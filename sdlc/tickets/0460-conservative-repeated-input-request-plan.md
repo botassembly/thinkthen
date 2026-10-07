@@ -1,6 +1,6 @@
 # 0460: Bound requests for repeated records when caching is disabled
 
-Status: in progress. Fresh Astra review accepted conservative native and command-line request bounds. Implementation and local regressions remain.
+Status: COMPLETE. Fresh whole-change High review accepted source 710bd20ec5ba56a256fa991cd91df9a57007d0bd after focused and forwarded checks passed. Full test, lint and specification gates run on the recorded candidate before landing.
 
 Milestone: 0.2
 
@@ -30,5 +30,6 @@ Fresh Astra Extra High review accepted this ticket and the bounded design on 202
 
 Extend existing native and CLI planning regressions, including a multi-question tag case so the bound counts wire questions rather than records. Preserve reader failure/unread-tail checks, zero-send planning and all original duplicate record positions. One fresh whole-change code review follows focused policy/lint and behavior tests; add one short record at landing.
 
-Reviews: accept
+Code review: ACCEPT, 2026-10-07; fresh whole-change read-only Sol High review of 710bd20ec5ba56a256fa991cd91df9a57007d0bd against 0d78347db.
 
+Reviews: accept
