@@ -267,8 +267,8 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
     let counts: Value = serde_json::from_slice(lines[1]).expect("whole-input counts");
     assert_eq!(
         counts,
-        json!({"records":5,"requests":1,"estimated_bytes":1402,
-            "estimated_input_tokens":{"lower":723,"upper":1274},"upper_bound":false})
+        json!({"records":5,"requests":10,"estimated_bytes":1402,
+            "estimated_input_tokens":{"lower":723,"upper":1274},"upper_bound":true})
     );
     let full = serde_json::to_vec(&plan["request"]).expect("body size");
     assert_eq!(

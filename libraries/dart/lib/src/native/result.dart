@@ -10,6 +10,7 @@ final class CompleteResult<T> {
   final List<QuestionAuthorView> authors, observationAuthors;
   final List<List<QuestionAuthorView>> memberAuthors;
   final List<List<RankView>> rankMembers;
+  final List<List<DetailsView>> rankMemberDetails;
   final List<SourceRecognitionView?> sourceRecognitions;
   final List<SourceRelationsView?> sourceRelations;
   CompleteResult(
@@ -23,7 +24,8 @@ final class CompleteResult<T> {
       List<DetailsView> observationDetails,
       List<QuestionAuthorView> observationAuthors,
       List<SourceRecognitionView?> sourceRecognitions,
-      List<SourceRelationsView?> sourceRelations)
+      List<SourceRelationsView?> sourceRelations,
+      [List<List<DetailsView>> rankMemberDetails = const []])
       : rows = List.unmodifiable(rows),
         observations = List.unmodifiable(observations),
         details = List.unmodifiable(details),
@@ -32,6 +34,8 @@ final class CompleteResult<T> {
             memberAuthors.map(List<QuestionAuthorView>.unmodifiable)),
         rankMembers =
             List.unmodifiable(rankMembers.map(List<RankView>.unmodifiable)),
+        rankMemberDetails = List.unmodifiable(
+            rankMemberDetails.map(List<DetailsView>.unmodifiable)),
         observationDetails = List.unmodifiable(observationDetails),
         observationAuthors = List.unmodifiable(observationAuthors),
         sourceRecognitions = List.unmodifiable(sourceRecognitions),

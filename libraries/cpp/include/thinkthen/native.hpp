@@ -23,6 +23,7 @@ struct Result {
     std::vector<std::vector<RankView>> rank_members;
     std::vector<SourceRecognition> located_recognition;
     std::vector<SourceRelations> located_relations;
+    std::vector<std::vector<Details>> rank_member_details{};
     const DecideView& decide(size_t i) const { return rows.at(i).data.decide.value(); }
     const ChooseView& choose(size_t i) const { return rows.at(i).data.choose.value(); }
     const TagView& tag(size_t i) const { return rows.at(i).data.tag.value(); }
@@ -55,13 +56,15 @@ inline Result snapshot(thinkthen_result *raw) {
         out.rows.push_back(copy(row));
         thinkthen_details_v1 details{}; view_ok(thinkthen_result_details(raw,i,&details)); out.details.push_back(copy(details));
         thinkthen_question_author_v1 author{}; view_ok(thinkthen_result_question_author(raw,i,&author)); out.authors.push_back(copy(author));
-        out.member_authors.emplace_back(); out.rank_members.emplace_back();
+        out.member_authors.emplace_back(); out.rank_members.emplace_back(); out.rank_member_details.emplace_back();
         if(row.function==8) for(size_t j=0;j<row.data.annotate.answers.len;++j) {
             view_ok(thinkthen_result_member_author(raw,i,j,&author)); out.member_authors.back().push_back(copy(author));
         }
         if(row.function==6) {
             size_t count=0; view_ok(thinkthen_result_rank_member_count(raw,i,&count)); extent(count,sizeof(RankView),raw);
-            for(size_t j=0;j<count;++j) { thinkthen_rank_view_v1 v{}; view_ok(thinkthen_result_rank_member(raw,i,j,&v)); out.rank_members.back().push_back(copy(v)); }
+            for(size_t j=0;j<count;++j) { thinkthen_rank_view_v1 v{}; view_ok(thinkthen_result_rank_member(raw,i,j,&v)); out.rank_members.back().push_back(copy(v));
+                view_ok(thinkthen_result_member_author(raw,i,j,&author)); out.member_authors.back().push_back(copy(author));
+                view_ok(thinkthen_result_rank_member_details(raw,i,j,&details)); out.rank_member_details.back().push_back(copy(details)); }
         }
         thinkthen_source_recognition_v1 recognition{};
         if(row.function==9) view_ok(thinkthen_result_source_recognition(raw,i,&recognition));

@@ -107,7 +107,7 @@ The first output line is one compact JSON document with four fields that are alw
 
 `request` is the body the adapter would send, as a JSON value and never as a string. `key_env` names the variable a key would be read from, so a script can prove that a key stays home. The plan never holds the value.
 
-The second output line counts the entire validated input. `requests` counts prepared requests before cache answers, refusal splits and retries. `estimated_bytes` sums their exact UTF-8 body lengths; `estimated_input_tokens.lower` rounds down at 0.516 tokens per byte and `upper` rounds up at 0.908. These measured rates estimate input tokens, not a provider bill. `upper_bound` marks staged recognize and relate work whose later requests depend on answers.
+The second output line counts the entire validated input. `requests` bounds initial requests before cache answers, refusal splits and retries. Ordinary native, command-line and annotate plans count every admitted wire-question occurrence, including repeats. Each initial request consumes at least one occurrence, so pauses, window flushes and later repeats stay within this allowance. Splits and retries keep their separate limits. `estimated_bytes` sums exact UTF-8 body lengths in an uncoalesced, uninterrupted packed preview; `estimated_input_tokens.lower` rounds down at 0.516 tokens per byte and `upper` rounds up at 0.908. These measured rates estimate input tokens, not a provider bill. `upper_bound` is true when the occurrence bound exceeds the packed preview count or staged recognize and relate work depends on later answers. These byte and token estimates do not bound runtime byte or token admission.
 
 ```json
 {"records":1,"requests":1,"estimated_bytes":219,"estimated_input_tokens":{"lower":113,"upper":199},"upper_bound":false}
@@ -117,7 +117,7 @@ The preview band rounds the sum of prepared bytes; live estimated-input admissio
 
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
-In record mode `--plan` validates every record before printing. The first line discloses the first prepared request; the second counts the whole input. The first line carries a fifth field, `input`, naming the framing and pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. Batched verbs use the same content, member and byte cuts as execution, without a pause boundary.
+In record mode `--plan` validates every record before printing. The first line discloses the first prepared request; the second counts the whole input. The first line carries a fifth field, `input`, naming the framing and pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. The packed preview uses the same content, member and byte cuts as execution, without pause boundaries or duplicate coalescing. Pending equal questions still share answers during execution under [ADR 0123](../sdlc/planning/adr/0123-conservative-plan-request-bounds.md).
 
 ```json
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Payouts have failed for 3 days.\". Does this report a payment failure?"}}}}

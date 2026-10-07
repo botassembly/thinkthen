@@ -70,3 +70,5 @@ Results contain copied function views, summary/facts/attempts, every observation
 Cache, record, refresh and strict replay use the engine settings and native storage, including changed-reading replay and native identities. Large admitted inputs need an adequate PHP `memory_limit`; the complete shared image suite uses 2 GiB, because copied views retain original evidence. No setting is changed automatically.
 
 The prior `src/complete` JSON carrier readers remain private compatibility work. Their signed-integer/ambiguous-authored-null restrictions do not limit the native views above. Run the existing canonical suite with `python3 libraries/php/fixtures/complete_parity.py php` from the checkout; it counts owned loopback arrivals and emits cells only for actual public calls. No paid backend is used.
+
+Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.

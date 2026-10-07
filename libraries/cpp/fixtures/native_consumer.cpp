@@ -95,7 +95,12 @@ int main(int argc,char **argv) {
             else CALL(rank) else CALL(find) else CALL(annotate) else CALL(recognize) else CALL(relate)
 #undef CALL
             else throw std::runtime_error("fixture function missing");
-            q.reset(); source.reset(); owners.clear(); e.reset(); selected(r,verb); std::cout<<fixture::encode(r).dump()<<'\n';
+            q.reset(); source.reset(); owners.clear(); e.reset();
+            if(verb=="rank") {
+                const n::Result previous{r.summary,r.rows,r.observations,r.details,r.observation_details,r.authors,r.observation_authors,r.member_authors,r.rank_members,r.located_recognition,r.located_relations};
+                if(!previous.rank_member_details.empty() || previous.rows.size()!=r.rows.size() || (!r.rows.empty() && previous.rank(0).common.answer_id!=r.rank(0).common.answer_id)) throw std::runtime_error("existing result aggregate changed");
+            }
+            selected(r,verb); std::cout<<fixture::encode(r).dump()<<'\n';
         }
     } catch(const n::NativeFailure& f) { if(cancellation.joinable()) cancellation.join(); std::cout<<fixture::encode(f.snapshot).dump()<<'\n'; return 0; }
     catch(const std::exception& f) { if(cancellation.joinable()) cancellation.join(); std::cerr<<f.what()<<'\n'; return 1; }
