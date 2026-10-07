@@ -1,6 +1,9 @@
+with Thinkthen.Native;
+with Thinkthen.Native.Results;
 package body Thinkthen.Typed.Complete is
    use type Interfaces.C.int;
    use type System.Address;
+   function Borrow (Item : Result) return System.Address is (Item.Handle);
    function Exists (Item : Result) return Boolean is (Item.Handle /= System.Null_Address);
    procedure Result_Free (Item : System.Address)
      with Import, Convention => C, External_Name => "thinkthen_result_free";
@@ -11,17 +14,14 @@ package body Thinkthen.Typed.Complete is
    end Finalize;
    function Native_Decide (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_decide_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Decide;
    function View_Decide (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Decide_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_decide";
+                          View : access Decide_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Decide;
    procedure Decide (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Decide (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Decide;
@@ -34,17 +34,14 @@ package body Thinkthen.Typed.Complete is
    end Decide;
    function Native_Choose (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_choose_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Choose;
    function View_Choose (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Choose_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_choose";
+                          View : access Choose_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Choose;
    procedure Choose (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Choose (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Choose;
@@ -57,17 +54,14 @@ package body Thinkthen.Typed.Complete is
    end Choose;
    function Native_Tag (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_tag_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Tag;
    function View_Tag (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Tag_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_tag";
+                          View : access Tag_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Tag;
    procedure Tag (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Tag (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Tag;
@@ -80,17 +74,14 @@ package body Thinkthen.Typed.Complete is
    end Tag;
    function Native_Score (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_score_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Score;
    function View_Score (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Score_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_score";
+                          View : access Score_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Score;
    procedure Score (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Score (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Score;
@@ -103,17 +94,14 @@ package body Thinkthen.Typed.Complete is
    end Score;
    function Native_Filter (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_filter_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Filter;
    function View_Filter (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Filter_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_filter";
+                          View : access Filter_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Filter;
    procedure Filter (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Filter (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Filter;
@@ -126,17 +114,14 @@ package body Thinkthen.Typed.Complete is
    end Filter;
    function Native_Rank (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_rank_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Rank;
    function View_Rank (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Rank_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_rank";
+                          View : access Rank_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Rank;
    procedure Rank (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Rank (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Rank;
@@ -149,17 +134,14 @@ package body Thinkthen.Typed.Complete is
    end Rank;
    function Native_Find (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_find_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Find;
    function View_Find (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Find_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_find";
+                          View : access Find_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Find;
    procedure Find (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Find (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Find;
@@ -172,17 +154,14 @@ package body Thinkthen.Typed.Complete is
    end Find;
    function Native_Annotate (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_annotate_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Annotate;
    function View_Annotate (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Annotate_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_annotate";
+                          View : access Annotate_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Annotate;
    procedure Annotate (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Annotate (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Annotate;
@@ -195,17 +174,14 @@ package body Thinkthen.Typed.Complete is
    end Annotate;
    function Native_Recognize (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_recognize_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Recognize;
    function View_Recognize (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Recognize_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_recognize";
+                          View : access Recognize_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Recognize;
    procedure Recognize (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Recognize (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Recognize;
@@ -218,17 +194,14 @@ package body Thinkthen.Typed.Complete is
    end Recognize;
    function Native_Relate (E, Q, Input : System.Address;
                            Options : access constant Controls_V1;
-                           Out_Handle : access System.Address) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_relate_complete";
+                           Out_Handle : access System.Address) return Interfaces.C.int renames Thinkthen.Native.Relate;
    function View_Relate (Item : System.Address; Index : Interfaces.C.size_t;
-                          View : access Relate_View_V1) return Interfaces.C.int
-     with Import, Convention => C, External_Name => "thinkthen_result_relate";
+                          View : access Relate_View_V1) return Interfaces.C.int renames Thinkthen.Native.Results.Result_Relate;
    procedure Relate (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int) is
       Copy : aliased Controls_V1 := Options;
       New_Handle : aliased System.Address := System.Null_Address;
    begin
-      Copy.Surface := Thinkthen.Typed.Controls.Surface;
       Code := Native_Relate (Client.Handle, Borrow (Q), Borrow (Input), Copy'Access, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Relate;
@@ -269,4 +242,67 @@ package body Thinkthen.Typed.Complete is
       Code := Native_Error (System.Null_Address, New_Handle'Access);
       if Code = 0 then Finalize (Item); Item.Handle := New_Handle; end if;
    end Error_Snapshot;
+   procedure Details (Item : Result; Index : Interfaces.C.size_t; View : in out Details_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Details_V1 := View;
+   begin
+      Code := Native.Results.Result_Details
+        (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Details;
+   procedure Observation_Details (Item : Result; Index : Interfaces.C.size_t; View : in out Details_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Details_V1 := View;
+   begin
+      Code := Native.Results.Result_Observation_Details
+        (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Observation_Details;
+   procedure Question_Author (Item : Result; Index : Interfaces.C.size_t; View : in out Question_Author_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Question_Author_V1 := View;
+   begin
+      Code := Native.Results.Result_Question_Author
+        (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Question_Author;
+   procedure Member_Author (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Question_Author_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Question_Author_V1 := View;
+   begin
+      Code := Native.Results.Result_Member_Author
+        (Item.Handle, Index, Member, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Member_Author;
+   procedure Observation_Author (Item : Result; Index : Interfaces.C.size_t; View : in out Question_Author_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Question_Author_V1 := View;
+   begin
+      Code := Native.Results.Result_Observation_Author
+        (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Observation_Author;
+   procedure Source_Recognition (Item : Result; Index : Interfaces.C.size_t; View : in out Source_Recognition_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Source_Recognition_V1 := View;
+   begin
+      Code := Native.Results.Result_Source_Recognition
+        (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Source_Recognition;
+   procedure Source_Relations (Item : Result; Index : Interfaces.C.size_t; View : in out Source_Relations_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Source_Relations_V1 := View;
+   begin
+      Code := Native.Results.Result_Source_Relations
+        (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Source_Relations;
+   procedure Rank_Member (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Rank_View_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Rank_View_V1 := View;
+   begin
+      Code := Native.Results.Result_Rank_Member
+        (Item.Handle, Index, Member, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Rank_Member;
+   procedure Rank_Member_Count (Item : Result; Index : Interfaces.C.size_t; View : in out Interfaces.C.size_t; Code : out Interfaces.C.int) is
+      Copy : aliased Interfaces.C.size_t := View;
+   begin
+      Code := Native.Results.Result_Rank_Member_Count
+        (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Rank_Member_Count;
 end Thinkthen.Typed.Complete;

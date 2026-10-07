@@ -1,4 +1,4 @@
-/* Private complete integration: compile against reviewed 0426 header. */
+/* Complete native calls over counted COBOL descriptors. */
 #include "thinkthen.h"
 static thinkthen_controls_v1 controls_for_cobol(const thinkthen_controls_v1 *input) {
     thinkthen_controls_v1 copy = input ? *input :
@@ -65,4 +65,29 @@ int TT_RELATE(const thinkthen_engine *e, const thinkthen_question *q,
                  thinkthen_result **out) {
     thinkthen_controls_v1 copy=controls_for_cobol(controls);
     return thinkthen_relate_complete(e,q,s,&copy,out);
+}
+
+int TT_DECIDE_BATCH_START(const thinkthen_engine *e,const thinkthen_question *q,const thinkthen_source *s,const thinkthen_controls_v1 *controls,thinkthen_batch **out) {
+    thinkthen_controls_v1 copy=controls_for_cobol(controls);
+    return thinkthen_decide_batch_start(e,q,s,&copy,out);
+}
+int TT_CHOOSE_BATCH_START(const thinkthen_engine *e,const thinkthen_question *q,const thinkthen_source *s,const thinkthen_controls_v1 *controls,thinkthen_batch **out) {
+    thinkthen_controls_v1 copy=controls_for_cobol(controls);
+    return thinkthen_choose_batch_start(e,q,s,&copy,out);
+}
+int TT_TAG_BATCH_START(const thinkthen_engine *e,const thinkthen_question *q,const thinkthen_source *s,const thinkthen_controls_v1 *controls,thinkthen_batch **out) {
+    thinkthen_controls_v1 copy=controls_for_cobol(controls);
+    return thinkthen_tag_batch_start(e,q,s,&copy,out);
+}
+int TT_SCORE_BATCH_START(const thinkthen_engine *e,const thinkthen_question *q,const thinkthen_source *s,const thinkthen_controls_v1 *controls,thinkthen_batch **out) {
+    thinkthen_controls_v1 copy=controls_for_cobol(controls);
+    return thinkthen_score_batch_start(e,q,s,&copy,out);
+}
+int TT_FILTER_BATCH_START(const thinkthen_engine *e,const thinkthen_question *q,const thinkthen_source *s,const thinkthen_controls_v1 *controls,thinkthen_batch **out) {
+    thinkthen_controls_v1 copy=controls_for_cobol(controls);
+    return thinkthen_filter_batch_start(e,q,s,&copy,out);
+}
+int TT_ANNOTATE_BATCH_START(const thinkthen_engine *e,const thinkthen_question *q,const thinkthen_source *s,const thinkthen_controls_v1 *controls,thinkthen_batch **out) {
+    thinkthen_controls_v1 copy=controls_for_cobol(controls);
+    return thinkthen_annotate_batch_start(e,q,s,&copy,out);
 }

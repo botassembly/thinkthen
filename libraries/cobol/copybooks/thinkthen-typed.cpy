@@ -5,3 +5,4 @@
        copy "tt-metadata.cpy".
        copy "tt-rows.cpy".
        copy "tt-events.cpy".
+       copy "tt-extensions.cpy".

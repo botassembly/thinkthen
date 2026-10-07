@@ -4,6 +4,7 @@ with Thinkthen_C_Inputs; use Thinkthen_C_Inputs;
 with Thinkthen_C_Answers; use Thinkthen_C_Answers;
 with Thinkthen_C_Entities; use Thinkthen_C_Entities;
 with Thinkthen_C_Metadata; use Thinkthen_C_Metadata;
+with Thinkthen_C_Extensions; use Thinkthen_C_Extensions;
 package Thinkthen.Views is
    -- Copies require a live owner; borrowed lists retain their native count.
    -- Index is zero-based. Invalid count/index/address arithmetic refuses.
@@ -28,4 +29,10 @@ package Thinkthen.Views is
    function Element (Items : Question_Sources_V1; Index : Interfaces.C.size_t) return Question_Source_V1;
    function Element (Items : Observation_Identities_V1; Index : Interfaces.C.size_t) return Observation_Identity_V1;
    function Element (Items : Attempts_V1; Index : Interfaces.C.size_t) return Attempt_V1;
+   function Element (Items : Input_Properties_V1; Index : Interfaces.C.size_t) return Input_Property_V1;
+   function Element (Items : Source_Details_V1; Index : Interfaces.C.size_t) return Source_Detail_V1;
+   function Element (Items : Input_Views_V1; Index : Interfaces.C.size_t) return Input_View_V1;
+   function Element (Items : Source_Entities_V1; Index : Interfaces.C.size_t) return Source_Entity_V1;
+   function Element (Items : Source_Entity_Edges_V1; Index : Interfaces.C.size_t) return Source_Entity_Edge_V1;
+   function Element (Items : Source_Edges_V1; Index : Interfaces.C.size_t) return Source_Edge_V1;
 end Thinkthen.Views;

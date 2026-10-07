@@ -74,3 +74,19 @@
        78 tt-c-event-row-v1 value 2.
        78 tt-c-result-success-v1 value 1.
        78 tt-c-result-failure-v1 value 2.
+       78 tt-c-source-jsonl-v1 value 5.
+       78 tt-c-load-atomic-v1 value 1.
+       78 tt-c-load-set-v1 value 2.
+       78 tt-c-load-dynamic-choose-v1 value 3.
+       78 tt-c-load-recognize-v1 value 4.
+       78 tt-c-load-relate-v1 value 5.
+       78 tt-c-load-rank-v1 value 6.
+       78 tt-c-load-rank-set-v1 value 7.
+       78 tt-c-load-find-v1 value 8.
+       78 tt-c-property-string-v1 value 1.
+       78 tt-c-property-number-v1 value 2.
+       78 tt-c-property-boolean-v1 value 3.
+       78 tt-c-property-string-list-v1 value 4.
+       78 tt-c-declaration-absent-v1 value 0.
+       78 tt-c-declaration-string-v1 value 1.
+       78 tt-c-declaration-object-v1 value 2.

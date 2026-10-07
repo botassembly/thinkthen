@@ -2,9 +2,8 @@
   "directory": [
     "src",
     "examples",
-    "checks",
-    "pending"
+    "checks"
   ],
   "extension": ".adb",
-  "max": 2417
+  "max": 3013
 }

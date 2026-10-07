@@ -24,6 +24,7 @@ package Thinkthen_C_Inputs is
    C_SOURCE_LINE_V1 : constant Interfaces.Unsigned_32 := 1;
    C_SOURCE_WINDOW_V1 : constant Interfaces.Unsigned_32 := 2;
    C_SOURCE_FILE_V1 : constant Interfaces.Unsigned_32 := 3;
+   C_SOURCE_JSONL_V1 : constant Interfaces.Unsigned_32 := 5;
    C_SOURCE_IMAGE_FILE_V1 : constant Interfaces.Unsigned_32 := 4;
    C_DECIDE_NULL_V1 : constant Interfaces.Unsigned_32 := 0;
    C_DECIDE_BOOLEAN_V1 : constant Interfaces.Unsigned_32 := 1;
@@ -31,7 +32,7 @@ package Thinkthen_C_Inputs is
    type Byte_String_V1 is record
       Data : System.Address := System.Null_Address;
       Len : Interfaces.C.size_t := 0;
-   end record with Convention => C;
+   end record with Convention => C_Pass_By_Copy;
    for Byte_String_V1 use record
       Data at 0 range 0 .. 63;
       Len at 8 range 0 .. 63;
@@ -51,7 +52,7 @@ package Thinkthen_C_Inputs is
    type Optional_String_V1 is record
       Present : Interfaces.C.int := 0;
       Value : Byte_String_V1 := (others => <>);
-   end record with Convention => C;
+   end record with Convention => C_Pass_By_Copy;
    for Optional_String_V1 use record
       Present at 0 range 0 .. 31;
       Value at 8 range 0 .. 127;

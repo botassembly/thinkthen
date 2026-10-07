@@ -20,6 +20,9 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
+# Isolate read-only test configuration from the caller's configuration.
+scratch_dir fixture_config
+export XDG_CONFIG_HOME="$fixture_config"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   smoke_guard
   # The replay smoke (ticket 0335): the source package over the installed C door.
@@ -92,10 +95,15 @@ cc -std=c11 -Wall -Wextra -Werror -pedantic -c "$ROOT/src/tt_counted.c" -o "$TAR
 cobc -x -free -I "$ROOT/copybooks" -o "$TARGET/counted_bounds" \
   "$ROOT/checks/counted_bounds.cob" "$TARGET/tt_counted.o"
 "$TARGET/counted_bounds"
+cc -std=c11 -Wall -Wextra -Werror -pedantic -I"$REPO/libraries/c/include" -c "$REPO/libraries/ada/checks/typed_boundary.c" -o "$TARGET/typed_boundary.o"
+cobc -x -free -I "$ROOT/copybooks" -o "$TARGET/carrier_bounds" \
+  "$ROOT/checks/carrier_bounds.cob" "$TARGET/typed_boundary.o" "$TARGET/tt_counted.o"
+"$TARGET/carrier_bounds"
 python3 "$ROOT/checks/files.py"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
 python3 "$ROOT/checks/failure.py"
 python3 "$ROOT/checks/run_matrix.py"
 python3 "$ROOT/checks/negative.py"
+python3 "$ROOT/checks/native_parity.py"
 echo 'COBOL package gate passed'

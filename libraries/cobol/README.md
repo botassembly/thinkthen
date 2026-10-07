@@ -24,7 +24,7 @@ cobc -x -free -fstatic-call -fno-gen-c-decl-static-call \
 LD_LIBRARY_PATH="$native/lib" /tmp/thinkthen-cobol-direct
 ```
 
-The executable plus the matching native shared library is the project-ready form factor. To use the binding in a COBOL project, copy `copybooks/thinkthen.cpy` and the needed `src/*.cob` plus `TTJSON.c` and `tt_shape.c`, compile the C sources to objects, link those alongside your COBOL source and `-lthinkthen`, and install the matching C header/shared library with your application. For typed helper builds, `cc -std=c11 -D_GNU_SOURCE -c libraries/cobol/src/TTJSON.c -o ttjson.o` and `cc -std=c11 -D_GNU_SOURCE -c libraries/cobol/src/tt_shape.c -o ttshape.o`, then pass `libraries/cobol/src/tt_validate.cob libraries/cobol/src/tt_plan.cob ttjson.o ttshape.o -lm` to `cobc` for `TT-PARSE-FIELD`, `TT-JSON-MEMBER` and `TT-PLAN` alongside the header and linker flags above. `checks/door.cob` shows the public constructor and generic JSON route. No generated C prototype for native `void` functions: use dynamic COBOL CALL for frees and cancellation.
+The executable plus the matching native shared library is the project-ready form factor. To use the binding in a COBOL project, copy `copybooks/thinkthen.cpy` and the needed `src/*.cob` plus `TTJSON.c` and `tt_shape.c`, compile the C sources to objects, link those alongside your COBOL source and `-lthinkthen`, and install the matching C header/shared library with your application. For typed helper builds, `cc -std=c11 -D_GNU_SOURCE -c libraries/cobol/src/TTJSON.c -o ttjson.o` and `cc -std=c11 -D_GNU_SOURCE -c libraries/cobol/src/tt_shape.c -o ttshape.o`, then pass `libraries/cobol/src/tt_validate.cob libraries/cobol/src/tt_plan.cob ttjson.o ttshape.o -lm` to `cobc` for `TT-PARSE-FIELD`, `TT-JSON-MEMBER` and `TT-PLAN` alongside the header and linker flags above. `checks/door.cob` shows the public constructor and generic JSON route. Use `RETURNING OMITTED` for native `void` functions, including frees and cancellation.
 
 `copybooks/thinkthen.cpy` names no, yes and not sure through 88-level condition names, plus six error kinds with retryability, a message and owned failure-facts JSON. `TT-DECIDE` checks lengths and NULs, copies errors on its calling OS thread, and returns native `(outcome,pad,probability)` storage. `TT-CALL` exposes the generic JSON door's complete `{value,facts}` envelope. Both take `tt-deadline-ms` after their inputs: a budget in milliseconds, or -1 for none. `TT-PLAN` previews a decide, choose, score or tag call through `thinkthen_plan_json`: pass the verb, the question text and its length (text that starts with `{` is a question object), `tt-text-count` and `tt-texts`, and settings JSON with its length (0 for none). It returns the result schema's `plan` object as JSON text, needs no key and sends nothing. `max_requests_total` in `TT-ENGINE-NEW`'s settings caps the process's live sends. `TT-VALIDATE-LABELS` accepts an all-bare JSON list or an all-described JSON map; a mixed label is rejected by name. Map values accept a description string or `{what,not_for,examples}`; JSON is never rewritten, so descriptions pass unchanged to the native C JSON door. `TT-PARSE-FIELD` reads one annotate answer member into `tt-field`: 1 unresolved null, 2 a failure with its kind code 1 to 6 in `tt-field-failure-code` and its cause in `tt-field-cause`, 3 answered, 0 another object or invalid JSON. `TT-JSON-MEMBER` copies one member's JSON text, an object member by name or an array element by its 1-based index, and never reads a member the caller does not name. Results, facts and plans stay JSON text; read the members you need with it. JSON is bounded at 8192 bytes. The product gate runs all 29 executable J1 cases through the public COBOL door and checks the current result schema. Entity offsets are zero-based Unicode-scalar indices and end-exclusive, not bytes or UTF-16.
 
@@ -36,50 +36,20 @@ The executable plus the matching native shared library is the project-ready form
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
 
-## Unpublished 0.2 typed carrier slice (0430)
+## Native typed API
 
-This branch contains independent counted input/result carriers against the reviewed
-0426 layouts. It does not establish complete function parity. Native constructors
-and result/2 execution are dependencies; the complete integration and compile-only
-consumers remain in `pending/`. The existing compatibility consumers still use the
-released native API. No result/1 is converted to result/2 by these carriers.
+Copy `copybooks/*.cpy` and `src/tt_inputs.c`, `tt_complete.c`, `tt_counted.c` and `tt_native.h` into the project. The public bridge header includes the matching native `thinkthen.h`. `thinkthen-typed.cpy` provides input/result/metadata/location groups and constants. Strings and lists use pointers with exact 64-bit counts; known engine fields have native groups, never JSON projections. Overlay a nested field with its matching typed BASED group using `SET ADDRESS OF`. Check presence and state/kind constants before reading optional/union arms. Zero input storage with `MOVE LOW-VALUES`; `INITIALIZE` space-fills nested PIC X storage and cannot initialize native descriptors.
 
-`copybooks/thinkthen-typed.cpy` provides counted native groups and closed
-constants. Scalars use binary widths or `float-long`; lists and strings use pointers
-plus 64-bit counts. Nested native records are named storage fields: overlay them with
-the matching typed BASED group using `SET ADDRESS OF`, as `checks/carrier_bounds.cob`
-shows. They are native record storage, never JSON for known engine fields. Check
-presence and kind/state constants before reading optional or union arms. Initialize
-input groups with `MOVE LOW-VALUES`, then set all required fields; explicitly set
-`v-deadline-ms` to -1 when no deadline is wanted. `INITIALIZE` would space-fill nested
-storage and is unsuitable. The typed bridge fixes surface `cobol` on every complete call.
+`TT_QUESTION_NEW` accepts a counted question specification. `TT_QUESTION_NEW_AUTHORED` adds optional name, wording version and item/context declarations. `TT_QUESTION_PARSE`, `TT_QUESTION_LOAD_NAMED` and `TT_QUESTION_LOAD_REFERENCE` take an explicit native loader role plus a counted string descriptor. `TT_QUESTION_LOAD` takes an explicit question-file path. Native loaders own parsing, catalog lookup and admission. `TT_SOURCE_RECORDS` clones originals, per-item context, ordered options and image handles. `TT_SOURCE_FILES` delegates line/window/whole-file/image-file/JSONL reading to native code; `TT_SOURCE_IMAGE_FILES` admits image units before opening a path. `TT_IMAGE_CLONE` takes counted PNG/JPEG bytes, media and optional filename. Images do not pass through compatibility JSON or an 8 KB base64 field.
 
-`TT_COPY_COUNTED` copies into a caller-sized field and refuses insufficient capacity
-without changing that field or its output count. `TT_ELEMENT` returns a zero-based
-borrowed element after range, multiplication, alignment and pointer arithmetic
-checks. Pass count/index/size/deadline scalars with `BY VALUE SIZE IS 8`, and media/function
-discriminators with `BY VALUE SIZE IS 4`; ordinary `BY VALUE` can narrow numeric
-arguments in GnuCOBOL. Caller buffers must be real readable/writable storage. BASED overlays borrow
-memory and must not be freed; only caller-allocated groups and native owners are
-freed. Keep owners live until all callers and overlays finish. A constructor clones
-nested images/questions; never finalize or free a handle during a native call.
+`TT_DECIDE`, `TT_CHOOSE`, `TT_TAG`, `TT_SCORE`, `TT_FILTER`, `TT_RANK`, `TT_FIND`, `TT_ANNOTATE`, `TT_RECOGNIZE` and `TT_RELATE` take engine, question, source, controls and output-result pointers. The bridge fixes surface `cobol`. The retained hyphenated `TT-DECIDE` and `TT-CALL` remain compatibility methods. Decide/choose/score admit ordered single/multiple images under native route limits. The other seven functions refuse images with Usage before a send. Ordinary strings and bytes never imply image input.
 
-The `pending/tt_inputs.c` constructor bridge avoids by-value C structs in COBOL.
-`pending/tt_complete.c` names TT_DECIDE, TT_CHOOSE, TT_TAG, TT_SCORE, TT_FILTER,
-TT_RANK, TT_FIND, TT_ANNOTATE, TT_RECOGNIZE and TT_RELATE. It awaits complete C
-exports; it is not a fallback to JSON. The existing `TT-DECIDE` stays compatible.
-Result accessors use the reviewed native `thinkthen_result_*` functions with typed
-copybook storage. Image input uses counted native image handles, never base64 in
-compatibility JSON. Files/question files are explicit native paths; no COBOL reader,
-parser, cache, scheduler or model policy is added.
+The matching `thinkthen_result_*` functions fill typed copybook views, including summary/facts, attempts, IDs/provenance, all ten rows, probabilities, annotation states, native details, rank members, authors, located entities and relation endpoints. `thinkthen_error_complete` owns a failed-call or failed-build snapshot. A pre-start failure carries no invented facts; a started failure carries completed work and final counts. Views borrow their result until `thinkthen_result_free`; results survive engine/input destruction. Constructors clone buffers and nested handles. On any nonzero return, the output remains unchanged. Free each successful nonnull handle exactly once after all borrowers finish. Use `RETURNING OMITTED` for native `void` frees and cancellation.
 
-Ruling: the supported ABI is Linux x86_64. Native counts are exact unsigned 64-bit
-values; coordinates are not shortened, and cost remains decimal text. A copy into
-any fixed PIC X field is bounded by that field's actual capacity and refuses rather
-than truncates. The existing 8192-byte compatibility JSON boundary stays unchanged
-(requests require room for NUL and results can occupy 8192 bytes). This is not a
-limit on counted typed data. Executed checks copy 9,000 bytes, refuse an 8-byte
-capacity without writes, preserve full-width counts, duplicates, descriptions,
-pointers, present empty context, false/null and Unicode/CRLF/NUL. Native cloning,
-binary image admission, all complete calls, zero-send text-only refusals and shared
-result/2/storage behavior remain required execution after native/C dependencies land.
+`TT_DECIDE_BATCH_START`, `TT_CHOOSE_BATCH_START`, `TT_TAG_BATCH_START`, `TT_SCORE_BATCH_START`, `TT_FILTER_BATCH_START` and `TT_ANNOTATE_BATCH_START` expose the native lazy record scheduler. `thinkthen_batch_next` returns an independently owned row result or NULL on exhaustion. A terminal error preserves output; the following next returns NULL. `thinkthen_batch_facts` returns an owned final summary after termination. Start clones children/controls, which may then be freed. Keep the engine live and use/free the batch exclusively on its creating OS thread. `thinkthen_batch_free` stops and joins native work. Aggregate rank/find/recognize/relate retain complete-call semantics.
+
+`TT_COPY_COUNTED` copies into caller-sized fields and refuses insufficient capacity without changing destination or output count. `TT_ELEMENT` returns a zero-based borrowed list element after count/index, multiplication, alignment and address-range checks. Pass counts/indexes/sizes/deadlines with `BY VALUE SIZE IS 8` and media/function/role tags with `BY VALUE SIZE IS 4`. Ordinary BY VALUE can narrow GnuCOBOL scalars. Allocate/free caller groups; never FREE a borrowed BASED overlay. Native counts, coordinates and tokens retain unsigned 64-bit precision. Cost is counted decimal text.
+
+Ruling: the Linux x86_64 ABI imposes no 8 KB cap on typed records, views or image handles. Copies into PIC X refuse counts above the caller field's actual capacity. The legacy compatibility JSON boundary remains 8192 bytes; requests also need room for their terminating NUL. Existing checks refuse oversized compatibility input before a send. No record, result, coordinate or image is silently shortened.
+
+`examples/native.cob` constructs a 9,000-byte counted record, changes caller bytes after construction and reads a typed result after native input/engine owners are freed. Compile with `cobc -x -free -fstatic-call -fno-gen-c-decl-static-call -I copybooks -I /path/to/native/include -A '-include src/tt_native.h -Wno-incompatible-pointer-types' -o native examples/native.cob src/tt_inputs.c src/tt_complete.c -L /path/to/native/lib -lthinkthen`. Supply `TT_NATIVE_SETTINGS` with the engine settings JSON. The source/package gate executes the shared named-function cases, native files/images, errors, cache/record/replay and lazy batches through compiled COBOL consumers and counted loopback sends.

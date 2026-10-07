@@ -324,9 +324,8 @@ flutter)
 ada)
 		mkdir -p "$folder/src" "$folder/examples"
 		cp libraries/ada/LICENSE libraries/ada/README.md libraries/ada/thinkthen.gpr "$folder/"
-		cp libraries/ada/src/thinkthen.ads libraries/ada/src/thinkthen.adb \
-			libraries/ada/src/thinkthen_c.ads "$folder/src/"
-		cp libraries/ada/examples/consumer.adb "$folder/examples/"
+		cp libraries/ada/src/*.ads libraries/ada/src/*.adb "$folder/src/"
+		cp libraries/ada/examples/consumer.adb libraries/ada/examples/native.adb "$folder/examples/"
 		;;
 objective-c)
 		mkdir -p "$folder/Sources" "$folder/Examples"
@@ -339,14 +338,16 @@ objective-c)
 cobol)
 		mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples"
 		cp libraries/cobol/LICENSE libraries/cobol/README.md libraries/cobol/source-package.json "$folder/"
-		cp libraries/cobol/copybooks/thinkthen.cpy "$folder/copybooks/"
+		cp libraries/cobol/copybooks/*.cpy "$folder/copybooks/"
 		cp libraries/cobol/src/TTJSON.c libraries/cobol/src/TTJSON.h \
 			libraries/cobol/src/tt_shape.c libraries/cobol/src/tt_engine.cob \
 			libraries/cobol/src/tt_error.cob libraries/cobol/src/tt_call.cob libraries/cobol/src/tt_files.cob \
 			libraries/cobol/src/tt_decide.cob libraries/cobol/src/tt_validate.cob \
-			libraries/cobol/src/tt_plan.cob "$folder/src/"
+			libraries/cobol/src/tt_plan.cob libraries/cobol/src/tt_counted.c \
+			libraries/cobol/src/tt_complete.c libraries/cobol/src/tt_inputs.c \
+			libraries/cobol/src/tt_native.h "$folder/src/"
 		cp libraries/cobol/examples/direct.cob libraries/cobol/examples/settings.cob \
-			libraries/cobol/examples/types.cob "$folder/examples/"
+			libraries/cobol/examples/types.cob libraries/cobol/examples/native.cob "$folder/examples/"
 		;;
 	esac
 	# A case-blind volume, such as a default Mac one, keeps only one of two names that differ only in case.

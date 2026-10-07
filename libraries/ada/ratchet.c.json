@@ -1,7 +1,6 @@
 {
   "directory": [
-    "checks",
-    "pending"
+    "checks"
   ],
   "extension": ".c",
   "max": 156

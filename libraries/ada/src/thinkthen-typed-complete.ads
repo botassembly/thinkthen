@@ -1,8 +1,10 @@
 with Thinkthen_C_Rows; use Thinkthen_C_Rows;
 with Thinkthen_C_Events; use Thinkthen_C_Events;
+with Thinkthen_C_Extensions; use Thinkthen_C_Extensions;
 package Thinkthen.Typed.Complete is
-   -- Private integration slice: native result/2 execution not yet available.
+   -- Native result ownership. Views borrow Item until it finalizes.
    type Result is new Ada.Finalization.Limited_Controlled with private;
+   function Borrow (Item : Result) return System.Address;
    function Exists (Item : Result) return Boolean;
    procedure Decide (Client : Engine; Q : Question; Input : Source;
                     Options : Controls_V1; Item : in out Result; Code : out Interfaces.C.int);
@@ -49,6 +51,15 @@ package Thinkthen.Typed.Complete is
    procedure Error_Snapshot (Client : Engine; Item : in out Result; Code : out Interfaces.C.int);
    -- Null-engine overload reads the calling thread's failed-build slot.
    procedure Error_Snapshot (Item : in out Result; Code : out Interfaces.C.int);
+   procedure Details (Item : Result; Index : Interfaces.C.size_t; View : in out Details_V1; Code : out Interfaces.C.int);
+   procedure Observation_Details (Item : Result; Index : Interfaces.C.size_t; View : in out Details_V1; Code : out Interfaces.C.int);
+   procedure Question_Author (Item : Result; Index : Interfaces.C.size_t; View : in out Question_Author_V1; Code : out Interfaces.C.int);
+   procedure Member_Author (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Question_Author_V1; Code : out Interfaces.C.int);
+   procedure Observation_Author (Item : Result; Index : Interfaces.C.size_t; View : in out Question_Author_V1; Code : out Interfaces.C.int);
+   procedure Source_Recognition (Item : Result; Index : Interfaces.C.size_t; View : in out Source_Recognition_V1; Code : out Interfaces.C.int);
+   procedure Source_Relations (Item : Result; Index : Interfaces.C.size_t; View : in out Source_Relations_V1; Code : out Interfaces.C.int);
+   procedure Rank_Member (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Rank_View_V1; Code : out Interfaces.C.int);
+   procedure Rank_Member_Count (Item : Result; Index : Interfaces.C.size_t; View : in out Interfaces.C.size_t; Code : out Interfaces.C.int);
 private
    type Result is new Ada.Finalization.Limited_Controlled with record
       Handle : aliased System.Address := System.Null_Address;

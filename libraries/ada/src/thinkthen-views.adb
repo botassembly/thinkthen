@@ -160,4 +160,40 @@ package body Thinkthen.Views is
       return Pointers.To_Pointer
         (Address_At (Items.Data, Items.Len, Index, Attempt_V1'Size / 8, Attempt_V1'Alignment)).all;
    end Element;
+   function Element (Items : Input_Properties_V1; Index : Interfaces.C.size_t) return Input_Property_V1 is
+      package Pointers is new System.Address_To_Access_Conversions (Input_Property_V1);
+   begin
+      return Pointers.To_Pointer
+        (Address_At (Items.Data, Items.Len, Index, Input_Property_V1'Size / 8, Input_Property_V1'Alignment)).all;
+   end Element;
+   function Element (Items : Source_Details_V1; Index : Interfaces.C.size_t) return Source_Detail_V1 is
+      package Pointers is new System.Address_To_Access_Conversions (Source_Detail_V1);
+   begin
+      return Pointers.To_Pointer
+        (Address_At (Items.Data, Items.Len, Index, Source_Detail_V1'Size / 8, Source_Detail_V1'Alignment)).all;
+   end Element;
+   function Element (Items : Input_Views_V1; Index : Interfaces.C.size_t) return Input_View_V1 is
+      package Pointers is new System.Address_To_Access_Conversions (Input_View_V1);
+   begin
+      return Pointers.To_Pointer
+        (Address_At (Items.Data, Items.Len, Index, Input_View_V1'Size / 8, Input_View_V1'Alignment)).all;
+   end Element;
+   function Element (Items : Source_Entities_V1; Index : Interfaces.C.size_t) return Source_Entity_V1 is
+      package Pointers is new System.Address_To_Access_Conversions (Source_Entity_V1);
+   begin
+      return Pointers.To_Pointer
+        (Address_At (Items.Data, Items.Len, Index, Source_Entity_V1'Size / 8, Source_Entity_V1'Alignment)).all;
+   end Element;
+   function Element (Items : Source_Entity_Edges_V1; Index : Interfaces.C.size_t) return Source_Entity_Edge_V1 is
+      package Pointers is new System.Address_To_Access_Conversions (Source_Entity_Edge_V1);
+   begin
+      return Pointers.To_Pointer
+        (Address_At (Items.Data, Items.Len, Index, Source_Entity_Edge_V1'Size / 8, Source_Entity_Edge_V1'Alignment)).all;
+   end Element;
+   function Element (Items : Source_Edges_V1; Index : Interfaces.C.size_t) return Source_Edge_V1 is
+      package Pointers is new System.Address_To_Access_Conversions (Source_Edge_V1);
+   begin
+      return Pointers.To_Pointer
+        (Address_At (Items.Data, Items.Len, Index, Source_Edge_V1'Size / 8, Source_Edge_V1'Alignment)).all;
+   end Element;
 end Thinkthen.Views;

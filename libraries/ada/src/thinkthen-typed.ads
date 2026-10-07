@@ -2,10 +2,10 @@ with Ada.Finalization;
 with Interfaces.C;
 with System;
 with Thinkthen_C_Inputs; use Thinkthen_C_Inputs;
+with Thinkthen_C_Extensions; use Thinkthen_C_Extensions;
 package Thinkthen.Typed is
-   -- Unpublished constructor slice. Native owners clone inputs; no send occurs.
-   -- Code uses the existing six C error kinds. Failure snapshots are pending
-   -- the complete C API; parent compatibility error accessors remain available.
+   -- Native owners clone inputs. Constructors send no requests.
+   -- Complete.Error_Snapshot captures all six native failure kinds.
    type Question is new Ada.Finalization.Limited_Controlled with private;
    type Source is new Ada.Finalization.Limited_Controlled with private;
    type Image is new Ada.Finalization.Limited_Controlled with private;
@@ -15,6 +15,22 @@ package Thinkthen.Typed is
                            Item : in out Question; Code : out Interfaces.C.int);
    procedure Load_Question (Client : Engine; Path : Byte_String_V1;
                             Item : in out Question; Code : out Interfaces.C.int);
+   procedure New_Question (Client : Engine; Specification : Question_Spec_V1;
+                          Author : Question_Author_V1; Item : in out Question;
+                          Code : out Interfaces.C.int);
+   procedure Parse_Question (Client : Engine; Role : Interfaces.Unsigned_32;
+                            JSON : Byte_String_V1; Item : in out Question;
+                            Code : out Interfaces.C.int);
+   procedure Load_Named (Client : Engine; Role : Interfaces.Unsigned_32;
+                        Name : Byte_String_V1; Item : in out Question;
+                        Code : out Interfaces.C.int);
+   procedure Load_Reference (Client : Engine; Role : Interfaces.Unsigned_32;
+                            Reference : Byte_String_V1; Item : in out Question;
+                            Code : out Interfaces.C.int);
+   procedure Author (Item : Question; View : in out Question_Author_V1;
+                     Code : out Interfaces.C.int);
+   procedure Image_Files (Client : Engine; Specification : Source_Spec_V1;
+                          Item : in out Source; Code : out Interfaces.C.int);
    procedure Clone_Image (Client : Engine; Bytes : System.Address;
                           Count : Interfaces.C.size_t; Media : Interfaces.Unsigned_32;
                           Filename : Optional_String_V1; Item : in out Image;
