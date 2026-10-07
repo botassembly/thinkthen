@@ -116,8 +116,10 @@ def test_frame_surface_reaches_eager_and_lazy_native_calls_without_changing_shar
             body=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             requests.append((self.headers['User-Agent'],body['model']))
             reply=b'{"model":"frame-reported","answers":{"q1":{"type":"noul","noul":0.9}}}'
-            self.send_response(200);self.send_header('Content-Length',str(len(reply)))
-            self.send_header('Connection','close');self.end_headers();self.wfile.write(reply)
+            self.send_response(200)
+            self.send_header('Content-Length',str(len(reply)))
+            self.send_header("Connection", "close")
+            self.end_headers();self.wfile.write(reply)
         def log_message(self,*args): pass
     server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
     worker=threading.Thread(target=server.serve_forever);worker.start()
