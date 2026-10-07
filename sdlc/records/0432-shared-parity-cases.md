@@ -82,3 +82,10 @@ Clean-environment checks against the current release command passed: all ten fun
 The complete site run at `5b11d7e5a` passed CLI replay, flags and Astro, then rejected the OpenAI setup command's raw code block. The page now uses the existing Code component backed by `src/lib/code.mjs`. The command text, routes and surrounding content remain unchanged.
 
 A clean-environment Astro build passed, with its log at `target/0432-openai-code-build.log`. Existing code rendering, settings, sample and whitespace checks passed. The subsequent words check found two Settings uses of “preview” and an obsolete allowance for “planned”; this separate mismatch remains with the coordinator because checker changes are outside this slice. No product or runner edits were made, and unchanged full Rust gates remain applicable.
+
+
+## Settings prose allowance follow-up, 2026-10-07
+
+Settings renders the specification table directly. Its exact uncoalesced uninterrupted preview bytes and input-token estimates describe the landed plan contract; “preview” is not a release-status label there. The existing words check now replaces its obsolete “planned” allowance with two exact Settings-context allowances. Canonical setting names, specification text, rendered descriptions and behavior remain unchanged. Checker logic and tests remain unchanged; the restriction on other retired prose remains in force.
+
+A clean-environment Astro build and all subsequent static checks passed: layout, Markdown export/headings, code rendering, words, search generation, sitemap, exact settings, internal links, cards, head metadata and recipe publication. Logs are `target/0432-settings-static-build.log` and `target/0432-settings-static-final.log`. The existing words tests and sample checks passed. The redirect execution check cannot bind its loopback listener under this sandbox (EPERM). The separate layout checker planted-test run failed its diagnostic marker assertion; its actual built-page check passed. Those execution checks remain with the coordinator's complete docs run, including binding and SQL replay. Full Rust checks remain applicable.
