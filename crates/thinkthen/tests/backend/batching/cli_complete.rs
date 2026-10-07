@@ -5,6 +5,80 @@ use serde_json::{Value, json};
 use std::fs;
 
 #[test]
+fn per_record_context_previews_refuse_the_same_request_limit_as_execution() {
+    let place = folder("context-preview-admission");
+    fs::create_dir_all(&place).expect("folder");
+    let question = format!("{place}/question.json");
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
+    .expect("listener");
+    let input = format!(
+        "{}\n",
+        json!({"body":"Evidence","reference":"X".repeat(2000)})
+    );
+    for verb in ["decide", "annotate"] {
+        let declaration =
+            json!({"decide":"Refund?","on":"/body","context_schema":{"type":"string"}});
+        fs::write(
+            &question,
+            if verb == "annotate" {
+                json!({"version":1,"questions":{"refund":declaration}})
+            } else {
+                declaration
+            }
+            .to_string(),
+        )
+        .expect("question");
+        let operand = if verb == "annotate" {
+            question.clone()
+        } else {
+            format!("@{question}")
+        };
+        let mut refusal = None;
+        for planned in [false, true] {
+            let mut args = vec![
+                verb,
+                &operand,
+                "--jsonl",
+                "--context-field",
+                "/reference",
+                "--max-request-bytes",
+                "500",
+                "--no-cache",
+                "--url",
+                listener.base(),
+            ];
+            if planned {
+                args.push("--plan");
+            }
+            let output = spawn(&args, &[KEY], input.as_bytes()).expect("command");
+            assert_eq!(
+                output.status.code(),
+                Some(2),
+                "{verb}, plan={planned}: {}",
+                text(&output.stderr)
+            );
+            assert!(output.stdout.is_empty());
+            assert_eq!(listener.count(), 0);
+            let cause = text(&output.stderr)
+                .lines()
+                .find(|line| !line.contains("warning:"))
+                .expect("refusal")
+                .to_owned();
+            assert!(cause.contains("500"), "{cause}");
+            assert!(!cause.contains(&"X".repeat(20)));
+            if let Some(actual) = &refusal {
+                assert_eq!(&cause, actual);
+            } else {
+                refusal = Some(cause);
+            }
+        }
+    }
+    fs::remove_dir_all(&place).expect("remove owned folder");
+}
+
+#[test]
 fn decision_details_present_native_meanings_without_changing_bare_or_record_controls() {
     let place = folder("decision-authored-details");
     fs::create_dir_all(&place).expect("folder");

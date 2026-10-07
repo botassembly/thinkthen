@@ -4,6 +4,92 @@ use crate::harness::{Canned, Listener};
 use serde_json::{Value, json};
 
 #[test]
+fn scalar_image_captions_preserve_optional_blank_bytes_and_refuse_invalid_text() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let red = fixture("red.png");
+    for caption in [b"".as_slice(), b"   ", b"\t\n", b"Caption\n"] {
+        let output = call(
+            &listener,
+            &[
+                "decide",
+                "Red?",
+                "--image",
+                red.to_str().unwrap(),
+                "--details",
+            ],
+            caption,
+        );
+        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        let row: Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(
+            row["input"]["text"],
+            if caption.is_empty() {
+                Value::Null
+            } else {
+                json!(std::str::from_utf8(caption).unwrap())
+            }
+        );
+        let body: Value =
+            serde_json::from_slice(&listener.requests().last().unwrap().body).unwrap();
+        assert_eq!(body["state"], json!(std::str::from_utf8(caption).unwrap()));
+    }
+    let before = listener.count();
+    for (caption, exit) in [(vec![0xff], 5), (vec![b'x'; 16 * 1024 * 1024 + 1], 2)] {
+        let output = call(
+            &listener,
+            &[
+                "decide",
+                "Red?",
+                "--image",
+                red.to_str().unwrap(),
+                "--details",
+            ],
+            &caption,
+        );
+        assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
+        assert!(output.stdout.is_empty());
+        assert_eq!(listener.count(), before);
+    }
+    let place = crate::batching::folder("image-caption-declaration");
+    std::fs::create_dir_all(&place).unwrap();
+    let path = format!("{place}/question.json");
+    let operand = format!("@{path}");
+    for (schema, caption, exit) in [
+        (json!({"type":"string"}), b"   ".as_slice(), 0),
+        (
+            json!({"type":"object","properties":{"body":{"type":"string"}}}),
+            b"   ".as_slice(),
+            2,
+        ),
+        (json!({"type":"string"}), b"".as_slice(), 2),
+    ] {
+        std::fs::write(
+            &path,
+            json!({"decide":"Red?","item_schema":schema}).to_string(),
+        )
+        .unwrap();
+        let before = listener.count();
+        let output = call(
+            &listener,
+            &[
+                "decide",
+                &operand,
+                "--image",
+                red.to_str().unwrap(),
+                "--details",
+            ],
+            caption,
+        );
+        assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
+        assert_eq!(listener.count() - before, usize::from(exit == 0));
+        if exit != 0 {
+            assert!(output.stdout.is_empty());
+        }
+    }
+    std::fs::remove_dir_all(&place).unwrap();
+}
+
+#[test]
 fn framed_json_captions_keep_context_originals_and_repeated_image_order() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
     let red = fixture("red.png");

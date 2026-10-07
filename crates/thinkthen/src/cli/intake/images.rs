@@ -100,6 +100,20 @@ impl Attachment {
     }
 
     fn caption(&self, item: &Item) -> Result<Option<String>, Placed> {
+        if !self.source.reading.streams()
+            && !self.source.reading.has_fields()
+            && let Data::Bytes(bytes) = &item.data
+        {
+            let record = self
+                .source
+                .reading
+                .record(bytes)
+                .map_err(|error| Placed::at(Failure::record(error, false), item.at))?;
+            return Ok(record
+                .text()
+                .filter(|text| !text.is_empty())
+                .map(str::to_owned));
+        }
         let text = match &item.data {
             Data::Record(record) => self.source.reading.evidence(record),
             Data::Bytes(bytes) => self

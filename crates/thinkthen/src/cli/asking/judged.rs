@@ -42,6 +42,7 @@ pub(super) fn records(
     let reading = reading.clone();
     let context_field = configuration.context_field.clone();
     let context_schema = configuration.declarations.context_schema.clone();
+    let declarations = configuration.declarations.clone();
     let streams = reading.streams();
     let limited = configuration.keeping == Keeping::Ordered && configuration.common.located();
     let mut remaining = crate::core::MAX_RECORD_BYTES;
@@ -69,6 +70,15 @@ pub(super) fn records(
                     (record, Some(bytes), None)
                 }
             };
+            if !streams
+                && !reading.has_fields()
+                && reading.declares_item()
+                && let Some(images) = item.images.as_ref().or(images.as_ref())
+            {
+                declarations
+                    .validate_item(&crate::public::QuestionInput::Images(images.clone()))
+                    .map_err(|error| Placed::at(Failure::Image(error.to_string()), item.at))?;
+            }
             let held = Held {
                 context: super::context::record(
                     &record,
@@ -113,7 +123,8 @@ impl Planner<'_> {
             if self.reading.declares_item() && images.text().is_none() {
                 return Err(Failure::Record(crate::core::RecordError::ItemSchema));
             }
-            if self.reading.declares_item() {
+            if self.reading.declares_item() && (self.reading.streams() || self.reading.has_fields())
+            {
                 self.reading.evidence(&held.record)?;
             }
             let mut state = images.state();
