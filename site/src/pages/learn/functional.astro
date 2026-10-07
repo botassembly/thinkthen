@@ -21,7 +21,7 @@ const readme = (folder) => `${REPO}/blob/main/libraries/${folder}/README.md`;
 
   <h2>A judge is a question with no input</h2>
   <p>Call <code>tt.decide</code> with a question and no text. It returns a judge. A judge is a plain Python callable. <code>functools.partial</code> and <code>toolz.pipe</code> take it like any function.</p>
-  <p>Hand the judge the whole list. <code>map(judge, xs)</code> calls the judge once per item and sends one request per item. <code>judge(xs)</code> hands over the whole list. ThinkThen packs it into as few requests as <code>THINKTHEN_BATCH</code> and <code>THINKTHEN_MAX_REQUEST_BYTES</code> allow. <code>tt.plan</code> gives a request admission bound before anything is sent. Its first body shows how questions pack. Here four reviews fit in one body; four separate plans each contain one review. The request bound stays four because input pauses can leave batches partly full.</p>
+  <p>Hand the judge the whole list. <code>map(judge, xs)</code> calls the judge once per item and sends one request per item. <code>judge(xs)</code> hands over the whole list. ThinkThen packs it into as few requests as <code>THINKTHEN_BATCH</code> and <code>THINKTHEN_MAX_REQUEST_BYTES</code> allow. <code>tt.plan</code> gives a request admission bound before anything is sent. This example allows up to four requests; batching may use fewer. The bound counts each review before cache reuse because input pauses can leave batches partly full.</p>
   <Code code={judge.code} file={judge.file} label="Copy the judge sample" />
   {judge.output && <Code code={judge.output} lang="output" caption="What Python printed" copy={false} />}
 
