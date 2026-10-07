@@ -1,6 +1,6 @@
 # 0411: Reread stored answers under changed rules on every surface
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Existing SDK adoption landed in 0431 at e2641d87c. The other family checklists retain their required changed-reading cache/replay cases; close when all required surfaces pass.
 
 Milestone: 0.2
 

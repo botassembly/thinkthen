@@ -106,6 +106,14 @@ def arguments(step, home, settings):
     return args
 
 
+def metadata(meta):
+    fields = {key: meta[key] for key in ('model', 'usage') if key in meta}
+    if 'context_sha256' in meta:
+        fields['context_digest'] = meta['context_sha256']
+    fields['source_batch_sizes'] = [source.get('batch_size') for source in meta['question_sources']]
+    return fields
+
+
 def project(packet, verb):
     """Read only actual complete serializer fields; never substitute fixture data."""
     if 'error' in packet:
@@ -123,6 +131,7 @@ def project(packet, verb):
     out = {'code': 0, 'schema': results[0]['schema'] if results else 'thinkthen.result/2',
            'call_id': facts['call_id'], 'requests_sent': facts['requests_sent'],
            'cache_answers': facts['cache_answers'], 'records': facts['records'], 'rows': []}
+    out.update({key: facts[key] for key in ('input_tokens', 'output_tokens') if key in facts})
     for at, result in enumerate(results):
         assert result['schema'] == 'thinkthen.result/2', result
         meta = result['meta']
@@ -138,6 +147,21 @@ def project(packet, verb):
         row['answer'] = answer
         row['candidates'] = result.get('candidates', [])
         row['question_digest'] = meta.get('question_sha256', meta.get('questions_sha256'))
+        row.update(metadata(meta))
+        if 'question_name' in result:
+            row['question_name'] = result['question_name']
+        if 'members' in result:
+            row['members'] = []
+            for member in result['members']:
+                child = member['result']
+                assert child['schema'] == 'thinkthen.result/2', child
+                assert re.fullmatch('[0-9a-f]{64}', child['answer_id']), 'invalid native member ID'
+                row['members'].append(dict(name=member['name'], value=child['value'],
+                    answer_id=child['answer_id'], probability=child['answer']['probability'],
+                    author=child['question'].get('name'),
+                    observations=len(child['meta']['observations']), sources=len(child['meta']['question_sources']),
+                    **{key: child['question'][key] for key in ('wording_version',) if key in child['question']},
+                    **metadata(child['meta'])))
         assert re.fullmatch('[0-9a-f]{64}', row['answer_id']), 'invalid native answer ID'
         assert meta['cached'] is (meta['origin'] in ('cache', 'replay')), 'native cache fact differs from origin'
         assert all(re.fullmatch('[0-9a-f]{64}', identity) for identity in meta['requests']), 'invalid request identity'
