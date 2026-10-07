@@ -78,6 +78,7 @@ fn take(comptime T: type, value: n.Outcome(T)) !T {
         .failed => |v| blk: {
             var failure = v;
             defer failure.deinit();
+            _ = try failure.kind();
             try emit(&failure);
             break :blk error.EmittedNativeFailure;
         },
@@ -120,6 +121,7 @@ fn run() !void {
             tt.releaseFailure(a, f);
             var failure = try n.failure(a, null);
             defer failure.deinit();
+            _ = try failure.kind();
             try emit(&failure);
             return;
         },
@@ -177,6 +179,9 @@ fn run() !void {
         for (bytes, 0..) |*b, j| b.* = try std.fmt.parseInt(u8, s[j * 2 .. j * 2 + 2], 16);
         owners[i] = try take(n.Image, try n.image(&engine, bytes, try number(get(v, "media_code")), null));
         image_count += 1;
+        var copied = try owners[i].view(a);
+        defer copied.deinit();
+        if (!std.mem.eql(u8, bytes, copied.value.bytes[0..copied.value.bytes_len])) return error.ImageCopyChanged;
         images[i] = owners[i].raw;
     }
     const shared = get(v, "shared_context_bytes");

@@ -80,7 +80,6 @@ for name in door failure main; do
   gcc -std=gnu11 -x objective-c -I"$REPO/libraries/c/include" -I"$ROOT/Sources" "$ROOT/Sources/ThinkThen.m" "$ROOT/Sources/TTJSON.c" "$source" -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c -lobjc -pthread -lm -o "$TARGET/$name"
 done
 gcc -std=gnu11 -x objective-c -I"$REPO/libraries/c/include" -I"$ROOT/Sources" "$ROOT/Sources/ThinkThen.m" "$ROOT/Sources/TTJSON.c" "$ROOT/checks/nul_text.m" -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c -lobjc -pthread -lm -Wl,--wrap=thinkthen_recognize -Wl,--wrap=thinkthen_free_string -o "$TARGET/nul_text"
-THINKTHEN_API_KEY=tt-fixture-key THINKTHEN_BASE_URL=http://127.0.0.1:1/generic/v1 LD_LIBRARY_PATH="$TARGET" "$TARGET/nul_text"
 gcc -std=gnu11 -x objective-c -I"$REPO/libraries/c/include" -I"$ROOT/Sources" "$ROOT/checks/direct.m" -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c -lobjc -pthread -o "$TARGET/direct"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"

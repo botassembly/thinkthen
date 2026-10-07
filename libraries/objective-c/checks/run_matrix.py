@@ -38,6 +38,8 @@ def stop(process):
 
 try:
     status = 'PASS'
+    subprocess.run([str(root / 'target/nul_text')], env=env, cwd=root, check=True, timeout=30)
+    assert not backend.arrivals, 'NUL result stub sent a request'
     for case, args in [('direct', []), ('basic', ['basic']), ('bulk', ['bulk']), ('reverse', ['reverse']), ('typed-json', ['typed-json']), ('boundaries', ['boundaries']), ('concurrent', ['concurrent']), ('strict', ['strict']), ('held', ['held'])]:
         with (logs / (case + '.log')).open('wb') as output:
             active = subprocess.Popen([str(root / 'target/direct' if case == 'direct' else root / 'target/main'), *args], env=env, cwd=root,
