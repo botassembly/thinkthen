@@ -108,6 +108,12 @@ pub fn entry() -> ExitCode {
             (ExitCode::from(code), stopped)
         }
     };
+    if environment.usage().has_held_model_mismatch() {
+        let _unwritten = writeln!(
+            stderr.lock(),
+            "thinkthen: warning: a held answer names a different model and cannot be reused online"
+        );
+    }
     finish_usage(&environment);
     if wants_facts {
         let snapshot = environment.usage().run_snapshot();

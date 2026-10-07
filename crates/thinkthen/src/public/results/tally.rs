@@ -23,6 +23,7 @@ struct State {
     mixed_models: bool,
     cost_micro_usd: u64,
     missing_cost: bool,
+    held_model_mismatch: bool,
 }
 
 /// One caller-owned sum of completed call facts. Clones share its state.
@@ -121,6 +122,7 @@ impl State {
     fn snapshot(&self) -> Facts {
         let state = self;
         Facts {
+            held_model_mismatch: state.held_model_mismatch,
             attempts: None,
             call_id: None,
             records: state.records,
@@ -188,6 +190,7 @@ impl TallyStart<'_> {
                 .map_or(self.started, |first| first.min(self.started)),
         );
         state.last = Some(state.last.map_or(ended, |last| last.max(ended)));
+        state.held_model_mismatch |= facts.held_model_mismatch;
         state.records = records;
         state.requests_sent = requests;
         state.cache_answers = cached;
@@ -259,6 +262,7 @@ mod tests {
 
     fn facts(requests_sent: u64, cache_answers: u64, model: Option<&str>) -> Facts {
         Facts {
+            held_model_mismatch: false,
             attempts: None,
             call_id: None,
             cache_answers,

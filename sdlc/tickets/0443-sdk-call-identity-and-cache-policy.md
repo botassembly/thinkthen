@@ -69,6 +69,7 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+const fn Facts::held_model_mismatch(&self) -> bool
 const fn complete_call_schema() -> &'static str
 fn Engine::relate_records_complete_with<I, T>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRecord<Vec<T>, CompleteRelated>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
 fn Engine::try_relate_records_complete_with<I, T>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRecord<Vec<T>, CompleteRelated>>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>>, T: InputEvidence
@@ -308,3 +309,5 @@ Source grows 130 nonblank Rust lines (146962 → 147092) for the shared relation
 Rank CLI constituent WIP: all ten command details now use concrete result/2 serializers. Ordered rank finalizes numeric positions and stable answer identity before serialization. Saved-set turns retain every member observation, checked partial usage and final full member positions even when top truncation prunes a member's payload. Each retained original is shared across its member candidates; lightweight numeric scores retain full positions without retaining every original under top. Bare output, lexical record bytes, stable ties, request bodies, per-question cache/replay and failure withholding stay covered. Set metadata uses the resolved set digest, all actual member receipts and unique actual attempts; the winner retains its own resolved profile/batch presentation. Timing sidecars, held-model warnings, final whole review and consumer adoption remain open.
 
 Source grows 376 nonblank Rust lines (147092 → 147468) for deferred typed rank rendering, shared member payloads, truthful full-position bookkeeping and two independent command record/replay cases. The legacy rank detail renderer and JSON member-name patcher are removed; existing native rank identity and aggregate arithmetic are reused. No new scheduler, parser, key domain, dependency or proof tool is added.
+
+Held-model warning constituent adds 262 measured nonblank Rust lines (147468 → 147730) for validated route/question-bound exclusion, call-scoped typed facts and safe fixed CLI presentation, plus two actual cache/replay regressions. SQL row selection shares its existing column layout and constituent validation; warnings remain outside durable usage totals and legacy facts serialization. Strict complete schema/corpus adopt the boolean field together. Final timing integration, whole High review/full landing gates and host adoption remain open.

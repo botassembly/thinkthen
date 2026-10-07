@@ -28,6 +28,7 @@ struct State {
     reported: ReportedSum,
     live_replies: u64,
     missing_usage: bool,
+    held_model_mismatch: bool,
     token_sum_valid: bool,
     model: Option<String>,
 }
@@ -43,6 +44,7 @@ pub(crate) struct Snapshot {
     pub(crate) tokens: Option<Usage>,
     pub(crate) reported: Option<ReportedUsage>,
     pub(crate) cost_complete: bool,
+    pub(crate) held_model_mismatch: bool,
     pub(crate) model: Option<String>,
 }
 
@@ -81,6 +83,7 @@ impl CallFacts {
             reported: ReportedSum::default(),
             live_replies: 0,
             missing_usage: false,
+            held_model_mismatch: false,
             token_sum_valid: true,
             model: None,
         })))
@@ -142,6 +145,7 @@ impl CallFacts {
         Snapshot {
             attempts,
             call_id: state.invocation.call_id(),
+            held_model_mismatch: state.held_model_mismatch,
             elapsed: state.elapsed.unwrap_or_else(|| state.started.elapsed()),
             records: state.records,
             requests_sent: state.requests_sent,
@@ -159,6 +163,12 @@ impl CallFacts {
 }
 
 impl Cancel<'_> {
+    pub(crate) fn held_model_mismatch(&self) {
+        if let Some(facts) = &self.facts {
+            facts.state().held_model_mismatch = true;
+        }
+    }
+
     /// Capture command detail attempts under the already established invocation.
     pub(crate) fn with_captured_attempts(&self, requested: bool) -> Self {
         if !requested {

@@ -95,6 +95,12 @@
             "null"
           ]
         },
+        "held_model_mismatch": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "input_tokens": {
           "format": "uint64",
           "minimum": 0,
@@ -2618,6 +2624,11 @@
         "estimated_cost_usd": {
           "type": [
             "string"
+          ]
+        },
+        "held_model_mismatch": {
+          "type": [
+            "boolean"
           ]
         },
         "input_tokens": {

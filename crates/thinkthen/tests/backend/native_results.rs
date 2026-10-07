@@ -4,6 +4,7 @@ use serde_json::{Value, json};
 use std::io::Write;
 use std::process::Stdio;
 mod annotation;
+mod cache_warning;
 pub(crate) mod compatibility;
 mod find;
 mod rank;

@@ -99,3 +99,6 @@ mod admission_cancel;
 mod schema;
 #[path = "native_complete/unknown_usage.rs"]
 mod unknown_usage;
+
+#[path = "native_complete/cache_warning.rs"]
+mod cache_warning;

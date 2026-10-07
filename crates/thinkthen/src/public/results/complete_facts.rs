@@ -53,6 +53,8 @@ struct Document<'a> {
     call_id: &'a CallId,
     cache_answers: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
+    held_model_mismatch: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     estimated_cost_usd: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     input_tokens: Option<u64>,
@@ -72,6 +74,7 @@ impl Serialize for CompleteFacts<'_> {
         Document {
             call_id: self.call_id,
             cache_answers: facts.cache_answers,
+            held_model_mismatch: facts.held_model_mismatch.then_some(true),
             estimated_cost_usd: facts.estimated_cost_usd.as_deref(),
             input_tokens: facts.input_tokens,
             model: facts.model.as_deref(),

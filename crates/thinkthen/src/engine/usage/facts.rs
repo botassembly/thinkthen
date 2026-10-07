@@ -42,6 +42,15 @@ pub(crate) struct Snapshot {
 }
 
 impl Counters {
+    pub(crate) fn held_model_mismatch(&self) {
+        self.held_model_mismatch
+            .store(true, std::sync::atomic::Ordering::Release);
+    }
+    pub(crate) fn has_held_model_mismatch(&self) -> bool {
+        self.held_model_mismatch
+            .load(std::sync::atomic::Ordering::Acquire)
+    }
+
     pub(crate) fn set_prices(&self, prices: Option<Prices>) {
         self.shared
             .queue

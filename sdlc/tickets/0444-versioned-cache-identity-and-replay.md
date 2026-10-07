@@ -71,3 +71,5 @@ A prior-failing independently framed public recording regression now passes,
 including original ordered duplicate attachments and zero-send strict replay.
 All 24 image and nine storage cases plus affected Clippy pass. Whole review and
 main landing remain open.
+
+Held-model warning constituent WIP: cache lookup checks a missed exact key for validated historical answers on the same configured URL, literal requested model, selected state and wire question. Excluded mismatches trigger a fixed command warning and a call-scoped `Facts::held_model_mismatch()` getter, with optional true-only complete-facts serialization. Stored model/address values never enter the warning. Exact corrected hits, unrelated questions and offline historical replay remain silent; ambiguous replay still refuses before sends. Primitive keys, grouping, image domains and accepted observation identity are unchanged. The getter is recorded in 0443's canonical inventory delta. Bounded timing history and final whole review/host adoption remain open.

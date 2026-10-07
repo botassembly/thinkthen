@@ -981,6 +981,11 @@
             "string"
           ]
         },
+        "held_model_mismatch": {
+          "type": [
+            "boolean"
+          ]
+        },
         "input_tokens": {
           "format": "uint64",
           "maximum": 18446744073709551615,

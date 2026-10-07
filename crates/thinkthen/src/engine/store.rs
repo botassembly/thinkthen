@@ -26,6 +26,7 @@ mod images;
 mod rows;
 use rows::{found, insert, signed};
 mod migration;
+mod mismatch;
 mod original;
 mod policy;
 mod versioned;

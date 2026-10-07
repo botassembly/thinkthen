@@ -2806,6 +2806,211 @@
           "answered_by": "reported"
         }
       }
+    },
+    {
+      "name": "native-result2-held-model-warning",
+      "definition": "completeCall",
+      "response": {
+        "value": {
+          "schema": "thinkthen.result/2",
+          "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "value": false,
+          "question": {
+            "verb": "decide",
+            "text": {
+              "original": [
+                false,
+                null
+              ]
+            },
+            "name": "refund",
+            "wording_version": 7,
+            "item_schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "type": "string"
+                },
+                "ready": {
+                  "type": "boolean"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "body"
+              ]
+            }
+          },
+          "answer": {
+            "kind": "yes_no",
+            "probability": 0.1
+          },
+          "threshold": 0.5,
+          "meta": {
+            "tool": "thinkthen 0.2.0",
+            "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "url": "http://127.0.0.1:1/v1/systemone",
+            "model": "reported",
+            "usage": {
+              "input_tokens": 887
+            },
+            "requests_sent": 1,
+            "cached": false,
+            "requests": [
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "failed_questions": 0,
+            "origin": "live",
+            "question_sources": [
+              {
+                "origin": "live",
+                "answered_by": "reported",
+                "batch_size": 13
+              }
+            ],
+            "observations": [
+              {
+                "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            ],
+            "answered_by": "reported"
+          }
+        },
+        "facts": {
+          "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "cache_answers": 0,
+          "input_tokens": 887,
+          "model": "reported",
+          "records": 1,
+          "requests_sent": 1,
+          "seconds": 0.0,
+          "attempts": [
+            {
+              "ordinal": 1,
+              "request_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "sdk_request_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "wall_ms": 0,
+              "outcome": "ok",
+              "status": 200,
+              "server_ms": 0
+            }
+          ],
+          "held_model_mismatch": true
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-held-model-warning-rejects-stored-fields",
+      "definition": "completeCall",
+      "response": {
+        "value": {
+          "schema": "thinkthen.result/2",
+          "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "value": false,
+          "question": {
+            "verb": "decide",
+            "text": {
+              "original": [
+                false,
+                null
+              ]
+            },
+            "name": "refund",
+            "wording_version": 7,
+            "item_schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "type": "string"
+                },
+                "ready": {
+                  "type": "boolean"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "body"
+              ]
+            }
+          },
+          "answer": {
+            "kind": "yes_no",
+            "probability": 0.1
+          },
+          "threshold": 0.5,
+          "meta": {
+            "tool": "thinkthen 0.2.0",
+            "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "url": "http://127.0.0.1:1/v1/systemone",
+            "model": "reported",
+            "usage": {
+              "input_tokens": 887
+            },
+            "requests_sent": 1,
+            "cached": false,
+            "requests": [
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "failed_questions": 0,
+            "origin": "live",
+            "question_sources": [
+              {
+                "origin": "live",
+                "answered_by": "reported",
+                "batch_size": 13
+              }
+            ],
+            "observations": [
+              {
+                "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            ],
+            "answered_by": "reported"
+          }
+        },
+        "facts": {
+          "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "cache_answers": 0,
+          "input_tokens": 887,
+          "model": "reported",
+          "records": 1,
+          "requests_sent": 1,
+          "seconds": 0.0,
+          "attempts": [
+            {
+              "ordinal": 1,
+              "request_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "sdk_request_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "wall_ms": 0,
+              "outcome": "ok",
+              "status": 200,
+              "server_ms": 0
+            }
+          ],
+          "held_model_mismatch": {
+            "model": "stored-private-model"
+          }
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
     }
   ]
 }

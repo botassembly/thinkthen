@@ -31,6 +31,7 @@ pub(crate) struct Counters {
     /// The one read before this process's first send (ticket 0360). It keeps
     /// its result, so after a refusal every later send refuses too.
     readable: std::sync::OnceLock<Result<(), String>>,
+    held_model_mismatch: std::sync::atomic::AtomicBool,
 }
 
 /// What the requests hand the one writer thread, so no request waits on a file.
@@ -64,6 +65,7 @@ impl Counters {
             path,
             shared: Arc::default(),
             readable: std::sync::OnceLock::new(),
+            held_model_mismatch: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
