@@ -11,6 +11,25 @@ resolver = "3"
 edition = "2024"
 rust-version = "1.95.0"
 
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.test]
+debug = "line-tables-only"
+
+[profile.test.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
+
+[profile.debugging.package."*"]
+debug = true
+
 [profile.release]
 # A library must unwind through a host. The command's release build selects
 # abort through its dedicated build path.
