@@ -158,7 +158,7 @@ fn a_null_middle_row_keeps_its_place_without_becoming_a_question() {
     let plan = engine
         .plan_series(&decide(), &column, CallOptions::new())
         .expect("plan");
-    assert_eq!((plan.records(), plan.requests()), (2, 1));
+    assert_eq!((plan.records(), plan.requests()), (2, 2));
     assert_eq!(listener.count(), 0);
     let out = engine
         .probability_frame(&decide(), &column, CallOptions::new())

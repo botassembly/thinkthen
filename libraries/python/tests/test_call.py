@@ -142,7 +142,7 @@ def test_partial_judge_plan_and_execution_share_immutable_question(backend, tmp_
         except tt.UsageError as error: print(error.kind)
         """, env)
         account, planned, refusal = printed.splitlines()
-        assert account == "2 1 ['billing', 'billing'] 1"
+        assert account == "2 2 ['billing', 'billing'] 1"
         assert refusal == "usage"
         assert bodies == [planned.encode()]
         assert b"changed" not in bodies[0]
@@ -344,7 +344,7 @@ def test_portable_questions_ride_one_request_in_public_bulk_text_shapes(backend,
                               [[row['index'], list(row['requests'])] for row in call.details]]))
         """, env)
         values, facts, details = json.loads(printed)
-        keys = one_request(url, bodies, expected)
+        keys = one_request(url, bodies, expected, "jev-latest")
         assert values == [True] * 5
         assert facts == [5, 1]
         assert details == [[i, [key]] for i, key in enumerate(keys)]
@@ -352,7 +352,7 @@ def test_portable_questions_ride_one_request_in_public_bulk_text_shapes(backend,
 
 
 @contextmanager
-def capturing_filter_listener(answer=None, usage=True):
+def capturing_filter_listener(answer=None, usage=True, model="jev-latest"):
     """Keep wire bodies; a callback's None retains the normal decision answer."""
     bodies = []
 
@@ -377,7 +377,7 @@ def capturing_filter_listener(answer=None, usage=True):
                     continue
                 first = request["state"] == "one" or 'The text is "one"' in question["instructions"]
                 answers[name] = {"type": "noul", "noul": 0.1 if first else 0.9}
-            reply_fields = {"model": "jev-latest", "answers": answers}
+            reply_fields = {"model": model, "answers": answers}
             if usage:
                 reply_fields["usage"] = {"input_tokens": 6, "output_tokens": 3}
             reply = json.dumps(reply_fields,
@@ -433,15 +433,15 @@ def test_judge_eager_and_stream_share_exact_distinct_record_bodies(backend, tmp_
 def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, tmp_path):
     """Two simultaneously started calls, one identical cached replay, and a
     no-usage reply use the core tally without a mutable last-call slot."""
-    with capturing_filter_listener() as (url, first), \
-         capturing_filter_listener(usage=False) as (other, second):
+    with capturing_filter_listener(model="jev-1.13.0") as (url, first), \
+         capturing_filter_listener(usage=False, model="jev-1.13.0") as (other, second):
         env = child_env(backend, tmp_path, OWNED_CACHE=str(tmp_path / "owned-cache"),
                         OTHER_URL=other.removesuffix("/systemone"))
         env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
         printed = run("""
         import os, threading, concurrent.futures, thinkthen as tt
         tally = tt.Tally()
-        engine = tt.Engine(cache=os.environ["OWNED_CACHE"])
+        engine = tt.Engine(model="jev-1.13.0", cache=os.environ["OWNED_CACHE"])
         judge = engine.decide("Is it late?", tally=tally)
         gate = threading.Barrier(2)
         def ask(text):
@@ -463,7 +463,7 @@ def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, 
         assert printed.splitlines() == [
             "[False, True] 2 2 0 True True",
             "False 3 2 1",
-            "True 4 3 1 None None jev-latest",
+            "True 4 3 1 None None jev-1.13.0",
         ]
         assert len(first) == 2
         assert len(second) == 1
@@ -575,11 +575,11 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         assert bodies[1:] == [one, two, one]
         # A row names its own question's key, and a call asks equal keys once.
         packed_keys = dict(zip((quoted(question) for question in json.loads(bodies[0])["questions"].values()),
-                               question_keys(url, bodies[0])))
+                               question_keys(url, bodies[0], "jev-latest")))
         assert [row[:3] for row in packed["details"]] == [
             [index, index == 1, [packed_keys[text]]] for index, text in enumerate(["one", "two", "one"])]
         assert [row[:3] for row in separate["details"]] == [
-            [index, index == 1, question_keys(url, body)] for index, body in enumerate(bodies[1:])]
+            [index, index == 1, question_keys(url, body, "jev-latest")] for index, body in enumerate(bodies[1:])]
         assert separate["details"][0][2] == separate["details"][2][2]
         # A row carries its question's even share, the remainder to the
         # earliest. The repeated "one" shares the packed answer, as a cached

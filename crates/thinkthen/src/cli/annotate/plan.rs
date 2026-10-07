@@ -1,7 +1,7 @@
 //! The annotate dry run: every record's questions packed as a run would
 //! pack them, with nothing looked up.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -37,7 +37,8 @@ pub(super) fn dry_run(
         .map_err(|_| Failure::Defect("a model could not be written as JSON"))?;
     let mut packer = Packer::new(limits, model);
     let mut summary = PlanSummary::new(false);
-    let mut seen = HashSet::new();
+    let mut occurrences = 0_usize;
+    let mut group_requests = vec![0; judging.groups().len()];
     let mut closed = Vec::new();
     let parser = asker::Parser::of(judging, reading);
     for framed in inputs {
@@ -47,10 +48,9 @@ pub(super) fn dry_run(
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
-        let entries = asks
+        let entries: Vec<_> = asks
             .into_iter()
             .flat_map(|(group, asks)| asks.into_iter().map(move |ask| (group, ask)))
-            .filter(|(_, ask)| seen.insert(ask.key))
             .map(|(group, ask)| Entry {
                 state: ask.state.clone(),
                 question: Arc::clone(&ask.question),
@@ -58,27 +58,50 @@ pub(super) fn dry_run(
                 item: group,
             })
             .collect();
+        occurrences = occurrences
+            .checked_add(entries.len())
+            .ok_or(Failure::Defect("a plan is too large"))?;
         packer
             .add(entries, &mut closed)
             .map_err(|error| match error {
                 PackError::Profile(limit) => Failure::ProfileLimit(limit),
                 PackError::Context { .. } => Failure::Defect("annotate packed a context"),
             })?;
-    }
-    closed.extend(packer.close());
-    let mut group_requests = vec![0; judging.groups().len()];
-    for request in &closed {
-        summary
-            .request(&request.body)
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
-        for group in request.items.iter().collect::<BTreeSet<_>>() {
-            if let Some(count) = group_requests.get_mut(*group) {
-                *count += 1;
-            }
+        for request in closed.drain(..) {
+            preview_request(
+                &mut summary,
+                &mut group_requests,
+                &request.body,
+                &request.items,
+            )?;
         }
     }
-    let count = closed.len();
-    let Some(first) = closed.into_iter().next() else {
+    if let Some(request) = packer.close() {
+        preview_request(
+            &mut summary,
+            &mut group_requests,
+            &request.body,
+            &request.items,
+        )?;
+    }
+    let count = summary
+        .counts()
+        .map_err(|_| Failure::Defect("a plan is too large"))?
+        .requests;
+    summary.bound_requests(occurrences);
+    print_plan(judging, reading, &summary, count, group_requests, writer)
+}
+
+fn print_plan(
+    judging: &Judging<'_>,
+    reading: &Reading,
+    summary: &PlanSummary,
+    count: usize,
+    group_requests: Vec<usize>,
+    writer: &mut dyn Write,
+) -> Result<ExitCode, Failure> {
+    let backend = judging.engine().backend();
+    let Some(first) = summary.first_body() else {
         return Ok(ExitCode::SUCCESS);
     };
     judging.mismatch().print_once()?;
@@ -96,7 +119,7 @@ pub(super) fn dry_run(
         .iter()
         .map(|question| (question.name().to_owned(), question.on().to_vec()))
         .collect();
-    let document = PlanDocument::of_body(backend, first.body)
+    let document = PlanDocument::of_body(backend, first.to_vec())
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
         .key_env(judging.environment.key_variable())
         .questions_on(on)
@@ -112,4 +135,23 @@ pub(super) fn dry_run(
         .map_err(|_| Failure::Defect("a plan is too large"))?;
     edge::write_line(writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
+}
+
+fn preview_request(
+    summary: &mut PlanSummary,
+    group_requests: &mut [usize],
+    body: &[u8],
+    groups: &[usize],
+) -> Result<(), Failure> {
+    summary
+        .request(body)
+        .map_err(|_| Failure::Defect("a plan is too large"))?;
+    for group in groups.iter().collect::<BTreeSet<_>>() {
+        if let Some(count) = group_requests.get_mut(*group) {
+            *count = count
+                .checked_add(1)
+                .ok_or(Failure::Defect("a plan is too large"))?;
+        }
+    }
+    Ok(())
 }

@@ -68,6 +68,13 @@ impl PlanSummary {
         Ok(())
     }
 
+    /// Every initial request consumes an admitted wire-question occurrence.
+    /// The uninterrupted packed preview still owns the byte and token estimates.
+    pub(crate) fn bound_requests(&mut self, occurrences: usize) {
+        self.upper_bound |= occurrences > self.requests;
+        self.requests = occurrences;
+    }
+
     pub(crate) fn first_body(&self) -> Option<&[u8]> {
         self.first_body.as_deref()
     }

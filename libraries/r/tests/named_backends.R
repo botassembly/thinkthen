@@ -51,10 +51,10 @@ out <- child(c(
   '  kind <- tryCatch({tt_engine(backend = value); "none"}, thinkthen_usage = function(e) e$kind)',
   '  stopifnot(identical(kind, "usage"))',
   '}',
-  'stopifnot(length(formals(thinkthen:::tt_engine_set)) == 14L)',
-  'stopifnot(getDLLRegisteredRoutines("thinkthen")$.Call$wrap__tt_engine_set$numParameters == 14L)',
+  'stopifnot(length(formals(thinkthen:::tt_engine_set)) == 15L)',
+  'stopifnot(getDLLRegisteredRoutines("thinkthen")$.Call$wrap__tt_engine_set$numParameters == 15L)',
   'partial <- tryCatch(tt_engine(back = "typesafe"), thinkthen_usage = function(e) e$kind)',
-  'positional <- tryCatch(do.call(tt_engine, rep(list(NULL), 14L)), thinkthen_usage = function(e) e$kind)',
+  'positional <- tryCatch(do.call(tt_engine, rep(list(NULL), 15L)), thinkthen_usage = function(e) e$kind)',
   'stopifnot(identical(partial, "usage"), identical(positional, "usage"))',
   'cat("all refused")'
 ))

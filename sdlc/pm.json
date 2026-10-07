@@ -33,5 +33,12 @@
     "repo": "sdlc",
     "name": "thinkthen"
   },
-  "flow": "light"
+  "flow": "light",
+  "releaseMilestones": [
+    {
+      "name": "0.2",
+      "targetRef": "origin/main",
+      "state": "active"
+    }
+  ]
 }

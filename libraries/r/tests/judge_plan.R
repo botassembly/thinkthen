@@ -28,9 +28,9 @@ preview_sends <- sent_by({
 })
 check("plan uses literal packed body, independent bytes and measured token band",
       identical(planned$first_body, first) && identical(planned$records, 2) &&
-      identical(planned$requests, 1) && identical(planned$estimated_bytes, 218) &&
+      identical(planned$requests, 2) && identical(planned$estimated_bytes, 218) &&
       identical(planned$estimated_input_tokens, list(lower = 112, upper = 198)) &&
-      identical(planned$upper_bound, FALSE))
+      identical(planned$upper_bound, TRUE))
 check("empty plan and malformed input are zero-send paths",
       preview_sends == 0L && identical(empty$records, 0) &&
       identical(empty$requests, 0) && is.null(empty$first_body) &&
@@ -40,7 +40,7 @@ check("empty plan and malformed input are zero-send paths",
 no_key_sends <- sent_by(no_key <- child(c(
   sprintf('tt_engine(base_url = "%s", cache = FALSE)', arm("arm/full/v1")),
   'preview <- tt_plan(tt_decide("Q?"), c("alpha", "beta"))',
-  'cat(identical(Sys.getenv("THINKTHEN_API_KEY"), ""), identical(preview$records, 2), identical(preview$requests, 1), "\\n")'
+  'cat(identical(Sys.getenv("THINKTHEN_API_KEY"), ""), identical(preview$records, 2), identical(preview$requests, 2), "\\n")'
 ), env = "THINKTHEN_API_KEY="))
 check("a plan completes with no key and no listener request",
       no_key$status == 0L && identical(trimws(no_key$text), "TRUE TRUE TRUE") && no_key_sends == 0L)
@@ -137,7 +137,7 @@ check("forged and mutated functions, plan overrides, and a locked capture cannot
       identity_sends == 0L && locked && !callback_ran &&
       identical(c(forged, mutated, active_kind, override_batch, override_context),
                 rep("usage", 5L)) &&
-      identical(same$requests, 1) && identical(same$first_body, first))
+      identical(same$requests, 2) && identical(same$upper_bound, TRUE) && identical(same$first_body, first))
 
 # A forged nested scalar can carry an S3 is.na callback. Validation must
 # reject its class before any method runs, including when the JSON is classed.
@@ -175,11 +175,11 @@ check("classed nested values refuse before is.na dispatch or any listener arriva
 
 same_sends <- sent_by(same_answer <- judge(c("alpha", "beta")))
 check("an unrelated attribute cannot change the judge's planned body or actual send",
-      same_sends == 1L && identical(same$requests, 1) &&
+      same_sends == 1L && identical(same$requests, 2) && identical(same$upper_bound, TRUE) &&
       identical(same_answer$facts$requests_sent, 1L) &&
       identical(same_answer$probability, c(0.9, 0.9)) &&
       identical(same_answer$details[[1L]]$requests[[1L]],
-                question_keys(arm("arm/full/capture/v1/systemone"), same$first_body)[[1L]]))
+                question_keys(arm("arm/full/capture/v1/systemone"), same$first_body, "jev-1.13.0")[[1L]]))
 
 lazy <- dbplyr::lazy_frame(body = "x", con = dbplyr::simulate_dbi()) |>
   dplyr::mutate(accepted = thinkthen_decide("Q?", body, '{"threshold":0.7}'))

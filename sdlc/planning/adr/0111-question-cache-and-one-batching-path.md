@@ -44,7 +44,7 @@ No part can hold a raw line feed. The URL is checked for control characters toda
 
 The encoder writes each state and each question once. It builds the body by joining those same bytes: `{"state":S,"model":M,"questions":{"q1":Q1,…}}`. The key therefore hashes exactly the bytes sent, and the byte count of a request is a sum.
 
-The key leaves out the question name `qN`, the other questions in the request, the batch setting, the profile, the threshold and every header. The vendor shows no names to the model. Ruling 3 accepts that neighbours may move an answer. A threshold is applied after the answer, so retuning a threshold reuses every stored answer. Nothing else in the body can change an answer. Equal keys in one call are asked once.
+The key leaves out the question name `qN`, the other questions in the request, the batch setting, the profile, the threshold and every header. The vendor shows no names to the model. Ruling 3 accepts that neighbours may move an answer. A threshold is applied after the answer, so retuning a threshold reuses every stored answer. Nothing else in the body can change an answer. The original ruling said equal keys in one call are asked once. [ADR 0123](0123-conservative-plan-request-bounds.md) supersedes that global promise: only pending equal keys coalesce, and completed keys follow normal cache eligibility.
 
 ### 3. The store
 
@@ -247,7 +247,7 @@ Each slice updates the specification pages its behavior changes.
 
 | ADR | Change |
 | --- | --- |
-| 0048 item 1 | Every record function takes the quoted form, a batch of one included. Equal keys are asked once per call |
+| 0048 item 1 | Every record function takes the quoted form, a batch of one included. Pending equal keys coalesce; ADR 0123 supersedes the original once-per-call promise |
 | 0048 item 2 | The content cut goes. A request closes at a limit, the size, 4,096 inputs, a new state, the pause, the window or the end |
 | 0048 item 5 | Replaced. The key is one question, and replay and cache work per question |
 | 0048 items 6 and 9 | Partial replies store good answers. `meta.batch` goes and usage shares split by question |
