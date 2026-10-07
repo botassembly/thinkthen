@@ -214,9 +214,9 @@ def plants(header, library, package, dart):
         (copied / '.dart_tool').mkdir()
         shutil.copyfile(package / '.dart_tool/package_config.json', copied / '.dart_tool/package_config.json')
         cases = [('signed counts', 'lib/src/door.dart', 'Size', 'IntPtr'),
-                 ('field offset', 'lib/src/native/abi_0.dart', 'external Pointer<Uint8> data;\n  @Size()\n  external int len;', '@Size()\n  external int len;\n  external Pointer<Uint8> data;'),
-                 ('field width', 'lib/src/native/abi_0.dart', 'external Pointer<Uint8> data;\n  @Size()', 'external Pointer<Uint8> data;\n  @Uint32()'),
-                 ('alignment', 'lib/src/native/abi_0.dart', 'final class CStringsView extends Struct', '@Packed(4)\nfinal class CStringsView extends Struct'),
+                 ('field offset', 'lib/src/native/abi.dart', 'external Pointer<Uint8> data;\n  @Size()\n  external int len;', '@Size()\n  external int len;\n  external Pointer<Uint8> data;'),
+                 ('field width', 'lib/src/native/abi.dart', 'external Pointer<Uint8> data;\n  @Size()', 'external Pointer<Uint8> data;\n  @Uint32()'),
+                 ('alignment', 'lib/src/native/abi.dart', 'final class CStringsView extends Struct', '@Packed(4)\nfinal class CStringsView extends Struct'),
                  ('constant', 'lib/src/native/question.dart', 'const Rule.band(this.low, this.high) : kind = 3;', 'const Rule.band(this.low, this.high) : kind = 99;'),
                  ('return', 'lib/src/native/functions.dart', 'Int32 Function(Pointer<Void>, Size, Pointer<CSourceRelationsView>)', 'Int64 Function(Pointer<Void>, Size, Pointer<CSourceRelationsView>)')]
         for name, file, before, after in cases:
