@@ -1,5 +1,8 @@
 """Actual PostgreSQL named complete calls and typed SQL JSON field checks."""
 import json,subprocess,sys,threading
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'conformance/children'))
+from children import child_env
 payload=json.loads(sys.stdin.readline())
 def lit(value):return "'"+str(value).replace("'","''")+"'"
 command=['psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-h',sys.argv[1],'-U','postgres','-d','postgres']
@@ -54,13 +57,13 @@ END $check$;
 SELECT document FROM complete_result;
 """
 script='\n'.join(settings)+'\nSELECT pg_backend_pid();\nCREATE TEMP TABLE complete_result AS SELECT '+query+' AS document;\n'+checks
-running=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+running=subprocess.Popen(command,env=child_env(keep=('HOME','LANG','LC_ALL')),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
 running.stdin.write(script);running.stdin.close();running.stdin=None
 pid=running.stdout.readline().strip()
 if payload.get('held_cancel'):
     def cancel():
         sys.stdin.readline()
-        done=subprocess.run(command+['-c','SELECT pg_cancel_backend('+str(int(pid))+')'],text=True,capture_output=True)
+        done=subprocess.run(command+['-c','SELECT pg_cancel_backend('+str(int(pid))+')'],env=child_env(keep=('HOME','LANG','LC_ALL')),text=True,capture_output=True)
         assert done.returncode==0 and done.stdout.strip()=='t'
         print('cancel-fired',flush=True)
     threading.Thread(target=cancel,daemon=True).start()
