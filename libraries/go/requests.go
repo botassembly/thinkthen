@@ -1,9 +1,15 @@
 package thinkthen
 
+import "encoding/json"
+
 // QuestionInput selects a typed question or a user-named native question file.
 type QuestionInput struct {
-	Question Optional[Question]
-	File     Optional[string]
+	Role      QuestionRole
+	Saved     Optional[json.RawMessage]
+	Named     Optional[string]
+	Reference Optional[string]
+	Question  Optional[Question]
+	File      Optional[string]
 }
 
 func Asked(question Question) QuestionInput  { return QuestionInput{Question: Some(question)} }

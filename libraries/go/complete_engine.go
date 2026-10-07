@@ -4,18 +4,18 @@ import "context"
 
 // CompleteCall owns a function-specific row collection plus full invocation data.
 type CompleteCall[T any] struct {
+	Error        Optional[CompleteError]
 	Schema       string
-	Function     Function
-	AnswerId     AnswerId
-	Meta         Meta
-	Facts        CallFacts
+	Function     Optional[Function]
+	AnswerId     Optional[AnswerId]
+	Meta         Optional[Meta]
+	Facts        Optional[CallFacts]
 	Attempts     Optional[[]Attempt]
 	Rows         []T
 	Observations []ObservationEvent
 }
 
-// CompleteEngine is the integration contract. Engine does not implement it until
-// the reviewed native complete boundary lands; compatibility Call is separate.
+// CompleteEngine exposes typed native complete calls.
 type CompleteEngine interface {
 	DecideComplete(context.Context, QuestionInput, InputSource, CallControls) (CompleteCall[DecideRow], error)
 	ChooseComplete(context.Context, QuestionInput, InputSource, CallControls) (CompleteCall[ChooseRow], error)

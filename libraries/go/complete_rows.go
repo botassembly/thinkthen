@@ -1,6 +1,8 @@
 package thinkthen
 
 type CommonRow struct {
+	Details   Details
+	Author    QuestionAuthor
 	AnswerId  AnswerId
 	Input     Optional[Content]
 	Question  Optional[Question]
@@ -38,6 +40,7 @@ type FilterRow struct {
 }
 
 type RankRow struct {
+	Members      []RankRow
 	Common       CommonRow
 	Value        Optional[uint64]
 	QuestionName Optional[string]
@@ -55,12 +58,14 @@ type AnnotateRow struct {
 }
 
 type RecognizeRow struct {
-	Common CommonRow
-	Value  RecognizeValue
-	Answer RecognizeAnswer
+	Located SourceRecognition
+	Common  CommonRow
+	Value   RecognizeValue
+	Answer  RecognizeAnswer
 }
 
 type RelateRow struct {
+	Located   SourceRelations
 	Common    CommonRow
 	Value     []Edge
 	Questions []RelationAnswer
@@ -87,7 +92,7 @@ type ObservedProbabilities struct {
 
 type ObservationSuccess struct {
 	AnswerId      AnswerId
-	ObservationId ObservationId
+	ObservationId Optional[ObservationId]
 	Value         MemberValue
 	Probabilities ObservedProbabilities
 	Confidence    Optional[float64]
@@ -118,6 +123,8 @@ type RowObservation struct {
 }
 
 type ObservationEvent struct {
+	Details  Details
+	Author   QuestionAuthor
 	Kind     EventKind
 	Question Optional[QuestionObservation]
 	Row      Optional[RowObservation]

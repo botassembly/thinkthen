@@ -160,3 +160,18 @@ const (
 	EventKindQuestion EventKind = "question"
 	EventKindRow      EventKind = "row"
 )
+
+// QuestionRole is the explicit native saved grammar; it never guesses by shape.
+type QuestionRole uint32
+
+const (
+	LoadAtomic QuestionRole = 1 + iota
+	LoadSet
+	LoadDynamicChoose
+	LoadRecognize
+	LoadRelate
+	LoadRank
+	LoadRankSet
+	LoadFind
+)
+const SourceUnitJSONL SourceUnit = "jsonl"

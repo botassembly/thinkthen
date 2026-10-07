@@ -111,7 +111,7 @@ export PKG_CONFIG_PATH="$out/native/lib/pkgconfig" LD_LIBRARY_PATH="$out/native/
 export GOCACHE="$out/cache" GOMODCACHE="$out/modcache" GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 THINKTHEN_PORTABLE_NATIVE="$out/native" "$python_bin" fixtures/portable_batch.py
-"$go_bin" test -run '^(TestComplete|TestAtomicFixtures|TestRequestsKeep)' .
+"$go_bin" test -run '^(TestComplete|TestAtomicFixtures|TestRequestsKeep|TestNative)' .
 "$go_bin" vet ./...
 "$go_bin" build -o "$out/type-case" ./fixtures/type_case.go
 "$python_bin" fixtures/packing_negative.py

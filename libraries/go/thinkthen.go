@@ -52,6 +52,7 @@ func (k ErrorKind) String() string {
 }
 
 type Error struct {
+	Complete  Optional[CompleteError]
 	Code      int
 	Kind      ErrorKind
 	Retryable bool

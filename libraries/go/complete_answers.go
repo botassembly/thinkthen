@@ -47,6 +47,7 @@ type MemberSuccess struct {
 }
 
 type AnnotationMember struct {
+	Author   QuestionAuthor
 	Name     string
 	Request  Digest
 	Question Question
