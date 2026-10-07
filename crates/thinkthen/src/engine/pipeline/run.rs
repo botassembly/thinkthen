@@ -5,18 +5,19 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use super::send::{Done, Job};
+use super::send::Job;
 use super::{Answered, Asker, Event, Failed, Flow, Host};
-use crate::core::ModelName;
-use crate::core::pack::{self, Ask, Entry, Packer, QuestionKey};
+use crate::core::pack::{Ask, Entry, Packer, QuestionKey};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender};
 use crate::engine::pipeline::Input;
-use crate::engine::store::{Found, JSONL, Row, Store};
+use crate::engine::store::{Found, Store};
 use crate::engine::usage::Counters;
 
+mod replies;
 mod slot;
+mod staging;
 use slot::Slot;
 
 /// How long input may pause before the open request goes out.
@@ -52,6 +53,7 @@ pub(super) struct Run<'a, A: Asker> {
     call: Call,
     store: Option<Store>,
     packer: Packer<(Ask, usize)>,
+    staging: Option<staging::Staging<A>>,
     counts: Counts<'a>,
     window: usize,
     jobs: usize,
@@ -66,6 +68,7 @@ pub(super) struct Run<'a, A: Asker> {
     busy: usize,
     reading: bool,
     exhausted: bool,
+    unfinished_staging: bool,
     /// Why the call is stopping: it sends and reads nothing more, and waits
     /// for the requests on their way so their rows still print.
     stopping: Option<Error>,
@@ -82,11 +85,15 @@ impl<'a, A: Asker> Run<'a, A> {
         bounds: Bounds,
         counts: Counts<'a>,
     ) -> Self {
+        let staging = asker
+            .validates_batches()
+            .then(|| staging::Staging::new(&packer));
         Self {
             asker,
             call,
             store,
             packer,
+            staging,
             counts,
             window: bounds.window.max(1),
             jobs: bounds.jobs,
@@ -99,6 +106,7 @@ impl<'a, A: Asker> Run<'a, A> {
             busy: 0,
             reading: false,
             exhausted: false,
+            unfinished_staging: false,
             stopping: None,
             halted: false,
             arrived: Instant::now(),
@@ -119,7 +127,7 @@ impl<'a, A: Asker> Run<'a, A> {
                 return;
             }
             if !self.halted && self.stopping.is_none() {
-                self.dispatch(host, work);
+                self.dispatch(host, work, cancel);
             }
             cancel.observed_block();
             self.receive(received, cancel);
@@ -141,7 +149,7 @@ impl<'a, A: Asker> Run<'a, A> {
             && self.busy == 0
             && let Some(stop) = self.stopping.clone()
         {
-            if !self.slots.is_empty() || !self.exhausted {
+            if !self.slots.is_empty() || !self.exhausted || self.unfinished_staging {
                 let _flow = host.row(self.first, Err(Failed::Stopped(stop)));
             }
             self.halted = true;
@@ -150,13 +158,18 @@ impl<'a, A: Asker> Run<'a, A> {
             self.closed.clear();
             return self.busy != 0;
         }
-        !(self.exhausted && self.slots.is_empty() && self.busy == 0)
+        !(self.exhausted
+            && self.slots.is_empty()
+            && self.busy == 0
+            && !self.staging.as_ref().is_some_and(staging::Staging::is_open))
     }
 
     /// Close a full window, hand closed requests to free workers, and ask
     /// for one more input while the window has room.
-    fn dispatch(&mut self, host: &mut impl Host<A>, work: &Sender<Job>) {
-        if self.slots.len() >= self.window || self.exhausted {
+    fn dispatch(&mut self, host: &mut impl Host<A>, work: &Sender<Job>, cancel: &Cancel) {
+        let staged = self.staging.as_ref().map_or(0, staging::Staging::len);
+        if self.slots.len() + staged >= self.window || self.exhausted {
+            self.admit_stage(cancel);
             self.close();
         }
         while self.busy < self.jobs
@@ -168,7 +181,7 @@ impl<'a, A: Asker> Run<'a, A> {
             }
             self.busy += 1;
         }
-        if !self.reading && !self.exhausted && self.slots.len() < self.window {
+        if !self.reading && !self.exhausted && self.slots.len() + staged < self.window {
             self.reading = host.ask();
             self.exhausted |= !self.reading;
         }
@@ -176,7 +189,9 @@ impl<'a, A: Asker> Run<'a, A> {
 
     /// Wait for one input or reply, closing the open request at a pause.
     fn receive(&mut self, received: &Receiver<Event<A::Input, A::Error>>, cancel: &Cancel) {
-        let wait = if self.packer.is_open() && self.reading {
+        let open =
+            self.packer.is_open() || self.staging.as_ref().is_some_and(staging::Staging::is_open);
+        let wait = if open && self.reading {
             self.pause
                 .saturating_sub(self.arrived.elapsed())
                 .max(Duration::from_millis(1))
@@ -192,11 +207,13 @@ impl<'a, A: Asker> Run<'a, A> {
                 }
             }
             Err(RecvTimeoutError::Timeout) => {
-                if self.packer.is_open() && self.arrived.elapsed() >= self.pause {
+                if open && self.arrived.elapsed() >= self.pause {
+                    self.admit_stage(cancel);
                     self.close();
                 }
             }
             Err(RecvTimeoutError::Disconnected) => {
+                self.admit_stage(cancel);
                 self.exhausted = true;
                 self.reading = false;
             }
@@ -241,22 +258,50 @@ impl<'a, A: Asker> Run<'a, A> {
         self.reading = false;
         self.arrived = Instant::now();
         match input {
-            Input::End => self.exhausted = true,
+            Input::End => {
+                self.admit_stage(cancel);
+                self.exhausted = true;
+            }
             // A stopping call admits nothing more.
             Input::Item(_) | Input::Failed(_) if self.stopping.is_some() => {}
             Input::Failed(error) => {
+                self.refuse_stage(&error, cancel);
                 self.slots.push_back(Slot::failed(Failed::Asker(error)));
                 self.exhausted = true;
             }
             Input::Item(input) => {
-                let slot = self.admit(input, cancel);
-                self.slots.push_back(slot);
+                let asks = match self.asker.asks(&input) {
+                    Ok(asks) => asks,
+                    Err(error) => {
+                        self.refuse_stage(&error, cancel);
+                        self.slots.push_back(Slot::failed(Failed::Asker(error)));
+                        return;
+                    }
+                };
+                self.stage(input, asks, cancel);
+            }
+        }
+    }
+
+    fn stage(&mut self, input: A::Input, asks: Vec<Ask>, cancel: &Cancel) {
+        let label = self.asker.label(&input);
+        let Some(stage) = &mut self.staging else {
+            let slot = self.admit(input, asks, cancel);
+            self.slots.push_back(slot);
+            return;
+        };
+        match stage.add(input, asks, label) {
+            Ok(inputs) => self.admit_inputs(inputs, cancel),
+            Err(error) => {
+                stage.discard();
+                self.slots.push_back(Slot::failed(error));
+                self.exhausted = true;
             }
         }
     }
 
     /// Look one input's questions up, and pack the ones nothing answers.
-    fn admit(&mut self, input: A::Input, cancel: &Cancel) -> Slot<A> {
+    fn admit(&mut self, input: A::Input, asks: Vec<Ask>, cancel: &Cancel) -> Slot<A> {
         let place = self.first + self.slots.len();
         let label = self.asker.label(&input);
         let engine = |error| {
@@ -265,10 +310,6 @@ impl<'a, A: Asker> Run<'a, A> {
                 first: label,
                 last: label,
             })
-        };
-        let asks = match self.asker.asks(&input) {
-            Ok(asks) => asks,
-            Err(error) => return Slot::failed(Failed::Asker(error)),
         };
         let mut slot = Slot {
             input: Some(input),
@@ -324,136 +365,48 @@ impl<'a, A: Asker> Run<'a, A> {
         slot
     }
 
+    fn admit_inputs(&mut self, inputs: Vec<staging::Admitted<A>>, cancel: &Cancel) {
+        for input in inputs {
+            if let Some(stop) = cancel.stop_between_sends() {
+                self.stopping = Some(stop);
+                self.unfinished_staging = true;
+                self.closed.clear();
+                return;
+            }
+            let slot = self.admit(input.input, input.asks, cancel);
+            self.slots.push_back(slot);
+        }
+    }
+
+    fn admit_stage(&mut self, cancel: &Cancel) {
+        if let Some(stage) = &mut self.staging {
+            let inputs = stage.flush();
+            self.admit_inputs(inputs, cancel);
+        }
+    }
+
+    fn refuse_stage(&mut self, error: &A::Error, cancel: &Cancel) {
+        if self.staging.is_some() && self.asker.refuses_batch(error) {
+            if let Some(stage) = &mut self.staging {
+                stage.discard();
+            }
+            self.exhausted = true;
+        } else {
+            self.admit_stage(cancel);
+        }
+    }
+
     fn lookup(&mut self, asks: &[Ask], cancel: &Cancel) -> Result<Vec<Option<Found>>, Error> {
         match self.store.as_mut().filter(|store| store.looks_up()) {
-            Some(store) => store.lookup_asks(asks, cancel),
-            None => Ok(vec![None; asks.len()]),
-        }
-    }
-
-    /// A stored answer as an answer, or `Err(None)` when it no longer
-    /// decodes under a cache, which counts it a miss.
-    fn stored(
-        &self,
-        ask: &Ask,
-        found: Found,
-        label: usize,
-        cancel: &Cancel,
-    ) -> Result<Answered, Option<Error>> {
-        let decodes = pack::read(
-            std::slice::from_ref(&ask.decoder),
-            &[Ok(found.answer.as_str())],
-            &found.answered_by,
-        )
-        .is_ok_and(|outcomes| {
-            outcomes
-                .iter()
-                .all(|outcome| matches!(outcome, crate::core::AnswerOutcome::Answered(_)))
-        });
-        if !decodes {
-            return Err(self
-                .store
-                .as_ref()
-                .filter(|store| store.replays())
-                .map(|_| {
-                    Error::Entry(
-                        JSONL.to_owned(),
-                        format!(
-                            "holds an answer to question `{}` that no longer decodes",
-                            ask.key.hex()
-                        ),
-                    )
-                }));
-        }
-        if self.counts.cache_answers {
-            self.counts.usage.cache_answer();
-            cancel.cache_answer();
-        }
-        if let Ok(model) = ModelName::new(found.answered_by.clone()) {
-            self.counts.usage.answered_by(&model);
-        }
-        cancel.answered_by(&found.answered_by);
-        Ok(Answered {
-            key: ask.key,
-            answer: Ok(Arc::from(found.answer)),
-            answered_by: Arc::from(found.answered_by),
-            usage: found.usage,
-            cached: true,
-            requests_sent: 0,
-            attempts: Arc::from([]),
-            span: (label, label),
-        })
-    }
-
-    /// Store a reply's good answers and hand every answer to the inputs that wait on it.
-    fn answered(&mut self, done: Done, cancel: &Cancel) {
-        let span = done
-            .asks
-            .iter()
-            .fold((usize::MAX, 0), |(low, high), (_, label)| {
-                (low.min(*label), high.max(*label))
-            });
-        let split = match done.result {
-            Ok(split) => split,
-            Err(error) => {
-                // Every earlier input's questions went out before this
-                // request, so their rows and this failure still print.
-                if !self.continues && self.stopping.is_none() {
-                    self.stopping = Some(error.clone());
-                    self.closed.clear();
+            Some(store) => {
+                let found = store.lookup_asks(asks, cancel, (&self.call.url, &self.call.model))?;
+                if found.held_model_mismatch {
+                    self.counts.usage.held_model_mismatch();
+                    cancel.held_model_mismatch();
                 }
-                return self.fail_all(&done.asks, &error, span);
+                Ok(found.answers)
             }
-        };
-        if split.answers.len() != done.asks.len() {
-            let error = Error::Defect("a reply answered the wrong number of questions");
-            return self.fail_all(&done.asks, &error, span);
-        }
-        let count = done.asks.len();
-        let shares = pack::shares(split.usage, count);
-        let rows: Vec<Row<'_>> = done
-            .asks
-            .iter()
-            .zip(&split.answers)
-            .zip(&shares)
-            .filter_map(|(((ask, _), answer), usage)| {
-                Some(Row {
-                    key: ask.key,
-                    url: &self.call.url,
-                    model: &self.call.model,
-                    state: &ask.state,
-                    question: &ask.question,
-                    answer: answer.as_deref().ok()?,
-                    answered_by: split.model.as_str(),
-                    usage: *usage,
-                    taken_at: done.taken_at,
-                    origin: "live",
-                })
-            })
-            .collect();
-        let written = match self.store.as_mut() {
-            Some(store) => store.write(&rows, cancel),
-            None => Ok(()),
-        };
-        drop(rows);
-        if let Err(error) = written {
-            return self.fail_all(&done.asks, &error, span);
-        }
-        let answered_by: Arc<str> = Arc::from(split.model.as_str());
-        for (position, (((ask, _), answer), usage)) in
-            done.asks.iter().zip(split.answers).zip(shares).enumerate()
-        {
-            let answered = Answered {
-                key: ask.key,
-                answer: answer.map(Arc::from),
-                answered_by: Arc::clone(&answered_by),
-                usage,
-                cached: false,
-                requests_sent: crate::core::share(done.requests_sent, count, position),
-                attempts: Arc::clone(&done.attempts),
-                span,
-            };
-            self.deliver(&ask.key, answered);
+            None => Ok(vec![None; asks.len()]),
         }
     }
 

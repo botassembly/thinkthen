@@ -11,6 +11,7 @@ fn row(name: &str, probability: Option<f64>) -> Judged {
         outcome: Outcome::Yes,
         replayed: false,
         order_value: probability,
+        rank: None,
         partial_failure: false,
         profile_mismatch: None,
     }

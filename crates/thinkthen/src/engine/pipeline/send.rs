@@ -30,6 +30,8 @@ pub(super) struct Done {
     pub(super) requests_sent: u64,
     pub(super) attempts: Arc<[AttemptObservation]>,
     pub(super) taken_at: i64,
+    pub(super) storable: bool,
+    pub(super) original: Option<store::Original>,
 }
 
 /// What every worker of one call shares.
@@ -152,6 +154,14 @@ impl<'a> Sender<'a> {
             return refused(asks, error);
         }
         let budgeted = cancel
+            .with_cache_refresh(
+                self.engine.storage().refresh_cache
+                    || self
+                        .engine
+                        .backend()
+                        .api_type()
+                        .is_mutable_alias(self.engine.backend().model()),
+            )
             .with_process_budget(self.transport.send_budget.clone())
             .with_estimated_tokens(self.image_estimate(&asks));
         // A zero limit refuses before the key is read, so a bad key never
@@ -195,22 +205,20 @@ impl<'a> Sender<'a> {
             },
         );
         let taken_at = store::now();
+        let storable = answer.as_ref().is_ok_and(|answer| answer.storable);
+        let mut original = None;
         let result = answer.and_then(|http| {
-            let decoders: Vec<_> = asks.iter().map(|(ask, _)| ask.decoder.clone()).collect();
-            match pack::split(&decoders, &http.body) {
-                Ok(split) => {
-                    self.transport.usage.live_reply(split.usage);
-                    cancel.live_reply(split.usage);
-                    self.transport.usage.answered_by(&split.model);
-                    cancel.answered_by(split.model.as_str());
-                    Ok(split)
-                }
-                Err((error, usage)) => {
-                    self.transport.usage.live_reply(usage);
-                    cancel.live_reply(usage);
-                    Err(Error::from(error))
-                }
-            }
+            let split = self.decode_reply(&asks, &http.body, cancel)?;
+            original = (http.storable
+                && self.engine.storage().record.is_some()
+                && !self.engine.storage().cache_answers)
+                .then(|| store::Original {
+                    digest: digest.as_str().to_owned(),
+                    url: url.as_str().to_owned(),
+                    request: body.to_vec(),
+                    response: http.body,
+                });
+            Ok(split)
         });
         let mut attempts = events
             .lock()
@@ -224,6 +232,35 @@ impl<'a> Sender<'a> {
             requests_sent: sent.load(Ordering::Relaxed),
             attempts: attempts.into(),
             taken_at,
+            storable,
+            original,
+        }
+    }
+
+    fn decode_reply(
+        &self,
+        asks: &[(Ask, usize)],
+        body: &[u8],
+        cancel: &Cancel,
+    ) -> Result<Split, Error> {
+        let decoders: Vec<_> = asks.iter().map(|(ask, _)| ask.decoder.clone()).collect();
+        if let Some(model) = self.engine.backend().api_type().reported_model(body) {
+            self.transport.usage.answered_by(&model);
+            cancel.answered_by(model.as_str());
+        }
+        match pack::split_for(self.engine.backend().api_type(), &decoders, body) {
+            Ok(split) => {
+                self.transport.usage.live_reply(split.usage);
+                cancel.live_reply(split.usage);
+                self.transport.usage.answered_by(&split.model);
+                cancel.answered_by(split.model.as_str());
+                Ok(split)
+            }
+            Err((error, usage)) => {
+                self.transport.usage.live_reply(usage);
+                cancel.live_reply(usage);
+                Err(Error::from(error))
+            }
         }
     }
 
@@ -272,5 +309,7 @@ fn refused(asks: Vec<(Ask, usize)>, error: Error) -> Done {
         requests_sent: 0,
         attempts: Arc::from([]),
         taken_at: 0,
+        storable: false,
+        original: None,
     }
 }

@@ -3487,7 +3487,7 @@
           "evidence": "refund now",
           "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"refund now\\\". Does the writer ask for a refund?\"}}}",
           "response": {
-            "model": "jev-latest",
+            "model": "jev-1.13.0",
             "answers": {
               "q1": {
                 "type": "noul",
@@ -3514,7 +3514,7 @@
                   "kind": "yes_no",
                   "probability": 0.97
                 },
-                "model": "jev-latest",
+                "model": "jev-1.13.0",
                 "usage": {
                   "input_tokens": 10,
                   "output_tokens": 2
@@ -7905,6 +7905,18 @@
   ],
   "parity": {
     "schema": "thinkthen.parity-cases/1",
+    "pending_consumers": [
+      {
+        "id": "mcp",
+        "surface": "libraries/mcp",
+        "owner": "0455",
+        "baseline": [
+          "sh",
+          "libraries/mcp/check.sh"
+        ],
+        "dependency": "0455 must land installed thinkthen mcp, libraries/mcp/check.sh and the native closed mcp surface token/result schema; saved branch ticket/0455-mcp-ten-function-surface is WIP, not execution proof"
+      }
+    ],
     "functions": [
       "decide",
       "choose",
@@ -8160,6 +8172,9 @@
         "baseline": [
           "sh",
           "databases/postgresql/check.sh"
+        ],
+        "rulings": [
+          "0434: client native reader plus keyed table; server evidence paths are refused; both boundaries must execute"
         ]
       },
       {
@@ -12233,6 +12248,1979 @@
           "runtime"
         ],
         "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "selected-object-false-unicode",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "selected-object-false-unicode"
+        },
+        "expect": {
+          "fixture_ref": "selected-object-false-unicode"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-missing-required",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-missing-required"
+        },
+        "expect": {
+          "fixture_ref": "item-missing-required"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-null-property",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-null-property"
+        },
+        "expect": {
+          "fixture_ref": "item-null-property"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-number-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-number-string"
+        },
+        "expect": {
+          "fixture_ref": "item-number-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-boolean-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-boolean-string"
+        },
+        "expect": {
+          "fixture_ref": "item-boolean-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-list-nonstring",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-list-nonstring"
+        },
+        "expect": {
+          "fixture_ref": "item-list-nonstring"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-root-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-root-null"
+        },
+        "expect": {
+          "fixture_ref": "item-root-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-root-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-root-string"
+        },
+        "expect": {
+          "fixture_ref": "item-root-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "optional-properties-absent",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "optional-properties-absent"
+        },
+        "expect": {
+          "fixture_ref": "optional-properties-absent"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "undeclared-properties-retained",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "undeclared-properties-retained"
+        },
+        "expect": {
+          "fixture_ref": "undeclared-properties-retained"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "projection-cannot-recover-field",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "projection-cannot-recover-field"
+        },
+        "expect": {
+          "fixture_ref": "projection-cannot-recover-field"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "multiple-pointer-object",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "multiple-pointer-object"
+        },
+        "expect": {
+          "fixture_ref": "multiple-pointer-object"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-reader",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-reader"
+        },
+        "expect": {
+          "fixture_ref": "string-reader"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-number",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-number"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-number"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-false",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-false"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-false"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-null"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-object",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-object"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-object"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "csv-number-remains-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "csv-number-remains-string"
+        },
+        "expect": {
+          "fixture_ref": "csv-number-remains-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declared-object-context",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declared-object-context"
+        },
+        "expect": {
+          "fixture_ref": "declared-object-context"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "absent-context-shared-fallback",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "absent-context-shared-fallback"
+        },
+        "expect": {
+          "fixture_ref": "absent-context-shared-fallback"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "empty-context-suppresses-shared",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "empty-context-suppresses-shared"
+        },
+        "expect": {
+          "fixture_ref": "empty-context-suppresses-shared"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "context-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "context-null"
+        },
+        "expect": {
+          "fixture_ref": "context-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "context-mistyped",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "context-mistyped"
+        },
+        "expect": {
+          "fixture_ref": "context-mistyped"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "context-json-looking-text",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "context-json-looking-text"
+        },
+        "expect": {
+          "fixture_ref": "context-json-looking-text"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "legacy-context-object-refused",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "legacy-context-object-refused"
+        },
+        "expect": {
+          "fixture_ref": "legacy-context-object-refused"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-shorthand",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-shorthand"
+        },
+        "expect": {
+          "fixture_ref": "declaration-shorthand"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-null"
+        },
+        "expect": {
+          "fixture_ref": "declaration-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-empty",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-empty"
+        },
+        "expect": {
+          "fixture_ref": "declaration-empty"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-nested",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-nested"
+        },
+        "expect": {
+          "fixture_ref": "declaration-nested"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-unknown-keyword",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-unknown-keyword"
+        },
+        "expect": {
+          "fixture_ref": "declaration-unknown-keyword"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-required-unknown",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-required-unknown"
+        },
+        "expect": {
+          "fixture_ref": "declaration-required-unknown"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-duplicate-required",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-duplicate-required"
+        },
+        "expect": {
+          "fixture_ref": "declaration-duplicate-required"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-zero",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-zero"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-zero"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-overflow",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-overflow"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-overflow"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-string"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-boolean",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-boolean"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-boolean"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-null"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-missing",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-missing"
+        },
+        "expect": {
+          "fixture_ref": "named-missing"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-traversal",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-traversal"
+        },
+        "expect": {
+          "fixture_ref": "named-traversal"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-uppercase",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-uppercase"
+        },
+        "expect": {
+          "fixture_ref": "named-uppercase"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-overlong",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-overlong"
+        },
+        "expect": {
+          "fixture_ref": "named-overlong"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-file-symlink-escape",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-file-symlink-escape"
+        },
+        "expect": {
+          "fixture_ref": "named-file-symlink-escape"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-folder-symlink-escape",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-folder-symlink-escape"
+        },
+        "expect": {
+          "fixture_ref": "named-folder-symlink-escape"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-name-mismatch",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-name-mismatch"
+        },
+        "expect": {
+          "fixture_ref": "named-name-mismatch"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-explicit-name",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-explicit-name"
+        },
+        "expect": {
+          "fixture_ref": "lookup-explicit-name"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-cwd-precedence",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-cwd-precedence"
+        },
+        "expect": {
+          "fixture_ref": "lookup-cwd-precedence"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-named-without-config",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-named-without-config"
+        },
+        "expect": {
+          "fixture_ref": "lookup-named-without-config"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-at-path-literal",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-at-path-literal"
+        },
+        "expect": {
+          "fixture_ref": "lookup-at-path-literal"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-traversal-is-explicit-path",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-traversal-is-explicit-path"
+        },
+        "expect": {
+          "fixture_ref": "lookup-traversal-is-explicit-path"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-cwd-failure-no-fallback",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-cwd-failure-no-fallback"
+        },
+        "expect": {
+          "fixture_ref": "lookup-cwd-failure-no-fallback"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-decide",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-decide"
+        },
+        "expect": {
+          "fixture_ref": "metadata-decide"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-choose",
+        "verb": "choose",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-choose"
+        },
+        "expect": {
+          "fixture_ref": "metadata-choose"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-tag",
+        "verb": "tag",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-tag"
+        },
+        "expect": {
+          "fixture_ref": "metadata-tag"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-score",
+        "verb": "score",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-score"
+        },
+        "expect": {
+          "fixture_ref": "metadata-score"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-filter",
+        "verb": "filter",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-filter"
+        },
+        "expect": {
+          "fixture_ref": "metadata-filter"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-rank",
+        "verb": "rank",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-rank"
+        },
+        "expect": {
+          "fixture_ref": "metadata-rank"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-find",
+        "verb": "find",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-find"
+        },
+        "expect": {
+          "fixture_ref": "metadata-find"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-annotate",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-annotate"
+        },
+        "expect": {
+          "fixture_ref": "metadata-annotate"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-recognize",
+        "verb": "recognize",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-recognize"
+        },
+        "expect": {
+          "fixture_ref": "metadata-recognize"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-relate",
+        "verb": "relate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-relate"
+        },
+        "expect": {
+          "fixture_ref": "metadata-relate"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "finite-all-before-send",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "finite-all-before-send"
+        },
+        "expect": {
+          "fixture_ref": "finite-all-before-send"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "stream-staged-batch",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "stream-staged-batch"
+        },
+        "expect": {
+          "fixture_ref": "stream-staged-batch"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "annotate-member-validation-before-send",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "annotate-member-validation-before-send"
+        },
+        "expect": {
+          "fixture_ref": "annotate-member-validation-before-send"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "annotate-document-json",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "annotate-document-json"
+        },
+        "expect": {
+          "fixture_ref": "annotate-document-json"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "annotate-document-invalid-json",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "annotate-document-invalid-json"
+        },
+        "expect": {
+          "fixture_ref": "annotate-document-invalid-json"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-only-declared-item-missing",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "image-only-declared-item-missing"
+        },
+        "expect": {
+          "fixture_ref": "image-only-declared-item-missing"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-ancillary-item",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "image-ancillary-item"
+        },
+        "expect": {
+          "fixture_ref": "image-ancillary-item"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "cache-hit-cannot-bypass-declaration",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "cache-hit-cannot-bypass-declaration"
+        },
+        "expect": {
+          "fixture_ref": "cache-hit-cannot-bypass-declaration"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0444"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "replay-hit-cannot-bypass-declaration",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "replay-hit-cannot-bypass-declaration"
+        },
+        "expect": {
+          "fixture_ref": "replay-hit-cannot-bypass-declaration"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0444"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "mcp-question-inline-at",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "mcp-question-inline-at"
+        },
+        "expect": {
+          "fixture_ref": "mcp-question-inline-at"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "consumers": [
+          "mcp"
+        ]
+      },
+      {
+        "id": "mcp-question-explicit-name",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "mcp-question-explicit-name"
+        },
+        "expect": {
+          "fixture_ref": "mcp-question-explicit-name"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "consumers": [
+          "mcp"
+        ]
+      },
+      {
+        "id": "mcp-question-mutually-exclusive",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "mcp-question-mutually-exclusive"
+        },
+        "expect": {
+          "fixture_ref": "mcp-question-mutually-exclusive"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "consumers": [
+          "mcp"
+        ]
+      },
+      {
+        "id": "author-name-blank",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-blank"
+        },
+        "expect": {
+          "fixture_ref": "author-name-blank"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-uppercase",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-uppercase"
+        },
+        "expect": {
+          "fixture_ref": "author-name-uppercase"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-leading-digit",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-leading-digit"
+        },
+        "expect": {
+          "fixture_ref": "author-name-leading-digit"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-control",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-control"
+        },
+        "expect": {
+          "fixture_ref": "author-name-control"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-nonascii",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-nonascii"
+        },
+        "expect": {
+          "fixture_ref": "author-name-nonascii"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-fraction",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-fraction"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-fraction"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-integral-float",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-integral-float"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-integral-float"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-exponent",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-exponent"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-exponent"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-name-only",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-name-only"
+        },
+        "expect": {
+          "fixture_ref": "metadata-name-only"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-version-only",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-version-only"
+        },
+        "expect": {
+          "fixture_ref": "metadata-version-only"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-typed-declarations",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-typed-declarations"
+        },
+        "expect": {
+          "fixture_ref": "metadata-typed-declarations"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "duplicate-metadata",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "duplicate-metadata"
+        },
+        "expect": {
+          "fixture_ref": "duplicate-metadata"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "duplicate-schema",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "duplicate-schema"
+        },
+        "expect": {
+          "fixture_ref": "duplicate-schema"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "single-format-version",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "single-format-version"
+        },
+        "expect": {
+          "fixture_ref": "single-format-version"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-file-unsupported",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-file-unsupported"
+        },
+        "expect": {
+          "fixture_ref": "declaration-file-unsupported"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-malformed-no-fallback",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-malformed-no-fallback"
+        },
+        "expect": {
+          "fixture_ref": "named-malformed-no-fallback"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declared-string-null-context",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declared-string-null-context"
+        },
+        "expect": {
+          "fixture_ref": "declared-string-null-context"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
       }
     ],
     "image_profiles": {
@@ -12284,19 +14272,22 @@
         "wire": "ordered top-level data URL images",
         "supported_revision": "d81235049384534c167caea52b85a694f6103d14",
         "unsupported_revision": "a7b94df2c616bc1f62a73b964b4a71cb0dcc488e",
-        "max_images": 8,
+        "max_images": 2,
         "vendor_body_limit": null,
         "runtime_prerequisites": [
-          "reviewed vision-capable model revision",
-          "matching projector",
-          "explicit configured context/batch/ubatch",
-          "proved model-specific vision-token upper bound"
+          "operator selects retained clef-llamacpp-v0.6.0-0036 profile",
+          "matching retained model and projector",
+          "context/batch/ubatch8192 and one slot"
         ],
-        "unresolved_budget": {
-          "kind": "usage",
-          "requests": 0
-        },
-        "local_model_name_is_not_capability": true
+        "local_model_name_is_not_capability": true,
+        "model": "clef-local-0036",
+        "profile_file": "specification/fixtures/images/local/clef-profile.json",
+        "setup_fixture": "specification/fixtures/images/local/setups.json",
+        "setup_ref": "clef",
+        "max_original_image_bytes": 1048576,
+        "max_longest_edge": 1024,
+        "sdk_body_limit": 2800000,
+        "local_token_estimate": null
       }
     },
     "image_admission_contract": {
@@ -12336,12 +14327,13 @@
           "id": "jpeg-valid",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "valid fully decoded JPEG",
             "media": "image/jpeg",
             "dimensions": [
-              1,
-              1
-            ]
+              32,
+              32
+            ],
+            "existing_image": "specification/fixtures/images/red.jpg",
+            "decode": "valid"
           },
           "expect": {
             "requests": 1,
@@ -12353,8 +14345,13 @@
           "id": "webp-unsupported",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "valid container in the unsupported format",
-            "media": "image/webp"
+            "media": "image/webp",
+            "existing_image": "specification/fixtures/images/red.webp",
+            "dimensions": [
+              1,
+              1
+            ],
+            "decode": "valid"
           },
           "expect": {
             "kind": "usage",
@@ -12366,8 +14363,13 @@
           "id": "gif-unsupported",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "valid container in the unsupported format",
-            "media": "image/gif"
+            "media": "image/gif",
+            "existing_image": "specification/fixtures/images/red.gif",
+            "dimensions": [
+              1,
+              1
+            ],
+            "decode": "valid"
           },
           "expect": {
             "kind": "usage",
@@ -12400,7 +14402,8 @@
               3200
             ],
             "decode": "valid",
-            "patches": 10000
+            "patches": 10000,
+            "existing_image": "specification/fixtures/images/boundary-3200x3200.png"
           },
           "expect": {
             "requests": 1,
@@ -12418,7 +14421,8 @@
               3200
             ],
             "decode": "valid",
-            "patches": 10100
+            "patches": 10100,
+            "existing_image": "specification/fixtures/images/boundary-3232x3200.png"
           },
           "expect": {
             "kind": "usage",
@@ -12436,7 +14440,8 @@
               32
             ],
             "decode": "valid",
-            "aspect_ratio": 100
+            "aspect_ratio": 100,
+            "existing_image": "specification/fixtures/images/boundary-3200x32.png"
           },
           "expect": {
             "requests": 1,
@@ -12454,7 +14459,8 @@
               32
             ],
             "decode": "valid",
-            "aspect_ratio": 101
+            "aspect_ratio": 101,
+            "existing_image": "specification/fixtures/images/boundary-3232x32.png"
           },
           "expect": {
             "kind": "usage",
@@ -12472,7 +14478,8 @@
               1440
             ],
             "decode": "valid",
-            "tiles": 2025
+            "tiles": 2025,
+            "existing_image": "specification/fixtures/images/boundary-1440x1440.png"
           },
           "expect": {
             "requests": 1,
@@ -12490,7 +14497,8 @@
               1024
             ],
             "decode": "valid",
-            "tiles": 2048
+            "tiles": 2048,
+            "existing_image": "specification/fixtures/images/boundary-2048x1024.png"
           },
           "expect": {
             "requests": 1,
@@ -12508,7 +14516,8 @@
               1310
             ],
             "decode": "valid",
-            "tiles": 2050
+            "tiles": 2050,
+            "existing_image": "specification/fixtures/images/boundary-1600x1310.png"
           },
           "expect": {
             "kind": "usage",
@@ -12551,14 +14560,14 @@
           }
         },
         {
-          "id": "llama-clef-count-8",
+          "id": "llama-clef-count-2",
           "profile_ref": "llama-clef",
           "construction": {
             "existing_image": "specification/fixtures/images/red.png",
-            "repeat": 8,
+            "repeat": 2,
             "preserve_duplicates": true,
             "other_limits": "within bounds",
-            "runtime_prerequisites": "satisfied by owner proof"
+            "runtime_prerequisites": "explicit retained profile and setup fixture"
           },
           "expect": {
             "requests": 1,
@@ -12567,14 +14576,14 @@
           }
         },
         {
-          "id": "llama-clef-count-9",
+          "id": "llama-clef-count-3",
           "profile_ref": "llama-clef",
           "construction": {
             "existing_image": "specification/fixtures/images/red.png",
-            "repeat": 9,
+            "repeat": 3,
             "preserve_duplicates": true,
             "other_limits": "within bounds",
-            "runtime_prerequisites": "satisfied by owner proof"
+            "runtime_prerequisites": "explicit retained profile and setup fixture"
           },
           "expect": {
             "kind": "usage",
@@ -12592,7 +14601,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 4499999,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 2249764,
+                  "ascii_tail_bytes": 1
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 0
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 2249754,
+                  "ascii_tail_bytes": 1
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "requests": 1,
@@ -12608,7 +14663,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 4500000,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 2249765,
+                  "ascii_tail_bytes": 0
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 1
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 2249755,
+                  "ascii_tail_bytes": 0
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -12624,7 +14725,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 33554432,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 16776915,
+                  "ascii_tail_bytes": 1
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 0
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 16776905,
+                  "ascii_tail_bytes": 1
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "requests": 1,
@@ -12640,7 +14787,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 33554433,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 16776916,
+                  "ascii_tail_bytes": 0
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 1
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 16776906,
+                  "ascii_tail_bytes": 0
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -12654,8 +14847,8 @@
           "id": "png-malformed-idat",
           "profile_ref": "liquid-d1",
           "construction": {
-            "existing_image": "specification/fixtures/images/red.png",
-            "mutation": "invalid compressed pixel data with independently correct container CRC; header alone stays valid"
+            "existing_image": "specification/fixtures/images/malformed-pixels.png",
+            "media": "image/png"
           },
           "expect": {
             "kind": "usage",
@@ -12667,7 +14860,8 @@
           "id": "jpeg-malformed-scan",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "JPEG with valid dimensions/container header and invalid scan data"
+            "existing_image": "specification/fixtures/images/malformed-scan.jpg",
+            "media": "image/jpeg"
           },
           "expect": {
             "kind": "usage",
@@ -12681,8 +14875,8 @@
           "id": "png-truncated",
           "profile_ref": "liquid-d1",
           "construction": {
-            "existing_image": "specification/fixtures/images/red.png",
-            "mutation": "truncate compressed IDAT stream before completion"
+            "existing_image": "specification/fixtures/images/truncated.png",
+            "media": "image/png"
           },
           "expect": {
             "kind": "usage",
@@ -12694,7 +14888,8 @@
           "id": "jpeg-truncated",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "JPEG truncated within scan data"
+            "existing_image": "specification/fixtures/images/truncated.jpg",
+            "media": "image/jpeg"
           },
           "expect": {
             "kind": "usage",
@@ -12720,7 +14915,53 @@
             "indivisible_attachments": "cannot fit a single complete question even after splitting",
             "no_drop_or_text_retry": true,
             "individual_images": "fit the exact route limit separately",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 2249765,
+                  "ascii_tail_bytes": 0
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 1
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 2249755,
+                  "ascii_tail_bytes": 0
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -12744,7 +14985,53 @@
             "indivisible_attachments": "cannot fit a single complete question even after splitting",
             "no_drop_or_text_retry": true,
             "individual_images": "fit the exact route limit separately",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 16776916,
+                  "ascii_tail_bytes": 0
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 1
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 16776906,
+                  "ascii_tail_bytes": 0
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -12762,7 +15049,67 @@
             "each_complete_question_bytes": "within route limit",
             "unsplit_final_body_bytes_min": 4500001,
             "each_question_retains": "all ordered images, duplicates and context",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 2249764,
+                  "ascii_tail_bytes": 1,
+                  "each_final_body_bytes": 4499999
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 0,
+                  "each_final_body_bytes": 4499999
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 2249754,
+                  "ascii_tail_bytes": 1,
+                  "each_final_body_bytes": 4499999
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            },
+            "distinct_state_construction": "replace the first prefix character with another ASCII character in the second input",
+            "same_state_choose_candidate_orders": [
+              [
+                "red",
+                "blue"
+              ],
+              [
+                "blue",
+                "red"
+              ]
+            ]
           },
           "expect": {
             "requests": 2,
@@ -12781,7 +15128,67 @@
             "each_complete_question_bytes": "within route limit",
             "unsplit_final_body_bytes_min": 33554433,
             "each_question_retains": "all ordered images, duplicates and context",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 16776915,
+                  "ascii_tail_bytes": 1,
+                  "each_final_body_bytes": 33554432
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 0,
+                  "each_final_body_bytes": 33554432
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 16776905,
+                  "ascii_tail_bytes": 1,
+                  "each_final_body_bytes": 33554432
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            },
+            "distinct_state_construction": "replace the first prefix character with another ASCII character in the second input",
+            "same_state_choose_candidate_orders": [
+              [
+                "red",
+                "blue"
+              ],
+              [
+                "blue",
+                "red"
+              ]
+            ]
           },
           "expect": {
             "requests": 2,
@@ -12796,17 +15203,18 @@
           "id": "liquid-valid-above-both-spike-caps",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "original valid PNG above the historical spike cap; not padding a malformed container",
             "media": "image/png",
             "dimensions": [
-              256,
-              256
+              192,
+              192
             ],
             "compressed_bytes_min": 32769,
             "final_body_bytes_min": 65537,
             "final_body_bytes_max": 4499999,
-            "patches": 64,
-            "explicit_sdk_byte_limit": "unset"
+            "patches": 36,
+            "explicit_sdk_byte_limit": "unset",
+            "existing_image": "specification/fixtures/images/above-spike.png",
+            "decode": "valid"
           },
           "expect": {
             "requests": 1,

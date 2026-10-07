@@ -7,6 +7,7 @@ use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
 use crate::public::results::{Call, Found, Ranked};
+type PreparedFind<T> = (Vec<T>, Find, std::sync::Arc<crate::engine::facade::Engine>);
 
 impl Engine {
     /// Every record, most likely yes first; ties keep input order.
@@ -72,7 +73,10 @@ impl Engine {
         let records = self.try_within_limit(records)?;
         // A rank judges every record before it orders any, so a blank record
         // is refused before the first send.
-        for record in records.as_slice() {
+        for (at, record) in records.as_slice().iter().enumerate() {
+            question
+                .admit_input(&super::super::InputEvidence::question_input(record))
+                .map_err(|error| error.at_record(at))?;
             evidence(record.evidence())?;
         }
         let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
@@ -148,10 +152,37 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
-        options.without_context("find")?;
+        let options = options.started()?;
+        let (units, find, engine) = self.prepare_find(question, units, &options)?;
+        for (at, unit) in units.iter().enumerate() {
+            question
+                .metadata
+                .validate_item(&super::super::InputEvidence::question_input(unit))
+                .map_err(|error| error.at_record(at))?;
+        }
+        let none = question.kind == Kind::FindNone;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        stop.run_call(1, |cancel| {
+            let found = engine.find(&find, cancel).map_err(Error::from)?;
+            observe_find(&stop, &engine, question, &find, &found)?;
+            Ok(found)
+        })?
+        .try_map(|found| Found::new(units, none, &found))
+    }
+
+    pub(in crate::public) fn prepare_find<I, T>(
+        &self,
+        question: &Question,
+        units: I,
+        options: &CallOptions<'_>,
+    ) -> Result<PreparedFind<T>, Error>
+    where
+        I: IntoIterator<Item = Result<T, Error>>,
+        T: Evidence,
+    {
         only(question, &[Kind::Find, Kind::FindNone], "find")?;
         let none = question.kind == Kind::FindNone;
-        let maximum = if none { 254 } else { 255 };
+        let maximum = Find::maximum(none);
         let count_message = if none {
             "a find question offering none takes 2 to 254 units"
         } else {
@@ -159,9 +190,13 @@ impl Engine {
         };
         let mut held = Vec::new();
         let mut bytes = 0usize;
-        for unit in units {
+        let mut units = units.into_iter();
+        loop {
+            options.admission()?;
+            let Some(unit) = units.next() else { break };
+            options.admission()?;
             let unit = unit?;
-            self.check_limit(held.len())?;
+            self.check_record_limit(held.len())?;
             if held.len() == maximum {
                 return Err(Error::usage(count_message));
             }
@@ -179,16 +214,11 @@ impl Engine {
         let core::Question::Decide { text, .. } = &question.core else {
             return Err(Error::defect("a find question held no text"));
         };
-        let engine = self.asking(question)?;
+        let engine = crate::public::complete::contextual(self.asking(question)?, options)?;
         let find = Find::new(text.clone(), &texts, engine.backend().model().clone(), none)
             .map_err(|_| Error::usage(count_message))?;
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        stop.run_call(1, |cancel| {
-            let found = engine.find(&find, cancel).map_err(Error::from)?;
-            observe_find(&stop, &engine, question, &find, &found)?;
-            Ok(found)
-        })?
-        .try_map(|found| Found::new(units, none, &found))
+        let find = crate::public::find_question::profiled(find, question);
+        Ok((units, find, engine))
     }
 
     /// Hold a finite input whole, and refuse it over the request limit.
@@ -199,25 +229,13 @@ impl Engine {
         self.try_within_limit(records.into_iter().map(Ok))
     }
 
-    fn check_limit(&self, admitted: usize) -> Result<(), Error> {
-        if let Some(most) = self.most.filter(|&most| admitted >= most) {
-            return Err(Error::usage(format!(
-                "this engine answers at most {most} records in one call"
-            )));
-        }
-        Ok(())
-    }
-
-    fn try_within_limit<I, T>(&self, records: I) -> Result<std::vec::IntoIter<T>, Error>
+    pub(in crate::public) fn try_within_limit<I, T>(
+        &self,
+        records: I,
+    ) -> Result<std::vec::IntoIter<T>, Error>
     where
         I: IntoIterator<Item = Result<T, Error>>,
     {
-        let mut held = Vec::new();
-        for record in records {
-            let record = record?;
-            self.check_limit(held.len())?;
-            held.push(record);
-        }
-        Ok(held.into_iter())
+        self.try_within_admission(records, &CallOptions::new())
     }
 }

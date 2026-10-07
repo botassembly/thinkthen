@@ -6,7 +6,7 @@ use std::path::Path;
 
 use super::{ANSWERED, EVIDENCE, folder, run};
 use crate::harness::{Canned, Listener};
-use crate::support::{DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, keys};
+use crate::support::{DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, reported_keys};
 
 /// One cached answer: the model asked for, the question, and the reply.
 type Asked<'a> = (&'a str, &'a str, &'a str);
@@ -34,8 +34,16 @@ pub(super) fn fill(folder: &Path, evidence: &str, rows: &[Asked<'_>]) -> Vec<Str
         assert_eq!(output.status.code(), Some(0), "{output:?}");
         assert_eq!(listener.requests().len(), 1);
         let url = format!("{}/{ENDPOINT_PATH}", listener.base());
-        let [key] = <[String; 1]>::try_from(keys(&url, &encoded_decide(evidence, model, question)))
-            .expect("one question");
+        let response: serde_json::Value = serde_json::from_str(reply).expect("a saved reply");
+        let [key] = <[String; 1]>::try_from(reported_keys(
+            &url,
+            &encoded_decide(evidence, model, question),
+            response
+                .get("model")
+                .and_then(serde_json::Value::as_str)
+                .expect("reported model"),
+        ))
+        .expect("one question");
         filled.push(key);
     }
     filled

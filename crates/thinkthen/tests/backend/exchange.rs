@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 #[cfg(unix)]
 use crate::harness::spawn;
 use crate::harness::{Canned, Listener};
-use crate::support::{decide, digest, encoded_decide, keys};
+use crate::support::{decide, digest, encoded_decide, reported_keys};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -127,48 +127,36 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     assert_eq!(sent.body, viewed.body, "the view changes no request byte");
     // `meta.requests` lists question keys; an attempt names the body it sent.
     let request = digest(detailed.url(), &viewed.body);
-    let [key] = keys(detailed.url(), &viewed.body)
+    let [key] = reported_keys(detailed.url(), &viewed.body, "jev-1.13.0")
         .try_into()
         .expect("one question");
 
+    let row: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let attempt = &row["meta"]["attempts"][0];
+    assert_eq!(row["meta"]["attempts"].as_array().unwrap().len(), 1);
+    assert_eq!(attempt["ordinal"], 1);
+    assert_eq!(attempt["request_sha256"], request);
+    assert!(attempt["wall_ms"].as_u64().is_some());
+    assert_eq!(attempt["outcome"], "ok");
+    assert_eq!(attempt["status"], 200);
+    assert!(thinkthen::SdkRequestId::new(attempt["sdk_request_id"].as_str().unwrap()).is_ok());
     assert_eq!(
-        zero_wall_ms(&String::from_utf8_lossy(&output.stdout)),
-        format!(
-            concat!(
-                r#"{{"schema":"thinkthen.result/1","value":true,"#,
-                r#""question":{{"verb":"decide","text":"asks for a refund"}},"#,
-                r#""answer":{{"kind":"yes_no","probability":0.92}},"threshold":0.5,"#,
-                r#""meta":{{"tool":"thinkthen "#,
-                env!("CARGO_PKG_VERSION"),
-                r#"","#,
-                r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
-                r#""url":"{url}","#,
-                r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
-                r#""requests_sent":1,"cached":false,"requests":["{key}"],"failed_questions":0,"#,
-                r#""attempts":[{{"ordinal":1,"request_sha256":"{request}","wall_ms":0,"outcome":"ok","status":200}}]}},"position":{{"file":null,"first":1,"last":1}}}}"#,
-                "\n",
-            ),
-            url = detailed.url(),
-            request = request,
-            key = key,
-        )
+        crate::native_results::compatibility::judgment(row),
+        serde_json::json!({
+            "schema":"thinkthen.result/2", "value":true,
+            "question":{"verb":"decide","text":"asks for a refund"},
+            "answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,
+            "meta":{
+                "tool":concat!("thinkthen ",env!("CARGO_PKG_VERSION")),
+                "question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79",
+                "url":detailed.url(), "model":"jev-1.13.0",
+                "usage":{"input_tokens":312,"output_tokens":48},
+                "requests_sent":1,"cached":false,"requests":[key],"failed_questions":0
+            },
+            "position":{"file":null,"first":1,"last":1}
+        })
     );
     assert_eq!(output.status.code(), Some(0));
-}
-
-/// Write every measured `wall_ms` as zero, so an exact line can be pinned.
-fn zero_wall_ms(text: &str) -> String {
-    let marker = r#""wall_ms":"#;
-    let mut out = String::new();
-    let mut rest = text;
-    while let Some(place) = rest.find(marker) {
-        let value = place + marker.len();
-        out.push_str(&rest[..value]);
-        out.push('0');
-        rest = rest[value..].trim_start_matches(|c: char| c.is_ascii_digit());
-    }
-    out.push_str(rest);
-    out
 }
 
 #[test]

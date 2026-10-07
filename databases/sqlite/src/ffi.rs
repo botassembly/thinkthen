@@ -16,7 +16,7 @@ use rusqlite::vtab::{
     Context as Cell, Filters, IndexInfo, Module, VTab, VTabConfig, VTabConnection, VTabCursor,
 };
 
-use crate::many::{ChooseMany, DecideMany, Rank, ScoreMany, Store, TagMany};
+use crate::many::{ChooseMany, DecideMany, Rank, RankSetTable, ScoreMany, Store, TagMany};
 use crate::tables::{self, Recognizer, Relater, Table};
 use crate::{Registration, budget, guard, scalars};
 
@@ -190,7 +190,8 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         Some(Arc::clone(&store)),
     )?;
     connection.create_module(c"thinkthen_tag_many", &TAG_MANY, Some(Arc::clone(&store)))?;
-    connection.create_module(c"thinkthen_rank", &RANK, Some(store))?;
+    connection.create_module(c"thinkthen_rank", &RANK, Some(Arc::clone(&store)))?;
+    connection.create_module(c"thinkthen_rank_set", &RANK_SET, Some(store))?;
     pin();
     Ok(false)
 }
@@ -262,6 +263,7 @@ const CHOOSE_MANY: Module<'static, Tab<ChooseMany>> = Module::eponymous_only_mod
 const SCORE_MANY: Module<'static, Tab<ScoreMany>> = Module::eponymous_only_module();
 const TAG_MANY: Module<'static, Tab<TagMany>> = Module::eponymous_only_module();
 const RANK: Module<'static, Tab<Rank>> = Module::eponymous_only_module();
+const RANK_SET: Module<'static, Tab<RankSetTable>> = Module::eponymous_only_module();
 
 /// Table registration state owned by one connection, beside its shared rows.
 #[derive(Debug)]

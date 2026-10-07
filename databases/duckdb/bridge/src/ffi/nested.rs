@@ -13,24 +13,24 @@ pub(super) fn ask(
     from_file: bool,
 ) -> Result<Recognize, String> {
     match kind {
-        8 => members
+        8 if argument.is_empty() => members
             .iter()
             .try_fold(Recognize::builder(), |built, name| {
                 built.kind(Kind::new(name, None)?)
             })
             .and_then(thinkthen::RecognizeBuilder::build)
             .map_err(|error| RowError::from(error).text),
-        9 if from_file => Recognize::from_json(argument).map_err(|error| {
+        8 | 9 if from_file => Recognize::from_json(argument).map_err(|error| {
             if error.kind() == thinkthen::ErrorKind::Usage {
                 RowError::local(error.detail().message()).text
             } else {
                 RowError::from(error).text
             }
         }),
-        9 if argument.starts_with('@') => {
+        8 | 9 if argument.starts_with('@') => {
             Err(RowError::local("the question file was not read by this database").text)
         }
-        9 => Recognize::from_json(argument).map_err(|error| RowError::from(error).text),
+        8 | 9 => Recognize::from_json(argument).map_err(|error| RowError::from(error).text),
         _ => Err("thinkthen defect: the bridge got an unknown nested kind".to_owned()),
     }
 }

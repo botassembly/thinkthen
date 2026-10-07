@@ -12,6 +12,8 @@ use crate::engine::usage::RunSnapshot;
 #[derive(Serialize)]
 struct Line {
     schema: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    call_id: Option<crate::core::CallId>,
     records: u64,
     requests_sent: u64,
     retries: u64,
@@ -23,6 +25,8 @@ struct Line {
     #[serde(skip_serializing_if = "Option::is_none")]
     estimated_cost_usd: Option<String>,
     seconds: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    command_ms: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -56,19 +60,30 @@ pub(crate) fn write(
     mut writer: impl Write,
     snapshot: RunSnapshot,
     elapsed: Duration,
+    command_elapsed: Duration,
     stopped: Option<Stopped>,
+    call_id: Option<crate::core::CallId>,
 ) {
-    let tokens = snapshot.usage_known;
     let line = Line {
         schema: "thinkthen.run/1",
+        call_id,
         records: snapshot.records,
         requests_sent: snapshot.counts.requests_sent,
         retries: snapshot.counts.retries,
         cache_answers: snapshot.counts.cache_answers,
-        input_tokens: tokens.then_some(snapshot.counts.input_tokens),
-        output_tokens: tokens.then_some(snapshot.counts.output_tokens),
+        input_tokens: snapshot
+            .reported
+            .and_then(crate::core::ReportedUsage::input_tokens),
+        output_tokens: snapshot
+            .reported
+            .and_then(crate::core::ReportedUsage::output_tokens),
         estimated_cost_usd: snapshot.estimated_cost_usd,
         seconds: (elapsed.as_secs_f64() * 1000.0).round() / 1000.0,
+        command_ms: snapshot.http_time.and_then(|http| {
+            command_elapsed
+                .checked_sub(http)
+                .and_then(|duration| u64::try_from(duration.as_nanos().div_ceil(1_000_000)).ok())
+        }),
         model: snapshot.model,
         stopped,
     };

@@ -17,12 +17,17 @@
 pub(crate) mod adapters;
 mod answer;
 mod backend;
+pub(crate) use backend::posting_address;
 mod backend_profile;
 pub(crate) mod batch;
 mod budget;
+pub(crate) mod cache_control;
 pub(crate) mod check;
 mod digest;
 mod find;
+mod identity;
+pub(crate) use identity::answer::{AtomicReading, RecordScope};
+pub(crate) use identity::legacy::{Metadata as LegacyMetadata, observation as legacy_observation};
 pub(crate) mod image;
 mod json;
 pub(crate) mod measure;
@@ -37,11 +42,18 @@ mod probability;
 mod question;
 mod question_file;
 mod question_set;
+mod recognition_result;
 mod recognize;
+mod surface;
+pub(crate) use recognition_result::{PairOdds, Place, RecognitionOdds, RecognizedValue};
+pub use surface::{Surface, SurfaceError};
 mod recognize_file;
+pub(crate) mod record_input;
 pub(crate) mod recording;
 mod records;
 mod relate_file;
+#[cfg(test)]
+pub(crate) use relate_file::RelateQuestion;
 pub(crate) mod relation;
 mod render;
 mod reply;
@@ -70,7 +82,6 @@ pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
 pub(crate) use crate::core::digest::{bytes_sha256, hex};
 pub(crate) use crate::core::find::Find;
-#[cfg(test)]
 pub(crate) use crate::core::find::FindResult;
 pub(crate) use crate::core::json::Json;
 pub(crate) use crate::core::json::JsonError;
@@ -82,8 +93,8 @@ pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub(crate) use crate::core::question_file::{
-    Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
-    resolve, safe_key,
+    Cutting, QuestionFile, QuestionFileError, QuestionRole, Resolved, Source, Sources, Typed, Verb,
+    pointers, resolve, safe_key,
 };
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
@@ -98,7 +109,7 @@ pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub(crate) use crate::core::relate_file::{
-    EntitySetError, RelateConfigError, RelateFields, RelateQuestion, RelateSpec, inline_rule,
+    EntitySetError, RelateConfigError, RelateFields, RelateSpec, inline_rule,
 };
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
@@ -108,17 +119,30 @@ pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{
     AnswerOutcome, BackendFailure, BackendFailureCause, FailedValue, Reply,
 };
-pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
+pub(crate) use crate::core::result::complete::Atomic as CompleteAtomic;
+pub(crate) use crate::core::result::complete::Find as CompleteFind;
+pub(crate) use crate::core::result::complete::Recognition as CompleteRecognition;
+pub(crate) use crate::core::result::complete::wire::PhysicalSource as CompletePhysicalSource;
+pub(crate) use crate::core::result::complete::{
+    Annotation as CompleteAnnotation, AnnotationMember as CompleteAnnotationMember,
+};
+pub(crate) use crate::core::result::complete::{
+    Relation as CompleteRelation, RelationEntry as CompleteRelationEntry,
+};
+pub use crate::core::result::complete::{RelationDirection, RelationMethod};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,
-    RecordValue, RequestMeta, Usage, share,
+    RecordValue, ReportedSum, RequestMeta, Usage, share,
 };
-pub use crate::core::result::{AttemptObservation, AttemptOutcome};
+pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt, ReportedUsage};
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
 pub(crate) use crate::core::threshold::{Outcome, Threshold, ThresholdError};
+pub use identity::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
+pub use result::complete::MemberIdentity;
+pub use result::{Observation, Origin, QuestionSource, ResultIdentity};
 
 pub(crate) use crate::core::find::FindAnswer;
 pub(crate) use crate::core::text::Url;
@@ -150,3 +174,17 @@ mod tests {
         }
     }
 }
+
+pub(crate) use identity::LogicalTrace;
+pub(crate) use question_set::NamedQuestion;
+
+pub(crate) use result::Fields as MetadataFields;
+
+pub(crate) mod declaration;
+pub use declaration::{
+    InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
+    WordingVersion,
+};
+
+#[cfg(test)]
+pub(crate) use result::complete as complete_documents;

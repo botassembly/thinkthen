@@ -1,0 +1,217 @@
+use super::*;
+use std::cell::Cell;
+use std::num::NonZeroUsize;
+use thinkthen::{BatchSetting, RawRecord, RecordInput, RecordReading};
+
+#[cfg(test)]
+fn input(text: &str) -> RecordInput<thinkthen::RecordEvidence> {
+    RecordReading::new(&[""], None, None)
+        .unwrap()
+        .compose(RawRecord::json(text).unwrap())
+        .unwrap()
+}
+#[cfg(test)]
+fn two() -> CallOptions<'static> {
+    CallOptions::new()
+        .batch(BatchSetting::Records(NonZeroUsize::new(2).unwrap()))
+        .attempts(true)
+}
+
+#[test]
+fn deadline_at_eof_reports_the_unfinished_declared_input_without_sending() {
+    check_eof_deadline(0);
+}
+
+#[test]
+fn deadline_at_eof_keeps_the_completed_prefix_and_final_facts() {
+    check_eof_deadline(2);
+}
+
+#[cfg(test)]
+fn check_eof_deadline(prefix: usize) {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.2}},"usage":{"input_tokens":887}}"#)).unwrap();
+    let engine = engine(&listener);
+    let question =
+        Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
+    let due = std::time::Instant::now() + std::time::Duration::from_secs(1);
+    let mut position = 0;
+    let eof = Cell::new(false);
+    let records = std::iter::from_fn(|| {
+        if position > prefix {
+            std::thread::sleep(due.saturating_duration_since(std::time::Instant::now()));
+            eof.set(true);
+            return None;
+        }
+        if position == prefix {
+            let before = due - std::time::Duration::from_millis(40);
+            std::thread::sleep(before.saturating_duration_since(std::time::Instant::now()));
+        }
+        let text = [r#""A.""#, r#""B.""#, r#""Pending.""#][position];
+        position += 1;
+        Some(Ok(input(text)))
+    });
+    let mut batch =
+        engine.try_decide_records_complete_with(&question, records, two().deadline_at(due));
+    for (at, value) in [Answer::Yes, Answer::No]
+        .into_iter()
+        .take(prefix)
+        .enumerate()
+    {
+        let row = batch.next().unwrap().unwrap();
+        assert_eq!(row.ordinal(), at);
+        assert_eq!(row.result().value(), value);
+    }
+    let terminal = batch.next();
+    assert!(
+        eof.get(),
+        "the stop occurs while EOF admits the pending stage"
+    );
+    let error = terminal
+        .expect("pending input must produce a deadline, not normal exhaustion")
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Deadline);
+    assert_eq!(error.stopped().cause(), thinkthen::StopCause::Deadline);
+    let facts = error.facts().unwrap();
+    assert_eq!(facts.records(), prefix as u64);
+    assert_eq!(facts.requests_sent(), (prefix / 2) as u64);
+    assert_eq!(facts.attempts().unwrap().len(), prefix / 2);
+    assert_eq!(facts.input_tokens(), (prefix > 0).then_some(887));
+    assert_eq!(facts.output_tokens(), None);
+    assert_eq!(error.stopped().status(), None);
+    assert!(!error.stopped().retryable());
+    assert!(facts.call_id().is_some());
+    assert!(batch.next().is_none());
+    assert_eq!(batch.facts().unwrap().records(), prefix as u64);
+    assert_eq!(listener.count(), prefix / 2);
+}
+
+#[test]
+fn invalid_second_streamed_item_prevents_the_entire_staged_batch_from_sending() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    let question =
+        Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
+    let pulled = Cell::new(0);
+    let records = [r#""Valid.""#, "12", r#""Unread.""#]
+        .into_iter()
+        .inspect(|_| pulled.set(pulled.get() + 1))
+        .map(|text| Ok(input(text)));
+    let mut batch = engine.try_decide_records_complete_with(&question, records, two());
+    let error = batch.next().unwrap().unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.detail().message(),
+        "the item does not match item_schema"
+    );
+    assert_eq!(error.stopped().at(), Some(2));
+    assert_eq!(error.facts().unwrap().records(), 0);
+    assert_eq!(error.facts().unwrap().requests_sent(), 0);
+    assert_eq!(pulled.get(), 2);
+    assert!(batch.next().is_none());
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn invalid_later_batch_keeps_only_the_dispatched_prefix_and_original_error_position() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.2}},"usage":{"input_tokens":887}}"#)).unwrap();
+    let engine = engine(&listener);
+    let question =
+        Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
+    let pulled = Cell::new(0);
+    let records = [r#""A.""#, r#""B.""#, r#""C.""#, "false", r#""Unread.""#]
+        .into_iter()
+        .inspect(|_| pulled.set(pulled.get() + 1))
+        .map(|text| Ok(input(text)));
+    let mut batch = engine.try_decide_records_complete_with(&question, records, two());
+    for (at, value) in [Answer::Yes, Answer::No].into_iter().enumerate() {
+        let row = batch.next().unwrap().unwrap();
+        assert_eq!(row.ordinal(), at);
+        assert_eq!(row.result().value(), value);
+        assert_eq!(
+            row.result().identity().question_sources()[0]
+                .batch_size()
+                .unwrap(),
+            2
+        );
+    }
+    let error = batch.next().unwrap().unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(error.stopped().at(), Some(4));
+    assert_eq!(error.facts().unwrap().records(), 2);
+    assert_eq!(error.facts().unwrap().requests_sent(), 1);
+    assert_eq!(error.facts().unwrap().input_tokens(), Some(887));
+    assert_eq!(error.facts().unwrap().output_tokens(), None);
+    assert_eq!(pulled.get(), 4);
+    assert!(batch.next().is_none());
+    assert_eq!(listener.count(), 1);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap(),
+        json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"A.\". Refund?"},"q2":{"type":"noul","instructions":"The text is \"B.\". Refund?"}}})
+    );
+}
+
+#[test]
+fn an_invalid_replay_batch_is_admitted_before_looking_up_its_missing_first_question() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
+    })
+    .unwrap();
+    let folder = folder();
+    let build = || {
+        Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("complete-private")
+            .unwrap()
+            .max_retries(0)
+    };
+    let engine = build().cache_at(&folder).unwrap().build().unwrap();
+    let question =
+        Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
+    engine
+        .decide_complete_with(&question, "Primed.", CallOptions::new())
+        .unwrap();
+    let replay = build().replay(&folder).unwrap().build().unwrap();
+    let mut batch = replay.try_decide_records_complete_with(
+        &question,
+        [Ok(input(r#""Unstored.""#)), Ok(input("null"))],
+        two(),
+    );
+    let error = batch.next().unwrap().unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(error.stopped().at(), Some(2));
+    assert_eq!(error.facts().unwrap().cache_answers(), 0);
+    assert_eq!(error.facts().unwrap().requests_sent(), 0);
+    assert!(batch.next().is_none());
+    assert_eq!(listener.count(), 1);
+    drop(batch);
+    drop(replay);
+    drop(engine);
+    std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+fn annotation_member_declarations_admit_the_whole_stream_batch_before_any_member_sends() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Refund?","item_schema":{"type":"string"}},"second":{"decide":"Urgent?","item_schema":{"type":"string"}}}}"#).unwrap();
+    let mut batch = engine.try_annotate_records_complete_with(
+        &set,
+        [Ok(input(r#""Valid.""#)), Ok(input("null"))],
+        two(),
+    );
+    let error = batch.next().unwrap().unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(error.stopped().at(), Some(2));
+    assert_eq!(error.facts().unwrap().records(), 0);
+    assert_eq!(listener.count(), 0);
+    assert!(batch.next().is_none());
+}

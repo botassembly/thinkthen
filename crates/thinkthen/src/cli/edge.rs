@@ -119,7 +119,7 @@ impl Environment {
             input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS")
                 .and_then(|text| text.parse().ok()),
             sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
-            cancel: crate::engine::Cancel::default(),
+            cancel: crate::engine::Cancel::default().with_surface(crate::core::Surface::Cli),
             usage,
             usage_path,
             key: KeySnapshot::default(),
