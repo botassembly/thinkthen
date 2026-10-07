@@ -69,6 +69,7 @@ public static class Native
 
 public sealed class Failure : Exception
 {
+    public Optional<CompleteError> Complete { get; internal set; }
     public int Code { get; }
     public FailureKind Kind { get; }
     public bool Retryable { get; }
@@ -79,7 +80,7 @@ public sealed class Failure : Exception
     }
 }
 
-public sealed class Engine : IDisposable
+public sealed partial class Engine : IDisposable
 {
     private readonly ReaderWriterLockSlim lifetime = new();
     private IntPtr engine;

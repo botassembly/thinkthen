@@ -166,4 +166,20 @@ public final class Json {
         }
         return out.append('"').toString();
     }
+    /** Encode caller-owned JSON values without interpreting question grammar. */
+    public static String write(Object value) {
+        if (value == null) return "null";
+        if (value instanceof String text) return quote(text);
+        if (value instanceof Boolean || value instanceof BigDecimal || value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long) return value.toString();
+        if (value instanceof Double n && Double.isFinite(n)) return n.toString();
+        if (value instanceof Float n && Float.isFinite(n)) return n.toString();
+        if (value instanceof Map<?,?> map) {
+            StringBuilder out = new StringBuilder("{");
+            for (var entry : map.entrySet()) { if (!(entry.getKey() instanceof String key)) throw new IllegalArgumentException("JSON object key is not a string"); if(out.length()>1)out.append(',');out.append(quote(key)).append(':').append(write(entry.getValue())); }
+            return out.append('}').toString();
+        }
+        if (value instanceof List<?> list) { StringBuilder out=new StringBuilder("["); for(Object entry:list){if(out.length()>1)out.append(',');out.append(write(entry));}return out.append(']').toString(); }
+        throw new IllegalArgumentException("unsupported JSON value");
+    }
+
 }

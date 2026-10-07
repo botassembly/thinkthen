@@ -1,0 +1,16 @@
+namespace ThinkThen;
+internal static partial class NativeComplete {
+ internal static ReportedUsage ReadReportedUsage(ReportedUsageV1 v) => new(v.present!=0,Opt(v.input_tokens.present,()=>checked((ulong)v.input_tokens.value)),Opt(v.output_tokens.present,()=>checked((ulong)v.output_tokens.value)));
+ internal static SourceDetail ReadSourceDetail(SourceDetailV1 v) => new((Origin)(v.origin-1),String(v.answered_by),Opt(v.batch_size.present,()=>checked((ulong)v.batch_size.value)));
+ internal static InputView ReadInputView(InputViewV1 v) => new(Opt(v.original.present,()=>ReadContent(v.original.value)),Opt(v.position.present,()=>ReadLocation(v.position.value)),Opt(v.images.present,()=>Array<ImageViewV1,ImageView>(v.images.value.data,v.images.value.len,x=>ReadImageView(x))));
+ internal static Details ReadDetails(DetailsV1 v) => new(Opt(v.question.present,()=>ReadQuestion(v.question.value)),Opt(v.threshold.present,()=>ReadRule(v.threshold.value)),Opt(v.raw_pick.present,()=>String(v.raw_pick.value)),ReadReportedUsage(v.usage),Array<SourceDetailV1,SourceDetail>(v.question_sources.data,v.question_sources.len,x=>ReadSourceDetail(x)),Array<ObservationIdentityV1,ObservationIdentity>(v.observations.data,v.observations.len,x=>ReadObservationIdentity(x)),Array<InputViewV1,InputView>(v.inputs.data,v.inputs.len,x=>ReadInputView(x)));
+ internal static SourceEntity ReadSourceEntity(SourceEntityV1 v) => new(ReadEntity(v.entity),Opt(v.position.present,()=>ReadLocation(v.position.value)));
+ internal static SourceEntityEdge ReadSourceEntityEdge(SourceEntityEdgeV1 v) => new(String(v.relation),ReadSourceEntity(v.source),ReadSourceEntity(v.target),(double)v.probability,v.either!=0);
+ internal static SourceRecognition ReadSourceRecognition(SourceRecognitionV1 v) => new(v.present!=0,Array<SourceEntityV1,SourceEntity>(v.entities.data,v.entities.len,x=>ReadSourceEntity(x)),Opt(v.relations.present,()=>Array<SourceEntityEdgeV1,SourceEntityEdge>(v.relations.value.data,v.relations.value.len,x=>ReadSourceEntityEdge(x))));
+ internal static SourceEndpoint ReadSourceEndpoint(SourceEndpointV1 v) => new(checked((ulong)v.ordinal),ReadEndpoint(v.endpoint),ReadContent(v.record),Opt(v.position.present,()=>ReadLocation(v.position.value)));
+ internal static SourceEdge ReadSourceEdge(SourceEdgeV1 v) => new(String(v.relation),ReadSourceEndpoint(v.source),ReadSourceEndpoint(v.target),(double)v.probability,v.either!=0);
+ internal static SourceRelations ReadSourceRelations(SourceRelationsV1 v) => new(v.present!=0,Array<SourceEdgeV1,SourceEdge>(v.edges.data,v.edges.len,x=>ReadSourceEdge(x)));
+ internal static InputProperty ReadInputProperty(InputPropertyV1 v) => new(String(v.name),(PropertyKind)checked((int)v.kind));
+ internal static InputDeclaration ReadInputDeclaration(InputDeclarationV1 v) => new((DeclarationKind)checked((int)v.kind),Array<InputPropertyV1,InputProperty>(v.properties.data,v.properties.len,x=>ReadInputProperty(x)),Array<StringV1,string>(v.required.data,v.required.len,x=>String(x)));
+ internal static QuestionAuthor ReadQuestionAuthor(QuestionAuthorV1 v) => new(Opt(v.name.present,()=>String(v.name.value)),Opt(v.wording_version.present,()=>checked((ulong)v.wording_version.value)),ReadInputDeclaration(v.item_schema),ReadInputDeclaration(v.context_schema));
+}
