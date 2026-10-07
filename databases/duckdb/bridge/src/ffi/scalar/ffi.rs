@@ -263,7 +263,7 @@ fn details(
 }
 
 enum ScalarAsk {
-    Question(LoadedQuestion),
+    Question(Box<LoadedQuestion>),
     Set(QuestionSet),
 }
 
@@ -304,9 +304,9 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
         let ask = if kind == 7 {
             ScalarAsk::Set(set_typed(argument, from_file != 0).map_err(|error| error.text)?)
         } else {
-            ScalarAsk::Question(
+            ScalarAsk::Question(Box::new(
                 question_typed(argument, from_file != 0).map_err(|error| error.text)?,
-            )
+            ))
         };
         let copied = copied_texts(texts, count)?;
         let context = (!context_bytes.is_null())

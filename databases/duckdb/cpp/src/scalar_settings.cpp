@@ -55,7 +55,12 @@ SessionSettings Settings(ClientContext &context) {
 	    settings.max_requests_total < 0) {
 		throw OrdinaryError("thinkthen usage: a request total is a whole number of 0 or more");
 	}
-	settings.cache_allowed = FolderAllowed(context, settings.cache) ? 1 : 0;
+	settings.base_url = TextSetting(context,"thinkthen_base_url");
+    settings.input_price = TextSetting(context,"thinkthen_usd_per_million_input");
+    settings.output_price = TextSetting(context,"thinkthen_usd_per_million_output");
+    const auto refresh = NumericSetting(context,"thinkthen_refresh_cache");
+    settings.refresh_cache = refresh==1 ? 1 : 0;
+    settings.cache_allowed = FolderAllowed(context, settings.cache) ? 1 : 0;
 	settings.record_allowed = FolderAllowed(context, settings.record) ? 1 : 0;
 	settings.replay_allowed = FolderAllowed(context, settings.replay) ? 1 : 0;
 	return settings;

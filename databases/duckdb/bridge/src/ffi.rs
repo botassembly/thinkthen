@@ -8,6 +8,10 @@ use crate::{engines, errors, signal};
 use thinkthen::fork_safe::{RecvTimeoutError, channel};
 use thinkthen::{CancelToken, LoadedQuestion, Question, QuestionSet};
 
+#[path = "ffi/complete/ffi.rs"]
+mod complete;
+#[path = "ffi/complete_files/ffi.rs"]
+mod complete_files;
 #[path = "ffi/complete_listed/ffi.rs"]
 mod complete_listed;
 #[path = "ffi/files/ffi.rs"]

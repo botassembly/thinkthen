@@ -400,6 +400,7 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
 
 /// Register judgments under the initial connection policy, without harmless flags.
 pub(crate) fn register(connection: &Connection, mode: Registration) -> rusqlite::Result<()> {
+    crate::complete::register(connection)?;
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     let judgment = match mode {
         Registration::DirectOnly => volatile,

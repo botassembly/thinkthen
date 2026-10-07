@@ -43,6 +43,10 @@ struct ThinkThenSettings {
 	size_t replay_len;
 	int32_t record_allowed;
 	int32_t replay_allowed;
+    const uint8_t *base_url_bytes; size_t base_url_len;
+    const uint8_t *input_price_bytes; size_t input_price_len;
+    const uint8_t *output_price_bytes; size_t output_price_len;
+    int32_t refresh_cache;
 };
 struct ThinkThenStop {
 	void *context;
