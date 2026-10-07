@@ -285,7 +285,7 @@ pub(super) fn find(
     common.answer = OptionalAnswerV1 {
         present: 1,
         value: AnswerV1 {
-            kind: 7,
+            kind: 5,
             data: answer,
         },
     };

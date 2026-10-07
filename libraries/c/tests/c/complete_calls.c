@@ -13,6 +13,7 @@ static int same(thinkthen_string_v1 s,const char *value) {
 static thinkthen_question *make(thinkthen_engine *e,unsigned kind) {
     thinkthen_question_spec_v1 spec={0}; spec.kind=kind;
     if(kind<8) spec.text=TEXT("Does this need attention?");
+    if(kind==7) spec.none=getenv("TYPED_FIND_NONE")!=NULL;
     if(kind==5) spec.threshold=(thinkthen_rule_v1){2,0.95,0};
     if(kind==1) spec.yes=(thinkthen_optional_content_v1){1,TEXT("accepted")};
     thinkthen_choice_v1 choices[2]={0}; choices[0].name=STR("z-first"); choices[1].name=STR("a-second");
@@ -68,7 +69,19 @@ static void check(thinkthen_result *r,unsigned kind,int files) {
     if(kind==4) { thinkthen_score_view_v1 v={0}; assert(thinkthen_result_score(r,0,&v)==0); row=v.common; assert(v.value==0.1); assert(same(row.answer.value.data.score.level,"z-first")); }
     if(kind==5) { thinkthen_filter_view_v1 v={0}; assert(thinkthen_result_filter(r,0,&v)==0); row=v.common; assert(v.value==0 && row.answer.value.data.probability==0.9); }
     if(kind==6) { thinkthen_rank_view_v1 v={0}; assert(thinkthen_result_rank(r,0,&v)==0); row=v.common; assert(v.value.present && v.value.value==1); }
-    if(kind==7) { thinkthen_find_view_v1 v={0}; assert(thinkthen_result_find(r,0,&v)==0); row=v.common; assert(v.value.present && v.index.present && v.index.value==0); assert(row.answer.value.kind==7 && row.answer.value.data.find.probabilities.len==2); }
+    if(kind==7) {
+        int none=getenv("TYPED_FIND_NONE")!=NULL;
+        thinkthen_find_view_v1 v={0}; assert(thinkthen_result_find(r,0,&v)==0); row=v.common;
+        assert(v.value.present==!none && v.index.present==!none && row.question.value.none==none);
+        if(!none) { assert(v.index.value==0 && v.value.value.kind==THINKTHEN_CONTENT_TEXT_V1 && v.value.value.data.len>0); if(!files) assert(same(v.value.value.data,"Maria Chen joined Northwind Freight.")); }
+        assert(row.answer.present && row.answer.value.kind==THINKTHEN_ANSWER_FIND_V1);
+        thinkthen_named_answer_v1 answer=row.answer.value.data.find;
+        assert(same(answer.pick,none?"none":"u001"));
+        assert(answer.probabilities.len==(none?3:2));
+        assert(same(answer.probabilities.data[0].name,"u001") && answer.probabilities.data[0].probability==(none?0.1:0.9));
+        assert(same(answer.probabilities.data[1].name,"u002") && answer.probabilities.data[1].probability==0.1);
+        if(none) assert(same(answer.probabilities.data[2].name,"none") && answer.probabilities.data[2].probability==0.8);
+    }
     if(kind==8) { thinkthen_annotate_view_v1 v={0}; assert(thinkthen_result_annotate(r,0,&v)==0); row=v.common; assert(v.answers.len==2 && same(v.answers.data[0].name,"z_first")); assert(v.answers.data[0].data.success.value.data.decide.kind==2); assert(same(v.answers.data[1].data.success.answer.data.choice.pick,"z-first")); }
     if(kind==9) { thinkthen_recognize_view_v1 v={0}; assert(thinkthen_result_recognize(r,0,&v)==0); row=v.common; assert(v.value.entities.len>0 && v.answer.pieces.len>0 && v.answer.names.len>0); }
     if(kind==10) { thinkthen_relate_view_v1 v={0}; assert(thinkthen_result_relate(r,0,&v)==0); row=v.common; assert(v.value.len==2 && v.questions.len==2); assert(v.questions.data[0].data.success.answer_id.len==64); }
@@ -143,13 +156,14 @@ int main(void) {
     thinkthen_controls_v1 controls={0}; controls.deadline_ms=-1; controls.attempts=1;
     thinkthen_result *results[10]={0};
     for(unsigned kind=1;kind<=10;++kind) {
+        if(getenv("TYPED_FIND_NONE") && kind!=7) continue;
         thinkthen_question *q=make(e,kind);
         int rc=calls[kind-1](e,q,source,&controls,&results[kind-1]);
         if(rc) { fprintf(stderr,"function %u: %d %s\n",kind,rc,thinkthen_error_message(e)); abort(); }
         thinkthen_question_free(q);
     }
     thinkthen_source_free(source); thinkthen_engine_free(e);
-    for(unsigned kind=1;kind<=10;++kind) { check(results[kind-1],kind,path!=NULL); thinkthen_result_free(results[kind-1]); }
+    for(unsigned kind=1;kind<=10;++kind) if(results[kind-1]) { check(results[kind-1],kind,path!=NULL); thinkthen_result_free(results[kind-1]); }
     thinkthen_result_free(NULL);
     return 0;
 }
