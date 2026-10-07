@@ -62,11 +62,13 @@ jq -r 'select(has("key")) | keys_unsorted | join(",")' recording/thinkthen.jsonl
   | mustmatch "key,url,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin"
 ```
 
+This committed version-1 recording also checks backward compatibility. New cache entries use the versioned key and observation identity described in the cache specification; replay validates and normalizes the older entries without changing their saved bytes.
+
 `record.sh` in this folder is the script that made the recording. It runs through `sdlc/scripts/live`, the one door for a paid call.
 
 ## Step 2: read where the answer came from
 
-`--details` says so. `meta.cached` is `true` for replay. Live attempts are optional detail; replay has none.
+`--details` says so. `meta.cached` is `true` for replay. The current attempt list is empty because replay sends no request.
 
 ```bash
 set -euo pipefail
@@ -74,8 +76,8 @@ set -euo pipefail
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --details --replay recording/ < report.txt \
-  | jq -c '{value, cached: .meta.cached, attempts_present: (.meta | has("attempts"))}' \
-  | mustmatch '{"value":true,"cached":true,"attempts_present":false}'
+  | jq -c '{value, cached: .meta.cached, attempts: (.meta.attempts | length)}' \
+  | mustmatch '{"value":true,"cached":true,"attempts":0}'
 ```
 
 ## Step 3: know a replay miss when you see one
@@ -97,7 +99,7 @@ said=$(env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --quiet --replay recording/ < vague.txt 2>&1 >/dev/null) && rc=0 || rc=$?
 printf 'rc=%s %s\n' "$rc" "$said" \
-  | mustmatch 'rc=5 thinkthen: the decide request for one document: the replay folder holds no answer for question `bdd549264706825ecdea6fd3dc98f854f0aeb2e50ffe35c00157c53ccd60f70b`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent'
+  | mustmatch 'rc=5 thinkthen: the decide request for one document: the replay folder holds no answer for question `1d9521c1802069faf42b91f16e1290e79e4a58dec57b790600707fcca5eb1aa6`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent'
 ```
 
 Record the missing case and the test passes again. A recording is grown one case at a time.

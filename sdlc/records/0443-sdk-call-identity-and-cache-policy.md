@@ -18,3 +18,6 @@ The landing lint caught a CLI admission-test child inheriting its parent environ
 The source total rises by one line for that child-environment isolation call; the measured ratchet is 153171.
 
 Astra identified the refused older files recordings as controlled synthetic replies with persisted origin `fixture`. The cache validator now admits that explicit fourth origin for v1 and v2 while preserving all original bytes and observation IDs. Native-store replay, conversion, migration/reopen and unknown-origin regressions passed; a fresh code review covers this bounded compatibility fix. The files example comparison retains every JSON value and row order while ignoring object field order; filenames-only output remains byte-exact.
+
+The top-search-hits demo now shows the settled result/2 rank position, starting at 1, instead of the old null value. Its saved probabilities, input paths and null threshold are unchanged.
+The no-network demo now checks an empty attempt list and the normalized v2 miss key. Its original v1 recording remains unchanged as a compatibility case.
