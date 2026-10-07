@@ -45,11 +45,14 @@ class PublicAssertions(unittest.TestCase):
         seen = parity.cells('conformance: not_run=0 unselected=0\n' + self.cell(), ['rust'], self.cases)
         self.assertEqual(seen, {('rust', 'typed-decide'): 'pass'})
 
-    def test_missing_cells_remain_missing_and_failed_process_invalidates_pass(self):
+    def test_failed_case_keeps_independent_pass_and_missing_cell_visible(self):
         seen = parity.cells(self.cell(), ['rust'], self.cases)
         row = parity.summarize('rust', self.cases, 0, seen, None, None)
         self.assertEqual(row['cells'], {'typed-decide': 'pass', 'files-decide': 'missing'})
-        for code in [1, 77, 127]:
+        partial = parity.summarize('rust', self.cases, 1, seen, None, None)
+        self.assertEqual(partial['cells'], {'typed-decide': 'pass', 'files-decide': 'missing'})
+        self.assertEqual(partial['named_typed_functions'], ['decide'])
+        for code in [77, 127, None]:
             with self.subTest(code=code):
                 row = parity.summarize('rust', self.cases, code, seen, None, None)
                 self.assertEqual(set(row['cells'].values()), {'fail'})
