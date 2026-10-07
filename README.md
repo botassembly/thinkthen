@@ -6,7 +6,7 @@
 
 # thinkthen
 
-ThinkThen answers typed questions about text. Ask from a shell script or from your own program, and get back `true`, `false`, a label, or a number. A failed call never looks like an answer. Use it to gate a script, label records, or grade answers in an eval.
+ThinkThen answers typed questions about text. Development 0.2 also admits JPEG and PNG images for `decide`, `choose` and `score`. Ask from a shell script or from your own program, and get back `true`, `false`, a label, or a number. A failed call never looks like an answer. Use it to gate a script, label records, or grade answers in an eval.
 
 ```sh
 thinkthen decide 'Does the customer ask for money back?' < message.txt
@@ -19,6 +19,8 @@ true
 The exit code is 0 for yes, 1 for no, and 3 for not sure. A shell `if` can branch on it. [How-to 01](https://github.com/botassembly/thinkthen/tree/main/demos/01-refund-gate) runs this question against a recorded answer.
 
 ## Install
+
+The public release remains 0.1.2. The 0.2 examples below require a reviewed development command or candidate SDK; they do not describe a published package.
 
 ```sh
 curl -fsSL https://thinkthen.dev/install.sh | sh
@@ -81,6 +83,67 @@ true
 The [specification](https://github.com/botassembly/thinkthen/blob/main/specification/README.md) gives each function's contract, its exit codes, and its failures.
 
 For agents, the [official ThinkThen skill](skills/thinkthen/SKILL.md) explains function selection, evidence framing, abstention and bounded requests.
+
+## Files and provenance in development 0.2
+
+`decide`, `filter`, `rank` and `annotate` accept document files as positional operands. For other functions, repeat `--input FILE`; positional operands in `choose`, `tag` and `score` name options, labels and levels. The two file input forms cannot mix. With several document files, decide/choose/tag/score print one JSONL row per file with `input_file` and `value`. A completed multi-document run exits 0 even for false or not sure answers. One document retains its scalar output and answer exit code.
+
+Use `--input folder --unit line`, `--unit file` or `--window N` for located readers. Folder descendants sort by relative path; explicit operands and duplicates keep their order. Details retain physical file/line positions separately from selected evidence. Blank lines still count toward physical positions. Paths never become model evidence or cache identity. `--field` selects evidence from JSON records; the original stays in the answer. The [file guide](https://thinkthen.dev/learn/files/) shows each function's located output and limits.
+
+## Images in development 0.2
+
+Select an admitted backend and model explicitly. For example, with the Liquid backend key configured:
+
+```sh
+thinkthen decide 'Does the package have visible damage?' \
+  --backend liquid --model d1 --image package.jpg
+thinkthen choose 'Which package is damaged?' first second neither \
+  --backend liquid --model d1 --image first.jpg --image second.jpg
+thinkthen score 'How severe is the damage?' none minor severe \
+  --backend liquid --model d1 --image package.jpg
+```
+
+Repeated `--image` attachments form one ordered input. Duplicates remain present. Optional stdin text or framed caption records can accompany attachments. `--image-media image/png` or `image/jpeg` declares the attachment format; omission detects it from bytes. Attachments cannot accompany `--media`, `--unit` or `--window`. To judge separate whole-file images, use `--input photos --unit file --media image` instead. Seven other functions refuse images before reading files or sending.
+
+Liquid `d1` and Perplexity `pplx-decider-v1-27b` have admitted image routes. Local images require an explicit profile declaring an exact supported setup and model alias. TypeSafe, OpenRouter, Ollama, the named MLX route and OpenAI Decisions refuse images. A provider name alone establishes no image capability. The [image contract](specification/files.md#explicit-image-files-04470448) and [local setup declarations](specification/backends.md#local-image-declarations) give limits and profiles. No image accuracy claim follows from admission.
+
+## Saved questions and records in development 0.2
+
+Write `refund.json` yourself:
+
+```json
+{
+  "decide": "Does the writer request a refund?",
+  "true": "The writer asks for money back.",
+  "false": "The writer asks for something else.",
+  "threshold": "0.2:0.8",
+  "name": "refund",
+  "wording_version": 1,
+  "item_schema": {"type": "string"},
+  "context_schema": {"type": "string"}
+}
+```
+
+```sh
+thinkthen decide @refund.json --jsonl --field /body \
+  --context-field /policy < tickets.jsonl
+```
+
+Each JSON record supplies its own `body` and separate `policy` context. The answer retains the whole original record. Per-record context changes request/cache identity and stays associated with its record. An explicit empty context suppresses shared context from `--context FILE`. Item selection precedes declaration validation; extra properties remain present and values are never coerced. Declarations support root strings or root objects with string, finite number, boolean and string-list properties. They are a restricted grammar, not arbitrary JSON Schema.
+
+`true` and `false` are authored readings of yes and no. Saved readings can also be JSON objects, lists or null. A present null remains distinct from an absent reading. CLI `--true` and `--false` supply text overrides.
+
+For named lookup, place the same file at `questions/refund.json` under the platform configuration directory. On Linux this defaults to `~/.config/thinkthen/questions/refund.json`; macOS uses `~/Library/Application Support/thinkthen/questions/refund.json`; Windows uses `%APPDATA%\thinkthen\questions\refund.json`. Then use `@refund`. An existing local `refund` entry takes precedence over named lookup. References containing path punctuation keep path behavior. ThinkThen creates no question file or configuration. A present authored name must match the requested name. Author names, wording versions and declarations describe the caller's question; they do not change its digest or answer identity. Existing 0.1 question files remain accepted. The [question-file contract](specification/question-file.md) gives the full grammar and safe refusals.
+
+## MCP in development 0.2
+
+Install or unpack the reviewed candidate command, put it on PATH, and configure its backend environment as for the CLI. Configure your MCP client to launch:
+
+```json
+{"command":"thinkthen","args":["mcp"]}
+```
+
+The Rust server uses local stdio, one native engine and the same cache. It exposes exactly the ten functions above. It starts no shell and no process per call. A `decide` tool call accepts `{"question":"Does the writer request a refund?","evidence":"Please refund my order."}`. Use `question_file`, `question_name` or `question_reference` for explicit file, named or @ lookup; those selectors are exclusive with literal `question`. Literal @ text is never treated as a path. Ordered images are admitted only for decide/choose/score. The [MCP guide](libraries/mcp/README.md) gives source inputs, per-record context, complete results and a no-key recorded call. Final platform and release qualification remain required.
 
 ## Languages
 
