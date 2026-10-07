@@ -1,6 +1,7 @@
 # 0428: Complete C++, Swift, Zig and Objective-C typed parity
 
-Status: in progress. All 247 public cases per family are covered by retained full runs plus passing prerequisite reruns; actual shared release archives and installed consumers pass. The fresh High whole-family review found Zig arena ownership and C++/Swift/Zig final-row index defects; focused allocator, duplicate-row, filter and reordered-rank regressions now pass after their fixes and the additive C row accessor. Root owns the narrow High review of these substantial fixes, landing gates and the existing ticket record.
+Status: COMPLETE. All ten typed functions and 247 applicable cases per family pass through retained runs and focused corrections. Whole-family and ownership/index reviews are accepted. Full tests, lint and executable docs pass; the compiler-environment review's helper-import finding is fixed and isolated normal-entrypoint checks pass.
+Landed: 3fab8b824
 
 Milestone: 0.2
 
