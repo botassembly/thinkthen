@@ -18,28 +18,26 @@ fn two() -> CallOptions<'static> {
 }
 
 #[test]
-fn deadline_at_eof_reports_the_unfinished_declared_input_without_sending() {
-    check_eof_deadline(0);
+fn deadline_during_unfinished_declared_input_reports_without_sending() {
+    check_unfinished_declared_input_deadline(0);
 }
 
 #[test]
-fn deadline_at_eof_keeps_the_completed_prefix_and_final_facts() {
-    check_eof_deadline(2);
+fn deadline_during_unfinished_declared_input_keeps_completed_prefix_and_final_facts() {
+    check_unfinished_declared_input_deadline(2);
 }
 
 #[cfg(test)]
-fn check_eof_deadline(prefix: usize) {
+fn check_unfinished_declared_input_deadline(prefix: usize) {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.2}},"usage":{"input_tokens":887}}"#)).unwrap();
     let engine = engine(&listener);
     let question =
         Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
     let due = std::time::Instant::now() + std::time::Duration::from_secs(1);
     let mut position = 0;
-    let eof = Cell::new(false);
     let records = std::iter::from_fn(|| {
         if position > prefix {
             std::thread::sleep(due.saturating_duration_since(std::time::Instant::now()));
-            eof.set(true);
             return None;
         }
         if position == prefix {
@@ -62,10 +60,6 @@ fn check_eof_deadline(prefix: usize) {
         assert_eq!(row.result().value(), value);
     }
     let terminal = batch.next();
-    assert!(
-        eof.get(),
-        "the stop occurs while EOF admits the pending stage"
-    );
     let error = terminal
         .expect("pending input must produce a deadline, not normal exhaustion")
         .unwrap_err();

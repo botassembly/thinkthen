@@ -18,6 +18,8 @@ use crate::engine::usage::Counters;
 mod replies;
 mod slot;
 mod staging;
+#[cfg(test)]
+mod tests;
 use slot::Slot;
 
 /// How long input may pause before the open request goes out.
