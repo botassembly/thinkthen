@@ -99,21 +99,7 @@ fn decision_details_present_native_meanings_without_changing_bare_or_record_cont
             json!({"decide":"Refund?","true":meaning}).to_string(),
         )
         .expect("question");
-        let output = spawn(
-            &[
-                "decide",
-                &operand,
-                "--details",
-                "--no-cache",
-                "--url",
-                listener.base(),
-            ],
-            &[KEY],
-            b"Evidence",
-        )
-        .expect("detailed command");
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
-        let row: Value = serde_json::from_slice(&output.stdout).expect("detail");
+        let row = detailed_value(&listener, &operand, "decide", 0);
         assert_eq!(row["value"], meaning);
         assert_eq!(row["answer"]["probability"], 0.9);
         let bare = spawn(
@@ -124,21 +110,7 @@ fn decision_details_present_native_meanings_without_changing_bare_or_record_cont
         .expect("bare command");
         assert_eq!(text(&bare.stdout), "true\n");
         for (verb, expected) in [("filter", json!(true)), ("rank", json!(1))] {
-            let output = spawn(
-                &[
-                    verb,
-                    &operand,
-                    "--details",
-                    "--no-cache",
-                    "--url",
-                    listener.base(),
-                ],
-                &[KEY],
-                b"Evidence\n",
-            )
-            .expect("record command");
-            assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
-            let row: Value = serde_json::from_slice(&output.stdout).expect("record detail");
+            let row = detailed_value(&listener, &operand, verb, 0);
             assert_eq!(row["value"], expected);
         }
     }
@@ -156,24 +128,28 @@ fn decision_details_present_native_meanings_without_changing_bare_or_record_cont
         ),
     ] {
         fs::write(&question, declaration.to_string()).expect("question");
-        let output = spawn(
-            &[
-                "decide",
-                &operand,
-                "--details",
-                "--no-cache",
-                "--url",
-                listener.base(),
-            ],
-            &[KEY],
-            b"Evidence",
-        )
-        .expect("command");
-        assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
-        let row: Value = serde_json::from_slice(&output.stdout).expect("detail");
+        let row = detailed_value(&listener, &operand, "decide", exit);
         assert_eq!(row["value"], expected);
     }
     fs::remove_dir_all(&place).expect("remove owned folder");
+}
+
+fn detailed_value(listener: &Listener, operand: &str, verb: &str, exit: i32) -> Value {
+    let output = spawn(
+        &[
+            verb,
+            operand,
+            "--details",
+            "--no-cache",
+            "--url",
+            listener.base(),
+        ],
+        &[KEY],
+        b"Evidence\n",
+    )
+    .expect("detailed command");
+    assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
+    serde_json::from_slice(&output.stdout).expect("detail")
 }
 
 #[test]

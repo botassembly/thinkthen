@@ -270,23 +270,25 @@ fn details_keeps_filter_membership_and_rank_top_membership() -> io::Result<()> {
         RECORDS,
     )?;
     assert_eq!(code(&output), 0, "{}", said(&output));
-    let rows: Vec<(String, String)> = printed(&output)
+    let rows: Vec<_> = printed(&output)
         .lines()
-        .filter_map(|line| {
-            let (_, rest) = line.split_once("\"input\":")?;
-            let (record, _) = rest.split_once(",\"question\":")?;
-            let (value, _) = line.split_once("\"value\":")?.1.split_once(',')?;
-            Some((record.to_owned(), value.to_owned()))
+        .map(|line| {
+            let row: serde_json::Value = serde_json::from_str(line).expect("detail JSON");
+            (
+                row["input"].clone(),
+                row["value"].clone(),
+                row["index"].as_u64(),
+            )
         })
         .collect();
     assert_eq!(
         rows,
-        [
-            (RECORDS_AS_SENT[0].to_owned(), "true".to_owned()),
-            (RECORDS_AS_SENT[2].to_owned(), "true".to_owned()),
-            (RECORDS_AS_SENT[3].to_owned(), "true".to_owned()),
-        ],
-        "filter --details prints only kept records, in input order"
+        [0, 2, 3].map(|index| (
+            serde_json::from_str::<serde_json::Value>(RECORDS_AS_SENT[index]).expect("original"),
+            serde_json::Value::Bool(true),
+            Some(index as u64),
+        )),
+        "filter --details prints only kept originals with their indices, in input order"
     );
     let filter_ordinals: Vec<_> = printed(&output)
         .lines()
@@ -313,20 +315,20 @@ fn details_keeps_filter_membership_and_rank_top_membership() -> io::Result<()> {
         RECORDS,
     )?;
     assert_eq!(code(&output), 0, "{}", said(&output));
-    let held: Vec<String> = printed(&output)
+    let held: Vec<_> = printed(&output)
         .lines()
-        .filter_map(|line| {
-            let (_, rest) = line.split_once("\"input\":")?;
-            let (record, _) = rest.split_once(",\"question\":")?;
-            Some(record.to_owned())
+        .map(|line| {
+            let row: serde_json::Value = serde_json::from_str(line).expect("detail JSON");
+            (row["input"].clone(), row["index"].as_u64())
         })
         .collect();
     assert_eq!(
         held,
-        [
-            "{\"id\":\"R-3\",\"body\":\"The card was refused at checkout.\"}",
-            "{\"id\":\"R-4\",\"body\":\"The refund never arrived.\"}",
-        ]
+        [2, 3].map(|index| (
+            serde_json::from_str::<serde_json::Value>(RECORDS_AS_SENT[index]).expect("original"),
+            Some(index as u64),
+        )),
+        "rank --top retains the exact originals and their source indices in rank order"
     );
     let rank_ordinals: Vec<_> = printed(&output)
         .lines()
