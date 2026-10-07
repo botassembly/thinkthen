@@ -1,4 +1,6 @@
 use super::*;
+#[path = "../../src/test_deadline/child.rs"]
+mod child;
 use thinkthen::{
     BatchSetting, InputEvidence, QuestionInput, RankSet, RecordInput, RecordObservation,
 };
@@ -476,7 +478,7 @@ del historical['value'][0]['members']
 validator.validate(historical)
 "#;
     use std::io::Write as _;
-    let mut child = std::process::Command::new("python3")
+    let mut child = child::command("python3", &[])
         .args(["-c", script])
         .stdin(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
