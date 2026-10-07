@@ -1,6 +1,6 @@
 # 0425: Put the complete SDK outcome into the 0.2 plan
 
-Status: landed. The complete reviewed 0.2 plan assigns every PM ask, dependencies and acceptance checks. Product implementation remains open in its owning tickets.
+Status: OPEN. The complete reviewed 0.2 plan is landed and assigns every PM ask, dependencies and acceptance checks. Installed parity, MCP timing, docs and final candidate qualification remain open.
 
 Milestone: 0.2
 
