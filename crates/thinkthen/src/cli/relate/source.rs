@@ -145,7 +145,9 @@ pub(super) fn write(
     sources: &Sources,
 ) -> Result<(), Failure> {
     let mut edges = Vec::new();
-    let mut budget = Budget(crate::core::MAX_RECORD_BYTES - usize::from(output.details) * 2);
+    let mut budget = crate::result_json::bounded::OutputBudget(
+        crate::core::MAX_RECORD_BYTES - usize::from(output.details) * 2,
+    );
     for edge in &execution.edges {
         for source in sources
             .occurrences
@@ -174,7 +176,9 @@ pub(super) fn write(
                 };
                 // Count escaped JSON bytes using borrowed evidence before retaining
                 // the Cartesian expansion or writing any part of this complete set.
-                budget.admit(&located, !output.details || !edges.is_empty())?;
+                budget
+                    .admit(&located, !output.details || !edges.is_empty())
+                    .map_err(|()| Failure::Usage("source relate output exceeds 16 MiB"))?;
                 edges.push(located);
             }
         }
@@ -204,32 +208,5 @@ impl Serialize for Complete<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.canonical
             .serialize_with_value::<S, (), _>(None, self.value, serializer)
-    }
-}
-
-struct Budget(usize);
-
-impl Budget {
-    fn admit(&mut self, edge: &impl Serialize, separator: bool) -> Result<(), Failure> {
-        if separator {
-            self.write_all(b"\n")
-                .map_err(|_| Failure::Usage("source relate output exceeds 16 MiB"))?;
-        }
-        serde_json::to_writer(self, edge)
-            .map_err(|_| Failure::Usage("source relate output exceeds 16 MiB"))
-    }
-}
-
-impl Write for Budget {
-    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-        self.0 = self
-            .0
-            .checked_sub(bytes.len())
-            .ok_or_else(|| std::io::Error::other("source relate output exceeds 16 MiB"))?;
-        Ok(bytes.len())
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
     }
 }

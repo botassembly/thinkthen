@@ -1,6 +1,6 @@
 # Result shapes
 
-[specification/result.md](../specification/result.md) names each command's detailed row in its compatibility table. This page holds that table to rows the binary writes. It replays one command from each command's demo with `--details`, so no key and no network are needed. It then holds every `thinkthen.result/1` example row on the contract page to the same table. Each example row's fence names its command as the second word of the info string.
+[specification/result.md](../specification/result.md) names each command's detailed row in its compatibility table. This page holds that table to rows the binary writes. It replays one command from each command's demo with `--details`, so no key and no network are needed. It checks result/2 CLI rows and examples against the generated strict native schema, and holds retained result/1 compatibility examples to the legacy table. Each example row's fence names its command as the second word of the info string.
 
 The replayed CLI find winner carries position. The illustrative find row omits it. The compatibility table marks that CLI member optional and accepts both rows without adding a required member to shared host results.
 
@@ -28,9 +28,9 @@ row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $comma
   (cd "$demos/44-recognize-names" && tr -d '\n' < message.txt | thinkthen recognize --url https://api.typesafe.ai/v1 --replay recording/ --kind "PER=Part of a person's name." --kind 'ORG=Part of the name of an organization: a company, band, team, agency, government body, or media outlet.' --kind 'LOC=Part of the name of a place: a country, region, city, or geographic feature.' --kind 'MISC=Part of another named entity: a nationality, an event, a product, or the name of a creative work.' --details | row recognize)
   (cd "$demos/45-map-relationships" && thinkthen relate @relations.json --url https://api.typesafe.ai/v1 --details --replay recording/ < entities.json | row relate)
   awk '/^```/ { if (fenced) { fenced = 0 } else { fenced = 1; label = $2 }; next }
-       fenced && /"schema":"thinkthen\.result\/1"/ { print "{\"from\":\"example\",\"command\":\"" label "\",\"row\":" $0 "}" }' "$page"
+       fenced && /"schema":"thinkthen\.result\/[12]"/ { print "{\"from\":\"example\",\"command\":\"" label "\",\"row\":" $0 "}" }' "$page"
 } > "$HOME/rows.jsonl"
-wc -l < "$HOME/rows.jsonl" | mustmatch "22"
+wc -l < "$HOME/rows.jsonl" | mustmatch "23"
 jq -r 'select(.from == "replayed" and .command == "choose") | .row |
   [(.value == "billing"), (.answer.probabilities.billing == 1),
    (.answer.confidence == 1), (.threshold == null),
@@ -40,6 +40,7 @@ sed -n '/^## Compatibility$/,/^## Record rows$/p' "$page" | grep '^| `' \
       members: [.[3] | scan("`([^`]+)`")[0]], meta: [.[4] | scan("`([^`]+)`")[0]]}' > "$HOME/table.jsonl"
 wc -l < "$HOME/table.jsonl" | mustmatch "10"
 jq -r --slurpfile table "$HOME/table.jsonl" '
+  select(.row.schema == "thinkthen.result/1") |
   def compare($where; $held; $listed):
     ($held - ($listed | map(rtrimstr("?"))) | .[] | "\($where) \(.) is not in the table"),
     (($listed | map(select(endswith("?") | not))) - $held | .[] | "\($where) \(.) is missing");
@@ -57,4 +58,24 @@ jq -r --slurpfile table "$HOME/table.jsonl" '
             | select($verb != $expected) | "\($who) question.verb is \($verb), expected \($expected) for this rank form"
           else empty end))
     end' "$HOME/rows.jsonl" | mustmatch ""
+
+python3 - "$HOME/rows.jsonl" "$top/specification/result.schema.json" <<'PY_SCHEMA' | mustmatch ""
+import json, sys
+from jsonschema import Draft202012Validator
+schema = json.load(open(sys.argv[2]))
+names = {"decide":"completeDecide", "choose":"completeChoose", "tag":"completeTag",
+         "score":"completeScore", "filter":"completeFilter", "rank":"completeRank",
+         "find":"completeFind", "annotate":"completeAnnotation", "recognize":"completeRecognition",
+         "relate":"completeRelation"}
+for line in open(sys.argv[1]):
+    case = json.loads(line)
+    row = case["row"]
+    if case["from"] == "replayed":
+        assert row["schema"] == "thinkthen.result/2", case["command"]
+    if row["schema"] == "thinkthen.result/2":
+        command = case["command"].split("-")[0]
+        Draft202012Validator({"$ref":"#/$defs/"+names[command], "$defs":schema["$defs"]}).validate(row)
+        if command == "rank":
+            assert isinstance(row["value"], int) and not isinstance(row["value"], bool) and row["value"] > 0
+PY_SCHEMA
 ```

@@ -7,7 +7,7 @@ use std::sync::Arc;
 impl Engine {
     /// Relate selected native records, retaining the complete ordered original entity set.
     /// # Errors
-    /// Invalid fields, duplicate entities, unsupported controls and images refuse before sending.
+    /// Invalid fields, non-source duplicate entities, unsupported controls and images refuse before sending.
     #[allow(
         clippy::type_complexity,
         reason = "The whole original set retains a concrete complete relation aggregate"
@@ -69,9 +69,30 @@ impl Engine {
         if lines {
             ask.0.check_lines().map_err(Error::refused)?;
         }
-        let entities = ask.0.admit(&pairs).map_err(Error::refused)?;
+        let located = inputs.iter().any(|input| matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some()));
+        if located && !inputs.iter().all(|input| matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some())) {
+            return Err(Error::usage("source relate takes a source for every record"));
+        }
+        if located && pairs.len() > 255 {
+            return Err(Error::usage(
+                "source relate takes at most 255 source records",
+            ));
+        }
+        let distinct = if located {
+            unique(&pairs)
+        } else {
+            pairs.clone()
+        };
+        let entities = ask.0.admit(&distinct).map_err(Error::refused)?;
         self.relate_admitted_complete(ask, entities, options, lines, &inputs)?
-            .try_map(|result| {
+            .try_map(|mut result| {
+                if located {
+                    result.source_edges = Some(crate::public::results::source_relation::expand(
+                        &result.value,
+                        &inputs,
+                        &pairs,
+                    )?);
+                }
                 Ok(CompleteRecord {
                     original: originals,
                     ordinal: 0,
@@ -118,4 +139,14 @@ fn prepare<T: InputEvidence>(
         .ok_or_else(|| Error::usage("relate input exceeds 16 MiB"))?;
     *lines = Some(literal);
     Ok((record.original, input, pair))
+}
+
+fn unique(pairs: &[(String, String)]) -> Vec<(String, String)> {
+    let mut distinct = Vec::new();
+    for pair in pairs {
+        if !distinct.contains(pair) {
+            distinct.push(pair.clone());
+        }
+    }
+    distinct
 }

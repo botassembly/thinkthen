@@ -2,9 +2,9 @@
 
 Status: **Settled** for the bare value, the object, the five answer kinds, the full distribution with `confidence`, and request identity. ADR 0010 accepted the original kinds, ADR 0030 accepted `find`, and the 2026-09-21 amendment to ADR 0017 accepted `meta.requests`. ADR 0048 amends `meta` for batches.
 
-## Result/2 target for 0.2
+## Result/2 for 0.2
 
-Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The remaining sections and their result/1 examples describe landed behavior until adoption. The generated [result schema](result.schema.json) contains native result/2 definitions alongside retained result/1 compatibility definitions under ADR 0112. The additive native `complete_call_schema()` supplies the packaged strict complete success/error schema to consumers such as MCP. Both artifacts derive from the production serializers; they do not establish host or CLI adoption.
+Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The native branch implements the complete Rust calls and CLI details. The remaining result/1 examples document the retained explicit compatibility projection; they are not the new CLI details. Whole-code acceptance and host adoption remain open. The generated [result schema](result.schema.json) contains native result/2 definitions alongside retained result/1 compatibility definitions under ADR 0112. The additive native `complete_call_schema()` supplies the packaged strict complete success/error schema to consumers such as MCP. Both artifacts derive from the production serializers; host adoption requires actual consumer execution.
 
 ### Complete results and compatibility
 
@@ -30,6 +30,14 @@ Plain, graded and set rank assign positions after selection and before top trunc
 The five atomic answers remain `yes_no:{probability}`, `choice:{pick,probabilities,confidence?}`, `tag:{probabilities}`, `score:{level,probabilities,confidence?}` and `find:{pick,probabilities,confidence?}`, each tagged by its existing `kind`. Probability maps keep declared option order. Nullable successful values remain distinct from failures.
 
 An annotate success entry requires `answer_id,value,question,answer,threshold,request`. A failure entry requires `failure_id,question,failure,request` and omits the successful fields. The existing bare failure marker and six backend member causes remain unchanged. Recognize retains `answer:{pieces,names,pairs}` with complete probabilities. Relate retains `answer:{questions}`; each entry keeps `relation,reads,method,direction,source,target,request` and requires either success `answer_id,probability,accepted` or failure `failure_id,failure`. Existing nullable target rules remain.
+
+### Recorded CLI example
+
+This `decide --details --replay` row comes from the existing refund recording. It retains the actual historical observation and reports no current send or attempt. Its original wire-question count was never recorded, so `batch_size` is absent.
+
+```json decide
+{"schema":"thinkthen.result/2","answer_id":"a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e","value":true,"question":{"verb":"decide","text":"Does the customer ask for money back?"},"answer":{"kind":"yes_no","probability":0.99},"threshold":0.5,"meta":{"tool":"thinkthen 0.2.0","question_sha256":"ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":331,"output_tokens":21},"requests_sent":0,"cached":true,"requests":["1c38c6f52bec903f93aef63060bdc08055463afe00b5759223bfc5a64d30dafe"],"failed_questions":0,"attempts":[],"origin":"replay","question_sources":[{"origin":"replay","answered_by":"jev-1.13.0"}],"observations":[{"observation_id":"017420ba535606f3ab3ec3f9364250b5891432862f33194ab3d520cced234017"}],"answered_by":"jev-1.13.0"},"position":{"file":null,"first":1,"last":7}}
+```
 
 ### Identity types and stable answers
 
@@ -393,4 +401,4 @@ For `filter` and `rank`, every answered row in one run must also name the same r
 
 Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It says that a cache or recording folder may hold answers from the other version, and it tells the user to rerun with `--no-cache` or to prune that folder with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a `--no-cache` run returns. The library says the same of its cache.
 
-0447 image location addition preserves text SourceRecord's required line fields. Native ImageSourceRecord has record and file only. CLI image file details add flat file and position.file and omit first/last and first_line/last_line. Attachment details carry ordered source names in position.images beside typed input images; filenames never enter model state or identity. Native typed image calls return existing scalar/details/facts carriers until the separately owned result/2 implementation adopts shared identifiers.
+0447 image location addition preserves text SourceRecord's required line fields. Native ImageSourceRecord has record and file only. CLI image file details add flat file and position.file and omit first/last and first_line/last_line. Attachment details carry ordered source names in position.images beside typed input images; filenames never enter model state or identity. Existing native scalar/details/facts carriers remain available; additive complete image calls use the same result/2 identities and provenance as text.

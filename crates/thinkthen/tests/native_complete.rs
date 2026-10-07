@@ -102,3 +102,6 @@ mod unknown_usage;
 
 #[path = "native_complete/cache_warning.rs"]
 mod cache_warning;
+
+#[path = "native_complete/source_relations.rs"]
+mod source_relations;

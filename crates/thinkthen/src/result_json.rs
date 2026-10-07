@@ -7,6 +7,7 @@ use crate::core::{
     question_sha256_with_profile,
 };
 use crate::engine::facade::Judgment;
+pub(crate) mod bounded;
 pub(crate) mod complete;
 
 /// What a detailed row names beside the judgment: the backend's address and the

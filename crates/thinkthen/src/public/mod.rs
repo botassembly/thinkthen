@@ -120,7 +120,9 @@ pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
     RecognitionProbabilities,
 };
-pub use results::{CompleteRelated, CompleteRelationMember};
+pub use results::{
+    CompleteRelated, CompleteRelationMember, SourceRelationEdge, SourceRelationEndpoint,
+};
 pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;

@@ -69,6 +69,18 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+struct SourceRelationEndpoint
+fn SourceRelationEndpoint::ordinal(&self) -> usize
+fn SourceRelationEndpoint::entity(&self) -> &Entity
+fn SourceRelationEndpoint::record(&self) -> &RawRecord
+fn SourceRelationEndpoint::location(&self) -> &SourceLocation
+impl Serialize for SourceRelationEndpoint
+struct SourceRelationEdge
+const fn SourceRelationEdge::edge(&self) -> &Edge
+const fn SourceRelationEdge::source(&self) -> &SourceRelationEndpoint
+const fn SourceRelationEdge::target(&self) -> &SourceRelationEndpoint
+impl Serialize for SourceRelationEdge
+fn CompleteRelated::source_edges(&self) -> Option<&[SourceRelationEdge]>
 const fn Facts::held_model_mismatch(&self) -> bool
 const fn complete_call_schema() -> &'static str
 fn Engine::relate_records_complete_with<I, T>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRecord<Vec<T>, CompleteRelated>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
@@ -311,3 +323,13 @@ Rank CLI constituent WIP: all ten command details now use concrete result/2 seri
 Source grows 376 nonblank Rust lines (147092 → 147468) for deferred typed rank rendering, shared member payloads, truthful full-position bookkeeping and two independent command record/replay cases. The legacy rank detail renderer and JSON member-name patcher are removed; existing native rank identity and aggregate arithmetic are reused. No new scheduler, parser, key domain, dependency or proof tool is added.
 
 Held-model warning constituent adds 262 measured nonblank Rust lines (147468 → 147730) for validated route/question-bound exclusion, call-scoped typed facts and safe fixed CLI presentation, plus two actual cache/replay regressions. SQL row selection shares its existing column layout and constituent validation; warnings remain outside durable usage totals and legacy facts serialization. Strict complete schema/corpus adopt the boolean field together. Final timing integration, whole High review/full landing gates and host adoption remain open.
+
+### Explicit source relation execution constituent
+
+Native explicit source records now share one admitted entity for equal selected name/kind pairs, retaining every ordered original occurrence. This corrects the earlier whole-set note only for located source inputs; non-source duplicate rejection remains unchanged. `CompleteRelated::value()` retains the semantic accepted edges and `source_edges()` exposes complete typed occurrence pairs with actual ordinal, native original content and source coordinates. Endpoint ownership survives engine drop and requires no JSON result parser. Mixed source/non-source input refuses before lookup/send. Source admission limits remain 255 occurrences and 16 MiB retained originals. Escaped expanded endpoints are measured against 16 MiB before retaining/output; overflow returns the actual started facts without retry or truncation. CLI and native reuse one presentation byte budget.
+
+The prior implementation refused equal source identities; the new public regression failed with that exact duplicate refusal before the integration and passes afterward. Independent expected wire questions pin deduplication, partial input887/output unknown, original false/null/list fields, ordered Cartesian expansion, renamed-source zero-send replay with unchanged answer identity, non-Clone/non-Serialize/non-Send original ownership and escaped-output overflow. Existing non-source and CLI located cases remain required. Whole High review, root landing and actual host adoption remain open.
+
+Source grows 439 nonblank Rust lines (148275 to 148714) for owned typed source endpoints, shared escaped-output accounting and three public behavior cases. Checked native/CLI relation rendering and removed the CLI-only duplicate byte budget; semantic question planning, canonical members and physical presentation serialization remain shared.
+
+The executable result page now validates actual replayed CLI result/2 rows against the shared strict schema and retains the separate result/1 compatibility-table checks. One real refund replay example (unknown historical batch count, zero sends, empty current attempts) is shared with the type corpus. These docs do not claim host parity or main landing.
