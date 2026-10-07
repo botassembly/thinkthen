@@ -778,6 +778,7 @@ int thinkthen_relate_complete(const thinkthen_engine *, const thinkthen_question
 void thinkthen_result_free(thinkthen_result *);
 int thinkthen_result_summary(const thinkthen_result *, thinkthen_summary_v1 *);
 int thinkthen_result_observation(const thinkthen_result *, size_t, thinkthen_observation_v1 *);
+int thinkthen_result_row(const thinkthen_result *, size_t, thinkthen_row_observation_v1 *);
 int thinkthen_result_decide(const thinkthen_result *, size_t, thinkthen_decide_view_v1 *);
 int thinkthen_result_choose(const thinkthen_result *, size_t, thinkthen_choose_view_v1 *);
 int thinkthen_result_tag(const thinkthen_result *, size_t, thinkthen_tag_view_v1 *);
@@ -786,6 +787,7 @@ int thinkthen_result_filter(const thinkthen_result *, size_t, thinkthen_filter_v
 int thinkthen_result_rank(const thinkthen_result *, size_t, thinkthen_rank_view_v1 *);
 
 int thinkthen_result_rank_member_count(const thinkthen_result *, size_t, size_t *);
+int thinkthen_result_rank_member_details(const thinkthen_result *, size_t, size_t, thinkthen_details_v1 *);
 int thinkthen_result_rank_member(const thinkthen_result *, size_t, size_t, thinkthen_rank_view_v1 *);
 int thinkthen_result_find(const thinkthen_result *, size_t, thinkthen_find_view_v1 *);
 int thinkthen_result_annotate(const thinkthen_result *, size_t, thinkthen_annotate_view_v1 *);

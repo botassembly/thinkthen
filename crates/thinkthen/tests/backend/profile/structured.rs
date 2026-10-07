@@ -26,13 +26,13 @@ fn structured_tag(prefix: &str) -> (String, PathBuf, PathBuf) {
     (format!("@{}", question.to_string_lossy()), exact, under)
 }
 
-/// The whole body fits at the edge. One byte under, each question goes in
-/// its own request with the state repeated, by ADR 0111 section 4.
+/// Preview bytes retain packing at the edge and splitting one byte under.
+/// Both plans bound requests by the two admitted wire questions.
 #[test]
 fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
     let (question, exact, under) = structured_tag("plan-");
     let base = ["tag", question.as_str(), "--model", "local-1"];
-    let requests = |profile: &Path| {
+    let preview = |profile: &Path| {
         let planned = spawn(
             &[
                 &base[..],
@@ -49,18 +49,35 @@ fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
             "{}",
             String::from_utf8_lossy(&planned.stderr)
         );
-        let counts: serde_json::Value = serde_json::from_slice(
-            planned
-                .stdout
-                .split(|byte| *byte == b'\n')
-                .nth(1)
-                .expect("a counts line"),
-        )
-        .expect("counts");
-        counts["requests"].clone()
+        let mut lines = planned.stdout.split(|byte| *byte == b'\n');
+        let document: serde_json::Value =
+            serde_json::from_slice(lines.next().expect("a preview line")).expect("preview");
+        let counts: serde_json::Value =
+            serde_json::from_slice(lines.next().expect("a counts line")).expect("counts");
+        (document["request"].clone(), counts)
     };
-    assert_eq!(requests(&exact), 1);
-    assert_eq!(requests(&under), 2);
+    let (packed, packed_counts) = preview(&exact);
+    assert_eq!(
+        packed,
+        serde_json::from_str::<serde_json::Value>(STRUCTURED_TAG_BODY).expect("independent body")
+    );
+    assert_eq!(
+        packed_counts,
+        serde_json::json!({"records":1,"requests":2,"estimated_bytes":212,
+            "estimated_input_tokens":{"lower":109,"upper":193},"upper_bound":true})
+    );
+    let (split, split_counts) = preview(&under);
+    assert_eq!(
+        split,
+        serde_json::json!({"state":"Refund me please.","model":"local-1",
+            "questions":{"q1":{"type":"noul",
+                "instructions":[["Which topics?"],{"label":"billing"}]}}})
+    );
+    assert_eq!(
+        split_counts,
+        serde_json::json!({"records":1,"requests":2,"estimated_bytes":273,
+            "estimated_input_tokens":{"lower":140,"upper":248},"upper_bound":false})
+    );
 }
 
 #[test]

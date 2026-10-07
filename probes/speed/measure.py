@@ -103,7 +103,8 @@ def table(path):
 
 
 def gate(path=HERE / "functions.jsonl"):
-    env = {"THINKTHEN_BASE_URL": os.environ["THINKTHEN_BASE_URL"], "THINKTHEN_API_KEY": LOOPBACK_KEY}
+    env = {"THINKTHEN_BASE_URL": os.environ["THINKTHEN_BASE_URL"], "THINKTHEN_API_KEY": LOOPBACK_KEY,
+           "THINKTHEN_TEST_INPUT_PAUSE_MS": "10000"}
     failures = []
     for row in table(path):
         got = run(os.environ["THINKTHEN_BIN"], [row["function"], *row["args"]],

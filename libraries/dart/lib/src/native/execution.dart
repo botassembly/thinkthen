@@ -207,6 +207,7 @@ extension _Execution on Engine {
     final authors = <QuestionAuthorView>[];
     final members = <List<QuestionAuthorView>>[];
     final ranks = <List<RankView>>[];
+    final rankDetails = <List<DetailsView>>[];
     final recognitions = <SourceRecognitionView?>[];
     final relations = <SourceRelationsView?>[];
     for (var i = 0; i < s.count; ++i) {
@@ -229,6 +230,7 @@ extension _Execution on Engine {
       }
       members.add(ma);
       final rm = <RankView>[];
+      final rd = <DetailsView>[];
       if (verb == 'rank') {
         final n = calloc<Size>();
         try {
@@ -240,6 +242,18 @@ extension _Execution on Engine {
               if (_api.thinkthen_result_rank_member(r, i, j, p) != 0)
                 throw StateError('native rank member');
               rm.add(RankView.copy(p.ref));
+              final a = calloc<CQuestionAuthorView>();
+              final d = calloc<CDetailsView>();
+              try {
+                if (_api.thinkthen_result_member_author(r, i, j, a) != 0 ||
+                    _api.thinkthen_result_rank_member_details(r, i, j, d) != 0)
+                  throw StateError('native rank member details');
+                ma.add(QuestionAuthorView.copy(a.ref));
+                rd.add(DetailsView.copy(d.ref));
+              } finally {
+                calloc.free(a);
+                calloc.free(d);
+              }
             } finally {
               calloc.free(p);
             }
@@ -249,6 +263,7 @@ extension _Execution on Engine {
         }
       }
       ranks.add(rm);
+      rankDetails.add(rd);
       recognitions.add(verb == 'recognize' ? _source_recognition(r, i) : null);
       relations.add(verb == 'relate' ? _source_relations(r, i) : null);
     }
@@ -263,7 +278,8 @@ extension _Execution on Engine {
         List.generate(s.observation_count, (i) => _observation_details(r, i)),
         List.generate(s.observation_count, (i) => _observation_author(r, i)),
         recognitions,
-        relations);
+        relations,
+        rankDetails);
   }
 
   CompleteResult<T> _execute<T>(

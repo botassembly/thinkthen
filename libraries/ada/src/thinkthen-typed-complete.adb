@@ -228,6 +228,12 @@ package body Thinkthen.Typed.Complete is
       Code := Native_Observation (Item.Handle, Index, Copy'Access);
       if Code = 0 then View := Copy; end if;
    end Observation;
+   procedure Row (Item : Result; Index : Interfaces.C.size_t; View : in out Row_Observation_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Row_Observation_V1 := View;
+   begin
+      Code := Native.Results.Result_Row (Item.Handle, Index, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Row;
    function Native_Error (E : System.Address; Out_Handle : access System.Address) return Interfaces.C.int
      with Import, Convention => C, External_Name => "thinkthen_error_complete";
    procedure Error_Snapshot (Client : Engine; Item : in out Result; Code : out Interfaces.C.int) is
@@ -291,6 +297,13 @@ package body Thinkthen.Typed.Complete is
         (Item.Handle, Index, Copy'Access);
       if Code = 0 then View := Copy; end if;
    end Source_Relations;
+   procedure Rank_Member_Details (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Details_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Details_V1 := View;
+   begin
+      Code := Native.Results.Result_Rank_Member_Details
+        (Item.Handle, Index, Member, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Rank_Member_Details;
    procedure Rank_Member (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Rank_View_V1; Code : out Interfaces.C.int) is
       Copy : aliased Rank_View_V1 := View;
    begin

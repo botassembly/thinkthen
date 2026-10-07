@@ -14,6 +14,7 @@ Object? encodeNative(Object? v) {
       'authors': encodeNative(v.authors),
       'memberAuthors': encodeNative(v.memberAuthors),
       'rankMembers': encodeNative(v.rankMembers),
+      'rankMemberDetails': encodeNative(v.rankMemberDetails),
       'observationDetails': encodeNative(v.observationDetails),
       'observationAuthors': encodeNative(v.observationAuthors),
       'sourceRecognitions': encodeNative(v.sourceRecognitions),

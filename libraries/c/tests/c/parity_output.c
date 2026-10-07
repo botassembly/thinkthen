@@ -28,11 +28,6 @@ static void recognized(thinkthen_recognize_value_v1 v) {
     if(v.relations.present) { fputs(",\"relations\":[",stdout); for(size_t i=0;i<v.relations.value.len;++i) { if(i) putchar(','); thinkthen_entity_edge_v1 e=v.relations.value.data[i]; fputs("{\"relation\":",stdout); quoted(e.relation); fputs(",\"source\":",stdout); entity(e.source); fputs(",\"target\":",stdout); entity(e.target); printf(",\"probability\":%.17g",e.probability); if(e.either) fputs(",\"either\":true",stdout); putchar('}'); } putchar(']'); }
     putchar('}');
 }
-static size_t ordinal(thinkthen_result *r,thinkthen_row_v1 row) {
-    thinkthen_summary_v1 s={0}; if(thinkthen_result_summary(r,&s)) abort();
-    for(size_t i=0;i<s.observation_count;++i) { thinkthen_observation_v1 e={0}; if(thinkthen_result_observation(r,i,&e)) abort(); if(e.kind==2) { thinkthen_row_v1 v={0}; switch(e.data.row.function) { case 1:v=e.data.row.data.decide.common;break;case 2:v=e.data.row.data.choose.common;break;case 3:v=e.data.row.data.tag.common;break;case 4:v=e.data.row.data.score.common;break;case 5:v=e.data.row.data.filter.common;break;case 6:v=e.data.row.data.rank.common;break;case 8:v=e.data.row.data.annotate.common;break;case 9:v=e.data.row.data.recognize.common;break;default:break; } if(v.answer_id.len==row.answer_id.len && !memcmp(v.answer_id.data,row.answer_id.data,v.answer_id.len)) return e.data.row.index; } }
-    return 0;
-}
 static void details(thinkthen_result *r,size_t at) {
     thinkthen_details_v1 d={0}; if(thinkthen_result_details(r,at,&d)) abort();
     fputs(",\"detail_inputs\":[",stdout);
@@ -42,6 +37,42 @@ static void details(thinkthen_result *r,size_t at) {
         fputs("{\"input\":",stdout); if(input.original.present) content(input.original.value); else fputs("null",stdout);
         if(input.position.present) { fputs(",\"file\":",stdout); quoted(input.position.value.file.value); if(input.position.value.first_line.present) printf(",\"first_line\":%zu",input.position.value.first_line.value); if(input.position.value.last_line.present) printf(",\"last_line\":%zu",input.position.value.last_line.value); }
         putchar('}');
+    }
+    putchar(']');
+}
+static void rank_facts(thinkthen_row_v1 common,thinkthen_details_v1 d) {
+    fputs(",\"model\":",stdout); quoted(common.meta.model);
+    if(common.meta.context_sha256.present) { fputs(",\"context_digest\":",stdout); quoted(common.meta.context_sha256.value); }
+    if(d.usage.present) {
+        fputs(",\"usage\":{",stdout);
+        if(d.usage.input_tokens.present) printf("\"input_tokens\":%llu",(unsigned long long)d.usage.input_tokens.value);
+        if(d.usage.output_tokens.present) { if(d.usage.input_tokens.present) putchar(','); printf("\"output_tokens\":%llu",(unsigned long long)d.usage.output_tokens.value); }
+        putchar('}');
+    }
+    fputs(",\"source_batch_sizes\":[",stdout);
+    for(size_t i=0;i<d.question_sources.len;++i) { if(i) putchar(','); if(d.question_sources.data[i].batch_size.present) printf("%zu",d.question_sources.data[i].batch_size.value); else fputs("null",stdout); }
+    putchar(']');
+}
+static void rank_members(thinkthen_result *r,size_t at) {
+    size_t count=0; if(thinkthen_result_rank_member_count(r,at,&count)) abort();
+    if(!count) return;
+    thinkthen_rank_view_v1 parent={0}; thinkthen_details_v1 parent_details={0};
+    if(thinkthen_result_rank(r,at,&parent) || thinkthen_result_details(r,at,&parent_details)) abort();
+    if(parent.question_name.present) { fputs(",\"question_name\":",stdout); quoted(parent.question_name.value); }
+    rank_facts(parent.common,parent_details);
+    fputs(",\"members\":[",stdout);
+    for(size_t i=0;i<count;++i) {
+        if(i) putchar(',');
+        thinkthen_rank_view_v1 v={0}; thinkthen_details_v1 d={0}; thinkthen_question_author_v1 a={0};
+        if(thinkthen_result_rank_member(r,at,i,&v) || thinkthen_result_rank_member_details(r,at,i,&d) || thinkthen_result_member_author(r,at,i,&a)) abort();
+        fputs("{\"name\":",stdout); if(v.question_name.present) quoted(v.question_name.value); else fputs("null",stdout);
+        fputs(",\"value\":",stdout); if(v.value.present) printf("%zu",v.value.value); else fputs("null",stdout);
+        if(v.common.answer.present) { if(v.common.answer.value.kind!=1) abort(); printf(",\"probability\":%.17g",v.common.answer.value.data.probability); }
+        fputs(",\"answer_id\":",stdout); quoted(v.common.answer_id);
+        if(a.name.present) { fputs(",\"author\":",stdout); quoted(a.name.value); }
+        if(a.wording_version.present) printf(",\"wording_version\":%llu",(unsigned long long)a.wording_version.value);
+        printf(",\"observations\":%zu,\"sources\":%zu",d.observations.len,d.question_sources.len);
+        rank_facts(v.common,d); putchar('}');
     }
     putchar(']');
 }
@@ -61,7 +92,11 @@ static void row(thinkthen_result *r,unsigned kind,size_t at) {
         case 10:{ thinkthen_relate_view_v1 v={0}; if(thinkthen_result_relate(r,at,&v)) abort(); common=v.common; edges(v.value); break; }
         default:abort();
     }
-    if(kind!=7) index=ordinal(r,common);
+    if(kind!=7) {
+        thinkthen_row_observation_v1 final={0};
+        if(thinkthen_result_row(r,at,&final)) abort();
+        index=final.index;
+    }
     printf(",\"index\":"); if(index==SIZE_MAX) fputs("null",stdout); else printf("%zu",index);
     fputs(",\"answer_id\":",stdout); quoted(common.answer_id);
     fputs(",\"origin\":",stdout); if(common.meta.origin.present) printf("%u",common.meta.origin.value); else fputs("null",stdout);
@@ -85,6 +120,7 @@ static void row(thinkthen_result *r,unsigned kind,size_t at) {
         }
         putchar(']');
     }
+    if(kind==6) rank_members(r,at);
     details(r,at);
     thinkthen_question_author_v1 author={0}; if(thinkthen_result_question_author(r,at,&author)) abort();
     if(author.name.present) { fputs(",\"name\":",stdout); quoted(author.name.value); }
@@ -103,6 +139,6 @@ static void output(thinkthen_engine *e,unsigned kind,int code,thinkthen_result *
             thinkthen_result_free(snapshot);
         }
     }
-    else { thinkthen_summary_v1 s={0}; if(thinkthen_result_summary(r,&s)) abort(); fputs(",\"schema\":",stdout); quoted(s.schema); printf(",\"requests_sent\":%llu,\"cache_answers\":%llu,\"observations\":%zu,\"call_id\":",(unsigned long long)s.facts.value.requests_sent,(unsigned long long)s.facts.value.cache_answers,s.observation_count); quoted(s.facts.value.call_id); fputs(",\"rows\":[",stdout); for(size_t at=0;at<s.count;++at) { if(at) putchar(','); row(r,kind,at); } putchar(']'); }
+    else { thinkthen_summary_v1 s={0}; if(thinkthen_result_summary(r,&s)) abort(); fputs(",\"schema\":",stdout); quoted(s.schema); printf(",\"requests_sent\":%llu,\"records\":%llu,\"cache_answers\":%llu,\"observations\":%zu,\"call_id\":",(unsigned long long)s.facts.value.requests_sent,(unsigned long long)s.facts.value.records,(unsigned long long)s.facts.value.cache_answers,s.observation_count); quoted(s.facts.value.call_id); if(s.facts.value.input_tokens.present) printf(",\"input_tokens\":%llu",(unsigned long long)s.facts.value.input_tokens.value); if(s.facts.value.output_tokens.present) printf(",\"output_tokens\":%llu",(unsigned long long)s.facts.value.output_tokens.value); fputs(",\"rows\":[",stdout); for(size_t at=0;at<s.count;++at) { if(at) putchar(','); row(r,kind,at); } putchar(']'); }
     puts("}");
 }

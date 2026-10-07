@@ -61,6 +61,19 @@ def row(result,verb,at):
         else:answer['probabilities']=probabilities(data['tag'] if a['kind']==3 else data[{2:'choice',4:'score',5:'find',7:'find'}[a['kind']]]['probabilities'])
     answer['detail_inputs']=[{'input':original(i['original']),**location(i['position'])} for i in result['details'][at]['inputs']['data']]
     if verb=='annotate':answer['member_authors']=[author(a) for a in result['memberAuthors'][at]]
+    if verb=='rank' and result['rankMembers'][at]:
+        def rank_facts(target,common,details):
+            meta=common['meta']; target['model']=string(meta['model'])
+            target['context_digest']=string(meta['context_sha256']['value']) if meta['context_sha256']['present'] else None
+            usage=details['usage'];target['usage']={key:int(usage[key]['value']) for key in ('input_tokens','output_tokens') if usage[key]['present']}
+            target['source_batch_sizes']=[int(source['batch_size']['value']) if source['batch_size']['present'] else None for source in details['question_sources']['data']]
+        rank_facts(answer,common,result['details'][at]);answer['question_name']=string(v['question_name']['value']);answer['members']=[]
+        for j,rank_member in enumerate(result['rankMembers'][at]):
+            mc=rank_member['common'];mm=mc['meta'];a=author(result['memberAuthors'][at][j])
+            child={'name':string(rank_member['question_name']['value']),'value':optional(rank_member['value']),'probability':mc['answer']['value']['data']['probability'],
+                   'answer_id':string(mc['answer_id']),'author':a.get('name'),'observations':mm['observations']['len'],'sources':mm['question_sources']['len']}
+            if 'wording_version' in a:child['wording_version']=a['wording_version']
+            rank_facts(child,mc,result['rankMemberDetails'][at][j]);answer['members'].append(child)
     return answer
 
 def project(payload,verb):
@@ -70,5 +83,9 @@ def project(payload,verb):
         if e['stopped']['present'] and e['stopped']['value']['at']['present']:out['stopped_at']=e['stopped']['value']['at']['value']
     else:
         r=payload['result'];s=r['summary'];facts=s['facts']['value'];out={'code':0,'schema':string(s['schema']),'requests_sent':int(facts['requests_sent']) if facts else 0,'cache_answers':int(facts['cache_answers']) if facts else 0,'observations':s['observation_count'],'call_id':string(facts['call_id']) if facts else '', 'rows':[row(r,verb,i) for i in range(s['count'])]}
+    if 'result' in payload and payload['result']['summary']['facts']['present']:
+        facts=payload['result']['summary']['facts']['value'];out['records']=int(facts['records'])
+        for key in ('input_tokens','output_tokens'):
+            if facts[key]['present']:out[key]=int(facts[key]['value'])
     if 'completed' in payload:out['completed']=[answer for r in payload['completed'] for answer in project({'result':r},verb)['rows']]
     return out

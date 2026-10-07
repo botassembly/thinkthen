@@ -60,3 +60,23 @@ test "serialized facts require observed identity and preserve absent counters" {
         \\{"call_id":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","cache_answers":0,"records":0,"requests_sent":0,"seconds":0}
     ));
 }
+test "native snapshots preserve existing named initialization" {
+    const n = @import("thinkthen").native;
+    const c = @import("thinkthen").c;
+    var snapshot = n.Snapshot{
+        .arena = std.heap.ArenaAllocator.init(std.testing.allocator),
+        .summary = std.mem.zeroes(c.thinkthen_summary_v1),
+        .rows = &.{},
+        .observations = &.{},
+        .details = &.{},
+        .observation_details = &.{},
+        .authors = &.{},
+        .observation_authors = &.{},
+        .member_authors = &.{},
+        .rank_members = &.{},
+        .located_recognition = &.{},
+        .located_relations = &.{},
+    };
+    defer snapshot.deinit();
+    try std.testing.expectEqual(@as(usize, 0), snapshot.rank_member_details.len);
+}

@@ -3,7 +3,6 @@
 use std::io::{self, IsTerminal, Write};
 use std::process::ExitCode;
 
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::JudgingInput;
@@ -63,7 +62,7 @@ pub(super) fn packed(
     };
     let mut packer = packer(&planner, backend, packing)?;
     let mut summary = PlanSummary::new(false);
-    let mut seen = HashSet::new();
+    let mut occurrences = 0_usize;
     let mut closed = Vec::new();
     let mut dropped = false;
     for held in records {
@@ -76,29 +75,33 @@ pub(super) fn packed(
             dropped |= built_in::drops_detail(&plan);
             let asks = pack::asks_for(backend.api_type(), backend.url(), &plan)
                 .map_err(|error| super::encoded(&plan, error))?;
-            entries.extend(
-                asks.into_iter()
-                    .filter(|ask| seen.insert(ask.key))
-                    .map(|ask| Entry {
-                        state: ask.state.clone(),
-                        question: Arc::clone(&ask.question),
-                        options: pipeline::options(&ask),
-                        item: (),
-                    }),
-            );
+            entries.extend(asks.into_iter().map(|ask| Entry {
+                state: ask.state.clone(),
+                question: Arc::clone(&ask.question),
+                options: pipeline::options(&ask),
+                item: (),
+            }));
         }
+        occurrences = occurrences
+            .checked_add(entries.len())
+            .ok_or(Failure::Defect("a plan is too large"))?;
         packer
             .add(entries, &mut closed)
             .map_err(|error| planner.refused(error))?;
+        for request in closed.drain(..) {
+            summary
+                .request(&request.body)
+                .map_err(|_| Failure::Defect("a plan is too large"))?;
+        }
     }
-    closed.extend(packer.close());
     crate::cli::check::say_dropped_detail(dropped, configuration.environment.named())?;
-    for request in &closed {
+    if let Some(request) = packer.close() {
         summary
             .request(&request.body)
             .map_err(|_| Failure::Defect("a plan is too large"))?;
     }
-    let Some(first) = closed.into_iter().next() else {
+    summary.bound_requests(occurrences);
+    let Some(first) = summary.first_body() else {
         return Ok(ExitCode::SUCCESS);
     };
     print_plan(
@@ -106,7 +109,7 @@ pub(super) fn packed(
         &configuration.mismatch,
         reading,
         &configuration.planning(),
-        first.body,
+        first.to_vec(),
         &summary,
         output.writer(),
     )

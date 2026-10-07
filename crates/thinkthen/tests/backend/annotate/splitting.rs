@@ -447,7 +447,7 @@ fn the_plan_shows_each_request() {
             r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Short note.\". Is this concise?"},"#,
             r#""q2":{"type":"noul","instructions":"The text is \"Refund me.\". Does this ask for a refund?"}}}}"#,
             "\n",
-            r#"{"records":1,"requests":1,"estimated_bytes":266,"estimated_input_tokens":{"lower":137,"upper":242},"upper_bound":false}"#,
+            r#"{"records":1,"requests":2,"estimated_bytes":266,"estimated_input_tokens":{"lower":137,"upper":242},"upper_bound":true}"#,
             "\n",
         )
         .to_owned(), Some(0))
