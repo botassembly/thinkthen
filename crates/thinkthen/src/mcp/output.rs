@@ -157,4 +157,88 @@ mod tests {
         assert!(output.write(&text).is_err());
         assert_eq!(count.load(Ordering::Relaxed), limit);
     }
+    #[derive(Default)]
+    struct Sink {
+        bytes: Vec<u8>,
+        writes: usize,
+        flushes: usize,
+        interrupted: bool,
+        terminal: Option<io::ErrorKind>,
+        failed: bool,
+        after_failure: usize,
+        flush_failure: bool,
+    }
+    impl Write for Sink {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.writes += 1;
+            if self.failed {
+                self.after_failure += 1;
+            } else if !self.interrupted {
+                self.interrupted = true;
+                return Err(io::ErrorKind::Interrupted.into());
+            } else if self.writes == 4 {
+                if let Some(kind) = self.terminal {
+                    self.failed = true;
+                    return if kind == io::ErrorKind::WriteZero {
+                        Ok(0)
+                    } else {
+                        Err(kind.into())
+                    };
+                }
+            }
+            let count = bytes.len().min(7);
+            self.bytes.extend_from_slice(&bytes[..count]);
+            Ok(count)
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            self.flushes += 1;
+            if self.flush_failure {
+                self.failed = true;
+                Err(io::ErrorKind::PermissionDenied.into())
+            } else {
+                Ok(())
+            }
+        }
+    }
+    #[test]
+    fn packets_handle_short_writes_and_interrupts_without_retrying_terminal_failures() {
+        for repeats in [4, 4096] {
+            let text = "\"\\\n\t".repeat(repeats);
+            let mut expected = serde_json::to_vec(&text).unwrap();
+            expected.push(b'\n');
+            for (terminal, flush_failure, error) in [
+                (None, false, None),
+                (
+                    Some(io::ErrorKind::BrokenPipe),
+                    false,
+                    Some(io::ErrorKind::BrokenPipe),
+                ),
+                (
+                    Some(io::ErrorKind::WriteZero),
+                    false,
+                    Some(io::ErrorKind::WriteZero),
+                ),
+                (None, true, Some(io::ErrorKind::PermissionDenied)),
+            ] {
+                let output = Output::new(Sink {
+                    terminal,
+                    flush_failure,
+                    ..Sink::default()
+                });
+                assert_eq!(output.write(&text).err().map(|e| e.kind()), error);
+                let sink = output.0.lock().unwrap();
+                assert!(sink.interrupted);
+                assert_eq!(sink.after_failure, 0, "packet tail retried after {error:?}");
+                if terminal.is_some() {
+                    assert_eq!(sink.writes, 4);
+                    assert_eq!(sink.flushes, 0);
+                    assert_eq!(sink.bytes, expected[..14]);
+                } else {
+                    assert_eq!(sink.bytes, expected);
+                    assert_eq!(sink.bytes.iter().filter(|&&b| b == b'\n').count(), 1);
+                    assert_eq!(sink.flushes, 1);
+                }
+            }
+        }
+    }
 }
