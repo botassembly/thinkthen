@@ -128,20 +128,21 @@ for named in (False, True):
             assert done.returncode == 0 and "DART_PORTABLE_BATCH_PASS" in done.stdout, done.stderr
         backend.stdin.write("count\n")
         backend.stdin.flush()
-        assert int(backend.stdout.readline()) == 1
+        assert int(backend.stdout.readline()) == 2
         backend.stdin.write("capture\n")
         backend.stdin.flush()
         actual = [body.encode() for body in json.loads(backend.stdout.readline())["bodies"]]
-        one_portable_request(actual)
+        for body in actual:one_portable_request([body])
+        assert "tt-portable-loopback" not in done.stdout + done.stderr
         if named:
-            for command, expected in (("paths", paths(row["path"])),
-                                      ("bearers", {"markers":{"local":1},"absent":0,"unknown":0,"overflow":False})):
+            for command, expected in (("paths", paths(row["path"], 2)),
+                                      ("bearers", {"markers":{"local":2},"absent":0,"unknown":0,"overflow":False})):
                 backend.stdin.write(command + "\n"); backend.stdin.flush()
                 assert json.loads(backend.stdout.readline()) == expected, command
             assert "tt-named-loopback" not in done.stdout + done.stderr
             assert b"tt-named-loopback" not in b"".join(actual)
             print("dart named backend: selected path, bearer, result and secrecy PASS")
-        print("Dart public bulk: five values, one request with the fixture questions")
+        print("Dart public bulk: legacy and complete typed values, two requests with the fixture questions")
     finally:
         backend.stdin.close()
         assert backend.wait(timeout=10) == 0

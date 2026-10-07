@@ -68,4 +68,4 @@ result = subprocess.run([sys.executable, str(Path(__file__).with_name("embedder.
                         env=env, capture_output=True, text=True, timeout=320)
 assert result.returncode == 0 and "FLUTTER_EMBEDDER_PASS" in result.stdout, (result.stdout, result.stderr)
 print(f"Flutter archive app: {dart_root / 'flutter/example/build/linux/x64/release/bundle/thinkthen_flutter_example'}")
-print("Flutter installed: one complete decoded body and counted send")
+print("Flutter installed: legacy and complete decoded bodies, two counted sends, cancellation and usage zero sends")

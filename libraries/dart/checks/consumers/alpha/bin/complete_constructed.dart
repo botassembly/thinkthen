@@ -83,6 +83,13 @@ List<CompleteResult<Object>> constructed(CompleteApi engine) {
     if (verb == 'decide' &&
         result.authors.first.wording_version.value != BigInt.from(2147483647))
       throw StateError('wording version changed');
+    if (verb == 'find') {
+      final row = result.rows.first as FindView;
+      if (result.summary.function.value != 7 ||
+          row.common.question.value!.kind != 7 ||
+          row.common.answer.value!.kind != 5)
+        throw StateError('find ABI tags changed');
+    }
     results.add(result);
   }
   return results;

@@ -86,17 +86,18 @@ for named in (False, True):
         server.stdin.write("capture\n")
         server.stdin.flush()
         captured = json.loads(server.stdout.readline())
-        assert count == 1, (count, captured)
-        one_portable_request(captured["bodies"])
+        assert count == 2, (count, captured)
+        for body in captured["bodies"]:one_portable_request([body])
+        assert "sk-loopback-php-portable" not in run.stdout + run.stderr
         if named:
-            for command, expected in (("paths", paths(row["path"])),
-                                      ("bearers", {"markers":{"local":1},"absent":0,"unknown":0,"overflow":False})):
+            for command, expected in (("paths", paths(row["path"], 2)),
+                                      ("bearers", {"markers":{"local":2},"absent":0,"unknown":0,"overflow":False})):
                 server.stdin.write(command + "\n"); server.stdin.flush()
                 assert json.loads(server.stdout.readline()) == expected, command
             assert "tt-named-loopback" not in run.stdout + run.stderr
             assert "tt-named-loopback" not in json.dumps(captured["bodies"])
             print("php named backend: selected path, bearer, result and secrecy PASS")
-        print("php portable: five typed rows, one request with the fixture questions")
+        print("php portable: legacy and complete typed rows, two requests with the fixture questions")
     finally:
         server.stdin.close()
         server.wait(timeout=10)

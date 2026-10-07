@@ -23,6 +23,7 @@ try {
         $r=$e->$verb($q,$source);
         if($r->summary->state!==1 || !$r->summary->facts->present || !$r->rows || strlen($r->rows[0]->common->answer_id->data)!==64)throw new RuntimeException('typed constructor did not execute');
         if($verb==='decide' && $r->authors[0]->wording_version->value!=='2147483647')throw new RuntimeException('unsigned wording version changed');
+        if($verb==='find' && ($r->summary->function->value!==7 || $r->rows[0]->common->question->value->kind!==7 || $r->rows[0]->common->answer->value->kind!==5))throw new RuntimeException('find ABI tags changed');
         $results[$verb]=$r;
     }
     $e->close();

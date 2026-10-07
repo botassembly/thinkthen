@@ -75,8 +75,6 @@ def main():
                                 child['THINKTHEN_BASE_URL']=f'http://127.0.0.1:{backend.port}/{step["arm"]}'
                                 prepare(home,step)
                             settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{})}
-                            # The image wire oracle expects input-order captures; bound native concurrency.
-                            if value.get('image_variants'):settings['throttle']=1
                             settings['base_url']=child['THINKTHEN_BASE_URL']
                             settings={k:str(home/'saved') if v=='$FOLDER' else str(home/'refreshed') if v=='$REFRESH' else str(home/'profile.json') if v=='$PROFILE' else v for k,v in settings.items()}
                             if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')

@@ -395,7 +395,7 @@ final class AnswerView {
             2 => "choice",
             3 => "tag",
             4 => "score",
-            5 || 7 => "find",
+            5 => "find",
             _ => throw StateError("native discriminator")
           }));
 }

@@ -202,7 +202,7 @@ final class AnswerV1DataView
 final class AnswerView
 {
     public function __construct(public readonly int $kind, public readonly AnswerV1DataView $data) {}
-    public static function copy(\FFI\CData $v): self { return new self($v->kind, AnswerV1DataView::copy($v->data,match($v->kind) {1 => "probability", 2 => "choice", 3 => "tag", 4 => "score", 5, 7 => "find", default => throw new \UnexpectedValueException("native discriminator") })); }
+    public static function copy(\FFI\CData $v): self { return new self($v->kind, AnswerV1DataView::copy($v->data,match($v->kind) {1 => "probability", 2 => "choice", 3 => "tag", 4 => "score", 5 => "find", default => throw new \UnexpectedValueException("native discriminator") })); }
 }
 
 final class OptionalAnswerView
