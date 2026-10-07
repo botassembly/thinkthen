@@ -18,6 +18,8 @@ File readers must preserve lazy admission rather than invent caller-defined batc
 
 An earlier named-provider test used its external default address for six fake-key requests. No paid work resulted. All named-provider fixtures now use an explicit owned loopback address, checked before engine creation. Larger image capture is bounded to three bodies and leaves the ordinary capture limit unchanged.
 
+The landing run also exposed a private replay parser rejecting the public-runtime fixture field. The private runner now admits that separate array without interpreting its grammar; its original typed replay exchanges and unknown-field refusal remain. All seven existing private conformance tests pass, and a fresh review accepted the correction.
+
 ## Remaining work
 
 The host families adopt these typed carriers. The global parity table, installed packages and final Windows/macOS qualification remain required before 0.2 is complete.
