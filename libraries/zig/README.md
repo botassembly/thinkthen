@@ -28,3 +28,22 @@ Explicit files and folders use the [library reader contract](../files.md), with 
 Typed 0.2 host descriptors are available through `thinkthen.complete`. Ten named request builders prepare explicit questions/question files and record/file/image sources; known answer, metadata, fact, identity, location, span and edge fields have typed carriers. This is independent carrier preparation, not complete-call runtime parity. The host descriptor codec is not the native wire format. Existing engine calls remain the executable compatibility API. Adoption of the real 0426 constructors, complete calls, result views and failure snapshots is still required; no legacy result is promoted to result/2.
 
 Descriptor slices borrow caller memory. `complete.clone` makes an independent deep copy in an owned parse arena; call its `deinit` after all borrowed fields are unused. `complete.readFacts` similarly owns decoded field storage.
+
+
+## Complete native calls (0428 integration)
+
+The additive complete API uses C's native question grammar and readers for all ten named functions. Bare and generic JSON calls remain available. Known result fields are typed; arbitrary original JSON is retained as counted content.
+
+Question input is explicit: construct a typed descriptor, parse saved JSON with a loader role, load an exact file, load a configured name, or load a reference. The eight roles are atomic, question set, per-record choose, recognize, record relate, rank, rank set and find. A string is never guessed to be a path. Native declarations, named/versioned authors, record context, options, rank members, observations, answer/request/call IDs, final facts and owned failure snapshots remain distinct.
+
+Records may carry explicit text or JSON, per-record context and ordered candidate replacements. Images use explicit PNG/JPEG media and preserve original compressed bytes, order and duplicates. Decide, choose and score admit native image routes; the other seven functions refuse before sending. File sources explicitly select line, window, whole file, image file or JSONL. Physical filename/line ranges and absent image line coordinates come from the native reader.
+
+Complete results copy all borrowed native views before `thinkthen_result_free`. They survive destruction of the engine, question, source and input buffers. Presence remains explicit, including absent aggregate IDs/meta, nullable selections and independently unknown reported token dimensions. Cost strings are copied without floating-point conversion. Failures retain the six native kinds, safe messages, available stop details and final facts/attempts.
+
+Decide, choose, tag, score, filter and annotate also have owned lazy native batches. Start/next/facts/free belong to the creating thread; keep the engine live until the batch closes. Starting clones question/source/context/cancellation state. Returned rows own independent snapshots. Rank, find, recognize and relate retain aggregate complete calls. No host parser, cache, scheduler or model-routing policy is added.
+
+This is an unpublished integration API. The family ticket and root review own final qualification; the shared consumer reports actual failures instead of counting generic JSON as typed parity.
+
+Import `thinkthen.native`. Its `question`, `parse`, `load`, `named`, `reference`, `records`, `files` and `image` constructors return `Outcome` values with owned success handles or a failure `Snapshot`. `Role` and `Unit` select the exact native grammar/reader. The ten named calls return an owned `Snapshot`; its checked named getters expose typed C layouts backed by the snapshot arena, with detail/author/observation/rank/located arrays. No known result is decoded through JSON. `Snapshot.kind()` maps a failure to the six-language enum.
+
+Call `deinit()` once for each success handle, image view and snapshot, after every borrowed field/slice is unused. Counted descriptors borrow caller buffers through construction only. `image.view(allocator)` returns independently owned bytes and properties. The six `FUNCTIONBatch` functions return `LazyBatch`; its engine must stay live through `deinit`, and start/next/facts/deinit stay on the creating thread. Each yielded snapshot is independent of that batch.

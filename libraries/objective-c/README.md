@@ -55,3 +55,22 @@ Explicit files and folders use the [library reader contract](../files.md), with 
 Typed 0.2 host descriptors are available through `TTComplete.h`. Ten named request builders prepare explicit questions/question files and record/file/image sources; known answer, metadata, fact, identity, location, span and edge fields have typed carriers. This is independent carrier preparation, not complete-call runtime parity. The host descriptor codec is not the native wire format. Existing engine calls remain the executable compatibility API. Adoption of the real 0426 constructors, complete calls, result views and failure snapshots is still required; no legacy result is promoted to result/2.
 
 Compile `Sources/TTComplete.c` with `Sources/TTJSON.c` when using `ttc_atomic_read` or `ttc_facts_read`. Descriptors borrow caller storage; parsed field strings borrow the `TTJSON` tree, and probability entries use caller-provided storage. Release the tree only after those borrows finish. Invalid field reads leave outputs unchanged.
+
+
+## Complete native calls (0428 integration)
+
+The additive complete API uses C's native question grammar and readers for all ten named functions. Bare and generic JSON calls remain available. Known result fields are typed; arbitrary original JSON is retained as counted content.
+
+Question input is explicit: construct a typed descriptor, parse saved JSON with a loader role, load an exact file, load a configured name, or load a reference. The eight roles are atomic, question set, per-record choose, recognize, record relate, rank, rank set and find. A string is never guessed to be a path. Native declarations, named/versioned authors, record context, options, rank members, observations, answer/request/call IDs, final facts and owned failure snapshots remain distinct.
+
+Records may carry explicit text or JSON, per-record context and ordered candidate replacements. Images use explicit PNG/JPEG media and preserve original compressed bytes, order and duplicates. Decide, choose and score admit native image routes; the other seven functions refuse before sending. File sources explicitly select line, window, whole file, image file or JSONL. Physical filename/line ranges and absent image line coordinates come from the native reader.
+
+Complete results copy all borrowed native views before `thinkthen_result_free`. They survive destruction of the engine, question, source and input buffers. Presence remains explicit, including absent aggregate IDs/meta, nullable selections and independently unknown reported token dimensions. Cost strings are copied without floating-point conversion. Failures retain the six native kinds, safe messages, available stop details and final facts/attempts.
+
+Decide, choose, tag, score, filter and annotate also have owned lazy native batches. Start/next/facts/free belong to the creating thread; keep the engine live until the batch closes. Starting clones question/source/context/cancellation state. Returned rows own independent snapshots. Rank, find, recognize and relate retain aggregate complete calls. No host parser, cache, scheduler or model-routing policy is added.
+
+This is an unpublished integration API. The family ticket and root review own final qualification; the shared consumer reports actual failures instead of counting generic JSON as typed parity.
+
+Include `TTNativeAPI.h`, and compile `TTNativeAPI.m` plus `TTNativeViews.c` with the existing sources. `TTQuestion`, `TTSource` and `TTImage` own native handles and release them in `dealloc`. The `TTClient (Complete)` category supplies counted constructors/loaders and ten `FUNCTIONComplete:source:controls:output:failure:` selectors. Success and native failure outputs own `TTNativeResult` snapshots; free each with `tt_native_result_free` after every reader finishes. `tt_native_FUNCTION`, summary/details/author/observation/rank-member/located getters return checked typed views borrowing that host snapshot. `tt_native_failure_kind` maps its six native errors.
+
+The six `FUNCTIONBatch:source:controls:output:failure:` selectors return `TTBatch`. Keep the client live until batch `dealloc`; `next:failure:`, `facts:failure:` and `dealloc` run on its creating thread. Completed row snapshots outlive the batch and client. Failed calls leave success outputs unchanged. Counted input descriptors must stay initialized/readable through construction. Native constructors clone all nested buffers. Existing ABI/static and ASan/UBSan checks remain in the family gate.

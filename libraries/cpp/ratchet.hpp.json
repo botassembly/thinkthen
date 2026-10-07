@@ -1,5 +1,8 @@
 {
-  "directory": "include",
+  "directory": [
+    "include",
+    "fixtures"
+  ],
   "extension": ".hpp",
-  "max": 748
+  "max": 1445
 }

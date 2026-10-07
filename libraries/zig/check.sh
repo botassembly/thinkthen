@@ -69,7 +69,7 @@ cp "$native/libthinkthen_c.so" "$here/target/native/lib/libthinkthen.so"
 sh "$root/libraries/c/localize.sh" "$native/libthinkthen_c.a" "$here/target/native/lib/libthinkthen.a"
 ln -sf libthinkthen.so "$here/target/native/lib/libthinkthen.so.0"
 export HOME="$here/target/home" ZIG_GLOBAL_CACHE_DIR="$here/target/cache"
-"$zig" fmt --check "$here/src/thinkthen.zig" "$here/src/complete.zig" "$here/Tests/carriers.zig" "$here/build.zig" "$here/Tests/type_case.zig" "$here/Tests/settings.zig" "$here/Tests/portable_batch.zig" "$here/Tests/build.zig"
+"$zig" fmt --check "$here/src/thinkthen.zig" "$here/src/complete.zig" "$here/src/native.zig" "$here/Tests/native_consumer.zig" "$here/Tests/carriers.zig" "$here/build.zig" "$here/Tests/type_case.zig" "$here/Tests/settings.zig" "$here/Tests/portable_batch.zig" "$here/Tests/build.zig"
 "$zig" build -j2 -Dnative="$here/target/native" -Dlink-mode=shared --build-file "$here/build.zig" --cache-dir "$here/target/scratch/package-cache" --global-cache-dir "$here/target/cache"
 "$zig" build -j2 -Dnative="$here/target/native" -Dlink-mode=shared --build-file "$here/Tests/build.zig" --cache-dir "$here/target/scratch/tests-cache" --global-cache-dir "$here/target/cache"
 "$zig" test -j2 --cache-dir "$here/target/scratch/carrier-cache" --global-cache-dir "$here/target/cache" --dep thinkthen -Mroot="$here/Tests/carriers.zig" -I "$here/target/native/include" -Mthinkthen="$here/src/thinkthen.zig" -lc
