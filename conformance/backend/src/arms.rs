@@ -97,7 +97,7 @@ fn capturing(request: &Recorded) -> bool {
     let path = request.line.split(' ').nth(1).unwrap_or_default();
     let mut parts = path.trim_start_matches('/').split('/');
     match (parts.next(), parts.next(), parts.next()) {
-        (Some("arm"), Some("full"), Some("capture")) => true,
+        (Some("arm"), Some("full" | "held"), Some("capture")) => true,
         (Some("case"), Some("files-relate"), _) => true,
         (Some("case"), Some("rank-set-ordered-members"), Some("capture")) => true,
         (Some("case"), Some(id), Some("capture")) => id

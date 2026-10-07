@@ -181,8 +181,11 @@ def project_row(result, value, at):
                                 if isinstance(original, dict) and "record" in original and "file" in original else {"input": original}
                                 for original in result.get("input", [])]
     images = result.get("images")
-    if images is None and isinstance(result.get("input"), dict):
-        images = result["input"].get("images")
+    image_input = result.get("input")
+    if value.get("image_paths") and isinstance(image_input, dict) and "images" in image_input:
+        row["input"] = image_input.get("text")
+        if images is None:
+            images = image_input["images"]
     if images is not None:
         row["images"] = [base64.b64decode(i["base64"]).hex() for i in images]
         row["image_properties"] = [[1 if i["media"] == "image/jpeg" else 2, i["width"], i["height"]]
@@ -378,7 +381,7 @@ def run_case(binary, row, value, home):
                 settings["record"] = str(home / "recorded")
             before = int(backend.read("count"))
             if step.get("held_cancel"):
-                settings.update(batch=1, jobs=1)
+                settings.update(batch=1, jobs=1, base_url=f"http://127.0.0.1:{backend.port}/arm/held/capture/v1")
             got, details = execute(binary, step, settings, home, env, backend)
             count = int(backend.read("count"))
             if "requests_sent" in got:
