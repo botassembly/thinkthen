@@ -131,6 +131,9 @@ def main():
                         if value.get('image_variants'):
                             from c_images import assert_images
                             assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
+                        if 'capture_request' in step['expect']:
+                            bodies=json.loads(backend.read('capture'))['bodies']
+                            assert len(bodies)==1 and json.loads(bodies[0])==step['expect']['capture_request'],bodies
                         if step.get('owned_jsonl'):
                             request=json.loads(json.loads(backend.read('capture'))['bodies'][0])
                             expected={f'q{i+1}':{'type':'noul','instructions':f'The text is {compact(item)}. {step["question"]["decide"]}'} for i,item in enumerate(step['items'][:2])}

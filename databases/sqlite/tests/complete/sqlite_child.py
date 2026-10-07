@@ -38,6 +38,11 @@ try:
         for row in db.execute("SELECT json_extract(j.value,'$.answer_id'),CAST(json_extract(j.value,'$.answer.probability') AS REAL),json_extract(j.value,'$.meta.origin') FROM result,json_each(CASE json_type(result.value,'$.value') WHEN 'array' THEN json_extract(result.value,'$.value') ELSE json_array(json_extract(result.value,'$.value')) END) j"):
             if row[0] is not None:assert isinstance(row[0],str) and len(row[0])==64
             if row[1] is not None:assert isinstance(row[1],float)
+        for member, in db.execute("SELECT m.value FROM result,json_each(CASE json_type(result.value,'$.value') WHEN 'array' THEN json_extract(result.value,'$.value') ELSE '[]' END) r,json_each(json_extract(r.value,'$.members')) m ORDER BY r.key,m.key"):
+            for path,kind in (('$.name','text'),('$.result.value','integer'),('$.result.answer_id','text'),('$.result.question.name','text'),('$.result.meta.model','text'),('$.result.meta.context_sha256','text'),('$.result.meta.usage.input_tokens','integer'),('$.result.meta.question_sources[0].batch_size','integer')):
+                assert db.execute('SELECT json_type(?,?)',[member,path]).fetchone()[0]==kind
+            position,identity,probability=db.execute("SELECT CAST(json_extract(?,'$.result.value') AS INTEGER),json_extract(?,'$.result.answer_id'),CAST(json_extract(?,'$.result.answer.probability') AS REAL)",[member]*3).fetchone()
+            assert position>0 and len(identity)==64 and isinstance(probability,float)
     else:assert isinstance(typed[3],str)
     print(result,flush=True)
 except sqlite3.Error as error:

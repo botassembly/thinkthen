@@ -12,7 +12,7 @@ for key,value in payload['engine_settings'].items():
 name='thinkthen_'+payload['verb']+'_complete'
 query=name+'('+','.join(map(lit,[payload['question'],json.dumps(payload['inputs'],ensure_ascii=False,separators=(',',':')),json.dumps(payload.get('controls',{}))]))+')'
 checks="""
-DO $check$ DECLARE d jsonb; r jsonb; n bigint; p double precision; k text;
+DO $check$ DECLARE d jsonb; r jsonb; m jsonb; c jsonb; n bigint; p double precision; k text;
 BEGIN
  SELECT document::jsonb->'native' INTO d FROM complete_result;
  IF d ? 'facts' THEN
@@ -37,6 +37,17 @@ BEGIN
    IF r->>'schema' <> 'thinkthen.result/2' OR length(r->>'answer_id') <> 64 THEN RAISE EXCEPTION 'missing native result identity'; END IF;
    IF r->'answer' ? 'probability' AND jsonb_typeof(r->'answer'->'probability') NOT IN ('number','null') THEN RAISE EXCEPTION 'invalid native probability'; END IF;
    p := (r->'answer'->>'probability')::double precision;
+   IF r ? 'members' THEN
+    FOR m IN SELECT value FROM jsonb_array_elements(r->'members') LOOP
+     c := m->'result';
+     IF jsonb_typeof(m->'name') IS DISTINCT FROM 'string' OR jsonb_typeof(c->'value') IS DISTINCT FROM 'number' OR (c->>'value')::bigint < 1 OR jsonb_typeof(c->'answer_id') IS DISTINCT FROM 'string' OR length(c->>'answer_id') <> 64 THEN RAISE EXCEPTION 'invalid native member identity or position'; END IF;
+     IF jsonb_typeof(c->'question'->'name') IS DISTINCT FROM 'string' OR jsonb_typeof(c->'meta'->'model') IS DISTINCT FROM 'string' OR jsonb_typeof(c->'meta'->'context_sha256') IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'invalid native member metadata'; END IF;
+     IF jsonb_typeof(c->'meta'->'usage'->'input_tokens') IS DISTINCT FROM 'number' OR jsonb_typeof(c->'meta'->'question_sources'->0->'batch_size') IS DISTINCT FROM 'number' OR jsonb_typeof(c->'answer'->'probability') IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'invalid native member usage, source or probability'; END IF;
+     n := (c->'meta'->'usage'->>'input_tokens')::bigint;
+     n := (c->'meta'->'question_sources'->0->>'batch_size')::bigint;
+     p := (c->'answer'->>'probability')::double precision;
+    END LOOP;
+   END IF;
   END LOOP;
  END IF;
 END $check$;

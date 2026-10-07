@@ -32,6 +32,19 @@ def projected(row,verb,index,events):
         if key in answer:out[key]=answer[key]
     if verb=='annotate':
         out['member_authors']=[a.get('question',{}) for a in row.get('answers',{}).values()]
+    if 'members' in row:
+        out.update(question_name=row['question_name'],usage=meta['usage'],model=meta['model'],
+                   context_digest=meta['context_sha256'],source_batch_sizes=[s['batch_size'] for s in meta['question_sources']])
+        out['members']=[]
+        for member in row['members']:
+            result=member['result'];details=result['meta']
+            child={'name':member['name'],'author':result['question']['name'],'value':result['value'],
+                   'answer_id':result['answer_id'],'probability':result['answer']['probability'],
+                   'usage':details['usage'],'model':details['model'],'context_digest':details['context_sha256'],
+                   'source_batch_sizes':[s['batch_size'] for s in details['question_sources']],
+                   'observations':len(details['observations']),'sources':len(details['question_sources'])}
+            if 'wording_version' in result['question']:child['wording_version']=result['question']['wording_version']
+            out['members'].append(child)
     if verb=='find':out['index']=row.get('answer',{}).get('selected')
     return out
 
@@ -55,6 +68,8 @@ def project(doc,verb):
     values=doc['value'] if isinstance(doc['value'],list) else [doc['value']]
     facts=doc['facts'];events=doc.get('observations',[])
     out={'facts':facts,'code':0,'schema':values[0]['schema'] if values else 'thinkthen.result/2','requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'call_id':facts['call_id'],'observations':len(events)}
+    for key in ('records','input_tokens','output_tokens'):
+        if key in facts:out[key]=facts[key]
     out['rows']=[projected(row,verb,(doc.get('ordinals') or list(range(len(values))))[at],events) for at,row in enumerate(values)]
     if verb=='find':out['rows'][0]['index']=doc['selection']
     return out
