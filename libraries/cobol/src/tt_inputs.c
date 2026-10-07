@@ -1,5 +1,5 @@
 /* Native constructors clone counted caller storage. */
-#include "thinkthen.h"
+#include "tt_native.h"
 int TT_QUESTION_NEW(const thinkthen_engine *engine,
                     const thinkthen_question_spec_v1 *spec, thinkthen_question **out) {
     return thinkthen_question_new(engine, spec, out);

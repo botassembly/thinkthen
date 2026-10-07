@@ -1,4 +1,4 @@
--- Unpublished 0430 typed C carriers. Counted data never uses a JSON buffer.
+-- Counted native carriers. Typed data never uses a JSON buffer.
 with Interfaces;
 with Interfaces.C;
 with System;

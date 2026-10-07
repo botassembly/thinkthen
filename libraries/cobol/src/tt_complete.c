@@ -1,5 +1,5 @@
 /* Complete native calls over counted COBOL descriptors. */
-#include "thinkthen.h"
+#include "tt_native.h"
 static thinkthen_controls_v1 controls_for_cobol(const thinkthen_controls_v1 *input) {
     thinkthen_controls_v1 copy = input ? *input :
         (thinkthen_controls_v1){.deadline_ms=THINKTHEN_NO_DEADLINE};

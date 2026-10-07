@@ -1,4 +1,4 @@
-      *> Unpublished 0430 counted native carriers, Linux x86_64.
+      *> Counted native carriers, Linux x86_64.
       *> BASED groups borrow native storage or caller ALLOCATE storage.
       *> Overlay nested named fields with their matching typed BASED group.
        01 tt-string-v1 based.
