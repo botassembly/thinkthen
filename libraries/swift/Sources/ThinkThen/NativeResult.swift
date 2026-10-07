@@ -9,6 +9,7 @@ public struct NativeResult: Sendable {
     public let observationAuthors: [NativeQuestionAuthor]
     public let memberAuthors: [[NativeQuestionAuthor]]
     public let rankMembers: [[NativeRankView]]
+    public let rankMemberDetails: [[NativeDetails]]
     public let locatedRecognition: [NativeSourceRecognition]
     public let locatedRelations: [NativeSourceRelations]
     init(taking raw: OpaquePointer) throws {
@@ -24,7 +25,7 @@ public struct NativeResult: Sendable {
         }
         observations = events; observationDetails = eventDetails; observationAuthors = eventAuthors
         var values: [NativeRowObservation] = [], ds: [NativeDetails] = [], authors: [NativeQuestionAuthor] = []
-        var mas: [[NativeQuestionAuthor]] = [], rms: [[NativeRankView]] = []
+        var mas: [[NativeQuestionAuthor]] = [], rms: [[NativeRankView]] = [], rmds: [[NativeDetails]] = []
         var recs: [NativeSourceRecognition] = [], rels: [NativeSourceRelations] = []
         for i in 0..<s.count {
             var row = thinkthen_row_observation_v1(); try nativeViewOK(thinkthen_result_row(raw,i,&row))
@@ -35,20 +36,21 @@ public struct NativeResult: Sendable {
             if row.function == 8 { for j in 0..<row.data.annotate.answers.len {
                 try nativeViewOK(thinkthen_result_member_author(raw,i,j,&a)); members.append(try nativeCopy(a))
             } }
-            mas.append(members)
-            var ranks: [NativeRankView] = []
+            var ranks: [NativeRankView] = [], rankDetails: [NativeDetails] = []
             if row.function == 6 {
                 var count = 0; try nativeViewOK(thinkthen_result_rank_member_count(raw,i,&count))
                 try nativeExtent(count,MemoryLayout<NativeRankView>.stride,UnsafeRawPointer(raw))
-                for j in 0..<count { var v = thinkthen_rank_view_v1(); try nativeViewOK(thinkthen_result_rank_member(raw,i,j,&v)); ranks.append(try nativeCopy(v)) }
+                for j in 0..<count { var v = thinkthen_rank_view_v1(); try nativeViewOK(thinkthen_result_rank_member(raw,i,j,&v)); ranks.append(try nativeCopy(v));
+                    try nativeViewOK(thinkthen_result_member_author(raw,i,j,&a)); members.append(try nativeCopy(a));
+                    try nativeViewOK(thinkthen_result_rank_member_details(raw,i,j,&d)); rankDetails.append(try nativeCopy(d)) }
             }
-            rms.append(ranks)
+            mas.append(members); rms.append(ranks); rmds.append(rankDetails)
             var rec = thinkthen_source_recognition_v1()
             if row.function == 9 { try nativeViewOK(thinkthen_result_source_recognition(raw,i,&rec)) }; recs.append(try nativeCopy(rec))
             var rel = thinkthen_source_relations_v1()
             if row.function == 10 { try nativeViewOK(thinkthen_result_source_relations(raw,i,&rel)) }; rels.append(try nativeCopy(rel))
         }
-        rows = values; details = ds; self.authors = authors; memberAuthors = mas; rankMembers = rms
+        rows = values; details = ds; self.authors = authors; memberAuthors = mas; rankMembers = rms; rankMemberDetails = rmds
         locatedRecognition = recs; locatedRelations = rels
     }
     public func decide(_ index: Int) throws -> NativeDecideView {

@@ -13,6 +13,7 @@ final class NativeCalls {
   add(linker,symbols,"thinkthen_question_new_authored",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,ADDRESS,ADDRESS));
   add(linker,symbols,"thinkthen_result_member_author",FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_LONG,JAVA_LONG,ADDRESS));
   add(linker,symbols,"thinkthen_result_rank_member_count",FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_LONG,ADDRESS));
+  add(linker,symbols,"thinkthen_result_rank_member_details",FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_LONG,JAVA_LONG,ADDRESS));
   add(linker,symbols,"thinkthen_result_rank_member",FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_LONG,JAVA_LONG,ADDRESS));
   for(String n:List.of("thinkthen_question_load"))add(linker,symbols,n,FunctionDescriptor.of(JAVA_INT,ADDRESS,layout("thinkthen_string_v1"),ADDRESS));
   for(String n:List.of("thinkthen_question_parse","thinkthen_question_load_named","thinkthen_question_load_reference"))add(linker,symbols,n,FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_INT,layout("thinkthen_string_v1"),ADDRESS));
