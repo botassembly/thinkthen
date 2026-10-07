@@ -2,8 +2,9 @@
 
 Status: **Settled** target for 0.2 by Ian's 2026-10-06 ruling and accepted
 [ticket 0455](../sdlc/tickets/0455-mcp-ten-function-surface.md). Development execution now exposes the ten tools through native complete calls.
-Native located serializers and dynamic choose saved-model/on preparation still block full
-0455 acceptance; complete parity and final Windows qualification remain pending.
+Native typed source serialization and dynamic choose saved-model/on preparation
+are integrated. Fresh whole MCP review, landing gates, complete parity, timing
+and final Windows qualification remain pending.
 
 An installed `thinkthen mcp` is a local stdio subprocess over one resolved Rust
 engine. Its default persistent cache, endpoint, effective key and provider API

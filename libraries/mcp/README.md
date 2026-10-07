@@ -4,9 +4,8 @@ The development command exposes `thinkthen mcp` over local stdio with exactly
 `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`,
 `recognize` and `relate`. It uses one environment-resolved native Engine and its
 default persistent cache. No additional package, daemon or publication is made.
-Full 0455 acceptance remains open: native located serialization and dynamic
-choose saved-model/on preparation, complete shared parity, timing and final Windows
-qualification are still required.
+Full 0455 acceptance remains open: fresh whole MCP review, landing gates,
+complete shared parity, timing and final Windows qualification are still required.
 
 After 0.2 is published, install the ordinary command:
 
@@ -94,18 +93,15 @@ Flush does not wait for a peer to drain. The exact Windows-only unsafe leaf is
 required `Win32_System_IO` feature. Windows compilation and pipe regressions
 remain pending on the existing runner. Linux checks do not qualify Windows.
 
-## Native integration gaps and landing work
+## Landing work
 
-- Native `CompleteRecord<QuestionInput, ...>` serialization must retain physical
-  text source locations. The current carrier retains them but atomic JSON loses
-  them. Find's selected original likewise needs the settled located serializer.
-  The adapter must adopt native types/schema rather than fabricate fields.
-- Native `RecordChooseQuestion::model` rejects an already saved model. A typed
-  override must replace that saved setting for explicit caller controls.
-  Its saved-question loader also refuses authored non-root `on` pointers; native
-  preparation must expose those to `RecordReading`.
-  Existing declaration accessors supply dynamic per-record context to native
-  `RecordReading`; no host question parser is needed.
+Native complete results retain optional typed `source` for explicit physical
+inputs. Dynamic choose retains authored non-root `on` selection through native
+admission. Explicit MCP model controls use `with_model_override`; the native
+`model` builder continues to refuse a duplicate saved model. Context declarations
+still pass directly to native `RecordReading`. These paths use the packaged
+native schema and need no host question parser or result-field fabrication.
+
 - Root owns the fresh whole High review, full tests/lint, affected installed/spec/
   surface checks, complete shared parity and final real Windows qualification.
   Keep the one short ticket record at landing, release rehearsal and Ian's
@@ -114,7 +110,8 @@ remain pending on the existing runner. Linux checks do not qualify Windows.
   existing explicit `test-stress --run` entry point. Atomic, record and whole-set
   samples report payload bytes, counted requests, cold startup, warm median,
   exploratory p95 and maximum. Measurement remains pending; future proxy latency
-  remains unmeasured.
+  remains unmeasured. The current entry point runs all load campaigns and surface
+  stress checks together; a bounded MCP builder handoff leaves that run to root.
 
 Ian can overturn the local MCP contract and measurement plan. A pushed ticket
 checkpoint is not a main landing, publication or complete support claim.

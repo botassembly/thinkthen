@@ -238,7 +238,7 @@ fn apply(prepared: &mut PreparedQuestion, invocation: &Invocation) -> Result<(),
     }
     if let PreparedQuestion::Dynamic(q) = prepared {
         if let Some(model) = &options.model {
-            *q = q.clone().model(model)?;
+            *q = q.clone().with_model_override(model)?;
         }
         if let Some(threshold) = &options.threshold {
             *q = q.clone().cut_at(threshold.native()?.bounds().0)?;
