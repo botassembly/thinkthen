@@ -106,7 +106,7 @@ impl Question {
             QuestionInput::Record(record) if record.images().is_empty() => {
                 record.original().clone()
             }
-            QuestionInput::Text(text) => RawRecord::json(text)?,
+            QuestionInput::Text(text) => RawRecord::text(text)?,
             _ => {
                 return Err(Error::usage(
                     "authored on pointers require a text or JSON record",
