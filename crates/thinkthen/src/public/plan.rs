@@ -203,7 +203,7 @@ impl Engine {
                 summary.request(&request.body).map_err(|_| too_large())?;
             }
         }
-        for request in packer.close() {
+        if let Some(request) = packer.close() {
             summary.request(&request.body).map_err(|_| too_large())?;
         }
         summary.bound_requests(occurrences);

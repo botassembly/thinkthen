@@ -95,7 +95,7 @@ pub(super) fn packed(
         }
     }
     crate::cli::check::say_dropped_detail(dropped, configuration.environment.named())?;
-    for request in packer.close() {
+    if let Some(request) = packer.close() {
         summary
             .request(&request.body)
             .map_err(|_| Failure::Defect("a plan is too large"))?;

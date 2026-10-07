@@ -76,7 +76,7 @@ pub(super) fn dry_run(
             )?;
         }
     }
-    for request in packer.close() {
+    if let Some(request) = packer.close() {
         preview_request(
             &mut summary,
             &mut group_requests,
