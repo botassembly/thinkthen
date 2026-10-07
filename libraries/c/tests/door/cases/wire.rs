@@ -3,7 +3,6 @@
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 use super::{Checked, Members, Reply};
 
@@ -95,52 +94,9 @@ pub(crate) fn string(case: &Members, key: &str) -> String {
     member(case, key).as_str().unwrap_or_default().to_owned()
 }
 
-pub(super) fn digest(url: &str, request: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(b"systemone\n");
-    hasher.update(url.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(request);
-    hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
-/// Every question key of one request body, in wire order, by ADR 0111
-/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
-/// one question as the body carries them, joined by line feeds.
-pub(crate) fn keys(url: &str, body: &[u8]) -> Checked<Vec<String>> {
-    let parts: Members = serde_json::from_slice(body).map_err(|error| error.to_string())?;
-    let part = |name: &str| {
-        parts
-            .get(name)
-            .map(|raw| raw.get())
-            .ok_or(format!("no {name}"))
-    };
-    let (model, state) = (part("model")?, part("state")?);
-    let questions: Members =
-        serde_json::from_str(part("questions")?).map_err(|error| error.to_string())?;
-    let mut placed = Vec::new();
-    for (name, question) in &questions {
-        let place: usize = name[1..]
-            .parse()
-            .map_err(|_| format!("no qN name: {name}"))?;
-        placed.push((place, question.get()));
-    }
-    placed.sort_by_key(|(place, _)| *place);
-    Ok(placed
-        .into_iter()
-        .map(|(_, question)| {
-            let joined = ["systemone", url, model, state, question].join("\n");
-            Sha256::digest(joined.as_bytes())
-                .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect()
-        })
-        .collect())
-}
+#[path = "../../../../../conformance/consumer/consumer/tests/public/keys.rs"]
+mod question_keys;
+pub(crate) use question_keys::{fixture_keys, keys};
 
 pub(super) fn swap(value: &Value, renamed: &BTreeMap<String, Value>) -> Value {
     match value {

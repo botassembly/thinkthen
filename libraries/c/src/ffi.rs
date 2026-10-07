@@ -10,6 +10,12 @@
 
 use std::ffi::{CStr, CString, c_char};
 
+/// Canonical counted descriptors and borrowed carrier layouts.
+pub mod carriers;
+
+/// Counted constructors; native complete execution integration stays private.
+#[path = "ffi/current/ffi.rs"]
+pub mod current;
 #[path = "ffi/texts/ffi.rs"]
 mod texts;
 #[path = "ffi/typed_facts/ffi.rs"]
@@ -504,3 +510,9 @@ pub unsafe extern "C" fn thinkthen_free_string(text: *mut c_char) {
         }
     });
 }
+
+#[path = "ffi/complete/ffi.rs"]
+mod complete;
+
+#[path = "ffi/batch/ffi.rs"]
+mod batch;

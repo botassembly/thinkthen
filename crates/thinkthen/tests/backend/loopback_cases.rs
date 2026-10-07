@@ -26,12 +26,8 @@ const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-loopback-cases")];
 
-/// The cases the command wire does not run: five injections, three question
-/// forms, and one case holding one request per `annotate` group. ADR 0111
-/// section 5 packs a record's groups into one request, so that recording no
-/// longer matches any surface.
-const IN_PROCESS: [&str; 9] = [
-    "18-annotate-two-groups",
+/// The private invariants and explicit in-process/question-form checks.
+const IN_PROCESS: [&str; 8] = [
     "20-usage-fault",
     "22-local-fault",
     "23-cancelled-fault",

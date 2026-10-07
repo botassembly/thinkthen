@@ -1,12 +1,10 @@
 //! How each shared case asks the door, and what its replies must hold.
 
-use std::collections::BTreeMap;
-
 use conformance_backend::Backend;
 use serde_json::value::RawValue;
 use serde_json::{Value, json};
 
-use super::wire::{digest, judged, keys, member, parsed, renamed_verb, same, string, swap, with};
+use super::wire::{fixture_keys, judged, member, parsed, renamed_verb, same, string, swap, with};
 use super::{CANONICAL, Checked, Judge, Members, Reply, Script};
 use crate::scratch;
 
@@ -29,11 +27,7 @@ pub(super) fn plan<'a>(
         .unwrap_or_default();
     let served = format!("{base}/systemone");
     // Every row lists question keys, by ADR 0111.
-    let mut renamed = BTreeMap::new();
-    for exchange in &exchanges {
-        let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
-        renamed.insert(digest(CANONICAL, request), json!(keys(&served, request)?));
-    }
+    let renamed = fixture_keys(CANONICAL, &served, &exchanges)?;
     let success = swap(&expect["success"], &renamed);
     let texts: Vec<String> = exchanges
         .iter()
