@@ -1,10 +1,10 @@
 # 0459: Fail binding checks when copied C declarations drift
 
-Status: ready
+Status: in progress. Shared compiler-derived ABI foundation is implemented; copied-family gate adoption remains.
 
 Milestone: 0.2
 
-Owner: builder.
+Owner: lane 0 owns the shared checker and C/lint integration; family owners retain copied declarations.
 
 ## Outcome
 
@@ -23,3 +23,20 @@ Every binding that copies the C ABI has declarations that match the public C hea
 Use the settled public C header from 0426/0431 and coordinate copied files with 0427–0430. The PHP prototype correction is already pushed in the active family follow-up; the full drift check remains this ticket's outcome.
 
 Reviews: accept
+
+## Shared gate adoption
+
+The existing `check-c-exports.py HEADER LIBRARY` route retains export checking. `--describe HEADER` prints live JSON with records (size, alignment and every field’s type, offset and width), constants, function return/argument types and widths, and the C calling convention. `--self-test HEADER` refuses field order, constant, argument, return, pointer-depth, by-value and missing-prototype plants. C source, installed and smoke checks use their actual header; lint runs the same plants. No baseline is stored.
+
+Copied family gates import `header_abi` and `compare_abi` from that same script. Each gate independently enumerates its represented records, constants and imported functions from its actual host declarations, selects those public declarations from the live header facts, and compares a complete host description for that selection. Missing fields or imports fail as well as changed values. The host supplies actual size/alignment/offset/field-width and calling signatures; it must not copy the C probe’s numbers into its own declaration output. Existing public consumers retain execution, secrecy and cancellation proof.
+
+| Copied family | Actual declarations | Gate adoption |
+| --- | --- | --- |
+| C# | `NativeAbi*.cs`, `NativeMethods.cs`, `NativeBatchMethods.cs` | Actual managed layout/field offsets and imported method return/argument/by-value signatures |
+| JVM Java/Kotlin/Scala | `NativeLayouts*.java`, `NativeCalls.java` | Actual FFM layout, field offsets and function descriptors; all three consumers retain their existing gates |
+| PHP | `src/native/abi.h` | Compiler comparison of the copied C declarations and actual PHP FFI layout; generate its declaration-only copy where practical |
+| Dart/Flutter | `lib/src/native/abi*.dart`, `functions.dart` | Actual FFI layouts and typed signatures through the shared source/installed consumer |
+| Ada | `thinkthen-native*.ads` | Existing `typed_boundary.c` and `carrier_bounds.adb` compare represented declarations |
+| COBOL | native copybooks and `src/tt_native.h` | Existing C boundary and `carrier_bounds.cob` compare actual copied storage/declarations |
+
+Rust, Python, JS/TS, Ruby and R compile native source; Go, C++, Swift, Zig and Objective-C compile the installed C header. They retain that route. Clang is an explicit declaration-discovery prerequisite for this foundation; the target C compiler supplies all layout facts. The emitted portable C11 probe has a separate MSVC compilation path. Windows must measure with its own compiler/runtime. MSVC’s C11 support, toolchain environment and host checks remain unqualified until native execution. Missing tools fail qualification and never count as an exit-77 success. No Linux offsets establish Windows or macOS proof.
