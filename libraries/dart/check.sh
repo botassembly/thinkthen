@@ -41,6 +41,7 @@ case ${THINKTHEN_ARTIFACT:-} in
     locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" \
       python3 "$FLUTTER/installed.py" "$scratch/dart" "$scratch/flutter-stage" "$scratch/native"
     export TT_DART TT_FLUTTER
+    python3 "$CHECKS/installed_complete.py" "$scratch/dart" "$scratch/native" dart
     python3 "$CHECKS/installed_complete.py" "$scratch/dart" "$scratch/native" flutter
     echo 'Flutter installed release PASS: legacy and complete Linux app calls, zero-send cancellation and usage'
     exit 0 ;;

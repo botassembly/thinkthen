@@ -23,9 +23,9 @@ def prepare(package, native, consumer):
     dart = os.environ['TT_DART']
     flutter = os.environ.get('TT_FLUTTER')
     app = package / 'checks/consumers/alpha'
-    app.mkdir(parents=True)
+    app.mkdir(parents=True, exist_ok=True)
     source = ROOT / 'libraries/dart/checks/consumers/alpha'
-    shutil.copytree(source / 'bin', app / 'bin')
+    shutil.copytree(source / 'bin', app / 'bin', dirs_exist_ok=True)
     shutil.copy2(source / 'pubspec.yaml', app / 'pubspec.yaml')
     env = dict(os.environ, FLUTTER_SUPPRESS_ANALYTICS='true', CI='true')
     subprocess.run([dart, 'pub', 'get', '--offline', '--directory', str(app)], env=env, check=True)
