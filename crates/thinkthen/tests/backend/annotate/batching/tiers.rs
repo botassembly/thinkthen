@@ -207,3 +207,53 @@ fn request_size_flag_overrides_the_environment_close_limit() {
     );
     assert_eq!(listener.requests().len(), 1);
 }
+
+#[test]
+fn annotate_plan_bounds_wire_occurrences_and_keeps_packed_group_counts() {
+    let file = set(
+        "repeated-plan-groups",
+        r#"{"version":1,"questions":{"left_answer":{"decide":"Left?","on":"/left"},"right_answer":{"decide":"Right?","on":"/right"}}}"#,
+    );
+    let listener =
+        Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
+    let output = spawn(
+        &[
+            "annotate",
+            &file.to_string_lossy(),
+            "--jsonl",
+            "--batch",
+            "2",
+            "--plan",
+            "--url",
+            listener.base(),
+        ],
+        &[],
+        b"{\"left\":\"same\",\"right\":\"same\"}\n{\"left\":\"same\",\"right\":\"same\"}\n",
+    )
+    .expect("annotate plan");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let lines: Vec<Value> = String::from_utf8(output.stdout)
+        .expect("UTF-8")
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("plan JSON"))
+        .collect();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0]["request_count"], 1);
+    assert_eq!(lines[0]["group_requests"], json!([1, 1]));
+    assert_eq!(
+        lines[0]["request"]["questions"]
+            .as_object()
+            .expect("questions")
+            .len(),
+        4
+    );
+    assert_eq!(lines[1]["records"], 2);
+    assert_eq!(lines[1]["requests"], 4);
+    assert_eq!(lines[1]["upper_bound"], true);
+    assert_eq!(listener.count(), 0);
+}

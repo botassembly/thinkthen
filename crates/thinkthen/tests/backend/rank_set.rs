@@ -437,9 +437,9 @@ fn preview_matches_counted_requests(
     assert_eq!(
         summary,
         serde_json::json!({
-            "records":3,"requests":3 * per_record,"estimated_bytes":bytes,
+            "records":3,"requests":6,"estimated_bytes":bytes,
             "estimated_input_tokens":{"lower":bytes * 516 / 1000,"upper":(bytes * 908).div_ceil(1000)},
-            "upper_bound":false
+            "upper_bound":!mixed
         })
     );
     Ok(())

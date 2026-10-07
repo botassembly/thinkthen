@@ -142,7 +142,7 @@ def test_partial_judge_plan_and_execution_share_immutable_question(backend, tmp_
         except tt.UsageError as error: print(error.kind)
         """, env)
         account, planned, refusal = printed.splitlines()
-        assert account == "2 1 ['billing', 'billing'] 1"
+        assert account == "2 2 ['billing', 'billing'] 1"
         assert refusal == "usage"
         assert bodies == [planned.encode()]
         assert b"changed" not in bodies[0]

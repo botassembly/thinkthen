@@ -221,7 +221,7 @@ fn a_plan_counts_a_closed_batch_and_the_later_singleton_without_sending() {
     assert_eq!(
         lines.next(),
         Some(
-            r#"{"records":3,"requests":2,"estimated_bytes":418,"estimated_input_tokens":{"lower":215,"upper":380},"upper_bound":false}"#
+            r#"{"records":3,"requests":3,"estimated_bytes":418,"estimated_input_tokens":{"lower":215,"upper":380},"upper_bound":true}"#
         )
     );
     assert_eq!(lines.next(), None);
@@ -313,4 +313,82 @@ fn a_raised_size_warns_only_at_the_built_in_address() {
         );
         assert_eq!(text(&output.stderr), expected, "{base}");
     }
+}
+
+#[test]
+fn repeated_rank_records_complete_under_the_planned_allowance_with_every_original_position() {
+    let directory = folder("repeated-rank-plan");
+    fs::create_dir_all(&directory).expect("fixture folder");
+    let input = std::path::Path::new(&directory).join("records.txt");
+    let records: Vec<_> = (1..=164).chain(1..=22).collect();
+    fs::write(&input, super::lines(records.iter().copied())).expect("186 input records");
+    let listener = Listener::answering(answering).expect("loopback listener");
+    let fixed = [
+        "rank",
+        QUESTION,
+        "--lines",
+        "--batch",
+        "16",
+        "--jobs",
+        "1",
+        "--no-cache",
+        "--max-retries",
+        "0",
+        "--details",
+        "--url",
+        listener.base(),
+    ];
+    let run = |extra: &[&str]| {
+        spawn_file(&[&fixed[..], extra].concat(), &[KEY], &input).expect("rank command")
+    };
+    let old_allowance = run(&["--max-requests-total", "11"]);
+    assert_eq!(
+        old_allowance.status.code(),
+        Some(2),
+        "{}",
+        text(&old_allowance.stderr)
+    );
+    assert!(old_allowance.stdout.is_empty());
+    assert!(
+        text(&old_allowance.stderr)
+            .starts_with("thinkthen: the process send budget was spent before another request\n")
+    );
+    assert_eq!(listener.count(), 11);
+    let preview = run(&["--plan"]);
+    assert_eq!(preview.status.code(), Some(0), "{}", text(&preview.stderr));
+    assert_eq!(listener.count(), 11, "planning sends nothing");
+    let counts: serde_json::Value =
+        serde_json::from_str(text(&preview.stdout).lines().nth(1).expect("plan counts"))
+            .expect("JSON counts");
+    assert_eq!(counts["records"], 186);
+    assert_eq!(counts["requests"], 186);
+    assert_eq!(counts["upper_bound"], true);
+    let allowance = counts["requests"]
+        .as_u64()
+        .expect("request bound")
+        .to_string();
+    let complete = run(&["--max-requests-total", &allowance]);
+    assert_eq!(
+        complete.status.code(),
+        Some(0),
+        "{}",
+        text(&complete.stderr)
+    );
+    let rows = super::details(&complete);
+    assert_eq!(rows.len(), 186);
+    let mut positions = Vec::new();
+    for row in rows {
+        let at = row["position"]["first"]
+            .as_u64()
+            .expect("original position");
+        let expected = records[usize::try_from(at - 1).expect("record index")];
+        assert_eq!(row["input"], format!("line {expected}"));
+        positions.push(at);
+    }
+    positions.sort_unstable();
+    assert_eq!(positions, (1..=186).collect::<Vec<_>>());
+    assert!(
+        listener.count() - 11 <= 186,
+        "the allowance bounds all sends"
+    );
 }

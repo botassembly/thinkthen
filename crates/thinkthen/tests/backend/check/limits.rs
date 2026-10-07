@@ -152,7 +152,7 @@ fn size_refusals_add_two_halves_to_tag_and_relate_requests() {
     assert_eq!(plan.status.code(), Some(0), "{}", text(&plan.stderr));
     assert!(
         text(&plan.stdout)
-            .ends_with("prepared-requests upper-bound 15 before retries and refusal splits\n")
+            .ends_with("prepared-requests upper-bound 16 before retries and refusal splits\n")
     );
     assert_eq!(listener.count(), 19, "planning sends nothing");
 }
