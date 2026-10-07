@@ -1,19 +1,14 @@
 #!/bin/sh
-# The full functional checkpoint: `test`, then every surface on all shared cases.
+# The full functional checkpoint: `test`, then required public parity and packaging.
 set -eu
 case ${1:-} in
 --list)
     unset THINKTHEN_CONFORMANCE_IDS
     REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-    count=$(jq -r '.case_count' "$REPO/conformance/cases.json")
-    rows=$(jq -r '.cases | length' "$REPO/conformance/cases.json")
-    [ "$count" = 55 ] && [ "$rows" = 55 ] || {
-        echo 'test-full-cases: canonical corpus is not 55 cases' >&2
-        exit 1
-    }
-    echo 'THINKTHEN_CONFORMANCE_IDS is unset; canonical cases: 55'
+    python3 "$REPO/conformance/parity.py" --validate
+    echo 'THINKTHEN_CONFORMANCE_IDS is unset; no required cell may be skipped'
     echo 'sdlc/scripts/test (the whole workspace suite, doctests, consumer, self-tests)'
-    echo 'surfaces --full-functional (all 55 shared cases)'
+    echo 'surfaces --full-functional (required public parity, C safety and release smoke)'
     exit 0 ;;
 --run) ;;
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;

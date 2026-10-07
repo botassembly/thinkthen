@@ -50,7 +50,7 @@ Rehearsals hold no OIDC token, use no registry secrets, and require no environme
 
 The release branch is named for the major and minor version: `release/0.2` for 0.2. Ticket 0128 phase 4 holds the release details. The cut runs in this order:
 
-1. **The release candidate holds on main.** The rehearsal is clean, release QA's latest round is clean, and only release fixes remain (ADR 0116 item 3).
+1. **The release candidate holds on main.** The rehearsal is clean, release QA's latest round is clean, and only release fixes remain (ADR 0116 item 3). The existing `sdlc/scripts/test-full-cases --run` checkpoint must pass all required public variants without missing or skipped cells before cutting the candidate. Its generated `target/parity/matrix.md` reports current functions, files, images and remaining work. A routine or Rust-only hosted gate does not replace this checkpoint.
 2. **The release commit lands on main.** Main already carries the next version, so the release commit does not run `versions --set`. On a ticket branch from main, the agent dates the changelog headings and writes the public install text for the release, as ticket 0396 did for 0.1.2:
    - `CHANGELOG.md`: date the unreleased heading. Remove `(unreleased)` from the matching heading in `libraries/dart/CHANGELOG.md`.
    - Update `install.sh`, its site copy, and the release names in `libraries/{ada,cobol,csharp,go,jvm,objective-c}/README.md`.

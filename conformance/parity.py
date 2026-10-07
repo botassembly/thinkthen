@@ -163,7 +163,8 @@ def consumer_environment(scratch, port):
              'RUSTUP_TOOLCHAIN', 'RUSTC_WRAPPER', 'SCCACHE_CONF',
              'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD',
              'THINKTHEN_TOOLCHAINS', 'THINKTHEN_DUCKDB_CLI',
-             'SQLITE_AMALGAMATION', 'THINKTHEN_PRIVATE_NAMES')
+             'SQLITE_AMALGAMATION', 'THINKTHEN_PRIVATE_NAMES',
+             'R_LIBS_USER', 'PUB_CACHE')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     for name, fallback in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
         env[name] = os.environ.get(name, str(Path.home() / fallback))
@@ -173,7 +174,12 @@ def consumer_environment(scratch, port):
         path = Path(scratch) / folder
         path.mkdir()
         env[name] = str(path)
-    env.update(CARGO_BUILD_JOBS='2', CARGO_NET_OFFLINE='true',
+    if toolchains := env.get('THINKTHEN_TOOLCHAINS'):
+        cache = Path(env['HOME']) / '.cache'
+        cache.mkdir()
+        (cache / 'thinkthen-toolchains').symlink_to(Path(toolchains).expanduser().resolve(),
+                                                   target_is_directory=True)
+    env.update(CARGO_BUILD_JOBS=os.environ.get('CARGO_BUILD_JOBS', '1'), CARGO_NET_OFFLINE='true',
                THINKTHEN_TEST_PROFILE='full',
                THINKTHEN_BASE_URL=f'http://127.0.0.1:{port}/generic/v1',
                THINKTHEN_API_KEY='sk-conformance-loopback')

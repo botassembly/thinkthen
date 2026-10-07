@@ -251,14 +251,17 @@ usage_guard
 . "$(dirname -- "$0")/installed.sh"
 backend_start
 
-if [ "$parity" -eq 1 ]; then
+failed=0 skipped=
+if [ "$parity" -eq 1 ] || [ "$profile" = full ]; then
+    mode=release
+    # The public C projection does not run the C crate's private safety tests.
+    code=0
+    sh libraries/c/check.sh "$port" 3>&- || code=$?
+    verdict "$mode" libraries/c "$code" || exit 1
     unset THINKTHEN_CONFORMANCE_IDS
     export THINKTHEN_TEST_PROFILE=full
     python3 conformance/parity.py "$port" ${parity_baseline:+"$parity_baseline"}
-    exit $?
-fi
-
-failed=0 skipped=
+else
 for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
@@ -268,6 +271,7 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	[ "$code" -ne 77 ] || skipped="$skipped $surface"
 	verdict "$mode" "$surface" "$code" || failed=1
 done
+fi
 [ "$failed" -eq 0 ] || exit 1
 # A publish packs every surface (ticket 0362), so a surface that did not run stops it.
 if [ -n "$publish_tag" ] && [ -n "$skipped" ]; then

@@ -67,10 +67,10 @@ Each test starts its own backend. The count, the held gate, the rounds, and the 
 
 Lines are served in order. A `wait` answers on its own line later and never holds up the lines behind it. Its `wait ` prefix tells it from a `count` line when the two interleave. A `wait` still pending at the end can print before or after the final count. Rust tests call `Backend::wait`, `Backend::round`, and `Backend::release` in process.
 
-## Required 0.2 parity (0432 phase A)
+## Required 0.2 parity (0432)
 
 The `parity` section of `cases.json` is the independent public inventory:
-28 consumers, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
+29 consumers including MCP, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
 CLI/C, three SQL extensions and three dataframe surfaces kept separate.
 It references the existing 55 behavior cases, nine settings cases and type
 corpus rather than changing their landed schemas. `decide_many` is a decide
@@ -81,13 +81,22 @@ Run `sdlc/scripts/surfaces --parity-baseline` for phase A: only actual CLI,
 Rust and C consumers run; other rows remain missing/not checked. This bounded
 run also exits nonzero and cannot qualify full parity.
 
-Run `sdlc/scripts/surfaces --parity` explicitly for complete adoption. It runs the
-existing full consumers with no selector, writes logs and the current matrix
-to `target/parity/`, and exits nonzero for every failed or missing required
-cell, including exit 77. Routine gates validate the inventory and retain
-current green behavior; they do not require unfinished parity adoption.
-After all owners adopt the inventory, 0432 must make this full run mandatory
-and pass it before closing. The overall ticket remains open.
+The existing final checkpoint, `sdlc/scripts/test-full-cases --run`, runs the
+full test gate and `surfaces --full-functional`. The surface step requires the
+complete public suite and generates the current table in `target/parity/`.
+Each shared consumer command executes once, including each distinct public
+variant. Missing or failed required cells, skipped cases and exit 77 fail the
+checkpoint. It also retains the C crate's private safety checks and the
+release-pack/release-smoke tail. `surfaces --parity` uses the same strict path.
+Routine gates validate the inventory and retain their existing scope; the
+Rust-only hosted gate does not qualify the complete support table. The overall
+ticket stays open until the required final checkpoint passes.
+
+Consumers receive owned HOME/XDG directories. Explicit `THINKTHEN_TOOLCHAINS`,
+`R_LIBS_USER` and `PUB_CACHE` paths supply build dependencies without copying
+user configuration. Set `PUB_CACHE` to an owned writable cache when tools
+need to write; do not write a shared cache while holding its read lock.
+The caller's `CARGO_BUILD_JOBS` limit is retained and defaults to one.
 
 Each required declaration has `id`, one of the ten `verb` values, `kind`,
 `input`, `expect` and `preconditions`. References resolve to existing fixtures;
@@ -185,9 +194,9 @@ missing runners/toolchains and exit 77 fail the strict run. Shared command
 folders must emit each public variant separately. The runner regression tests
 use simulated process output; their success establishes runner behavior only,
 never SDK parity. Development selectors stay in individual existing consumers;
-the final `surfaces --parity` run has none and permits no skip. Routine gates
-continue validating declarations during adoption. The passing complete run
-must become mandatory before 0432 can close.
+the final full-functional checkpoint has none and permits no skip. Routine
+gates continue validating declarations. The passing complete checkpoint is
+required before 0432 can close.
 
 ## Public input and safety boundaries (0432 ruling)
 

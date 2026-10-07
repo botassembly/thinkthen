@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import contextlib
 import io
+import os
 import shutil
 import sys
 import tempfile
@@ -142,7 +143,10 @@ class PublicAssertions(unittest.TestCase):
             'HOME': '/ambient/home', 'THINKTHEN_BASE_URL': 'https://example.invalid',
             'THINKTHEN_API_KEY': 'ambient-secret', 'THINKTHEN_CONFORMANCE_IDS': '/selector',
             'THINKTHEN_TEST_PROFILE': 'routine', 'OTHER_API_KEY': 'unrelated-secret',
+            'THINKTHEN_TOOLCHAINS': str(Path(scratch) / 'tools'), 'CARGO_BUILD_JOBS': '1',
+            'R_LIBS_USER': str(Path(scratch) / 'r-library'), 'PUB_CACHE': str(Path(scratch) / 'pub-cache'),
         }):
+            (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
@@ -151,6 +155,12 @@ class PublicAssertions(unittest.TestCase):
                 self.assertTrue(Path(env[name]).is_relative_to(scratch))
             self.assertNotIn('THINKTHEN_CONFORMANCE_IDS', env)
             self.assertNotIn('OTHER_API_KEY', env)
+            self.assertEqual(env['CARGO_BUILD_JOBS'], '1')
+            self.assertEqual(env['R_LIBS_USER'], str(Path(scratch) / 'r-library'))
+            self.assertEqual(env['PUB_CACHE'], str(Path(scratch) / 'pub-cache'))
+            self.assertEqual((Path(env['HOME']) / '.cache/thinkthen-toolchains').resolve(),
+                             Path(scratch) / 'tools')
+            self.assertFalse((Path(env['HOME']) / '.config').exists())
 
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):
         contract = {'functions': ['decide'], 'consumers': [
@@ -200,6 +210,66 @@ class PublicAssertions(unittest.TestCase):
         for port in ['https://example.invalid', '0', '65536', '-1']:
             with self.assertRaisesRegex(ValueError, 'owned loopback port'):
                 parity.run(port)
+
+
+class FullCheckpoint(unittest.TestCase):
+    def test_required_parity_keeps_private_safety_and_release_checks_without_duplicate_consumers(self):
+        for entry, args in [('test-full-cases', ['--run']),
+                            ('surfaces', ['--full-functional']), ('surfaces', ['--parity']),
+                            ('surfaces', ['--full-functional', '--publish', 'checkpoint/surfaces/test',
+                                          '--publish-root', '/unused-publication-root'])]:
+            for failed in [None, 'safety', 'parity', 'smoke']:
+                with self.subTest(entry=entry, failed=failed), tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder)
+                    scripts = root / 'sdlc/scripts'
+                    scripts.mkdir(parents=True)
+                    for name in ['test-full-cases', 'surfaces', 'verdict.sh']:
+                        shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+                    files = {
+                        'sdlc/scripts/heavy-lock': '',
+                        'sdlc/scripts/scratch.sh': 'usage_guard() { :; }\nscratch_dir() { packed=$PWD/packed; mkdir -p "$packed"; }\n',
+                        'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
+                        'sdlc/scripts/test': 'printf "workspace\\n" >> calls\n',
+                        'sdlc/surfaces.txt': 'libraries/c landed\n',
+                        'libraries/c/Cargo.toml': '',
+                        'libraries/c/check.sh': 'printf "safety\\n" >> calls\nexit "$SAFETY_CODE"\n',
+                        'sdlc/scripts/release-pack': 'if [ "${4:-}" = crate ]; then printf "extra-pack\\n" >> calls; else printf "pack\\n" >> calls; fi\n',
+                        'sdlc/scripts/release-smoke': 'printf "smoke\\n" >> calls\nexit "$SMOKE_CODE"\n',
+                        'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
+                        'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
+                        'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
+                        'conformance/parity.py': (
+                            'import os,sys\n'
+                            'if sys.argv[1:] != ["--validate"]:\n'
+                            ' assert "THINKTHEN_CONFORMANCE_IDS" not in os.environ\n'
+                            ' assert os.environ["THINKTHEN_TEST_PROFILE"] == "full"\n'
+                            ' with open("calls", "a") as f: f.write("parity\\n")\n'
+                            ' sys.exit(int(os.environ["PARITY_CODE"]))\n'),
+                    }
+                    for path, text in files.items():
+                        target = root / path
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_text(text)
+                    (root / 'bin/rustc').chmod(0o755)
+                    (root / 'bin/git').chmod(0o755)
+                    env = {'PATH': str(root / 'bin') + ':' + os.defpath,
+                           'HOME': str(root / 'home'), 'SAFETY_CODE': '77' if failed == 'safety' else '0',
+                           'PARITY_CODE': '1' if failed == 'parity' else '0',
+                           'SMOKE_CODE': '77' if failed == 'smoke' else '0',
+                           'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
+                    result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
+                                            env=env, capture_output=True, text=True, check=False)
+                    expected = ['safety'] if failed == 'safety' else ['safety', 'parity']
+                    if failed not in ('safety', 'parity'):
+                        expected += ['pack', 'smoke']
+                    if entry == 'test-full-cases':
+                        expected.insert(0, 'workspace')
+                    if '--publish' in args:
+                        expected.insert(0, 'stage-check')
+                        if failed is None:
+                            expected += ['extra-pack', 'stage']
+                    self.assertEqual((root / 'calls').read_text().splitlines(), expected, result.stderr)
+                    self.assertEqual(result.returncode == 0, failed is None, result.stdout + result.stderr)
 
 
 if __name__ == '__main__':
