@@ -1,6 +1,6 @@
 # 0458: Repair only flagged file seams after the core freezes
 
-Status: ready
+Status: COMPLETE. The four flagged file families now follow semantic seams. Declarations, conversion behavior and substantive tests are unchanged; fresh review, full lint, actual package checks and integrated full tests passed.
 
 Milestone: 0.2
 
@@ -23,3 +23,7 @@ One fresh read-only reviewer inventories hand-written source files over 400 nonb
 Wait for 0457 and the reviewed core-freeze commit. Finish required native SDK, SQL, dataframe and MCP changes first. Do not reopen settled API decisions during this cleanup.
 
 Reviews: accept
+
+Reviews: accept
+
+Landed: qualified source 6853677336bf79e5188ebf2538995420899fedeb.

@@ -82,7 +82,7 @@ if [ "$mode" = go-cpp ]; then
 		./complete_readers.go ./complete_rows.go ./complete_test.go ./identities.go ./native_batch.go \
 		./native_complete.go ./native_details.go ./native_inputs.go ./native_methods.go \
 		./native_question_view.go ./native_test.go ./native_unions.go ./native_values.go \
-		./native_values_1.go ./native_values_2.go ./portable_batch_test.go ./questions.go ./recovery_test.go \
+		./portable_batch_test.go ./questions.go ./recovery_test.go \
 		./requests.go ./result.go ./thinkthen.go ./thinkthen_test.go ./examples/ ./examples/decide/ \
 		./examples/decide/main.go ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail 'Go source members differ'
@@ -118,13 +118,12 @@ check_dart_archive() {
 		./pubspec.lock ./lib/ ./lib/thinkthen_dart.dart ./lib/src/ \
 		./lib/src/allocator.dart ./lib/src/door.dart ./lib/src/typed.dart \
 		./lib/thinkthen_complete.dart ./lib/src/native/ \
-		./lib/src/native/abi.dart ./lib/src/native/abi_0.dart ./lib/src/native/abi_1.dart \
-		./lib/src/native/abi_2.dart ./lib/src/native/api.dart ./lib/src/native/batch.dart \
+		./lib/src/native/abi.dart \
+		./lib/src/native/api.dart ./lib/src/native/batch.dart \
 		./lib/src/native/engine.dart ./lib/src/native/execution.dart ./lib/src/native/functions.dart \
 		./lib/src/native/input.dart ./lib/src/native/question.dart ./lib/src/native/question_adapter.dart \
-		./lib/src/native/result.dart ./lib/src/native/views.dart ./lib/src/native/views_0.dart \
-		./lib/src/native/views_1.dart ./lib/src/native/views_2.dart ./lib/src/native/views_3.dart \
-		./lib/src/native/views_4.dart \
+		./lib/src/native/result.dart ./lib/src/native/views.dart \
+		./lib/src/native/value_views.dart ./lib/src/native/observation_views.dart \
 		./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
 	tar -xOzf "$dir/$name" ./pubspec.yaml >"$work/package-metadata"
@@ -142,8 +141,7 @@ if [ "$mode" = php-dart ]; then
 				./src/complete/ ./src/complete/models.php ./src/native/ \
 				./src/native/abi.h ./src/native/batch.php ./src/native/engine.php \
 				./src/native/input.php ./src/native/question.php ./src/native/question_adapter.php \
-				./src/native/result.php ./src/native/views.php ./src/native/views_0.php \
-				./src/native/views_1.php \
+				./src/native/result.php ./src/native/views.php \
 				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
 			tar -xOzf "$dir/$name" ./composer.json >"$work/package-metadata"
 			python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"} and p["autoload"]=={"files":["autoload.php"]}' "$work/package-metadata" || fail 'PHP Composer identity differs'

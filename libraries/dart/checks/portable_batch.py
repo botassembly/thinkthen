@@ -49,9 +49,6 @@ if RELEASE_PACKAGE:
                 "lib/src/typed.dart", "THINKTHEN-PACKAGE-INPUTS",
                 'lib/thinkthen_complete.dart',
                 'lib/src/native/abi.dart',
-                'lib/src/native/abi_0.dart',
-                'lib/src/native/abi_1.dart',
-                'lib/src/native/abi_2.dart',
                 'lib/src/native/api.dart',
                 'lib/src/native/batch.dart',
                 'lib/src/native/engine.dart',
@@ -62,11 +59,8 @@ if RELEASE_PACKAGE:
                 'lib/src/native/question_adapter.dart',
                 'lib/src/native/result.dart',
                 'lib/src/native/views.dart',
-                'lib/src/native/views_0.dart',
-                'lib/src/native/views_1.dart',
-                'lib/src/native/views_2.dart',
-                'lib/src/native/views_3.dart',
-                'lib/src/native/views_4.dart'}
+                'lib/src/native/value_views.dart',
+                'lib/src/native/observation_views.dart'}
     members = {str(path.relative_to(package)) for path in package.rglob("*") if path.is_file()}
     assert members == expected and not any(path.is_symlink() for path in package.rglob("*")), ("DART_ARCHIVE_MEMBERS", members)
     manifest = (package / "pubspec.yaml").read_text()
