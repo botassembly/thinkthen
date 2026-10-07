@@ -21,13 +21,14 @@ from verbs_budget import (
     b13c_try_details_split_denials,
     b13c_try_details_total_zero_sends_nothing,
 )
-from verbs_complete import complete_question_files_keep_identity, complete_question_refusals_and_nulls, complete_question_rechecks_prepared_authority
+from verbs_complete import native_complete_file_authorization_precedes_content_parsing, complete_question_files_keep_identity, complete_question_refusals_and_nulls, complete_question_rechecks_prepared_authority
 from verbs_portable import portable_batch_identity
-from portable import question_keys
+from question_keys import question_keys
 
 REFUND = "Does the writer ask for a refund?"
 SHUFFLED = "(VALUES (1, 'good morning'), (2, NULL), (3, 'refund now'), (4, 'good morning'), (5, NULL), (6, 'refund now')) t(i, x)"
 
+case(native_complete_file_authorization_precedes_content_parsing)
 case(complete_question_files_keep_identity)
 case(complete_question_refusals_and_nulls)
 case(complete_question_rechecks_prepared_authority)
@@ -330,8 +331,8 @@ def b13c_try_details_members():
             b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
         ]
         expect(set(backend.bodies), set(expected), "full first-seen request bodies")
-        # A row lists its own question key, by ADR 0111 section 7.
-        keys = [question_keys(backend.base + "/systemone", body) for body in expected]
+        # Each cache/2 key includes this fixture's independently reported model.
+        keys = [question_keys(backend.base + "/systemone", body, "jev-latest") for body in expected]
         for place, request, at in [(0, 0, 0), (2, 0, 2), (3, 1, 0)]:
             expect(values[place]["details"]["meta"]["requests"], [keys[request][at]], "member question key")
 
@@ -458,7 +459,7 @@ def b13c_try_details_total_one_preserves_answered_rows():
         answered = [0, 1] if b'alpha' in backend.bodies[0] else [2, 3]
         failed = [place for place in range(4) if place not in answered]
         expect(values[4], None, "NULL text remains SQL NULL")
-        keys = question_keys(backend.base + "/systemone", backend.bodies[0])
+        keys = question_keys(backend.base + "/systemone", backend.bodies[0], "jev-latest")
         for at, place in enumerate(answered):
             expect(values[place]["status"], "answered", f"answered SQL slot {place}")
             expect(values[place]["details"]["meta"]["requests"], [keys[at]], f"answer question key {place}")

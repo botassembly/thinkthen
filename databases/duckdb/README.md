@@ -166,7 +166,6 @@ NULL constructor operands return NULL. NULL question or collection returns NULL 
 
 `thinkthen_image_file(path)` explicitly reads one local regular image with DuckDB filesystem permissions and the native handle reader. Its `file` field retains the source name; a byte constructor has NULL `file`. No text line positions are invented. `thinkthen_recognize` also accepts the existing native recognize JSON/question-file grammar with described kinds in addition to its retained name list.
 
-Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). The additive SQL rank-set route exposes native turns and combined count facts; complete rank result/identity adoption remains with 0417/0435. These image calls expose landed native details; this is not a full SDK parity claim.
 
 `thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
 rank-set route. It takes the native version-one ordered set of named decide
@@ -184,13 +183,13 @@ uses the existing host configuration. Per-call model, cuts, pointers and
 score members refuse before sending. One-member sets preserve the plain
 question's wire/cache identity. Recording each member individually supports
 strict set replay with zero sends. Described decide members retain their
-authored true/false meanings. Independent single described/saved-score rank
-awaits the native richer-rank API under 0406.
+authored true/false meanings. The additive `thinkthen_rank_complete` route also accepts described decide and
+saved score questions through the native complete rank API.
 
 `facts` comes directly from the same completed native call, counts original
 records and combined member requests, and repeats on every output row. It
-is the current count-facts shape; full observations, call/answer IDs and
-started-failure carriers await native/0435 adoption. An empty object yields
+is the compatibility count-facts shape. Use `thinkthen_rank_complete` for full
+observations, call/answer IDs and started-failure envelopes. An empty object yields
 no rows. Set JSON and files use native RankSet admission, preserving member
 order and rejecting duplicates, authored thresholds/on and non-decide kinds.
 
@@ -198,3 +197,23 @@ Questions/keyed input and facts are VARCHAR JSON text. Questions may name an
 explicit `@file` through the existing DuckDB-authorized reader. NULL questions
 or keyed input yields no rows without file IO or sends; NULL settings uses
 defaults.
+
+## Complete native calls (0.2 development)
+
+All ten `thinkthen_FUNCTION_complete(question TEXT, inputs TEXT, settings TEXT :=
+NULL)` calls expose the owning native result/2 envelope and final facts, including
+started-failure facts, full probabilities, authors, call/answer/observation IDs,
+structured stops, requested attempts and optional exact caller-priced cost.
+Ordinary scalar/table signatures and cumulative usage remain compatible. See the
+[shared SQL complete API](../sqlite/README.md#complete-native-calls-02-development)
+for explicit records, context, reading, options, images, rank sets, file controls,
+error envelopes and native cache/record/replay behavior.
+
+DuckDB returns JSON text. Explicit native file inputs read DuckDB-authorized
+handles. Complete question `@reference` and `@@NAME` use native metadata
+selection, then the executing session authorizes the selected path and reads
+capped UTF-8 through DuckDB. The same retained selection parses the original
+bytes; Rust never opens that question content. Engine options add
+`thinkthen_base_url`, paired price strings and
+`thinkthen_refresh_cache` (0/1); the same native engine owns cache, replay and
+usage. No complete call creates another SQL scheduler or cumulative facts ledger.

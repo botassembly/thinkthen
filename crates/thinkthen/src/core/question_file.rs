@@ -419,7 +419,7 @@ mod fields;
 mod find;
 mod profile;
 mod role;
-pub(crate) use role::QuestionRole;
+pub use role::QuestionRole;
 mod resolve;
 
 pub(crate) use crate::core::question_file::fields::pointers;

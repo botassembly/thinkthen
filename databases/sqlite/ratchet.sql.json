@@ -1,5 +1,7 @@
 {
-  "directory": ["tests"],
+  "directory": [
+    "tests"
+  ],
   "extension": ".sql",
   "max": 22
 }

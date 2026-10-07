@@ -176,6 +176,7 @@ fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_er
 #[cfg(test)]
 fn check_named(root: &Path) {
     check_roles(root);
+    reference::check(root, &config(root));
     let named = Question::load_named("refund").unwrap();
     assert_eq!(named.name().unwrap().as_str(), "refund");
     assert!(
@@ -472,3 +473,7 @@ fn check_roles(root: &Path) {
 #[cfg(feature = "cli")]
 #[path = "native_named_questions/rank_set.rs"]
 mod rank_set;
+
+#[cfg(test)]
+#[path = "native_named_questions/reference.rs"]
+mod reference;

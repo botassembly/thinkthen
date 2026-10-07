@@ -35,7 +35,7 @@ def ten_folder_examples_keep_original_documents_and_mapped_endpoints():
     with tempfile.TemporaryDirectory(prefix='thinkthen-files-cache-') as cache, Backend() as backend, ConditionalBackend(backend.base()) as proxy:
         extra = {'THINKTHEN_CACHE': cache}
         def reply(answers):
-            proxy.reply = json.dumps({'model':'jev-latest','answers':answers}).encode()
+            proxy.reply = json.dumps({'model':'jev-1.13.0','answers':answers}).encode()
         # Seed real judgment cache entries with controlled yes/no replies. The
         # published WHERE runs over every source row and must reject five lines.
         for row in lines:
@@ -216,6 +216,37 @@ def oversized_sorted_manifest_refuses_before_admitting_content():
         got=run([f"SELECT thinkthen_decide('Is it valid?',record) FROM thinkthen_read_files({literal(tmp)})"],backend.base())
         expect(said(got[0]),'thinkthen local: source manifest exceeds 16 MiB (retryable: no)','exact manifest refusal')
         expect(backend.count(),0,'oversized manifest admitted no content')
+
+
+@case
+def complete_files_reject_unknown_formats_before_filesystem_work():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-format-') as tmp, Backend() as backend:
+        folder=Path(tmp)
+        os.mkfifo(folder/'fifo')
+        ordinary=folder/'ordinary.txt'
+        ordinary.write_text('Refund please.')
+        paths=[str(folder/'fifo'),'/dev/zero',str(folder/'missing'),str(ordinary)]
+        statements=[]
+        for path in paths:
+            for format in ('text',42,None,False,{},[]):
+                payload=json.dumps({'files':{'paths':[path],'format':format}})
+                statements.append("SELECT thinkthen_decide_complete('{\"decide\":\"Refund?\"}',"+literal(payload)+")")
+        trace=folder/'format-io.trace'
+        wrap=['strace','-f','-e','trace=openat,newfstatat,statx,access,readlink','-o',str(trace)] if sys.platform=='linux' else None
+        got=run(statements,backend.base(),timeout=5,wrap=wrap)
+        if wrap:
+            calls=trace.read_text()
+            assert calls and all('"'+path+'"' not in calls for path in paths),calls
+        for result in got:
+            value=json.loads(rows(result)[0][0])
+            expect(value['native']['error']['kind'],'usage','format refusal precedes source access')
+            expect(value['native']['error']['message'],'file format is jsonl','exact format diagnostic')
+            assert 'facts' not in value['native'] and value['observations']==[],value
+        expect(backend.count(),0,'unknown formats send nothing')
+        valid=json.dumps({'files':{'paths':[str(folder/'missing')],'format':'jsonl'}})
+        value=json.loads(rows(run(["SELECT thinkthen_decide_complete('{\"decide\":\"Refund?\"}',"+literal(valid)+")"],backend.base())[-1])[0][0])
+        expect(value['native']['error']['kind'],'local','admitted format reaches the native reader')
+        expect(backend.count(),0,'missing valid JSON-line file sends nothing')
 
 
 if __name__=='__main__':

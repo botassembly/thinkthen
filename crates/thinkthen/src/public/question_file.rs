@@ -10,7 +10,7 @@ use std::path::Path;
 use super::Error;
 
 /// The most bytes a question file may hold: 1 MiB.
-const LIMIT: u64 = 1_048_576;
+pub(crate) const LIMIT: u64 = 1_048_576;
 
 /// Why a question file gave no text.
 #[derive(Debug)]

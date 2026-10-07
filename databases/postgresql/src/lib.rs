@@ -8,6 +8,9 @@ use pgrx::prelude::*;
 use thinkthen::{Details, Engine, Error, LoadedQuestion, Recognize};
 
 mod call;
+mod complete;
+#[path = "../../sqlite/src/complete_native/mod.rs"]
+mod complete_native;
 #[allow(
     unsafe_code,
     reason = "the one FFI module: interrupt flags, the signal mask, and descriptor opens"

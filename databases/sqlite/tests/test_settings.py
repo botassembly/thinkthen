@@ -99,8 +99,8 @@ zero = run(db, "SELECT thinkthen_usage()")
 valid = run(db, "SELECT thinkthen_configure(?)", ('{"batch":1,"throttle":8,"model":"judge-b"}',))
 invalid = [run(db, "SELECT thinkthen_configure(?)", (text,)) for text in
            ('{"batch":0}', '{"throttle":33}', '{"unknwon":1}', '{"batch":1,"batch":2}',
-            '{"base_url":"https://example.invalid"}', '{"max_estimated_input_tokens_total":1}',
-            '{"usd_per_million_input":"0","usd_per_million_output":"0"}')]
+            '{"base_url":"http://"}', '{"max_estimated_input_tokens_total":1}',
+            '{"usd_per_million_input":"0"}')]
 answer = run(db, "SELECT thinkthen_details('Is it red?', 'a red door')")
 after = run(db, "SELECT thinkthen_configure('{}')")
 say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
@@ -108,7 +108,7 @@ say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
     expect(json.loads(held["zero"][0][0])["requests_sent"], 0, "usage builds no engine")
     expect(all(value.startswith("thinkthen usage:") for value in held["invalid"]), True, "seven invalid objects")
     expect(held["invalid"][-1],
-           "thinkthen usage: settings JSON has unsupported price key usd_per_million_input (retryable: no)", "unimplemented host prices")
+           "thinkthen usage: settings prices require both input and output fields (retryable: no)", "paired host prices")
     expect(held["invalid"][-2],
            "thinkthen usage: settings JSON has unknown key max_estimated_input_tokens_total (retryable: no)", "unimplemented host cap")
     expect(held["valid"], [['{"batch":1,"throttle":8,"model":"judge-b"}']], "the selected object")

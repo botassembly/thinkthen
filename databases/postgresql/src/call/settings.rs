@@ -10,6 +10,7 @@ use thinkthen::{BatchSetting, EngineBuilder, Error};
 
 use super::{Call, OrRaise};
 use crate::ffi;
+mod complete;
 
 /// The registered value that leaves a numeric engine setting unset.
 pub(crate) const UNSET: i32 = -1;
@@ -28,6 +29,9 @@ pub(crate) fn throttle_refusal(value: i32) -> Option<String> {
 /// calls nothing, so the value `EngineBuilder::from_env` seeded stands.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Plan {
+    base_url: Option<String>,
+    prices: Option<(String, String)>,
+    refresh_cache: bool,
     pub(super) throttle: Option<u8>,
     pub(super) max_requests: Option<usize>,
     max_request_bytes: Option<usize>,
@@ -126,6 +130,7 @@ impl Plan {
                 .map(str::to_owned),
             record: folder(raw.record)?,
             replay: folder(raw.replay)?,
+            ..Self::default()
         })
     }
 }
@@ -133,6 +138,13 @@ impl Plan {
 /// Apply a plan to a seeded builder. A requested throttle always reaches
 /// the public setter, which accepts the active width and refuses a change.
 pub(super) fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBuilder, Error> {
+    builder = builder.refresh_cache(plan.refresh_cache);
+    if let Some(base) = &plan.base_url {
+        builder = builder.base_url(base)?;
+    }
+    if let Some((input, output)) = &plan.prices {
+        builder = builder.prices_usd_per_million(input, output)?;
+    }
     if let Some(value) = plan.throttle {
         // The public engine accepts an equal width and refuses a changed one.
         // Apply even when a width is already active.
@@ -220,7 +232,7 @@ pub(crate) fn read_result() -> Result<Call, Error> {
     let profile = text_of(&PROFILE);
     let record = text_of(&RECORD);
     let replay = text_of(&REPLAY);
-    let plan = Plan::of(Raw {
+    let mut plan = Plan::of(Raw {
         throttle: THROTTLE.get(),
         max_requests: MAX_REQUESTS.get(),
         max_request_bytes: MAX_REQUEST_BYTES.get(),
@@ -234,6 +246,7 @@ pub(crate) fn read_result() -> Result<Call, Error> {
         record: record.as_deref(),
         replay: replay.as_deref(),
     })?;
+    complete::read(&mut plan)?;
     // Ian's ruling of 2026-09-25: the backend's total, computed once per call.
     let total = u64::try_from(MAX_REQUESTS_TOTAL.get()).ok();
     Ok(Call {
@@ -327,6 +340,7 @@ fn register_new_engine_settings() {
 
 /// Register the settings with PostgreSQL. `_PG_init` calls this alone.
 pub(crate) fn register() {
+    complete::register();
     let int = |name, about, setting, most, context, flags| {
         GucRegistry::define_int_guc(name, about, c"", setting, -1, most, context, flags);
     };

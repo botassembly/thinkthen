@@ -48,7 +48,7 @@ def test_replacement_refuses_atomically_and_first_build_captures_later_key():
 run(db, "SELECT thinkthen_configure(?)", ('{"backend":"local","cache":false}',))
 refused = [run(db, "SELECT thinkthen_configure(?)", (source,)) for source in (
     '{"backend":"nowhere","model":"replaced"}', '{"backend":1}',
-    '{"backend":"local","backend":"other"}', '{"base_url":"http://127.0.0.1"}')]
+    '{"backend":"local","backend":"other"}', '{"base_url":"http://"}')]
 say(refused=refused,usage=run(db,"SELECT thinkthen_usage()"))
 input()
 os.environ['LOCAL_KEY'] = 'fake-later'

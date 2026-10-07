@@ -83,6 +83,27 @@ say(errors=[run(db, "SELECT thinkthen_decide('Is it good?',record) FROM thinkthe
         expect(backend.close(), 0, 'all refusals send nothing')
 
 
+def test_complete_files_reject_unknown_formats_before_source_access():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-complete-format-') as tmp:
+        folder=pathlib.Path(tmp)
+        import os
+        os.mkfifo(folder/'fifo')
+        (folder/'ordinary').write_text('Refund please.')
+        paths=[str(folder/'fifo'),'/dev/zero',str(folder/'missing'),str(folder/'ordinary')]
+        backend=Backend()
+        held=child(f"""
+db=connect()
+errors=[]
+for path in {paths!r}:
+    for format in ('text',42,None,False,{{}},[]):
+        value=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',('{{"decide":"Refund?"}}',json.dumps({{'files':{{'paths':[path],'format':format}}}}))).fetchone()[0])
+        errors.append([value['native']['error']['kind'],value['native']['error']['message'],'facts' in value['native'],value['observations']])
+say(errors=errors)
+""",environment(backend),5)
+        expect(held['errors'],[['usage','file format is jsonl',False,[]]]*24,'present format must be JSON lines before I/O')
+        expect(backend.close(),0,'unknown complete formats send nothing')
+
+
 def test_reader_is_direct_only_in_trusted_mode_and_caller_temp_still_works():
     backend = Backend()
     held = child(TRUSTED + f"""
