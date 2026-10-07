@@ -108,3 +108,6 @@ mod source_relations;
 
 #[path = "native_complete/source_recognition.rs"]
 mod source_recognition;
+
+#[path = "native_complete/find_admission.rs"]
+mod find_admission;

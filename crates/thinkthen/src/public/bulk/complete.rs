@@ -153,6 +153,7 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
+        let options = options.started()?;
         let (units, find, engine) = self.prepare_find(question, units, &options)?;
         for (at, unit) in units.iter().enumerate() {
             question
@@ -182,7 +183,7 @@ impl Engine {
     {
         only(question, &[Kind::Find, Kind::FindNone], "find")?;
         let none = question.kind == Kind::FindNone;
-        let maximum = if none { 254 } else { 255 };
+        let maximum = Find::maximum(none);
         let count_message = if none {
             "a find question offering none takes 2 to 254 units"
         } else {
@@ -190,7 +191,11 @@ impl Engine {
         };
         let mut held = Vec::new();
         let mut bytes = 0usize;
-        for unit in units {
+        let mut units = units.into_iter();
+        loop {
+            options.admission()?;
+            let Some(unit) = units.next() else { break };
+            options.admission()?;
             let unit = unit?;
             self.check_record_limit(held.len())?;
             if held.len() == maximum {

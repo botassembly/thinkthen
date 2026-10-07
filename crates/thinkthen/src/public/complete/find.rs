@@ -47,6 +47,7 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
+        let options = options.started()?;
         let (units, find, engine) = self.prepare_find(question, units, &options)?;
         for (at, unit) in units.iter().enumerate() {
             let input = inputs.get(at).map(|input| input.as_ref());

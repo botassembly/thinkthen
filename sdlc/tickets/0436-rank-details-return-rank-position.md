@@ -38,3 +38,5 @@ fn Question::rank_described(&str, Option<Description>, Option<Description>) -> R
 fn Question::rank_from_json(&str) -> Result<Question, Error>
 fn Question::load_rank(impl AsRef<Path>) -> Result<Question, Error>
 ```
+
+Executable saved-set rank example now pins result/2 final positions 1/2/3 beside the unchanged bare ordering; the old null expectations were a stale result/1 example. The shared result page validates all actual complete CLI function variants against the generated schema. Native/CLI behavior is implemented on the working branch; whole review, landing and host adoption remain open.
