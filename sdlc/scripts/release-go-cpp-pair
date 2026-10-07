@@ -91,11 +91,14 @@ if [ "$mode" = swift-zig ]; then
 			printf '%s\n' ./ ./LICENSE ./README.md ./Package.swift ./Examples/ ./Examples/main.swift \
 				./Sources/ ./Sources/CThinkThen/ ./Sources/CThinkThen/include/ \
 				./Sources/CThinkThen/include/thinkthen.h ./Sources/CThinkThen/module.modulemap \
-				./Sources/ThinkThen/ ./Sources/ThinkThen/ThinkThen.swift ./Tests/ ./Tests/TypeCase/ \
+				./Sources/ThinkThen/ ./Sources/ThinkThen/ThinkThen.swift ./Sources/ThinkThen/Complete.swift \
+				./Sources/ThinkThen/Native.swift ./Sources/ThinkThen/NativeResult.swift \
+				./Sources/ThinkThen/NativeViews.swift ./Tests/ ./Tests/TypeCase/ \
 				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \
-				./examples/decide.zig ./src/ ./src/thinkthen.zig ./THINKTHEN-PACKAGE-INPUTS \
+				./examples/decide.zig ./src/ ./src/thinkthen.zig ./src/complete.zig ./src/native.zig \
+				./THINKTHEN-PACKAGE-INPUTS \
 				| LC_ALL=C sort >"$work/expected-members" ;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
@@ -209,6 +212,8 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./Sources/ \
 				./Sources/ThinkThen.h ./Sources/ThinkThen.m \
 				./Sources/TTJSON.h ./Sources/TTJSON.c ./Examples/ ./Examples/consumer.m \
+				./Sources/TTComplete.h ./Sources/TTComplete.c ./Sources/TTNative.h \
+				./Sources/TTNativeAPI.h ./Sources/TTNativeAPI.m ./Sources/TTNativeViews.c \
 				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$third")
 			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./copybooks/ \

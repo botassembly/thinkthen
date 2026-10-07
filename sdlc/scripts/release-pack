@@ -238,7 +238,9 @@ cpp)
 		mkdir -p "$folder/cmake" "$folder/include/thinkthen"
 		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
 		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
-		cp libraries/cpp/include/thinkthen/door.hpp libraries/cpp/include/thinkthen/json.hpp "$folder/include/thinkthen/"
+		cp libraries/cpp/include/thinkthen/door.hpp libraries/cpp/include/thinkthen/json.hpp \
+			libraries/cpp/include/thinkthen/complete.hpp libraries/cpp/include/thinkthen/native.hpp \
+			libraries/cpp/include/thinkthen/native_views.hpp "$folder/include/thinkthen/"
 		;;
 csharp)
 		mkdir -p "$folder/feed"
@@ -266,7 +268,9 @@ swift)
 		cp libraries/swift/Examples/main.swift "$folder/Examples/"
 		cp libraries/swift/Sources/CThinkThen/module.modulemap "$folder/Sources/CThinkThen/"
 		cp libraries/c/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
-		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift "$folder/Sources/ThinkThen/"
+		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift libraries/swift/Sources/ThinkThen/Complete.swift \
+			libraries/swift/Sources/ThinkThen/Native.swift libraries/swift/Sources/ThinkThen/NativeResult.swift \
+			libraries/swift/Sources/ThinkThen/NativeViews.swift "$folder/Sources/ThinkThen/"
 		cp libraries/swift/Tests/TypeCase/main.swift "$folder/Tests/TypeCase/"
 		;;
 zig)
@@ -274,7 +278,7 @@ zig)
 		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
 			libraries/zig/build.zig.zon "$folder/"
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/thinkthen.zig "$folder/src/"
+		cp libraries/zig/src/thinkthen.zig libraries/zig/src/complete.zig libraries/zig/src/native.zig "$folder/src/"
 		;;
 php)
 		mkdir -p "$folder/examples" "$folder/src/complete" "$folder/src/native"
@@ -333,7 +337,10 @@ objective-c)
 		cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
 			libraries/objective-c/source-package.json "$folder/"
 		cp libraries/objective-c/Sources/ThinkThen.h libraries/objective-c/Sources/ThinkThen.m \
-			libraries/objective-c/Sources/TTJSON.h libraries/objective-c/Sources/TTJSON.c "$folder/Sources/"
+			libraries/objective-c/Sources/TTJSON.h libraries/objective-c/Sources/TTJSON.c \
+			libraries/objective-c/Sources/TTComplete.h libraries/objective-c/Sources/TTComplete.c \
+			libraries/objective-c/Sources/TTNative.h libraries/objective-c/Sources/TTNativeAPI.h \
+			libraries/objective-c/Sources/TTNativeAPI.m libraries/objective-c/Sources/TTNativeViews.c "$folder/Sources/"
 		cp libraries/objective-c/Examples/consumer.m "$folder/Examples/"
 		;;
 cobol)
