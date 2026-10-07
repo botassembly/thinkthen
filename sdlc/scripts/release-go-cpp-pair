@@ -98,7 +98,7 @@ if [ "$mode" = swift-zig ]; then
 				./Sources/CThinkThen/include/thinkthen.h ./Sources/CThinkThen/module.modulemap \
 				./Sources/ThinkThen/ ./Sources/ThinkThen/ThinkThen.swift ./Sources/ThinkThen/Complete.swift \
 				./Sources/ThinkThen/Native.swift ./Sources/ThinkThen/NativeResult.swift \
-				./Sources/ThinkThen/NativeViews.swift ./Tests/ ./Tests/TypeCase/ \
+				./Sources/ThinkThen/NativeViews.swift ./Sources/ThinkThen/NativeQuestionViews.swift ./Tests/ ./Tests/TypeCase/ \
 				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \

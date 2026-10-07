@@ -77,7 +77,7 @@ def test_constructor_backend_errors_send_nothing(backend, tmp_path):
     failures = json.loads(output)
     assert failures[:4] == ["backend is text"] * 4
     assert failures[6:10] == ["backend is text"] * 4
-    assert "the built-in backends are `liquid`, `llamacpp`, `mlx`, `ollama`, `openrouter`, `perplexity` and `typesafe`" in failures[5]
+    assert "the built-in backends are `liquid`, `llamacpp`, `mlx`, `ollama`, `openai`, `openrouter`, `perplexity` and `typesafe`" in failures[5]
     assert backend.count() == 0
 
 

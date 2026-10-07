@@ -27,6 +27,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
         DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1
     "$dotnet" pack "$here/ThinkThen.csproj" -c Release -o "$smoke/feed" -v quiet >&2
     cp "$here/tests/Smoke.csproj" "$here/tests/source/Smoke.cs" "$smoke/app/"
+    python3 "$here/tests/package_check.py" "$smoke/native/include/thinkthen.h" "$smoke/feed/Botassembly.ThinkThen.$version.nupkg"
     "$dotnet" build "$smoke/app/Smoke.csproj" -c Release -o "$smoke/app/out" -p:RestoreSources="$smoke/feed" -v quiet >&2
     LD_LIBRARY_PATH="$smoke/native/lib" "$smoke/app/out/Smoke"
     exit
@@ -44,6 +45,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     tar -xzf "$THINKTHEN_C_ARTIFACT" -C "$native"
     python3 "$root/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
     version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$root/crates/thinkthen/Cargo.toml" | head -n 1)
+    python3 "$here/tests/package_check.py" "$native/include/thinkthen.h" "$managed/Botassembly.ThinkThen.$version.nupkg"
     mode=release
     [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || mode=portable
     THINKTHEN_RELEASE_NUPKG="$managed/Botassembly.ThinkThen.$version.nupkg" \

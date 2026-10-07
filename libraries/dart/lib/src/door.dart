@@ -80,18 +80,18 @@ class Door {
     Pointer<Void>,
     Pointer<Answer>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
   ) decideOpts = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Uint8>,
-        IntPtr,
+        Size,
         Int64,
         Pointer<Void>,
         Pointer<Answer>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       ),
       int Function(
         Pointer<Void>,
@@ -102,43 +102,43 @@ class Door {
         Pointer<Void>,
         Pointer<Answer>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       )>('thinkthen_decide_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
     int,
     int,
     Pointer<Void>,
     Pointer<Answer>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
   ) manyOpts = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
+        Pointer<Size>,
+        Size,
         Int64,
         Pointer<Void>,
         Pointer<Answer>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       ),
       int Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         int,
         int,
         Pointer<Void>,
         Pointer<Answer>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       )>('thinkthen_decide_many_with_facts_opts');
   late final Pointer<Uint8> Function(
     Pointer<Void>,
@@ -166,21 +166,21 @@ class Door {
     int,
     Pointer<Void>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
   ) recognizeOpts = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Uint8>,
-        IntPtr,
+        Size,
         Int64,
         Pointer<Void>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       ),
       int Function(
         Pointer<Void>,
@@ -190,66 +190,66 @@ class Door {
         int,
         Pointer<Void>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       )>('thinkthen_recognize_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
     int,
     int,
     Pointer<Void>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
   ) relateOpts = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
+        Pointer<Size>,
+        Size,
         Int64,
         Pointer<Void>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       ),
       int Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         int,
         int,
         Pointer<Void>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       )>('thinkthen_relate_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
   ) planJson = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       ),
       int Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       )>('thinkthen_plan_json');
   late final void Function(Pointer<Uint8>) freeString = lib.lookupFunction<
       Void Function(Pointer<Uint8>),
@@ -265,7 +265,7 @@ class Door {
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Uint8>,
-        IntPtr,
+        Size,
         Pointer<Answer>,
       ),
       int Function(
@@ -279,7 +279,7 @@ class Door {
     Pointer<Void>,
     Pointer<Uint8>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
     int,
     Pointer<Answer>,
   ) manyPlain = lib.lookupFunction<
@@ -287,15 +287,15 @@ class Door {
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
+        Pointer<Size>,
+        Size,
         Pointer<Answer>,
       ),
       int Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         int,
         Pointer<Answer>,
       )>('thinkthen_decide_many');
@@ -310,15 +310,15 @@ class Door {
     Pointer<Uint8>,
     int,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
   ) recognizePlain = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Uint8>,
-        IntPtr,
+        Size,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       ),
       int Function(
         Pointer<Void>,
@@ -326,34 +326,34 @@ class Door {
         Pointer<Uint8>,
         int,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       )>('thinkthen_recognize');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
     int,
     Pointer<Pointer<Uint8>>,
-    Pointer<IntPtr>,
+    Pointer<Size>,
   ) relatePlain = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
+        Pointer<Size>,
+        Size,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       ),
       int Function(
         Pointer<Void>,
         Pointer<Uint8>,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
         int,
         Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
+        Pointer<Size>,
       )>('thinkthen_relate');
   // Exercise all five non-_opts entry points on existing cache keys.
   void plainAliases(Pointer<Void> engine) {
@@ -361,10 +361,10 @@ class Door {
     final answer = memory.allocate(sizeOf<Answer>()).cast<Answer>();
     final ptrs =
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>();
-    final lens = memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>();
+    final lens = memory.allocate(sizeOf<Size>()).cast<Size>();
     final result =
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>();
-    final resultLen = memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>();
+    final resultLen = memory.allocate(sizeOf<Size>()).cast<Size>();
     final usage = memory.cString('{"usage":true}');
     final spec = memory.cString(
       '{"version":1,"recognize":{"kinds":{"person":"A person name."}}}',
@@ -377,7 +377,7 @@ class Door {
     final second = memory.cString('{"name":"Second","kind":"alert"}');
     final both =
         memory.allocate(2 * sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>();
-    final lengths = memory.allocate(2 * sizeOf<IntPtr>()).cast<IntPtr>();
+    final lengths = memory.allocate(2 * sizeOf<Size>()).cast<Size>();
     try {
       if (decidePlain(engine, question, text, 3, answer) != 0 ||
           answer.ref.outcome != 1 ||
@@ -535,7 +535,7 @@ class Door {
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
       );
       final outLen = owned.add(
-        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+        memory.allocate(sizeOf<Size>()).cast<Size>(),
       );
       final code = planJson(engine, request, out, outLen);
       if (code != 0) throw failure(engine, code);
@@ -565,7 +565,7 @@ class Door {
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
       );
       final factsLen = owned.add(
-        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+        memory.allocate(sizeOf<Size>()).cast<Size>(),
       );
       out.ref.outcome = 123;
       out.ref.probability = -1;
@@ -623,7 +623,7 @@ class Door {
             .cast<Pointer<Uint8>>(),
       );
       final lens = owned.add(
-        memory.allocate(sizeOf<IntPtr>() * texts.length).cast<IntPtr>(),
+        memory.allocate(sizeOf<Size>() * texts.length).cast<Size>(),
       );
       final out = owned.add(
         memory.allocate(sizeOf<Answer>() * texts.length).cast<Answer>(),
@@ -632,7 +632,7 @@ class Door {
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
       );
       final factsLen = owned.add(
-        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+        memory.allocate(sizeOf<Size>()).cast<Size>(),
       );
       facts.value = nullptr;
       factsLen.value = 999;
@@ -788,19 +788,19 @@ class Door {
             .cast<Pointer<Uint8>>(),
       );
       final lens = owned.add(
-        memory.allocate(sizeOf<IntPtr>() * values.length).cast<IntPtr>(),
+        memory.allocate(sizeOf<Size>() * values.length).cast<Size>(),
       );
       final out = owned.add(
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
       );
       final outLen = owned.add(
-        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+        memory.allocate(sizeOf<Size>()).cast<Size>(),
       );
       final facts = owned.add(
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
       );
       final factsLen = owned.add(
-        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+        memory.allocate(sizeOf<Size>()).cast<Size>(),
       );
       for (var i = 0; i < values.length; i++) {
         ptrs[i] = values[i];

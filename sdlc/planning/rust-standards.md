@@ -35,7 +35,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 
 ## Size
 
-- No source or test file passes 500 non-blank lines. Enforced by: `lint`.
+- Hand-written Rust and binding source/test files warn at 500–999 nonblank lines and fail at 1,000. Explain a warning in the change’s commit; it does not require a mechanical split. Generated source, vendored dependencies and build output remain excluded. Enforced by: `policy.py`, called by `lint`.
 - `sdlc/ratchet.json` holds one ceiling over everything under `crates`, test files included. The ceiling equals the measured total. Adding code means editing the number. The commit that raises it says what grew and why it earns the lines, and where the author looked for duplication to delete first. Enforced by: `sdlc/scripts/ratchet.mjs`, called by `lint`.
 - A repository with nothing to lint fails. Enforced by: `lint` fails when it finds no Rust source.
 

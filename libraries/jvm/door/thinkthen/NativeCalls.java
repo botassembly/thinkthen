@@ -6,7 +6,8 @@ import java.util.*;
 import static java.lang.foreign.ValueLayout.*;
 import static thinkthen.NativeLayouts.*;
 final class NativeCalls {
- private static final Map<String,MethodHandle> CALLS=new HashMap<>();
+ private record NativeCall(MethodHandle handle,FunctionDescriptor descriptor) {}
+ private static final Map<String,NativeCall> CALLS=new HashMap<>();
  static {
   SymbolLookup symbols=SymbolLookup.libraryLookup(Path.of(System.getProperty("thinkthen.library")),Arena.global());Linker linker=Linker.nativeLinker();
   add(linker,symbols,"thinkthen_question_new",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,ADDRESS));
@@ -32,7 +33,7 @@ final class NativeCalls {
   }
   for(String n:List.of("observation","details","observation_details","question_author","observation_author","source_recognition","source_relations"))add(linker,symbols,"thinkthen_result_"+n,FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_LONG,ADDRESS));
  }
- private static void add(Linker linker,SymbolLookup symbols,String n,FunctionDescriptor d){CALLS.put(n,linker.downcallHandle(symbols.find(n).orElseThrow(),d));}
- static Object call(String n,Object... args){try{return CALLS.get(n).invokeWithArguments(args);}catch(Throwable e){throw new IllegalStateException("native call "+n,e);}}
+ private static void add(Linker linker,SymbolLookup symbols,String n,FunctionDescriptor d){CALLS.put(n,new NativeCall(linker.downcallHandle(symbols.find(n).orElseThrow(),d),d));}
+ static Object call(String n,Object... args){try{return CALLS.get(n).handle().invokeWithArguments(args);}catch(Throwable e){throw new IllegalStateException("native call "+n,e);}}
  static void check(MemorySegment e,int code){if(code!=0)throw NativeExecution.failure(e);}
 }

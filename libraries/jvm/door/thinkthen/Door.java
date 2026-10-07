@@ -49,7 +49,8 @@ public final class Door implements AutoCloseable, CompleteEngine {
         NativeFailure(Failure failure,Complete.OptionalValue<Complete.CompleteError> complete) { super(failure.message()); this.failure = failure; this.complete=complete; }
     }
     private static final MemoryLayout ANSWER = MemoryLayout.structLayout(JAVA_INT.withName("outcome"), MemoryLayout.paddingLayout(4), JAVA_DOUBLE.withName("probability"));
-    private static final Map<String, MethodHandle> CALLS = new HashMap<>();
+    private record NativeCall(MethodHandle handle, FunctionDescriptor descriptor) {}
+    private static final Map<String, NativeCall> CALLS = new HashMap<>();
     static {
         String path = System.getProperty("thinkthen.library");
         if (path == null || !Path.of(path).isAbsolute()) throw new IllegalArgumentException("-Dthinkthen.library requires an absolute path");
@@ -78,10 +79,10 @@ public final class Door implements AutoCloseable, CompleteEngine {
         register(linker, symbols, "thinkthen_free_string", FunctionDescriptor.ofVoid(ADDRESS));
     }
     private static void register(Linker linker, SymbolLookup symbols, String name, FunctionDescriptor descriptor) {
-        CALLS.put(name, linker.downcallHandle(symbols.find(name).orElseThrow(), descriptor));
+        CALLS.put(name, new NativeCall(linker.downcallHandle(symbols.find(name).orElseThrow(), descriptor), descriptor));
     }
     static Object invoke(String name, Object... arguments) {
-        try { return CALLS.get(name).invokeWithArguments(arguments); }
+        try { return CALLS.get(name).handle().invokeWithArguments(arguments); }
         catch (Throwable failure) { throw new IllegalStateException("native call " + name, failure); }
     }
     static boolean nullPointer(MemorySegment pointer) { return pointer.address() == 0; }

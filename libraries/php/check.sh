@@ -32,6 +32,7 @@ if [ "$profile" = smoke ]; then
     . "$repo/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$repo" "$smoke"
+    "$python_bin" fixtures/abi.py "$smoke/include/thinkthen.h" src/native/abi.h "$smoke/lib/libthinkthen.so"
     TT_LIBRARY="$smoke/lib/libthinkthen.so.0" "$php_bin" -n -d extension=ffi -d ffi.enable=1 fixtures/smoke.php
     exit
 fi
@@ -58,6 +59,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     scratch_dir native
     tar -xzf "$THINKTHEN_C_ARTIFACT" -C "$native"
     "$python_bin" "$repo/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
+    "$python_bin" fixtures/abi.py "$native/include/thinkthen.h" "$package/src/native/abi.h" "$native/lib/libthinkthen.so"
     readelf -d "$native/lib/libthinkthen.so" | grep -q 'Library soname: \[libthinkthen.so.0\]'
     [ "$(readlink "$native/lib/libthinkthen.so.0")" = libthinkthen.so ] || exit 1
     locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \

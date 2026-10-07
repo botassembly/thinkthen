@@ -270,7 +270,7 @@ swift)
 		cp libraries/c/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
 		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift libraries/swift/Sources/ThinkThen/Complete.swift \
 			libraries/swift/Sources/ThinkThen/Native.swift libraries/swift/Sources/ThinkThen/NativeResult.swift \
-			libraries/swift/Sources/ThinkThen/NativeViews.swift "$folder/Sources/ThinkThen/"
+			libraries/swift/Sources/ThinkThen/NativeViews.swift libraries/swift/Sources/ThinkThen/NativeQuestionViews.swift "$folder/Sources/ThinkThen/"
 		cp libraries/swift/Tests/TypeCase/main.swift "$folder/Tests/TypeCase/"
 		;;
 zig)
