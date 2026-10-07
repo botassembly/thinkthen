@@ -41,7 +41,7 @@ def prepare(package, native, consumer):
         facade = package / 'flutter'
         (facade / 'lib/thinkthen_flutter.dart').resolve(strict=True)
         example = facade / 'example'
-        tests = example / 'test'; tests.mkdir()
+        tests = example / 'test'; tests.mkdir(exist_ok=True)
         for name in ('complete_constructed_test.dart', 'complete_native_test.dart'):
             shutil.copy2(ROOT / 'libraries/dart/flutter/example/test' / name, tests / name)
         for project in (facade, example):
