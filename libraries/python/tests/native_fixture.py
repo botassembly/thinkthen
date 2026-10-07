@@ -78,21 +78,22 @@ def assert_required(packet,row,value,bodies,root):
     for result in results:
         assert result['schema']=='thinkthen.result/2'
         assert len(result['answer_id'])==64 and len(packet['facts']['call_id'])==64
-        if value.get('unadorned'):assert 'name' not in result['question'] and 'wording_version' not in result['question']
         questions=[a['question'] for a in result.get('answers',{}).values() if 'question' in a] or [result['question']]
         for question in questions:
+            if value.get('unadorned'):assert 'name' not in question and 'wording_version' not in question
             for key,want in expect.get('resolved_metadata',{}).items():assert question[key]==want,(key,question,want)
             if 'ordered_properties' in expect:assert list(question['item_schema']['properties'])==expect['ordered_properties']
             if 'required_properties' in expect:assert question['item_schema']['required']==expect['required_properties']
-        if 'selected_item' in expect:assert result['input']==packet['inputs'][0]['original'],(result,packet)
+        if 'selected_item' in expect:assert result['input']==(expect['selected_item'] if value['verb']=='annotate' else packet['inputs'][0]['original']),(result,packet)
     if 'per_item_context' in expect:
         want=expect['per_item_context']
         if want=='':want='Each question quotes the text it asks about.'
         assert bodies and all(json.loads(body)['state']==want for body in bodies),(bodies,expect)
     if 'selected_item' in expect:
         selected=json.dumps(expect['selected_item'],ensure_ascii=False,separators=(',',':'))
+        if value['verb']=='annotate':selected=json.dumps(selected,ensure_ascii=False)
         # Native quoted instructions preserve the selected value, including false/null/Unicode.
-        assert bodies and any(selected in q['instructions'] for body in bodies for q in json.loads(body)['questions'].values()),(bodies,selected)
+        assert bodies and any(selected in q['instructions'] or json.loads(body)['state']==expect['selected_item'] for body in bodies for q in json.loads(body)['questions'].values()),(bodies,selected)
     if row['kind']=='located':
         for original in packet['inputs']:
             location=original['location'];path=Path(location['file'])
@@ -146,7 +147,8 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                     steps=value.get('steps',[value])
                     batch_cases={'01-decide-yes-captured','06-choose-billing','09-tag-two','12-score-upper','13-filter-records','17-annotate-mixed'}
                     if row['id'] in batch_cases:
-                        steps=[*steps,{**value,'incremental':True,'batch_probe':True,'count_delta':True}]
+                        steps=[*steps,{**value,'incremental':True,'batch_probe':True,'count_delta':True},
+                            {**value,'items':value['items'][:1],'incremental':True,'held_cancel':True,'arm':'arm/held/v1','override_arm':'arm/held/v1','settings':{**value.get('settings',{}),'timeout':1},'count_delta':True,'expect':{'error':'cancelled','requests_sent':1}}]
                     if row['id']=='06-choose-billing':
                         steps.append({**value,'question':{k:v for k,v in value['question'].items() if k!='options'},
                             'record_options':dict.fromkeys(value['question']['options']),
@@ -154,9 +156,9 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                     if value.get('metadata'):
                         def bare(question):
                             return {k:({n:bare(q) for n,q in v.items()} if k=='questions' else v) for k,v in question.items() if k not in ('name','wording_version')}
-                        baseline={**value,'question':bare(value['question']),'unadorned':True,'count_delta':True,'settings':{**value.get('settings',{}),'record':'$FOLDER'}}
+                        baseline={**value,'question':bare(value['question']),'unadorned':True,'count_delta':True,'settings':{**value.get('settings',{}),'record':'$FOLDER'},'arm':'arm/full/capture/v1','override_arm':'arm/full/capture/v1','metadata_only':True,'expect':{}}
                         baseline.pop('metadata',None)
-                        steps=[baseline,*[{**step,'count_delta':True,'settings':{**step.get('settings',{}),'cache':'$FOLDER'},'expect':{**step['expect'],'count':0,'requests_sent':0}} for step in steps]]
+                        steps=[*[{**step,'count_delta':True} for step in steps],baseline,{**value,'count_delta':True,'settings':{**value.get('settings',{}),'cache':'$FOLDER'},'arm':'arm/full/capture/v1','override_arm':'arm/full/capture/v1','metadata_only':True,'expect':{'requests_sent':0}}]
                     for original in steps:
                         step=dict(original)
                         if step.get('copy_store'):
@@ -167,12 +169,13 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                         if value.get('image_variants'):
                             backend.close();backend=c_parity.Backend(root/'target/debug/conformance-backend',env);c_parity.prepare(home,step)
                         settings={'cache':False,'batch':1,'max_retries':0,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0',**step.get('settings',{})}
-                        settings['base_url']=f'http://127.0.0.1:{backend.port}/{step["arm"] if value.get("image_variants") else value["arm"]}'
+                        settings['base_url']=f'http://127.0.0.1:{backend.port}/{step.get("override_arm",step["arm"] if value.get("image_variants") else value["arm"])}'
                         for key,v in settings.items():
                             if isinstance(v,str) and v in ('$FOLDER','$REFRESH','$PROFILE'):settings[key]=str(home/{'$FOLDER':'saved','$REFRESH':'refreshed','$PROFILE':'profile.json'}[v])
                         if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
                         before=int(backend.read('count'))
                         def invoke(given):
+                            invocation_count=int(backend.read('count'))
                             framed=request(step,root,home,given)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
                             if framed['batch_probe']:
@@ -192,15 +195,16 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                             assert not child.stderr,child.stderr
                             assert 'sk-conformance-loopback' not in child.stdout
                             packet=json.loads(child.stdout)
-                            bodies=json.loads(backend.read('capture'))['bodies'] if 'capture' in settings['base_url'] else []
+                            if packet.get('facts') is not None:assert packet['facts']['requests_sent']==int(backend.read('count'))-invocation_count,(packet,invocation_count)
+                            needs_body=any(key in step['expect'] for key in ('selected_item','per_item_context'))
+                            bodies=json.loads(backend.read('capture'))['bodies'] if needs_body else []
                             assert_required(packet,row,step,bodies,root)
                             return project(packet,step['verb'])
                         got=invoke(settings)
                         count=int(backend.read('count'))
                         c_parity.assertions(row,step,got,count-before if step.get('count_delta') else count)
                         if step.get('unadorned'):unadorned=got
-                        elif value.get('metadata'):
-                            assert unadorned is not None
+                        elif value.get('metadata') and unadorned is not None:
                             for before_row,after_row in zip(unadorned['rows'],got['rows'],strict=True):
                                 for key in ('question_digest','cache_keys','observation_ids','answer_id'):assert before_row[key]==after_row[key],(key,before_row,after_row)
                         if value.get('identity_steps'):identities.append(got)

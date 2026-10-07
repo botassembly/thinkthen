@@ -282,5 +282,4 @@ fn annotate_groups_share_one_request_and_retain_each_probability() {
         Value::Object(probabilities.into_inner().expect("probabilities")),
         case["expect"]["probabilities"]
     );
-
 }

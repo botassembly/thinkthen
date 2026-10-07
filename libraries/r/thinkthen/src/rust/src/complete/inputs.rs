@@ -108,7 +108,7 @@ fn compose(
                 .map_err(|_| super::usage("text requires a string"))?;
             let record = reading.compose(RawRecord::text(&text)?)?;
             let native = if images.is_empty() && annotation {
-                QuestionInput::Text(text.clone())
+                QuestionInput::annotation_document(&text)?
             } else if images.is_empty() {
                 record.original.question_input()
             } else {

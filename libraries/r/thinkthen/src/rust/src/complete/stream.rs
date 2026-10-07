@@ -53,6 +53,7 @@ pub(crate) struct Session {
     state: Mutex<State>,
     output: Mutex<Receiver<String>>,
     stop: CancelToken,
+    caller: Option<CancelToken>,
 }
 impl std::fmt::Debug for Session {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -79,6 +80,7 @@ impl Session {
             .transpose()?;
         let stop = CancelToken::new();
         let token = stop.clone();
+        let caller_for_worker = caller.clone();
         let (credit, input) = channel();
         let (output, receiver) = channel();
         let worker = std::thread::Builder::new()
@@ -88,7 +90,7 @@ impl Session {
                     engine,
                     request,
                     due,
-                    caller,
+                    caller: caller_for_worker,
                     context,
                     token,
                 }
@@ -102,6 +104,7 @@ impl Session {
             }),
             output: Mutex::new(receiver),
             stop,
+            caller,
         })
     }
     pub(crate) fn advance(&self) -> Result<(), Error> {
@@ -114,6 +117,9 @@ impl Session {
             .map_err(|_| usage("complete batch is exhausted"))
     }
     pub(crate) fn poll(&self) -> Result<Option<String>, Error> {
+        if self.caller.as_ref().is_some_and(CancelToken::is_cancelled) {
+            self.stop.cancel();
+        }
         match self
             .output
             .lock()

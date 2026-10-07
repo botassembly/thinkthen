@@ -145,21 +145,32 @@ impl QuestionInput {
     /// # Errors
     /// Returns Usage for the existing native document bounds or invalid blank evidence.
     pub fn annotation_text(text: &str, location: SourceLocation) -> Result<Self, Error> {
-        let reading =
-            core::Reading::new(core::Framing::Document, Vec::new()).map_err(Error::refused)?;
-        let original = RawRecord(std::sync::Arc::new(
-            reading
-                .annotation_record(text.as_bytes())
-                .map_err(Error::refused)?,
-        ));
-        let selected = RecordReading::new(&[], None, None)?
-            .compose(original)?
-            .original
-            .with_location(location);
-        Ok(Self::Record(selected))
+        Ok(Self::Record(
+            annotation_record(text)?.with_location(location),
+        ))
+    }
+    /// Read an annotation document without inventing a physical source location.
+    /// Valid JSON stays structural; syntax-invalid document text stays literal.
+    /// # Errors
+    /// Preserves native duplicate, depth, size and blank-evidence refusals.
+    pub fn annotation_document(text: &str) -> Result<Self, Error> {
+        Ok(Self::Record(annotation_record(text)?))
     }
 }
 
+fn annotation_record(text: &str) -> Result<super::RecordEvidence, Error> {
+    let reading =
+        core::Reading::new(core::Framing::Document, Vec::new()).map_err(Error::refused)?;
+    let original = RawRecord(std::sync::Arc::new(
+        reading
+            .annotation_record(text.as_bytes())
+            .map_err(Error::refused)?,
+    ));
+    let selected = RecordReading::new(&[], None, None)?
+        .compose(original)?
+        .original;
+    Ok(selected)
+}
 fn descriptions(labels: &core::Labels) -> Json {
     Json::Object(
         labels

@@ -1,7 +1,10 @@
 //! Execute every shared projection through concrete native complete APIs.
 #[test]
-fn complete_native_calls_preserve_required_inputs_results_and_facts() -> Result<(), Box<dyn std::error::Error>> {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..").canonicalize()?;
+fn complete_native_calls_preserve_required_inputs_results_and_facts()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()?;
     let program = r#"
 import sys
 from pathlib import Path

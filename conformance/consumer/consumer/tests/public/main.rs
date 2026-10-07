@@ -9,6 +9,7 @@
     reason = "a missing member of a shared case reads as null and fails its comparison"
 )]
 mod cases;
+mod native;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
@@ -29,6 +30,5 @@ mod run;
 )]
 mod settings;
 mod values;
-mod native;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/wait.rs"]
 mod wait;

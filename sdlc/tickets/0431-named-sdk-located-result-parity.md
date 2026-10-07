@@ -39,6 +39,9 @@ Second PM message `2026-10-06-pm-vision-ships-in-0-2-and-the-sdk-stays-one-endpo
 
 ```text
 fn Engine::try_choose_dynamic_records_complete_with<'a, I, T>(&'a self, &'a RecordChooseQuestion, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteChoice>> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
+fn QuestionInput::annotation_document(&str) -> Result<QuestionInput, Error>
 ```
+
+The location-free annotation document constructor reuses the existing native document reading and record composition. Valid JSON stays structural, syntax-invalid text stays literal, and duplicate/depth/size/blank refusals stay native. `annotation_text(text, location)` reuses that constructor and retains its physical source separately. No location is invented for caller documents.
 
 The lazy dynamic choose prerequisite reuses native record admission and scheduling. It requires candidates on every original and yields the completed prefix, one terminal error with joined final facts, then exhaustion. Empty input validates call controls and completes without a question or request. The eager dynamic choose method retains whole-set admission before sending.

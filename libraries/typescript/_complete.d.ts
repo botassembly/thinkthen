@@ -322,6 +322,7 @@ export interface DecideResult {
   readonly first_line?: number;
   readonly last_line?: number;
   readonly source?: PhysicalSource;
+  readonly images?: readonly NativeImage[];
 }
 export interface ChooseResult {
   readonly schema: "thinkthen.result/2";
@@ -338,6 +339,7 @@ export interface ChooseResult {
   readonly first_line?: number;
   readonly last_line?: number;
   readonly source?: PhysicalSource;
+  readonly images?: readonly NativeImage[];
 }
 export interface TagResult {
   readonly schema: "thinkthen.result/2";
@@ -370,6 +372,7 @@ export interface ScoreResult {
   readonly first_line?: number;
   readonly last_line?: number;
   readonly source?: PhysicalSource;
+  readonly images?: readonly NativeImage[];
 }
 export interface FilterResult {
   readonly schema: "thinkthen.result/2";

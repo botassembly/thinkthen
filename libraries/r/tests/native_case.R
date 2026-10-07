@@ -7,7 +7,7 @@ tryCatch({
   do.call(tt_engine, document$settings)
   method <- get(paste0("tt_", document$verb, "_complete"), asNamespace("thinkthen"))
   if (isTRUE(document$incremental) || isTRUE(document$held_cancel)) {
-    stream<-get(paste0("tt_",document$verb,"_batch"),asNamespace("thinkthen"))(document$question,document$input,attempts=TRUE,cancel=isTRUE(document$cancel),deadline_ms=document$deadline_ms)
+    stream<-get(paste0("tt_",document$verb,"_batch"),asNamespace("thinkthen"))(document$question,document$input,attempts=TRUE,cancel=isTRUE(document$cancel),deadline_ms=document$deadline_ms,context=document$shared_context)
     if (isTRUE(document$batch_probe)) {cat("ready\n");flush(stdout());readLines(incoming,n=1L,warn=FALSE)}
     if (isTRUE(document$held_cancel)) {
       # R stays on its main thread while the native batch owns the held call.
