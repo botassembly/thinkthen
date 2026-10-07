@@ -125,7 +125,7 @@ fn members<T>(
             run.batch_setting = Some(setting.into());
             run.context_sha256.clone_from(&held.context_sha256);
             let attempts = captured.then(|| judged.answered.attempts.clone());
-            let canonical = super::super::atomic(
+            let mut canonical = super::super::atomic(
                 run,
                 &judged,
                 super::super::spec(InputFunction::Rank, question, judged.value.clone(), index),
@@ -134,6 +134,7 @@ fn members<T>(
                 attempts,
             )
             .map_err(|_| super::super::wrong())?;
+            canonical.source.clone_from(&held.source);
             let value = position(*positions.get(member).ok_or_else(super::super::wrong)?)?;
             let canonical = canonical
                 .ranked_member(index, named.name(), value)

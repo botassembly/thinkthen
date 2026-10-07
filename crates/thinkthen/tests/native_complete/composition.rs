@@ -73,25 +73,23 @@ fn native_projection_sends_selected_content_and_controls_retaining_entire_origin
     );
     for (at, row) in rows.value().iter().enumerate() {
         assert_eq!(row.result().value(), Some("b"));
-        assert_eq!(
-            row.original()
-                .original()
-                .content()
-                .unwrap()
-                .to_json()
-                .unwrap(),
-            originals[at]
-        );
+        let content = row.original().original().content().unwrap();
+        assert_eq!(content.to_json().unwrap(), originals[at]);
         assert_eq!(
             row.original().location().unwrap().first_line(),
             Some(at + 4)
         );
-        let serialized = serde_json::to_string(row).unwrap();
         let original_json: Value = serde_json::from_str(originals[at]).unwrap();
-        let doc: Value = serde_json::from_str(&serialized).unwrap();
+        let doc = serde_json::to_value(row).unwrap();
         assert_eq!(doc["input"], original_json);
+        assert_eq!(
+            doc["source"],
+            json!({"file":format!("private-{at}.jsonl"),
+            "first_line":at + 4, "last_line":at + 4})
+        );
         assert!(!format!("{:?}", row.original()).contains("private-"));
     }
+    super::schema::call(&rows, "completeChoose");
     let replay = storage_builder(&listener, "liquid", "fixed")
         .replay(&folder)
         .unwrap()

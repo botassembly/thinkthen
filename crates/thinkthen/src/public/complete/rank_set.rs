@@ -56,6 +56,7 @@ impl Asker for SetRecords {
 struct Held<T> {
     original: T,
     context_sha256: Option<String>,
+    source: Option<core::CompletePhysicalSource>,
 }
 type Admission<T> = (Vec<Held<T>>, Vec<Input>);
 
@@ -231,6 +232,7 @@ fn prepare<T: InputEvidence>(
             members.push(prepared);
         }
         held.push(Held {
+            source: super::physical_source(&input),
             original: record.original,
             context_sha256,
         });

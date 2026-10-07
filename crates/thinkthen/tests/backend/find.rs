@@ -117,8 +117,7 @@ fn cache_records_once_and_then_replays_without_a_key_or_second_request() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("find-replay");
     let folder_text = folder.to_string_lossy();
     let _removed = fs::remove_dir_all(&folder);
-    let matched = PICKED.replace("jev-1.13.0", "local-1");
-    let listener = Listener::serving(vec![Canned::ok(&matched)]).expect("listener");
+    let listener = Listener::serving(vec![Canned::ok(PICKED)]).expect("listener");
     let arguments = [
         "find",
         "Which unit answers?",

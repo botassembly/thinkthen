@@ -1,4 +1,5 @@
 //! Native name resolution and CLI admission use isolated ordinary config folders.
+#[cfg(feature = "cli")]
 use conformance_backend::{Canned, Listener};
 use std::{
     fs,
@@ -337,6 +338,7 @@ fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batche
     );
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_whole_set_functions_validate_typed_selected_values_before_sending() {
     let root = Folder::new().unwrap();
@@ -365,6 +367,7 @@ fn cli_whole_set_functions_validate_typed_selected_values_before_sending() {
         let path = root.path().join("question.json");
         fs::write(&path, question).unwrap();
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command.clear_environment();
         child_environment(&mut command, root.path());
         let output = command
             .env("THINKTHEN_API_KEY", "named-fixture-private")

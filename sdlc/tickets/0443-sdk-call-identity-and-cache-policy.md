@@ -79,6 +79,7 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+fn RecordChooseQuestion::with_model_override(self, &str) -> Result<RecordChooseQuestion, Error>
 fn Question::to_json(&self) -> Result<String, Error>
 fn LoadedQuestion::to_json(&self) -> Result<String, Error>
 fn QuestionInput::annotation_text(&str, SourceLocation) -> Result<QuestionInput, Error>
@@ -392,3 +393,7 @@ Three prior-failing public cases observed four pulls after first-unit cancellati
 Native foundation handoff at the final working branch: all ten concrete complete execution routes, typed resolved readings/metadata/raw selection, owned observations/failure identities, shared record/source composition and strict complete-call serialization are implemented. CLI details use result/2 and numeric rank positions; released convenience/scalar calls, old C ABI and explicit generic compatibility envelopes remain available. The closed MCP surface uses the existing compiled-version/call/send headers and canonical schema. Host owners can now integrate their actual named execution/views rather than private fixture constructors. C652/MCP2243/family/frame/SQL adoption, fresh whole High review and full landing gates remain open; no whole 0.2 parity or main claim is made.
 
 Whole integration review correction: CLI rank sets now attach every member item declaration to their shared selected-record reading. That reading validates their conjunction before plans reach lookup, and any member declaration enables existing bounded wire-batch staging. The counted CLI regression uses an undeclared first member and object-declared second member over text, both without a cache and with an empty replay fixture. It pins local Usage before replay miss, zero sends, unchanged fixture bytes and no SQLite creation. Existing native set-rank refusal remains unchanged.
+
+Explicit caller model precedence for a saved per-record choose reading uses `RecordChooseQuestion::with_model_override`. The ordinary `model` builder still refuses duplicate settings. The override validates the model and retains the saved cut, declarations and ordered whole per-record candidates; endpoint and key remain the engine's. This bounded API detail resolves the concrete MCP consumer block within the approved single-route SDK outcome.
+
+Complete atomic results now retain optional physical `source` metadata in their existing concrete serializer and generated strict schema. Native scalar, eager record, streaming record and rank-set preparation carry the supplied filename and optional paired text line range without changing originals, wire bytes or identity. Saved per-record choose pointers use that same preparation; JSON-looking literal text still refuses before sending. Shared schema fixtures distinguish text coordinates, image filenames without coordinates, missing paired coordinates and zero lines. Existing source/cache and native composition cases assert the actual retained output.

@@ -13,6 +13,7 @@ pub(crate) struct Atomic {
     pub(crate) identity: ResultIdentity,
     pub(crate) legacy: DecisionResult,
     pub(crate) rank_position: Option<std::num::NonZeroUsize>,
+    pub(crate) source: Option<super::wire::PhysicalSource>,
 }
 
 impl Atomic {
@@ -94,6 +95,7 @@ impl Atomic {
                 super::wire::AtomicValue::Rank,
             ),
             input,
+            source: self.source.as_ref(),
             question_name,
             question: crate::core::declaration::ReadableQuestion {
                 question: &row.question,
