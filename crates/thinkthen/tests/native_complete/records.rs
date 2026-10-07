@@ -223,6 +223,7 @@ fn numeric_rank_positions_keep_original_occurrences_stable_ties_and_saved_score_
             .collect::<Vec<_>>(),
         [1, 2, 3]
     );
+    schema::call(&rows, "completeRank");
     for row in rows.value() {
         let doc: Value = serde_json::from_str(&row.result().to_json().unwrap()).unwrap();
         assert_eq!(doc["schema"], "thinkthen.result/2");

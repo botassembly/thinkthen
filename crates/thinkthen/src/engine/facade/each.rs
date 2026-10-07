@@ -82,7 +82,7 @@ impl Asks {
 
     /// Add every question of `plan`, each with its wire questions.
     pub(crate) fn add(&mut self, backend: &Backend, plan: &Plan) -> Result<(), Error> {
-        let asks = pack::asks(backend.url(), plan)
+        let asks = pack::asks_for(backend.api_type(), backend.url(), plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let mut start = self.asks.len();
         for question in plan.questions() {
@@ -232,10 +232,13 @@ impl Engine {
         let Some(profile) = self.profile() else {
             return Ok(());
         };
-        let asks = pack::asks(self.backend.url(), plan)
+        let asks = pack::asks_for(self.backend.api_type(), self.backend.url(), plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let first = asks.first().ok_or(Error::Defect("a plan asks nothing"))?;
-        let body = crate::core::adapters::built_in::encode(plan)
+        let body = self
+            .backend
+            .api_type()
+            .encode(plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let limits = PackLimits {
             image_ceiling: self.backend.image_ceiling(),

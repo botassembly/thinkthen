@@ -316,6 +316,7 @@ impl Engine {
             .map(|entity| (entity.name, entity.kind))
             .collect();
         let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
+        ask.validate_pairs(&pairs)?;
         if admitted.is_empty() {
             let stop = Stop::begin(options)?.with_prices(self.prices);
             return stop.run_call(0, |_| {

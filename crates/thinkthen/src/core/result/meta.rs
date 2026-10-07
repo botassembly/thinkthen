@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use super::{BatchSetting, BatchWarning, ProfileWarning, RequestMeta, Usage};
 use crate::core::text::{ModelName, Url};
+mod combine;
 
 /// Who answered, how, at what cost, from a backend or from a recording.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

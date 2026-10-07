@@ -37,6 +37,7 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
         cached.value().question().wording_version().unwrap().get(),
         7
     );
+    schema::call(&cached, "completeDecide");
     let output: Value = serde_json::from_str(&cached.value().to_json().unwrap()).unwrap();
     assert_eq!(output["question"]["item_schema"], json!({"type":"string"}));
     assert_eq!(

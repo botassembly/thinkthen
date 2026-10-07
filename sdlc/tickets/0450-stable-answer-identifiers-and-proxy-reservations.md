@@ -218,3 +218,5 @@ impl Serialize for ProxyMetadata
 ProxyMetadata::decision_id: ProxyId
 ProxyMetadata::reading: ProxyOverride<V>
 ```
+
+Native foundation update: every complete logical result/member now exposes its accepted observation/answer or failed occurrence identity independently of presentation. All-ten result/2 public/CLI serializers and strict schema expose the actual IDs. The reserved proxy types remain inert and any activation refuses before lookup/send; no route discovery, policy engine or extra endpoint is implemented. Host adoption and root whole review/landing remain open.

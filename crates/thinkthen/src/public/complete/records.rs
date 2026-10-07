@@ -184,14 +184,16 @@ impl Engine {
         I: IntoIterator<Item = RecordInput<T>>,
         T: InputEvidence,
     {
+        let options = options.started()?;
+        options.admission()?;
         admitted(function, question)?;
         let setting = crate::public::bulk::selected_batch(question, &options, self.batch)?;
         let engine = self.asking(question)?;
         let Admitted { held, inputs } = prepare(
             function,
             question,
-            self.within_limit(records)?,
-            options.context_text(),
+            self.within_admission(records, &options)?,
+            &options,
         )?;
         // Plan every admitted row before the invocation starts; no later invalid
         // shortlist/context/image can cause an eager partial send.
@@ -286,12 +288,14 @@ fn prepare<T: InputEvidence>(
     function: InputFunction,
     question: &Question,
     records: impl Iterator<Item = RecordInput<T>>,
-    fallback: Option<&str>,
+    options: &CallOptions<'_>,
 ) -> Result<Admitted<T>, Error> {
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
-        let (item, input) = prepare_record(function, question, record, fallback, at)?;
+        options.admission()?;
+        let (item, input) = prepare_record(function, question, record, options.context_text(), at)?;
+        options.admission()?;
         inputs.push(input);
         held.push(item);
     }
@@ -320,8 +324,7 @@ pub(super) fn prepare_record<T: InputEvidence>(
         .transpose()?;
     let input = record.original.question_input();
     question
-        .metadata
-        .validate_item(&input)
+        .admit_input(&input)
         .map_err(|error| error.at_record(at))?;
     crate::public::images::guard(function, &input)?;
     if let crate::public::QuestionInput::Text(text) = &input {

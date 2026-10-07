@@ -43,6 +43,16 @@ impl ResolvedRelationRule<'_> {
 #[derive(Clone, Copy)]
 pub struct RecognitionReading<'a>(pub(crate) &'a core::RecognizeSpec);
 impl RecognitionReading<'_> {
+    /// Explicit authored model, independent of accepted response provenance.
+    #[must_use]
+    pub fn model(&self) -> Option<&str> {
+        self.0.model.as_ref().map(core::ModelName::as_str)
+    }
+    /// Original authored evidence pointers.
+    pub fn on(&self) -> impl Iterator<Item = &str> {
+        self.0.on.iter().map(core::Pointer::as_str)
+    }
+
     /// Optional author name on the aggregate question, never its generated primitives.
     #[must_use]
     pub fn name(&self) -> Option<&crate::public::QuestionName> {
@@ -102,6 +112,12 @@ pub struct RelationReading<'a> {
     pub(crate) lines: bool,
 }
 impl RelationReading<'_> {
+    /// Explicit authored model, independent of accepted response provenance.
+    #[must_use]
+    pub fn model(&self) -> Option<&str> {
+        self.spec.model.as_ref().map(core::ModelName::as_str)
+    }
+
     /// Optional author name on the aggregate question, never its generated primitives.
     #[must_use]
     pub fn name(&self) -> Option<&crate::public::QuestionName> {

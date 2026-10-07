@@ -1,5 +1,6 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
+mod admission;
 mod observer;
 
 pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};

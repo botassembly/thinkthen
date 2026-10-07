@@ -4,7 +4,7 @@ The permanent [SDK boundary](sdk-boundary.md) fixes one endpoint, effective key 
 
 Status: **Settled**, amended by ADR 0048, for the wire shape, the key, the address, the request, the `systemone` adapter, and every adapter row.
 
-`thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
+Released behavior speaks System One under ADR0010. The accepted [ADR0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md) adds an explicitly selected OpenAI Decisions text adapter for 0.2; the development text contract is below. Existing routes keep their wire shape. Every token count and probability in an example here is illustrative.
 
 A backend is an address and a model. `THINKTHEN_BASE_URL` or the configuration file's `url` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. A named backend pairs an address with its own key variables and a model; see [Named backends](#named-backends). An explicit profile may add a stable name and local limits. It never selects either value.
 
@@ -50,7 +50,7 @@ With no backend named, the key is read from `THINKTHEN_API_KEY`. A named backend
 
 Settled by ADR 0114 and ADR 0115. Ian can overturn each default they record.
 
-Seven backends are built in:
+The built-in backends are:
 
 | Name | Base | Path | Key variables, first nonblank wins | Model | Descriptions |
 | --- | --- | --- | --- | --- | --- |
@@ -58,6 +58,7 @@ Seven backends are built in:
 | `llamacpp` | `http://localhost:8080/v1` | `systemone` | `LLAMACPP_API_KEY` | `local` | as authored |
 | `mlx` | `http://localhost:8000/v1` | `systemone` | `MLX_API_KEY` | `strands-decider-2B-hobson-v19` | as text, a Strands schema workaround |
 | `ollama` | `http://localhost:11434/v1` | `systemone` | `OLLAMA_API_KEY` | `nimble` | as text (workaround) |
+| `openai` | `https://api.openai.com/v1` | `decisions` | `OPENAI_API_KEY` | `gpt-6-luna` | complete JSON as text |
 | `openrouter` | `https://openrouter.ai/api/v1` | `systemone` | `OPENROUTER_API_KEY` | `typesafe/jev-1.13` | as authored, with both yes-or-no sides |
 | `perplexity` | `https://api.perplexity.ai/v1` | `decisions` | `PERPLEXITY_API_KEY` | `pplx-decider-v1-27b` | as authored |
 | `typesafe` | `https://api.typesafe.ai/v1` | `systemone` | `TYPESAFE_API_KEY` | `jev-1.13.0` | as authored |
@@ -163,7 +164,7 @@ An adapter is two pure functions.
 - **encode** takes a plan and returns the request body as bytes. A plan holds the evidence, the model name, and an ordered list of named questions.
 - **decode** takes the response body as bytes and returns the model that answered, one answer per named question, and the usage the backend reported.
 
-An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Version one compiles one adapter, `systemone`, and nothing selects it. Ruling 1 of ADR 0010 left one wire shape, so there is nothing to choose between. The adapter name `systemone` still leads every question key, so an answer stored today names the shape it was asked in.
+An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Released behavior compiles `systemone`. The OpenAI target selects a second adapter explicitly at the edge, under accepted ADR0122. Each versioned question key carries its explicit adapter discriminator. System One/v1 bytes and identities remain unchanged.
 
 A reply that is not a `systemone` response at all is exit code 4, and the message names the line and column the reading stopped at and never the text it stopped on. A backend can send back whatever was sent to it, so a diagnostic never repeats a reply.
 
@@ -344,3 +345,53 @@ The optional tested SDK envelope is two JPEG/PNG originals per question, each at
 The SDK does not tokenize these local prompts or calibrate their image cost. When a calibrated image estimate is unavailable, an explicit estimated-token send budget uses the existing approximate encoded-body admission estimate. A sufficient caller cap admits the unchanged body; a smaller cap refuses before transport. This guide is neither vendor billing nor an exact local context measure. Recorded maxima of 2115 llama.cpp tokens and 2066 MLX tokens describe observed requests only. They do not turn byte or pixel caps into exact context admission. The declared server must reject a prompt exceeding its complete context or physical batch with an error and no truncation; a byte-admitted request may therefore fail at the server. Configurable question batching remains in effect, and per-question cache identity stays independent of batch size. Ticket 0454 adds observed count metadata only.
 
 Imajev's native `noul` is the folded decision score `p(true) + 0.5*p(unknown)`. Retain its raw `unknown_probability` and `abstained` in recordings. SDK `unsure` follows the caller's reading band and does not report native abstention. The original author response may omit `usage.output_tokens`; preserve reported input and unknown output. The 0036 compatibility wrapper's inserted zero was derived from no generated language, not an author observation. Slice B retains an untouched original response fixture; native integration owns complete partial usage propagation.
+
+## OpenAI Decisions target for 0.2
+
+Status: **Settled** under [ADR 0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md), existing 0441, with accepted whole-design and request-local identity correction review. This describes development 0.2 text behavior; public installation remains 0.1.2.
+
+### Selection and boundaries
+
+`--backend openai`, EngineBuilder::backend and existing binding/SQL named settings select base `https://api.openai.com/v1`, path `decisions`, API type `openai-decisions`, named environment key `OPENAI_API_KEY` and default model `gpt-6-luna`. ADR 0114 precedence, explicit api_key and backend-plus-address override rules remain; a bare builder reads no environment. OpenAI joins the built-in credential-host guard. Keep unnamed routes, configured entries and every existing built-in on System One. A path named decisions does not identify an API type: Perplexity's current System One dialect remains unchanged. Built-in transport/model/key/API type are immutable in read-only config; existing price/profile/rate overrides apply. There is no adapter option or automatic hostname selection.
+
+One engine resolves one endpoint/key/API type before calls. Model overrides stay opaque literal caller choices, sent unchanged; an unsupported model is a backend failure, with no fallback or invented model metadata. Secrets, transport IDs and prices enter no body or identity. Preserve existing System One request/recording fixtures byte for byte. OpenAI uses the shared ADR 0120 cache/2 identity with its distinct adapter and encoded question, without changing legacy System One identity validation.
+
+### Encoding
+
+Pure encode receives resolved neutral shared evidence and expanded ordered questions. It emits `{model,input,questions}` with no extra API controls. Text evidence travels as a string; structured JSON evidence becomes its complete compact JSON text, with array order and members preserved. Existing record-scoping/context framing is rendered into strings without changing which evidence each question addresses. Record batching is many questions against shared framed input, not a vendor batch endpoint or independent input per array member.
+
+Question names are q1, q2 and onward in the final sent request order, after per-question cache lookup and missing-piece packing. These names correlate that request only; retries validate against their actual sent body, and split children assign names in their own sent order. String instructions stay verbatim when no extra authored meanings are needed. Object/list instructions or descriptions become complete compact JSON text, never just their what field. Missing/null descriptions remain absent. A predicate with true/false meanings appends two newline-separated lines `True means: DESCRIPTION` and `False means: DESCRIPTION` for the present non-null sides; DESCRIPTION is the original string or compact JSON text. Preserve both meanings, including false, empty authored structures and all rich fields. Refuse any neutral extension that cannot be represented instead of dropping it. Pin string rendering and delimiter cases with exact fixtures.
+
+| Neutral question or function | OpenAI representation |
+| --- | --- |
+| decide/filter, predicate rank, relation pairs | predicate with rendered instructions and authored true/false meanings |
+| tag | one named predicate per label, existing label-specific expansion and logical tag assembly |
+| choose, find choice, recognition menus, single-relation menu | choice; ordered choices with string value equal to the original label and optional rendered description |
+| score, score rank | score; ordered levels with original label and optional rendered description |
+| annotate, recognize and relate stages, rank sets | Existing neutral stages and grouping over the three types, one fixed route throughout |
+
+Booleans and strings are distinct in the vendor API. ThinkThen's menus use string labels: an echoed boolean never substitutes for the string true or false. No extra none choice, invented option, model group or generated instruction is introduced. Existing function limits and caller profiles remain. Question/choice maxima are not established by this reference; accept no invented vendor maximum. Existing packer may split independent questions under caller bounds, never split a single choice menu and call that equivalent.
+
+### Request-local names and persistent forms
+
+For OpenAI only, the adapter's canonical persistent question is its typed encoded question with the top-level `name` member omitted; all other semantic fields, rendered meanings and option/level order remain. After exact live correlation and typed validation, project each accepted answer to the adapter's canonical typed per-question answer with its top-level `name` omitted. Validate/reuse that stored answer against the name-free canonical question, without expecting a former request's name. Do not remove authored names inside instructions, descriptions, choice values or level labels. Neither request position nor qN enters per-question keys, observation identity or answer identity; [cache.md](cache.md#version-2-identity) fixes this projection. Existing engine lookup stores/reuses each question independently and packs only missing pieces.
+
+For unchanged shared state and semantic question B, B sent as q2 after A and B sent alone as q1 have the same persistent question form and key. A held B answer retains its observation ID; unchanged logical scope and reading retain its answer ID when transport position changes. A fresh paid answer still creates a new observation under result/2; changing semantic scope, reading or shared state retains the existing identity rules. Exact whole-request digests may include qN because they identify sent bytes, not per-question answers. Keep raw recorded request/reply bodies byte for byte with their original names/order; decode any saved raw exchange against its own original request before the name-free projection. Do not rewrite raw exchanges or apply this projection to System One/v1 identities.
+
+### Decoding and failure
+
+The response has model, ordered answers and usage. Validate a nonblank actual model and reported nonnegative integer token counts; do not synthesize missing usage, replace model with the requested one or allocate per-question tokens as vendor measurements. Keep request-level reported counts once through shared facts and count-only usage. Preserve actual cache/replay origin and cache instructions under 0442–0444. Unknown optional usage metadata (including compute_units in the current reference) grants no capability and is not a fabricated token/cost fact.
+
+Before any persistent projection, each live answer position must match the exact name and type in that sent request; a refusal must echo the exact sent name at that position. Reordered answers are not repaired by name lookup. Reject duplicate JSON members, duplicate names or extra answers as a malformed envelope. A missing/truncated answer, wrong kind/name at its planned position, explicit refusal or invalid known answer fails the corresponding logical question. Preserve independent valid logical answers through the existing partial-failure contract; one failed expanded tag member fails that tag. If no logical answer is valid, return existing backend failure/CLI exit4; partial CLI output follows existing exit6 rules. A refusal has no probability and never means false or zero. Missing/null/unknown names cannot guess correspondence.
+
+Predicate requires finite probability in [0,1]. Choice distributions must contain exactly the sent string values, once each; reorder them to caller order. Score distributions must contain each sent zero-based index and its matching level label, once each. Reject extra/missing/duplicate entries, boolean substitutions and invalid probabilities. Require finite confidence in [0,1] for choice/score and preserve it as received. Start with the existing generic total tolerance `member count × f64::EPSILON`; widen only under admitted exchange evidence and a reviewed amendment in 0441. System One retains its own evidenced tolerance. Never renormalize reported members or fill missing probabilities. Compute winning/tie/threshold and weighted score using existing neutral reading rules; vendor choice/score cannot override them. Validate required vendor choice membership and finite score shape; record any discrepancy without substituting a vendor value for the local reading.
+
+Reuse six error kinds, value-free HTTP/transport errors, bounded body parsing, response limits, timeout/deadline, cancellation, pacing and retries. Do not forward provider error text, invent OpenAI oversize codes or treat refusal as a rate retry. Malformed/refused answers cause no transport retry; existing one-time logical refusal splitting, if applicable, stays budgeted on the same route. Root's first probe uses no retries or split retries. Safe transport headers are not body recordings. OpenAI cache/record/replay fixtures are actual saved exchanges; no generated example becomes observed evidence.
+
+### Limits, prices and images
+
+The admitted [guide](https://developers.openai.com/api/docs/guides/decisions) gives gpt-6-luna Decisions input at $0.10/M with no output/cache-read/cache-write charge, with regional and long-context caveats. This is dated pricing evidence, not a default SDK price, bill guarantee or tariff for another endpoint. Caller price pairs retain precedence; report actual usage and explicitly supplied prices. No guessed probabilities, billed-token shares or hidden routing enter facts.
+
+The [create reference](https://developers.openai.com/api/reference/resources/decisions/methods/create) admits ordered user-message text and inline base64 image parts, at most 128 images across a request, and image detail low/high/auto/original. Its schema string-length ceilings are not byte/context/decoded-pixel guarantees. It supplies no question/choice maximum or global deterministic-repeat promise. Root records accepted finite counts, failed diagnostic counts, totals, model/usage and allowlisted headers separately from documented maxima.
+
+OpenAI images refuse before lookup/send until 0441 admits request/context/image-cost bounds under ADR 0121 and 0448. The wire would use input_text/input_image user-message parts, never System One state/images fields, external URLs or file IDs. JPEG/PNG validation and original ordered bytes remain owned by the existing image edge. Model or hostname alone enables nothing. Images and vision qualification stay outside the first text probe.

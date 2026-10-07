@@ -1,0 +1,1 @@
+{"model":"gpt-6-luna","input":"Please refund this order.","questions":[{"type":"choice","name":"q1","instructions":"Which team owns the request?","choices":[{"value":"billing","description":"Payments and refunds."},{"value":"shipping","description":"Delivery and tracking."},{"value":"technical","description":"Product faults."}]}]}

@@ -77,7 +77,7 @@ INHERITED = {"workspace": True}
 # vendor's words live behind one adapter. These are the words that name the
 # vendor rather than the judgment: its question type, its field for what an
 # option means, its module, its host, and the stem of its model names.
-VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe", "jev")
+VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe", "jev", "openai", "luna")
 # The adapters folder, where every vendor word belongs. `adapters.rs` names the
 # modules it holds and says which one this build uses, and each adapter's own
 # module owns its name, its default address, its default model, and its

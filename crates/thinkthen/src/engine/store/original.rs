@@ -36,6 +36,10 @@ impl Original {
             let text = std::str::from_utf8(body).map_err(|_| super::versioned::invalid())?;
             crate::core::Json::parse(text).map_err(|_| super::versioned::invalid())?;
         }
+        crate::core::adapters::ApiType::recorded_type(&self.request)
+            .ok_or_else(super::versioned::invalid)?
+            .validate_exchange(&self.request, &self.response)
+            .map_err(|_| super::versioned::invalid())?;
         Ok(())
     }
 
@@ -113,6 +117,7 @@ impl Store {
         &mut self,
         rows: &[Row<'_>],
         original: Option<&Original>,
+        attempts: &[crate::core::AttemptObservation],
         cancel: &Cancel,
     ) -> Result<(), Error> {
         let Some(original) = original.filter(|_| self.mode == Mode::Record) else {
@@ -121,6 +126,8 @@ impl Store {
         if self.connection.is_none() {
             self.connect(cancel)?;
         }
+        let timing =
+            super::timing::Timing::prepare(&self.folder, rows, attempts, cancel, self.busy_limit)?;
         let connection = self.connection.as_ref().ok_or(Error::RecordingStorage)?;
         self.transaction(cancel, connection, || {
             self.waiting(cancel, || {
@@ -128,6 +135,7 @@ impl Store {
                 original.insert(connection)?;
                 Ok(())
             })
-        })
+        })?;
+        timing.map_or(Ok(()), super::timing::Timing::commit)
     }
 }

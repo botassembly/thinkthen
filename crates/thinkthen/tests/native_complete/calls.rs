@@ -91,6 +91,7 @@ fn a_started_record_failure_has_original_stop_position_status_and_joined_complet
     assert_eq!(error.stopped().cause(), StopCause::Status);
     assert_eq!(error.stopped().status(), Some(503));
     assert!(error.stopped().retryable());
+    schema::check(&serde_json::to_value(error.complete()).unwrap(), "");
     let complete = error.complete();
     let doc = serde_json::to_value(&complete).unwrap();
     assert_eq!(
@@ -125,6 +126,7 @@ fn admission_and_cancellation_keep_distinct_complete_failure_facts_and_zero_send
     let refused = serde_json::to_value(invalid.complete()).unwrap();
     assert_eq!(refused["error"]["kind"], "usage");
     assert_eq!(refused["error"]["stopped"]["cause"], "usage");
+    schema::check(&refused, "");
     assert!(refused.get("facts").is_none());
     let token = CancelToken::new();
     token.cancel();

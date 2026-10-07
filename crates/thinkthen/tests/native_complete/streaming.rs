@@ -195,6 +195,7 @@ fn pulled_choose_score_tag_and_filter_execute_concrete_complete_results() {
         .try_filter_records_complete_with(&filter, inputs(), CallOptions::new())
         .into_call()
         .unwrap();
+    schema::call(&filtered, "completeFilter");
     assert!(!filtered.value()[0].result().value());
     assert_eq!(listener.count(), 4);
     assert_eq!(

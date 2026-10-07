@@ -21,7 +21,14 @@ pub(crate) fn read(
         .iter()
         .map(|answered| answered.answer.as_deref().map_err(DecodeError::cause))
         .collect();
-    pack::read(std::slice::from_ref(question), &stored, model(answers))
+    pack::read_for(
+        answers
+            .first()
+            .map_or(Default::default(), |answer| answer.api),
+        std::slice::from_ref(question),
+        &stored,
+        model(answers),
+    )
 }
 
 /// What a row reports for `outcomes`: the first answer's model, the summed

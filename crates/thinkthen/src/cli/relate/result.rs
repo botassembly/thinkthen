@@ -1,23 +1,23 @@
-use std::io::Write;
-
-use serde::Serialize;
-
-use crate::core::{
-    AnswerOutcome, Backend, BackendFailure, Framing, Meta, Pick, ProfileWarning, RelateAsk,
-    RelateQuestion, RelateSpec, RelationEdge, RelationEntity, RequestMeta, json_line, reaches_cut,
-};
-use crate::engine::facade::{Execution, Logical};
+//! Complete relation details delegate to the shared native renderer.
+#[cfg(test)]
+use crate::core::RelateQuestion;
+use crate::core::{self, Framing, json_line};
+#[cfg(test)]
+use crate::core::{BackendFailure, Meta, RelationEdge, RelationEntity};
+use crate::engine::facade::{Engine, Execution};
 use crate::failure::Failure;
-
+#[cfg(test)]
+use serde::Serialize;
+use std::io::Write;
 pub(super) struct Output<'a> {
     pub(super) details: bool,
     pub(super) framing: Framing,
-    pub(super) spec: &'a RelateSpec,
-    pub(super) entities: &'a [RelationEntity],
-    pub(super) backend: &'a Backend,
-    pub(super) warning: Option<ProfileWarning>,
+    pub(super) spec: &'a core::RelateSpec,
+    pub(super) entities: &'a [core::RelationEntity],
+    pub(super) engine: &'a Engine,
 }
 
+#[cfg(test)]
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateDetails"))]
 pub(crate) struct Details<'a> {
@@ -28,6 +28,7 @@ pub(crate) struct Details<'a> {
     meta: Meta,
 }
 
+#[cfg(test)]
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateAnswers"))]
 struct Answers<'a> {
@@ -35,6 +36,7 @@ struct Answers<'a> {
 }
 
 /// One yes/no pair or menu answer, or a recoverable failure.
+#[cfg(test)]
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateEntry"))]
 struct Entry<'a> {
@@ -49,6 +51,7 @@ struct Entry<'a> {
     request: &'a str,
 }
 
+#[cfg(test)]
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateBody"))]
 struct Body<'a> {
@@ -59,29 +62,12 @@ struct Body<'a> {
     judged: Option<Judged>,
 }
 
+#[cfg(test)]
 #[derive(Clone, Copy, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateJudged"))]
 struct Judged {
     probability: f64,
     accepted: bool,
-}
-
-impl Judged {
-    /// A yes/no answer, accepted by the shared relation cut.
-    fn at(probability: f64, threshold: f64) -> Self {
-        Self {
-            probability,
-            accepted: reaches_cut(probability, threshold),
-        }
-    }
-
-    /// A menu's top label, accepted only as a target at the cut.
-    fn picked(pick: Pick, threshold: f64) -> Self {
-        Self {
-            probability: pick.probability,
-            accepted: pick.accepted(threshold),
-        }
-    }
 }
 
 pub(super) fn write(
@@ -106,99 +92,26 @@ pub(super) fn write(
     }
 }
 
-pub(super) fn details<'a>(
-    output: &Output<'a>,
-    execution: &'a Execution,
-) -> Result<Details<'a>, Failure> {
-    let question = output.spec.question(output.framing == Framing::Lines);
-    let meta = Meta::new(
-        env!("CARGO_PKG_VERSION"),
-        question.sha256()?,
-        output.backend.url().clone(),
-        execution
-            .model
-            .clone()
-            .unwrap_or_else(|| output.backend.model().clone()),
-        execution.usage,
-        RequestMeta::new(
-            execution.replayed,
-            execution.requests_sent,
-            execution.requests.clone(),
-        )
-        .with_failed_questions(execution.failed)
-        .with_profile_warning(output.warning.clone()),
-    )
-    .with_reported_usage(execution.reported_usage);
-    let threshold = output.spec.threshold.cut_value().unwrap_or(0.5);
-    let questions = execution
-        .logical
-        .iter()
-        .map(|logical| entry(logical, output.entities, threshold))
-        .collect::<Result<_, _>>()?;
-    Ok(Details {
-        schema: crate::core::RESULT_SCHEMA,
-        value: &execution.edges,
-        question,
-        answer: Answers { questions },
-        meta,
-    })
-}
-
-fn entry<'a>(
-    logical: &'a Logical,
-    entities: &'a [RelationEntity],
-    threshold: f64,
-) -> Result<Entry<'a>, Failure> {
-    let (answer, failure) = match &logical.outcome {
-        AnswerOutcome::Answered(answer) => (Some(answer), None),
-        AnswerOutcome::Failed(failure) => (None, Some(failure)),
-    };
-    let wrong = || Failure::Defect("a relation answer has the wrong kind");
-    let (method, body) = match &logical.asked {
-        RelateAsk::Pair(pair) => {
-            let probability = answer
-                .map(|answer| answer.yes().ok_or_else(wrong))
-                .transpose()?;
-            let body = Body {
-                source: endpoint(entities, pair.source)?,
-                target: Some(endpoint(entities, pair.target)?),
-                judged: probability.map(|probability| Judged::at(probability, threshold)),
-            };
-            ("yes_no", body)
+pub(super) fn details(
+    output: &Output<'_>,
+    execution: &Execution,
+) -> Result<core::CompleteRelation, Failure> {
+    let mut events = std::collections::BTreeMap::new();
+    for logical in &execution.logical {
+        for event in &logical.answered.attempts {
+            events.insert(event.ordinal(), event.clone());
         }
-        RelateAsk::Menu(menu) => {
-            let pick = answer
-                .map(|answer| Pick::of(menu, answer).ok_or_else(wrong))
-                .transpose()?;
-            let target = pick
-                .and_then(|pick| pick.target)
-                .map(|place| endpoint(entities, place))
-                .transpose()?;
-            let body = Body {
-                source: endpoint(entities, menu.source)?,
-                target,
-                judged: pick.map(|pick| Judged::picked(pick, threshold)),
-            };
-            ("choice", body)
-        }
-    };
-    Ok(Entry {
-        relation: &logical.relation.name,
-        reads: &logical.relation.reads,
-        method,
-        direction: if logical.relation.either {
-            "either"
-        } else {
-            "source_to_target"
+    }
+    crate::result_json::complete::relation(
+        output.engine,
+        output.spec,
+        output.entities,
+        execution,
+        crate::result_json::complete::RelationRow {
+            lines: output.framing == Framing::Lines,
+            context_sha256: None,
+            attempts: Some(events.into_values().collect()),
         },
-        body,
-        failure,
-        request: &logical.request,
-    })
-}
-
-fn endpoint(entities: &[RelationEntity], place: usize) -> Result<&RelationEntity, Failure> {
-    entities
-        .get(place)
-        .ok_or(Failure::Defect("a relation mapping names no entity"))
+    )
+    .map_err(|_| Failure::Defect("a complete relation result could not be constructed"))
 }

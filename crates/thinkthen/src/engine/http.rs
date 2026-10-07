@@ -23,7 +23,7 @@ use observation::{ResponseInfo, observed_result};
 #[cfg(test)]
 use retry::honored;
 use retry::{bounded_wait, draw, floor, longest, too_long};
-use send::send;
+use send::timed;
 #[cfg(test)]
 use send::{io_transport, transport};
 
@@ -100,6 +100,7 @@ const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
 /// a run pays for one handshake per job rather than one per record (ticket 0142).
 /// It reuses no connection idle for a second or more. Common keep-alive waits run longer (0341).
 pub(crate) struct Client {
+    api: crate::core::adapters::ApiType,
     agent: Agent,
     timeout: Duration,
     width: &'static Widths,
@@ -172,11 +173,17 @@ impl Client {
             config = config.proxy(None);
         }
         Self {
+            api: Default::default(),
             agent: config.build().into(),
             timeout,
             width: crate::engine::limits::client_width(widths),
             every: None,
         }
+    }
+
+    pub(crate) const fn with_api(mut self, api: crate::core::adapters::ApiType) -> Self {
+        self.api = api;
+        self
     }
 
     /// Space attempt starts to each address by `every`.
@@ -292,17 +299,14 @@ impl Client {
             let ordinal = cancel.attempt_started();
             marked();
             let sending = cancel.sending();
-            let started = Instant::now();
-            let sent = send(
+            let (sent, wall_ms) = timed(
                 &self.agent,
                 exchange,
                 limit,
-                invocation,
-                &sdk_request_id,
-                cancel.cache_refresh,
+                (invocation, &sdk_request_id),
+                (cancel.cache_refresh, self.api),
+                usage,
             );
-            let wall_ms = u64::try_from(started.elapsed().as_nanos().div_ceil(1_000_000).max(1))
-                .unwrap_or(u64::MAX);
             drop(sending);
             if let (Some(ordinal), Some(digest)) = (ordinal, cancel.attempt_digest()) {
                 let (info, outcome) = observed_result(&sent);
