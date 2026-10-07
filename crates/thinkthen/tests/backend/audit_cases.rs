@@ -9,7 +9,7 @@ use crate::wait;
 use std::process::{Command, Stdio};
 
 use conformance_backend::{Canned, Listener};
-use measure_support::{audit, fixture, fixtures};
+use measure_support::{audit, fixture, fixtures, measure};
 use serde_json::{Value, json};
 
 const RESULTS: &str = "cases/results.jsonl";
@@ -228,6 +228,8 @@ fn saved_decision_meanings_grade_the_run_verdict_and_keep_explicit_cuts() {
         Value::Null,
         json!(false),
         json!({"decision":"yes"}),
+        json!({"failed":false}),
+        json!({"failed":{"kind":"backend","cause":"missing_answer"}}),
         json!(["yes"]),
     ] {
         for (probability, threshold, expected) in [
@@ -253,6 +255,7 @@ fn saved_decision_meanings_grade_the_run_verdict_and_keep_explicit_cuts() {
                 let (code, stdout, stderr) = audit(&arguments, &input);
                 assert_eq!((code, stderr.as_str()), (0, ""));
                 let report = rows(&stdout).remove(0);
+                assert_eq!(report["failed"], 0, "{saved}");
                 assert_eq!(
                     [
                         report["right"].as_u64(),
@@ -263,6 +266,96 @@ fn saved_decision_meanings_grade_the_run_verdict_and_keep_explicit_cuts() {
                     "{saved}"
                 );
             }
+            let (code, stdout, stderr) =
+                measure(&["runs", "diff", "-", "small/decide.jsonl"], &input);
+            assert_eq!((code, stderr.as_str()), (0, ""));
+            let reports = rows(&stdout);
+            let summary = &reports.last().expect("diff summary")["summary"];
+            assert_eq!(summary["records"], 1, "{saved}");
+            assert_eq!(
+                summary["changed"],
+                u64::from(expected != [1, 0, 0]),
+                "{saved}"
+            );
         }
+    }
+}
+
+#[test]
+fn saved_decisions_without_probability_refuse_without_echoing_content() {
+    for probability in [None, Some(Value::Null)] {
+        let mut saved = json!({
+            "schema":"thinkthen.result/2", "input":{"id":"secret-id","body":"secret-body"},
+            "question":{"verb":"decide","text":"secret-question"},
+            "value":"secret-value",
+            "answer":{"kind":"yes_no"}, "threshold":0.5,
+        });
+        if let Some(probability) = probability {
+            saved["answer"]["probability"] = probability;
+        }
+        let input = serde_json::to_vec(&saved).expect("saved decision");
+        for (command, location) in [
+            (
+                vec!["runs", "audit", "-", "small/decide-key.jsonl"],
+                "results",
+            ),
+            (vec!["runs", "diff", "-", "small/decide.jsonl"], "first run"),
+            (
+                vec!["runs", "diff", "small/decide.jsonl", "-"],
+                "second run",
+            ),
+        ] {
+            let (code, stdout, stderr) = measure(&command, &input);
+            assert_eq!(code, 2);
+            assert!(stdout.is_empty());
+            assert_eq!(
+                stderr,
+                format!(
+                    "thinkthen: {}: {location} line 1 holds a probability outside 0 to 1 or an empty distribution\n",
+                    command[1],
+                )
+            );
+        }
+    }
+}
+
+#[test]
+fn actual_saved_failures_and_legacy_value_markers_remain_failed() {
+    let base: Value = serde_json::from_str(
+        fixture("small/decide.jsonl")
+            .lines()
+            .next()
+            .expect("decision"),
+    )
+    .expect("saved row");
+    let failure = json!({"kind":"backend","cause":"missing_answer"});
+    for route in ["explicit", "bare", "legacy"] {
+        let mut saved = base.clone();
+        if route != "legacy" {
+            saved["schema"] = json!("thinkthen.result/2");
+        }
+        if route == "explicit" {
+            saved["failure"] = failure.clone();
+        } else {
+            saved["value"] = json!({"failed":failure});
+        }
+        if route == "bare" {
+            saved.as_object_mut().expect("saved row").remove("answer");
+        }
+        let input = serde_json::to_vec(&saved).expect("saved failure");
+        let (code, stdout, stderr) = audit(&["-", "small/decide-key.jsonl"], &input);
+        assert_eq!((code, stderr.as_str()), (0, ""));
+        assert_eq!(rows(&stdout)[0]["failed"], 1, "{route}");
+        let (code, stdout, stderr) = measure(&["runs", "diff", "-", "small/decide.jsonl"], &input);
+        assert_eq!(code, 0);
+        assert_eq!(
+            stderr,
+            "thinkthen: diff: warning: no answer paired; check that both runs hold the same record ids and answer names\n"
+        );
+        assert_eq!(
+            rows(&stdout).last().expect("summary")["summary"]["records"],
+            0,
+            "{route}"
+        );
     }
 }

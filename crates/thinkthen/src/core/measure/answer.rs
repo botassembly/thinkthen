@@ -298,6 +298,17 @@ fn refuse_repeats(answers: &[Answer], identity: Identity) -> Result<(), MeasureE
     Ok(())
 }
 
+/// A detailed v2 decision carries a typed answer, independently of its authored value.
+fn detailed_decision(entry: &Json) -> bool {
+    entry.member("schema").and_then(Json::as_str) == Some("thinkthen.result/2")
+        && verb_named(entry) == Some("decide")
+        && entry
+            .member("answer")
+            .and_then(|answer| answer.member("kind"))
+            .and_then(Json::as_str)
+            == Some("yes_no")
+}
+
 impl Answer {
     /// Every answer one entry holds: one, or one per label of a `tag` answer.
     fn read(
@@ -310,7 +321,8 @@ impl Answer {
     ) -> Result<Vec<Self>, MeasureError> {
         let value = entry.member("value");
         let failed = entry.member("failure").is_some()
-            || value.and_then(|held| held.member("failed")).is_some()
+            || (!detailed_decision(entry)
+                && value.and_then(|held| held.member("failed")).is_some())
             || (entry.member("answer").is_none() && value.is_none());
         let question = entry.member("question");
         let audit = identity == Identity::Question;
@@ -394,15 +406,7 @@ impl Answer {
 
     /// Read a saved decision's run verdict independently of its authored meaning.
     fn saved_decision(&mut self, entry: &Json) -> Result<(), MeasureError> {
-        if self.failed
-            || self.verb != Verb::Decide
-            || entry.member("schema").and_then(Json::as_str) != Some("thinkthen.result/2")
-            || entry
-                .member("answer")
-                .and_then(|answer| answer.member("kind"))
-                .and_then(Json::as_str)
-                != Some("yes_no")
-        {
+        if self.failed || !detailed_decision(entry) {
             return Ok(());
         }
         let Some(threshold) = entry
@@ -420,10 +424,10 @@ impl Answer {
         if entry.member("value").is_none() {
             return Err(MeasureError::Ungradable(self.line));
         }
-        self.value = self
+        let probability = self
             .probability
-            .and_then(|p| threshold.judge(p).value())
-            .map(Printed::Bool);
+            .ok_or(MeasureError::Probability(self.line))?;
+        self.value = threshold.judge(probability).value().map(Printed::Bool);
         Ok(())
     }
 
