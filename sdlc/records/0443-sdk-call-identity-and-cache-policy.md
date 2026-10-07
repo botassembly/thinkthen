@@ -48,3 +48,5 @@ no Rust file exceeds 500 lines. The count-only private-name scan retains one
 unchanged starting tracked-file hit and zero edited-file/path hits. Root owns
 that finding, narrow confirmation and full gates on the actual merge candidate.
 Native/host parity and release qualification remain open.
+
+Astra extra-high accepted the cache reconciliation. The full landing gate then found one CLI image test running in the library-only build; its CLI-only feature guard preserves SDK image coverage. An unrelated privacy-scan collision inside a base64 JPEG is represented with JSON Unicode escapes. Parsed request values and decoded image bytes remain equal. No privacy rule or scanner changes.
