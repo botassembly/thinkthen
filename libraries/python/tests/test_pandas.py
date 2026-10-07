@@ -52,7 +52,7 @@ def test_portable_questions_ride_one_request_in_public_column_and_frame_shapes(b
                               [[row['index'], list(row['requests'])] for row in call.details]]))
         """, env)
         values, order, facts, details = json.loads(printed)
-        keys = one_request(url, bodies, expected)
+        keys = one_request(url, bodies, expected, "jev-latest")
         assert values == [True] * 5
         assert order == ([9, 5, 7, 3, 1] if shape != "polars_frame" else list(range(5)))
         assert facts == [5, 1]
@@ -189,10 +189,10 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
         assert singleton in bodies[1:4]
         # Each detail names its own question's key, by ADR 0111.
         def each(body):
-            return [[key] for key in question_keys(url, body)]
+            return [[key] for key in question_keys(url, body, "jev-latest")]
 
         def by_state(items):
-            return {quoted_record(json.loads(body)): question_keys(url, body)[0] for body in items}
+            return {quoted_record(json.loads(body)): question_keys(url, body, "jev-latest")[0] for body in items}
         states = ["one", "two", "three"]
         expected_keys = [
             each(bodies[0]),

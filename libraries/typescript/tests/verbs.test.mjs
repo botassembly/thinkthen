@@ -12,7 +12,7 @@ import { createRequire } from 'node:module';
 
 import { FAKE_KEY, ask, startBackend } from './backend.mjs';
 import { questionKeys } from './cases.mjs';
-const keysOf = (base, body) => questionKeys(`${base}/systemone`, body);
+const keysOf = (base, body, reportedModel) => questionKeys(`${base}/systemone`, body, reportedModel);
 const native = createRequire(import.meta.url)('../loader.js');
 
 test('named recognition and relation plans retain source, model and bounded answers', async (t) => {
@@ -99,7 +99,7 @@ test('a named rich question preserves source order and its captured request', as
   assert.equal(value.source, source);
   const body = '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \\"first\\". Which?","criteria":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}}}';
   assert.deepEqual(backend.bodies, [body]);
-  assert.equal(value.request, keysOf(backend.base(), body)[0]);
+  assert.equal(value.request, keysOf(backend.base(), body, backend.reportedModels[0])[0]);
 });
 
 test('named question files refuse bounded local failures before any send', async (t) => {
@@ -136,6 +136,7 @@ test('named question files refuse bounded local failures before any send', async
 // Capture the listener's exact body bytes while answering by the generic rule.
 async function captured(t) {
   const bodies = [];
+  const reportedModels = [];
   const server = createServer(async (request, reply) => {
     const chunks = [];
     for await (const chunk of request) chunks.push(chunk);
@@ -149,12 +150,14 @@ async function captured(t) {
       return [name, { type: question.type, probabilities }];
     }));
     reply.writeHead(200, { 'content-type': 'application/json' });
-    reply.end(JSON.stringify({ model: asked.model, answers, usage: { input_tokens: 3, output_tokens: 2 } }));
+    const response = { model: asked.model, answers, usage: { input_tokens: 3, output_tokens: 2 } };
+    reportedModels.push(response.model);
+    reply.end(JSON.stringify(response));
   });
   await new Promise((done) => server.listen(0, '127.0.0.1', done));
   const folder = mkdtempSync(join(tmpdir(), 'thinkthen-ts-capture-'));
   t.after(() => { server.closeAllConnections(); server.close(); rmSync(folder, { recursive: true, force: true }); });
-  return { bodies, port: server.address().port, folder, base: () => `http://127.0.0.1:${server.address().port}/v1` };
+  return { bodies, reportedModels, port: server.address().port, folder, base: () => `http://127.0.0.1:${server.address().port}/v1` };
 }
 
 test('packed and batch-one calls expose exact bodies, ordered details, and final facts', async (t) => {
@@ -186,7 +189,7 @@ test('packed and batch-one calls expose exact bodies, ordered details, and final
   for (const body of backend.bodies.slice(1, 4)) assert.equal(Object.keys(JSON.parse(body).questions).length, 1);
   assert.notEqual(backend.bodies[0], backend.bodies[4]);
   // A row lists its question key; the duplicate record shares the first one.
-  const [first, third] = keysOf(backend.base(), backend.bodies[0]);
+  const [first, third] = keysOf(backend.base(), backend.bodies[0], backend.reportedModels[0]);
   assert.deepEqual(value.packed.details.map((row) => row.requests), [[first], [first], [third]]);
   assert.deepEqual(value.packed.details.map((row) => row.index), [0, 1, 2]);
 });
@@ -209,7 +212,7 @@ test('portable fixture questions ride one request from the public TypeScript bul
   assert.deepEqual(value.details.map((row) => row.index), [0, 1, 2, 3, 4]);
   assert.equal(value.facts.records, 5);
   assert.equal(value.facts.requests_sent, 1);
-  assert.deepEqual(value.details.map((row) => row.requests), keysOf(backend.base(), backend.bodies[0]).map((key) => [key]));
+  assert.deepEqual(value.details.map((row) => row.requests), keysOf(backend.base(), backend.bodies[0], backend.reportedModels[0]).map((key) => [key]));
 });
 
 test('runtime-label many calls preserve ordered descriptions and bare versus null score levels', async (t) => {
@@ -242,9 +245,9 @@ test('runtime-label many calls preserve ordered descriptions and bare versus nul
   assert.deepEqual(Object.values(described.questions)[0].criteria, [{}, 'High.']);
   assert.match(backend.bodies[3], /nested/);
   assert.deepEqual(Object.values(meaning.questions)[0].criteria, { false: { nested: ['no', true] } });
-  assert.deepEqual(value.choices.details.map((row) => row.requests), keysOf(backend.base(), backend.bodies[0]).map((key) => [key]));
+  assert.deepEqual(value.choices.details.map((row) => row.requests), keysOf(backend.base(), backend.bodies[0], backend.reportedModels[0]).map((key) => [key]));
   assert.equal(Object.values(JSON.parse(backend.bodies[7]).questions)[0].type, 'choice');
-  const probed = keysOf(backend.base(), backend.bodies[7]);
+  const probed = keysOf(backend.base(), backend.bodies[7], backend.reportedModels[7]);
   assert.ok(value.recognized.details.some((row) => probed.every((key) => row.requests.includes(key))));
 });
 

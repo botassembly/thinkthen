@@ -10,12 +10,9 @@ tryCatch({
     stream<-get(paste0("tt_",document$verb,"_batch"),asNamespace("thinkthen"))(document$question,document$input,attempts=TRUE,cancel=isTRUE(document$cancel),deadline_ms=document$deadline_ms,context=document$shared_context)
     if (isTRUE(document$batch_probe)) {cat("ready\n");flush(stdout());readLines(incoming,n=1L,warn=FALSE)}
     if (isTRUE(document$held_cancel)) {
-      # R stays on its main thread while the native batch owns the held call.
-      until <- Sys.time() + 0.15
-      repeat {
-        stream$poll()
-        if (Sys.time() >= until) break
-      }
+      # Advance once, then let the owned listener confirm request admission.
+      stopifnot(is.null(stream$poll()))
+      stopifnot(identical(readLines(incoming,n=1L,warn=FALSE), "continue"))
       stream$cancel()
     }
     repeat {

@@ -157,7 +157,7 @@ def check(one)
   # Every row lists question keys, by ADR 0111.
   renamed = exchanges.to_h do |exchange|
     request = exchange["request"]
-    [digest(CANONICAL, request), QuestionKeys.of("#{base}/systemone", request)]
+    [digest(CANONICAL, request), QuestionKeys.of("#{base}/systemone", request, exchange.fetch("response").fetch("model"))]
   end
   success = swap(one["expect"]["success"], renamed)
   texts = exchanges.map { |exchange| exchange["evidence"] }
