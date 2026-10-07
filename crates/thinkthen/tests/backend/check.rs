@@ -340,12 +340,13 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
                 let (function, body) = plan.split_once(' ').expect("function plan");
                 assert_eq!(function, name);
                 let counts: serde_json::Value = serde_json::from_str(body).expect("counts");
-                assert_eq!(counts["requests"], 1 + usize::from(name == "recognize"));
-                assert_eq!(counts["upper_bound"], name == "recognize");
+                let bounded = matches!(name, "recognize" | "tag");
+                assert_eq!(counts["requests"], 1 + usize::from(bounded));
+                assert_eq!(counts["upper_bound"], bounded);
             }
             assert!(
                 stdout.ends_with(
-                    "prepared-requests upper-bound 15 before retries and refusal splits\n"
+                    "prepared-requests upper-bound 16 before retries and refusal splits\n"
                 )
             );
             assert_eq!(text(&output.stderr), "");
