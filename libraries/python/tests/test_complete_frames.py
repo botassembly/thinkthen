@@ -59,13 +59,17 @@ def test_complete_frame_refuses_bad_rows_and_preserves_cancel_deadline_secrecy(b
         try: facade.decide(q,series(['secret text', 7]))
         except tt.UsageError as e: assert 'secret' not in str(e); print(e.kind)
         else: raise AssertionError('bad row admitted')
+        frame = pd.DataFrame({{'body':['secret text']}}) if {library!r} == 'pandas' else pl.DataFrame({{'body':['secret text']}})
+        try: facade.decide(q,frame,on='secret column')
+        except tt.UsageError as e: assert 'secret' not in str(e); print(e.kind)
+        else: raise AssertionError('bad column admitted')
         token = tt.CancelToken(); token.cancel()
         for controls in ({{'token':token}},{{'deadline_ms':0}}):
             try: facade.decide(q,series(['secret text']),**controls)
             except (tt.Cancelled,tt.DeadlineError) as e: assert 'secret' not in str(e); print(e.kind)
             else: raise AssertionError('controls ignored')
     ''', child_env(backend, tmp_path))
-    assert output.splitlines() == ['usage','cancelled','deadline']
+    assert output.splitlines() == ['usage','usage','cancelled','deadline']
     assert backend.count() == 0
 
 

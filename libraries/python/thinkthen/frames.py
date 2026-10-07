@@ -30,6 +30,8 @@ def _series(value, on):
         value = value.collect()
     if type(value).__name__ == 'DataFrame':
         if on is None: raise UsageError('select a dataframe column with on=')
+        if not isinstance(on, str) or on not in value.columns:
+            raise UsageError('selected dataframe column does not exist')
         value = value[on]
     elif on is not None:
         raise UsageError('on selects a dataframe column')
