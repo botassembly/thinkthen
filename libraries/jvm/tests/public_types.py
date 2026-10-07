@@ -28,13 +28,19 @@ runnable = {case["name"] for case in corpus["cases"]
 if len(sys.argv) > 2 or (selected is not None and selected not in runnable):
     raise SystemExit("JVM J1 case selector must name an existing runtime case")
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
-classes = TARGET / "classes/typecase"
+installed = os.environ.get("THINKTHEN_RELEASE_JVM_DIR")
+native = Path(os.environ["THINKTHEN_RELEASE_C_DIR"]) / "lib" if installed else TARGET / "native"
+if os.environ.get("THINKTHEN_ARTIFACT") and not installed:
+    raise ValueError("installed JVM parity requires its extracted JARs")
+classes = Path(installed) / "test-classes" if installed else TARGET / "classes/typecase"
 classes.mkdir(parents=True, exist_ok=True)
-jars = TARGET / "jars"
+jars = Path(installed).resolve(strict=True) if installed else TARGET / "jars"
+for part in ("door", "kotlin", "scala"):
+    (jars / f"thinkthen-{part}.jar").resolve(strict=True)
 classpath = ":".join(str(jars / f"thinkthen-{part}.jar") for part in ("door", "kotlin", "scala"))
 compiler_env = child_env(JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"),
                          PATH=str(JDK / "bin") + ":" + os.environ.get("PATH", "/usr/bin:/bin"))
-java = [str(JDK / "bin/java"), "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(TARGET / "native/libthinkthen.so")]
+java = [str(JDK / "bin/java"), "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(native / "libthinkthen.so")]
 subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java"), str(HERE / "CarrierChecks.java"), str(HERE / "NativeChecks.java"), str(HERE / "NativeCases.java")], env=compiler_env, check=True)
 subprocess.run([str(KOTLIN / "bin/kotlinc"), "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", str(classes) + ":" + classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], env=compiler_env, check=True)
 subprocess.run([str(SCALA / "bin/scalac"), "-J-XX:ActiveProcessorCount=2", "-classpath", str(classes) + ":" + classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], env=compiler_env, check=True)
@@ -75,7 +81,7 @@ def native_parity(consumer, command):
                 env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": folder,
                        "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
                        "XDG_STATE_HOME": str(home / "state"), "LC_ALL": "C.UTF-8",
-                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": str(ROOT / ("libraries/csharp/target/scratch/lib" if consumer == "csharp" else "libraries/jvm/target/native"))}
+                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": str(native)}
                 backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
@@ -241,7 +247,7 @@ try:
             settings=json.dumps({"base_url":f"http://127.0.0.1:{port}/arm/full/v1","model":"fixed","cache":False,"batch":"max","throttle":1,"max_retries":0})
             env=child_env(HOME=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
                           THINKTHEN_API_KEY="sk-native-complete-loopback",THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
-                          TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path),LD_LIBRARY_PATH=str(TARGET / "native"))
+                          TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path),LD_LIBRARY_PATH=str(native))
             for lang in ("java","kotlin","scala"):
                 before=sent()
                 assert type_case(["native"],env,"native complete",lang)=={"native":"pass"}
