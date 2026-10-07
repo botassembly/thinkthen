@@ -269,8 +269,10 @@ def execute(binary, value, settings, home, env, backend=None):
         assert len(details) == 1 and rows[0]["input"] == value["items"][0], details
         assert rows[0]["index"] == 0 and rows[0]["value"] is True, rows
         assert len(rows[0]["answer_id"]) == 64 and rows[0]["observations"] == rows[0]["sources"] == 1, rows
-        assert facts["records"] == facts["requests_sent"] == 1, facts
-        assert facts["stopped"]["cause"] == "cancelled", facts
+        assert facts["records"] == facts["requests_sent"] == 1 and facts["retries"] == 0, facts
+        assert len(facts["call_id"]) == 64, facts
+        assert facts["stopped"] == {"cause":"cancelled","retryable":False}, facts
+        assert all(len(identity) == 64 for identity in rows[0]["observation_ids"]), rows
         assert diagnostic == ["stopped by a signal; 1 record finished"], diagnostic
     return out, details
 
@@ -382,6 +384,8 @@ def run_case(binary, row, value, home):
             if "requests_sent" in got:
                 assert got["requests_sent"] == count - before, (got, count - before)
             bodies = json.loads(backend.read("capture"))["bodies"]
+            if step.get("held_cancel"):
+                assert len(bodies) == 1, "signal drain sent a queued suffix"
             if value.get("image_variants"):
                 from c_images import assert_images
                 assert_images(step, got, bodies)
