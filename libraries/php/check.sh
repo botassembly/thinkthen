@@ -95,4 +95,5 @@ for plant in source header native canary private-key wrong-value; do "$python_bi
 "$python_bin" fixtures/run_matrix.py
 "$python_bin" fixtures/plant.py
 "$python_bin" fixtures/type_cases.py
+if [ "$profile" = full ]; then "$python_bin" fixtures/complete_parity.py php; fi
 echo 'php: pass'

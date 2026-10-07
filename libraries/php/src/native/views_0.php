@@ -105,8 +105,8 @@ final class RelationsView
 
 final class QuestionMemberView
 {
-    public function __construct(public readonly StringView $name, public readonly ?QuestionViewView $question) {}
-    public static function copy(\FFI\CData $v): self { return new self(StringView::copy($v->name), (\FFI::isNull($v->question) ? null : QuestionViewView::copy($v->question[0]))); }
+    public function __construct(public readonly StringView $name, public readonly ?QuestionView $question) {}
+    public static function copy(\FFI\CData $v): self { return new self(StringView::copy($v->name), (\FFI::isNull($v->question) ? null : QuestionView::copy($v->question[0]))); }
 }
 
 final class QuestionMembersView
@@ -115,7 +115,7 @@ final class QuestionMembersView
     public static function copy(\FFI\CData $v): self { return new self(array_map(fn($i) => QuestionMemberView::copy($v->data[$i]), $v->len ? range(0,$v->len-1) : []), $v->len); }
 }
 
-final class QuestionViewView
+final class QuestionView
 {
     public function __construct(public readonly int $kind, public readonly ContentView $text, public readonly OptionalContentView $yes, public readonly OptionalContentView $no, public readonly ChoicesView $choices, public readonly RuleView $threshold, public readonly RuleView $relation_threshold, public readonly OptionalStringView $model, public readonly OptionalStringView $profile, public readonly OptionalSizeView $batch, public readonly int $batch_max, public readonly int $none, public readonly StringsView $on, public readonly QuestionMembersView $members, public readonly ChoicesView $kinds, public readonly RelationsView $relations, public readonly OptionalStringView $name_pointer, public readonly OptionalStringView $kind_pointer) {}
     public static function copy(\FFI\CData $v): self { return new self($v->kind, ContentView::copy($v->text), OptionalContentView::copy($v->yes), OptionalContentView::copy($v->no), ChoicesView::copy($v->choices), RuleView::copy($v->threshold), RuleView::copy($v->relation_threshold), OptionalStringView::copy($v->model), OptionalStringView::copy($v->profile), OptionalSizeView::copy($v->batch), $v->batch_max, $v->none, StringsView::copy($v->on), QuestionMembersView::copy($v->members), ChoicesView::copy($v->kinds), RelationsView::copy($v->relations), OptionalStringView::copy($v->name_pointer), OptionalStringView::copy($v->kind_pointer)); }
@@ -123,11 +123,11 @@ final class QuestionViewView
 
 final class OptionalQuestionView
 {
-    public function __construct(public readonly int $present, public readonly ?QuestionViewView $value) {}
-    public static function copy(\FFI\CData $v): self { return new self($v->present, ($v->present ? QuestionViewView::copy($v->value) : null)); }
+    public function __construct(public readonly int $present, public readonly ?QuestionView $value) {}
+    public static function copy(\FFI\CData $v): self { return new self($v->present, ($v->present ? QuestionView::copy($v->value) : null)); }
 }
 
-final class ImageViewView
+final class ImageView
 {
     public function __construct(public readonly int $media, public readonly string $bytes, public readonly int $bytes_len, public readonly int $width, public readonly int $height, public readonly OptionalStringView $filename) {}
     public static function copy(\FFI\CData $v): self { return new self($v->media, ($v->bytes_len ? \FFI::string($v->bytes,$v->bytes_len) : ""), $v->bytes_len, $v->width, $v->height, OptionalStringView::copy($v->filename)); }
@@ -136,7 +136,7 @@ final class ImageViewView
 final class ImageViewsView
 {
     public function __construct(public readonly array $data, public readonly int $len) {}
-    public static function copy(\FFI\CData $v): self { return new self(array_map(fn($i) => ImageViewView::copy($v->data[$i]), $v->len ? range(0,$v->len-1) : []), $v->len); }
+    public static function copy(\FFI\CData $v): self { return new self(array_map(fn($i) => ImageView::copy($v->data[$i]), $v->len ? range(0,$v->len-1) : []), $v->len); }
 }
 
 final class OptionalImageViewsView
@@ -255,8 +255,8 @@ final class MemberV1DataView
 
 final class MemberView
 {
-    public function __construct(public readonly StringView $name, public readonly StringView $request, public readonly QuestionViewView $question, public readonly int $state, public readonly MemberV1DataView $data) {}
-    public static function copy(\FFI\CData $v): self { return new self(StringView::copy($v->name), StringView::copy($v->request), QuestionViewView::copy($v->question), $v->state, MemberV1DataView::copy($v->data,match($v->state) {1 => "success", 2 => "failure", default => throw new \UnexpectedValueException("native discriminator") })); }
+    public function __construct(public readonly StringView $name, public readonly StringView $request, public readonly QuestionView $question, public readonly int $state, public readonly MemberV1DataView $data) {}
+    public static function copy(\FFI\CData $v): self { return new self(StringView::copy($v->name), StringView::copy($v->request), QuestionView::copy($v->question), $v->state, MemberV1DataView::copy($v->data,match($v->state) {1 => "success", 2 => "failure", default => throw new \UnexpectedValueException("native discriminator") })); }
 }
 
 final class MembersView

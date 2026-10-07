@@ -21,7 +21,18 @@ if RELEASE_PACKAGE:
     package = Path(RELEASE_PACKAGE).resolve()
     native = Path(RELEASE_NATIVE).resolve()
     expected = {"LICENSE", "README.md", "composer.json", "autoload.php",
-                "src/ThinkThen.php", "examples/direct.php", "THINKTHEN-PACKAGE-INPUTS"}
+                "src/ThinkThen.php", "examples/direct.php", "THINKTHEN-PACKAGE-INPUTS",
+                'src/complete/models.php',
+                'src/native/abi.h',
+                'src/native/views.php',
+                'src/native/views_0.php',
+                'src/native/views_1.php',
+                'src/native/input.php',
+                'src/native/question.php',
+                'src/native/question_adapter.php',
+                'src/native/result.php',
+                'src/native/batch.php',
+                'src/native/engine.php'}
     members = {str(path.relative_to(package)) for path in package.rglob("*") if path.is_file()}
     assert members == expected and not any(path.is_symlink() for path in package.rglob("*")), ("PHP_ARCHIVE_MEMBERS", members)
     metadata = json.loads((package / "composer.json").read_text())

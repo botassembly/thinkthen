@@ -31,61 +31,61 @@ final class RowView
     public static function copy(\FFI\CData $v): self { return new self(StringView::copy($v->answer_id), OptionalContentView::copy($v->input), OptionalQuestionView::copy($v->question), OptionalAnswerView::copy($v->answer), OptionalRuleView::copy($v->threshold), OptionalLocationView::copy($v->position), OptionalStringView::copy($v->input_file), MetaView::copy($v->meta), OptionalImageViewsView::copy($v->images)); }
 }
 
-final class DecideViewView
+final class DecideView
 {
     public function __construct(public readonly RowView $common, public readonly DecideValueView $value) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), DecideValueView::copy($v->value)); }
 }
 
-final class ChooseViewView
+final class ChooseView
 {
     public function __construct(public readonly RowView $common, public readonly OptionalStringView $value) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), OptionalStringView::copy($v->value)); }
 }
 
-final class TagViewView
+final class TagView
 {
     public function __construct(public readonly RowView $common, public readonly StringsView $value) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), StringsView::copy($v->value)); }
 }
 
-final class ScoreViewView
+final class ScoreView
 {
     public function __construct(public readonly RowView $common, public readonly float $value) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), $v->value); }
 }
 
-final class FilterViewView
+final class FilterView
 {
     public function __construct(public readonly RowView $common, public readonly int $value) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), $v->value); }
 }
 
-final class RankViewView
+final class RankView
 {
     public function __construct(public readonly RowView $common, public readonly OptionalSizeView $value, public readonly OptionalStringView $question_name) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), OptionalSizeView::copy($v->value), OptionalStringView::copy($v->question_name)); }
 }
 
-final class FindViewView
+final class FindView
 {
     public function __construct(public readonly RowView $common, public readonly OptionalContentView $value, public readonly OptionalSizeView $index) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), OptionalContentView::copy($v->value), OptionalSizeView::copy($v->index)); }
 }
 
-final class AnnotateViewView
+final class AnnotateView
 {
     public function __construct(public readonly RowView $common, public readonly MembersView $answers) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), MembersView::copy($v->answers)); }
 }
 
-final class RecognizeViewView
+final class RecognizeView
 {
     public function __construct(public readonly RowView $common, public readonly RecognizeValueView $value, public readonly RecognizeAnswerView $answer) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), RecognizeValueView::copy($v->value), RecognizeAnswerView::copy($v->answer)); }
 }
 
-final class RelateViewView
+final class RelateView
 {
     public function __construct(public readonly RowView $common, public readonly EdgesView $value, public readonly RelationAnswersView $questions) {}
     public static function copy(\FFI\CData $v): self { return new self(RowView::copy($v->common), EdgesView::copy($v->value), RelationAnswersView::copy($v->questions)); }
@@ -123,8 +123,8 @@ final class QuestionObservationView
 
 final class RowObservationV1DataView
 {
-    public function __construct(public readonly ?DecideViewView $decide, public readonly ?ChooseViewView $choose, public readonly ?TagViewView $tag, public readonly ?ScoreViewView $score, public readonly ?FilterViewView $filter, public readonly ?RankViewView $rank, public readonly ?FindViewView $find, public readonly ?AnnotateViewView $annotate, public readonly ?RecognizeViewView $recognize, public readonly ?RelateViewView $relate) {}
-    public static function copy(\FFI\CData $v, ?string $active): self { return new self(($active === "decide" ? DecideViewView::copy($v->decide) : null), ($active === "choose" ? ChooseViewView::copy($v->choose) : null), ($active === "tag" ? TagViewView::copy($v->tag) : null), ($active === "score" ? ScoreViewView::copy($v->score) : null), ($active === "filter" ? FilterViewView::copy($v->filter) : null), ($active === "rank" ? RankViewView::copy($v->rank) : null), ($active === "find" ? FindViewView::copy($v->find) : null), ($active === "annotate" ? AnnotateViewView::copy($v->annotate) : null), ($active === "recognize" ? RecognizeViewView::copy($v->recognize) : null), ($active === "relate" ? RelateViewView::copy($v->relate) : null)); }
+    public function __construct(public readonly ?DecideView $decide, public readonly ?ChooseView $choose, public readonly ?TagView $tag, public readonly ?ScoreView $score, public readonly ?FilterView $filter, public readonly ?RankView $rank, public readonly ?FindView $find, public readonly ?AnnotateView $annotate, public readonly ?RecognizeView $recognize, public readonly ?RelateView $relate) {}
+    public static function copy(\FFI\CData $v, ?string $active): self { return new self(($active === "decide" ? DecideView::copy($v->decide) : null), ($active === "choose" ? ChooseView::copy($v->choose) : null), ($active === "tag" ? TagView::copy($v->tag) : null), ($active === "score" ? ScoreView::copy($v->score) : null), ($active === "filter" ? FilterView::copy($v->filter) : null), ($active === "rank" ? RankView::copy($v->rank) : null), ($active === "find" ? FindView::copy($v->find) : null), ($active === "annotate" ? AnnotateView::copy($v->annotate) : null), ($active === "recognize" ? RecognizeView::copy($v->recognize) : null), ($active === "relate" ? RelateView::copy($v->relate) : null)); }
 }
 
 final class RowObservationView
@@ -169,7 +169,7 @@ final class SourceDetailsView
     public static function copy(\FFI\CData $v): self { return new self(array_map(fn($i) => SourceDetailView::copy($v->data[$i]), $v->len ? range(0,$v->len-1) : []), $v->len); }
 }
 
-final class InputViewView
+final class InputView
 {
     public function __construct(public readonly OptionalContentView $original, public readonly OptionalLocationView $position, public readonly OptionalImageViewsView $images) {}
     public static function copy(\FFI\CData $v): self { return new self(OptionalContentView::copy($v->original), OptionalLocationView::copy($v->position), OptionalImageViewsView::copy($v->images)); }
@@ -178,7 +178,7 @@ final class InputViewView
 final class InputViewsView
 {
     public function __construct(public readonly array $data, public readonly int $len) {}
-    public static function copy(\FFI\CData $v): self { return new self(array_map(fn($i) => InputViewView::copy($v->data[$i]), $v->len ? range(0,$v->len-1) : []), $v->len); }
+    public static function copy(\FFI\CData $v): self { return new self(array_map(fn($i) => InputView::copy($v->data[$i]), $v->len ? range(0,$v->len-1) : []), $v->len); }
 }
 
 final class DetailsView

@@ -104,7 +104,7 @@ final class Engine
     {
         $v=$this->ffi->new('thinkthen_'.$type.'_v1');$code=$at===null?$this->ffi->$method($r,\FFI::addr($v)):$this->ffi->$method($r,$at,\FFI::addr($v));
         if($code) throw new \LogicException('native result accessor refused');
-        $class=__NAMESPACE__.'\\'.str_replace(' ','',ucwords(str_replace('_',' ',$type))).'View';return $class::copy($v);
+        $class=__NAMESPACE__.'\\'.str_replace(' ','',ucwords(str_replace('_',' ',$type))).(str_ends_with($type,'_view')?'':'View');return $class::copy($v);
     }
     public function copyResult(\FFI\CData $r,string $verb): CompleteResult
     {
@@ -113,7 +113,7 @@ final class Engine
             $rows[]=$this->view($r,$verb.'_view','thinkthen_result_'.$verb,$i);
             $details[]=$this->view($r,'details','thinkthen_result_details',$i);$authors[]=$this->view($r,'question_author','thinkthen_result_question_author',$i);
             $ma=[];if($verb==='annotate')foreach($rows[$i]->answers->data as $j=>$_){$v=$this->ffi->new('thinkthen_question_author_v1');if($this->ffi->thinkthen_result_member_author($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native member author');$ma[]=QuestionAuthorView::copy($v);}$memberAuthors[]=$ma;
-            $rm=[];if($verb==='rank'){$n=$this->ffi->new('size_t');if($this->ffi->thinkthen_result_rank_member_count($r,$i,\FFI::addr($n)))throw new \LogicException('native rank member count');for($j=0;$j<$n->cdata;++$j){$v=$this->ffi->new('thinkthen_rank_view_v1');if($this->ffi->thinkthen_result_rank_member($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native rank member');$rm[]=RankViewView::copy($v);}}$rankMembers[]=$rm;
+            $rm=[];if($verb==='rank'){$n=$this->ffi->new('size_t');if($this->ffi->thinkthen_result_rank_member_count($r,$i,\FFI::addr($n)))throw new \LogicException('native rank member count');for($j=0;$j<$n->cdata;++$j){$v=$this->ffi->new('thinkthen_rank_view_v1');if($this->ffi->thinkthen_result_rank_member($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native rank member');$rm[]=RankView::copy($v);}}$rankMembers[]=$rm;
             $recognitions[]=$verb==='recognize'?$this->view($r,'source_recognition','thinkthen_result_source_recognition',$i):null;
             $relations[]=$verb==='relate'?$this->view($r,'source_relations','thinkthen_result_source_relations',$i):null;
         }
@@ -131,15 +131,25 @@ final class Engine
     }
     public function batchClosed(): void { --$this->batches; }
     public function batchFailure(): never { $this->fail(); }
+    /** @return CompleteResult<DecideView> */
     public function decide(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("decide",$question,$input,$controls); }
+    /** @return CompleteResult<ChooseView> */
     public function choose(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("choose",$question,$input,$controls); }
+    /** @return CompleteResult<TagView> */
     public function tag(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("tag",$question,$input,$controls); }
+    /** @return CompleteResult<ScoreView> */
     public function score(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("score",$question,$input,$controls); }
+    /** @return CompleteResult<FilterView> */
     public function filter(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("filter",$question,$input,$controls); }
+    /** @return CompleteResult<RankView> */
     public function rank(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("rank",$question,$input,$controls); }
+    /** @return CompleteResult<FindView> */
     public function find(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("find",$question,$input,$controls); }
+    /** @return CompleteResult<AnnotateView> */
     public function annotate(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("annotate",$question,$input,$controls); }
+    /** @return CompleteResult<RecognizeView> */
     public function recognize(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("recognize",$question,$input,$controls); }
+    /** @return CompleteResult<RelateView> */
     public function relate(Question $question,Source $input,?Controls $controls=null): CompleteResult { return $this->execute("relate",$question,$input,$controls); }
     public function decideBatch(Question $question,Source $input,?Controls $controls=null): Batch { return $this->execute("decide",$question,$input,$controls,true); }
     public function chooseBatch(Question $question,Source $input,?Controls $controls=null): Batch { return $this->execute("choose",$question,$input,$controls,true); }

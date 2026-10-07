@@ -1,111 +1,111 @@
 part of 'engine.dart';
 
 extension _Execution on Engine {
-  DecideViewView _readDecide(Pointer<Void> r, int at) {
-    final p = calloc<CDecideViewView>();
+  DecideView _readDecide(Pointer<Void> r, int at) {
+    final p = calloc<CDecideView>();
     try {
       if (_api.thinkthen_result_decide(r, at, p) != 0)
         throw StateError("native decide view");
-      return DecideViewView.copy(p.ref);
+      return DecideView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  ChooseViewView _readChoose(Pointer<Void> r, int at) {
-    final p = calloc<CChooseViewView>();
+  ChooseView _readChoose(Pointer<Void> r, int at) {
+    final p = calloc<CChooseView>();
     try {
       if (_api.thinkthen_result_choose(r, at, p) != 0)
         throw StateError("native choose view");
-      return ChooseViewView.copy(p.ref);
+      return ChooseView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  TagViewView _readTag(Pointer<Void> r, int at) {
-    final p = calloc<CTagViewView>();
+  TagView _readTag(Pointer<Void> r, int at) {
+    final p = calloc<CTagView>();
     try {
       if (_api.thinkthen_result_tag(r, at, p) != 0)
         throw StateError("native tag view");
-      return TagViewView.copy(p.ref);
+      return TagView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  ScoreViewView _readScore(Pointer<Void> r, int at) {
-    final p = calloc<CScoreViewView>();
+  ScoreView _readScore(Pointer<Void> r, int at) {
+    final p = calloc<CScoreView>();
     try {
       if (_api.thinkthen_result_score(r, at, p) != 0)
         throw StateError("native score view");
-      return ScoreViewView.copy(p.ref);
+      return ScoreView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  FilterViewView _readFilter(Pointer<Void> r, int at) {
-    final p = calloc<CFilterViewView>();
+  FilterView _readFilter(Pointer<Void> r, int at) {
+    final p = calloc<CFilterView>();
     try {
       if (_api.thinkthen_result_filter(r, at, p) != 0)
         throw StateError("native filter view");
-      return FilterViewView.copy(p.ref);
+      return FilterView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  RankViewView _readRank(Pointer<Void> r, int at) {
-    final p = calloc<CRankViewView>();
+  RankView _readRank(Pointer<Void> r, int at) {
+    final p = calloc<CRankView>();
     try {
       if (_api.thinkthen_result_rank(r, at, p) != 0)
         throw StateError("native rank view");
-      return RankViewView.copy(p.ref);
+      return RankView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  FindViewView _readFind(Pointer<Void> r, int at) {
-    final p = calloc<CFindViewView>();
+  FindView _readFind(Pointer<Void> r, int at) {
+    final p = calloc<CFindView>();
     try {
       if (_api.thinkthen_result_find(r, at, p) != 0)
         throw StateError("native find view");
-      return FindViewView.copy(p.ref);
+      return FindView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  AnnotateViewView _readAnnotate(Pointer<Void> r, int at) {
-    final p = calloc<CAnnotateViewView>();
+  AnnotateView _readAnnotate(Pointer<Void> r, int at) {
+    final p = calloc<CAnnotateView>();
     try {
       if (_api.thinkthen_result_annotate(r, at, p) != 0)
         throw StateError("native annotate view");
-      return AnnotateViewView.copy(p.ref);
+      return AnnotateView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  RecognizeViewView _readRecognize(Pointer<Void> r, int at) {
-    final p = calloc<CRecognizeViewView>();
+  RecognizeView _readRecognize(Pointer<Void> r, int at) {
+    final p = calloc<CRecognizeView>();
     try {
       if (_api.thinkthen_result_recognize(r, at, p) != 0)
         throw StateError("native recognize view");
-      return RecognizeViewView.copy(p.ref);
+      return RecognizeView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
   }
 
-  RelateViewView _readRelate(Pointer<Void> r, int at) {
-    final p = calloc<CRelateViewView>();
+  RelateView _readRelate(Pointer<Void> r, int at) {
+    final p = calloc<CRelateView>();
     try {
       if (_api.thinkthen_result_relate(r, at, p) != 0)
         throw StateError("native relate view");
-      return RelateViewView.copy(p.ref);
+      return RelateView.copy(p.ref);
     } finally {
       calloc.free(p);
     }
@@ -206,7 +206,7 @@ extension _Execution on Engine {
     final details = <DetailsView>[];
     final authors = <QuestionAuthorView>[];
     final members = <List<QuestionAuthorView>>[];
-    final ranks = <List<RankViewView>>[];
+    final ranks = <List<RankView>>[];
     final recognitions = <SourceRecognitionView?>[];
     final relations = <SourceRelationsView?>[];
     for (var i = 0; i < s.count; ++i) {
@@ -215,7 +215,7 @@ extension _Execution on Engine {
       details.add(_details(r, i));
       authors.add(_question_author(r, i));
       final ma = <QuestionAuthorView>[];
-      if (row is AnnotateViewView) {
+      if (row is AnnotateView) {
         for (var j = 0; j < row.answers.len; ++j) {
           final p = calloc<CQuestionAuthorView>();
           try {
@@ -228,18 +228,18 @@ extension _Execution on Engine {
         }
       }
       members.add(ma);
-      final rm = <RankViewView>[];
+      final rm = <RankView>[];
       if (verb == 'rank') {
         final n = calloc<Size>();
         try {
           if (_api.thinkthen_result_rank_member_count(r, i, n) != 0)
             throw StateError('native rank member count');
           for (var j = 0; j < n.value; ++j) {
-            final p = calloc<CRankViewView>();
+            final p = calloc<CRankView>();
             try {
               if (_api.thinkthen_result_rank_member(r, i, j, p) != 0)
                 throw StateError('native rank member');
-              rm.add(RankViewView.copy(p.ref));
+              rm.add(RankView.copy(p.ref));
             } finally {
               calloc.free(p);
             }

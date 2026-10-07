@@ -10,7 +10,7 @@ from urllib.parse import unquote, urlparse
 dart_root, flutter_stage, native_root = (Path(arg).resolve() for arg in sys.argv[1:])
 flutter_root = flutter_stage / "flutter"
 expected = {
-    "README.md", "pubspec.yaml", "pubspec.lock", "lib/thinkthen_flutter.dart",
+    "README.md", "pubspec.yaml", "pubspec.lock", "lib/thinkthen_flutter.dart", "lib/thinkthen_complete_flutter.dart",
     "example/.metadata", "example/README.md", "example/pubspec.yaml",
     "example/pubspec.lock", "example/analysis_options.yaml", "example/lib/main.dart",
     "example/linux/CMakeLists.txt", "example/linux/flutter/CMakeLists.txt",

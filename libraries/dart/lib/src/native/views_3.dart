@@ -86,16 +86,16 @@ final class QuestionObservationView {
 }
 
 final class RowObservationV1DataView {
-  final DecideViewView? decide;
-  final ChooseViewView? choose;
-  final TagViewView? tag;
-  final ScoreViewView? score;
-  final FilterViewView? filter;
-  final RankViewView? rank;
-  final FindViewView? find;
-  final AnnotateViewView? annotate;
-  final RecognizeViewView? recognize;
-  final RelateViewView? relate;
+  final DecideView? decide;
+  final ChooseView? choose;
+  final TagView? tag;
+  final ScoreView? score;
+  final FilterView? filter;
+  final RankView? rank;
+  final FindView? find;
+  final AnnotateView? annotate;
+  final RecognizeView? recognize;
+  final RelateView? relate;
   const RowObservationV1DataView(
       this.decide,
       this.choose,
@@ -110,16 +110,16 @@ final class RowObservationV1DataView {
   factory RowObservationV1DataView.copy(
           CRowObservationV1DataView v, String? active) =>
       RowObservationV1DataView(
-          (active == "decide" ? DecideViewView.copy(v.decide) : null),
-          (active == "choose" ? ChooseViewView.copy(v.choose) : null),
-          (active == "tag" ? TagViewView.copy(v.tag) : null),
-          (active == "score" ? ScoreViewView.copy(v.score) : null),
-          (active == "filter" ? FilterViewView.copy(v.filter) : null),
-          (active == "rank" ? RankViewView.copy(v.rank) : null),
-          (active == "find" ? FindViewView.copy(v.find) : null),
-          (active == "annotate" ? AnnotateViewView.copy(v.annotate) : null),
-          (active == "recognize" ? RecognizeViewView.copy(v.recognize) : null),
-          (active == "relate" ? RelateViewView.copy(v.relate) : null));
+          (active == "decide" ? DecideView.copy(v.decide) : null),
+          (active == "choose" ? ChooseView.copy(v.choose) : null),
+          (active == "tag" ? TagView.copy(v.tag) : null),
+          (active == "score" ? ScoreView.copy(v.score) : null),
+          (active == "filter" ? FilterView.copy(v.filter) : null),
+          (active == "rank" ? RankView.copy(v.rank) : null),
+          (active == "find" ? FindView.copy(v.find) : null),
+          (active == "annotate" ? AnnotateView.copy(v.annotate) : null),
+          (active == "recognize" ? RecognizeView.copy(v.recognize) : null),
+          (active == "relate" ? RelateView.copy(v.relate) : null));
 }
 
 final class RowObservationView {
@@ -242,24 +242,23 @@ final class SourceDetailsView {
       v.len);
 }
 
-final class InputViewView {
+final class InputView {
   final OptionalContentView original;
   final OptionalLocationView position;
   final OptionalImageViewsView images;
-  const InputViewView(this.original, this.position, this.images);
-  factory InputViewView.copy(CInputViewView v) => InputViewView(
+  const InputView(this.original, this.position, this.images);
+  factory InputView.copy(CInputView v) => InputView(
       OptionalContentView.copy(v.original),
       OptionalLocationView.copy(v.position),
       OptionalImageViewsView.copy(v.images));
 }
 
 final class InputViewsView {
-  final List<InputViewView> data;
+  final List<InputView> data;
   final int len;
   const InputViewsView(this.data, this.len);
   factory InputViewsView.copy(CInputViewsView v) => InputViewsView(
-      List.unmodifiable(
-          List.generate(v.len, (i) => InputViewView.copy(v.data[i]))),
+      List.unmodifiable(List.generate(v.len, (i) => InputView.copy(v.data[i]))),
       v.len);
 }
 

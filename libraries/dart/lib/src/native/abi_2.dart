@@ -13,14 +13,14 @@ final class CSourceDetailsView extends Struct {
   external int len;
 }
 
-final class CInputViewView extends Struct {
+final class CInputView extends Struct {
   external COptionalContentView original;
   external COptionalLocationView position;
   external COptionalImageViewsView images;
 }
 
 final class CInputViewsView extends Struct {
-  external Pointer<CInputViewView> data;
+  external Pointer<CInputView> data;
   @Size()
   external int len;
 }

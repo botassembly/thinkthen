@@ -159,11 +159,11 @@ final class RelationsView {
 
 final class QuestionMemberView {
   final StringView name;
-  final QuestionViewView? question;
+  final QuestionView? question;
   const QuestionMemberView(this.name, this.question);
   factory QuestionMemberView.copy(CQuestionMemberView v) => QuestionMemberView(
       StringView.copy(v.name),
-      (v.question.address == 0 ? null : QuestionViewView.copy(v.question.ref)));
+      (v.question.address == 0 ? null : QuestionView.copy(v.question.ref)));
 }
 
 final class QuestionMembersView {
@@ -177,7 +177,7 @@ final class QuestionMembersView {
           v.len);
 }
 
-final class QuestionViewView {
+final class QuestionView {
   final int kind;
   final ContentView text;
   final OptionalContentView yes;
@@ -196,7 +196,7 @@ final class QuestionViewView {
   final RelationsView relations;
   final OptionalStringView name_pointer;
   final OptionalStringView kind_pointer;
-  const QuestionViewView(
+  const QuestionView(
       this.kind,
       this.text,
       this.yes,
@@ -215,7 +215,7 @@ final class QuestionViewView {
       this.relations,
       this.name_pointer,
       this.kind_pointer);
-  factory QuestionViewView.copy(CQuestionViewView v) => QuestionViewView(
+  factory QuestionView.copy(CQuestionView v) => QuestionView(
       v.kind,
       ContentView.copy(v.text),
       OptionalContentView.copy(v.yes),
@@ -238,23 +238,23 @@ final class QuestionViewView {
 
 final class OptionalQuestionView {
   final int present;
-  final QuestionViewView? value;
+  final QuestionView? value;
   const OptionalQuestionView(this.present, this.value);
   factory OptionalQuestionView.copy(COptionalQuestionView v) =>
       OptionalQuestionView(
-          v.present, (v.present != 0 ? QuestionViewView.copy(v.value) : null));
+          v.present, (v.present != 0 ? QuestionView.copy(v.value) : null));
 }
 
-final class ImageViewView {
+final class ImageView {
   final int media;
   final List<int> bytes;
   final int bytes_len;
   final int width;
   final int height;
   final OptionalStringView filename;
-  const ImageViewView(this.media, this.bytes, this.bytes_len, this.width,
+  const ImageView(this.media, this.bytes, this.bytes_len, this.width,
       this.height, this.filename);
-  factory ImageViewView.copy(CImageViewView v) => ImageViewView(
+  factory ImageView.copy(CImageView v) => ImageView(
       v.media,
       List.unmodifiable(v.bytes.asTypedList(v.bytes_len)),
       v.bytes_len,
@@ -264,12 +264,11 @@ final class ImageViewView {
 }
 
 final class ImageViewsView {
-  final List<ImageViewView> data;
+  final List<ImageView> data;
   final int len;
   const ImageViewsView(this.data, this.len);
   factory ImageViewsView.copy(CImageViewsView v) => ImageViewsView(
-      List.unmodifiable(
-          List.generate(v.len, (i) => ImageViewView.copy(v.data[i]))),
+      List.unmodifiable(List.generate(v.len, (i) => ImageView.copy(v.data[i]))),
       v.len);
 }
 

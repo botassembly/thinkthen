@@ -49,20 +49,34 @@ The local Linux file pilot packs this Dart source beside a separately built matc
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
 
-## 0.2 typed integration in progress (0429)
+## Complete typed calls
 
-Private `lib/src/complete` carriers and ten named `Requests` builders cover the
-reviewed result/2 and input shapes. They are not exported by `thinkthen_dart.dart`
-and call no legacy C door. Existing methods keep their behavior. Independent
-carrier/request fixtures compile and execute, but cannot establish complete
-native parity. [0429](../../sdlc/tickets/0429-php-dart-flutter-typed-parity.md)
-records the exact C call/view integration and runtime cases still required.
+Import `package:thinkthen_dart/thinkthen_complete.dart` for the native-backed `Engine`, typed questions/inputs and copied complete views. Existing `Door` methods retain their behavior.
 
-Dart VM counts currently admit exact signed 64-bit integers; larger or noninteger
-known counts refuse rather than truncate. Native adaptation of larger unsigned
-counts and lossless arbitrary numeric payloads is still required. Dart has no
-union parameter syntax: named private builders check the closed question
-variants at admission and reject a wrong variant. Optional carriers distinguish
-absence from present zero, false, null and empty values. Authored-null decide
-JSON is ambiguous with uncertainty and refuses; the actual C view discriminator
-must construct its typed authored or unresolved variant. No reading is guessed.
+```dart
+import 'package:thinkthen_dart/thinkthen_complete.dart';
+
+final engine = Engine(absoluteLibrary, settingsJson: settingsJson);
+try {
+  final question = Question.spec(QuestionSpec(FunctionKind.decide,
+      text: const Content.text('Does this ask for a refund?')));
+  final result = engine.decide(question,
+      Records([Record(const Content.text('Refund me please.'))]));
+  final answerId = result.rows.first.common.answer_id.data;
+  final probability = result.rows.first.common.answer.value!.data.probability;
+} finally { engine.close(); }
+```
+
+The ten named methods return `CompleteResult<DecideView>`, `ChooseView`, `TagView`, `ScoreView`, `FilterView`, `RankView`, `FindView`, `AnnotateView`, `RecognizeView` and `RelateView`, respectively. `CompleteApi` fixes their compile-time signatures for Dart and the separately executed Flutter facade.
+
+`QuestionSpec` carries typed choices/descriptions, meanings, reading rules, model/profile/batch, pointers, members, recognition kinds and relation rules. `Author`, `Declaration` and `Property` carry names, wording versions and item/context schemas. `Question.file`, `named` and `reference` use native loaders. `Question.saved(LoaderRole.…, json)` explicitly imports saved grammar under one native parser. Text never implies a path.
+
+`Records` preserves ordered `Record` originals, contexts, candidate replacements and `Image` attachments. `Content.text` is literal; `Content.json` is arbitrary caller JSON, including explicit null. `Files` selects native line/window/file/image/JSONL reading. Images remain ordered original JPEG/PNG bytes; native alone decodes and admits their route/limits. Only decide/choose/score support them on admitted routes. Other functions refuse before sending.
+
+Results copy summaries/facts/attempts, every observation and its details/author, full row views/details/authors, annotation member authors, rank member views and located recognition/relation views. Known fields have static property types; arbitrary authored/original JSON retains explicit content bytes. Optional views keep `present` and nullable `value`. Decide's native discriminator preserves uncertainty, ordinary Boolean and authored meanings, including Boolean/null. Find's named-answer reader accepts declared C tag 5 and current native tag 7 and preserves the emitted tag. Unsigned counters are exact `BigInt`; wording version admission stays native.
+
+`CompleteFailure` exposes `ErrorKind`, message, retryability and copied final native summary. Prestart failures have absent facts/attempts. `Controls` supplies deadlines, cancellation, context, packing and attempts. Cancellation owns a native token; `nativeHandle` is borrowed until close and can be passed to a cooperating native thread/isolate. Free tokens after using calls finish.
+
+`decideBatch`, `chooseBatch`, `tagBatch`, `scoreBatch`, `filterBatch` and `annotateBatch` own native lazy batches. Pull `next()` until exhaustion, read `facts()`, and always close the batch before closing its engine. The native engine owns all reading, packing, scheduling and storage. Returned views survive engine/batch close. Cache/record/refresh/replay settings retain native identities and support changed-reading strict replay without sends.
+
+The older private JSON carrier readers retain their own boundary restrictions; complete views above do not use them. The canonical consumer is AOT-compiled and statically calls the named public methods. `complete_parity.py dart` reuses the shared suite and counted owned loopback backend. Flutter runs its own facade separately.

@@ -250,66 +250,66 @@ final class NativeApi {
           Int32 Function(Pointer<Void>, Size, Pointer<CObservationView>),
           int Function(Pointer<Void>, int,
               Pointer<CObservationView>)>("thinkthen_result_observation");
-  late final int Function(Pointer<Void>, int, Pointer<CDecideViewView>)
+  late final int Function(Pointer<Void>, int, Pointer<CDecideView>)
       thinkthen_result_decide = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CDecideViewView>),
+          Int32 Function(Pointer<Void>, Size, Pointer<CDecideView>),
           int Function(Pointer<Void>, int,
-              Pointer<CDecideViewView>)>("thinkthen_result_decide");
-  late final int Function(Pointer<Void>, int, Pointer<CChooseViewView>)
+              Pointer<CDecideView>)>("thinkthen_result_decide");
+  late final int Function(Pointer<Void>, int, Pointer<CChooseView>)
       thinkthen_result_choose = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CChooseViewView>),
+          Int32 Function(Pointer<Void>, Size, Pointer<CChooseView>),
           int Function(Pointer<Void>, int,
-              Pointer<CChooseViewView>)>("thinkthen_result_choose");
-  late final int Function(Pointer<Void>, int, Pointer<CTagViewView>)
+              Pointer<CChooseView>)>("thinkthen_result_choose");
+  late final int Function(Pointer<Void>, int, Pointer<CTagView>)
       thinkthen_result_tag = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CTagViewView>),
-          int Function(Pointer<Void>, int,
-              Pointer<CTagViewView>)>("thinkthen_result_tag");
-  late final int Function(Pointer<Void>, int, Pointer<CScoreViewView>)
+          Int32 Function(Pointer<Void>, Size, Pointer<CTagView>),
+          int Function(
+              Pointer<Void>, int, Pointer<CTagView>)>("thinkthen_result_tag");
+  late final int Function(Pointer<Void>, int, Pointer<CScoreView>)
       thinkthen_result_score = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CScoreViewView>),
+          Int32 Function(Pointer<Void>, Size, Pointer<CScoreView>),
           int Function(Pointer<Void>, int,
-              Pointer<CScoreViewView>)>("thinkthen_result_score");
-  late final int Function(Pointer<Void>, int, Pointer<CFilterViewView>)
+              Pointer<CScoreView>)>("thinkthen_result_score");
+  late final int Function(Pointer<Void>, int, Pointer<CFilterView>)
       thinkthen_result_filter = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CFilterViewView>),
+          Int32 Function(Pointer<Void>, Size, Pointer<CFilterView>),
           int Function(Pointer<Void>, int,
-              Pointer<CFilterViewView>)>("thinkthen_result_filter");
-  late final int Function(Pointer<Void>, int, Pointer<CRankViewView>)
+              Pointer<CFilterView>)>("thinkthen_result_filter");
+  late final int Function(Pointer<Void>, int, Pointer<CRankView>)
       thinkthen_result_rank = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CRankViewView>),
-          int Function(Pointer<Void>, int,
-              Pointer<CRankViewView>)>("thinkthen_result_rank");
+          Int32 Function(Pointer<Void>, Size, Pointer<CRankView>),
+          int Function(
+              Pointer<Void>, int, Pointer<CRankView>)>("thinkthen_result_rank");
   late final int Function(Pointer<Void>, int, Pointer<Size>)
       thinkthen_result_rank_member_count = lib.lookupFunction<
           Int32 Function(Pointer<Void>, Size, Pointer<Size>),
           int Function(Pointer<Void>, int,
               Pointer<Size>)>("thinkthen_result_rank_member_count");
-  late final int Function(Pointer<Void>, int, int, Pointer<CRankViewView>)
+  late final int Function(Pointer<Void>, int, int, Pointer<CRankView>)
       thinkthen_result_rank_member = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Size, Pointer<CRankViewView>),
+          Int32 Function(Pointer<Void>, Size, Size, Pointer<CRankView>),
           int Function(Pointer<Void>, int, int,
-              Pointer<CRankViewView>)>("thinkthen_result_rank_member");
-  late final int Function(Pointer<Void>, int, Pointer<CFindViewView>)
+              Pointer<CRankView>)>("thinkthen_result_rank_member");
+  late final int Function(Pointer<Void>, int, Pointer<CFindView>)
       thinkthen_result_find = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CFindViewView>),
-          int Function(Pointer<Void>, int,
-              Pointer<CFindViewView>)>("thinkthen_result_find");
-  late final int Function(Pointer<Void>, int, Pointer<CAnnotateViewView>)
+          Int32 Function(Pointer<Void>, Size, Pointer<CFindView>),
+          int Function(
+              Pointer<Void>, int, Pointer<CFindView>)>("thinkthen_result_find");
+  late final int Function(Pointer<Void>, int, Pointer<CAnnotateView>)
       thinkthen_result_annotate = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CAnnotateViewView>),
+          Int32 Function(Pointer<Void>, Size, Pointer<CAnnotateView>),
           int Function(Pointer<Void>, int,
-              Pointer<CAnnotateViewView>)>("thinkthen_result_annotate");
-  late final int Function(Pointer<Void>, int, Pointer<CRecognizeViewView>)
+              Pointer<CAnnotateView>)>("thinkthen_result_annotate");
+  late final int Function(Pointer<Void>, int, Pointer<CRecognizeView>)
       thinkthen_result_recognize = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CRecognizeViewView>),
+          Int32 Function(Pointer<Void>, Size, Pointer<CRecognizeView>),
           int Function(Pointer<Void>, int,
-              Pointer<CRecognizeViewView>)>("thinkthen_result_recognize");
-  late final int Function(Pointer<Void>, int, Pointer<CRelateViewView>)
+              Pointer<CRecognizeView>)>("thinkthen_result_recognize");
+  late final int Function(Pointer<Void>, int, Pointer<CRelateView>)
       thinkthen_result_relate = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Size, Pointer<CRelateViewView>),
+          Int32 Function(Pointer<Void>, Size, Pointer<CRelateView>),
           int Function(Pointer<Void>, int,
-              Pointer<CRelateViewView>)>("thinkthen_result_relate");
+              Pointer<CRelateView>)>("thinkthen_result_relate");
   late final int Function(Pointer<Void>, Pointer<Pointer<Void>>)
       thinkthen_error_complete = lib.lookupFunction<
           Int32 Function(Pointer<Void>, Pointer<Pointer<Void>>),
@@ -394,11 +394,11 @@ final class NativeApi {
               int,
               COptionalStringView,
               Pointer<Pointer<Void>>)>("thinkthen_image_clone");
-  late final int Function(Pointer<Void>, Pointer<CImageViewView>)
+  late final int Function(Pointer<Void>, Pointer<CImageView>)
       thinkthen_image_view = lib.lookupFunction<
-          Int32 Function(Pointer<Void>, Pointer<CImageViewView>),
+          Int32 Function(Pointer<Void>, Pointer<CImageView>),
           int Function(
-              Pointer<Void>, Pointer<CImageViewView>)>("thinkthen_image_view");
+              Pointer<Void>, Pointer<CImageView>)>("thinkthen_image_view");
   late final void Function(Pointer<Void>) thinkthen_image_free =
       lib.lookupFunction<Void Function(Pointer<Void>),
           void Function(Pointer<Void>)>("thinkthen_image_free");

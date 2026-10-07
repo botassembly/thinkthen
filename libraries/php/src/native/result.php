@@ -2,13 +2,14 @@
 declare(strict_types=1);
 namespace ThinkThen\Native;
 
-/** All nested values are copied from native views; no borrowed pointer escapes. */
+/** @template T
+ * All nested values are copied from native views; no borrowed pointer escapes. */
 final class CompleteResult
 {
-    /** @param list<DecideViewView|ChooseViewView|TagViewView|ScoreViewView|FilterViewView|RankViewView|FindViewView|AnnotateViewView|RecognizeViewView|RelateViewView> $rows
+    /** @param list<T> $rows
      * @param list<ObservationView> $observations @param list<DetailsView> $details
      * @param list<QuestionAuthorView> $authors @param list<list<QuestionAuthorView>> $memberAuthors
-     * @param list<list<RankViewView>> $rankMembers */
+     * @param list<list<RankView>> $rankMembers */
     public function __construct(public readonly SummaryView $summary,public readonly array $rows,
         public readonly array $observations,public readonly array $details,public readonly array $authors,
         public readonly array $memberAuthors,public readonly array $rankMembers,

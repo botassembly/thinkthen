@@ -153,7 +153,7 @@ final class CQuestionSpecView extends Struct {
 
 final class CQuestionMemberView extends Struct {
   external CStringView name;
-  external Pointer<CQuestionViewView> question;
+  external Pointer<CQuestionView> question;
 }
 
 final class CQuestionMembersView extends Struct {
@@ -162,7 +162,7 @@ final class CQuestionMembersView extends Struct {
   external int len;
 }
 
-final class CQuestionViewView extends Struct {
+final class CQuestionView extends Struct {
   @Uint32()
   external int kind;
   external CContentView text;
@@ -189,7 +189,7 @@ final class CQuestionViewView extends Struct {
 final class COptionalQuestionView extends Struct {
   @Int32()
   external int present;
-  external CQuestionViewView value;
+  external CQuestionView value;
 }
 
 final class CImagesView extends Struct {
@@ -198,7 +198,7 @@ final class CImagesView extends Struct {
   external int len;
 }
 
-final class CImageViewView extends Struct {
+final class CImageView extends Struct {
   @Uint32()
   external int media;
   external Pointer<Uint8> bytes;
@@ -212,7 +212,7 @@ final class CImageViewView extends Struct {
 }
 
 final class CImageViewsView extends Struct {
-  external Pointer<CImageViewView> data;
+  external Pointer<CImageView> data;
   @Size()
   external int len;
 }
@@ -361,7 +361,7 @@ final class CMemberV1DataView extends Union {
 final class CMemberView extends Struct {
   external CStringView name;
   external CStringView request;
-  external CQuestionViewView question;
+  external CQuestionView question;
   @Uint32()
   external int state;
   external CMemberV1DataView data;

@@ -7,9 +7,16 @@ import 'views.dart';
 import 'input.dart';
 import 'result.dart';
 import 'question.dart';
+import 'api.dart';
 part 'execution.dart';
 part 'batch.dart';
 part 'question_adapter.dart';
+
+NativeApi _library(String path) {
+  if (!path.startsWith('/'))
+    throw ArgumentError('absolute library path required');
+  return NativeApi(path);
+}
 
 final class _Scope {
   final List<Pointer> owned = [];
@@ -73,7 +80,7 @@ final class Cancellation {
 }
 
 /// One owned native engine; results contain no borrowed memory.
-final class Engine {
+final class Engine implements CompleteApi {
   final NativeApi _api;
   late final Pointer<Void> _engine;
   final String _surface;
@@ -86,7 +93,7 @@ final class Engine {
   Engine.flutter(String absoluteLibrary, {String? settingsJson})
       : this._(absoluteLibrary, settingsJson, 'flutter');
   Engine._(String absoluteLibrary, String? settingsJson, this._surface)
-      : _api = NativeApi(absoluteLibrary) {
+      : _api = _library(absoluteLibrary) {
     if (!absoluteLibrary.startsWith('/'))
       throw ArgumentError('absolute library path required');
     if (settingsJson == null) {
@@ -255,67 +262,67 @@ final class Engine {
     return c;
   }
 
-  CompleteResult<DecideViewView> decide(Question question, Source input,
+  CompleteResult<DecideView> decide(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("decide", question, input, controls,
           _api.thinkthen_decide_complete, _readDecide);
-  CompleteResult<ChooseViewView> choose(Question question, Source input,
+  CompleteResult<ChooseView> choose(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("choose", question, input, controls,
           _api.thinkthen_choose_complete, _readChoose);
-  CompleteResult<TagViewView> tag(Question question, Source input,
+  CompleteResult<TagView> tag(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("tag", question, input, controls, _api.thinkthen_tag_complete,
           _readTag);
-  CompleteResult<ScoreViewView> score(Question question, Source input,
+  CompleteResult<ScoreView> score(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("score", question, input, controls,
           _api.thinkthen_score_complete, _readScore);
-  CompleteResult<FilterViewView> filter(Question question, Source input,
+  CompleteResult<FilterView> filter(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("filter", question, input, controls,
           _api.thinkthen_filter_complete, _readFilter);
-  CompleteResult<RankViewView> rank(Question question, Source input,
+  CompleteResult<RankView> rank(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("rank", question, input, controls, _api.thinkthen_rank_complete,
           _readRank);
-  CompleteResult<FindViewView> find(Question question, Source input,
+  CompleteResult<FindView> find(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("find", question, input, controls, _api.thinkthen_find_complete,
           _readFind);
-  CompleteResult<AnnotateViewView> annotate(Question question, Source input,
+  CompleteResult<AnnotateView> annotate(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("annotate", question, input, controls,
           _api.thinkthen_annotate_complete, _readAnnotate);
-  CompleteResult<RecognizeViewView> recognize(Question question, Source input,
+  CompleteResult<RecognizeView> recognize(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("recognize", question, input, controls,
           _api.thinkthen_recognize_complete, _readRecognize);
-  CompleteResult<RelateViewView> relate(Question question, Source input,
+  CompleteResult<RelateView> relate(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _execute("relate", question, input, controls,
           _api.thinkthen_relate_complete, _readRelate);
-  Batch<DecideViewView> decideBatch(Question question, Source input,
+  Batch<DecideView> decideBatch(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _start("decide", question, input, controls,
           _api.thinkthen_decide_batch_start, _readDecide);
-  Batch<ChooseViewView> chooseBatch(Question question, Source input,
+  Batch<ChooseView> chooseBatch(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _start("choose", question, input, controls,
           _api.thinkthen_choose_batch_start, _readChoose);
-  Batch<TagViewView> tagBatch(Question question, Source input,
+  Batch<TagView> tagBatch(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _start("tag", question, input, controls, _api.thinkthen_tag_batch_start,
           _readTag);
-  Batch<ScoreViewView> scoreBatch(Question question, Source input,
+  Batch<ScoreView> scoreBatch(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _start("score", question, input, controls,
           _api.thinkthen_score_batch_start, _readScore);
-  Batch<FilterViewView> filterBatch(Question question, Source input,
+  Batch<FilterView> filterBatch(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _start("filter", question, input, controls,
           _api.thinkthen_filter_batch_start, _readFilter);
-  Batch<AnnotateViewView> annotateBatch(Question question, Source input,
+  Batch<AnnotateView> annotateBatch(Question question, Source input,
           {Controls controls = const Controls()}) =>
       _start("annotate", question, input, controls,
           _api.thinkthen_annotate_batch_start, _readAnnotate);

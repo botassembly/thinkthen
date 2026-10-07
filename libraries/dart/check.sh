@@ -137,3 +137,9 @@ python3 "$CHECKS/plant-check.py"
 python3 "$FLUTTER/run.py"
 python3 "$FLUTTER/plant-check.py"
 python3 "$FLUTTER/embedder.py"
+
+if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ]; then
+  "$TT_DART" compile exe "$CHECKS/consumers/alpha/bin/complete_native.dart" -o "$CHECKS/scratch/complete-native"
+  THINKTHEN_COMPLETE_LIBRARY="$TT_NATIVE_LIBRARY" python3 "$ROOT/../php/fixtures/complete_parity.py" dart
+  THINKTHEN_COMPLETE_LIBRARY="$TT_NATIVE_LIBRARY" python3 "$ROOT/../php/fixtures/complete_parity.py" flutter
+fi

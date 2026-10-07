@@ -76,7 +76,7 @@ final class MemberV1DataView {
 final class MemberView {
   final StringView name;
   final StringView request;
-  final QuestionViewView question;
+  final QuestionView question;
   final int state;
   final MemberV1DataView data;
   const MemberView(
@@ -84,7 +84,7 @@ final class MemberView {
   factory MemberView.copy(CMemberView v) => MemberView(
       StringView.copy(v.name),
       StringView.copy(v.request),
-      QuestionViewView.copy(v.question),
+      QuestionView.copy(v.question),
       v.state,
       MemberV1DataView.copy(
           v.data,

@@ -288,96 +288,90 @@ final class RowView {
       OptionalImageViewsView.copy(v.images));
 }
 
-final class DecideViewView {
+final class DecideView {
   final RowView common;
   final DecideValueView value;
-  const DecideViewView(this.common, this.value);
-  factory DecideViewView.copy(CDecideViewView v) =>
-      DecideViewView(RowView.copy(v.common), DecideValueView.copy(v.value));
+  const DecideView(this.common, this.value);
+  factory DecideView.copy(CDecideView v) =>
+      DecideView(RowView.copy(v.common), DecideValueView.copy(v.value));
 }
 
-final class ChooseViewView {
+final class ChooseView {
   final RowView common;
   final OptionalStringView value;
-  const ChooseViewView(this.common, this.value);
-  factory ChooseViewView.copy(CChooseViewView v) =>
-      ChooseViewView(RowView.copy(v.common), OptionalStringView.copy(v.value));
+  const ChooseView(this.common, this.value);
+  factory ChooseView.copy(CChooseView v) =>
+      ChooseView(RowView.copy(v.common), OptionalStringView.copy(v.value));
 }
 
-final class TagViewView {
+final class TagView {
   final RowView common;
   final StringsView value;
-  const TagViewView(this.common, this.value);
-  factory TagViewView.copy(CTagViewView v) =>
-      TagViewView(RowView.copy(v.common), StringsView.copy(v.value));
+  const TagView(this.common, this.value);
+  factory TagView.copy(CTagView v) =>
+      TagView(RowView.copy(v.common), StringsView.copy(v.value));
 }
 
-final class ScoreViewView {
+final class ScoreView {
   final RowView common;
   final double value;
-  const ScoreViewView(this.common, this.value);
-  factory ScoreViewView.copy(CScoreViewView v) =>
-      ScoreViewView(RowView.copy(v.common), v.value);
+  const ScoreView(this.common, this.value);
+  factory ScoreView.copy(CScoreView v) =>
+      ScoreView(RowView.copy(v.common), v.value);
 }
 
-final class FilterViewView {
+final class FilterView {
   final RowView common;
   final int value;
-  const FilterViewView(this.common, this.value);
-  factory FilterViewView.copy(CFilterViewView v) =>
-      FilterViewView(RowView.copy(v.common), v.value);
+  const FilterView(this.common, this.value);
+  factory FilterView.copy(CFilterView v) =>
+      FilterView(RowView.copy(v.common), v.value);
 }
 
-final class RankViewView {
+final class RankView {
   final RowView common;
   final OptionalSizeView value;
   final OptionalStringView question_name;
-  const RankViewView(this.common, this.value, this.question_name);
-  factory RankViewView.copy(CRankViewView v) => RankViewView(
-      RowView.copy(v.common),
-      OptionalSizeView.copy(v.value),
-      OptionalStringView.copy(v.question_name));
+  const RankView(this.common, this.value, this.question_name);
+  factory RankView.copy(CRankView v) => RankView(RowView.copy(v.common),
+      OptionalSizeView.copy(v.value), OptionalStringView.copy(v.question_name));
 }
 
-final class FindViewView {
+final class FindView {
   final RowView common;
   final OptionalContentView value;
   final OptionalSizeView index;
-  const FindViewView(this.common, this.value, this.index);
-  factory FindViewView.copy(CFindViewView v) => FindViewView(
-      RowView.copy(v.common),
-      OptionalContentView.copy(v.value),
-      OptionalSizeView.copy(v.index));
+  const FindView(this.common, this.value, this.index);
+  factory FindView.copy(CFindView v) => FindView(RowView.copy(v.common),
+      OptionalContentView.copy(v.value), OptionalSizeView.copy(v.index));
 }
 
-final class AnnotateViewView {
+final class AnnotateView {
   final RowView common;
   final MembersView answers;
-  const AnnotateViewView(this.common, this.answers);
-  factory AnnotateViewView.copy(CAnnotateViewView v) =>
-      AnnotateViewView(RowView.copy(v.common), MembersView.copy(v.answers));
+  const AnnotateView(this.common, this.answers);
+  factory AnnotateView.copy(CAnnotateView v) =>
+      AnnotateView(RowView.copy(v.common), MembersView.copy(v.answers));
 }
 
-final class RecognizeViewView {
+final class RecognizeView {
   final RowView common;
   final RecognizeValueView value;
   final RecognizeAnswerView answer;
-  const RecognizeViewView(this.common, this.value, this.answer);
-  factory RecognizeViewView.copy(CRecognizeViewView v) => RecognizeViewView(
+  const RecognizeView(this.common, this.value, this.answer);
+  factory RecognizeView.copy(CRecognizeView v) => RecognizeView(
       RowView.copy(v.common),
       RecognizeValueView.copy(v.value),
       RecognizeAnswerView.copy(v.answer));
 }
 
-final class RelateViewView {
+final class RelateView {
   final RowView common;
   final EdgesView value;
   final RelationAnswersView questions;
-  const RelateViewView(this.common, this.value, this.questions);
-  factory RelateViewView.copy(CRelateViewView v) => RelateViewView(
-      RowView.copy(v.common),
-      EdgesView.copy(v.value),
-      RelationAnswersView.copy(v.questions));
+  const RelateView(this.common, this.value, this.questions);
+  factory RelateView.copy(CRelateView v) => RelateView(RowView.copy(v.common),
+      EdgesView.copy(v.value), RelationAnswersView.copy(v.questions));
 }
 
 final class ObservedProbabilitiesV1DataView {

@@ -75,7 +75,7 @@ Object? encodeNative(Object? v) {
     return {'name': encodeNative(v.name), 'question': encodeNative(v.question)};
   if (v is QuestionMembersView)
     return {'data': encodeNative(v.data), 'len': encodeNative(v.len)};
-  if (v is QuestionViewView)
+  if (v is QuestionView)
     return {
       'kind': encodeNative(v.kind),
       'text': encodeNative(v.text),
@@ -98,7 +98,7 @@ Object? encodeNative(Object? v) {
     };
   if (v is OptionalQuestionView)
     return {'present': encodeNative(v.present), 'value': encodeNative(v.value)};
-  if (v is ImageViewView)
+  if (v is ImageView)
     return {
       'media': encodeNative(v.media),
       'bytes': v.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
@@ -427,40 +427,40 @@ Object? encodeNative(Object? v) {
       'meta': encodeNative(v.meta),
       'images': encodeNative(v.images)
     };
-  if (v is DecideViewView)
+  if (v is DecideView)
     return {'common': encodeNative(v.common), 'value': encodeNative(v.value)};
-  if (v is ChooseViewView)
+  if (v is ChooseView)
     return {'common': encodeNative(v.common), 'value': encodeNative(v.value)};
-  if (v is TagViewView)
+  if (v is TagView)
     return {'common': encodeNative(v.common), 'value': encodeNative(v.value)};
-  if (v is ScoreViewView)
+  if (v is ScoreView)
     return {'common': encodeNative(v.common), 'value': encodeNative(v.value)};
-  if (v is FilterViewView)
+  if (v is FilterView)
     return {'common': encodeNative(v.common), 'value': encodeNative(v.value)};
-  if (v is RankViewView)
+  if (v is RankView)
     return {
       'common': encodeNative(v.common),
       'value': encodeNative(v.value),
       'question_name': encodeNative(v.question_name)
     };
-  if (v is FindViewView)
+  if (v is FindView)
     return {
       'common': encodeNative(v.common),
       'value': encodeNative(v.value),
       'index': encodeNative(v.index)
     };
-  if (v is AnnotateViewView)
+  if (v is AnnotateView)
     return {
       'common': encodeNative(v.common),
       'answers': encodeNative(v.answers)
     };
-  if (v is RecognizeViewView)
+  if (v is RecognizeView)
     return {
       'common': encodeNative(v.common),
       'value': encodeNative(v.value),
       'answer': encodeNative(v.answer)
     };
-  if (v is RelateViewView)
+  if (v is RelateView)
     return {
       'common': encodeNative(v.common),
       'value': encodeNative(v.value),
@@ -551,7 +551,7 @@ Object? encodeNative(Object? v) {
     };
   if (v is SourceDetailsView)
     return {'data': encodeNative(v.data), 'len': encodeNative(v.len)};
-  if (v is InputViewView)
+  if (v is InputView)
     return {
       'original': encodeNative(v.original),
       'position': encodeNative(v.position),

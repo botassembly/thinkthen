@@ -285,57 +285,57 @@ final class CRowView extends Struct {
   external COptionalImageViewsView images;
 }
 
-final class CDecideViewView extends Struct {
+final class CDecideView extends Struct {
   external CRowView common;
   external CDecideValueView value;
 }
 
-final class CChooseViewView extends Struct {
+final class CChooseView extends Struct {
   external CRowView common;
   external COptionalStringView value;
 }
 
-final class CTagViewView extends Struct {
+final class CTagView extends Struct {
   external CRowView common;
   external CStringsView value;
 }
 
-final class CScoreViewView extends Struct {
+final class CScoreView extends Struct {
   external CRowView common;
   @Double()
   external double value;
 }
 
-final class CFilterViewView extends Struct {
+final class CFilterView extends Struct {
   external CRowView common;
   @Int32()
   external int value;
 }
 
-final class CRankViewView extends Struct {
+final class CRankView extends Struct {
   external CRowView common;
   external COptionalSizeView value;
   external COptionalStringView question_name;
 }
 
-final class CFindViewView extends Struct {
+final class CFindView extends Struct {
   external CRowView common;
   external COptionalContentView value;
   external COptionalSizeView index;
 }
 
-final class CAnnotateViewView extends Struct {
+final class CAnnotateView extends Struct {
   external CRowView common;
   external CMembersView answers;
 }
 
-final class CRecognizeViewView extends Struct {
+final class CRecognizeView extends Struct {
   external CRowView common;
   external CRecognizeValueView value;
   external CRecognizeAnswerView answer;
 }
 
-final class CRelateViewView extends Struct {
+final class CRelateView extends Struct {
   external CRowView common;
   external CEdgesView value;
   external CRelationAnswersView questions;
@@ -391,16 +391,16 @@ final class CQuestionObservationView extends Struct {
 }
 
 final class CRowObservationV1DataView extends Union {
-  external CDecideViewView decide;
-  external CChooseViewView choose;
-  external CTagViewView tag;
-  external CScoreViewView score;
-  external CFilterViewView filter;
-  external CRankViewView rank;
-  external CFindViewView find;
-  external CAnnotateViewView annotate;
-  external CRecognizeViewView recognize;
-  external CRelateViewView relate;
+  external CDecideView decide;
+  external CChooseView choose;
+  external CTagView tag;
+  external CScoreView score;
+  external CFilterView filter;
+  external CRankView rank;
+  external CFindView find;
+  external CAnnotateView annotate;
+  external CRecognizeView recognize;
+  external CRelateView relate;
 }
 
 final class CRowObservationView extends Struct {

@@ -20,7 +20,7 @@ def main():
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
-    library=ROOT/'libraries/c/target/debug/libthinkthen_c.so'
+    library=Path(os.environ.get('THINKTHEN_COMPLETE_LIBRARY',str(ROOT/'libraries/c/target/debug/libthinkthen_c.so')))
     dart=os.environ.get('TT_DART',str(Path.home()/'.local/opt/flutter/bin/dart'))
     flutter=os.environ.get('TT_FLUTTER',str(Path.home()/'.local/opt/flutter/bin/flutter'))
     failures=0
@@ -28,6 +28,27 @@ def main():
         scratch=Path(tmp)
         helper=scratch/'cancel.so'
         subprocess.run(['cc','-shared','-fPIC','-pthread','-Wall','-Wextra','-Werror',str(ROOT/'libraries/php/fixtures/cancel_reader.c'),'-ldl','-o',str(helper)],check=True)
+        # Counted descriptor constructors are an additional public door, with no synthetic parity cells.
+        with tempfile.TemporaryDirectory(prefix='constructors-',dir=scratch) as owned:
+            env={'PATH':os.environ['PATH'],'HOME':owned,'XDG_CONFIG_HOME':owned+'/config',
+                 'XDG_CACHE_HOME':owned+'/cache','XDG_STATE_HOME':owned+'/state','LANG':'C.UTF-8',
+                 'PUB_CACHE':os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
+                 'FLUTTER_SUPPRESS_ANALYTICS':'true','CI':'true'}
+            backend=Backend(ROOT/'target/debug/conformance-backend',env)
+            try:
+                settings=compact({'base_url':f'http://127.0.0.1:{backend.port}/generic/v1','cache':False,'max_retries':0})
+                env['THINKTHEN_API_KEY']='sk-conformance-loopback'
+                if consumer=='php':command=['/usr/bin/php8.3','-n','-d','extension=ffi','-d','ffi.enable=1',str(ROOT/'libraries/php/fixtures/complete_constructed.php'),str(library),settings]
+                elif consumer=='dart':command=[dart,str(ROOT/'libraries/dart/checks/consumers/alpha/bin/complete_constructed.dart'),str(library),settings]
+                else:
+                    command=[flutter,'test','--no-pub','--reporter','expanded',str(ROOT/'libraries/dart/flutter/example/test/complete_constructed_test.dart')]
+                    env.update(TT_NATIVE_LIBRARY=str(library),TT_SETTINGS=settings)
+                output=subprocess.run(command,env=env,cwd=ROOT/'libraries/dart/flutter/example' if consumer=='flutter' else ROOT,capture_output=True,text=True,timeout=60)
+                assert output.returncode==0,(output.stdout,output.stderr)
+                assert 'sk-conformance-loopback' not in output.stdout+output.stderr
+                assert int(backend.read('count'))==11
+                print(consumer+' counted constructors: ten functions, 11 arrivals, copied results retained after close',flush=True)
+            finally:backend.close()
         for row in rows:
             error=None
             try:
@@ -54,6 +75,8 @@ def main():
                                 child['THINKTHEN_BASE_URL']=f'http://127.0.0.1:{backend.port}/{step["arm"]}'
                                 prepare(home,step)
                             settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{})}
+                            # The image wire oracle expects input-order captures; bound native concurrency.
+                            if value.get('image_variants'):settings['throttle']=1
                             settings['base_url']=child['THINKTHEN_BASE_URL']
                             settings={k:str(home/'saved') if v=='$FOLDER' else str(home/'refreshed') if v=='$REFRESH' else str(home/'profile.json') if v=='$PROFILE' else v for k,v in settings.items()}
                             if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
@@ -84,7 +107,9 @@ def main():
                                     if consumer=='flutter':payload=json.loads((home/'output.json').read_text())
                                     else:
                                         assert not stderr,stderr
+                                        assert 'sk-conformance-loopback' not in stdout+stderr, 'credential leaked'
                                         payload=json.loads(stdout)
+                                    assert 'sk-conformance-loopback' not in compact(payload), 'credential leaked'
                                     return project(payload,step['verb'])
                                 finally:
                                     if running.poll() is None:running.kill();running.wait()

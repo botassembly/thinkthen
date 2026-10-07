@@ -21,9 +21,9 @@ Future<void> main(List<String> args) async {
 
 /// This consumer is also invoked through the separately executed Flutter facade.
 Future<Map<String, Object?>> consume(
-    Map<String, dynamic> v, dynamic engine, String library) async {
+    Map<String, dynamic> v, CompleteApi engine, String library) async {
   Cancellation? token;
-  Batch? batch;
+  Batch<Object>? batch;
   Pointer<Void>? thread;
   void Function(Pointer<Void>)? join;
   try {
@@ -39,7 +39,7 @@ Future<Map<String, Object?>> consume(
       'relate' => LoaderRole.relate,
       _ => LoaderRole.atomic
     };
-    var q = v.containsKey('loader')
+    var q = v['loader'] != null
         ? switch (v['loader']) {
             'load' || 'file' => Question.file(v['reference']),
             'load_named' || 'named' => Question.named(role, v['reference']),
@@ -95,7 +95,7 @@ Future<Map<String, Object?>> consume(
       ]);
     }
     if (injection == 'cancel_token' || v['held_cancel'] == true) {
-      token = engine.cancellation() as Cancellation;
+      token = engine.cancellation();
       if (injection == 'cancel_token') token.fire();
     }
     if (v['held_cancel'] == true) {
@@ -131,7 +131,7 @@ Future<Map<String, Object?>> consume(
         'filter' => engine.filterBatch(q, source, controls: controls),
         'annotate' => engine.annotateBatch(q, source, controls: controls),
         _ => throw StateError('no aggregate batch')
-      } as Batch;
+      };
       final completed = <Object?>[];
       try {
         while (true) {

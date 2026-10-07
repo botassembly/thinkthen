@@ -40,23 +40,33 @@ Each GitHub release ships `thinkthen-php-VERSION-x86_64-unknown-linux-gnu.tar.gz
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
 
-## 0.2 typed integration in progress (0429)
+## Complete typed calls
 
-The private `src/complete` models and ten named `Requests` builders implement
-reviewed result/2 fields and typed inputs. They are deliberately absent from
-`autoload.php`. Existing methods above keep their released behavior. The
-independent fixtures exercise carriers and request construction; they do not
-establish complete native parity. [0429](../../sdlc/tickets/0429-php-dart-flutter-typed-parity.md)
-records the remaining actual C calls/views, ownership review and runtime cases.
+`autoload.php` also provides `ThinkThen\Native\Engine`. It exposes `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate` through the matching complete native functions. Existing `ThinkThen` methods retain their return types.
 
-Private JSON readers require `stdClass` for objects and PHP arrays for lists,
-preserving `{}` versus `[]` and numeric option/member names as strings in ordered
-entry carriers. Known count fields admit exact signed 64-bit integers and reject
-larger values, strings, floats and booleans. Use `JSON_BIGINT_AS_STRING` when
-reading fixture JSON so overflow is rejected rather than rounded. Arbitrary
-original/author JSON remains content; do not coerce unsupported numeric tokens
-into a claimed typed native result. Native adaptation of larger unsigned counts
-and lossless arbitrary numeric payloads remains pending. An authored-null decide
-JSON value cannot distinguish the authored meaning from uncertainty; the private
-reader refuses it and requires the reviewed C view discriminator. Its carrier
-can retain authored null and Boolean meanings without reinterpretation.
+```php
+use ThinkThen\Native\{Engine, Question, QuestionSpec, FunctionKind, Content, Records, Record};
+
+$engine = new Engine($absoluteLibrary, $settingsJson);
+try {
+    $question = Question::spec(new QuestionSpec(
+        FunctionKind::DECIDE, Content::text('Does this ask for a refund?')));
+    $result = $engine->decide($question,
+        new Records([new Record(Content::text('Refund me please.'))]));
+    $row = $result->rows[0];
+    $answerId = $row->common->answer_id->data;
+    $probability = $row->common->answer->value->data->probability;
+} finally { $engine->close(); }
+```
+
+`QuestionSpec` carries typed options/descriptions, meanings, thresholds, models, profiles, batch settings, pointers, question members, recognition kinds and relation rules. `Author`, `Declaration` and `Property` carry optional names, wording versions and item/context schemas. Native admission enforces their contract. `Question::file`, `named` and `reference` use native loaders; `Question::saved(LoaderRole::…, $json)` explicitly imports saved grammar through one native parser. It never infers a path from text.
+
+`Records` retains each `Record`'s original `Content`, context, complete candidate replacement and ordered `Image` attachments. `Content::text` preserves literal text; `Content::json` carries arbitrary caller JSON, including explicit null. `Files` selects native line, window, whole-file, image-file or JSONL reading with `FileUnit`. Only decide/choose/score admit images on an admitted route. Other combinations fail explicitly before sending. No host reader, cache or scheduler is added.
+
+Results contain copied function views, summary/facts/attempts, every observation and its details/author, row details/authors, annotation member authors, rank member views and located recognition/relation views. Nested known fields have typed properties; arbitrary authored/original JSON remains explicit `ContentView` bytes. An optional view's `present` distinguishes absence from zero, false and empty values. Decide's `kind` distinguishes uncertainty (0), ordinary Boolean (1) and authored meaning (2), including authored Boolean/null. Find answer views accept the declared C answer tag 5 and the current native tag 7, preserving the actual tag and its named-answer fields. Unsigned native counters are exact decimal strings. Wording versions remain subject to native bounds.
+
+`CompleteFailure` exposes the six named kinds through `kind()`, safe message/code/retryability, and its copied `summary`, with final facts/attempts only when the native call started. `Controls` supplies deadline, native cancellation, context, packing and attempts. `decideBatch`, `chooseBatch`, `tagBatch`, `scoreBatch`, `filterBatch` and `annotateBatch` own native lazy batches: call `next()` until exhaustion, then `facts()`, and always `close()`. Close batches before the engine. Eager results and yielded rows remain readable after close. PHP blocks during FFI calls; a native cooperating thread can fire the borrowed cancellation token, while ordinary PHP code can pre-fire it or set a deadline.
+
+Cache, record, refresh and strict replay use the engine settings and native storage, including changed-reading replay and native identities. Large admitted inputs need an adequate PHP `memory_limit`; the complete shared image suite uses 2 GiB, because copied views retain original evidence. No setting is changed automatically.
+
+The prior `src/complete` JSON carrier readers remain private compatibility work. Their signed-integer/ambiguous-authored-null restrictions do not limit the native views above. Run the existing canonical suite with `python3 libraries/php/fixtures/complete_parity.py php` from the checkout; it counts owned loopback arrivals and emits cells only for actual public calls. No paid backend is used.

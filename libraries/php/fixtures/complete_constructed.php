@@ -4,7 +4,7 @@ require dirname(__DIR__).'/autoload.php';
 use ThinkThen\Native\{Engine,Question,QuestionSpec,FunctionKind,Content,Choice,Member,Relation,Records,Record,Author,Declaration,Property,PropertyKind};
 $e=new Engine($argv[1],$argv[2]);
 try {
-    $decide=Question::spec(new QuestionSpec(FunctionKind::DECIDE,Content::text('Refund?'),
+    $decide=Question::spec(new QuestionSpec(FunctionKind::DECIDE,Content::text('Does this ask for a refund?'),
         author:new Author('refund','2147483647',Declaration::string())));
     $specs=[
         'decide'=>$decide,
@@ -19,7 +19,7 @@ try {
     ];
     $results=[];
     foreach($specs as $verb=>$q){
-        $source=$verb==='relate'?new Records([new Record(Content::json((object)['name'=>'Alice','kind'=>'person'])),new Record(Content::json((object)['name'=>'Paris','kind'=>'place']))]):new Records($verb==='find'?[new Record(Content::text('Alice visited Paris.')),new Record(Content::text('Refund me.'))]:[new Record(Content::text('Alice visited Paris. Refund me.'))]);
+        $source=$verb==='relate'?new Records([new Record(Content::json((object)['name'=>'Alice','kind'=>'person'])),new Record(Content::json((object)['name'=>'Paris','kind'=>'place']))]):new Records($verb==='find'?[new Record(Content::text('Alice visited Paris.')),new Record(Content::text('Refund me.'))]:[new Record(Content::text('Refund me please.'))]);
         $r=$e->$verb($q,$source);
         if($r->summary->state!==1 || !$r->summary->facts->present || !$r->rows || strlen($r->rows[0]->common->answer_id->data)!==64)throw new RuntimeException('typed constructor did not execute');
         if($verb==='decide' && $r->authors[0]->wording_version->value!=='2147483647')throw new RuntimeException('unsigned wording version changed');

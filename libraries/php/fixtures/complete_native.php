@@ -48,7 +48,7 @@ function consume(array $v,string $library,string $settings): array
 }
 function encodeNative(mixed $v): mixed
 {
-    if($v instanceof ThinkThen\Native\ImageViewView){$out=get_object_vars($v);$out['bytes']=bin2hex($v->bytes);return array_map(encodeNative(...),$out);}
+    if($v instanceof ThinkThen\Native\ImageView){$out=get_object_vars($v);$out['bytes']=bin2hex($v->bytes);return array_map(encodeNative(...),$out);}
     if(is_object($v))return array_map(encodeNative(...),get_object_vars($v));
     if(is_array($v))return array_map(encodeNative(...),$v);
     return $v;

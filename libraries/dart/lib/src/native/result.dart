@@ -9,7 +9,7 @@ final class CompleteResult<T> {
   final List<DetailsView> details, observationDetails;
   final List<QuestionAuthorView> authors, observationAuthors;
   final List<List<QuestionAuthorView>> memberAuthors;
-  final List<List<RankViewView>> rankMembers;
+  final List<List<RankView>> rankMembers;
   final List<SourceRecognitionView?> sourceRecognitions;
   final List<SourceRelationsView?> sourceRelations;
   CompleteResult(
@@ -19,7 +19,7 @@ final class CompleteResult<T> {
       List<DetailsView> details,
       List<QuestionAuthorView> authors,
       List<List<QuestionAuthorView>> memberAuthors,
-      List<List<RankViewView>> rankMembers,
+      List<List<RankView>> rankMembers,
       List<DetailsView> observationDetails,
       List<QuestionAuthorView> observationAuthors,
       List<SourceRecognitionView?> sourceRecognitions,
@@ -31,7 +31,7 @@ final class CompleteResult<T> {
         memberAuthors = List.unmodifiable(
             memberAuthors.map(List<QuestionAuthorView>.unmodifiable)),
         rankMembers =
-            List.unmodifiable(rankMembers.map(List<RankViewView>.unmodifiable)),
+            List.unmodifiable(rankMembers.map(List<RankView>.unmodifiable)),
         observationDetails = List.unmodifiable(observationDetails),
         observationAuthors = List.unmodifiable(observationAuthors),
         sourceRecognitions = List.unmodifiable(sourceRecognitions),
