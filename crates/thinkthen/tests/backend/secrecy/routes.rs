@@ -143,7 +143,7 @@ pub(crate) const PATHS: [Route; 17] = [
             "the entry names a schema this version does not read, \
              and this version reads `thinkthen.recording/1`",
         ),
-        fixture_says: Some("records a different question, so the file was damaged or hand-edited"),
+        fixture_says: Some("stored constituents or identity are invalid"),
         keyed: true,
     },
     route(

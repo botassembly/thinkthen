@@ -293,6 +293,20 @@ impl Store {
         if self.private && self.folder.exists() {
             require_private(&self.folder)?;
         }
+        let jsonl = self.folder.join(JSONL);
+        let read_fixture = || {
+            if exists(&jsonl)? {
+                fixture::read(&jsonl)?.normalized().map(Some)
+            } else {
+                Ok(None)
+            }
+        };
+        // Refusing a fixture must not create a competing empty replay store.
+        let fixture = if exists(&sqlite)? {
+            None
+        } else {
+            read_fixture()?
+        };
         make_folder(&self.folder)?;
         create_private(&sqlite)?;
         let connection = Connection::open(&sqlite).map_err(storage)?;
@@ -306,11 +320,9 @@ impl Store {
             connection.query_row("PRAGMA user_version", [], |row| row.get(0))
         })?;
         if version == 0 {
-            let jsonl = self.folder.join(JSONL);
-            let fixture = if exists(&jsonl)? {
-                Some(fixture::read(&jsonl)?.normalized()?)
-            } else {
-                None
+            let fixture = match fixture {
+                Some(entries) => Some(entries),
+                None => read_fixture()?,
             };
             self.waiting(cancel, || {
                 connection.execute_batch("PRAGMA auto_vacuum = INCREMENTAL")

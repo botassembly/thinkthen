@@ -10,7 +10,9 @@ impl Store {
             let version: u32 = self.waiting(cancel, || {
                 connection.query_row("PRAGMA user_version", [], |row| row.get(0))
             })?;
-            let entries = Entries::read(connection)?.normalized()?;
+            let entries = Entries::read(connection)
+                .and_then(Entries::normalized)
+                .map_err(super::versioned::sqlite_error)?;
             if version == 2 {
                 return Ok(());
             }

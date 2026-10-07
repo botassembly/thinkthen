@@ -20,6 +20,9 @@ pub(crate) const ENDPOINT_PATH: &str = "systemone";
 pub(crate) const QUOTED: &str = "Each question quotes the text it asks about.";
 pub(crate) const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
 
+#[path = "../../../../conformance/consumer/consumer/tests/public/keys.rs"]
+pub(crate) mod shared_keys;
+
 #[derive(Serialize)]
 struct Request<'a> {
     state: &'a str,
@@ -86,6 +89,23 @@ pub(crate) fn digest(url: &str, request: &[u8]) -> String {
 /// Independent result/2 question keys in wire order; these fixtures report
 /// the requested model, so both normalized model fields have the same bytes.
 pub(crate) fn keys(url: &str, body: &[u8]) -> Vec<String> {
+    let body_json: serde_json::Value = serde_json::from_slice(body).expect("a request body");
+    reported_keys(
+        url,
+        body,
+        body_json
+            .get("model")
+            .and_then(serde_json::Value::as_str)
+            .expect("a requested model"),
+    )
+}
+
+pub(crate) fn reported_keys(url: &str, body: &[u8], reported: &str) -> Vec<String> {
+    shared_keys::keys(url, body, reported).expect("v2 question keys")
+}
+
+/// Unversioned saved rows retain the original LF-framed v1 identity.
+pub(crate) fn legacy_keys(url: &str, body: &[u8]) -> Vec<String> {
     #[derive(serde::Deserialize)]
     struct Parts<'a> {
         #[serde(borrow)]
@@ -106,18 +126,14 @@ pub(crate) fn keys(url: &str, body: &[u8]) -> Vec<String> {
         .into_iter()
         .map(|(_, question)| {
             let mut digest = Sha256::new();
-            digest.update(b"thinkthen.question-key/2\0");
-            for part in [
+            let parts = [
                 "systemone",
                 url,
                 parts.model.get(),
-                parts.model.get(),
                 parts.state.get(),
                 question.get(),
-            ] {
-                digest.update((part.len() as u64).to_be_bytes());
-                digest.update(part.as_bytes());
-            }
+            ];
+            digest.update(parts.join("\n").as_bytes());
             digest
                 .finalize()
                 .iter()
@@ -183,7 +199,7 @@ pub(crate) fn plant_fixture(
         .map(|(name, question)| (name[1..].parse::<usize>().unwrap_or(0), question.get()))
         .collect();
     questions.sort_by_key(|(place, _)| *place);
-    let keys = keys(url, body);
+    let keys = legacy_keys(url, body);
     let state = parts.state.get();
     let state_sha256: String = Sha256::digest(state.as_bytes())
         .iter()
@@ -223,7 +239,7 @@ pub(crate) fn plant_fixture(
     }
     fs::create_dir_all(folder)?;
     fs::write(folder.join("thinkthen.jsonl"), text)?;
-    Ok(keys)
+    Ok(self::keys(url, body))
 }
 
 pub(crate) fn plant_recording(

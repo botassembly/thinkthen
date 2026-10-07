@@ -18,6 +18,14 @@ pub(super) fn invalid() -> Error {
     )
 }
 
+/// The common validator also reads SQLite snapshots; retain their actual source.
+pub(super) fn sqlite_error(error: Error) -> Error {
+    match error {
+        Error::Entry(_, why) => Error::Entry(super::SQLITE.to_owned(), why),
+        other => other,
+    }
+}
+
 pub(super) fn legacy_id(
     answer: &Answer,
     state: &str,
