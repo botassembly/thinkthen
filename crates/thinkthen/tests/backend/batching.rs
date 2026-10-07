@@ -281,11 +281,11 @@ fn a_table_shares_one_request_and_filter_prints_its_kept_rows() {
     assert_eq!(text(&output.stdout), "{\"body\":\"line 2\"}\n");
 }
 
-/// Equal questions in one call are asked once, by ADR 0111 section 2: ten
+/// Equal questions pending together share one answer, by ADR 0111 section 3: ten
 /// thousand lines of five values send one request of five questions, and
 /// every row reads its question's answer.
 #[test]
-fn equal_records_ask_their_question_once() {
+fn equal_records_pending_together_ask_their_question_once() {
     let repeats: String = (0..10_000)
         .map(|at| format!("line {}\n", at % 5 + 1))
         .collect();

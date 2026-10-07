@@ -1,7 +1,5 @@
-//! A typed view of the packer: the requests a call would send with an
-//! empty store, before any is sent.
+//! A request admission bound and uninterrupted packed-body preview, before any send.
 
-use std::collections::HashSet;
 use std::fmt;
 
 use serde::Serialize;
@@ -19,8 +17,8 @@ use super::error::Error;
 use super::options::CallOptions;
 use super::question::Kind;
 
-/// Prepared request counts before cache answers, refusal splits or retries.
-/// The token band is an estimate of the prepared body bytes, not a bill.
+/// A request admission bound before cache answers, refusal splits or retries.
+/// Bytes and the token band describe the uncoalesced uninterrupted preview, not a bill.
 /// It serializes as the `plan` definition of the result schema.
 #[derive(Clone, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "plan"))]
@@ -61,12 +59,13 @@ impl PlanEstimate {
     pub const fn records(&self) -> usize {
         self.records
     }
-    /// Planned requests before cache answers, refusal splits and retries.
+    /// Initial-request bound counting admitted wire-question occurrences.
+    /// Refusal splits and retries have separate limits.
     #[must_use]
     pub const fn requests(&self) -> usize {
         self.requests
     }
-    /// Exact bytes of bodies known at plan time.
+    /// Exact body bytes in the uncoalesced uninterrupted packed preview.
     #[must_use]
     pub const fn estimated_bytes(&self) -> usize {
         self.estimated_bytes
@@ -79,7 +78,7 @@ impl PlanEstimate {
             self.estimated_input_tokens.upper,
         )
     }
-    /// Whether later staged requests could only be bounded before replies.
+    /// Whether the request bound exceeds the packed preview count or includes staged work.
     #[must_use]
     pub const fn upper_bound(&self) -> bool {
         self.upper_bound
@@ -92,7 +91,7 @@ impl PlanEstimate {
 }
 
 impl Engine {
-    /// Validate all records and preview the same packed requests execution prepares.
+    /// Validate all records, bound initial requests and preview uninterrupted packing.
     /// This reads no key, cache or network and sends nothing.
     ///
     /// # Errors
@@ -173,7 +172,7 @@ impl Engine {
             packer.check_state(&state).map_err(packed)?;
         }
         let mut summary = PlanSummary::new(false);
-        let mut seen = HashSet::new();
+        let mut occurrences = 0_usize;
         let mut closed = Vec::new();
         for (at, item) in records.into_iter().enumerate() {
             let item = item?;
@@ -187,9 +186,8 @@ impl Engine {
                 Miss::Failed(_) => Error::defect("a plan read an answer"),
             })?;
             summary.record().map_err(|_| too_large())?;
-            let entries = asks
+            let entries: Vec<_> = asks
                 .into_iter()
-                .filter(|ask| seen.insert(ask.key))
                 .map(|ask| Entry {
                     options: pipeline::options(&ask),
                     state: ask.state,
@@ -197,12 +195,18 @@ impl Engine {
                     item: (),
                 })
                 .collect();
+            occurrences = occurrences
+                .checked_add(entries.len())
+                .ok_or_else(too_large)?;
             packer.add(entries, &mut closed).map_err(packed)?;
+            for request in closed.drain(..) {
+                summary.request(&request.body).map_err(|_| too_large())?;
+            }
         }
-        closed.extend(packer.close());
-        for request in &closed {
+        for request in packer.close() {
             summary.request(&request.body).map_err(|_| too_large())?;
         }
+        summary.bound_requests(occurrences);
         let counts = summary.counts().map_err(|_| too_large())?;
         let first_body = summary
             .first_body()

@@ -31,10 +31,10 @@ fn public_plan_reads_every_record_and_discloses_the_same_two_prepared_bodies_wit
         .expect("plan");
     assert_eq!(
         (plan.records(), plan.requests(), plan.estimated_bytes()),
-        (3, 2, 418)
+        (3, 3, 418)
     );
     assert_eq!(plan.estimated_input_tokens(), (215, 380));
-    assert!(!plan.upper_bound());
+    assert!(plan.upper_bound());
     assert_eq!(plan.first_body(), Some(FIRST.as_bytes()));
     assert_eq!(listener.count(), 0);
     let refused = engine.plan_with(
@@ -144,5 +144,29 @@ fn fallible_plan_returns_the_reader_error_at_admission_and_leaves_the_tail_unrea
     assert_eq!(error.kind(), ErrorKind::Local);
     assert_eq!(error.to_string(), "reader stopped");
     assert_eq!(pulls.get(), 2);
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn repeated_tag_inputs_bound_each_wire_question_and_keep_the_uncoalesced_preview() {
+    let listener =
+        Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .no_cache()
+        .build()
+        .expect("keyless engine");
+    let question = Question::tag_labels("Which apply?")
+        .and_then(|labels| labels.label("urgent", None))
+        .and_then(|labels| labels.label("later", None))
+        .and_then(thinkthen::LabelBuilder::build)
+        .expect("labels");
+    let plan = engine.plan(&question, ["same", "same"]).expect("plan");
+    assert_eq!((plan.records(), plan.requests()), (2, 4));
+    assert!(plan.upper_bound());
+    let body: serde_json::Value =
+        serde_json::from_slice(plan.first_body().expect("first body")).expect("JSON body");
+    assert_eq!(body["questions"].as_object().expect("questions").len(), 4);
     assert_eq!(listener.count(), 0);
 }
