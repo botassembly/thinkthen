@@ -7934,18 +7934,7 @@
   ],
   "parity": {
     "schema": "thinkthen.parity-cases/1",
-    "pending_consumers": [
-      {
-        "id": "mcp",
-        "surface": "libraries/mcp",
-        "owner": "0455",
-        "baseline": [
-          "sh",
-          "libraries/mcp/check.sh"
-        ],
-        "dependency": "0455 must land installed thinkthen mcp, libraries/mcp/check.sh and the native closed mcp surface token/result schema; saved branch ticket/0455-mcp-ten-function-surface is WIP, not execution proof"
-      }
-    ],
+    "pending_consumers": [],
     "functions": [
       "decide",
       "choose",
