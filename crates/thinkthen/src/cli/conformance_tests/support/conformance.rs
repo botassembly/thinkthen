@@ -53,7 +53,7 @@ pub(super) struct Case {
     pub(super) operation: Option<Injection>,
     pub(super) exchanges: Vec<Exchange>,
     #[serde(rename = "runtime_exchanges")]
-    _runtime_exchanges: Option<Vec<Exchange>>,
+    _runtime_exchanges: Option<Vec<Box<RawValue>>>,
     pub(super) expect: Expect,
 }
 
