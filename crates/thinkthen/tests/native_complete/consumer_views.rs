@@ -306,3 +306,82 @@ fn located_annotation_documents_use_the_native_json_or_literal_reading_without_l
             .all(|request| !String::from_utf8_lossy(&request.body).contains("input.txt"))
     );
 }
+
+#[test]
+fn atomic_and_rank_pointer_reading_preserves_literal_text_and_admits_explicit_json() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    let authored =
+        r#"{"decide":"Refund?","on":"/payload","item_schema":{"type":"object","properties":{}}}"#;
+    let atomic = Question::from_json(authored).unwrap();
+    let rank = Question::rank_from_json(authored).unwrap();
+    let text = r#"{"payload":{}}"#;
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
+    let literal = reading
+        .compose(thinkthen::RawRecord::text(text).unwrap())
+        .unwrap()
+        .original;
+    for input in [
+        thinkthen::QuestionInput::Text(text.into()),
+        thinkthen::QuestionInput::Record(literal),
+    ] {
+        let records = || {
+            [RecordInput {
+                original: input.clone(),
+                context: None,
+                options: None,
+            }]
+        };
+        assert_eq!(
+            engine
+                .decide_records_complete_with(&atomic, records(), CallOptions::new())
+                .unwrap_err()
+                .kind(),
+            ErrorKind::Usage
+        );
+        assert_eq!(
+            engine
+                .rank_records_complete_with(&rank, records(), CallOptions::new())
+                .unwrap_err()
+                .kind(),
+            ErrorKind::Usage
+        );
+    }
+    assert_eq!(listener.count(), 0);
+    let parsed = reading
+        .compose(thinkthen::RawRecord::json(text).unwrap())
+        .unwrap()
+        .original;
+    let located = thinkthen::QuestionInput::annotation_text(
+        text,
+        thinkthen::SourceLocation::new("typed.json".into(), None, None).unwrap(),
+    )
+    .unwrap();
+    for input in [thinkthen::QuestionInput::Record(parsed), located] {
+        let records = || {
+            [RecordInput {
+                original: input.clone(),
+                context: None,
+                options: None,
+            }]
+        };
+        engine
+            .decide_records_complete_with(&atomic, records(), CallOptions::new())
+            .unwrap();
+        engine
+            .rank_records_complete_with(&rank, records(), CallOptions::new())
+            .unwrap();
+    }
+    assert_eq!(listener.count(), 4);
+    for request in listener.requests() {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        assert_eq!(
+            body["state"],
+            "Each question quotes the text it asks about."
+        );
+        assert!(!String::from_utf8(request.body).unwrap().contains("payload"));
+    }
+}
