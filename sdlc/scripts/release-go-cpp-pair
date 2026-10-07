@@ -77,8 +77,13 @@ for name in "$first" "$second" ${third:+"$third"}; do
 done
 if [ "$mode" = go-cpp ]; then
 	tar -tzf "$dir/$first" | LC_ALL=C sort >"$work/members" || fail "cannot list $first"
-	printf '%s\n' ./ ./LICENSE ./README.md ./go.mod ./thinkthen.go ./result.go \
-		./thinkthen_test.go ./recovery_test.go ./examples/ ./examples/decide/ \
+	printf '%s\n' ./ ./LICENSE ./README.md ./go.mod ./complete.go ./complete_answers.go ./complete_details.go \
+		./complete_engine.go ./complete_enums.go ./complete_inputs.go ./complete_metadata.go \
+		./complete_readers.go ./complete_rows.go ./complete_test.go ./identities.go ./native_batch.go \
+		./native_complete.go ./native_details.go ./native_inputs.go ./native_methods.go \
+		./native_question_view.go ./native_test.go ./native_unions.go ./native_values.go \
+		./native_values_1.go ./native_values_2.go ./portable_batch_test.go ./questions.go ./recovery_test.go \
+		./requests.go ./result.go ./thinkthen.go ./thinkthen_test.go ./examples/ ./examples/decide/ \
 		./examples/decide/main.go ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail 'Go source members differ'
 fi

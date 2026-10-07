@@ -126,19 +126,53 @@ def check_jar(data, kind):
             f"{kind} JAR directory inventory differs")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is not None and manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
-    expected = {
-        "door": {"thinkthen/Door$Answer.class", "thinkthen/Door$TypedResult.class", "thinkthen/Door$Failure.class",
-                 "thinkthen/Door$FailureKind.class", "thinkthen/Door$NativeFailure.class",
-                 "thinkthen/Door$Outcome.class", "thinkthen/Door$Token.class", "thinkthen/Door$AnnotatedField.class",
-                 "thinkthen/Door$AnnotatedField$Unresolved.class", "thinkthen/Door$AnnotatedField$Answered.class",
-                 "thinkthen/Door$AnnotatedField$Failed.class", "thinkthen/Door.class",
-                 "thinkthen/Json$Reader.class", "thinkthen/Json.class"},
-        "kotlin": {"KotlinCallerKt.class", "KotlinFacade$RunningDecision.class",
-                   "KotlinFacade.class", "META-INF/main.kotlin_module"},
-        "scala": {"ScalaCaller$package$.class", "ScalaCaller$package.class",
-                  "ScalaCaller$package.tasty", "ScalaFacade$RunningDecision.class",
-                  "ScalaFacade.class", "ScalaFacade.tasty", "scalaCaller.class", "scalaCaller.tasty"},
+    classes = {
+        "door": (
+            "Complete Complete$AnnotateRow Complete$AnnotationMember Complete$AtomicAnswer Complete$AtomicKind "
+            "Complete$Attempt Complete$AttemptOutcome Complete$BatchKind Complete$BatchSetting Complete$BatchWarning "
+            "Complete$CallControls Complete$CallFacts Complete$Choice Complete$ChooseRow Complete$CommonRow "
+            "Complete$CompleteError Complete$Content Complete$ContentKind Complete$DecideRow Complete$DecideValue "
+            "Complete$Direction Complete$Edge Complete$Endpoint Complete$Entity Complete$EntityEdge Complete$EventKind "
+            "Complete$FileSource Complete$FilterRow Complete$FindRow Complete$Function Complete$IdentityKind "
+            "Complete$ImageInput Complete$ImageView Complete$Location Complete$Media Complete$MemberCause "
+            "Complete$MemberFailure Complete$MemberState Complete$MemberSuccess Complete$MemberValue Complete$Meta "
+            "Complete$NameSpan Complete$ObservationEvent Complete$ObservationIdentity Complete$ObservationSuccess "
+            "Complete$ObservedProbabilities Complete$OptionalValue Complete$Origin Complete$PairSpan Complete$Piece "
+            "Complete$Place Complete$Probability Complete$ProfileWarning Complete$Question Complete$QuestionMember "
+            "Complete$QuestionObservation Complete$QuestionSource Complete$RankRow Complete$RecognizeAnswer "
+            "Complete$RecognizeRow Complete$RecognizeValue Complete$RecordInput Complete$RelateRow Complete$Relation "
+            "Complete$RelationAnswer Complete$RelationMethod Complete$RelationSuccess Complete$RowObservation "
+            "Complete$RowValue Complete$Rule Complete$RuleKind Complete$ScoreRow Complete$SourceUnit Complete$Stage "
+            "Complete$StopCause Complete$Stopped Complete$TagRow Complete$TokenUsage Complete$ValueKind "
+            "CompleteDetails CompleteDetails$DeclarationKind CompleteDetails$Details CompleteDetails$InputDeclaration "
+            "CompleteDetails$InputProperty CompleteDetails$InputView CompleteDetails$PropertyKind "
+            "CompleteDetails$QuestionAuthor CompleteDetails$ReportedUsage CompleteDetails$SourceDetail "
+            "CompleteDetails$SourceEdge CompleteDetails$SourceEndpoint CompleteDetails$SourceEntity "
+            "CompleteDetails$SourceEntityEdge CompleteDetails$SourceRecognition CompleteDetails$SourceRelations "
+            "CompleteEngine CompleteEngine$CompleteCall CompleteReaders Door Door$AnnotatedField "
+            "Door$AnnotatedField$Answered Door$AnnotatedField$Failed Door$AnnotatedField$Unresolved Door$Answer "
+            "Door$Failure Door$FailureKind Door$NativeFailure Door$Outcome Door$Token Door$TypedResult Ids "
+            "Ids$AnswerId Ids$CallId Ids$Digest Ids$FailureId Ids$ObservationId Ids$SdkRequestId Json Json$Reader "
+            "NativeBatch NativeBatch$Command NativeCalls NativeDetailReaders0 NativeDetails NativeExecution "
+            "NativeExecution$RowReader NativeInputs NativeLayouts NativeLayouts0 NativeLayouts1 NativeLayouts2 "
+            "NativeLayouts3 NativeLayouts4 NativeLayouts5 NativeLayouts6 NativeLayouts7 NativeRead NativeReaders0 "
+            "NativeReaders1 NativeReaders2 Questions Requests Requests$CompleteRequest Requests$InputSource "
+            "Requests$QuestionInput Requests$QuestionRole "
+        ).split(),
+        "kotlin": (
+            "KotlinCallerKt KotlinComplete KotlinFacade KotlinFacade$RunningDecision KotlinRequests "
+        ).split(),
+        "scala": (
+            "ScalaCaller$package ScalaCaller$package$ ScalaComplete ScalaComplete$ ScalaFacade "
+            "ScalaFacade$RunningDecision ScalaRequests ScalaRequests$ scalaCaller "
+        ).split(),
     }[kind]
+    expected = {("thinkthen/" if kind == "door" else "") + name + ".class" for name in classes}
+    if kind == "kotlin":
+        expected.add("META-INF/main.kotlin_module")
+    if kind == "scala":
+        expected.update(name + ".tasty" for name in
+                        ("ScalaCaller$package", "ScalaComplete", "ScalaFacade", "ScalaRequests", "scalaCaller"))
     require(set(members) == expected, f"{kind} JAR classes differ")
     require(not any(token in value for value in members.values() for token in
                     (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275",

@@ -231,7 +231,7 @@ part_source_wrapper() {
 	go)
 		mkdir -p "$folder/examples/decide"
 		cp libraries/go/LICENSE libraries/go/README.md libraries/go/go.mod \
-			libraries/go/thinkthen.go libraries/go/result.go libraries/go/thinkthen_test.go libraries/go/recovery_test.go "$folder/"
+			libraries/go/*.go "$folder/"
 		cp libraries/go/examples/decide/main.go "$folder/examples/decide/"
 		;;
 cpp)
