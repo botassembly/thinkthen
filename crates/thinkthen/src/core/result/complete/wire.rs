@@ -29,7 +29,11 @@ pub(crate) struct AtomicDocument<'a, T: Serialize> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) input: Option<&'a T>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) source: Option<&'a PhysicalSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) images: Option<&'a [crate::core::image::Image]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) question_name: Option<&'a str>,
     pub(crate) question: ReadableQuestion<'a, Question>,

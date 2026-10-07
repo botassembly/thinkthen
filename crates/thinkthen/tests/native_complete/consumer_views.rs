@@ -14,6 +14,16 @@ fn find_selection_reports_synthetic_none_even_when_the_raw_tied_pick_names_a_rea
     assert_eq!(call.value().selection(), FindSelection::None);
     assert!(call.value().selected().is_none());
     assert!(call.value().candidates()[2].is_none());
+    let doc = serde_json::to_value(call.value()).unwrap();
+    assert!(doc["index"].is_null());
+    assert_eq!(
+        doc["candidates"],
+        json!([
+            {"index":0,"input":"First.","probability":0.4},
+            {"index":1,"input":"Second.","probability":0.2},
+            {"index":null,"input":null,"probability":0.4}
+        ])
+    );
     assert_eq!(listener.count(), 1);
     assert_eq!(
         serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap(),

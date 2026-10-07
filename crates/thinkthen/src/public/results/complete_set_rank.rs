@@ -82,9 +82,10 @@ impl Serialize for CompleteSetRank {
 }
 impl<T: Serialize> Serialize for super::CompleteRecord<T, CompleteSetRank> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.result.result.canonical.serialize_with_named_input(
+        self.result.result.canonical.serialize_occurrence(
             Some(&self.original),
             Some(&self.result.question_name),
+            Some(self.ordinal),
             serializer,
         )
     }

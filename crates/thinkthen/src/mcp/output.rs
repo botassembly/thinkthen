@@ -40,8 +40,8 @@ impl<W: Write> Output<W> {
             "error":{"code":fault.code,"message":fault.message}}))
     }
     fn write(&self, value: &impl Serialize) -> io::Result<()> {
-        serde_json::to_writer(Counter(0), value)
-            .map_err(|_| io::Error::other("MCP output exceeds 64 MiB"))?;
+        serde_json::to_writer(Counter(1), value)
+            .map_err(|_| io::Error::other("MCP output exceeds 192 MiB"))?;
         let mut writer = self
             .0
             .lock()
@@ -111,8 +111,8 @@ struct Counter(usize);
 impl Write for Counter {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
         self.0 = self.0.saturating_add(bytes.len());
-        if self.0 > 64 * 1024 * 1024 {
-            return Err(io::Error::other("MCP output exceeds 64 MiB"));
+        if self.0 > 192 * 1024 * 1024 {
+            return Err(io::Error::other("MCP output exceeds 192 MiB"));
         }
         Ok(bytes.len())
     }
@@ -124,4 +124,37 @@ impl Write for Counter {
 /// Existing safe errors and observed facts. Admission invents no started facts.
 pub(super) fn native_error(error: &crate::Error) -> crate::CompleteError<'_> {
     error.complete()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Output;
+    use std::io::{self, Write};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    struct Count(Arc<AtomicUsize>);
+    impl Write for Count {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.0.fetch_add(bytes.len(), Ordering::Relaxed);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+    #[test]
+    fn outgoing_frame_counts_its_newline_and_refuses_excess_without_partial_output() {
+        let limit = 192 * 1024 * 1024;
+        let count = Arc::new(AtomicUsize::new(0));
+        let output = Output::new(Count(Arc::clone(&count)));
+        let mut text = String::with_capacity(limit);
+        text.extend(std::iter::repeat_n('x', limit - 3));
+        output.write(&text).unwrap();
+        assert_eq!(count.load(Ordering::Relaxed), limit);
+        text.push('x');
+        assert!(output.write(&text).is_err());
+        assert_eq!(count.load(Ordering::Relaxed), limit);
+    }
 }

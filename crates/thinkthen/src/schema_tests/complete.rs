@@ -13,6 +13,7 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
         generator.subschema_for::<relate::Document<'_, Value>>(),
         generator
             .subschema_for::<crate::public::CompleteCall<'_, wire::AtomicDocument<'_, Value>>>(),
+        generator.subschema_for::<crate::public::batch::CompletedPrefix<'_, wire::AtomicDocument<'_, Value>>>(),
         generator.subschema_for::<crate::public::CompleteError<'_>>(),
         generator.subschema_for::<crate::public::Surface>(),
         generator.subschema_for::<crate::cli::intake::Position>(),
@@ -44,8 +45,14 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
     );
     definitions.insert(
         "completeCall".into(),
-        super::any_of(&["completeCallSuccess", "CompleteError"]),
+        super::any_of(&[
+            "completeCallSuccess",
+            "CompleteError",
+            "completeBatchFailure",
+        ]),
     );
+    definitions["completeBatchFailure"]["properties"]["completed"] =
+        json!({"type":"array", "items":{"$ref":"#/$defs/completeDetailed"}});
     // Strict complete readers have their own derived graph; released definitions
     // keep their compatibility spelling and permissiveness.
     strict::graph(definitions, "completeCall");

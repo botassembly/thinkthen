@@ -201,6 +201,7 @@ impl Engine {
                 )
                 .map_err(|_| super::wrong())?;
                 canonical.source = held.source;
+                canonical.images = held.images;
                 Ok(Some(CompleteRecord {
                     original: held.original,
                     ordinal: at,

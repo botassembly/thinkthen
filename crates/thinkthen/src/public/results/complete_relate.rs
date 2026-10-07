@@ -57,11 +57,22 @@ impl CompleteRelated {
         input: Option<&T>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_occurrence(input, None, serializer)
+    }
+    pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        index: Option<usize>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         match &self.source_edges {
             Some(edges) => self
                 .canonical
-                .serialize_with_value(input, edges, serializer),
-            None => self.canonical.serialize_with_input(input, serializer),
+                .serialize_occurrence(input, edges, index, serializer),
+            None => {
+                self.canonical
+                    .serialize_occurrence(input, &self.canonical.value, index, serializer)
+            }
         }
     }
 

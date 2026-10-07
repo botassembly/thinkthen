@@ -31,8 +31,9 @@ impl Executor for NativeExecutor {
             ))?;
         }
         let records = invocation.records(&prepared, controls)?;
-        let single =
-            invocation.arguments.records.is_none() && invocation.arguments.source.is_none();
+        let single = invocation.arguments.records.is_none()
+            && invocation.arguments.source.is_none()
+            && invocation.arguments.inputs.is_none();
         match &prepared {
             PreparedQuestion::Atomic(q) => {
                 atomic(&engine, q, &invocation, records, controls, single)
@@ -57,16 +58,22 @@ impl Executor for NativeExecutor {
                 reply(engine.try_find_records_complete_with(file.question(), records, controls)?)
             }
             PreparedQuestion::Annotate(set) => {
-                let call = if invocation.arguments.records.is_some() {
+                let call = if invocation.arguments.records.is_some()
+                    || invocation.arguments.inputs.is_some()
+                {
                     engine.annotate_records_complete_with(
                         set,
                         records.collect::<Result<Vec<_>, _>>()?,
                         controls,
                     )?
                 } else {
-                    engine
+                    match engine
                         .try_annotate_records_complete_with(set, records, controls)
-                        .into_call()?
+                        .into_outcome()
+                    {
+                        crate::public::batch::Outcome::Complete(call) => call,
+                        outcome => return batch_failure(&outcome),
+                    }
                 };
                 let failed = call.value().iter().any(|row| {
                     row.result()
@@ -119,10 +126,13 @@ fn atomic<'a>(
     // Materialized originals require whole-call native admission before lookup.
     macro_rules! complete {
         ($eager:ident, $stream:ident, $question:expr) => {
-            if invocation.arguments.records.is_some() {
+            if invocation.arguments.records.is_some() || invocation.arguments.inputs.is_some() {
                 engine.$eager($question, records.collect::<Result<Vec<_>, _>>()?, controls)?
             } else {
-                engine.$stream($question, records, controls).into_call()?
+                match engine.$stream($question, records, controls).into_outcome() {
+                    crate::public::batch::Outcome::Complete(call) => call,
+                    outcome => return batch_failure(&outcome),
+                }
             }
         };
     }
@@ -303,5 +313,16 @@ fn selected_files(
                 location.is_some_and(|source| files.insert(source.file().to_owned()))
             })
             .collect()
+    })
+}
+
+fn batch_failure<T: Serialize>(
+    outcome: &crate::public::batch::Outcome<T>,
+) -> Result<NativeReply, Error> {
+    let object = NativeObject::new(outcome)
+        .map_err(|_| Error::defect("native batch outcome could not be written"))?;
+    Ok(NativeReply {
+        object,
+        failed: true,
     })
 }

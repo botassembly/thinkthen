@@ -49,17 +49,21 @@ with Client.launch(("thinkthen", "mcp", "--replay",
 Use inline literal text, including `@` prefixes, or the ordinary native JSON
 question/set/plan grammar as `question`. `question_file` explicitly loads an
 ordinary existing file. `question_name` loads a validated name from the native
-config questions folder. These three selectors are exclusive. The agent writes
+config questions folder. `question_reference` invokes explicit native @ resolution with working-directory precedence. These four selectors are exclusive. The agent writes
 its own question files; the server creates none. Authored question names,
 wording versions, declarations, descriptions and ordering remain native.
 
-Evidence, original JSON `records` and an explicit `source` are exclusive. Source
+Evidence, original JSON `records`, explicit `source` and finite `inputs` are exclusive. Source
 is `{paths:[...],unit:"line"|"window"|"file",window?,media?}`; it uses the native
 reader and composition, with folder order and repeated paths preserved. No path
 silently becomes evidence. Explicit `images` are ordered PNG/JPEG attachments,
 including duplicates, optionally beside text evidence. Only decide/choose/score
 admit images. Image source requires file units. Seven other functions refuse
 images before reading files or sending.
+
+Explicit `inputs` descriptors carry `text`, original `json`, or a whole-file text `source`, optional separate `context`, replacement choose `options`, and ordered `images`. An image-only descriptor can omit the original. Images accept path strings or `{path,media}` declarations validated by native decoding. Field pointers can select a text/JSON original with ancillary images; image-only sources refuse pointers. Explicit context/options conflict with their corresponding pointers. The finite array is admitted before sends; arbitrary objects in existing `records` keep their settled meaning.
+
+Incoming frames remain 16 MiB including newline. File-backed captions use the native reader when JSON escaping would exceed this limit. Outgoing frames, including newline and both equivalent complete representations, are bounded at 192 MiB in the server and client. This increases peak memory. Native decoded-input and vendor limits still apply; output overflow closes without a partial line after any work already performed.
 
 Per-call `options` admits model, threshold, shared context, field or ordered
 field list, per-item context/candidate pointers, batch (integer or `max`), rank top, find none,
@@ -70,7 +74,7 @@ selection requires explicit records or native source composition.
 
 Successes return unchanged native complete call envelopes and the packaged native
 output schema. Safe errors use `Error::complete()`, including joined started-call
-facts. Admission failures invent no call facts. No adapter rewrites schemas,
+facts. Incremental failures additionally retain actual ordered `completed` results. Admission failures invent no call facts. No adapter rewrites schemas,
 origins, IDs, timing, models or cache hits. Native calls stamp the closed `mcp`
 surface and compiled-engine User-Agent, call ID and request ID.
 
@@ -78,12 +82,16 @@ Run the independent client fixtures with `python3 libraries/mcp/test_client.py`.
 `installed.py ABSOLUTE_BINARY` initializes, pings, reads the ten-tool catalog and
 makes an actual recorded decide call. Release smoke runs it against the unpacked
 executable and checks its existing backend counter for zero sends.
-`conformance.py LOOPBACK_PORT ABSOLUTE_BINARY` executes 25 shared behavior cases
-through named public methods. `test_installed.py ABSOLUTE_BINARY ABSOLUTE_BACKEND`
+`conformance.py LOOPBACK_PORT ABSOLUTE_BINARY` runs the entire required MCP
+inventory, currently 250 entries, through named public methods. It reuses the
+canonical fixture projection and independent assertions, isolates request counts
+and body capture per case, and fails for missing native fields or unsupported
+inputs. It accepts no case selector. `test_installed.py ABSOLUTE_BINARY ABSOLUTE_BACKEND`
 uses an owned loopback backend and scratch home for names/files, sources,
 controls, secrecy, cache/replay, cancellation and EOF. Required cells beyond the
-executed consumer remain missing in the shared parity runner; fixture success
-never qualifies parity.
+executed consumer remain failed in the shared parity runner; fixture success
+never qualifies parity. Complete adoption remains pending while these failures
+are fixed; the current script is a failing full baseline.
 
 Unix uses owned unbuffered descriptors and bounded polling. Windows uses owned
 pipe handles with a joined cancellation watcher. Each synchronous operation

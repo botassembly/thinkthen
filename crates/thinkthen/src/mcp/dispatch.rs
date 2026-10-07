@@ -17,6 +17,21 @@ pub(super) enum PreparedQuestion {
 }
 impl Invocation {
     pub(super) fn question(&self) -> Result<PreparedQuestion, Error> {
+        if let Some(reference) = &self.arguments.question_reference {
+            let text = match crate::public::named_question::Reference::resolve(reference)? {
+                crate::public::named_question::Reference::Name(name) => {
+                    crate::public::named_question::named_text(&name)?
+                }
+                crate::public::named_question::Reference::Path(path) => {
+                    crate::read_question_file(&path)
+                        .map_err(|_| Error::local("the question file could not be read"))?
+                }
+            };
+            self.file_role(&text)?;
+            return self
+                .saved(&text)
+                .map_err(|e| Error::local(e.detail().message()));
+        }
         if let Some(name) = &self.arguments.question_name {
             let text = crate::public::named_question::named_text(name)?;
             self.file_role(&text)?;
@@ -83,7 +98,12 @@ impl Invocation {
                 RecognizeQuestionFile::from_json(text).map(PreparedQuestion::Recognize)
             }
             Tool::Relate => Relate::from_records_json(text).map(PreparedQuestion::Relate),
-            Tool::Choose if self.arguments.options.options_field.is_some() => {
+            Tool::Choose
+                if self.arguments.options.options_field.is_some()
+                    || self.arguments.inputs.as_ref().is_some_and(|inputs| {
+                        !inputs.is_empty() && inputs.iter().all(|input| input.options.is_some())
+                    }) =>
+            {
                 crate::RecordChooseQuestion::from_json(text).map(PreparedQuestion::Dynamic)
             }
             _ => Question::from_json(text).and_then(|q| self.atomic(q)),

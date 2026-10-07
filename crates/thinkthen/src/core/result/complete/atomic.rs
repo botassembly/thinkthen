@@ -14,6 +14,7 @@ pub(crate) struct Atomic {
     pub(crate) legacy: DecisionResult,
     pub(crate) rank_position: Option<std::num::NonZeroUsize>,
     pub(crate) source: Option<super::wire::PhysicalSource>,
+    pub(crate) images: Option<Vec<crate::core::image::Image>>,
 }
 
 impl Atomic {
@@ -86,6 +87,16 @@ impl Atomic {
         question_name: Option<&str>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_occurrence(input, question_name, None, serializer)
+    }
+
+    pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        question_name: Option<&str>,
+        index: Option<usize>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
         super::wire::AtomicDocument {
             schema: super::wire::Version::V2,
@@ -95,6 +106,8 @@ impl Atomic {
                 super::wire::AtomicValue::Rank,
             ),
             input,
+            index,
+            images: self.images.as_deref(),
             source: self.source.as_ref(),
             question_name,
             question: crate::core::declaration::ReadableQuestion {

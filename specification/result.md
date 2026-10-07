@@ -29,6 +29,12 @@ Plain, graded and set rank assign positions after selection and before top trunc
 
 The five atomic answers remain `yes_no:{probability}`, `choice:{pick,probabilities,confidence?}`, `tag:{probabilities}`, `score:{level,probabilities,confidence?}` and `find:{pick,probabilities,confidence?}`, each tagged by its existing `kind`. Probability maps keep declared option order. Nullable successful values remain distinct from failures.
 
+Complete native record wrappers expose their retained zero-based original `index`, before filtering, sorting or splitting. Rank `value` remains the one-based final position. Standalone scalar results omit the occurrence index. Complete find always carries nullable selected `index`: synthetic none is null; a selected original JSON null has an integer index. Its ordered `candidates` retain each original `input`, actual probability, nullable original index and optional supplied physical `source`; synthetic none follows real inputs. These fields change no identities or readings.
+
+Complete records with ancillary images retain optional ordered `images` beside their unchanged original `input` and supplied `source`. The images preserve media, base64 bytes and dimensions from the admitted native snapshot. Established image-only input serialization remains intact. Located annotation and recognition additionally retain native `source` beside the original.
+
+An incremental complete batch failure can carry ordered `completed` native result documents alongside its safe `error` and final `facts`. Those documents are the actual completed prefix observed by the existing batch, with original indexes and identities. Ordinary whole-call failure envelopes remain unchanged; no successful answer is fabricated for the terminal failure.
+
 An annotate success entry requires `answer_id,value,question,answer,threshold,request`. A failure entry requires `failure_id,question,failure,request` and omits the successful fields. The existing bare failure marker and six backend member causes remain unchanged. Recognize retains `answer:{pieces,names,pairs}` with complete probabilities. Relate retains `answer:{questions}`; each entry keeps `relation,reads,method,direction,source,target,request` and requires either success `answer_id,probability,accepted` or failure `failure_id,failure`. Existing nullable target rules remain.
 
 ### Recorded CLI example

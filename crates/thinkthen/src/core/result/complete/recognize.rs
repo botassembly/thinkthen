@@ -8,6 +8,7 @@ use crate::core::{Meta, RecognitionOdds, RecognizeSpec, RecognizedValue, Record,
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Recognition {
     pub(crate) identity: ResultIdentity,
+    pub(crate) source: Option<super::wire::PhysicalSource>,
     pub(crate) value: RecognizedValue,
     pub(crate) input: Option<Record>,
     pub(crate) question: RecognizeSpec,
@@ -41,6 +42,10 @@ pub(crate) struct Document<'a, T: Serialize, V: Serialize = RecognizedValue> {
     value: &'a V,
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<&'a T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source: Option<&'a super::wire::PhysicalSource>,
     question: crate::core::declaration::ReadableQuestion<
         'a,
         crate::core::recognize_file::QuestionDocument<'a>,
@@ -63,7 +68,18 @@ impl Recognition {
         value: &V,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_occurrence(input, value, None, serializer)
+    }
+    pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize, V: Serialize>(
+        &self,
+        input: Option<&T>,
+        value: &V,
+        index: Option<usize>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         Document {
+            index,
+            source: self.source.as_ref(),
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
             value,

@@ -14,6 +14,7 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
         declarations: Default::default(),
         rank_position: None,
         source: None,
+        images: None,
         legacy: DecisionResult::new(
             answer.read(Some(threshold)).0,
             Question::Decide {

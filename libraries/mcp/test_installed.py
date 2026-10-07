@@ -124,7 +124,11 @@ class Installed(unittest.TestCase):
                               source={'paths': [str(source)], 'unit': 'line'},
                               options={'field': '/body', 'batch': 1})
             self.assertEqual(failure.exception.result['error']['kind'], 'usage')
-            self.assertGreater(self.count(), 0)
+            self.assertEqual(self.count(), 2)
+            prefix = failure.exception.result['completed']
+            self.assertEqual([row['index'] for row in prefix], [0, 1])
+            self.assertTrue(all(len(row['answer_id']) == 64 for row in prefix))
+            self.assertEqual(failure.exception.result['facts']['records'], 2)
             self.assertEqual(failure.exception.result['facts']['requests_sent'], self.count())
 
     def test_both_source_rank_branches_bound_original_bytes_before_projection(self):
@@ -214,7 +218,22 @@ class Installed(unittest.TestCase):
                                options={'field': '/body', 'context_field': '/context', 'batch': 1})
                 self.assertEqual(typed['value'][0]['input'], record)
                 self.assertEqual(typed['facts']['requests_sent'], 1)
-            self.assertEqual(self.count(), 3)
+            explicit = client.choose(question={'choose': 'Which?', 'context_schema': schema},
+                                     inputs=[{'json': record, 'context': {'ready': False},
+                                              'options': ['zebra', 'alpha']}],
+                                     options={'field': '/body', 'batch': 1})
+            self.assertEqual(explicit['value'][0]['input'], record)
+            self.assertEqual(list(explicit['value'][0]['answer']['probabilities']), ['zebra', 'alpha'])
+            self.assertEqual(explicit['value'][0]['index'], 0)
+            self.assertEqual(self.count(), 4)
+            for inputs in ([{'text': 'first'}, {'text': 'later', 'context': None}],
+                           [{'json': record, 'context': 'c'}]):
+                before = self.count()
+                with self.assertRaises(ToolError) as refusal:
+                    client.decide(question='Q?', inputs=inputs,
+                                  options={'context_field': '/context'} if len(inputs) == 1 else {})
+                self.assertEqual(refusal.exception.result['error']['kind'], 'usage')
+                self.assertEqual(self.count(), before)
 
     def test_dynamic_saved_on_pointer_uses_native_composition(self):
         record = {'body': 'x', 'options': ['red', 'blue']}
@@ -247,6 +266,13 @@ class Installed(unittest.TestCase):
             set_rank = client.rank(question={'version': 1, 'questions': {'z': {'decide': 'Q?'}}},
                                    records=['a', 'b'], options={'batch': 'max', 'top': 0})
             self.assertEqual(set_rank['value'], [])
+            full_set = client.rank(question={'version': 1, 'questions': {'z': {'decide': 'Q?'}}},
+                                   records=['a', 'b'], options={'batch': 'max'})
+            self.assertEqual([row['index'] for row in full_set['value']], [0, 1])
+            self.assertEqual([row['value'] for row in full_set['value']], [1, 2])
+            self.assertEqual([row['question_name'] for row in full_set['value']], ['z', 'z'])
+            self.assertEqual([row['answer']['probability'] for row in full_set['value']], [0.9, 0.9])
+            self.assertTrue(all(len(row['answer_id']) == 64 for row in full_set['value']))
             found = client.find(question={'find': 'Which?', 'on': '/body'},
                                 records=[{'body': 'a', 'id': 1}, {'body': 'b', 'id': 2}])
             self.assertEqual(found['value']['value'], {'body': 'a', 'id': 1})
@@ -311,7 +337,8 @@ class Installed(unittest.TestCase):
     def test_every_tool_refuses_credentials_images_and_started_failures_safely(self):
         document = json.loads((ROOT / 'conformance/cases.json').read_text())
         with self.launch('arm/refuse', '--no-cache') as client:
-            from conformance import arguments, CASES
+            from conformance import arguments, fixture
+            import parity
             by_id = {c['id']: c for c in document['cases']}
             for name in document['parity']['functions']:
                 method = getattr(client, name)
@@ -320,9 +347,11 @@ class Installed(unittest.TestCase):
                     method(question='SECRET-QUESTION', evidence='SECRET-EVIDENCE', api_key='SECRET-KEY')
                 self.assertNotIn('SECRET', str(rejected.exception))
                 self.assertEqual(self.count(), before)
-                case = next(by_id[c] for c in CASES if by_id[c]['verb'] == name)
+                row = next(row for row in parity.required_cases(parity.inventory(), 'mcp').values()
+                           if row['verb'] == name and row['kind'] == 'behavior')
+                case = fixture(row, by_id, {})
                 with self.assertRaises(ToolError) as failure:
-                    method(**arguments(case))
+                    method(**arguments(case, self.home, {'batch': 1}))
                 result = failure.exception.result
                 self.assertEqual(result['error']['kind'], 'backend')
                 self.assertGreater(result['facts']['requests_sent'], 0)
@@ -332,6 +361,12 @@ class Installed(unittest.TestCase):
                 with self.assertRaises(ToolError):
                     getattr(client, name)(question='Q?', images=[str(self.home / 'missing.png')])
                 self.assertEqual(self.count(), before)
+            before = self.count()
+            with self.assertRaises(ToolError) as failure:
+                client.decide(question='Q?', images=[str(self.home / 'missing.png')] * 9)
+            self.assertEqual(failure.exception.result['error']['kind'], 'usage')
+            self.assertEqual(failure.exception.result['error']['message'], 'image evidence requires 1 to 8 images')
+            self.assertEqual(self.count(), before)
 
     def test_default_cache_record_and_strict_replay_preserve_zero_sends(self):
         with self.launch() as client:
