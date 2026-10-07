@@ -151,7 +151,7 @@ fn common_jsonl_field_and_named_windows_use_shared_intake_display() -> io::Resul
 }
 
 #[test]
-fn set_facts_count_n_originals_and_selected_details_do_not_sum_member_receipts() -> io::Result<()> {
+fn set_facts_count_originals_and_details_sum_only_their_actual_member_receipts() -> io::Result<()> {
     let question = saved("rank-set-facts", SET)?;
     let listener = Listener::answering(answer)?;
     let result = call(
@@ -169,12 +169,12 @@ fn set_facts_count_n_originals_and_selected_details_do_not_sum_member_receipts()
         rows.iter()
             .map(|row| row["meta"]["requests_sent"].as_u64())
             .collect::<Vec<_>>(),
-        [Some(1), Some(1), Some(0)]
+        [Some(1), Some(1), Some(1)]
     );
     for row in rows {
         assert_eq!(
             row["meta"]["usage"],
-            json!({"input_tokens":3,"output_tokens":1})
+            json!({"input_tokens":6,"output_tokens":2})
         );
     }
     let facts: Value = serde_json::from_slice(&result.stderr)?;

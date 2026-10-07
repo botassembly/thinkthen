@@ -39,6 +39,7 @@ fn complete_decision_identity_is_independent_of_retrieval_call_and_default_equiv
     ]);
     assert_eq!(result.answer_id().as_str(), expected);
     assert_decision_document(result);
+    schema::call(&live, "completeDecide");
     let equivalent = Question::decide("Refund?").unwrap().cut_at(0.50).unwrap();
     let cache = engine
         .decide_complete_with(&equivalent, "Refund me.", CallOptions::new().attempts(true))
@@ -114,6 +115,7 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
     let chosen = engine
         .choose_complete_with(&choice, "Text.", CallOptions::new())
         .unwrap();
+    schema::call(&chosen, "completeChoose");
     assert_eq!(chosen.value().value(), None);
     assert_eq!(chosen.value().confidence(), Some(0.4));
     let document: Value = serde_json::from_str(&chosen.value().to_json().unwrap()).unwrap();
@@ -134,6 +136,7 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
     let tagged = engine
         .tag_complete_with(&tags, "Text.", CallOptions::new())
         .unwrap();
+    schema::call(&tagged, "completeTag");
     assert_eq!(tagged.value().value(), ["a"]);
     let document: Value = serde_json::from_str(&tagged.value().to_json().unwrap()).unwrap();
     assert_eq!(
@@ -160,6 +163,7 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
     let graded = engine
         .score_complete_with(&score, "Text.", CallOptions::new())
         .unwrap();
+    schema::call(&graded, "completeScore");
     assert_eq!(graded.value().value(), 0.75);
     assert_eq!(graded.value().confidence(), None);
     assert_eq!(listener.count(), 3);

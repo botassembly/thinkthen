@@ -265,7 +265,7 @@ impl Serialize for AnnotatedRecord {
 /// The framing and the pointers one run reads its records by.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Reading {
-    item_schema: Option<crate::core::InputDeclaration>,
+    item_schema: Vec<crate::core::InputDeclaration>,
     framing: Framing,
     fields: Vec<Pointer>,
     by_default: bool,
@@ -301,7 +301,7 @@ impl Reading {
             }
         }
         Ok(Self {
-            item_schema: None,
+            item_schema: Vec::new(),
             framing,
             fields,
             by_default: false,

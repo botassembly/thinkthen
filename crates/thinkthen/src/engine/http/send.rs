@@ -10,14 +10,35 @@ use std::io;
 use std::time::Duration;
 use ureq::Agent;
 
-pub(super) fn send(
+pub(super) fn timed(
+    agent: &Agent,
+    exchange: &Exchange<'_>,
+    limit: Duration,
+    (invocation, sdk_request_id): (
+        &crate::engine::invocation::Invocation,
+        &crate::core::SdkRequestId,
+    ),
+    controls: (bool, crate::core::adapters::ApiType),
+    usage: &crate::engine::usage::Counters,
+) -> (Result<Sent, Box<Attempt>>, u64) {
+    let interval = usage.http_interval();
+    let started = std::time::Instant::now();
+    let sent = send(agent, exchange, limit, invocation, sdk_request_id, controls);
+    drop(interval);
+    let wall_ms =
+        u64::try_from(started.elapsed().as_nanos().div_ceil(1_000_000).max(1)).unwrap_or(u64::MAX);
+    (sent, wall_ms)
+}
+
+fn send(
     agent: &Agent,
     exchange: &Exchange<'_>,
     limit: Duration,
     invocation: &crate::engine::invocation::Invocation,
     sdk_request_id: &crate::core::SdkRequestId,
-    refresh: bool,
+    controls: (bool, crate::core::adapters::ApiType),
 ) -> Result<Sent, Box<Attempt>> {
+    let (refresh, api) = controls;
     let request = agent
         .post(exchange.url)
         .config()
@@ -55,7 +76,7 @@ pub(super) fn send(
     let info = ResponseInfo::of(
         status,
         header("x-envoy-upstream-service-time"),
-        header(crate::core::adapters::built_in::ATTEMPT_REQUEST_ID_HEADER),
+        header(api.request_id_header()),
         exchange,
     );
     if !(200..300).contains(&status) {

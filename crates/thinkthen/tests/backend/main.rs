@@ -222,3 +222,5 @@ mod rank_set;
     reason = "checked result objects and recorded keys stop the identity proof"
 )]
 mod rank_set_identity;
+
+mod native_results;

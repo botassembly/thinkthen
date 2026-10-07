@@ -3,11 +3,11 @@ mod annotate;
 mod find;
 mod many;
 mod rank;
+mod rank_set;
 mod recognize;
 mod records;
 mod relate;
 mod streaming;
-mod trace;
 use crate::core::{self, Value};
 use crate::public::engine::only;
 use crate::public::question::{Kind, Question};
@@ -179,7 +179,7 @@ fn run<'a>(
 
 fn spec(function: InputFunction, question: &Question, shown: Value, record: usize) -> AtomicSpec {
     AtomicSpec {
-        declarations: question.metadata.clone(),
+        declarations: question.reading_metadata(),
         function,
         record,
         question: question.core.clone(),

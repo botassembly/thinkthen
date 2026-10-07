@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::core::adapters::built_in;
 use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Outcome, Plan,
@@ -30,7 +29,9 @@ pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::workers::scoped as scoped_workers;
 pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
-pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognition, Recognized, step_one};
+pub(crate) use recognize::{MAX_TEXT_BYTES, Recognition, step_one};
+#[cfg(test)]
+pub(crate) use recognize::{Probabilities, Recognized};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
@@ -238,9 +239,9 @@ impl Engine {
             None => Client::new(self.timeout, secure, widths),
         };
         Ok(State {
-            client: client.paced(crate::engine::backoff::interval(
-                self.per_minute.or(self.backend.per_minute()),
-            )),
+            client: client.with_api(self.backend.api_type()).paced(
+                crate::engine::backoff::interval(self.per_minute.or(self.backend.per_minute())),
+            ),
             usage,
             width,
             total: limits.total.clone(),
@@ -380,7 +381,10 @@ impl Engine {
     /// on an engine worker, so a host signal never lands in its socket read.
     pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
         self.check_plan(plan)?;
-        let body = built_in::encode(plan)
+        let body = self
+            .backend
+            .api_type()
+            .encode(plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let state = self.state(cancel)?;
         let transport = self.transport(&state);
@@ -409,10 +413,11 @@ impl Engine {
                 || (),
             )
         })?;
-        let decoded = built_in::decode_observed(plan, &answered.body);
-        transport
-            .usage
-            .live_reply(decoded.usage.and_then(crate::core::ReportedUsage::complete));
+        let decoded = self
+            .backend
+            .api_type()
+            .decode_observed(plan, &answered.body);
+        transport.usage.live_reply(decoded.usage);
         cancel.live_reply(decoded.usage);
         let reply = decoded.reply.map_err(Error::from)?;
         transport.usage.answered_by(reply.model());

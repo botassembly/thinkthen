@@ -38,8 +38,10 @@ impl Text {
 /// What one question needs of each text beside the text.
 pub(crate) struct Decisions {
     metadata: crate::core::declaration::QuestionMetadata,
+    prepared: Question,
     question: core::Question,
     asked: (ModelName, core::Descriptions),
+    api: core::adapters::ApiType,
     url: core::Url,
     context: Option<core::Evidence>,
     profile: Option<core::BackendProfile>,
@@ -55,8 +57,10 @@ impl Decisions {
     ) -> Self {
         Self {
             metadata: question.metadata.clone(),
+            prepared: question.clone(),
             question: question.core.clone(),
             asked: engine.backend().asked(),
+            api: engine.backend().api_type(),
             url: engine.backend().url().clone(),
             context,
             profile: engine.profile().cloned(),
@@ -94,7 +98,15 @@ impl Asker for Decisions {
     type Error = Miss;
 
     fn validates_batches(&self) -> bool {
-        self.metadata.item_schema.is_some() || self.metadata.context_schema.is_some()
+        self.metadata.item_schema.is_some()
+            || self.metadata.context_schema.is_some()
+            || self
+                .prepared
+                .metadata
+                .reading
+                .on
+                .iter()
+                .any(|pointer| !pointer.is_empty())
     }
 
     fn label(&self, text: &Text) -> usize {
@@ -102,10 +114,9 @@ impl Asker for Decisions {
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Miss> {
-        self.metadata
-            .validate_item(&text.input)
-            .map_err(Miss::Refused)?;
-        let plan = match &text.input {
+        let input = self.prepared.selected_input(&text.input)?;
+        self.metadata.validate_item(&input).map_err(Miss::Refused)?;
+        let plan = match &input {
             super::QuestionInput::Text(text) => {
                 let record = evidence(text).map_err(Miss::Refused)?;
                 quoted_plan_of(
@@ -156,7 +167,7 @@ impl Asker for Decisions {
                 .map_err(|error| Miss::Refused(planned(error)))?
             }
         };
-        pack::asks(&self.url, &plan).map_err(|error| {
+        pack::asks_for(self.api, &self.url, &plan).map_err(|error| {
             if plan.images().is_some() {
                 Miss::Refused(Error::usage(error.to_string()))
             } else {
@@ -237,7 +248,7 @@ impl Decided {
         observed.requests.clone_from(&self.keys);
         Ok(observed
             .with_receipt(&self.answered)
-            .with_declarations(&question.metadata)
+            .with_declarations(&question.reading_metadata())
             .with_input(self.input.clone()))
     }
 

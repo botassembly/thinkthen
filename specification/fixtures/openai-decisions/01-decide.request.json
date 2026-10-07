@@ -1,0 +1,1 @@
+{"model":"gpt-6-luna","input":"Please refund this order.","questions":[{"type":"predicate","name":"q1","instructions":"Does the customer ask for a refund?"}]}

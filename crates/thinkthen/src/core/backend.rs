@@ -27,6 +27,7 @@ pub(crate) const MAX_PER_MINUTE: u32 = 60_000;
 /// and the rate its named backend's configuration entry sets.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Backend {
+    api_type: crate::core::adapters::ApiType,
     url: Url,
     model: ModelName,
     descriptions: Descriptions,
@@ -103,6 +104,7 @@ impl Backend {
     #[cfg(test)]
     pub(crate) const fn from_parts(url: Url, model: ModelName) -> Self {
         Self {
+            api_type: crate::core::adapters::ApiType::Primary,
             url,
             model,
             descriptions: Descriptions::Authored,
@@ -142,6 +144,7 @@ impl Backend {
         path: &str,
     ) -> Result<Self, BackendError> {
         Ok(Self {
+            api_type: crate::core::adapters::ApiType::Primary,
             url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE), path)?,
             model: ModelName::new(model)?,
             descriptions: Descriptions::Authored,
@@ -150,6 +153,14 @@ impl Backend {
             image_route: built_in::images::ImageRoute::Unsupported,
             per_minute: None,
         })
+    }
+
+    pub(crate) const fn with_api_type(mut self, api: crate::core::adapters::ApiType) -> Self {
+        self.api_type = api;
+        self
+    }
+    pub(crate) const fn api_type(&self) -> crate::core::adapters::ApiType {
+        self.api_type
     }
 
     /// Send descriptions in this form. Only a named backend sets one other

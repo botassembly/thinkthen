@@ -418,6 +418,8 @@ fn verb_of(members: &[(String, Json)]) -> Result<Verb, QuestionFileError> {
 mod fields;
 mod find;
 mod profile;
+mod role;
+pub(crate) use role::QuestionRole;
 mod resolve;
 
 pub(crate) use crate::core::question_file::fields::pointers;

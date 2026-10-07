@@ -28,7 +28,7 @@ impl Question {
     /// Admit a saved described decide or score question for ranking.
     ///
     /// # Errors
-    /// Returns a usage error for authored thresholds, another verb or evidence pointers.
+    /// Returns a usage error for authored thresholds, another verb or invalid evidence pointers.
     pub fn rank_from_json(text: &str) -> Result<Self, Error> {
         let (file, batch) = QuestionFile::parse_top(text).map_err(Error::refused)?;
         if !matches!(file.verb(), Verb::Decide | Verb::Score) {
@@ -39,15 +39,6 @@ impl Question {
             ..Typed::default()
         };
         let resolved = resolve(file.verb(), None, Some(&file), &typed).map_err(Error::refused)?;
-        if resolved
-            .on()
-            .iter()
-            .any(|pointer| !pointer.as_str().is_empty())
-        {
-            return Err(Error::usage(
-                "a library rank question reads its evidence whole, so it takes no on pointer",
-            ));
-        }
         Ok(Self {
             metadata: file.metadata.clone(),
             core: resolved

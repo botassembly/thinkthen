@@ -3,6 +3,19 @@ use super::Relate;
 use crate::public::Error;
 use std::path::Path;
 impl Relate {
+    pub(crate) fn validate_pairs(&self, pairs: &[(String, String)]) -> Result<(), Error> {
+        for (at, (name, kind)) in pairs.iter().enumerate() {
+            let record = crate::core::Record::from_json(crate::core::Json::Object(vec![
+                ("name".to_owned(), crate::core::Json::String(name.clone())),
+                ("kind".to_owned(), crate::core::Json::String(kind.clone())),
+            ]));
+            record
+                .validate_item(self.0.metadata.item_schema.as_ref())
+                .map_err(|error| Error::refused(error).at_record(at))?;
+        }
+        Ok(())
+    }
+
     /// Read a saved relation plan whose field pointers will select native records.
     /// # Errors
     /// Refuses invalid fields, rules and saved settings through the ordinary grammar.

@@ -1,22 +1,21 @@
 //! Actual ordered stage observations and aggregate metadata from the one engine.
 use crate::core::{self, Meta, RequestMeta};
 use crate::engine::facade;
-use crate::public::CallOptions;
 
-pub(super) struct Totals {
-    pub(super) model: Option<core::ModelName>,
-    pub(super) usage: Option<core::Usage>,
-    pub(super) reported: Option<core::ReportedUsage>,
-    pub(super) cached: bool,
-    pub(super) sent: u64,
-    pub(super) requests: Vec<String>,
-    pub(super) failed: usize,
+pub(crate) struct Totals {
+    pub(crate) model: Option<core::ModelName>,
+    pub(crate) usage: Option<core::Usage>,
+    pub(crate) reported: Option<core::ReportedUsage>,
+    pub(crate) cached: bool,
+    pub(crate) sent: u64,
+    pub(crate) requests: Vec<String>,
+    pub(crate) failed: usize,
 }
-pub(super) fn meta(
+pub(crate) fn meta(
     engine: &facade::Engine,
     digest: String,
     totals: Totals,
-    options: &CallOptions<'_>,
+    context_sha256: Option<String>,
     attempts: Option<Vec<core::AttemptObservation>>,
     profile: Option<&core::ProfileName>,
 ) -> Meta {
@@ -34,12 +33,7 @@ pub(super) fn meta(
                 profile,
                 engine.profile().map(core::BackendProfile::name),
             ))
-            .with_context_sha256(
-                options
-                    .context_text()
-                    .filter(|text| !text.is_empty())
-                    .map(|text| core::bytes_sha256(text.as_bytes())),
-            ),
+            .with_context_sha256(context_sha256),
     )
     .with_reported_usage(totals.reported)
     .with_captured_attempts(attempts)

@@ -168,7 +168,8 @@ impl Engine {
         );
         if let Some(context) = &context {
             let state = pack::state(context)
-                .map_err(|_| Error::defect("a context could not be written as JSON"))?;
+                .map_err(|_| Error::defect("a context could not be written as JSON"))?
+                .with_api(engine.backend().api_type());
             packer.check_state(&state).map_err(packed)?;
         }
         let mut summary = PlanSummary::new(false);

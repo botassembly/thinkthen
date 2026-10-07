@@ -22,10 +22,10 @@ One cut applies independently to every probability. The default is 0.5, equality
 ["billing"]
 ```
 
-Under `--details`, the question lists the label names and the answer keeps every probability. This excerpt omits the required `schema` and `meta` fields:
+Under `--details`, the question lists the label names and the answer keeps every probability. This excerpt omits the required `schema`, `answer_id` and `meta` fields:
 
 ```json
 {"value":["billing"],"question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]},"answer":{"kind":"tag","probabilities":{"billing":0.91,"urgent":0.22}},"threshold":0.5}
 ```
 
-Changing or reordering one label changes the whole request and cache key. A rerun therefore asks every label again, and answers near the cut can move.
+Changing or reordering labels changes the resolved reading and result identity. Each label question retains its own cache key: unchanged questions can reuse their held observations, and added or changed questions are asked again. The new result follows the caller’s label order. Batch size remains outside those keys.

@@ -13,13 +13,13 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--plan`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; 0.2 adoption pending |
+| [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; native/CLI implemented, host adoption pending |
 | [files.md](files.md) | Explicit text/image readers, located carriers and spans; ordered native/CLI image inputs | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |
-| [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; timing adoption pending |
-| [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; adoption pending |
+| [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; native timing implemented, host adoption pending |
+| [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; native implemented, host adoption pending |
 | [decide.md](decide.md) | `decide` | Settled |
 | [choose.md](choose.md) | `choose` | Settled |
 | [tag.md](tag.md) | `tag` | Settled |
@@ -67,3 +67,5 @@ Each section carries one of three words. **Settled** means code may be built aga
 The `runs` parent exposes `audit` and `diff` as settled by ticket 0440. Published top-level `audit` and `diff` remain hidden compatibility aliases with the same options, output, diagnostics and exit codes. Both spellings read saved inputs without setup or requests.
 
 The top-level nouns `questions`, `items`, `answers`, `checks`, `datasets`, `setups`, `findings`, `people` and `search` are reserved by [ADR 0118](../sdlc/planning/adr/0118-backend-command-namespace.md). They are unimplemented and exit 2 as unrecognized commands. This adds no judging function or proxy.
+
+[Accepted ADR0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md) and the [OpenAI target](backends.md#openai-decisions-target-for-02) refresh existing0441 for must-land 0.2 text support after0442–0444. The whole design and request-local identity correction were accepted; released System One behavior and the existing catalog completion scope remain.

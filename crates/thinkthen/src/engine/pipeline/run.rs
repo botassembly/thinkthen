@@ -398,7 +398,14 @@ impl<'a, A: Asker> Run<'a, A> {
 
     fn lookup(&mut self, asks: &[Ask], cancel: &Cancel) -> Result<Vec<Option<Found>>, Error> {
         match self.store.as_mut().filter(|store| store.looks_up()) {
-            Some(store) => store.lookup_asks(asks, cancel),
+            Some(store) => {
+                let found = store.lookup_asks(asks, cancel, (&self.call.url, &self.call.model))?;
+                if found.held_model_mismatch {
+                    self.counts.usage.held_model_mismatch();
+                    cancel.held_model_mismatch();
+                }
+                Ok(found.answers)
+            }
             None => Ok(vec![None; asks.len()]),
         }
     }

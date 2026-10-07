@@ -20,6 +20,7 @@ pub(crate) type Framed = crate::cli::intake::Item;
 /// One parsed input and the number its messages name.
 pub(super) struct Held {
     at: usize,
+    ordinal: usize,
     record: Record,
     position: Option<crate::cli::intake::Position>,
 }
@@ -74,15 +75,21 @@ impl Asker for AnnotateAsker<'_> {
             .as_ref()
             .filter(|p| p.located)
             .map(|_| held.record.clone());
-        let mut judged = self.judging.finish(held.record, groups).map_err(refused)?;
+        let mut judged = self
+            .judging
+            .finish(held.record, held.ordinal, groups)
+            .map_err(refused)?;
         if let (Some(position), Some(original), Some(line)) = (
             held.position.as_ref().filter(|p| p.located),
             original,
             &mut judged.printed,
-        ) {
+        ) && !self.judging.details()
+        {
             *line = crate::cli::intake::source_value(&original, line, position).map_err(refused)?;
         }
         if self.judging.details() {
+            crate::cli::intake::source_members(&mut judged.printed, held.position.as_ref())
+                .map_err(refused)?;
             crate::cli::intake::locate(&mut judged.printed, held.position.as_ref())
                 .map_err(refused)?;
         }
@@ -118,9 +125,9 @@ pub(super) fn asks(
                 reading,
                 record,
             )?;
-            let asks = pack::asks(url, &plan).map_err(|_| {
-                PrepareError::Other(Failure::Defect("a request could not be written as JSON"))
-            })?;
+            let asks = pack::asks_for(judging.engine().backend().api_type(), url, &plan).map_err(
+                |_| PrepareError::Other(Failure::Defect("a request could not be written as JSON")),
+            )?;
             Ok((group, asks))
         })
         .collect()
@@ -358,27 +365,24 @@ impl Parser {
 
     /// One input's record, as a dry run reads it.
     pub(super) fn record(&self, framed: Framed) -> Result<Record, Failure> {
-        self.parse(framed)
+        self.parse(framed, 0)
             .map(|held| held.record)
             .map_err(|refused| refused.error.into_failure())
     }
 
-    fn feed<I>(
-        &self,
-        mut inputs: I,
-        asks: &std::sync::mpsc::Receiver<()>,
-        port: &Port<Held, Refused>,
-    ) where
+    fn feed<I>(&self, inputs: I, asks: &std::sync::mpsc::Receiver<()>, port: &Port<Held, Refused>)
+    where
         I: Iterator<Item = Result<Framed, Placed>>,
     {
+        let mut inputs = inputs.enumerate();
         while asks.recv().is_ok() {
             let next = match inputs.next() {
                 None => Input::End,
-                Some(Ok(framed)) => match self.parse(framed) {
+                Some((ordinal, Ok(framed))) => match self.parse(framed, ordinal) {
                     Ok(held) => Input::Item(held),
                     Err(refused) => Input::Failed(refused),
                 },
-                Some(Err(placed)) => Input::Failed(Refused {
+                Some((_, Err(placed))) => Input::Failed(Refused {
                     at: placed.at.unwrap_or(0),
                     error: PrepareError::Other(placed.cause),
                 }),
@@ -390,7 +394,7 @@ impl Parser {
         }
     }
 
-    fn parse(&self, framed: Framed) -> Result<Held, Refused> {
+    fn parse(&self, framed: Framed, ordinal: usize) -> Result<Held, Refused> {
         let at = framed.at;
         let record = match framed.data {
             crate::cli::intake::Data::Bytes(bytes) => self
@@ -418,6 +422,7 @@ impl Parser {
         }
         Ok(Held {
             at,
+            ordinal,
             record,
             position: framed.position,
         })

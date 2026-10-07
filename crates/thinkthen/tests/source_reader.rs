@@ -185,3 +185,17 @@ fn image_read_failure_is_local_and_the_handle_stops_after_one_error() {
     assert!(!format!("{error:?}").contains("PRIVATE_IMAGE_BYTES"));
     assert!(reader.next().is_none());
 }
+
+#[test]
+fn physical_span_coordinates_refuse_overflow_without_panicking() {
+    let source = thinkthen::SourceRecord {
+        record: "a\nb",
+        file: "unknown".to_owned(),
+        first_line: usize::MAX,
+        last_line: usize::MAX,
+    };
+    assert_eq!(
+        source.span_lines(2, 3).unwrap_err().kind(),
+        thinkthen::ErrorKind::Usage
+    );
+}

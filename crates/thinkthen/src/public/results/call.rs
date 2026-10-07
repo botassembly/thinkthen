@@ -22,6 +22,9 @@ pub struct Facts {
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
     pub(super) call_id: Option<CallId>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    pub(super) held_model_mismatch: bool,
     pub(super) cache_answers: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, schemars(with = "String"))]
@@ -69,6 +72,7 @@ impl Facts {
         Self {
             attempts: snapshot.attempts,
             call_id: snapshot.call_id,
+            held_model_mismatch: snapshot.held_model_mismatch,
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
             cache_answers: snapshot.cache_answers,
@@ -82,6 +86,13 @@ impl Facts {
             seconds: snapshot.elapsed.as_secs_f64(),
             model: snapshot.model,
         }
+    }
+
+    /// Whether an excluded held answer reported a different model on this route.
+    /// This is call-scoped and contains no stored model, address or credential.
+    #[must_use]
+    pub const fn held_model_mismatch(&self) -> bool {
+        self.held_model_mismatch
     }
 
     /// Ordered input records finished before a stop, including filtered rows.

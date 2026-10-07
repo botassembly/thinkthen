@@ -4,6 +4,7 @@ use serde::Serialize;
 
 /// The native cause behind one of the six stable error kinds.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum StopCause {
     /// Admission or caller-budget refusal.
@@ -32,6 +33,7 @@ pub enum StopCause {
 
 /// Owned structured stop information retained with an error snapshot.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct Stopped {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) at: Option<usize>,

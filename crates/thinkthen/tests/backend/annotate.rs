@@ -338,7 +338,8 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
     assert!(row.contains(r#""questions_sha256":"#), "{row}");
     assert!(row.contains(r#""cached":false"#), "{row}");
     assert!(row.contains(r#""failed_questions":0"#), "{row}");
-    assert!(row.contains(r#""answers":{"risky":{"value":true"#), "{row}");
+    let parsed: serde_json::Value = serde_json::from_slice(&first.stdout).expect("complete row");
+    assert_eq!(parsed["answers"]["risky"]["value"], true);
 
     let mut replayed = base.to_vec();
     replayed.extend(["--replay", &recording_text]);

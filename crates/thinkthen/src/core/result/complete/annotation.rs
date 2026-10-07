@@ -1,10 +1,9 @@
 //! Complete annotation entries distinguish successful null from failed occurrences.
 
-use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
 use super::ResultIdentity;
-use crate::core::{AnnotateResult, AnnotatedEntry, AnswerId, FailureId, Origin};
+use crate::core::{AnnotateResult, AnnotatedEntry, AnswerId, FailureId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Annotation {
@@ -34,6 +33,11 @@ pub enum MemberIdentity {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "MemberDocument<'static>")
+)]
 pub(crate) struct AnnotationMember {
     pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: MemberIdentity,
@@ -67,135 +71,106 @@ impl AnnotationMember {
     }
 }
 
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeAnnotationMember")
+)]
+#[serde(untagged)]
+enum MemberDocument<'a> {
+    Answered {
+        answer_id: &'a AnswerId,
+        value: &'a crate::core::Value,
+        question: crate::core::declaration::ReadableQuestion<'a, crate::core::Question>,
+        answer: &'a crate::core::Answer,
+        threshold: Option<crate::core::Threshold>,
+        request: &'a str,
+    },
+    Failed {
+        failure_id: &'a FailureId,
+        question: crate::core::declaration::ReadableQuestion<'a, crate::core::Question>,
+        failure: &'a crate::core::BackendFailure,
+        request: &'a str,
+    },
+}
+
 impl Serialize for AnnotationMember {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        match (&self.identity, &self.legacy) {
+        let question = crate::core::declaration::ReadableQuestion {
+            question: self.question(),
+            metadata: &self.declarations,
+        };
+        let document = match (&self.identity, &self.legacy) {
             (MemberIdentity::Answered(id), AnnotatedEntry::Answered(entry)) => {
-                map.serialize_entry("answer_id", id)?;
-                map.serialize_entry("value", &entry.value)?;
-                map.serialize_entry(
-                    "question",
-                    &crate::core::declaration::ReadableQuestion {
-                        question: &entry.question,
-                        metadata: &self.declarations,
-                    },
-                )?;
-                map.serialize_entry("answer", &entry.answer)?;
-                map.serialize_entry("threshold", &entry.threshold)?;
-                map.serialize_entry("request", &entry.request)?;
+                MemberDocument::Answered {
+                    answer_id: id,
+                    value: &entry.value,
+                    question,
+                    answer: &entry.answer,
+                    threshold: entry.threshold,
+                    request: &entry.request,
+                }
             }
-            (MemberIdentity::Failed(id), AnnotatedEntry::Failed(entry)) => {
-                map.serialize_entry("failure_id", id)?;
-                map.serialize_entry(
-                    "question",
-                    &crate::core::declaration::ReadableQuestion {
-                        question: &entry.question,
-                        metadata: &self.declarations,
-                    },
-                )?;
-                map.serialize_entry("failure", &entry.failure)?;
-                map.serialize_entry("request", &entry.request)?;
-            }
+            (MemberIdentity::Failed(id), AnnotatedEntry::Failed(entry)) => MemberDocument::Failed {
+                failure_id: id,
+                question,
+                failure: &entry.failure,
+                request: &entry.request,
+            },
             _ => {
                 return Err(serde::ser::Error::custom(
                     "an annotation identity does not match its outcome",
                 ));
             }
-        }
-        map.end()
+        };
+        document.serialize(serializer)
     }
 }
 
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "std::collections::BTreeMap<String, AnnotationMember>")
+)]
 struct Members<'a>(&'a [(String, AnnotationMember)]);
-
 impl Serialize for Members<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_map(self.0.iter().map(|(name, member)| (name, member)))
     }
 }
 
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeAnnotation")
+)]
+pub(crate) struct Document<'a, T: Serialize> {
+    schema: super::wire::Version,
+    answer_id: &'a AnswerId,
+    input: &'a T,
+    value: &'a crate::core::NamedValues,
+    answers: Members<'a>,
+    meta: super::CompleteMeta<'a>,
+}
 impl Annotation {
     pub(crate) fn serialize_with_input<S: Serializer, T: Serialize>(
         &self,
         input: &T,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        let row = &self.legacy;
-        let meta = &row.meta;
-        let identity = &self.identity;
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("schema", "thinkthen.result/2")?;
-        map.serialize_entry("answer_id", identity.answer_id())?;
-        map.serialize_entry("input", input)?;
-        map.serialize_entry("value", &row.value)?;
-        map.serialize_entry("answers", &Members(&self.members))?;
-        map.serialize_entry(
-            "meta",
-            &AnnotationMeta {
-                row: meta,
-                identity,
-                context_sha256: self.context_sha256.as_deref(),
-                attempts: self.attempts.as_deref(),
-            },
-        )?;
-        map.end()
+        Document {
+            schema: super::wire::Version::V2,
+            answer_id: self.identity.answer_id(),
+            input,
+            value: &self.legacy.value,
+            answers: Members(&self.members),
+            meta: super::CompleteMeta::from_fields(self.metadata(), &self.identity),
+        }
+        .serialize(serializer)
     }
 }
-
-struct AnnotationMeta<'a> {
-    row: &'a super::super::AnnotateMeta,
-    identity: &'a ResultIdentity,
-    context_sha256: Option<&'a str>,
-    attempts: Option<&'a [crate::core::AttemptObservation]>,
-}
-
-impl Serialize for AnnotationMeta<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let row = self.row;
-        let identity = self.identity;
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("tool", &row.tool)?;
-        map.serialize_entry("questions_sha256", &row.questions_sha256)?;
-        map.serialize_entry("url", &row.url)?;
-        map.serialize_entry("model", &row.model)?;
-        if let Some(usage) = &row.reported_usage {
-            map.serialize_entry("usage", usage)?;
-        }
-        map.serialize_entry("requests_sent", &row.requests_sent)?;
-        let cached = !identity.question_sources().is_empty()
-            && identity
-                .question_sources()
-                .iter()
-                .all(|source| matches!(source.origin(), Origin::Cache | Origin::Replay));
-        map.serialize_entry("cached", &cached)?;
-        map.serialize_entry("requests", &row.requests)?;
-        map.serialize_entry("failed_questions", &row.failed_questions)?;
-        if let Some(warning) = &row.profile_warning {
-            map.serialize_entry("profile_warning", warning)?;
-        }
-        if let Some(context) = self.context_sha256 {
-            map.serialize_entry("context_sha256", context)?;
-        }
-        if let Some(attempts) = self.attempts {
-            map.serialize_entry(
-                "attempts",
-                &attempts
-                    .iter()
-                    .map(crate::core::AttemptObservation::complete)
-                    .collect::<Vec<_>>(),
-            )?;
-        }
-        map.serialize_entry("origin", &identity.origin())?;
-        map.serialize_entry("question_sources", identity.question_sources())?;
-        map.serialize_entry("observations", identity.observations())?;
-        if let Some(model) = identity.answered_by() {
-            map.serialize_entry("answered_by", model)?;
-        }
-        map.end()
-    }
-}
-
 impl Serialize for Annotation {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.serialize_with_input(&self.legacy.input, serializer)

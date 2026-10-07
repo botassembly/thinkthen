@@ -104,21 +104,25 @@ pub use recognize::{
     Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relation, RelationRule,
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
+pub use results::FindSelection;
 #[cfg(test)]
 pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, Candidate, CompleteAnnotated,
     CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision, CompleteFacts,
-    CompleteFilter, CompleteFound, CompleteRank, CompleteRecord, CompleteScore, CompleteTags,
-    Counters, Details, DoorReply, Facts, Found, Judgment, NamedProbability, ObservedRow, Picked,
-    Probabilities, ProfileMismatch, QuestionDetail, Ranked, RankedRow, RecordObservation,
-    ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
+    CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord, CompleteScore,
+    CompleteSetRank, CompleteTags, Counters, Details, DoorReply, Facts, Found, Judgment,
+    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, Ranked,
+    RankedRow, RecordObservation, ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
+    complete_call_schema,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
     RecognitionProbabilities,
 };
-pub use results::{CompleteRelated, CompleteRelationMember};
+pub use results::{
+    CompleteRelated, CompleteRelationMember, SourceRelationEdge, SourceRelationEndpoint,
+};
 pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
@@ -459,5 +463,8 @@ pub use crate::core::{
 };
 
 mod question_metadata;
+mod question_preparation;
 
 pub(crate) mod named_question;
+
+pub use results::{SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation};

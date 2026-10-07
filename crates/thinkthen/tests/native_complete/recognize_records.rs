@@ -5,9 +5,9 @@ use thinkthen::{
 };
 
 #[cfg(test)]
-fn record(id: usize, line: usize) -> RecordInput<thinkthen::RecordEvidence> {
-    let raw = RawRecord::json(&format!(r#"{{"body":"Ada met Acme.","private":{id}}}"#)).unwrap();
-    let mut record = RecordReading::new(&["/body"], None, None)
+fn record(_id: usize, line: usize) -> RecordInput<thinkthen::RecordEvidence> {
+    let raw = RawRecord::text("Ada met Acme.").unwrap();
+    let mut record = RecordReading::new(&[], None, None)
         .unwrap()
         .compose(raw)
         .unwrap();
@@ -67,10 +67,7 @@ fn located_recognition_retains_duplicate_occurrences_and_one_call_with_row_attem
     );
     let document = serde_json::to_value(&rows[1]).unwrap();
     assert_eq!(document["schema"], "thinkthen.result/2");
-    assert_eq!(
-        document["input"],
-        json!({"body":"Ada met Acme.","private":2})
-    );
+    assert_eq!(document["input"], json!("Ada met Acme."));
     assert_eq!(document["value"]["entities"][0]["start"], 0);
     assert_eq!(document["value"]["entities"][1]["end"], 12);
     let requests = listener.requests();

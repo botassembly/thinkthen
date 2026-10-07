@@ -43,6 +43,10 @@ pub(crate) struct Find {
 }
 
 impl Find {
+    /// Explicit none occupies one option in the existing 255-option primitive bound.
+    pub(crate) const fn maximum(none: bool) -> usize {
+        if none { 254 } else { 255 }
+    }
     /// Build one aggregate request from ordered evidence.
     pub(crate) fn new(
         text: QuestionText,
@@ -50,7 +54,7 @@ impl Find {
         model: ModelName,
         none: bool,
     ) -> Result<Self, FindError> {
-        let most = if none { 254 } else { 255 };
+        let most = Self::maximum(none);
         if !(2..=most).contains(&evidence.len()) {
             return Err(FindError::Count);
         }
