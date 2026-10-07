@@ -7963,43 +7963,43 @@
         "case_rulings": {
           "23-cancelled-fault": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case supplies a pre-fired native cancellation handle. CLI signals drain started work through cancellation-held-call."
           },
           "24-deadline-fault": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case supplies an expired native deadline handle. CLI timeout admission and slow-attempt controls remain required."
           },
           "boundary-cancelled": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case supplies a pre-fired native cancellation handle. CLI signals drain started work through cancellation-held-call."
           },
           "boundary-deadline": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case supplies an expired native deadline handle. CLI timeout admission and slow-attempt controls remain required."
           },
           "named-traversal": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case selects the strict named-only loader. CLI @reference deliberately resolves a local path first and retains path/file checks."
           },
           "named-uppercase": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case selects the strict named-only loader. CLI @reference deliberately resolves a local path first and retains path/file checks."
           },
           "named-overlong": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case selects the strict named-only loader. CLI @reference deliberately resolves a local path first and retains path/file checks."
           },
           "lookup-explicit-name": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case selects the strict named-only loader. CLI @reference deliberately resolves a local path first and retains path/file checks."
           },
           "named-malformed-no-fallback": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case selects the strict named-only loader. CLI @reference deliberately resolves a local path first and retains path/file checks."
           },
           "proxy-reservation-refusal": {
             "boundary": "sdk-only",
-            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+            "reason": "The SDK case supplies a proxy reservation object. The CLI has no corresponding reservation input."
           },
           "declaration-shorthand": {
             "boundary": "question-file",
@@ -8251,6 +8251,23 @@
               "exit": 5,
               "requests_sent": 0,
               "no_result": true,
+              "secrecy": true
+            }
+          },
+          "cancellation-held-call": {
+            "boundary": "signal-drain",
+            "reason": "The installed CLI drains one held request after actual SIGINT and SIGTERM, retains its completed prefix, stops queued sends and exits by the signal. Linux pending state coordinates delivery without acknowledging the internal cancellation flag.",
+            "expect": {
+              "signals": [
+                "SIGINT",
+                "SIGTERM"
+              ],
+              "requests_sent": 1,
+              "completed_rows": 1,
+              "completed_rows_ordered": true,
+              "no_suffix_output": true,
+              "cancelled_facts": true,
+              "signal_exit": true,
               "secrecy": true
             }
           }
