@@ -13785,23 +13785,23 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 470,
-                  "repeat_count": 642789,
-                  "ascii_tail_bytes": 6
+                  "repeat_count": 2249764,
+                  "ascii_tail_bytes": 1
                 },
                 "choose": {
                   "base_body_bytes": 505,
-                  "repeat_count": 642784,
-                  "ascii_tail_bytes": 6
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 0
                 },
                 "score": {
                   "base_body_bytes": 490,
-                  "repeat_count": 642787,
-                  "ascii_tail_bytes": 0
+                  "repeat_count": 2249754,
+                  "ascii_tail_bytes": 1
                 }
               }
             },
@@ -13847,23 +13847,23 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 470,
-                  "repeat_count": 642790,
+                  "repeat_count": 2249765,
                   "ascii_tail_bytes": 0
                 },
                 "choose": {
                   "base_body_bytes": 505,
-                  "repeat_count": 642785,
-                  "ascii_tail_bytes": 0
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 1
                 },
                 "score": {
                   "base_body_bytes": 490,
-                  "repeat_count": 642787,
-                  "ascii_tail_bytes": 1
+                  "repeat_count": 2249755,
+                  "ascii_tail_bytes": 0
                 }
               }
             },
@@ -13909,23 +13909,23 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 601,
-                  "repeat_count": 4793404,
-                  "ascii_tail_bytes": 3
+                  "repeat_count": 16776915,
+                  "ascii_tail_bytes": 1
                 },
                 "choose": {
                   "base_body_bytes": 636,
-                  "repeat_count": 4793399,
-                  "ascii_tail_bytes": 3
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 0
                 },
                 "score": {
                   "base_body_bytes": 621,
-                  "repeat_count": 4793401,
-                  "ascii_tail_bytes": 4
+                  "repeat_count": 16776905,
+                  "ascii_tail_bytes": 1
                 }
               }
             },
@@ -13971,23 +13971,23 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 601,
-                  "repeat_count": 4793404,
-                  "ascii_tail_bytes": 4
+                  "repeat_count": 16776916,
+                  "ascii_tail_bytes": 0
                 },
                 "choose": {
                   "base_body_bytes": 636,
-                  "repeat_count": 4793399,
-                  "ascii_tail_bytes": 4
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 1
                 },
                 "score": {
                   "base_body_bytes": 621,
-                  "repeat_count": 4793401,
-                  "ascii_tail_bytes": 5
+                  "repeat_count": 16776906,
+                  "ascii_tail_bytes": 0
                 }
               }
             },
@@ -14099,23 +14099,23 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 470,
-                  "repeat_count": 642790,
+                  "repeat_count": 2249765,
                   "ascii_tail_bytes": 0
                 },
                 "choose": {
                   "base_body_bytes": 505,
-                  "repeat_count": 642785,
-                  "ascii_tail_bytes": 0
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 1
                 },
                 "score": {
                   "base_body_bytes": 490,
-                  "repeat_count": 642787,
-                  "ascii_tail_bytes": 1
+                  "repeat_count": 2249755,
+                  "ascii_tail_bytes": 0
                 }
               }
             },
@@ -14169,23 +14169,23 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 601,
-                  "repeat_count": 4793404,
-                  "ascii_tail_bytes": 4
+                  "repeat_count": 16776916,
+                  "ascii_tail_bytes": 0
                 },
                 "choose": {
                   "base_body_bytes": 636,
-                  "repeat_count": 4793399,
-                  "ascii_tail_bytes": 4
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 1
                 },
                 "score": {
                   "base_body_bytes": 621,
-                  "repeat_count": 4793401,
-                  "ascii_tail_bytes": 5
+                  "repeat_count": 16776906,
+                  "ascii_tail_bytes": 0
                 }
               }
             },
@@ -14233,25 +14233,25 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 470,
-                  "repeat_count": 642789,
-                  "ascii_tail_bytes": 6,
+                  "repeat_count": 2249764,
+                  "ascii_tail_bytes": 1,
                   "each_final_body_bytes": 4499999
                 },
                 "choose": {
                   "base_body_bytes": 505,
-                  "repeat_count": 642784,
-                  "ascii_tail_bytes": 6,
+                  "repeat_count": 2249747,
+                  "ascii_tail_bytes": 0,
                   "each_final_body_bytes": 4499999
                 },
                 "score": {
                   "base_body_bytes": 490,
-                  "repeat_count": 642787,
-                  "ascii_tail_bytes": 0,
+                  "repeat_count": 2249754,
+                  "ascii_tail_bytes": 1,
                   "each_final_body_bytes": 4499999
                 }
               }
@@ -14276,7 +14276,16 @@
               }
             },
             "distinct_state_construction": "replace the first prefix character with another ASCII character in the second input",
-            "repeat_state_byte_split": true
+            "same_state_choose_candidate_orders": [
+              [
+                "red",
+                "blue"
+              ],
+              [
+                "blue",
+                "red"
+              ]
+            ]
           },
           "expect": {
             "requests": 2,
@@ -14303,25 +14312,25 @@
             ],
             "text_recipe": {
               "prefix": "image boundary:",
-              "repeat_token": "x\"\\\n",
-              "encoded_repeat_bytes": 7,
+              "repeat_token": "\n",
+              "encoded_repeat_bytes": 2,
               "by_function": {
                 "decide": {
                   "base_body_bytes": 601,
-                  "repeat_count": 4793404,
-                  "ascii_tail_bytes": 3,
+                  "repeat_count": 16776915,
+                  "ascii_tail_bytes": 1,
                   "each_final_body_bytes": 33554432
                 },
                 "choose": {
                   "base_body_bytes": 636,
-                  "repeat_count": 4793399,
-                  "ascii_tail_bytes": 3,
+                  "repeat_count": 16776898,
+                  "ascii_tail_bytes": 0,
                   "each_final_body_bytes": 33554432
                 },
                 "score": {
                   "base_body_bytes": 621,
-                  "repeat_count": 4793401,
-                  "ascii_tail_bytes": 4,
+                  "repeat_count": 16776905,
+                  "ascii_tail_bytes": 1,
                   "each_final_body_bytes": 33554432
                 }
               }
@@ -14346,7 +14355,16 @@
               }
             },
             "distinct_state_construction": "replace the first prefix character with another ASCII character in the second input",
-            "repeat_state_byte_split": true
+            "same_state_choose_candidate_orders": [
+              [
+                "red",
+                "blue"
+              ],
+              [
+                "blue",
+                "red"
+              ]
+            ]
           },
           "expect": {
             "requests": 2,

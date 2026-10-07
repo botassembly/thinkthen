@@ -100,6 +100,12 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
     functions(definitions);
 }
 fn locations(definitions: &mut Map<String, Value>) {
+    let source = definitions
+        .get_mut("completePhysicalSource")
+        .expect("physical source");
+    source["properties"]["first_line"]["minimum"] = json!(1);
+    source["properties"]["last_line"]["minimum"] = json!(1);
+    source["dependentRequired"] = json!({"first_line":["last_line"],"last_line":["first_line"]});
     for name in [
         "completeAtomic",
         "completeAnnotation",
