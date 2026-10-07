@@ -7,6 +7,7 @@ mod annotation;
 pub(crate) mod compatibility;
 mod find;
 mod recognize;
+mod relate;
 
 #[cfg(test)]
 pub(crate) fn validate(rows: &[(String, Value)]) {

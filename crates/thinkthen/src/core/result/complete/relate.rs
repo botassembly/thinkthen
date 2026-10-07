@@ -165,10 +165,10 @@ impl Relation {
     derive(schemars::JsonSchema),
     schemars(rename = "completeRelation")
 )]
-pub(crate) struct Document<'a, T: Serialize> {
+pub(crate) struct Document<'a, T: Serialize, V: Serialize = Vec<RelationEdge<RelationEntity>>> {
     schema: super::wire::Version,
     answer_id: &'a crate::core::AnswerId,
-    value: &'a [RelationEdge<RelationEntity>],
+    value: &'a V,
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<&'a T>,
     question: crate::core::declaration::ReadableQuestion<
@@ -184,10 +184,19 @@ impl Relation {
         input: Option<&T>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_with_value(input, &self.value, serializer)
+    }
+    /// Physical occurrence expansion presents typed values without changing identity.
+    pub(crate) fn serialize_with_value<S: Serializer, T: Serialize, V: Serialize>(
+        &self,
+        input: Option<&T>,
+        value: &V,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         Document {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
-            value: &self.value,
+            value,
             input,
             question: crate::core::declaration::ReadableQuestion {
                 question: &self.question.question(self.lines),

@@ -29,5 +29,20 @@ pub(crate) fn judgment(mut row: Value) -> Value {
             }
         }
     }
+    if let Some(members) = row["answer"]
+        .get_mut("questions")
+        .and_then(Value::as_array_mut)
+    {
+        for member in members {
+            let member = member.as_object_mut().unwrap();
+            if let Some(id) = member.remove("answer_id") {
+                assert!(thinkthen::AnswerId::new(id.as_str().unwrap()).is_ok());
+                assert!(member.remove("answer").is_some());
+            } else {
+                let id = member.remove("failure_id").unwrap();
+                assert!(thinkthen::FailureId::new(id.as_str().unwrap()).is_ok());
+            }
+        }
+    }
     row
 }

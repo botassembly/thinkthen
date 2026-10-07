@@ -17,6 +17,7 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
         generator.subschema_for::<crate::public::Surface>(),
         generator.subschema_for::<crate::cli::intake::Position>(),
         generator.subschema_for::<crate::cli::intake::SourceFields<'_>>(),
+        generator.subschema_for::<crate::cli::relate::source::Endpoint<'_>>(),
     ];
 }
 pub(super) fn finish(definitions: &mut Map<String, Value>) {
@@ -136,6 +137,13 @@ fn locations(definitions: &mut Map<String, Value>) {
         .as_object_mut()
         .expect("entity properties")
         .extend(fields);
+    strict::graph(definitions, "sourceRelationEndpoint");
+    for endpoint in ["source", "target"] {
+        definitions
+            .get_mut("completerelatedEntityEdge")
+            .expect("relation edge")["properties"][endpoint] =
+            super::any_of(&["completerelatedEntity", "completesourceRelationEndpoint"]);
+    }
     definitions.insert("completePosition".into(), definitions["Position"].clone());
     strict::graph(definitions, "completePosition");
 }

@@ -2,8 +2,9 @@
 mod aggregate;
 mod annotate;
 mod recognize;
-pub(crate) use aggregate::{Totals, meta as aggregate_meta};
+mod relate;
 pub(crate) use recognize::{RecognitionRow, recognition};
+pub(crate) use relate::{RelationRow, relation};
 mod find;
 use super::{Run, decision_with_digest};
 use crate::core::image::InputFunction;

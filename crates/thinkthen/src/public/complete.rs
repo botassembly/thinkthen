@@ -8,7 +8,6 @@ mod recognize;
 mod records;
 mod relate;
 mod streaming;
-mod trace;
 use crate::core::{self, Value};
 use crate::public::engine::only;
 use crate::public::question::{Kind, Question};

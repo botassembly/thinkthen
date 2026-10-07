@@ -5377,10 +5377,24 @@
           "type": "string"
         },
         "source": {
-          "$ref": "#/$defs/completerelatedEntity"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completerelatedEntity"
+            },
+            {
+              "$ref": "#/$defs/completesourceRelationEndpoint"
+            }
+          ]
         },
         "target": {
-          "$ref": "#/$defs/completerelatedEntity"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completerelatedEntity"
+            },
+            {
+              "$ref": "#/$defs/completesourceRelationEndpoint"
+            }
+          ]
         }
       },
       "required": [
@@ -5419,6 +5433,47 @@
         "target",
         "reads",
         "either"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completesourceRelationEndpoint": {
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "record": {}
+      },
+      "required": [
+        "name",
+        "kind",
+        "record",
+        "file"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -6825,6 +6880,46 @@
     "score": {
       "format": "double",
       "type": "number"
+    },
+    "sourceRelationEndpoint": {
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "last_line": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "record": {}
+      },
+      "required": [
+        "name",
+        "kind",
+        "record",
+        "file"
+      ],
+      "type": "object"
     },
     "tag": {
       "items": {
