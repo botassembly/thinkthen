@@ -9,7 +9,12 @@ impl Output<'_> {
         rows: Vec<Judged>,
         index: usize,
     ) -> Result<bool, Failure> {
-        if rows.len() == 1 {
+        if rows.len() == 1
+            && !rows
+                .first()
+                .and_then(|row| row.rank.as_ref())
+                .is_some_and(super::rank::RankRow::is_set)
+        {
             let row = rows
                 .into_iter()
                 .next()
@@ -22,12 +27,19 @@ impl Output<'_> {
         };
         if self.members.is_empty() {
             self.members.resize_with(rows.len(), Vec::new);
+            self.member_scores.resize_with(rows.len(), Vec::new);
         }
         for (member, row) in rows.into_iter().enumerate() {
             self.check_model(&row)?;
             let value = row
                 .order_value
                 .ok_or(Failure::Defect("a ranked row carries no probability"))?;
+            if row.rank.as_ref().is_some_and(super::rank::RankRow::is_set) {
+                self.member_scores
+                    .get_mut(member)
+                    .ok_or(Failure::Defect("a rank lost its scores"))?
+                    .push((index, value));
+            }
             let held = self
                 .members
                 .get_mut(member)
@@ -54,6 +66,7 @@ impl Output<'_> {
     }
 
     pub(super) fn end_members(&mut self) -> Result<(), Failure> {
+        let positions = member_positions(&self.member_scores)?;
         let Mode::Ordered { top, writer, .. } = &mut self.mode else {
             return Err(Failure::Defect("a set rank must hold output"));
         };
@@ -75,17 +88,18 @@ impl Output<'_> {
         for rows in &mut self.members {
             rows.sort_unstable_by_key(|(index, _)| *index);
         }
-        for (index, member) in turns(&lists, *top) {
+        for (at, (index, member)) in turns(&lists, *top).into_iter().enumerate() {
             let row = self
                 .members
-                .get(member)
+                .get_mut(member)
                 .and_then(|rows| {
                     rows.binary_search_by_key(&index, |(at, _)| *at)
                         .ok()
-                        .and_then(|place| rows.get(place))
+                        .and_then(|place| rows.get_mut(place))
                 })
                 .map(|(_, row)| row)
                 .ok_or(Failure::Defect("a merged rank lost its record"))?;
+            row.finish_rank(at, positions.get(&index).map(Vec::as_slice))?;
             if let Some(mismatch) = &row.profile_mismatch {
                 mismatch.print_once()?;
             }
@@ -95,4 +109,31 @@ impl Output<'_> {
         }
         Ok(())
     }
+}
+
+// Retain numeric scores for full member positions while payloads stay bounded by top.
+fn member_positions(
+    scores: &[Vec<(usize, f64)>],
+) -> Result<std::collections::BTreeMap<usize, Vec<usize>>, Failure> {
+    let mut positions = std::collections::BTreeMap::new();
+    let width = scores.len();
+    for (member, scores) in scores.iter().enumerate() {
+        let values = scores.iter().map(|(_, value)| *value).collect::<Vec<_>>();
+        for (at, place) in crate::core::ranking(&values, None).into_iter().enumerate() {
+            let (index, _) = scores
+                .get(place)
+                .ok_or(Failure::Defect("a rank lost its score"))?;
+            let row = positions
+                .entry(*index)
+                .or_insert_with(|| vec![usize::MAX; width]);
+            *row.get_mut(member)
+                .ok_or(Failure::Defect("a rank lost its member position"))? = at;
+        }
+    }
+    for row in positions.values() {
+        if row.contains(&usize::MAX) {
+            return Err(Failure::Defect("a rank lost its member position"));
+        }
+    }
+    Ok(positions)
 }

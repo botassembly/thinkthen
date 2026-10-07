@@ -2,6 +2,13 @@
 use super::Meta;
 use crate::core::{ModelName, RenderError, ReportedSum};
 impl Meta {
+    pub(crate) fn with_reading_metadata(mut self, reading: &Self) -> Self {
+        self.profile_warning.clone_from(&reading.profile_warning);
+        self.batch_setting = reading.batch_setting;
+        self.batch_warning.clone_from(&reading.batch_warning);
+        self.context_sha256.clone_from(&reading.context_sha256);
+        self
+    }
     pub(crate) fn combined(
         digest: String,
         requested_model: &ModelName,
@@ -36,6 +43,10 @@ impl Meta {
         }
         if members.iter().any(|member| member.model != total.model) {
             total.model = requested_model.clone();
+        }
+        if let Some(attempts) = &mut total.attempts {
+            attempts.sort_by_key(crate::core::AttemptObservation::ordinal);
+            attempts.dedup_by_key(|event| event.ordinal());
         }
         total.reported_usage = usage.total().map_err(|()| RenderError)?;
         total.usage = total

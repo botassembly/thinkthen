@@ -5,7 +5,7 @@ use crate::core::{Outcome, Question, Reading, Record, RecordValue, Value, json_l
 use crate::engine::facade::Judgment;
 use crate::failure::Failure;
 use crate::judge::Keeping;
-use crate::result_json::{Run, decision_row};
+use crate::result_json::Run;
 use crate::schedule::Judged;
 
 impl Judging<'_> {
@@ -24,35 +24,52 @@ impl Judging<'_> {
             Value::Score(position) => Some(*position),
             _ => judged.answer.yes(),
         };
+        let rank = if self.view.details && self.keeping == Keeping::Ordered {
+            Some(crate::schedule::rank::RankRow {
+                value: crate::schedule::rank::RankValue::Single(Box::new(self.canonical(
+                    record.clone(),
+                    question.clone(),
+                    judged,
+                    &mismatch,
+                    &mut context,
+                )?)),
+                record: context.record,
+                documents: self.documents,
+            })
+        } else {
+            None
+        };
         let original = context
             .position
             .filter(|p| p.located && !self.text_view)
             .map(|_| record.clone());
-        let mut printed =
-            if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
-                Some(self.detailed(record, question, judged, &mismatch, &mut context)?)
-            } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
-                None
-            } else if self.keeping.streams_only() {
-                Some(match context.arrived {
-                    Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
-                    None => json_line(&record)?,
-                })
-            } else if self.view.raw {
-                // One line stands for one record, so an unresolved record prints
-                // an empty line. On one document it prints nothing at all.
-                match judged.value.label() {
-                    Some(label) => Some(label.to_owned()),
-                    None if self.streams => Some(String::new()),
-                    None => None,
-                }
-            } else if self.view.quiet {
-                None
-            } else if self.streams {
-                Some(json_line(&RecordValue::new(record, judged.value.clone()))?)
-            } else {
-                Some(json_line(&judged.value)?)
-            };
+        let mut printed = if rank.is_some() {
+            None
+        } else if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes)
+        {
+            Some(self.detailed(record, question, judged, &mismatch, &mut context)?)
+        } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
+            None
+        } else if self.keeping.streams_only() {
+            Some(match context.arrived {
+                Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
+                None => json_line(&record)?,
+            })
+        } else if self.view.raw {
+            // One line stands for one record, so an unresolved record prints
+            // an empty line. On one document it prints nothing at all.
+            match judged.value.label() {
+                Some(label) => Some(label.to_owned()),
+                None if self.streams => Some(String::new()),
+                None => None,
+            }
+        } else if self.view.quiet {
+            None
+        } else if self.streams {
+            Some(json_line(&RecordValue::new(record, judged.value.clone()))?)
+        } else {
+            Some(json_line(&judged.value)?)
+        };
         if self.view.details {
             crate::cli::intake::locate(&mut printed, context.position)?;
         }
@@ -63,6 +80,7 @@ impl Judging<'_> {
             crate::cli::intake::document(&mut printed, context.position, self.view.details)?;
         }
         Ok(Judged {
+            rank,
             model: Some(judged.answered.reply.model().clone()),
             printed,
             position: context.position.cloned(),
@@ -81,6 +99,18 @@ impl Judging<'_> {
         mismatch: &crate::profile::Mismatch,
         context: &mut RowContext<'_>,
     ) -> Result<String, Failure> {
+        Ok(json_line(
+            &self.canonical(record, question, judged, mismatch, context)?,
+        )?)
+    }
+    fn canonical(
+        &self,
+        record: Record,
+        question: Question,
+        judged: &Judgment,
+        mismatch: &crate::profile::Mismatch,
+        context: &mut RowContext<'_>,
+    ) -> Result<crate::core::CompleteAtomic, Failure> {
         // Ordinary rank has no cut and therefore no yes/no value.
         // Graded rank keeps the score value that orders its records.
         let shown =
@@ -100,49 +130,38 @@ impl Judging<'_> {
                 .as_ref()
                 .map(|context| context.digest().to_owned()),
         };
-        let input = self.streams.then_some(record);
+        let input = (self.streams || self.keeping == Keeping::Ordered).then_some(record);
         let requests = std::mem::take(&mut context.requests);
         let attempts = std::mem::take(&mut context.attempts);
-        if self.keeping == Keeping::Ordered {
-            Ok(decision_row(
-                run,
-                judged,
-                question,
-                self.threshold,
-                shown,
-                input,
-                requests,
-                attempts,
-            )?)
+        let function = if self.keeping == Keeping::Ordered {
+            crate::core::image::InputFunction::Rank
+        } else if self.keeping == Keeping::Passing {
+            crate::core::image::InputFunction::Filter
         } else {
-            let function = if self.keeping == Keeping::Passing {
-                crate::core::image::InputFunction::Filter
-            } else {
-                match question {
-                    Question::Decide { .. } => crate::core::image::InputFunction::Decide,
-                    Question::Choose { .. } => crate::core::image::InputFunction::Choose,
-                    Question::Tag { .. } => crate::core::image::InputFunction::Tag,
-                    Question::Score { .. } => crate::core::image::InputFunction::Score,
-                }
-            };
-            let canonical = crate::result_json::complete::atomic(
-                run,
-                judged,
-                crate::result_json::complete::AtomicSpec {
-                    declarations: self.declarations.clone(),
-                    function,
-                    record: context.record,
-                    question,
-                    threshold: self.threshold,
-                    shown,
-                    rank_position: None,
-                },
-                requests,
-                input,
-                Some(attempts),
-            )?;
-            Ok(json_line(&canonical)?)
-        }
+            match question {
+                Question::Decide { .. } => crate::core::image::InputFunction::Decide,
+                Question::Choose { .. } => crate::core::image::InputFunction::Choose,
+                Question::Tag { .. } => crate::core::image::InputFunction::Tag,
+                Question::Score { .. } => crate::core::image::InputFunction::Score,
+            }
+        };
+        let canonical = crate::result_json::complete::atomic(
+            run,
+            judged,
+            crate::result_json::complete::AtomicSpec {
+                declarations: self.declarations.clone(),
+                function,
+                record: context.record,
+                question,
+                threshold: self.threshold,
+                shown,
+                rank_position: None,
+            },
+            requests,
+            input,
+            Some(attempts),
+        )?;
+        Ok(canonical)
     }
     fn mismatch_of(&self, question: &Question) -> crate::profile::Mismatch {
         match question {

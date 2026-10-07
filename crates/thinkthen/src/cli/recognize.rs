@@ -318,6 +318,7 @@ fn judged_record(
         outcome: Outcome::Yes,
         replayed,
         order_value: None,
+        rank: None,
         partial_failure: false,
         profile_mismatch: running.mismatch.notice(),
     })

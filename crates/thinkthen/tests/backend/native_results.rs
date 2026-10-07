@@ -6,6 +6,7 @@ use std::process::Stdio;
 mod annotation;
 pub(crate) mod compatibility;
 mod find;
+mod rank;
 mod recognize;
 mod relate;
 

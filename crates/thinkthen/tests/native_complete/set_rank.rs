@@ -23,7 +23,7 @@ fn assert_actual_metadata(result: &thinkthen::CompleteSetRank) {
         result.result().reported_usage().unwrap().output_tokens(),
         None
     );
-    assert_eq!(result.result().meta().attempts().unwrap().len(), 2);
+    assert_eq!(result.result().meta().attempts().unwrap().len(), 1);
     assert!(!format!("{result:?}").contains(result.question_name()));
 }
 #[test]

@@ -81,7 +81,8 @@ impl Atomic {
                 .iter()
                 .map(|member| &member.legacy.meta)
                 .collect::<Vec<_>>(),
-        )?;
+        )?
+        .with_reading_metadata(&self.legacy.meta);
         Ok(self)
     }
 }

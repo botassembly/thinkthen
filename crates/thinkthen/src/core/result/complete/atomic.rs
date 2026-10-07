@@ -16,6 +16,10 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    pub(crate) fn take_input(&mut self) -> Option<crate::core::Record> {
+        self.legacy.input.take()
+    }
+
     pub(crate) const fn question(&self) -> &crate::core::Question {
         &self.legacy.question
     }
