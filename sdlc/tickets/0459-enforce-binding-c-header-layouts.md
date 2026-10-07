@@ -1,6 +1,6 @@
 # 0459: Fail binding checks when copied C declarations drift
 
-Status: in progress. Shared compiler-derived ABI foundation is implemented; copied-family gate adoption remains.
+Status: in progress. The shared C-header comparison and all copied-family gates are implemented and reviewed. Final tests, lint and specification checks remain before landing.
 
 Milestone: 0.2
 
