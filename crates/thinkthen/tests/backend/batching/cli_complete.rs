@@ -5,6 +5,104 @@ use serde_json::{Value, json};
 use std::fs;
 
 #[test]
+fn decision_details_present_native_meanings_without_changing_bare_or_record_controls() {
+    let place = folder("decision-authored-details");
+    fs::create_dir_all(&place).expect("folder");
+    let question = format!("{place}/question.json");
+    let operand = format!("@{question}");
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
+    .expect("listener");
+    for meaning in [
+        json!("Urgent"),
+        json!({"action":"review","ready":false}),
+        json!(["review", false, null, {"priority":2}]),
+        Value::Null,
+    ] {
+        fs::write(
+            &question,
+            json!({"decide":"Refund?","true":meaning}).to_string(),
+        )
+        .expect("question");
+        let output = spawn(
+            &[
+                "decide",
+                &operand,
+                "--details",
+                "--no-cache",
+                "--url",
+                listener.base(),
+            ],
+            &[KEY],
+            b"Evidence",
+        )
+        .expect("detailed command");
+        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        let row: Value = serde_json::from_slice(&output.stdout).expect("detail");
+        assert_eq!(row["value"], meaning);
+        assert_eq!(row["answer"]["probability"], 0.9);
+        let bare = spawn(
+            &["decide", &operand, "--no-cache", "--url", listener.base()],
+            &[KEY],
+            b"Evidence",
+        )
+        .expect("bare command");
+        assert_eq!(text(&bare.stdout), "true\n");
+        for (verb, expected) in [("filter", json!(true)), ("rank", json!(1))] {
+            let output = spawn(
+                &[
+                    verb,
+                    &operand,
+                    "--details",
+                    "--no-cache",
+                    "--url",
+                    listener.base(),
+                ],
+                &[KEY],
+                b"Evidence\n",
+            )
+            .expect("record command");
+            assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+            let row: Value = serde_json::from_slice(&output.stdout).expect("record detail");
+            assert_eq!(row["value"], expected);
+        }
+    }
+    for (declaration, expected, exit) in [
+        (json!({"decide":"Refund?"}), json!(true), 0),
+        (
+            json!({"decide":"Refund?","threshold":"0.1:0.95","true":"Urgent"}),
+            Value::Null,
+            3,
+        ),
+        (
+            json!({"decide":"Refund?","threshold":0.95,"false":{"action":"wait"}}),
+            json!({"action":"wait"}),
+            1,
+        ),
+    ] {
+        fs::write(&question, declaration.to_string()).expect("question");
+        let output = spawn(
+            &[
+                "decide",
+                &operand,
+                "--details",
+                "--no-cache",
+                "--url",
+                listener.base(),
+            ],
+            &[KEY],
+            b"Evidence",
+        )
+        .expect("command");
+        assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
+        let row: Value = serde_json::from_slice(&output.stdout).expect("detail");
+        assert_eq!(row["value"], expected);
+    }
+    fs::remove_dir_all(&place).expect("remove owned folder");
+}
+
+#[test]
 fn filter_and_rank_keep_actual_ordinals_for_equal_records() {
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#)

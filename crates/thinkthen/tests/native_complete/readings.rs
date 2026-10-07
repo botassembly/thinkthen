@@ -2,6 +2,37 @@ use super::*;
 use thinkthen::{LoadedQuestion, QuestionKind, ResolvedThreshold};
 
 #[test]
+fn complete_decision_schema_admits_authored_content_while_accessors_stay_boolean() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    for meaning in [
+        json!({"action":"review","ready":false}),
+        json!(["review",false,null,{"priority":2}]),
+        Value::Null,
+    ] {
+        let LoadedQuestion::Question(question) =
+            Question::from_json(&json!({"decide":"Refund?","true":meaning}).to_string()).unwrap()
+        else {
+            panic!("decision")
+        };
+        let call = engine
+            .decide_complete_with(&question, "Evidence", CallOptions::new())
+            .unwrap();
+        assert_eq!(call.value().value(), Answer::Yes);
+        assert_eq!(
+            call.value().question().yes().unwrap().is_null(),
+            meaning.is_null()
+        );
+        let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+        assert_eq!(document["value"]["value"], meaning);
+        super::schema::check(&document, "completeAtomic");
+    }
+}
+
+#[test]
 fn complete_getters_keep_authored_content_order_null_and_raw_choice_before_cut() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"second":0.7,"first":0.3},"confidence":0.8}}}"#)).unwrap();
     let engine = engine(&listener);

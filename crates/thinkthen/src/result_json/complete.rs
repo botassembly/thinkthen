@@ -63,6 +63,7 @@ pub(crate) fn atomic(
     )?
     .with_captured_attempts(attempts);
     Ok(core::CompleteAtomic {
+        function: spec.function,
         declarations: spec.declarations,
         identity,
         legacy,

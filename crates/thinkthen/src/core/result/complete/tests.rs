@@ -11,6 +11,7 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
     let answer = Answer::new_yes_no(Probability::new(0.9).unwrap());
     let threshold = Threshold::default();
     Atomic {
+        function: crate::core::image::InputFunction::Decide,
         declarations: Default::default(),
         rank_position: None,
         source: None,
