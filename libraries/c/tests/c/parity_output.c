@@ -45,6 +45,42 @@ static void details(thinkthen_result *r,size_t at) {
     }
     putchar(']');
 }
+static void rank_facts(thinkthen_row_v1 common,thinkthen_details_v1 d) {
+    fputs(",\"model\":",stdout); quoted(common.meta.model);
+    if(common.meta.context_sha256.present) { fputs(",\"context_digest\":",stdout); quoted(common.meta.context_sha256.value); }
+    if(d.usage.present) {
+        fputs(",\"usage\":{",stdout);
+        if(d.usage.input_tokens.present) printf("\"input_tokens\":%llu",(unsigned long long)d.usage.input_tokens.value);
+        if(d.usage.output_tokens.present) { if(d.usage.input_tokens.present) putchar(','); printf("\"output_tokens\":%llu",(unsigned long long)d.usage.output_tokens.value); }
+        putchar('}');
+    }
+    fputs(",\"source_batch_sizes\":[",stdout);
+    for(size_t i=0;i<d.question_sources.len;++i) { if(i) putchar(','); if(d.question_sources.data[i].batch_size.present) printf("%zu",d.question_sources.data[i].batch_size.value); else fputs("null",stdout); }
+    putchar(']');
+}
+static void rank_members(thinkthen_result *r,size_t at) {
+    size_t count=0; if(thinkthen_result_rank_member_count(r,at,&count)) abort();
+    if(!count) return;
+    thinkthen_rank_view_v1 parent={0}; thinkthen_details_v1 parent_details={0};
+    if(thinkthen_result_rank(r,at,&parent) || thinkthen_result_details(r,at,&parent_details)) abort();
+    if(parent.question_name.present) { fputs(",\"question_name\":",stdout); quoted(parent.question_name.value); }
+    rank_facts(parent.common,parent_details);
+    fputs(",\"members\":[",stdout);
+    for(size_t i=0;i<count;++i) {
+        if(i) putchar(',');
+        thinkthen_rank_view_v1 v={0}; thinkthen_details_v1 d={0}; thinkthen_question_author_v1 a={0};
+        if(thinkthen_result_rank_member(r,at,i,&v) || thinkthen_result_rank_member_details(r,at,i,&d) || thinkthen_result_member_author(r,at,i,&a)) abort();
+        fputs("{\"name\":",stdout); if(v.question_name.present) quoted(v.question_name.value); else fputs("null",stdout);
+        fputs(",\"value\":",stdout); if(v.value.present) printf("%zu",v.value.value); else fputs("null",stdout);
+        if(v.common.answer.present) { if(v.common.answer.value.kind!=1) abort(); printf(",\"probability\":%.17g",v.common.answer.value.data.probability); }
+        fputs(",\"answer_id\":",stdout); quoted(v.common.answer_id);
+        if(a.name.present) { fputs(",\"author\":",stdout); quoted(a.name.value); }
+        if(a.wording_version.present) printf(",\"wording_version\":%llu",(unsigned long long)a.wording_version.value);
+        printf(",\"observations\":%zu,\"sources\":%zu",d.observations.len,d.question_sources.len);
+        rank_facts(v.common,d); putchar('}');
+    }
+    putchar(']');
+}
 static void row(thinkthen_result *r,unsigned kind,size_t at) {
     thinkthen_row_v1 common={0}; size_t index=0;
     fputs("{\"value\":",stdout);
@@ -85,6 +121,7 @@ static void row(thinkthen_result *r,unsigned kind,size_t at) {
         }
         putchar(']');
     }
+    if(kind==6) rank_members(r,at);
     details(r,at);
     thinkthen_question_author_v1 author={0}; if(thinkthen_result_question_author(r,at,&author)) abort();
     if(author.name.present) { fputs(",\"name\":",stdout); quoted(author.name.value); }
@@ -103,6 +140,6 @@ static void output(thinkthen_engine *e,unsigned kind,int code,thinkthen_result *
             thinkthen_result_free(snapshot);
         }
     }
-    else { thinkthen_summary_v1 s={0}; if(thinkthen_result_summary(r,&s)) abort(); fputs(",\"schema\":",stdout); quoted(s.schema); printf(",\"requests_sent\":%llu,\"cache_answers\":%llu,\"observations\":%zu,\"call_id\":",(unsigned long long)s.facts.value.requests_sent,(unsigned long long)s.facts.value.cache_answers,s.observation_count); quoted(s.facts.value.call_id); fputs(",\"rows\":[",stdout); for(size_t at=0;at<s.count;++at) { if(at) putchar(','); row(r,kind,at); } putchar(']'); }
+    else { thinkthen_summary_v1 s={0}; if(thinkthen_result_summary(r,&s)) abort(); fputs(",\"schema\":",stdout); quoted(s.schema); printf(",\"requests_sent\":%llu,\"records\":%llu,\"cache_answers\":%llu,\"observations\":%zu,\"call_id\":",(unsigned long long)s.facts.value.requests_sent,(unsigned long long)s.facts.value.records,(unsigned long long)s.facts.value.cache_answers,s.observation_count); quoted(s.facts.value.call_id); if(s.facts.value.input_tokens.present) printf(",\"input_tokens\":%llu",(unsigned long long)s.facts.value.input_tokens.value); if(s.facts.value.output_tokens.present) printf(",\"output_tokens\":%llu",(unsigned long long)s.facts.value.output_tokens.value); fputs(",\"rows\":[",stdout); for(size_t at=0;at<s.count;++at) { if(at) putchar(','); row(r,kind,at); } putchar(']'); }
     puts("}");
 }
