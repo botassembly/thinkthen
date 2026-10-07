@@ -1,6 +1,6 @@
 # 0435: Return isolated SQL call facts and caller-priced cost
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Complete SQL family adoption in warm lane 1.
 
 Milestone: 0.2
 
@@ -30,3 +30,15 @@ Specify an accessible started-failure facts route for each SQL host before code.
 ## Full-result answer identity
 
 0450 IDs belong on SQL full details/observation results from the same native evaluation. Ordinary scalar values retain compatibility. Expose per-logical-result IDs independently from invocation call_id; repeated packed invocation facts do not collapse distinct logical answers. Coordinate image overloads in 0452 without a second judgment.
+
+## Complete family adoption (2026-10-07)
+
+Risk: High. Native invocation ownership, public facts and PostgreSQL file privileges require one fresh High review of the whole family. This branch starts at published main 0179d16ad and owns databases and their actual SQL consumers, documentation and packages. Root owns the single landing record and full landing gates. Accepted 0434/0417/0452 slices, ordinary scalar/table signatures, SQLite's wrong-model correction, backend selection, settings and usage remain supported. No native/C/shared fixture changes or new dependency are authorized.
+
+Concrete additive route, fixed before code: each of the ten functions exposes `thinkthen_FUNCTION_complete(question TEXT, inputs TEXT, settings TEXT := NULL)`. DuckDB and SQLite return JSON text; PostgreSQL returns json. A complete call returns the formal native `Call::complete()` envelope, plus the actual ordered native observer snapshots. Admission and started failures return `Error::complete()` with those same snapshots. No SQL error handler reruns a judgment, subtracts usage counters, fabricates identity, or retains a process-global last error. Ordinary SQL functions continue raising their existing errors. This bounded failure-result route is explicit at the named complete door and covers all six native error kinds. Native facts are absent before a call starts and final after its workers join. SQL interrupts retain the host cancellation behavior.
+
+Inputs are explicit ordered record descriptors: `records` contains `text` or `json`, optional per-record `context`, `options`, `images` and `source` (file and paired line coordinates). Images contain explicit compressed bytes as integer arrays and media. DuckDB/SQLite additionally admit explicitly requested native file reads through `files` (paths and native unit/window). PostgreSQL admits only client-read descriptors and refuses server evidence/image readers; question references continue through its accepted confined privileged loader. Native RecordReading controls in `reading` select fields/context/options; `incremental` selects the existing native fallible record iterator. This is SQL edge serialization of existing native controls, not another question/declaration/image parser. NULL question/inputs yields NULL without sends; NULL settings uses defaults. Empty record arrays use native empty-input semantics.
+
+Settings retain the existing host engine selection. The complete door admits native per-call context/batch/deadline/attempt controls and literal reading overrides; engine-scoped caller prices use the existing exact native arithmetic. Cache, record and replay use the host's existing engine settings, never a SQL cache. Complete rank detects saved rank sets and delegates to native turns merging. Formal result JSON is checked using typed SQL field extraction at each actual installed consumer, reusing the existing shared fixture projector and counted owned loopback.
+
+Ian can overturn these additive spellings and the bounded complete failure-result choice. Any material departure from accepted native or PostgreSQL contracts returns to root for review before dependent implementation. Completion requires every applicable shared case at each of the three real SQL doors (currently 247 each), metadata/answer identities, changed-reading cache zero calls, retained PostgreSQL privilege checks, and installed extension checks, after merging newly published main.
