@@ -1,6 +1,6 @@
 # 0429: Complete PHP, Dart and Flutter typed parity
 
-Status: in progress. Private PHP/Dart/Flutter carrier and request-builder slice built; actual complete C/native integration and whole-family review remain open.
+Status: native-backed PHP/Dart/Flutter adoption built and pushed. Actual public consumers verify all 247 required cases per family, including 24 image-admission cells each, through full runs plus affected-case reruns; Flutter executes separately. Coordinator owns fresh whole-family review, full landing gates and shared release archive inventory fixes. The private-slice notes below are historical.
 
 Milestone: 0.2
 
