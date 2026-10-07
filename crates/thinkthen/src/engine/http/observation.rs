@@ -63,10 +63,12 @@ impl ResponseInfo {
         self,
         ordinal: u64,
         digest: &str,
+        sdk_request_id: &crate::core::SdkRequestId,
         wall_ms: u64,
         (outcome, transport_failed): (AttemptOutcome, bool),
     ) -> AttemptObservation {
         AttemptObservation {
+            sdk_request_id: sdk_request_id.clone(),
             ordinal,
             request_sha256: digest.to_owned(),
             wall_ms,

@@ -190,14 +190,22 @@ impl Recognizer {
     /// Kinds as a comma list, a JSON recognize section or file, or `'@name'`.
     fn ask(kinds: Option<&str>) -> Result<Recognize, Failure> {
         let kinds = kinds.map(str::trim).unwrap_or_default();
+        if kinds.starts_with('[') {
+            return Err(Failure::usage(
+                "recognize kinds take comma names or a recognize JSON object, not a JSON array",
+            ));
+        }
         if kinds.starts_with('{') || kinds.starts_with('@') {
-            let (whole, file) = file_json(kinds, "recognize")?;
+            let (source, file) = ordered_file_json(kinds, "recognize")?;
+            let ask = Recognize::from_json(&source).map_err(|error| from_file(error, file))?;
+            let whole: serde_json::Value = serde_json::from_str(&source)
+                .map_err(|_| Failure::defect("validated recognize JSON could not be read"))?;
             if whole.pointer("/recognize/relations").is_some() {
                 return Err(Failure::plain_usage(
                     "thinkthen_recognize takes no relations; relate rows with thinkthen_relate",
                 ));
             }
-            return read(&whole, file, Recognize::from_json);
+            return Ok(ask);
         }
         let mut builder = Recognize::builder();
         for name in kinds

@@ -2,7 +2,9 @@
 //! Sources: Liquid decision-models and Perplexity decisions/quickstart,
 //! checked 2026-10-06. Unknown local runtime/projector budgets fail closed.
 
-use crate::core::backend_profile::{LimitKind, ProfileLimit, ProfileName};
+use crate::core::backend_profile::{BackendProfile, LimitKind, ProfileLimit, ProfileName};
+
+pub(crate) mod local;
 use crate::core::image::ImageState;
 use serde::Serialize;
 use thiserror::Error;
@@ -14,12 +16,15 @@ pub(crate) enum ImageRoute {
     Unsupported,
     Liquid,
     Perplexity,
+    /// Named local wire route; admission still needs an explicit declaration.
+    Local,
 }
 
 pub(crate) fn named(name: &str, path: &str) -> ImageRoute {
     match (name, path) {
         ("liquid", "systemone") => ImageRoute::Liquid,
         ("perplexity", "decisions") => ImageRoute::Perplexity,
+        ("llamacpp", "systemone") => ImageRoute::Local,
         _ => ImageRoute::Unsupported,
     }
 }
@@ -46,9 +51,26 @@ pub(crate) struct ImageWire {
     pub(crate) body_limit: usize,
     pub(crate) questions_limit: Option<usize>,
     pub(crate) tokens_per_question: u64,
+    pub(crate) image_tokens_known: bool,
 }
 
 impl ImageRoute {
+    pub(crate) fn admit_profiled(
+        self,
+        model: &str,
+        input: &ImageState,
+        profile: Option<&BackendProfile>,
+    ) -> Result<ImageWire, ImageLimit> {
+        if let Some(declaration) = profile.and_then(|profile| profile.image_profile.as_ref()) {
+            return if self == Self::Local && declaration.matches(model) {
+                local::admit(declaration.id, input)
+            } else {
+                Err(ImageLimit::Unsupported)
+            };
+        }
+        self.admit(model, input)
+    }
+
     pub(crate) fn admit(self, model: &str, input: &ImageState) -> Result<ImageWire, ImageLimit> {
         if !matches!(
             (self, model),
@@ -75,7 +97,7 @@ impl ImageRoute {
                     check(at, "32-pixel tiles", 2048, count)?;
                     count
                 }
-                Self::Unsupported => return Err(ImageLimit::Unsupported),
+                Self::Unsupported | Self::Local => return Err(ImageLimit::Unsupported),
             };
             patches = patches.checked_add(count).ok_or(ImageLimit::Overflow)?;
             tokens = tokens
@@ -124,7 +146,7 @@ impl ImageRoute {
                 values.extend(parts);
                 (format!("[{}]", values.join(",")), None)
             }
-            Self::Unsupported => return Err(ImageLimit::Unsupported),
+            Self::Unsupported | Self::Local => return Err(ImageLimit::Unsupported),
         };
         Ok(ImageWire {
             state,
@@ -138,6 +160,7 @@ impl ImageRoute {
             // Perplexity publishes no exact image tokenizer. This conservative
             // tile estimate is an SDK estimate, never exact context admission.
             tokens_per_question: tokens,
+            image_tokens_known: true,
         })
     }
 }
@@ -169,6 +192,7 @@ impl std::fmt::Debug for ImageWire {
         f.debug_struct("ImageWire")
             .field("body_limit", &self.body_limit)
             .field("tokens_per_question", &self.tokens_per_question)
+            .field("image_tokens_known", &self.image_tokens_known)
             .finish_non_exhaustive()
     }
 }
@@ -176,3 +200,7 @@ impl std::fmt::Debug for ImageWire {
 #[cfg(test)]
 #[path = "image_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "images/local_tests.rs"]
+mod local_tests;

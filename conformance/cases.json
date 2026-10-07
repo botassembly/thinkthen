@@ -3487,7 +3487,7 @@
           "evidence": "refund now",
           "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"refund now\\\". Does the writer ask for a refund?\"}}}",
           "response": {
-            "model": "jev-latest",
+            "model": "jev-1.13.0",
             "answers": {
               "q1": {
                 "type": "noul",
@@ -3514,7 +3514,7 @@
                   "kind": "yes_no",
                   "probability": 0.97
                 },
-                "model": "jev-latest",
+                "model": "jev-1.13.0",
                 "usage": {
                   "input_tokens": 10,
                   "output_tokens": 2
@@ -7905,6 +7905,18 @@
   ],
   "parity": {
     "schema": "thinkthen.parity-cases/1",
+    "pending_consumers": [
+      {
+        "id": "mcp",
+        "surface": "libraries/mcp",
+        "owner": "0455",
+        "baseline": [
+          "sh",
+          "libraries/mcp/check.sh"
+        ],
+        "dependency": "0455 must land installed thinkthen mcp, libraries/mcp/check.sh and the native closed mcp surface token/result schema; saved branch ticket/0455-mcp-ten-function-surface is WIP, not execution proof"
+      }
+    ],
     "functions": [
       "decide",
       "choose",
@@ -8160,6 +8172,9 @@
         "baseline": [
           "sh",
           "databases/postgresql/check.sh"
+        ],
+        "rulings": [
+          "0434: client native reader plus keyed table; server evidence paths are refused; both boundaries must execute"
         ]
       },
       {
@@ -12242,6 +12257,1979 @@
           "runtime"
         ],
         "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "selected-object-false-unicode",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "selected-object-false-unicode"
+        },
+        "expect": {
+          "fixture_ref": "selected-object-false-unicode"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-missing-required",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-missing-required"
+        },
+        "expect": {
+          "fixture_ref": "item-missing-required"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-null-property",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-null-property"
+        },
+        "expect": {
+          "fixture_ref": "item-null-property"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-number-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-number-string"
+        },
+        "expect": {
+          "fixture_ref": "item-number-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-boolean-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-boolean-string"
+        },
+        "expect": {
+          "fixture_ref": "item-boolean-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-list-nonstring",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-list-nonstring"
+        },
+        "expect": {
+          "fixture_ref": "item-list-nonstring"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-root-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-root-null"
+        },
+        "expect": {
+          "fixture_ref": "item-root-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "item-root-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "item-root-string"
+        },
+        "expect": {
+          "fixture_ref": "item-root-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "optional-properties-absent",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "optional-properties-absent"
+        },
+        "expect": {
+          "fixture_ref": "optional-properties-absent"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "undeclared-properties-retained",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "undeclared-properties-retained"
+        },
+        "expect": {
+          "fixture_ref": "undeclared-properties-retained"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "projection-cannot-recover-field",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "projection-cannot-recover-field"
+        },
+        "expect": {
+          "fixture_ref": "projection-cannot-recover-field"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "multiple-pointer-object",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "multiple-pointer-object"
+        },
+        "expect": {
+          "fixture_ref": "multiple-pointer-object"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-reader",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-reader"
+        },
+        "expect": {
+          "fixture_ref": "string-reader"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-number",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-number"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-number"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-false",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-false"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-false"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-null"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "string-no-coercion-object",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "string-no-coercion-object"
+        },
+        "expect": {
+          "fixture_ref": "string-no-coercion-object"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "csv-number-remains-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "csv-number-remains-string"
+        },
+        "expect": {
+          "fixture_ref": "csv-number-remains-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declared-object-context",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declared-object-context"
+        },
+        "expect": {
+          "fixture_ref": "declared-object-context"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "absent-context-shared-fallback",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "absent-context-shared-fallback"
+        },
+        "expect": {
+          "fixture_ref": "absent-context-shared-fallback"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "empty-context-suppresses-shared",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "empty-context-suppresses-shared"
+        },
+        "expect": {
+          "fixture_ref": "empty-context-suppresses-shared"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "context-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "context-null"
+        },
+        "expect": {
+          "fixture_ref": "context-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "context-mistyped",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "context-mistyped"
+        },
+        "expect": {
+          "fixture_ref": "context-mistyped"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "context-json-looking-text",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "context-json-looking-text"
+        },
+        "expect": {
+          "fixture_ref": "context-json-looking-text"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "legacy-context-object-refused",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "legacy-context-object-refused"
+        },
+        "expect": {
+          "fixture_ref": "legacy-context-object-refused"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-shorthand",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-shorthand"
+        },
+        "expect": {
+          "fixture_ref": "declaration-shorthand"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-null"
+        },
+        "expect": {
+          "fixture_ref": "declaration-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-empty",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-empty"
+        },
+        "expect": {
+          "fixture_ref": "declaration-empty"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-nested",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-nested"
+        },
+        "expect": {
+          "fixture_ref": "declaration-nested"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-unknown-keyword",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-unknown-keyword"
+        },
+        "expect": {
+          "fixture_ref": "declaration-unknown-keyword"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-required-unknown",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-required-unknown"
+        },
+        "expect": {
+          "fixture_ref": "declaration-required-unknown"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-duplicate-required",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-duplicate-required"
+        },
+        "expect": {
+          "fixture_ref": "declaration-duplicate-required"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-zero",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-zero"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-zero"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-overflow",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-overflow"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-overflow"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-string",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-string"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-string"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-boolean",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-boolean"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-boolean"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-null",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-null"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-null"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-missing",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-missing"
+        },
+        "expect": {
+          "fixture_ref": "named-missing"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-traversal",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-traversal"
+        },
+        "expect": {
+          "fixture_ref": "named-traversal"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-uppercase",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-uppercase"
+        },
+        "expect": {
+          "fixture_ref": "named-uppercase"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-overlong",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-overlong"
+        },
+        "expect": {
+          "fixture_ref": "named-overlong"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-file-symlink-escape",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-file-symlink-escape"
+        },
+        "expect": {
+          "fixture_ref": "named-file-symlink-escape"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-folder-symlink-escape",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-folder-symlink-escape"
+        },
+        "expect": {
+          "fixture_ref": "named-folder-symlink-escape"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-name-mismatch",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-name-mismatch"
+        },
+        "expect": {
+          "fixture_ref": "named-name-mismatch"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-explicit-name",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-explicit-name"
+        },
+        "expect": {
+          "fixture_ref": "lookup-explicit-name"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-cwd-precedence",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-cwd-precedence"
+        },
+        "expect": {
+          "fixture_ref": "lookup-cwd-precedence"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-named-without-config",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-named-without-config"
+        },
+        "expect": {
+          "fixture_ref": "lookup-named-without-config"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-at-path-literal",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-at-path-literal"
+        },
+        "expect": {
+          "fixture_ref": "lookup-at-path-literal"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-traversal-is-explicit-path",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-traversal-is-explicit-path"
+        },
+        "expect": {
+          "fixture_ref": "lookup-traversal-is-explicit-path"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "lookup-cwd-failure-no-fallback",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "lookup-cwd-failure-no-fallback"
+        },
+        "expect": {
+          "fixture_ref": "lookup-cwd-failure-no-fallback"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-decide",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-decide"
+        },
+        "expect": {
+          "fixture_ref": "metadata-decide"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-choose",
+        "verb": "choose",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-choose"
+        },
+        "expect": {
+          "fixture_ref": "metadata-choose"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-tag",
+        "verb": "tag",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-tag"
+        },
+        "expect": {
+          "fixture_ref": "metadata-tag"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-score",
+        "verb": "score",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-score"
+        },
+        "expect": {
+          "fixture_ref": "metadata-score"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-filter",
+        "verb": "filter",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-filter"
+        },
+        "expect": {
+          "fixture_ref": "metadata-filter"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-rank",
+        "verb": "rank",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-rank"
+        },
+        "expect": {
+          "fixture_ref": "metadata-rank"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-find",
+        "verb": "find",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-find"
+        },
+        "expect": {
+          "fixture_ref": "metadata-find"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-annotate",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-annotate"
+        },
+        "expect": {
+          "fixture_ref": "metadata-annotate"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-recognize",
+        "verb": "recognize",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-recognize"
+        },
+        "expect": {
+          "fixture_ref": "metadata-recognize"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-relate",
+        "verb": "relate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-relate"
+        },
+        "expect": {
+          "fixture_ref": "metadata-relate"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "finite-all-before-send",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "finite-all-before-send"
+        },
+        "expect": {
+          "fixture_ref": "finite-all-before-send"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "stream-staged-batch",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "stream-staged-batch"
+        },
+        "expect": {
+          "fixture_ref": "stream-staged-batch"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "annotate-member-validation-before-send",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "annotate-member-validation-before-send"
+        },
+        "expect": {
+          "fixture_ref": "annotate-member-validation-before-send"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "annotate-document-json",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "annotate-document-json"
+        },
+        "expect": {
+          "fixture_ref": "annotate-document-json"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "annotate-document-invalid-json",
+        "verb": "annotate",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "annotate-document-invalid-json"
+        },
+        "expect": {
+          "fixture_ref": "annotate-document-invalid-json"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-only-declared-item-missing",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "image-only-declared-item-missing"
+        },
+        "expect": {
+          "fixture_ref": "image-only-declared-item-missing"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-ancillary-item",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "image-ancillary-item"
+        },
+        "expect": {
+          "fixture_ref": "image-ancillary-item"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "cache-hit-cannot-bypass-declaration",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "cache-hit-cannot-bypass-declaration"
+        },
+        "expect": {
+          "fixture_ref": "cache-hit-cannot-bypass-declaration"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0444"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "replay-hit-cannot-bypass-declaration",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "replay-hit-cannot-bypass-declaration"
+        },
+        "expect": {
+          "fixture_ref": "replay-hit-cannot-bypass-declaration"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414",
+          "0444"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "mcp-question-inline-at",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "mcp-question-inline-at"
+        },
+        "expect": {
+          "fixture_ref": "mcp-question-inline-at"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "consumers": [
+          "mcp"
+        ]
+      },
+      {
+        "id": "mcp-question-explicit-name",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "mcp-question-explicit-name"
+        },
+        "expect": {
+          "fixture_ref": "mcp-question-explicit-name"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "consumers": [
+          "mcp"
+        ]
+      },
+      {
+        "id": "mcp-question-mutually-exclusive",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "mcp-question-mutually-exclusive"
+        },
+        "expect": {
+          "fixture_ref": "mcp-question-mutually-exclusive"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "consumers": [
+          "mcp"
+        ]
+      },
+      {
+        "id": "author-name-blank",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-blank"
+        },
+        "expect": {
+          "fixture_ref": "author-name-blank"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-uppercase",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-uppercase"
+        },
+        "expect": {
+          "fixture_ref": "author-name-uppercase"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-leading-digit",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-leading-digit"
+        },
+        "expect": {
+          "fixture_ref": "author-name-leading-digit"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-control",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-control"
+        },
+        "expect": {
+          "fixture_ref": "author-name-control"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "author-name-nonascii",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "author-name-nonascii"
+        },
+        "expect": {
+          "fixture_ref": "author-name-nonascii"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-fraction",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-fraction"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-fraction"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-integral-float",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-integral-float"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-integral-float"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "wording-version-exponent",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "wording-version-exponent"
+        },
+        "expect": {
+          "fixture_ref": "wording-version-exponent"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-name-only",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-name-only"
+        },
+        "expect": {
+          "fixture_ref": "metadata-name-only"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-version-only",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-version-only"
+        },
+        "expect": {
+          "fixture_ref": "metadata-version-only"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "metadata-typed-declarations",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "metadata-typed-declarations"
+        },
+        "expect": {
+          "fixture_ref": "metadata-typed-declarations"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "duplicate-metadata",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "duplicate-metadata"
+        },
+        "expect": {
+          "fixture_ref": "duplicate-metadata"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "duplicate-schema",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "duplicate-schema"
+        },
+        "expect": {
+          "fixture_ref": "duplicate-schema"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "single-format-version",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "single-format-version"
+        },
+        "expect": {
+          "fixture_ref": "single-format-version"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declaration-file-unsupported",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declaration-file-unsupported"
+        },
+        "expect": {
+          "fixture_ref": "declaration-file-unsupported"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "named-malformed-no-fallback",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "named-malformed-no-fallback"
+        },
+        "expect": {
+          "fixture_ref": "named-malformed-no-fallback"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "declared-string-null-context",
+        "verb": "decide",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "declared-string-null-context"
+        },
+        "expect": {
+          "fixture_ref": "declared-string-null-context"
+        },
+        "preconditions": [
+          "0456",
+          "0407",
+          "0414"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
       }
     ],
     "image_profiles": {

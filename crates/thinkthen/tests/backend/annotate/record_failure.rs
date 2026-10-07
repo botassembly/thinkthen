@@ -378,6 +378,10 @@ fn skipped_row_counts_as_finished_with_only_known_token_usage() -> io::Result<()
     assert_eq!(lines[0], b"thinkthen: 1 record skipped");
     let mut facts: Value = serde_json::from_slice(lines[1])?;
     facts.as_object_mut().expect("run facts").remove("seconds");
+    let call_id = facts.as_object_mut().expect("run facts").remove("call_id");
+    let call_id = call_id.expect("actual invocation identity");
+    let call_id = call_id.as_str().expect("a string identity");
+    assert!(thinkthen::CallId::new(call_id).is_ok());
     assert_eq!(
         facts,
         json!({"schema":"thinkthen.run/1","records":3,

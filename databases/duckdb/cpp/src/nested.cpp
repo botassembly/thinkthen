@@ -57,13 +57,16 @@ unique_ptr<FunctionData> BindNested(ClientContext &context, ScalarFunction &func
 	if (arguments[1]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[1]);
 		if (!value.IsNull()) {
-			if (kind == 8) {
+			if (kind == 8 && value.type().id() == LogicalTypeId::LIST) {
 				if (auto members = Members(value)) {
 					ValidateNested(kind, {"", false}, *members);
 				}
 			} else {
 				bound->constant_argument = value.GetValue<string>();
-				ValidateNested(kind, ResolveQuestion(context, *bound->constant_argument), {});
+				// Rich recognize kinds resolve only after the executing row's NULL check.
+				if (kind != 8) {
+					ValidateNested(kind, ResolveQuestion(context, *bound->constant_argument), {});
+				}
 			}
 		}
 	}
@@ -102,13 +105,14 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		const auto setting = args.data[2].GetValue(row);
 		const auto call = setting.IsNull() ? string("{}") : setting.GetValue<string>();
-		auto members = bound.kind == 8 ? Members(argument) : std::optional<vector<string>>(vector<string>());
+		const auto list = bound.kind == 8 && argument.type().id() == LogicalTypeId::LIST;
+		auto members = list ? Members(argument) : std::optional<vector<string>>(vector<string>());
 		if (!members) {
 			continue;
 		}
-		const auto raw = bound.kind == 8 ? string() : argument.GetValue<string>();
+		const auto raw = list ? string() : argument.GetValue<string>();
 		if (validated.emplace(raw, *members).second) {
-			auto named = bound.kind == 8 ? ResolvedQuestion {"", false} : owner->Resolve(*context, raw);
+			auto named = list ? ResolvedQuestion {"", false} : owner->Resolve(*context, raw);
 			ValidateNested(bound.kind, named, *members);
 			resolved.emplace(raw, std::move(named));
 		}
@@ -172,6 +176,9 @@ void RegisterNested(ExtensionLoader &loader) {
 	recognize.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	recognize.SetStability(FunctionStability::VOLATILE);
 	loader.RegisterFunction(recognize);
+	auto described = recognize;
+	described.arguments[1] = LogicalType::VARCHAR;
+	loader.RegisterFunction(described);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_recognize(input, kinds, settings := NULL) AS "
 	                              "thinkthen_native_recognize(input, kinds, CAST(settings AS VARCHAR), typeof(settings))");
 	ScalarFunction relations("thinkthen_native_relations",

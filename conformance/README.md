@@ -70,8 +70,8 @@ Lines are served in order. A `wait` answers on its own line later and never hold
 ## Required 0.2 parity (0432 phase A)
 
 The `parity` section of `cases.json` is the independent public inventory:
-29 consumers, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
-CLI/C/MCP, three SQL extensions and three dataframe surfaces kept separate.
+28 consumers, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
+CLI/C, three SQL extensions and three dataframe surfaces kept separate.
 It references the existing 55 behavior cases, nine settings cases and type
 corpus rather than changing their landed schemas. `decide_many` is a decide
 input form; generic JSON compatibility calls do not qualify named or typed
@@ -136,4 +136,55 @@ refusals are SDK validation rulings. Owner-dependent media/large/malformed
 fixtures remain targets in the same canonical images corpus until 0447/0448
 supply them. Neither declarations nor schema checks qualify runtime cells.
 
-MCP is registered as planned by 0455. Its actual initialization/tools-call consumer qualifies no installed cells until complete native result/2 execution is adopted. Protocol fixtures do not emit parity.
+## 0432 shared integration targets
+
+`conformance/named-inputs.json` holds independent inputs and expectations for
+accepted 0456. The required IDs in `cases.json` point to it. Every public
+consumer must execute the corresponding native loader/builder and selected-input
+admission through its named functions, then access resolved metadata and
+ordered declarations with its public types. Successful fixture decoding is
+not an assertion. The 0407 per-item context and 0414 shared-context dependencies
+remain required, including explicit empty/false/null distinctions. Never
+coerce a projected number or JSON-looking string to satisfy a declaration.
+
+Build question files, named directories, collision entries and saved answers
+only in the consumer's fresh scratch home. The fixture's `setup` describes
+these owned entries; it does not authorize touching a user's config. The
+selected-item expectations fix the value after projection, independently of
+what a host serialized. Consumers compare request contents and count loopback
+connections, and pin safe errors where wording is settled. Metadata-only
+comparisons use the unadorned canonical behavior case as a separate input;
+reading/model overrides retain their existing meaning. Images reuse the shared
+red/blue/red files and remain dependent on the native image wire oracle.
+
+The shared runner supplies an owned HOME, platform config/cache/state folders,
+an explicit loopback URL and fake loopback key, full profile, offline Cargo and
+two build jobs. Tool locations are preserved separately from the scratch home.
+Consumers must explicitly pass the served URL/key to engines they construct;
+ambient settings, a hostname inferred from a fixture's historical digest URL,
+and remote calls are forbidden. Existing `cases.json.backend_url` is only the
+historical saved request-identity oracle; it is never a runtime destination.
+
+MCP is an additional required row in `parity.pending_consumers`. Its actual
+consumer is `libraries/mcp/check.sh`, from the saved 0455 branch. The explicit
+MCP cases check inline `@refund`, `question_name`, and conflicting question
+arguments at the installed stdio tool door. All other shared cases apply to
+MCP too. The MCP-specific cases' `consumers` list limits them to that actual
+door; shared cases cannot exclude any public variant. Native/MCP owners must
+land the closed `mcp` surface token, generated complete schema, installed
+command and runner together. Then move the row into the settled consumers and
+register its surface. Until that integration, even reported MCP assertions
+cannot qualify support. No second result schema is introduced here.
+
+`target/parity/matrix.md` is the plain current support table: functions out of
+ten, files, images and remaining assertions/owners. Counts come only from
+executed typed cells in successful consumers. Written language/input rulings
+are printed alongside their required boundary assertions and never count as
+passes. Missing output, malformed/unknown/duplicate cells, skipped statuses,
+missing runners/toolchains and exit 77 fail the strict run. Shared command
+folders must emit each public variant separately. The runner regression tests
+use simulated process output; their success establishes runner behavior only,
+never SDK parity. Development selectors stay in individual existing consumers;
+the final `surfaces --parity` run has none and permits no skip. Routine gates
+continue validating declarations during adoption. The passing complete run
+must become mandatory before 0432 can close.

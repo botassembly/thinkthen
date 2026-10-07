@@ -34,6 +34,7 @@ pub(crate) struct Plan {
     questions: Vec<Question>,
     images: Option<crate::core::image::ImageState>,
     image_route: crate::core::adapters::built_in::images::ImageRoute,
+    image_profile: Option<crate::core::BackendProfile>,
 }
 
 impl Plan {
@@ -57,6 +58,7 @@ impl Plan {
             descriptions,
             questions,
             images: None,
+            image_profile: None,
             image_route: crate::core::adapters::built_in::images::ImageRoute::Unsupported,
         })
     }
@@ -80,6 +82,18 @@ impl Plan {
         self.image_route = route;
         self
     }
+    pub(crate) fn with_image_profile(
+        mut self,
+        profile: Option<crate::core::BackendProfile>,
+    ) -> Self {
+        self.image_profile = profile;
+        self
+    }
+
+    pub(crate) fn image_profile(&self) -> Option<&crate::core::BackendProfile> {
+        self.image_profile.as_ref()
+    }
+
     pub(crate) fn images(&self) -> Option<&crate::core::image::ImageState> {
         self.images.as_ref()
     }

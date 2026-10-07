@@ -1004,6 +1004,12 @@
         "none": {
           "type": "boolean"
         },
+        "profile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "text": {}
       },
       "required": [

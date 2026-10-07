@@ -10,7 +10,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use crate::core::AttemptObservation;
-use crate::core::Usage;
+use crate::core::ReportedUsage;
 use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError, PackLimits, Packer, QuestionKey};
 use crate::engine::error::Error;
@@ -54,18 +54,31 @@ pub(crate) trait Asker: Sync {
     fn gone(&self) -> bool {
         false
     }
+
+    /// Declared inputs admit a bounded packed batch before any lookup.
+    fn validates_batches(&self) -> bool {
+        false
+    }
+
+    /// Annotate's existing missing-pointer exception may skip just that input.
+    fn refuses_batch(&self, _error: &Self::Error) -> bool {
+        true
+    }
 }
 
 /// One wire question's answer, live or stored.
 #[derive(Clone, Debug)]
 pub(crate) struct Answered {
+    pub(crate) observation_id: Option<crate::core::ObservationId>,
+    pub(crate) batch_size: Option<std::num::NonZeroU32>,
+    pub(crate) origin: crate::core::Origin,
     pub(crate) key: QuestionKey,
     /// The wire answer's JSON as received, or the error that failed it.
     pub(crate) answer: Result<Arc<str>, DecodeError>,
     /// The model the reply named.
     pub(crate) answered_by: Arc<str>,
     /// This question's share of its request's usage.
-    pub(crate) usage: Option<Usage>,
+    pub(crate) usage: Option<ReportedUsage>,
     /// Whether the store answered it.
     pub(crate) cached: bool,
     /// This question's share of its request's HTTP attempts.
@@ -241,8 +254,9 @@ impl Engine {
         start: impl FnOnce(Port<A::Input, A::Error>) -> H,
         cancel: &Cancel,
     ) -> Result<(), Error> {
+        cancel.invocation()?;
         let state = self.state(cancel)?;
-        let store = self.store(&state)?;
+        let store = self.store(&state, cancel)?;
         let model = pack::model_json(self.backend().model().as_str())
             .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
         let limits = self.pack_limits(packing);
@@ -296,7 +310,7 @@ impl Engine {
 
     /// The call's store, by the modes table of ADR 0111 section 3, or `None`
     /// under `--no-cache`.
-    fn store(&self, state: &super::facade::State) -> Result<Option<Store>, Error> {
+    fn store(&self, state: &super::facade::State, cancel: &Cancel) -> Result<Option<Store>, Error> {
         let storage = self.storage();
         let refresh = storage.refresh_cache
             || crate::core::adapters::built_in::is_mutable_alias(self.backend().model());
@@ -307,13 +321,17 @@ impl Engine {
             (None, Some(folder)) => (folder, Mode::Replay),
             (None, None) => return Ok(None),
         };
-        Store::open(
-            folder,
-            mode,
-            storage.private_default,
-            state.replayed.clone(),
-        )
-        .map(Some)
+        let replayed = if mode == Mode::Replay {
+            state
+                .replayed
+                .get_or_init(|| crate::engine::store::Replayed::of(folder))
+                .clone()?
+        } else {
+            None
+        };
+        Store::open(folder, mode, storage.private_default, replayed)
+            .and_then(|store| store.prepared(cancel))
+            .map(Some)
     }
 }
 

@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 #[cfg(unix)]
 use crate::harness::spawn;
 use crate::harness::{Canned, Listener};
-use crate::support::{decide, digest, encoded_decide, keys};
+use crate::support::{decide, digest, encoded_decide, reported_keys};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -127,7 +127,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     assert_eq!(sent.body, viewed.body, "the view changes no request byte");
     // `meta.requests` lists question keys; an attempt names the body it sent.
     let request = digest(detailed.url(), &viewed.body);
-    let [key] = keys(detailed.url(), &viewed.body)
+    let [key] = reported_keys(detailed.url(), &viewed.body, "jev-1.13.0")
         .try_into()
         .expect("one question");
 

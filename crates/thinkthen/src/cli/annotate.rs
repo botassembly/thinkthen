@@ -52,10 +52,10 @@ pub(crate) fn run(
         .questions
         .to_str()
         .and_then(|typed| typed.strip_prefix('@'));
-    let text = question_text::read(
-        path.map_or(arguments.questions.as_path(), Path::new),
-        Failure::OpenQuestionSet,
-    )?;
+    let text = match path {
+        Some(path) => question_text::reference(Path::new(path), Failure::OpenQuestionSet),
+        None => question_text::read(arguments.questions.as_path(), Failure::OpenQuestionSet),
+    }?;
     let set = match QuestionSet::parse(&text) {
         Ok(set) => set,
         Err(_) if input_looks_like_set(arguments) => {
@@ -311,6 +311,9 @@ fn plan_for(
     let evidence = set
         .group_evidence(group, &record)
         .map_err(|error| match error {
+            PartError::Declaration(_) => {
+                PrepareError::Other(Failure::Usage("the item does not match item_schema"))
+            }
             PartError::Reading(error) => PrepareError::Other(error.into()),
             PartError::Record(RecordError::Missed(pointer)) => PrepareError::MissingOn(pointer),
             PartError::Record(error) => PrepareError::Other(error.into()),

@@ -63,6 +63,7 @@ pub(crate) enum Error {
     StoreHotJournal,
     Entry(String, String),
     RecordingStorage,
+    RecordingForbidden,
     RecordingPathIsFile,
     DefaultCachePrivate,
     /// The usage folder exists and cannot be read, so a send would go
@@ -170,6 +171,7 @@ impl Error {
             | Self::StoreHotJournal
             | Self::Entry(_, _)
             | Self::RecordingStorage
+            | Self::RecordingForbidden
             | Self::RecordingPathIsFile
             | Self::DefaultCachePrivate
             | Self::UsageUnreadable(_) => Kind::Local,

@@ -49,6 +49,19 @@ pub struct Found<T> {
 withheld_debug!(Found<T> { selected });
 
 impl<T> Found<T> {
+    pub(crate) fn map<U>(self, mut map: impl FnMut(T) -> U) -> Found<U> {
+        Found {
+            selected: self.selected,
+            candidates: self
+                .candidates
+                .into_iter()
+                .map(|candidate| Candidate {
+                    input: candidate.input.map(&mut map),
+                    probability: candidate.probability,
+                })
+                .collect(),
+        }
+    }
     /// Pair each unit, and the `none` candidate last when asked, with its probability.
     pub(crate) fn new(units: Vec<T>, none: bool, found: &facade::Found) -> Result<Self, Error> {
         let probabilities = found.selection.probabilities();

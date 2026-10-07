@@ -15,6 +15,7 @@ pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[cfg_attr(test, schemars(inline, with = "crate::core::Json"))]
 pub(crate) struct RecognizeSpec {
+    pub(crate) metadata: crate::core::declaration::QuestionMetadata,
     pub(crate) kinds: RecognizeKinds,
     pub(crate) relations: Vec<RelationRule>,
     pub(crate) threshold: Threshold,
@@ -51,6 +52,8 @@ impl Serialize for Kinds<'_> {
 
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub(crate) enum RecognizeConfigError {
+    #[error(transparent)]
+    Declaration(#[from] crate::core::declaration::DeclarationError),
     #[error("a recognize question file is one closed version-one object")]
     Shape,
     #[error("recognize takes 0 to 20 distinct, nonblank kinds")]
@@ -77,6 +80,7 @@ impl RecognizeSpec {
         validate_kinds(&kinds)?;
         validate_relations(&kinds, &relations)?;
         Ok(Self {
+            metadata: crate::core::declaration::QuestionMetadata::default(),
             kinds,
             relations,
             threshold: parse_typed_cut(threshold)?,
@@ -103,6 +107,7 @@ impl RecognizeSpec {
                 "on",
             ]
             .contains(&name.as_str())
+                && !crate::core::declaration::QuestionMetadata::is_key(name)
         }) {
             return Err(RecognizeConfigError::Shape);
         }
@@ -130,6 +135,7 @@ impl RecognizeSpec {
         )?;
         validate_relations(&kinds, &relations)?;
         Ok(Self {
+            metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
             kinds,
             relations,
             threshold: parse_json_cut(value.member("threshold"))?,

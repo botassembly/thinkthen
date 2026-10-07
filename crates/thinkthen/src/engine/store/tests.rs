@@ -10,6 +10,11 @@ use crate::core::{Url, Usage};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
+const A: &str = r#"{"type":"noul","instructions":"a"}"#;
+const B: &str = r#"{"type":"noul","instructions":"b"}"#;
+const FIRST: &str = r#"{"type":"noul","noul":0.1}"#;
+const SECOND: &str = r#"{"type":"noul","noul":0.2}"#;
+
 const URL: &str = "http://127.0.0.1:9/v1/systemone";
 
 fn state() -> State {
@@ -20,8 +25,9 @@ fn state() -> State {
 }
 
 fn key(question: &str) -> QuestionKey {
-    QuestionKey::of(
+    QuestionKey::complete(
         &Url::new(URL).expect("url"),
+        "\"jev-1\"",
         "\"jev-1\"",
         state().json(),
         question,
@@ -30,14 +36,16 @@ fn key(question: &str) -> QuestionKey {
 
 fn row<'a>(state: &'a State, question: &'a str, answer: &'a str) -> Row<'a> {
     Row {
+        observation_id: crate::core::ObservationId::new("a".repeat(64)).unwrap(),
+        batch_size: None,
         key: key(question),
         url: URL,
         model: "jev-1",
         state,
         question,
         answer,
-        answered_by: "jev-1.2",
-        usage: Some(Usage::new(7, 1)),
+        answered_by: "jev-1",
+        usage: Some(crate::core::ReportedUsage::from_complete(Usage::new(7, 1))),
         taken_at: 1_700_000_000,
         origin: "live",
     }
@@ -86,37 +94,38 @@ fn a_cache_answers_a_hit_misses_the_rest_and_replaces_under_record() {
     let state = state();
     let mut empty = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     assert_eq!(
-        empty
-            .lookup(&[key("a")], &Cancel::default())
-            .expect("lookup"),
+        empty.lookup(&[key(A)], &Cancel::default()).expect("lookup"),
         [None]
     );
     assert!(!folder.path().exists(), "a lookup creates nothing");
-    written(folder.path(), &[row(&state, "a", "{\"n\":1}")]);
+    written(folder.path(), &[row(&state, A, FIRST)]);
     let mut store = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     let found = store
-        .lookup(&[key("b"), key("a")], &Cancel::default())
+        .lookup(&[key(B), key(A)], &Cancel::default())
         .expect("lookup");
     assert_eq!(found[0], None);
     let hit = found[1].as_ref().expect("a hit");
     assert_eq!(
         (hit.answer.as_str(), hit.answered_by.as_str()),
-        ("{\"n\":1}", "jev-1.2")
+        (FIRST, "jev-1")
     );
-    assert_eq!(hit.usage, Some(Usage::new(7, 1)));
+    assert_eq!(
+        hit.usage,
+        Some(crate::core::ReportedUsage::from_complete(Usage::new(7, 1)))
+    );
 
     let mut record = Store::open(folder.path(), Mode::Record, false, None).expect("open");
     assert!(!record.looks_up() && record.writes());
     record
-        .write(&[row(&state, "a", "{\"n\":2}")], &Cancel::default())
+        .write(&[row(&state, A, SECOND)], &Cancel::default())
         .expect("replace");
     let replaced = Store::open(folder.path(), Mode::Replay, false, None)
         .expect("open")
-        .lookup(&[key("a")], &Cancel::default())
+        .lookup(&[key(A)], &Cancel::default())
         .expect("lookup");
     assert_eq!(
         replaced[0].as_ref().map(|found| found.answer.as_str()),
-        Some("{\"n\":2}")
+        Some(SECOND)
     );
 }
 
@@ -126,7 +135,7 @@ fn a_new_store_is_private_and_a_read_only_replay_writes_nothing() {
     use std::os::unix::fs::PermissionsExt as _;
     let folder = scratch();
     let state = state();
-    written(folder.path(), &[row(&state, "a", "{}")]);
+    written(folder.path(), &[row(&state, A, FIRST)]);
     let mode = |path: &Path| fs::metadata(path).expect("metadata").permissions().mode() & 0o777;
     assert_eq!(mode(folder.path()), 0o700);
     assert_eq!(mode(&folder.path().join(SQLITE)), 0o600);
@@ -146,7 +155,7 @@ fn a_new_store_is_private_and_a_read_only_replay_writes_nothing() {
     assert!(replay.replays() && !replay.writes());
     assert!(
         replay
-            .lookup(&[key("a")], &Cancel::default())
+            .lookup(&[key(A)], &Cancel::default())
             .expect("lookup")[0]
             .is_some()
     );
@@ -164,7 +173,7 @@ fn a_new_store_is_private_and_a_read_only_replay_writes_nothing() {
 fn a_replay_of_a_folder_holding_both_files_is_refused() {
     let folder = scratch();
     let state = state();
-    written(folder.path(), &[row(&state, "a", "{}")]);
+    written(folder.path(), &[row(&state, A, FIRST)]);
     fs::write(folder.path().join(JSONL), "").expect("fixture");
     assert!(matches!(
         Store::open(folder.path(), Mode::Replay, false, None),
@@ -178,7 +187,7 @@ fn a_fixture_replays_from_memory_and_writes_the_same_bytes_again() {
     let state = state();
     written(
         folder.path(),
-        &[row(&state, "b", "{\"n\":2}"), row(&state, "a", "{\"n\":1}")],
+        &[row(&state, B, SECOND), row(&state, A, FIRST)],
     );
     let connection = super::read_only(&folder.path().join(SQLITE)).expect("open");
     let text = Entries::read(&connection)
@@ -203,20 +212,16 @@ fn a_fixture_replays_from_memory_and_writes_the_same_bytes_again() {
     fs::write(fixture.path().join(JSONL), &text).expect("fixture");
     let found = Store::open(fixture.path(), Mode::Replay, false, None)
         .expect("open")
-        .lookup(&[key("a"), key("b")], &Cancel::default())
+        .lookup(&[key(A), key(B)], &Cancel::default())
         .expect("lookup");
     assert!(found.iter().all(Option::is_some));
     assert!(!fixture.path().join(SQLITE).exists());
 
-    let edited = text.replacen("{\\\"n\\\":1}", "{\\\"n\\\":9}", 1).replacen(
-        "\"question\":\"a\"",
-        "\"question\":\"c\"",
-        1,
-    );
+    let edited = text.replacen("noul", "unknown", 1);
     fs::write(fixture.path().join(JSONL), edited).expect("edit");
     assert!(matches!(
         Store::open(fixture.path(), Mode::Replay, false, None),
-        Err(Error::Entry(name, why)) if name == JSONL && why.contains("hand-edited")
+        Err(Error::Entry(name, why)) if name == JSONL && !why.is_empty()
     ));
 }
 
@@ -224,7 +229,7 @@ fn a_fixture_replays_from_memory_and_writes_the_same_bytes_again() {
 fn a_lookup_waits_through_another_writer_and_then_answers() {
     let folder = scratch();
     let state = state();
-    written(folder.path(), &[row(&state, "a", "{}")]);
+    written(folder.path(), &[row(&state, A, FIRST)]);
     let mut store = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
@@ -239,9 +244,7 @@ fn a_lookup_waits_through_another_writer_and_then_answers() {
             holder.execute_batch("COMMIT").expect("unlock");
         }
     });
-    let found = store
-        .lookup(&[key("a")], &Cancel::default())
-        .expect("lookup");
+    let found = store.lookup(&[key(A)], &Cancel::default()).expect("lookup");
     assert!(found[0].is_some());
     assert!(
         committing.load(std::sync::atomic::Ordering::SeqCst),
@@ -254,7 +257,7 @@ fn a_lookup_waits_through_another_writer_and_then_answers() {
 fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
     let folder = scratch();
     let state = state();
-    written(folder.path(), &[row(&state, "a", "{}")]);
+    written(folder.path(), &[row(&state, A, FIRST)]);
     let mut store = Store::open(folder.path(), Mode::Cache, false, None)
         .expect("open")
         .with_busy_limit(Duration::from_millis(200));
@@ -263,7 +266,7 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
     let started = Instant::now();
     assert!(matches!(
-        store.lookup(&[key("a")], &Cancel::default()),
+        store.lookup(&[key(A)], &Cancel::default()),
         Err(Error::RecordingStorage)
     ));
     let waited = started.elapsed();
@@ -276,7 +279,7 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
     cancel.fire();
     let started = Instant::now();
     assert!(matches!(
-        writer.write(&[row(&state, "b", "{}")], &cancel),
+        writer.write(&[row(&state, B, FIRST)], &cancel),
         Err(Error::Cancelled)
     ));
     let waited = started.elapsed();
@@ -291,7 +294,7 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
 fn a_read_only_replay_that_meets_an_unfinished_write_is_refused() {
     let folder = scratch();
     let state = state();
-    written(folder.path(), &[row(&state, "a", "{}")]);
+    written(folder.path(), &[row(&state, A, FIRST)]);
     let writer = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     writer
         .execute_batch("PRAGMA cache_size = 1; BEGIN IMMEDIATE;")
@@ -310,44 +313,47 @@ fn a_read_only_replay_that_meets_an_unfinished_write_is_refused() {
         fs::copy(folder.path().join(&name), hot.path().join(&name)).expect("copy");
     }
     writer.execute_batch("ROLLBACK").expect("rollback");
-    let mut store = Store::open(hot.path(), Mode::Replay, false, None).expect("open");
     assert!(matches!(
-        store.lookup(&[key("a")], &Cancel::default()),
+        Store::open(hot.path(), Mode::Replay, false, None),
         Err(Error::StoreHotJournal)
     ));
 }
 
 #[test]
-fn a_merge_keeps_the_newer_answer_and_a_tie_keeps_the_held_one() {
+fn a_merge_refuses_conflicting_history_and_keeps_identical_snapshots() {
     let entries = |answer: &str, taken_at: i64| {
         let state = state();
-        let mut text = format!(
-            "{{\"sha256\":\"{}\",\"state\":{}}}\n",
-            crate::core::hex(state.sha256()),
-            serde_json::to_string(state.json()).expect("json")
+        let mut entries = Entries::default();
+        let digest = crate::core::hex(state.sha256());
+        entries
+            .states
+            .insert(digest.clone(), state.json().to_owned());
+        entries.answers.insert(
+            key(A).hex(),
+            super::Answer {
+                key_version: Some(2),
+                adapter: Some(crate::core::adapters::built_in::NAME.into()),
+                observation_id: Some(crate::core::ObservationId::new("a".repeat(64)).unwrap()),
+                batch_size: None,
+                key: key(A).hex(),
+                url: URL.into(),
+                model: "jev-1".into(),
+                state: digest,
+                question: A.into(),
+                answer: answer.into(),
+                answered_by: "jev-1".into(),
+                input_tokens: None,
+                output_tokens: None,
+                taken_at,
+                origin: "converted".into(),
+            },
         );
-        let line = super::Answer {
-            key: key("a").hex(),
-            url: URL.to_owned(),
-            model: "jev-1".to_owned(),
-            state: crate::core::hex(state.sha256()),
-            question: "a".to_owned(),
-            answer: answer.to_owned(),
-            answered_by: "jev-1.2".to_owned(),
-            input_tokens: None,
-            output_tokens: None,
-            taken_at,
-            origin: "converted".to_owned(),
-        };
-        text.push_str(&serde_json::to_string(&line).expect("json"));
-        Entries::parse(&text).expect("parse")
+        entries
     };
-    let answer = |entries: &Entries| entries.answers[&key("a").hex()].answer.clone();
-    let mut held = entries("held", 5);
-    held.merge(entries("tie", 5));
-    assert_eq!(answer(&held), "held");
-    held.merge(entries("older", 0));
-    assert_eq!(answer(&held), "held");
-    held.merge(entries("newer", 6));
-    assert_eq!(answer(&held), "newer");
+    let mut held = entries(FIRST, 5);
+    held.merge(entries(FIRST, 5)).unwrap();
+    for next in [entries(SECOND, 5), entries(FIRST, 0), entries(FIRST, 6)] {
+        assert!(held.merge(next).is_err());
+        assert_eq!(held, entries(FIRST, 5));
+    }
 }

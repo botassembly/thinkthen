@@ -5,7 +5,7 @@ use std::process::ExitCode;
 
 use crate::core::{
     Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, Meta, PlanDocument, PlanSummary, Pointer,
-    QuestionText, Reading, Record, RequestMeta, json_line,
+    Reading, Record, RequestMeta, json_line,
 };
 
 use crate::args::{Common, FindArguments};
@@ -18,6 +18,7 @@ use crate::edge::{self, Environment};
 use crate::engine::facade::{self, Found};
 use crate::failure::{Failure, ReplayContext};
 use crate::profile;
+mod question;
 
 /// Read one bounded set, ask once, and print its selected original unit.
 pub(crate) fn run(
@@ -26,22 +27,19 @@ pub(crate) fn run(
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let common = &arguments.common.as_common();
-    common.check_plan_name()?;
+    let question::Prepared {
+        common,
+        question,
+        profile: saved_profile,
+        sources,
+    } = question::Prepared::new(arguments)?;
+    let common = &common;
     let mut display = Display::default();
     display.arguments = arguments.display.clone();
     display.validate(common)?;
     let framing = framing(common);
-    let fields = common
-        .field
-        .iter()
-        .map(|typed| {
-            Pointer::new(typed).map_err(|error| Failure::Pointer("--field", typed.clone(), error))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let fields = fields(common)?;
     let reading = Reading::new(framing, fields)?;
-    let question = QuestionText::new(&arguments.question)
-        .map_err(|_| Failure::Usage("`find` takes a question that is text, not white space"))?;
     let backend = environment.resolve(
         common.backend.as_deref(),
         common.url.as_deref(),
@@ -83,13 +81,14 @@ pub(crate) fn run(
     }
     let evidence: Vec<_> = units.iter().map(|unit| unit.evidence.clone()).collect();
     let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
-        .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?;
+        .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?
+        .with_profile(saved_profile);
     if common.dry_run {
         return planned(
             &find,
             (&backend, environment.key_variable()),
             profile.as_ref(),
-            &reading,
+            (&reading, sources),
             units.len(),
             writer,
         );
@@ -98,7 +97,14 @@ pub(crate) fn run(
     let found = engine.find(&find, environment.cancel()).map_err(|error| {
         Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
     })?;
-    let rendered = rendered(common, &find, &backend, &reading, &units, found)?;
+    let rendered = rendered(
+        common,
+        &find,
+        (&backend, profile.as_ref()),
+        &reading,
+        &units,
+        found,
+    )?;
     display.emit_row(
         &mut writer,
         rendered.line.as_deref(),
@@ -118,7 +124,7 @@ fn planned(
     find: &Find,
     (backend, key_env): (&Backend, &str),
     profile: Option<&crate::core::BackendProfile>,
-    reading: &Reading,
+    (reading, sources): (&Reading, Option<crate::core::Sources>),
     records: usize,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -134,7 +140,7 @@ fn planned(
             .request(&request.body)
             .map_err(|_| Failure::Defect("a plan is too large"))?;
     }
-    let document = PlanDocument::of(backend, find.plan())
+    let mut document = PlanDocument::of(backend, find.plan())
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
         .key_env(key_env);
     if summary.first_body() != Some(document.request_body()) {
@@ -142,12 +148,25 @@ fn planned(
             "the disclosed request changed after preparation",
         ));
     }
+    if let Some(sources) = sources {
+        document = document.from(sources);
+    }
     edge::write_line(&mut writer, &json_line(&document.reading(reading))?)?;
     let counts = summary
         .counts()
         .map_err(|_| Failure::Defect("a plan is too large"))?;
     edge::write_line(&mut writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
+}
+
+fn fields(common: &Common) -> Result<Vec<Pointer>, Failure> {
+    common
+        .field
+        .iter()
+        .map(|typed| {
+            Pointer::new(typed).map_err(|error| Failure::Pointer("--field", typed.clone(), error))
+        })
+        .collect()
 }
 
 fn input_units(
@@ -289,7 +308,7 @@ fn read_units(
 fn rendered(
     common: &Common,
     find: &Find,
-    backend: &Backend,
+    (backend, profile): (&Backend, Option<&crate::core::BackendProfile>),
     reading: &Reading,
     units: &[Unit],
     found: Found,
@@ -330,7 +349,11 @@ fn rendered(
                 answered.replayed,
                 answered.requests_sent,
                 vec![answered.request.as_str().to_owned()],
-            ),
+            )
+            .with_profile_warning(crate::core::ProfileWarning::between(
+                find.profile(),
+                profile.map(crate::core::BackendProfile::name),
+            )),
         );
         Some(json_line(&find.result(value, selected, meta))?)
     } else {
