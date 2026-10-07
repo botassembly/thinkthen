@@ -3,6 +3,7 @@ use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{CallOptions, Engine, Error, ErrorKind, RecordObservation, Surface};
 mod execute;
+mod file_format;
 mod inputs;
 mod observations;
 mod questions;

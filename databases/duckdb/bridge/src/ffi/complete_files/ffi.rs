@@ -34,7 +34,7 @@ impl std::fmt::Debug for Reader {
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeText) -> Reply {
     reply_boundary(|| {
         let source = text(input.bytes, input.len)?;
-        crate::complete_native::Inputs::parse(source, true)
+        let inputs = crate::complete_native::Inputs::parse(source, true)
             .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         let value: serde_json::Value = serde_json::from_str(source)
             .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid inputs"))?;
@@ -51,7 +51,10 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeTe
         options
             .validate()
             .map_err(|e| crate::complete_native::failure(&e).to_string())?;
-        serde_json::to_vec(&serde_json::json!({"paths":files.get("paths"),"options":options,"jsonl":files.get("format").and_then(serde_json::Value::as_str)==Some("jsonl")})).map_err(|_|"thinkthen defect: source plan did not encode".to_owned())
+        serde_json::to_vec(
+            &serde_json::json!({"paths":files.get("paths"),"options":options,"jsonl":inputs.jsonl}),
+        )
+        .map_err(|_| "thinkthen defect: source plan did not encode".to_owned())
     })
 }
 /// Wrap one authorized synchronous handle with the native input reader.
@@ -135,7 +138,10 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_records(
     records: BridgeText,
 ) -> Reply {
     reply_boundary(|| {
-        let mut value: serde_json::Value = serde_json::from_str(text(input.bytes, input.len)?)
+        let source = text(input.bytes, input.len)?;
+        crate::complete_native::Inputs::parse(source, true)
+            .map_err(|e| crate::complete_native::failure(&e).to_string())?;
+        let mut value: serde_json::Value = serde_json::from_str(source)
             .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid inputs"))?;
         value
             .as_object_mut()

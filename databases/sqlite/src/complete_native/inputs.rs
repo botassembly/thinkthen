@@ -13,6 +13,7 @@ pub(super) type Records<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
 pub(crate) struct Inputs {
     raw: Fields,
+    pub(crate) jsonl: bool,
     pub(crate) incremental: bool,
     pub(crate) attempts: bool,
     pub(crate) cancelled: bool,
@@ -28,6 +29,7 @@ impl Inputs {
         }) {
             return Err(usage("unknown complete input field"));
         }
+        let mut jsonl = false;
         if let Some(files) = raw.get("files") {
             let files = fields(files.get())?;
             if files
@@ -36,6 +38,7 @@ impl Inputs {
             {
                 return Err(usage("unknown complete files field"));
             }
+            jsonl = super::file_format::jsonl(files.get("format").map(|value| value.get()))?;
         }
         if raw.contains_key("records") == raw.contains_key("files") {
             return Err(usage(
@@ -60,6 +63,7 @@ impl Inputs {
         let cancelled = flag("cancelled")?.unwrap_or(false);
         Ok(Self {
             raw,
+            jsonl,
             incremental,
             attempts,
             cancelled,
@@ -124,19 +128,9 @@ impl Inputs {
                 })
                 .transpose()?
                 .unwrap_or_default();
-            let jsonl = value
-                .get("format")
-                .map(|v| {
-                    serde_json::from_str::<String>(v.get())
-                        .map_err(|_| usage("file format is jsonl"))
-                })
-                .transpose()?;
-            if jsonl.as_deref().is_some_and(|v| v != "jsonl") {
-                return Err(usage("file format is jsonl"));
-            }
             let records = thinkthen::read_inputs(paths, options)?;
             return Ok(Box::new(records.map(move |item| {
-                item.and_then(|item| compose_file(item, &reading, jsonl.is_some()))
+                item.and_then(|item| compose_file(item, &reading, self.jsonl))
             })));
         }
         let records: Vec<Box<RawValue>> =

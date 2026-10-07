@@ -63,15 +63,42 @@ pub(crate) fn text(value: ValueRef<'_>, what: &str) -> Result<Option<String>, Fa
 /// at most 1 MiB, symlinks followed, and one sentence for every cause.
 /// `what` names the file's kind in that sentence.
 pub(crate) fn named_file(argument: &str, what: &str) -> Result<(String, Stamp), Failure> {
-    let refused = || {
-        Failure::of(
-            ErrorKind::Local,
-            format!(
-                "the {what} file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes"
-            ),
-        )
-    };
-    let path = argument.strip_prefix('@').ok_or_else(refused)?;
+    let path = argument
+        .strip_prefix('@')
+        .ok_or_else(|| file_refusal(argument, what))?;
+    read_checked(argument, what, std::path::Path::new(path), None)
+}
+
+/// Read the native selection once, retaining named-root checks on the opened descriptor.
+pub(crate) fn resolved_file(
+    argument: &str,
+    reference: &thinkthen::QuestionFileReference,
+) -> Result<String, Failure> {
+    read_checked(
+        argument,
+        "question",
+        reference.path(),
+        reference.named_root(),
+    )
+    .map(|held| held.0)
+}
+
+fn file_refusal(argument: &str, what: &str) -> Failure {
+    Failure::of(
+        ErrorKind::Local,
+        format!(
+            "the {what} file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes"
+        ),
+    )
+}
+
+fn read_checked(
+    argument: &str,
+    what: &str,
+    path: &std::path::Path,
+    named_root: Option<&std::path::Path>,
+) -> Result<(String, Stamp), Failure> {
+    let refused = || file_refusal(argument, what);
     let file = std::fs::OpenOptions::new()
         .read(true)
         .custom_flags(libc::O_NONBLOCK)
@@ -80,6 +107,12 @@ pub(crate) fn named_file(argument: &str, what: &str) -> Result<(String, Stamp), 
     let meta = file.metadata().map_err(|_| refused())?;
     if !meta.is_file() || meta.len() > FILE_CAP {
         return Err(refused());
+    }
+    if let Some(root) = named_root {
+        let actual = crate::ffi::path_of(&file).ok_or_else(refused)?;
+        if !actual.starts_with(root) {
+            return Err(refused());
+        }
     }
     let mut held = String::new();
     file.take(FILE_CAP + 1)

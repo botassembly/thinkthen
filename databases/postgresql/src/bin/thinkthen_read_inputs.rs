@@ -1,6 +1,8 @@
 //! Client-side native evidence reader for PostgreSQL's explicit descriptor workaround.
 use std::io::{self, Read as _, Write as _};
 use thinkthen::{InputReaderOptions, SourceItem};
+#[path = "../../../sqlite/src/complete_native/file_format.rs"]
+mod file_format;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut source = String::new();
     io::stdin().read_to_string(&mut source)?;
@@ -8,6 +10,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let files = value
         .get("files")
         .ok_or("client reader requires explicit files")?;
+    let format = files.get("format").map(ToString::to_string);
+    let jsonl = file_format::jsonl(format.as_deref())?;
     let paths: Vec<String> =
         serde_json::from_value(files.get("paths").ok_or("missing paths")?.clone())?;
     let options: InputReaderOptions = serde_json::from_value(
@@ -16,7 +20,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .cloned()
             .unwrap_or_else(|| serde_json::json!({})),
     )?;
-    let jsonl = files.get("format").and_then(serde_json::Value::as_str) == Some("jsonl");
     let descriptor = |item: SourceItem| match item {
         SourceItem::Text(s) => {
             serde_json::json!({if jsonl {"json_text"}else{"text"}:s.record,"source":{"file":s.file,"first_line":s.first_line,"last_line":s.last_line}})

@@ -1,4 +1,4 @@
-//! Question roles and explicit references reuse the native loaders and grammar.
+//! Content-only question roles reuse native grammar after the host reads references.
 use super::usage;
 use serde_json::value::RawValue;
 use std::collections::BTreeMap;
@@ -21,11 +21,10 @@ pub(crate) enum Prepared {
 }
 impl Prepared {
     pub(crate) fn parse(verb: &str, source: &str) -> Result<Self, Error> {
-        if let Some(name) = source.strip_prefix("@@") {
-            return Self::named(verb, name);
-        }
         if source.starts_with('@') {
-            return Self::reference(verb, source);
+            return Err(usage(
+                "the question reference was not read by this database",
+            ));
         }
         Self::content(verb, source)
     }
@@ -65,34 +64,6 @@ impl Prepared {
                 _ => Err(usage("filter requires a decide question")),
             },
             "decide" | "score" | "tag" => Question::from_json(source).map(Self::Atomic),
-            _ => Err(usage("unknown SQL complete function")),
-        }
-    }
-    fn named(verb: &str, source: &str) -> Result<Self, Error> {
-        match verb {
-            "annotate" => QuestionSet::load_named(source).map(Self::Annotate),
-            "rank" => match RankSet::load_named(source) {
-                Ok(set) => Ok(Self::RankSet(set)),
-                Err(_) => Question::load_rank_named(source).map(Self::Rank),
-            },
-            "find" => FindQuestionFile::load_named(source).map(|q| {
-                let (q, r) = q.into_parts();
-                Self::Find(q, r)
-            }),
-            "recognize" => RecognizeQuestionFile::load_named(source).map(|q| {
-                let (q, r) = q.into_parts();
-                Self::Recognize(q, r)
-            }),
-            "relate" => Relate::load_records_named(source).map(Self::Relate),
-            "choose" => match Question::load_named(source) {
-                Ok(q) => Ok(Self::Atomic(q)),
-                Err(_) => RecordChooseQuestion::load_named(source).map(Self::Dynamic),
-            },
-            "filter" => match Question::load_named(source)? {
-                LoadedQuestion::Question(q) => Ok(Self::Filter(q)),
-                _ => Err(usage("filter requires decide")),
-            },
-            "decide" | "score" | "tag" => Question::load_named(source).map(Self::Atomic),
             _ => Err(usage("unknown SQL complete function")),
         }
     }
@@ -150,34 +121,6 @@ impl Prepared {
             }
         }
         Ok(self)
-    }
-    fn reference(verb: &str, source: &str) -> Result<Self, Error> {
-        match verb {
-            "annotate" => QuestionSet::load_reference(source).map(Self::Annotate),
-            "rank" => match RankSet::load_reference(source) {
-                Ok(set) => Ok(Self::RankSet(set)),
-                Err(_) => Question::load_rank_reference(source).map(Self::Rank),
-            },
-            "find" => FindQuestionFile::load_reference(source).map(|q| {
-                let (q, r) = q.into_parts();
-                Self::Find(q, r)
-            }),
-            "recognize" => RecognizeQuestionFile::load_reference(source).map(|q| {
-                let (q, r) = q.into_parts();
-                Self::Recognize(q, r)
-            }),
-            "relate" => Relate::load_records_reference(source).map(Self::Relate),
-            "choose" => match Question::load_reference(source) {
-                Ok(q) => Ok(Self::Atomic(q)),
-                Err(_) => RecordChooseQuestion::load_reference(source).map(Self::Dynamic),
-            },
-            "filter" => match Question::load_reference(source)? {
-                LoadedQuestion::Question(q) => Ok(Self::Filter(q)),
-                _ => Err(usage("filter requires a decide question")),
-            },
-            "decide" | "score" | "tag" => Question::load_reference(source).map(Self::Atomic),
-            _ => Err(usage("unknown SQL complete function")),
-        }
     }
     pub(crate) fn reading(&self) -> Option<&RecordReading> {
         match self {

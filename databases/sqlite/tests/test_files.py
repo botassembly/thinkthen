@@ -46,6 +46,62 @@ say(recognize=run(db, "SELECT * FROM thinkthen_recognize('Ada', '@/dev/zero')"),
                                       "questions": sentence.format("question set")}, 0), "each door names its file's kind")
 
 
+def test_complete_question_files_refuse_nonregular_inputs_without_waiting() -> None:
+    with tempfile.TemporaryDirectory(prefix="thinkthen-complete-door-") as tmp:
+        folder = pathlib.Path(tmp)
+        os.mkfifo(folder / "fifo")
+        (folder / "fifo-link").symlink_to(folder / "fifo")
+        (folder / "big.json").write_bytes(b" " * 1_048_577)
+        backend = Backend()
+        paths = [str(folder / name) for name in ("fifo", "fifo-link", "big.json")]+["/dev/zero"]
+        held = child(f"""
+db = connect()
+results = []
+for path in {paths!r}:
+    for verb in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'):
+        value = json.loads(db.execute('SELECT thinkthen_'+verb+'_complete(?,?)', ('@'+path, '{{"records":[]}}')).fetchone()[0])
+        results.append([value['native']['error']['kind'], 'facts' in value['native'], value['observations']])
+say(results=results)
+""", environment(backend), 5)
+        expect(held['results'], [['local', False, []]] * 40, "all complete doors refuse before starting")
+        expect(backend.close(), 0, "nonregular complete questions send nothing")
+
+
+def test_complete_references_keep_native_roles_names_and_link_behavior() -> None:
+    with tempfile.TemporaryDirectory(prefix="thinkthen-complete-door-") as tmp:
+        folder = pathlib.Path(tmp)
+        sources = {
+            'choose': {'choose':'Which?','options':['a','b']},
+            'dynamic': {'choose':'Which?'},
+            'rank': {'decide':'First?'},
+            'set': {'version':1,'questions':{'first':{'decide':'First?'}}},
+            'wrong': {'find':'Which?'},
+            'bad': {'choose':'Which?','options':[]},
+        }
+        for name, source in sources.items():(folder/(name+'.json')).write_text(json.dumps(source))
+        (folder/'link.json').symlink_to(folder/'choose.json')
+        backend = Backend()
+        env = environment(backend)
+        named = pathlib.Path(env['XDG_CONFIG_HOME'])/'thinkthen/questions'
+        named.mkdir(parents=True)
+        (named/'saved.json').symlink_to(folder/'choose.json')
+        (named/'good.json').write_text(json.dumps(sources['choose']))
+        (named/'mismatch.json').write_text(json.dumps({**sources['choose'],'name':'different'}))
+        cases = [('choose','@'+str(folder/(name+'.json'))) for name in ('choose','dynamic','link')]
+        cases += [('rank','@'+str(folder/(name+'.json'))) for name in ('rank','set')]
+        cases += [('choose','@@good'),('choose','@@saved'),('choose','@@mismatch'),('decide','@'+str(folder/'wrong.json')),('choose','@'+str(folder/'bad.json'))]
+        held = child(f"""
+db = connect()
+results=[]
+for verb, reference in {cases!r}:
+    value=json.loads(db.execute('SELECT thinkthen_'+verb+'_complete(?,?)',(reference,'{{"records":[]}}')).fetchone()[0])
+    results.append(value['native'].get('error',{{}}).get('kind','ok'))
+say(results=results)
+""", env, 5)
+        expect(held['results'], ['ok']*6+['local','local','usage','local'], "one selected content grammar and native names")
+        expect(backend.close(), 0, "empty and refused complete references send nothing")
+
+
 def test_a_link_to_a_question_file_reads_its_target() -> None:
     """R5-20 and R4-6: the door follows symlinks and confines nothing."""
     folder = pathlib.Path(tempfile.mkdtemp(prefix="thinkthen-door-"))

@@ -151,7 +151,7 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
+	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -1522,6 +1522,9 @@ an_update_cannot_grant_public() {
 	same "$(extension_owned "AND has_function_privilege('public', p.oid, 'EXECUTE')")" 0
 }
 check an_update_cannot_grant_public
+
+client_reader_validates_file_formats() { python3 tests/read_inputs.py; }
+check client_reader_validates_file_formats
 
 complete_cases() {
     pg_stop

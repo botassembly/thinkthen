@@ -6,6 +6,25 @@ use rusqlite::{
 };
 use thinkthen::{Error, ErrorKind, Surface};
 
+fn prepare(
+    verb: &str,
+    source: &str,
+    settings: &thinkthen::Settings,
+) -> Result<crate::complete_native::Prepared, Error> {
+    if !source.starts_with('@') {
+        return crate::complete_native::prepare(verb, source, settings);
+    }
+    let reference = if let Some(name) = source.strip_prefix("@@") {
+        thinkthen::QuestionFileReference::named(name)?
+    } else {
+        thinkthen::QuestionFileReference::reference(source)?
+    };
+    let text = question::resolved_file(source, &reference)
+        .map_err(|failure| Error::new(failure.kind, failure.message))?;
+    let parsed = crate::complete_native::settings::parse_file(verb, &text, &reference)?;
+    crate::complete_native::settings::prepare_file(verb, &text, settings, parsed)
+}
+
 fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<String>> {
     let result = guard("a complete SQL call", || {
         let Some(question) = question::text(context.get_raw(0), "the question")? else {
@@ -20,7 +39,7 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
             thinkthen::Settings::default()
         };
         let result = (|| {
-            let prepared = crate::complete_native::prepare(verb, &question, &settings)?;
+            let prepared = prepare(verb, &question, &settings)?;
             let inputs = crate::complete_native::Inputs::parse(&inputs, true)?;
             Ok::<_, thinkthen::Error>((prepared, inputs))
         })();
