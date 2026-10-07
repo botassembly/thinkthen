@@ -7955,7 +7955,306 @@
         "baseline": [
           "python3",
           "conformance/cli_parity.py"
-        ]
+        ],
+        "required_checks": [
+          "named",
+          "runtime"
+        ],
+        "case_rulings": {
+          "23-cancelled-fault": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "24-deadline-fault": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "boundary-cancelled": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "boundary-deadline": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "named-traversal": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "named-uppercase": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "named-overlong": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "lookup-explicit-name": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "named-malformed-no-fallback": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "proxy-reservation-refusal": {
+            "boundary": "sdk-only",
+            "reason": "This case exercises SDK cancellation/deadline objects, strict named loading or proxy reservation controls. The CLI retains its own signal, path and option checks."
+          },
+          "declaration-shorthand": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "declaration-null": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "declaration-empty": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "declaration-nested": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "declaration-unknown-keyword": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "declaration-required-unknown": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "declaration-duplicate-required": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-zero": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-overflow": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-string": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-boolean": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-null": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-fraction": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-integral-float": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "wording-version-exponent": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "author-name-blank": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "author-name-uppercase": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "author-name-leading-digit": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "author-name-control": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "author-name-nonascii": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "duplicate-metadata": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "duplicate-schema": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          },
+          "single-format-version": {
+            "boundary": "question-file",
+            "reason": "The CLI reads the exact authored bytes through a question file and reports local file admission failure before transport. SDK construction expectations remain unchanged.",
+            "expect": {
+              "error": "local",
+              "exit": 5,
+              "requests_sent": 0,
+              "no_result": true,
+              "secrecy": true
+            }
+          }
+        }
       },
       {
         "id": "rust",
