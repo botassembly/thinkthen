@@ -1,6 +1,6 @@
 # 0296: Add the pandas Series accessor for all ten functions
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. The complete Series accessor passed all 248 source pandas cases; installed qualification, family review and landing gates remain open.
 
 Milestone: 0.2
 
