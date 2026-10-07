@@ -63,6 +63,11 @@ impl Common {
     }
     fn check_image_modes(&self) -> Result<(), crate::failure::Failure> {
         use crate::failure::Failure;
+        if self.image_media.is_some() && self.image.is_empty() {
+            return Err(Failure::Usage(
+                "--image-media requires explicit --image attachments",
+            ));
+        }
         if self.image.len() > crate::public::MAX_IMAGES {
             return Err(Failure::Usage("image evidence requires 1 to 8 images"));
         }

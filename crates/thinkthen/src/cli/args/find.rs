@@ -158,6 +158,7 @@ impl FindCommon {
             details: self.details,
             input: self.input.clone(),
             image: self.image.clone(),
+            image_media: None,
             media: self.media.clone(),
             window: self.window.clone(),
             unit: self.unit.clone(),

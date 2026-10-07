@@ -79,6 +79,9 @@ pub(crate) struct Common {
     /// Attach an original JPEG or PNG; repeat to preserve image order.
     #[arg(long, value_name = "FILE")]
     pub(crate) image: Vec<PathBuf>,
+    /// Declare the media of every explicit attachment; omit to infer from bytes.
+    #[arg(long, value_parser = ["image/png", "image/jpeg"], value_name = "MIME")]
+    pub(crate) image_media: Option<String>,
     /// Select text or image media for whole files.
     #[arg(long, value_parser = ["text", "image"], value_name = "MEDIA")]
     pub(crate) media: Option<String>,

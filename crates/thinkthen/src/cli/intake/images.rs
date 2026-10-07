@@ -40,6 +40,10 @@ pub(super) fn prepare(
     } else {
         Source::Attached(Attachment {
             paths: common.image.clone(),
+            media: common.image_media.as_deref().map(|media| match media {
+                "image/jpeg" => crate::public::ImageMedia::Jpeg,
+                _ => crate::public::ImageMedia::Png,
+            }),
             source: Box::new(Intake::text(common, reading, input, has_on, false)?.0),
             loaded: None,
         })
@@ -56,6 +60,7 @@ pub(super) fn prepare(
 /// cancellation can end the command even while the input handle waits for EOF.
 pub(super) struct Attachment {
     paths: Vec<std::path::PathBuf>,
+    media: Option<crate::public::ImageMedia>,
     source: Box<Intake>,
     loaded: Option<Loaded>,
 }
@@ -149,13 +154,19 @@ impl Attachment {
             let SourceItem::Image(image) = image else {
                 return Err(Failure::Defect("an image reader returned text"));
             };
+            let record = match self.media {
+                Some(media) => {
+                    crate::public::ImageInput::new(media, image.record.bytes()).map_err(refused)?
+                }
+                None => image.record,
+            };
             compressed = compressed
-                .checked_add(image.record.bytes().len())
+                .checked_add(record.bytes().len())
                 .filter(|&bytes| bytes <= crate::public::MAX_IMAGE_BYTES)
                 .ok_or(Failure::Usage(
                     "image evidence exceeds the 25165824 compressed byte SDK limit",
                 ))?;
-            images.push(image.record);
+            images.push(record);
             names.push(image.file);
         }
         Ok((images, names))

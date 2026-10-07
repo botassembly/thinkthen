@@ -106,3 +106,65 @@ fn framed_choose_keeps_distinct_ordered_option_lists_with_the_same_images() {
         json!([data_url("red.png")])
     );
 }
+
+#[test]
+fn explicit_attachment_media_validates_every_original_before_sending() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let red = fixture("red.png");
+    let jpeg = fixture("red.jpg");
+    for arguments in [
+        vec![
+            "--image-media",
+            "image/jpeg",
+            "--image",
+            red.to_str().unwrap(),
+        ],
+        vec![
+            "--image-media",
+            "image/png",
+            "--image",
+            red.to_str().unwrap(),
+            "--image",
+            jpeg.to_str().unwrap(),
+        ],
+        vec![
+            "--image-media",
+            "image/gif",
+            "--image",
+            red.to_str().unwrap(),
+        ],
+        vec!["--image-media", "image/png"],
+    ] {
+        let output = call(
+            &listener,
+            &[&["decide", "Is red visible?"], arguments.as_slice()].concat(),
+            b"Caption",
+        );
+        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        assert!(output.stdout.is_empty());
+        assert!(listener.requests().is_empty());
+    }
+    let output = call(
+        &listener,
+        &[
+            "decide",
+            "Is red visible?",
+            "--image-media",
+            "image/png",
+            "--image",
+            red.to_str().unwrap(),
+            "--image",
+            red.to_str().unwrap(),
+            "--details",
+        ],
+        b"Caption",
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
+    assert_eq!(
+        body["images"],
+        json!([data_url("red.png"), data_url("red.png")])
+    );
+}

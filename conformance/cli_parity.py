@@ -94,6 +94,8 @@ def command(binary, value, settings, home):
         context.write_text(value["shared_context"])
         args.extend(["--context", str(context)])
     if value.get("image_paths") and not value.get("paths"):
+        if value.get("media"):
+            args.extend(["--image-media", value["media"]])
         for path in value["image_paths"]:
             args.extend(["--image", str(ROOT / path)])
     if value.get("paths") or injection == "recording_read_failure":
