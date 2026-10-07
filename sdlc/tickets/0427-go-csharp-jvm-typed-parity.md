@@ -1,6 +1,6 @@
 # 0427: Complete Go, C# and JVM typed parity
 
-Status: in progress, implementation complete; awaiting root whole-family review and landing. All ten typed native calls and six owned lazy batches are implemented for Go, C#, Java, Kotlin and Scala. All 1,235 required shared cells passed.
+Status: complete. Go, C#, Java, Kotlin and Scala each pass all 247 required cases and actual installed archives. The fresh whole-family review and narrow packaging correction review accepted the implementation; combined full tests, lint and executable documentation passed. Final global/platform qualification belongs to 0432 and 0425.
 
 Milestone: 0.2
 

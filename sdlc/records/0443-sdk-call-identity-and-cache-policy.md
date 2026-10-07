@@ -21,3 +21,5 @@ Astra identified the refused older files recordings as controlled synthetic repl
 
 The top-search-hits demo now shows the settled result/2 rank position, starting at 1, instead of the old null value. Its saved probabilities, input paths and null threshold are unchanged.
 The no-network demo now checks an empty attempt list and the normalized v2 miss key. Its original v1 recording remains unchanged as a compatibility case.
+
+The builder notified the experiments team through pm on 2026-10-07 that the native cache/replay fixes and existing DuckDB zero-cap replay are available on main. The message asks for only affected 0035 reruns; SQL details still await adoption. Mail: `inbox/thinkthen-exp/2026-10-07-builder-native-cache-and-replay-fixes-are-on-main-for-selective-0035-reruns.md`.
