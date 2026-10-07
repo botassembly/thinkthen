@@ -74,11 +74,25 @@ struct Named<'a> {
     canonical: &'a CompleteAtomic,
     original: &'a Record,
     name: &'a str,
+    members: Vec<core::RankMemberDocument<'a>>,
 }
 impl Serialize for Named<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical
-            .serialize_with_named_input(Some(self.original), Some(self.name), serializer)
+        self.canonical.serialize_occurrence_members(
+            Some(self.original),
+            Some(self.name),
+            None,
+            Some(
+                self.members
+                    .iter()
+                    .map(|member| core::RankMemberDocument {
+                        name: member.name,
+                        result: member.result,
+                    })
+                    .collect(),
+            ),
+            serializer,
+        )
     }
 }
 fn position(at: usize) -> Result<NonZeroUsize, Failure> {
@@ -135,6 +149,12 @@ impl Judged {
                     canonical: &canonical,
                     original: &group.original,
                     name,
+                    members: group
+                        .members
+                        .iter()
+                        .zip(&members)
+                        .map(|((name, _), result)| core::RankMemberDocument { name, result })
+                        .collect(),
                 })?
             }
         });

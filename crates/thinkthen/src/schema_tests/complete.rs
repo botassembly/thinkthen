@@ -104,6 +104,7 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
     attempt["properties"]["ordinal"]["minimum"] = json!(1);
     attempt["properties"]["request_sha256"]["pattern"] = json!("^[0-9a-f]{64}$");
     locations(definitions);
+    rank_members(definitions);
     functions(definitions);
 }
 fn locations(definitions: &mut Map<String, Value>) {
@@ -206,6 +207,12 @@ fn functions(definitions: &mut Map<String, Value>) {
         ),
     ] {
         let mut row = definitions["completeAtomic"].clone();
+        if name != "completeRank" {
+            row["properties"]
+                .as_object_mut()
+                .expect("properties")
+                .remove("members");
+        }
         row["properties"]["value"] = value;
         if matches!(name, "completeScore" | "completeRank") {
             row["properties"]["threshold"] = threshold;
@@ -224,4 +231,50 @@ fn functions(definitions: &mut Map<String, Value>) {
         }
         definitions.insert(name.into(), row);
     }
+}
+
+fn rank_members(definitions: &mut Map<String, Value>) {
+    // A member serializes a standalone judgment and never another set or original.
+    let mut child = definitions["completeAtomic"].clone();
+    let properties = child["properties"]
+        .as_object_mut()
+        .expect("member properties");
+    for field in ["members", "question_name", "input", "index"] {
+        properties.remove(field);
+    }
+    properties.insert("value".into(), json!({"type":"integer","minimum":1}));
+    properties.insert("threshold".into(), json!({"type":"null"}));
+    child["allOf"]
+        .as_array_mut()
+        .expect("paired rules")
+        .push(json!({
+            "properties":{
+                "question":{"properties":{"verb":{"const":"decide"}}},
+                "answer":{"properties":{"kind":{"const":"yes_no"}}}
+            }
+        }));
+    definitions.insert("completeRankMemberResult".into(), child);
+    let member = definitions.get_mut("completeRankMember").expect("member");
+    member["properties"]["name"]["minLength"] = json!(1);
+    member["properties"]["result"] = json!({"$ref":"#/$defs/completeRankMemberResult"});
+    let parent = definitions.get_mut("completeAtomic").expect("atomic");
+    parent["properties"]["members"] = json!({
+        "type":"array","minItems":1,"items":{"$ref":"#/$defs/completeRankMember"}
+    });
+    parent["allOf"]
+        .as_array_mut()
+        .expect("paired rules")
+        .push(json!({
+            "if":{"required":["members"]},
+            "then":{
+                "required":["question_name"],
+                "properties":{
+                    "question_name":{"type":"string","minLength":1},
+                    "value":{"type":"integer","minimum":1},
+                    "threshold":{"type":"null"},
+                    "question":{"properties":{"verb":{"const":"decide"}}},
+                    "answer":{"properties":{"kind":{"const":"yes_no"}}}
+                }
+            }
+        }));
 }
