@@ -3,6 +3,7 @@
 
 use std::fmt;
 
+use crate::public::Call;
 use crate::public::error::Error;
 use crate::public::results::Facts;
 
@@ -37,6 +38,36 @@ impl<'a, T: 'a> Batch<'a, T> {
         self.source.facts()
     }
 
+    /// Exhaust this native batch and return its ordered values with joined final facts.
+    /// # Errors
+    /// Returns the first terminal error with its final facts; earlier observer rows remain visible.
+    pub fn into_call(mut self) -> Result<Call<Vec<T>>, Error> {
+        let values = self.by_ref().collect::<Result<Vec<_>, _>>()?;
+        let facts = self
+            .facts()
+            .cloned()
+            .ok_or_else(|| Error::defect("a completed batch has no facts"))?;
+        Ok(Call::new(values, facts))
+    }
+
+    /// Retain typed completed observations alongside a joined terminal failure.
+    pub(crate) fn into_outcome(mut self) -> Outcome<T> {
+        let mut completed = Vec::new();
+        for row in self.by_ref() {
+            match row {
+                Ok(row) => completed.push(row),
+                Err(error) => return Outcome::Failed { completed, error },
+            }
+        }
+        match self.facts().cloned() {
+            Some(facts) => Outcome::Complete(Call::new(completed, facts)),
+            None => Outcome::Failed {
+                completed,
+                error: Error::defect("a completed batch has no facts"),
+            },
+        }
+    }
+
     /// A batch that yields one error, then nothing.
     pub(crate) fn failed(error: Error) -> Self {
         Self {
@@ -66,4 +97,41 @@ impl<T> Source<T> for Option<Error> {
     fn facts(&self) -> Option<&Facts> {
         None
     }
+}
+
+/// Native batch outcome; the ordered prefix contains actual completed values.
+pub(crate) enum Outcome<T> {
+    Complete(Call<Vec<T>>),
+    Failed { completed: Vec<T>, error: Error },
+}
+impl<T: serde::Serialize> serde::Serialize for Outcome<T> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Complete(call) => call
+                .complete()
+                .ok_or_else(|| serde::ser::Error::custom("a completed batch has no identity"))?
+                .serialize(serializer),
+            Self::Failed { completed, error } if completed.is_empty() => {
+                error.complete().serialize(serializer)
+            }
+            Self::Failed { completed, error } => CompletedPrefix {
+                completed,
+                failure: error.complete(),
+            }
+            .serialize(serializer),
+        }
+    }
+}
+
+/// Safe joined failure and actual ordered completed native observations.
+#[derive(serde::Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeBatchFailure")
+)]
+pub(crate) struct CompletedPrefix<'a, T> {
+    completed: &'a [T],
+    #[serde(flatten)]
+    failure: crate::public::CompleteError<'a>,
 }

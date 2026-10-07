@@ -3,14 +3,11 @@
 //! Each success case runs on its own case arm. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
 //! backend served. A record function's row lists question keys by ADR 0111,
-//! so its digests become the keys of the request each digest named. Two cases
-//! do not apply to the library: `25-defect-fault` injects an internal
-//! invariant failure, which no outside boundary reaches, and the crate's own
-//! panic-door test covers the defect kind. `18-annotate-two-groups` recorded
-//! each group in its own request, and ADR 0111 section 5 packs a record's
-//! groups into one, as the command's wire run also skips it.
+//! so its digests become the keys of the request each digest named.
+//! Only `25-defect-fault` is private; the crate's panic-door test retains
+//! that invariant/error boundary without a caller-injectable failure.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fmt;
 use std::io::Write;
 use std::num::NonZeroUsize;
@@ -28,7 +25,7 @@ use thinkthen::{
 
 const CASES: &str = include_str!("../../../../cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 2] = ["18-annotate-two-groups", "25-defect-fault"];
+const SKIPPED: [&str; 1] = ["25-defect-fault"];
 
 /// The saved many-record exchanges contain one request body per record.
 fn singleton_requests<'a>() -> CallOptions<'a> {
@@ -37,7 +34,7 @@ fn singleton_requests<'a>() -> CallOptions<'a> {
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
 pub(crate) use crate::values::same;
-use crate::values::{detailed, digest, keys, selected_ids, swap};
+use crate::values::{detailed, fixture_keys, selected_ids, swap};
 
 thinkthen::choices! { enum Team { Billing => "billing", Shipping => "shipping", Other => "other" } }
 thinkthen::choices! { enum Mark { Billing => "billing", Urgent => "urgent", Security => "security" } }
@@ -171,11 +168,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let served = format!("{base}/systemone");
     let exchanges = case["exchanges"].as_array().cloned().unwrap_or_default();
     // Every row lists question keys, by ADR 0111.
-    let mut renamed = BTreeMap::new();
-    for exchange in &exchanges {
-        let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
-        renamed.insert(digest(CANONICAL, request), json!(keys(&served, request)?));
-    }
+    let renamed = fixture_keys(CANONICAL, &served, &exchanges)?;
     let success = swap(&case["expect"]["success"], &renamed);
     let texts: Vec<&str> = exchanges
         .iter()

@@ -3,7 +3,7 @@
 use serde::Serialize;
 use std::fmt;
 
-use crate::core::{self, BatchWarning, Framing, ProfileWarning, Reading};
+use crate::core::{self, BatchWarning, ProfileWarning};
 use crate::engine::facade;
 use crate::public::error::Error;
 use crate::public::question::Question;
@@ -66,11 +66,11 @@ impl Details {
         setting: core::Setting,
         context_sha256: Option<&str>,
     ) -> Result<Self, Error> {
-        let original = serde_json::to_vec(input)
+        // The native input already passed admission. Materialize its retained value
+        // without imposing the external serialized-record byte limit after a send.
+        let original = serde_json::to_string(input)
             .map_err(|_| Error::usage("a record cannot be written as JSON"))?;
-        let reading = Reading::new(Framing::Jsonl, Vec::new())
-            .map_err(|_| Error::defect("JSON record reading was refused"))?;
-        let input = reading.record(&original).map_err(Error::refused)?;
+        let input = core::Record::from_json(core::Json::parse(&original).map_err(Error::refused)?);
         Self::of_batch_member(
             member,
             Some(input),

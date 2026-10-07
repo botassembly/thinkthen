@@ -6,7 +6,7 @@
 
 `routine-ids.txt` selects 32 IDs from `cases.json` for the routine surface checks in `sdlc/scripts/surfaces`. Each runner reads the canonical 55-case JSON and filters by the absolute path in `THINKTHEN_CONFORMANCE_IDS`; a direct runner with that name unset still checks all 55. A missing or duplicate ID fails before a case runs. Supported cases count as pass or fail, unsupported injections as not run with a reason, and unselected cases are reported separately. The nine `settings.json` cases keep their own counted replay, cache-miss, and request-size relation split proof. Stored loopback replies in `cases.json` are not cache hits. `sdlc/scripts/test-full-cases --run` chooses the full functional set at a batch checkpoint; `sdlc/scripts/test-stress --run` is the separate repeated load campaign.
 
-A successful exchange has one of two provenance values. `captured` names a committed public recording folder, under `demos/` or `specification/`, whose `thinkthen.jsonl` holds each question of the embedded exchange with the answer and model its response carries. `synthetic_contract` says the exchange was written against the accepted wire contract. Fault cases name deterministic injection points. They are schema contracts until the private engine runner lands with the one-crate merge.
+A successful exchange has one of two provenance values. `captured` names a committed public recording folder, under `demos/` or `specification/`, whose `thinkthen.jsonl` holds each question of the embedded exchange with the answer and model its response carries. `synthetic_contract` says the exchange was written against the accepted wire contract. Fault cases name deterministic public refusal inputs or private invariant checks. Internal invariant injection is exercised only by the existing native and C safety tests; it is not an SDK input.
 
 The mixed `annotate` case keeps successful `decide`, `choose`, `score`, and `tag` answers together in one request. The separate partial case keeps three good answers, distinguishes one valid `null` answer from one failed answer, checks the exact failure marker and count, and keeps the logical request identity. The two-group case fixes aggregate request identity in question-set group order.
 
@@ -135,3 +135,62 @@ count limit), and pinned llama.cpp's count/runtime prerequisites. Format
 refusals are SDK validation rulings. Owner-dependent media/large/malformed
 fixtures remain targets in the same canonical images corpus until 0447/0448
 supply them. Neither declarations nor schema checks qualify runtime cells.
+
+## 0432 shared integration targets
+
+`conformance/named-inputs.json` holds independent inputs and expectations for
+accepted 0456. The required IDs in `cases.json` point to it. Every public
+consumer must execute the corresponding native loader/builder and selected-input
+admission through its named functions, then access resolved metadata and
+ordered declarations with its public types. Successful fixture decoding is
+not an assertion. The 0407 per-item context and 0414 shared-context dependencies
+remain required, including explicit empty/false/null distinctions. Never
+coerce a projected number or JSON-looking string to satisfy a declaration.
+
+Build question files, named directories, collision entries and saved answers
+only in the consumer's fresh scratch home. The fixture's `setup` describes
+these owned entries; it does not authorize touching a user's config. The
+selected-item expectations fix the value after projection, independently of
+what a host serialized. Consumers compare request contents and count loopback
+connections, and pin safe errors where wording is settled. Metadata-only
+comparisons use the unadorned canonical behavior case as a separate input;
+reading/model overrides retain their existing meaning. Images reuse the shared
+red/blue/red files and remain dependent on the native image wire oracle.
+
+The shared runner supplies an owned HOME, platform config/cache/state folders,
+an explicit loopback URL and fake loopback key, full profile, offline Cargo and
+two build jobs. Tool locations are preserved separately from the scratch home.
+Consumers must explicitly pass the served URL/key to engines they construct;
+ambient settings, a hostname inferred from a fixture's historical digest URL,
+and remote calls are forbidden. Existing `cases.json.backend_url` is only the
+historical saved request-identity oracle; it is never a runtime destination.
+
+MCP is an additional required row in `parity.pending_consumers`. Its actual
+consumer is `libraries/mcp/check.sh`, from the saved 0455 branch. The explicit
+MCP cases check inline `@refund`, `question_name`, and conflicting question
+arguments at the installed stdio tool door. All other shared cases apply to
+MCP too. The MCP-specific cases' `consumers` list limits them to that actual
+door; shared cases cannot exclude any public variant. Native/MCP owners must
+land the closed `mcp` surface token, generated complete schema, installed
+command and runner together. Then move the row into the settled consumers and
+register its surface. Until that integration, even reported MCP assertions
+cannot qualify support. No second result schema is introduced here.
+
+`target/parity/matrix.md` is the plain current support table: functions out of
+ten, files, images and remaining assertions/owners. Counts come only from
+executed typed cells in successful consumers. Written language/input rulings
+are printed alongside their required boundary assertions and never count as
+passes. Missing output, malformed/unknown/duplicate cells, skipped statuses,
+missing runners/toolchains and exit 77 fail the strict run. Shared command
+folders must emit each public variant separately. The runner regression tests
+use simulated process output; their success establishes runner behavior only,
+never SDK parity. Development selectors stay in individual existing consumers;
+the final `surfaces --parity` run has none and permits no skip. Routine gates
+continue validating declarations during adoption. The passing complete run
+must become mandatory before 0432 can close.
+
+## Public input and safety boundaries (0432 ruling)
+
+The public parity suite requires only inputs admitted by a real public call. The internal `25-defect-fault` and its `boundary-defect` reference remain in `parity.private_cases` for native/C panic containment and safe Defect error mapping. They do not require a caller-injectable crash or a public fault bridge. Existing secrecy, panic containment and all six C error mappings remain mandatory in the ordinary native/C tests.
+
+`parity.schema_cases` retains every distinct result-envelope, legacy JSON-door, usage and plan example without a public typed call fixture. These run at their actual schema/decoder boundary through `specification/fixtures/types/self-test`, which the existing full test rung already executes, and the existing generic-door tests. C owned-result accessors cannot accept an arbitrary malformed result envelope. Their parity proof executes actual named calls and reads known fields through typed getters. The described-choice fixture and every corpus entry with a real call case remain required public cells. All 24 image admission cells remain required.

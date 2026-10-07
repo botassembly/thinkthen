@@ -16,7 +16,8 @@ use serde_json::Value;
 use serde_json::value::RawValue;
 
 use crate::harness::spawn_one as spawn;
-use crate::support::{digest, keys};
+
+use crate::support::shared_keys;
 
 mod selection;
 use selection::selected_ids;
@@ -25,12 +26,8 @@ const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-loopback-cases")];
 
-/// The cases the command wire does not run: five injections, three question
-/// forms, and one case holding one request per `annotate` group. ADR 0111
-/// section 5 packs a record's groups into one request, so that recording no
-/// longer matches any surface.
-const IN_PROCESS: [&str; 9] = [
-    "18-annotate-two-groups",
+/// The private invariants and explicit in-process/question-form checks.
+const IN_PROCESS: [&str; 8] = [
     "20-usage-fault",
     "22-local-fault",
     "23-cancelled-fault",
@@ -110,14 +107,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let base = format!("{}/case/{id}/v1", backend.origin());
     let served = format!("{base}/systemone");
     // Every row lists question keys by ADR 0111.
-    let mut renamed = BTreeMap::new();
-    for exchange in list(&case["exchanges"]) {
-        let request = text(&exchange["request"]).as_bytes();
-        renamed.insert(
-            digest(CANONICAL, request),
-            Value::from(keys(&served, request)),
-        );
-    }
+    let renamed = shared_keys::fixture_keys(CANONICAL, &served, list(&case["exchanges"]))?;
     let success = &case["expect"]["success"];
     let answers = recomputed(&success["answers"], &renamed);
     let tail = ["--details", "--url", base.as_str(), "--no-cache"].map(str::to_owned);

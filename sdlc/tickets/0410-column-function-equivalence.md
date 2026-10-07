@@ -40,3 +40,21 @@ Focused offline Polars gate: both Clippy profiles, 29 consumer tests and one doc
 Exact native needs: engine-priced checked tally snapshot (0300); original row index remapping for composed native recognition observations; complete-result/2 and explicit named/reference loading from 0443/0456; accepted 0407/0414 context/candidate and question semantics; native selection identity that distinguishes synthetic none from threshold abstention (current real-unit selection flags deliberately do not guess). Score-based/rank-set dataframe adoption and remaining located routes remain open. Python typed image/file carrier integration waits for preserved 0431 interfaces. No legacy result/1 was cast to result/2; no answer IDs, counts or provenance were invented.
 
 No shared `public/mod.rs` export edit is needed for this slice: added methods use the existing exported `PolarsEngine` and existing typed inputs/results. The proposed native tally method needs no new type export. Read-only inspection of committed `cdb452882` did not merge active WIP. Tickets remain open; no landing record or approval is supplied here.
+Native consumer handoff, 2026-10-06: `Tally::facts_with_engine(&Engine)` now supplies the checked engine-priced per-call snapshot required by the dataframe aggregate. Input/output availability is independent; unknown output never drops reported input or becomes zero. The dataframe owner still adopts this method and the complete score/rank-set, observation row mapping and selection identity routes; this native constituent does not close column equivalence.
+
+
+Native consumer views, 2026-10-06: `CompleteFound::selection()` reports the actual mapped unit or explicitly offered synthetic none, including a none tie whose raw backend leading pick names a real unit. `RecordObservation::remap_index` maps retained rows back to original dataframe presentation indices without modifying detail identities, facts, source coordinates or original input. Public tests use independently expected exchanges and retain original observations on coalesced duplicate rows. Complete rank-set and host adoption remain open.
+
+### Added public declarations
+
+```text
+enum FindSelection
+FindSelection::Unit(usize)
+FindSelection::None
+fn CompleteFound::selection(&self) -> FindSelection
+fn RecordObservation::remap_index(self, usize) -> RecordObservation<'_>
+```
+
+Native set-rank handoff: `Engine::rank_set_records_complete_with` and plain/fallible equivalents now supply typed `CompleteSetRank` final/member results through one ordinary engine. Located `RecordInput` originals and explicit contexts use existing composition; member views retain all actual probabilities, identities and partial metadata. Frame adoption remains with its owner.
+
+Native foundation handoff: the existing checked per-call `Tally::facts_with_engine`, observation row remapping and `CompleteFound::selection` are available alongside full complete score/rank-set and composed/located aggregate execution. Typed `CompleteRecognized::source_value` and `CompleteRelated::source_edges` expose actual physical spans and ordered original endpoint occurrences without known-result JSON parsing. Partial reported input survives absent output. The dataframe owner still integrates and checks actual consumers; no column parity/main claim is made.

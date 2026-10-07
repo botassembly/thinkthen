@@ -84,6 +84,7 @@ impl From<EngineError> for Failure {
             EngineError::StoreHotJournal => Self::StoreHotJournal,
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingStorage => Self::RecordingStorage,
+            EngineError::RecordingForbidden => Self::RecordingForbidden,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
             EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
             EngineError::UsageUnreadable(sentence) => Self::UsageUnreadable(sentence),

@@ -4,7 +4,6 @@ use std::io::{Read, Write};
 
 use serde::Serialize;
 
-use crate::SourceRecord;
 use crate::args::Common;
 use crate::cli::intake::{Data, Intake};
 use crate::core::{Framing, Reading, Record, RelateSpec, RelationEntity, RelationEntityView};
@@ -13,7 +12,7 @@ use crate::failure::Failure;
 
 pub(super) struct Sources {
     pub(super) entities: Vec<RelationEntity>,
-    occurrences: Vec<(RelationEntity, SourceRecord<Record>)>,
+    occurrences: Vec<(RelationEntity, Occurrence)>,
 }
 
 type Selection = (Vec<RelationEntity>, Option<Sources>);
@@ -68,6 +67,7 @@ pub(super) fn read(
             .filter(|&bytes| bytes <= crate::core::MAX_RECORD_BYTES)
             .ok_or(Failure::Usage("source relate input exceeds 16 MiB"))?;
         let record = reading.record(&bytes).map_err(Failure::from)?;
+        record.validate_item(spec.metadata.item_schema.as_ref())?;
         let (name, kind) = if text {
             (reading.as_it_arrived(&bytes)?, "*")
         } else {
@@ -90,11 +90,11 @@ pub(super) fn read(
             .ok_or(Failure::Defect("relate source has no position"))?;
         occurrences.push((
             entity,
-            SourceRecord {
+            Occurrence {
                 record,
-                file: position.file.unwrap_or_default(),
-                first_line: position.first.unwrap_or(1),
-                last_line: position.last.unwrap_or(1),
+                file: position.file,
+                first_line: position.first,
+                last_line: position.last,
             },
         ));
     }
@@ -105,11 +105,27 @@ pub(super) fn read(
 }
 
 #[derive(Serialize)]
-struct Endpoint<'a> {
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+struct Occurrence {
+    record: Record,
+    file: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    first_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_line: Option<usize>,
+}
+
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "sourceRelationEndpoint")
+)]
+pub(crate) struct Endpoint<'a> {
     name: &'a str,
     kind: &'a str,
     #[serde(flatten)]
-    source: &'a SourceRecord<Record>,
+    source: &'a Occurrence,
 }
 
 #[derive(Serialize)]
@@ -129,7 +145,9 @@ pub(super) fn write(
     sources: &Sources,
 ) -> Result<(), Failure> {
     let mut edges = Vec::new();
-    let mut budget = Budget(crate::core::MAX_RECORD_BYTES - usize::from(output.details) * 2);
+    let mut budget = crate::result_json::bounded::OutputBudget(
+        crate::core::MAX_RECORD_BYTES - usize::from(output.details) * 2,
+    );
     for edge in &execution.edges {
         for source in sources
             .occurrences
@@ -158,23 +176,20 @@ pub(super) fn write(
                 };
                 // Count escaped JSON bytes using borrowed evidence before retaining
                 // the Cartesian expansion or writing any part of this complete set.
-                budget.admit(&located, !output.details || !edges.is_empty())?;
+                budget
+                    .admit(&located, !output.details || !edges.is_empty())
+                    .map_err(|()| Failure::Usage("source relate output exceeds 16 MiB"))?;
                 edges.push(located);
             }
         }
     }
     if output.details {
-        let mut details = serde_json::to_value(super::result::details(output, execution)?)
-            .map_err(|_| Failure::Defect("relate details could not be written"))?;
-        details
-            .as_object_mut()
-            .ok_or(Failure::Defect("relate details are not an object"))?
-            .insert(
-                "value".to_owned(),
-                serde_json::to_value(&edges)
-                    .map_err(|_| Failure::Defect("located edges could not be written"))?,
-            );
-        crate::edge::write_line(writer, &crate::core::json_line(&details)?)?;
+        let canonical = super::result::details(output, execution)?;
+        let located = Complete {
+            canonical: &canonical,
+            value: &edges,
+        };
+        crate::edge::write_line(writer, &crate::core::json_line(&located)?)?;
     } else {
         for edge in edges {
             if !crate::edge::write_line(&mut *writer, &crate::core::json_line(&edge)?)? {
@@ -185,29 +200,13 @@ pub(super) fn write(
     Ok(())
 }
 
-struct Budget(usize);
-
-impl Budget {
-    fn admit(&mut self, edge: &impl Serialize, separator: bool) -> Result<(), Failure> {
-        if separator {
-            self.write_all(b"\n")
-                .map_err(|_| Failure::Usage("source relate output exceeds 16 MiB"))?;
-        }
-        serde_json::to_writer(self, edge)
-            .map_err(|_| Failure::Usage("source relate output exceeds 16 MiB"))
-    }
+struct Complete<'a> {
+    canonical: &'a crate::core::CompleteRelation,
+    value: &'a Vec<Edge<'a>>,
 }
-
-impl Write for Budget {
-    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-        self.0 = self
-            .0
-            .checked_sub(bytes.len())
-            .ok_or_else(|| std::io::Error::other("source relate output exceeds 16 MiB"))?;
-        Ok(bytes.len())
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
+impl Serialize for Complete<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.canonical
+            .serialize_with_value::<S, (), _>(None, self.value, serializer)
     }
 }

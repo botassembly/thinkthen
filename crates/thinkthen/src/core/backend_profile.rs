@@ -5,6 +5,9 @@ use thiserror::Error;
 
 use crate::core::json::{Json, JsonError};
 
+mod images;
+pub(crate) use images::ImageProfile;
+
 /// A public backend name used for limits and threshold calibration.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "String"))]
@@ -47,17 +50,20 @@ pub(crate) struct BackendProfile {
     pub(crate) max_request_bytes: Option<usize>,
     pub(crate) max_questions: Option<usize>,
     pub(crate) max_options: Option<usize>,
+    pub(crate) image_profile: Option<ImageProfile>,
 }
 
 impl BackendProfile {
-    /// Parse the closed version-one profile object.
+    /// Parse a closed version-one or version-two profile object.
     pub(crate) fn parse(text: &str) -> Result<Self, ProfileError> {
         let value = Json::parse(text).map_err(ProfileError::Json)?;
         let Json::Object(members) = &value else {
             return Err(ProfileError::Object);
         };
+        let version_two =
+            value.member("schema").and_then(Json::as_str) == Some("thinkthen.backend-profile/2");
         for (name, _) in members {
-            if ![
+            if !([
                 "schema",
                 "name",
                 "max_evidence_bytes",
@@ -66,11 +72,14 @@ impl BackendProfile {
                 "max_options",
             ]
             .contains(&name.as_str())
+                || version_two && name == "image_profile")
             {
                 return Err(ProfileError::UnknownKey);
             }
         }
-        if value.member("schema").and_then(Json::as_str) != Some("thinkthen.backend-profile/1") {
+        if !version_two
+            && value.member("schema").and_then(Json::as_str) != Some("thinkthen.backend-profile/1")
+        {
             return Err(ProfileError::Schema);
         }
         let name = value
@@ -82,7 +91,12 @@ impl BackendProfile {
         let max_request_bytes = limit(&value, "max_request_bytes")?;
         let max_questions = limit(&value, "max_questions")?;
         let max_options = limit(&value, "max_options")?;
-        if max_evidence_bytes.is_none()
+        let image_profile = value
+            .member("image_profile")
+            .map(ImageProfile::parse)
+            .transpose()?;
+        if image_profile.is_none()
+            && max_evidence_bytes.is_none()
             && max_request_bytes.is_none()
             && max_questions.is_none()
             && max_options.is_none()
@@ -95,6 +109,7 @@ impl BackendProfile {
             max_request_bytes,
             max_questions,
             max_options,
+            image_profile,
         })
     }
 
@@ -173,6 +188,9 @@ pub(crate) enum ProfileError {
     /// No enforceable limit was supplied.
     #[error("names at least one limit")]
     NoLimit,
+    /// The optional declaration is not a closed admitted image profile.
+    #[error("image_profile holds an admitted `id` and an explicit nonblank `model_alias` only")]
+    ImageProfile,
 }
 
 /// Which profile limit refused a request.

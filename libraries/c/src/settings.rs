@@ -67,6 +67,11 @@ fn apply(
             "cache" if value == &Value::Bool(false) => builder.no_cache(),
             "cache" if value.is_string() => builder.cache_at(text()?)?,
             "cache" => return Err(Failure::usage("settings cache is false or a folder path")),
+            "refresh_cache" => builder.refresh_cache(
+                value
+                    .as_bool()
+                    .ok_or_else(|| Failure::usage("settings refresh_cache is a boolean"))?,
+            ),
             "record" => builder.record(text()?)?,
             "replay" => builder.replay(text()?)?,
             "profile" => builder.profile(text()?)?,

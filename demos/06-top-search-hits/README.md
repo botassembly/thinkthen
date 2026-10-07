@@ -53,15 +53,15 @@ jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits
   | thinkthen rank 'The passage answers the query.' --batch 1 \
       --jsonl --field /query --field /passage --details --replay recording/ \
   | jq -c '{path: .input.path, p: .answer.probability, value, threshold}' \
-  | mustmatch '{"path":"runbooks/database.md","p":0.91,"value":null,"threshold":null}
-{"path":"notes/2025-11-outage.md","p":0.87,"value":null,"threshold":null}
-{"path":"runbooks/login.md","p":0.83,"value":null,"threshold":null}
-{"path":"notes/onboarding.md","p":0.38,"value":null,"threshold":null}
-{"path":"runbooks/deploy.md","p":0.04,"value":null,"threshold":null}
-{"path":"runbooks/backup.md","p":0.02,"value":null,"threshold":null}'
+  | mustmatch '{"path":"runbooks/database.md","p":0.91,"value":1,"threshold":null}
+{"path":"notes/2025-11-outage.md","p":0.87,"value":2,"threshold":null}
+{"path":"runbooks/login.md","p":0.83,"value":3,"threshold":null}
+{"path":"notes/onboarding.md","p":0.38,"value":4,"threshold":null}
+{"path":"runbooks/deploy.md","p":0.04,"value":5,"threshold":null}
+{"path":"runbooks/backup.md","p":0.02,"value":6,"threshold":null}'
 ```
 
-`threshold` and `value` are `null` on every row, because `rank` reads no rule and picks nothing. A ranked list is a suggestion about reading order and not a claim about any page. The backup runbook still has a place in the order, and nothing in the run says it answers anything.
+`value` gives each row’s place in the order, starting at 1. `threshold` stays `null` because `rank` applies no cutoff. A ranked list is a suggestion about reading order and not a claim about any page. The backup runbook still has a place in the order, and nothing in the run says it answers anything.
 
 `rank` orders and never selects, so a floor is a separate command in front of it. [How-to 03](../03-grep-for-meaning/) is that command.
 

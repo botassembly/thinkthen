@@ -84,7 +84,7 @@ impl Asker for SetDecisions {
             rows.push(member.row(
                 Text {
                     at: text.at,
-                    input: crate::public::QuestionInput::Text(String::new()),
+                    input: text.input.clone(),
                 },
                 own,
             ));
@@ -138,7 +138,13 @@ impl Engine {
         I::Item: Evidence,
     {
         let records = self.within_limit(records)?;
-        for record in records.as_slice() {
+        for (at, record) in records.as_slice().iter().enumerate() {
+            for member in questions.0.questions() {
+                member
+                    .metadata()
+                    .validate_item(&crate::public::InputEvidence::question_input(record))
+                    .map_err(|error| error.at_record(at))?;
+            }
             evidence(record.evidence())?;
         }
         let set = questions.0.clone();
@@ -150,6 +156,7 @@ impl Engine {
             .questions()
             .iter()
             .map(|member| Question {
+                metadata: member.metadata().clone(),
                 core: member.question().clone(),
                 threshold: None,
                 model: None,
@@ -231,19 +238,44 @@ fn observed(
     index: usize,
     rows: Vec<Result<Decided, Miss>>,
 ) -> Result<Vec<f64>, Error> {
-    let mut probabilities = Vec::with_capacity(rows.len());
+    observed_judgments(set, questions, backend, stop, index, rows)?
+        .into_iter()
+        .map(|(judged, _)| {
+            judged
+                .answer
+                .yes()
+                .ok_or_else(|| Error::defect("a decide answer lost its probability"))
+        })
+        .collect()
+}
+
+pub(crate) fn observed_judgments(
+    set: &core::QuestionSet,
+    questions: &[Question],
+    backend: &core::Backend,
+    stop: &Stop<'_>,
+    index: usize,
+    rows: Vec<Result<Decided, Miss>>,
+) -> Result<Vec<crate::public::engine::Keyed>, Error> {
+    let mut judgments = Vec::with_capacity(rows.len());
     let mut failed = false;
     for ((named, question), row) in set.questions().iter().zip(questions).zip(rows) {
         let decided = match row {
             Ok(decided) => decided,
             Err(Miss::Failed(decided)) => {
                 failed = true;
-                decided
+                *decided
             }
             Err(Miss::Refused(error)) => return Err(error),
         };
         if stop.observing() {
-            let observed = decided.observed(question, backend)?;
+            let observed = decided.observed(question, backend)?.qualified(
+                crate::public::InputFunction::Rank,
+                index,
+                Some(named.name()),
+                None,
+                0,
+            )?;
             stop.observe(RecordObservation::Question {
                 index,
                 member: Some(named.name()),
@@ -256,12 +288,7 @@ fn observed(
             }
         }
         if let Some(judged) = decided.judgment(question) {
-            probabilities.push(
-                judged
-                    .answer
-                    .yes()
-                    .ok_or_else(|| Error::defect("a decide answer lost its probability"))?,
-            );
+            judgments.push((judged, decided.keys));
         }
     }
     if failed {
@@ -276,5 +303,5 @@ fn observed(
             return Err(Error::cancelled());
         }
     }
-    Ok(probabilities)
+    Ok(judgments)
 }

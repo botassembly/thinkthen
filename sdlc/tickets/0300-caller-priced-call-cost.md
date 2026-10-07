@@ -25,6 +25,7 @@ A concrete use: put `"usd_per_million_input":"0.042"` and `"usd_per_million_outp
 fn Engine::estimate_reported_cost(&self, u64, u64) -> Option<String>
 fn EngineBuilder::prices_usd_per_million(self, &str, &str) -> Result<EngineBuilder, Error>
 fn Facts::estimated_cost_usd(&self) -> Option<&str>
+fn Tally::facts_with_engine(&self, &Engine) -> Facts
 ```
 
 ## Contract to implement
@@ -80,3 +81,49 @@ Native integration needed: an engine-priced tally snapshot (for example `Tally::
 Public Rust column consumers prove 49 + 49 input tokens at 0.01 USD per million tokens round once to `0.000001`, and raw token overflow omits cost without poisoning the next call. These reuse native price arithmetic, with no float billing calculation. Existing count-only usage remains native-owned.
 
 Composed recognition collections explicitly refuse priced engines before any send until the native checked engine-priced aggregation API exists; rounded per-call prices are never presented as a valid composed estimate. Public Rust and pandas 2/3 consumers pin the refusal sentence and count zero loopback sends. This limitation applies to Rust and Python dataframe recognition. The proposed snapshot above must cover empty work, missing constituent usage, overflow, partial failure and concurrent aggregation. Shared tally code was not edited. No pricing remainder is marked complete.
+## Native checked tally constituent, 2026-10-06
+
+The additive `Tally::facts_with_engine(&Engine)` snapshots the same locked, checked per-call totals as `facts()` and applies the existing exact engine pricing arithmetic once. It never subtracts process totals or sums rounded call estimates. Every live call must have complete priced usage; missing live input/output or unpriced constituent facts omit cost. Priced zero-send cache/replay calls contribute zero without supplying reported tokens. Empty work with configured prices yields `0.000000`. Legacy `facts()` retains its per-call rounded-cost behavior. Input and output availability are now tracked independently, preserving reported input887 when output is unknown. Accounting overflow commits no partial state; `Tally::run` retains the affected call's actual facts when returning an accounting defect.
+
+The partial-usage public regression failed before this fix. Concurrent public calls pin the independent expected 98-token once-rounded result against two rounded-zero constituents; a started failure pins absent aggregate cost and truthful counts. The local overflow test checks atomicity and a clean new scope. Existing tally consumers and complete result serialization remain compatibility checks. This enables the dataframe owner to adopt checked pricing; it does not claim dataframe adoption, complete parity or landing. Source grows 168 nonblank Rust lines (142424 → 142592), for the snapshot implementation, public regressions, atomic overflow behavior and five declaration-neutral complete-result test fixtures. No dependency or proof tooling was added.
+
+Lane1 reviewer correction on coherent 2922fd8a1: retain checked known raw totals
+across absent reports and use them separately from reported-token availability
+for once-rounded pricing. The cache-only regression previously omitted cost;
+it now pins cache/replay-only zero, priced live/cache totals, absent reported
+tokens and unpriced-call omission. A public overflow across a cached call pins
+atomic unchanged tally state and the actual overflowing call's final facts.
+The existing partial-live and concurrent once-rounding regressions remain.
+Root owns the original reviewer's narrow confirmation and full landing gates.
+
+Lane1 public-control oracle reconciliation on ddc70a256: the four existing
+failures reproduce before test edits. The three matching-model cache tests now
+report the literal effective requested model, as admitted by cache.md's lookup
+and freshness contract. The price/counter calls still ask the original questions
+and retain their three/one send counts. Per-question alias refresh still sends
+twice; the pinned override sends once then reuses its answer. Independent exact
+request-body assertions protect those original question bytes and model choices.
+Cached priced facts remain zero cost with neither reported token dimension.
+The existing native-store mismatch/ambiguous-history refusal test remains an
+independent negative oracle; v1 saved fixture bytes and legacy conversion are
+unchanged. Full `public_controls` passes 24 cases with one existing stress ignore;
+all ten native-store cases pass, including original v1/v2 identity and read-only
+replay checks. The obsolete aggregate-context refusals are reconciled under
+0414 in the existing 0456 ticket; no production compatibility workaround was
+needed.
+
+Focused native-complete checks pass all 63 cases, including mixed-model failure,
+raw priced totals and EOF deadline/prefix coverage. Public-controls Clippy with
+warnings denied, offline policy (268 packages), formatting and the exact ratchet
+also pass. Heavy checks use the lane/shared locks, 10G memory/1G swap, two jobs
+and a stripped offline environment with only owned fake-key loopback sends.
+
+Measured source grows 78 nonblank Rust lines (143881 → 143959): exact original
+request-byte checks, absent-token pricing checks and valid aggregate context
+responses/assertions replace the obsolete refusal rows. Existing counted
+listeners, serial guards and independent native-store mismatch coverage were
+checked and reused instead of adding a harness or duplicating negative tests.
+Shared-context checks move to one cohesive child test module to keep the source
+cap: parent 497, call-facts 465, context 105 nonblank lines. This step changes no
+production source, C/corpus files or saved v1 fixture; root owns confirmation
+and full landing gates.

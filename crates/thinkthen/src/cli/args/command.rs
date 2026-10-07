@@ -20,6 +20,10 @@ pub(crate) enum Command {
     #[command(display_order = 1002)]
     Status(StatusArguments),
 
+    /// Serve the ten judging functions over local MCP stdio.
+    #[command(display_order = 1006)]
+    Mcp(crate::mcp::startup::Arguments),
+
     /// Check that a named backend works with this tool.
     #[command(display_order = 1003, subcommand)]
     Backends(super::backends::BackendCommand),
@@ -373,6 +377,7 @@ impl Command {
             self,
             Self::Cache(_)
                 | Self::Status(_)
+                | Self::Mcp(_)
                 | Self::Check(_)
                 | Self::Backends(_)
                 | Self::Transform(_)
@@ -397,6 +402,7 @@ impl Command {
             Self::Relate(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Cache(_)
             | Self::Status(_)
+            | Self::Mcp(_)
             | Self::Check(_)
             | Self::Backends(_)
             | Self::Transform(_)
@@ -425,6 +431,7 @@ impl Command {
             }
             Self::Cache(_)
             | Self::Status(_)
+            | Self::Mcp(_)
             | Self::Transform(_)
             | Self::Runs(_)
             | Self::Audit(_)

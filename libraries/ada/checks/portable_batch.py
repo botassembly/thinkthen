@@ -38,6 +38,12 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-ada-portable-") as scratch:
                     "-largs", "-L" + str(LIB_DIR), "-l" + LIB_NAME],
                    env=child_env(), capture_output=True, text=True, timeout=90)
     assert build.returncode == 0, (build.stdout, build.stderr)
+    native_program = target / "native_consumer"
+    subprocess.run(["gnatmake", "-gnat2022", "-I" + str(target / "src"),
+                    str(PACKAGE / "examples/native.adb"), "-D", scratch,
+                    "-o", str(native_program), "-largs", "-L" + str(LIB_DIR),
+                    "-l" + LIB_NAME], env=child_env(), check=True,
+                   capture_output=True, text=True, timeout=90)
     if INSTALLED:
         linked = subprocess.check_output(["ldd", program], env=child_env(LD_LIBRARY_PATH=str(LIB_DIR)), text=True)
         assert str(LIB_DIR / "libthinkthen.so.0") in linked, linked
@@ -80,6 +86,17 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-ada-portable-") as scratch:
                 assert "tt-named-loopback" not in json.dumps(captured["bodies"])
                 print("ada named backend: selected path, bearer, result and secrecy PASS")
             print("ada portable: five typed rows, one request with the fixture questions")
+            env["TT_NATIVE_SETTINGS"] = json.dumps({"base_url": base, "model": "literal", "cache": False, "max_retries": 0})
+            owned = subprocess.run([native_program], env=env, capture_output=True,
+                                   text=True, timeout=60)
+            assert owned.returncode == 0 and owned.stdout.strip() == "ADA_NATIVE_PASS", (owned.returncode, owned.stdout, owned.stderr)
+            server.stdin.write("count\n"); server.stdin.flush()
+            assert int(server.stdout.readline()) == 2
+            server.stdin.write("capture\n"); server.stdin.flush()
+            snapshot = json.loads(server.stdout.readline())
+            body = json.loads(snapshot["bodies"][-1])
+            assert "x" * 9000 in json.dumps(body) and "z" * 9000 not in json.dumps(body), body
+            print("ada native: 9,000 counted bytes cloned before mutation, typed result after owners freed")
         finally:
             server.stdin.close()
             server.wait(timeout=10)

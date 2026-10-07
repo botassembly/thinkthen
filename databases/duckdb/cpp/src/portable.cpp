@@ -432,6 +432,13 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability "
 	                      "FROM json_each(thinkthen_native_many(question, keyed_json, settings, "
 	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank");
+	RegisterMacro(loader, "CREATE MACRO thinkthen_rank_set(questions, keyed_json, settings := NULL) "
+	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
+	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
+	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability, "
+	                      "json_extract_string(item.value, '$.question_name') AS question_name, "
+	                      "CAST(json_extract(item.value, '$.facts') AS VARCHAR) AS facts "
+	                      "FROM json_each(thinkthen_native_many(questions, keyed_json, settings, 9)) item ORDER BY rank");
 	for (auto kind : {2, 3, 7}) {
 		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
 		ScalarFunction native("thinkthen_native_" + name,

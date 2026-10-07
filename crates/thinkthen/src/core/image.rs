@@ -10,6 +10,7 @@ use serde::{Serialize, Serializer};
 
 /// Initially validated media; extensions never select a media type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub enum ImageMedia {
     /// JPEG still image.
     #[serde(rename = "image/jpeg")]
@@ -32,6 +33,7 @@ impl ImageMedia {
 
 /// Bytes and dimensions whose complete pixel decode succeeded at the edge.
 #[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "EncodedImage"))]
 pub(crate) struct Image {
     pub(crate) media: ImageMedia,
     pub(crate) bytes: Arc<[u8]>,
@@ -60,8 +62,29 @@ impl Image {
     }
 }
 
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "completeImage"))]
+struct EncodedImage {
+    media: ImageMedia,
+    base64: String,
+    width: NonZeroU32,
+    height: NonZeroU32,
+}
+impl Serialize for Image {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        EncodedImage {
+            media: self.media,
+            base64: self.base64(),
+            width: self.width,
+            height: self.height,
+        }
+        .serialize(serializer)
+    }
+}
+
 /// Rebuildable identity constituents, never a vendor request state.
 #[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "EncodedImage"))]
 pub(crate) struct ImageState {
     pub(crate) text: crate::core::Json,
     pub(crate) images: Arc<[Image]>,
@@ -179,6 +202,9 @@ pub(crate) fn plan(
         profile.check_record(&text).map_err(BatchError::Profile)?;
     }
     Plan::new(record, asked.0, asked.1, questions)
-        .map(|plan| plan.with_images(state, route))
+        .map(|plan| {
+            plan.with_images(state, route)
+                .with_image_profile(profile.cloned())
+        })
         .map_err(|_| BatchError::Defect("an image plan has no question"))
 }

@@ -9,3 +9,9 @@ The Flutter package is private (`publish_to: none`) and its source path dependen
 From the repository root, run `libraries/dart/check.sh` with a populated offline pub cache. It checks the Dart binding, Flutter host test, planted negatives, and real Linux embedder. `TT_FLUTTER` can name the installed Flutter executable.
 
 For a local Linux release-file check, pack `c dart flutter` together with `sdlc/scripts/release-pack`. Validate the resulting three files with `sdlc/scripts/release-go-cpp-pair OUT dart-flutter`. The Flutter archive keeps this private package and example; install it beside the matching unpacked Dart archive so the relative dependencies still resolve. Pass the Flutter, Dart, and C archive paths as `THINKTHEN_ARTIFACT`, `THINKTHEN_DART_ARTIFACT`, and `THINKTHEN_C_ARTIFACT` to `libraries/dart/check.sh`. This is a local Linux consumer proof, not a published Flutter package or proof for another platform.
+
+## Complete typed Flutter calls
+
+Import `package:thinkthen_flutter/thinkthen_complete_flutter.dart` and create `ThinkThenCompleteFlutter(absoluteLibrary, settingsJson: settingsJson)`. It implements the typed `CompleteApi` from Dart with the same ten named functions and six native lazy batch methods. Questions, records, images, file selections, controls and copied result views are re-exported. Close the owned facade after its batches and calls finish.
+
+The facade selects the actual native `flutter` surface and retains one engine, route, reader, scheduler and storage. It preserves all released `ThinkThenFlutter` methods. Complete runtime cases execute this facade inside `flutter test`, separately from Dart's AOT consumer, using the same canonical fixtures and counted loopback sends. See the [Dart complete API](../README.md#complete-typed-calls) for the input, view, error and lifetime contracts.

@@ -1,22 +1,27 @@
 ---
-// Goal: tell a reader who searches for the OpenAI Decisions API what OpenAI announced, and what ThinkThen knows about it.
+// Goal: configure the explicit Decisions text route in development 0.2.
 import SidePage from '../../../layouts/SidePage.astro';
 import { BACKEND_PAGES } from '../../../data/catalog.mjs';
+import { backend } from '../../../lib/backends-table.mjs';
 import FromYourLanguage from '../../../components/FromYourLanguage.astro';
-
 const page = BACKEND_PAGES.find((p) => p.slug === 'openai');
+const route = backend('openai');
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'The OpenAI Decisions API: what OpenAI announced at DevDay on 2026-09-29, and what ThinkThen knows about it.' }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Configure OpenAI Decisions text in development 0.2 through one explicit named backend.' }} name="Backends">
   <h1>OpenAI Decisions API</h1>
-  <p class="lede">OpenAI announced the Decisions API at DevDay on 2026-09-29. OpenAI has not released it.</p>
-
-  <h2>What OpenAI announced</h2>
-  <p>OpenAI's <a href="https://openai.com/index/devday-2026-recap/">DevDay 2026 recap</a>, read on 2026-09-29, names a model called Luna. Luna answers questions a developer defines, with a finite set of answers fixed in advance. The context can be text or an image. OpenAI has published no schema, no price and no release date.</p>
-
-  <h2>What ThinkThen knows</h2>
-  <p>ThinkThen has not tested the Decisions API. Nobody knows yet whether it speaks System One, the wire shape ThinkThen speaks. This page will gain setup steps when OpenAI releases the API.</p>
-
+  <p class="lede">Development 0.2 supports Decisions text through the named <code>{route.name}</code> backend. Public installation remains 0.1.2.</p>
+  <h2>Development setup</h2>
+  <p>Use a reviewed development checkout. Set <code>{route.keys[0]}</code> in your process environment, then select <code>--backend {route.name}</code> or <code>THINKTHEN_BACKEND={route.name}</code>. ThinkThen posts to <code>{route.base}/{route.path}</code> and defaults to <code>{route.model}</code>. An explicit model stays your literal choice.</p>
+  <pre><code>thinkthen decide 'Does the customer ask for a refund?' --backend openai &lt; message.txt</code></pre>
+  <p>The Rust builder selects the same route with <code>Engine::builder().backend("openai")?</code>. A bare builder reads no environment; supply its explicit <code>api_key</code>, or start from <code>Engine::from_env()</code>. Existing binding and SQL named-backend settings use the shared engine.</p>
+  <p>All ten text functions use the existing planners, readers and acceptance rules. Predicate answers carry probabilities, menus carry complete distributions, and refusals remain failures. Structured instructions and descriptions travel as complete compact JSON text. Confidence is reported separately from your cut.</p>
+  <h2>One route and offline reuse</h2>
+  <p>Changing an address with <code>--backend openai --url BASE</code> keeps the Decisions API type. A hostname or a path named <code>decisions</code> alone never selects it. Retries keep the same route and key. The key stays out of bodies, results and recordings.</p>
+  <p>Record and replay use the existing question store. Each semantic question reuses its own answer even when its request position changes. Raw recordings keep original request and response bodies, with no headers. OpenAI and System One answers stay separate in the same cache.</p>
+  <h2>Measured text scope</h2>
+  <p>The bounded 2026-10-06 probe returned 28 successes and two HTTP 400 size diagnostics. Successful replies reported <code>gpt-6-luna</code>, input usage and zero output tokens. The diagnostics reported at most 200 questions and 255 choices; successful calls at those exact boundaries remain unproved. Batching changed some probabilities, and a few identical repeats establish no determinism guarantee.</p>
+  <p>This probe is adapter evidence, not a full backend qualification or an accuracy comparison. Images are refused before lookup or sending until this route's image bounds and costing are admitted.</p>
+  <p>OpenAI's <a href="https://developers.openai.com/api/docs/guides/decisions">Decisions guide</a> and <a href="https://developers.openai.com/api/reference/resources/decisions/methods/create">create reference</a> describe the API and pricing. Caller prices remain explicit; ThinkThen invents no usage or cost for replies that omit usage.</p>
   <FromYourLanguage />
-
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/backends/system-one/">Any System One server</a></p>
 </SidePage>

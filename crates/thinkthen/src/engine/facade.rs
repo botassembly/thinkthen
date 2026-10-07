@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::core::adapters::built_in;
 use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Outcome, Plan,
@@ -30,10 +29,13 @@ pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::workers::scoped as scoped_workers;
 pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
-pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
+pub(crate) use recognize::{MAX_TEXT_BYTES, Recognition, step_one};
+#[cfg(test)]
+pub(crate) use recognize::{Probabilities, Recognized};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
+mod context;
 mod each;
 mod finish;
 #[cfg(test)]
@@ -81,6 +83,7 @@ pub(crate) struct Settings {
 #[derive(Clone)]
 pub(crate) struct Engine {
     backend: Backend,
+    aggregate_context: Option<String>,
     profile: Option<BackendProfile>,
     timeout: Duration,
     max_retries: u32,
@@ -108,7 +111,8 @@ pub(super) struct State {
     /// The process request and estimated input totals.
     total: crate::engine::budget::SendBudget,
     /// The replay folder's fixture, read once for this process.
-    pub(super) replayed: Option<Arc<crate::engine::store::Replayed>>,
+    pub(super) replayed:
+        std::sync::OnceLock<Result<Option<Arc<crate::engine::store::Replayed>>, Error>>,
 }
 
 /// The transport settings one call's sends share.
@@ -124,6 +128,9 @@ pub(crate) struct Transport<'a> {
 /// its identity, and its HTTP attempts.
 #[derive(Clone)]
 pub(crate) struct Answered {
+    pub(crate) attempts: Vec<crate::core::AttemptObservation>,
+    pub(crate) sources: Vec<crate::core::QuestionSource>,
+    pub(crate) observations: Vec<crate::core::Observation>,
     pub(crate) reply: Reply,
     pub(crate) replayed: bool,
     pub(crate) request: Digest,
@@ -145,6 +152,11 @@ pub(crate) struct Found {
 }
 
 impl Engine {
+    pub(crate) fn with_aggregate_context(mut self, context: Option<String>) -> Self {
+        self.aggregate_context = context;
+        self
+    }
+
     /// Select this engine's limit at each live transport reservation.
     pub(crate) fn with_process_budget(
         mut self,
@@ -179,6 +191,7 @@ impl Engine {
         let engine = Self {
             usage_path: settings.usage.path().map(PathBuf::from),
             backend: settings.backend,
+            aggregate_context: None,
             profile: settings.profile,
             timeout: settings.timeout,
             max_retries: settings.max_retries,
@@ -217,27 +230,22 @@ impl Engine {
 
     /// State built from the immutable settings alone, as process `pid`.
     fn fresh(&self, pid: u32, usage: Arc<Counters>, cancel: &Cancel) -> Result<State, Error> {
-        let storage = &self.storage;
         let limits = crate::engine::limits::of(pid, cancel)?;
         let widths = &limits.widths;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
-        let replayed = match (&storage.record, &storage.replay) {
-            (None, Some(folder)) => crate::engine::store::Replayed::of(folder)?,
-            _ => None,
-        };
         let secure = self.backend.is_secure();
         let client = match self.roots.as_ref() {
             Some(roots) => Client::with_roots(self.timeout, secure, widths, Some(roots)),
             None => Client::new(self.timeout, secure, widths),
         };
         Ok(State {
-            client: client.paced(crate::engine::backoff::interval(
-                self.per_minute.or(self.backend.per_minute()),
-            )),
+            client: client.with_api(self.backend.api_type()).paced(
+                crate::engine::backoff::interval(self.per_minute.or(self.backend.per_minute())),
+            ),
             usage,
             width,
             total: limits.total.clone(),
-            replayed,
+            replayed: std::sync::OnceLock::new(),
         })
     }
 
@@ -373,7 +381,10 @@ impl Engine {
     /// on an engine worker, so a host signal never lands in its socket read.
     pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
         self.check_plan(plan)?;
-        let body = built_in::encode(plan)
+        let body = self
+            .backend
+            .api_type()
+            .encode(plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let state = self.state(cancel)?;
         let transport = self.transport(&state);
@@ -402,7 +413,10 @@ impl Engine {
                 || (),
             )
         })?;
-        let decoded = built_in::decode_observed(plan, &answered.body);
+        let decoded = self
+            .backend
+            .api_type()
+            .decode_observed(plan, &answered.body);
         transport.usage.live_reply(decoded.usage);
         cancel.live_reply(decoded.usage);
         let reply = decoded.reply.map_err(Error::from)?;

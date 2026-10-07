@@ -12,7 +12,7 @@ Decide, choose and score accept one or more ordered images per question on every
 
 ## Evidence
 
-- Starts from: Main 399c6c7c7 and the existing SDK plan. PM message `2026-10-06-pm-vision-ships-in-0-2-and-the-sdk-stays-one-endpoint-while-the-proxy-owns-the.md`, ask 1; experiment 0034 design, recorded spike at 8ec4fbffc0dbf8ceaa0fea5607749ff2f683a2a0 and subsequent OpenRouter controls. 0036 reports are pending.
+- Starts from: Main 399c6c7c7 and the existing SDK plan. PM message `2026-10-06-pm-vision-ships-in-0-2-and-the-sdk-stays-one-endpoint-while-the-proxy-owns-the.md`, ask 1; experiment 0034 design, recorded spike at 8ec4fbffc0dbf8ceaa0fea5607749ff2f683a2a0 and subsequent OpenRouter controls. Completed 0036 at b4b1d00b supplies measured local setup and native recording evidence for slice B.
 - Keeps: Existing text behavior, typed SDK parity, six errors, cancellation, secrecy, spend limits and zero-send strict replay. Core remains free of I/O; the one Rust engine and native file reader remain shared.
 - Changes: Add a typed immutable image/multi-image input and native execution, scalar CLI repeatable --image inputs and explicit whole-file image reader mode. Preserve order and duplicates. Folder files remain separate items; explicit attachment lists form a comparison question. Images carry filename provenance outside evidence/cache identity and no invented text-line ranges.
 - Proof: Reuse saved 0034 exchanges and one shared multi-image fixture. Independently assert complete two-image bodies/order/context, duplicate retention, result details/facts, zero-send replay and image-free compatibility. Files tests pin source ordering, absent line positions, relocation equality, malformed media/framing zero sends and retained later-read failure behavior. No accuracy claims.
@@ -134,3 +134,9 @@ trait InputEvidence
 type InputFileReader::Item = Result<SourceItem, Error>
 type SourceItems::Item = Result<SourceItem, Error>
 ```
+
+### Local slice B
+
+Lane2 builds closed backend-profile/2 declarations and local admission from actual main 5974abe80. Exact IDs, alias matching, measured setup pins, SDK envelope and server context rejection are in [backends.md](../../specification/backends.md#local-image-declarations). It owns the profile/image adapter leaves, behavioral tests and fixtures. Native/root sequential integration owns shared plan/pack/request propagation, complete partial usage and observed batch counts. Focused leaf and integration-candidate checks are reported at handoff; whole High review and full landing tests/lint remain with root. No model calls or new dependencies are authorized.
+
+Native foundation integration retains the ready local profile leaves, ordered immutable image inputs and their exact admission limits on one configured wire route. Approximate encoded-body fallback remains available under caller estimated budgets; absent local output usage remains unknown while reported input survives store/cache/replay. The completed M5 compatibility handoff is reused as qualified D7-phase evidence, without a repeated run or a final-parity claim. Root whole review/landing and host image adoption remain open.

@@ -1,0 +1,4241 @@
+{
+  "$defs": {
+    "completeAnnotation": {
+      "properties": {
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "answers": {
+          "additionalProperties": {
+            "$ref": "#/$defs/completeAnnotationMember"
+          },
+          "type": "object"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/completeannotatedRow"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "input",
+        "value",
+        "answers",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAnnotationMember": {
+      "anyOf": [
+        {
+          "properties": {
+            "answer": {
+              "$ref": "#/$defs/completeanswer"
+            },
+            "answer_id": {
+              "$ref": "#/$defs/completeAnswerId"
+            },
+            "question": {
+              "$ref": "#/$defs/completeReadableQuestion"
+            },
+            "request": {
+              "type": "string"
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completethreshold"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "value": {
+              "$ref": "#/$defs/completevalue"
+            }
+          },
+          "required": [
+            "answer_id",
+            "value",
+            "question",
+            "answer",
+            "threshold",
+            "request"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "failure": {
+              "$ref": "#/$defs/completefailure"
+            },
+            "failure_id": {
+              "$ref": "#/$defs/completeFailureId"
+            },
+            "question": {
+              "$ref": "#/$defs/completeReadableQuestion"
+            },
+            "request": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "failure_id",
+            "question",
+            "failure",
+            "request"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeAnswerId": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "completeAnswers": {
+      "properties": {
+        "questions": {
+          "items": {
+            "$ref": "#/$defs/completeRelationMember"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "questions"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAtomic": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/completeAtomicValue"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAtomicValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completevalue"
+        },
+        {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        }
+      ]
+    },
+    "completeAttempt": {
+      "properties": {
+        "ordinal": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "outcome": {
+          "$ref": "#/$defs/completeattemptOutcome"
+        },
+        "request_id": {
+          "type": [
+            "string"
+          ]
+        },
+        "request_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "sdk_request_id": {
+          "$ref": "#/$defs/completeSdkRequestId"
+        },
+        "server_ms": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "status": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "wall_ms": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ordinal",
+        "request_sha256",
+        "wall_ms",
+        "outcome",
+        "sdk_request_id"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeBatchFailure": {
+      "properties": {
+        "completed": {
+          "items": {
+            "$ref": "#/$defs/completeDetailed"
+          },
+          "type": "array"
+        },
+        "error": {
+          "$ref": "#/$defs/completeError"
+        },
+        "facts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeFacts"
+            }
+          ]
+        }
+      },
+      "required": [
+        "completed",
+        "error"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeCall": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completeCallSuccess"
+        },
+        {
+          "$ref": "#/$defs/completeCallError"
+        },
+        {
+          "$ref": "#/$defs/completeBatchFailure"
+        }
+      ]
+    },
+    "completeCallError": {
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/completeError"
+        },
+        "facts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeFacts"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeCallId": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "completeCallSuccess": {
+      "properties": {
+        "facts": {
+          "$ref": "#/$defs/completeFacts"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeDetailed"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/completeDetailed"
+              },
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "facts"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeChoose": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "question": {
+              "properties": {
+                "verb": {
+                  "const": "choose"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeDecide": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "question": {
+              "properties": {
+                "verb": {
+                  "const": "decide"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": true
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeDetailed": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completeAtomic"
+        },
+        {
+          "$ref": "#/$defs/completeAnnotation"
+        },
+        {
+          "$ref": "#/$defs/completeFind"
+        },
+        {
+          "$ref": "#/$defs/completeRecognition"
+        },
+        {
+          "$ref": "#/$defs/completeRelation"
+        }
+      ]
+    },
+    "completeError": {
+      "properties": {
+        "estimated_input_denial": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeEstimatedInputDenial"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/completefailureKind"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "send_budget_denial": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSendBudgetDenial"
+            }
+          ]
+        },
+        "stopped": {
+          "$ref": "#/$defs/completeStopped"
+        }
+      },
+      "required": [
+        "kind",
+        "message",
+        "retryable",
+        "stopped"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeEstimatedInputDenial": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "initial_request",
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint64",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "additional_request",
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint64",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "retry",
+              "type": "string"
+            },
+            "last_status": {
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limit": {
+              "format": "uint64",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "last_status"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeFacts": {
+      "properties": {
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/completeAttempt"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "cache_answers": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "call_id": {
+          "$ref": "#/$defs/completeCallId"
+        },
+        "estimated_cost_usd": {
+          "type": [
+            "string"
+          ]
+        },
+        "held_model_mismatch": {
+          "type": [
+            "boolean"
+          ]
+        },
+        "input_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "model": {
+          "type": [
+            "string"
+          ]
+        },
+        "output_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "records": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "seconds": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "call_id",
+        "cache_answers",
+        "records",
+        "requests_sent",
+        "seconds"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeFailureId": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "completeFilter": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "question": {
+              "properties": {
+                "verb": {
+                  "const": "decide"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+        "input"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeFind": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completefindAnswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/completeFindCandidate"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion2"
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "threshold": {
+          "type": "null"
+        },
+        "value": true
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "index",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeFindCandidate": {
+      "properties": {
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "input": true,
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        }
+      },
+      "required": [
+        "index",
+        "input",
+        "probability"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeImage": {
+      "properties": {
+        "base64": {
+          "type": "string"
+        },
+        "height": {
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "media": {
+          "$ref": "#/$defs/completeImageMedia"
+        },
+        "width": {
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "media",
+        "base64",
+        "width",
+        "height"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeImageMedia": {
+      "oneOf": [
+        {
+          "const": "image/jpeg",
+          "type": "string"
+        },
+        {
+          "const": "image/png",
+          "type": "string"
+        }
+      ]
+    },
+    "completeInputDeclaration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completeStringRoot"
+        },
+        {
+          "$ref": "#/$defs/completeObjectRoot"
+        }
+      ]
+    },
+    "completeInputPropertyType": {
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "const": "string",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "number",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "boolean",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "items": {
+              "$ref": "#/$defs/completeStringRoot"
+            },
+            "type": {
+              "const": "array",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "items"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeMeta": {
+      "allOf": [
+        {
+          "else": {
+            "properties": {
+              "origin": {
+                "type": "string"
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "observations": {
+                "maxItems": 0
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "answered_by"
+              ]
+            },
+            "properties": {
+              "cached": {
+                "const": false
+              },
+              "origin": {
+                "type": "null"
+              },
+              "question_sources": {
+                "maxItems": 0
+              },
+              "requests": {
+                "maxItems": 0
+              },
+              "requests_sent": {
+                "const": 0
+              }
+            }
+          }
+        }
+      ],
+      "oneOf": [
+        {
+          "not": {
+            "required": [
+              "questions_sha256"
+            ]
+          },
+          "required": [
+            "question_sha256"
+          ]
+        },
+        {
+          "not": {
+            "required": [
+              "question_sha256"
+            ]
+          },
+          "required": [
+            "questions_sha256"
+          ]
+        }
+      ],
+      "properties": {
+        "answered_by": {
+          "type": [
+            "string"
+          ]
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/completeAttempt"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "batch_setting": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completebatchSetting"
+            }
+          ]
+        },
+        "batch_warning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completebatchWarning"
+            }
+          ]
+        },
+        "cached": {
+          "type": "boolean"
+        },
+        "context_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": [
+            "string"
+          ]
+        },
+        "failed_questions": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/completeObservation"
+          },
+          "type": "array"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeOrigin"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_warning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeprofileWarning"
+            }
+          ]
+        },
+        "question_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": [
+            "string"
+          ]
+        },
+        "question_sources": {
+          "items": {
+            "$ref": "#/$defs/completeQuestionSource"
+          },
+          "type": "array"
+        },
+        "questions_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": [
+            "string"
+          ]
+        },
+        "requests": {
+          "items": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeUsage"
+            }
+          ]
+        }
+      },
+      "required": [
+        "tool",
+        "url",
+        "model",
+        "requests_sent",
+        "cached",
+        "requests",
+        "failed_questions",
+        "origin",
+        "question_sources",
+        "observations"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeObjectRoot": {
+      "properties": {
+        "properties": {
+          "additionalProperties": {
+            "$ref": "#/$defs/completeInputPropertyType"
+          },
+          "type": "object"
+        },
+        "required": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "type": {
+          "$ref": "#/$defs/completeObjectType"
+        }
+      },
+      "required": [
+        "type",
+        "properties"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeObjectType": {
+      "enum": [
+        "object"
+      ],
+      "type": "string"
+    },
+    "completeObservation": {
+      "anyOf": [
+        {
+          "properties": {
+            "observation_id": {
+              "$ref": "#/$defs/completeObservationId"
+            }
+          },
+          "required": [
+            "observation_id"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "failure_id": {
+              "$ref": "#/$defs/completeFailureId"
+            }
+          },
+          "required": [
+            "failure_id"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeObservationId": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "completeOrigin": {
+      "oneOf": [
+        {
+          "const": "live",
+          "type": "string"
+        },
+        {
+          "const": "cache",
+          "type": "string"
+        },
+        {
+          "const": "replay",
+          "type": "string"
+        },
+        {
+          "const": "proxy",
+          "type": "string"
+        },
+        {
+          "const": "memory",
+          "type": "string"
+        }
+      ]
+    },
+    "completePhysicalSource": {
+      "dependentRequired": {
+        "first_line": [
+          "last_line"
+        ],
+        "last_line": [
+          "first_line"
+        ]
+      },
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": [
+            "integer"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": [
+            "integer"
+          ]
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completePosition": {
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "last": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeQuestionName": {
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+      "type": "string"
+    },
+    "completeQuestionSource": {
+      "properties": {
+        "answered_by": {
+          "type": "string"
+        },
+        "batch_size": {
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 1,
+          "type": [
+            "integer"
+          ]
+        },
+        "origin": {
+          "$ref": "#/$defs/completeOrigin"
+        }
+      },
+      "required": [
+        "origin",
+        "answered_by"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRank": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "type": "null"
+        },
+        "value": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+        "input"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeReadableQuestion": {
+      "oneOf": [
+        {
+          "properties": {
+            "false": {},
+            "text": {},
+            "true": {},
+            "verb": {
+              "const": "decide",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "options": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "choose",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "options"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "labels": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "tag",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "labels"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "levels": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "score",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "levels"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "context_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "item_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeQuestionName"
+            }
+          ]
+        },
+        "wording_version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeWordingVersion"
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeReadableQuestion2": {
+      "properties": {
+        "context_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "item_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeQuestionName"
+            }
+          ]
+        },
+        "none": {
+          "type": "boolean"
+        },
+        "profile": {
+          "type": [
+            "string"
+          ]
+        },
+        "text": {},
+        "verb": {
+          "const": "find"
+        },
+        "wording_version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeWordingVersion"
+            }
+          ]
+        }
+      },
+      "required": [
+        "text",
+        "none",
+        "verb"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeReadableQuestion3": {
+      "properties": {
+        "context_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "item_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "kinds": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeQuestionName"
+            }
+          ]
+        },
+        "profile": {
+          "type": [
+            "string"
+          ]
+        },
+        "relation_threshold": {
+          "$ref": "#/$defs/completethreshold"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/completerelationRule"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "threshold": {
+          "$ref": "#/$defs/completethreshold"
+        },
+        "verb": {
+          "$ref": "#/$defs/completeVerb"
+        },
+        "wording_version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeWordingVersion"
+            }
+          ]
+        }
+      },
+      "required": [
+        "verb",
+        "kinds",
+        "threshold",
+        "relation_threshold"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeReadableQuestion4": {
+      "properties": {
+        "context_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completerelateFields"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "item_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeInputDeclaration"
+            }
+          ]
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeQuestionName"
+            }
+          ]
+        },
+        "profile": {
+          "type": [
+            "string"
+          ]
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/completerelationRule"
+          },
+          "type": "array"
+        },
+        "threshold": {
+          "$ref": "#/$defs/completethreshold"
+        },
+        "verb": {
+          "const": "relate"
+        },
+        "wording_version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeWordingVersion"
+            }
+          ]
+        }
+      },
+      "required": [
+        "verb",
+        "fields",
+        "relations",
+        "threshold"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRecognition": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completerecognizeAnswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion3"
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/completerecognize"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRelation": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeAnswers"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion4"
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "value": {
+          "items": {
+            "$ref": "#/$defs/completerelatedEntityEdge"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRelationDirection": {
+      "oneOf": [
+        {
+          "const": "source_to_target",
+          "type": "string"
+        },
+        {
+          "const": "either",
+          "type": "string"
+        }
+      ]
+    },
+    "completeRelationMember": {
+      "anyOf": [
+        {
+          "properties": {
+            "accepted": {
+              "type": "boolean"
+            },
+            "answer": {
+              "$ref": "#/$defs/completeanswer"
+            },
+            "answer_id": {
+              "$ref": "#/$defs/completeAnswerId"
+            },
+            "probability": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "answer_id",
+            "probability",
+            "accepted",
+            "answer"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "failure": {
+              "$ref": "#/$defs/completefailure"
+            },
+            "failure_id": {
+              "$ref": "#/$defs/completeFailureId"
+            }
+          },
+          "required": [
+            "failure_id",
+            "failure"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/completeRelationDirection"
+        },
+        "method": {
+          "$ref": "#/$defs/completeRelationMethod"
+        },
+        "reads": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "request": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/completerelatedEntity"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completerelatedEntity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "relation",
+        "reads",
+        "method",
+        "direction",
+        "source",
+        "target",
+        "request"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRelationMethod": {
+      "oneOf": [
+        {
+          "const": "yes_no",
+          "type": "string"
+        },
+        {
+          "const": "choice",
+          "type": "string"
+        }
+      ]
+    },
+    "completeScore": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "question": {
+              "properties": {
+                "verb": {
+                  "const": "score"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "type": "null"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSdkRequestId": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "completeSendBudgetDenial": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "before_first_send",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "before_additional_send",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "before_retry",
+              "type": "string"
+            },
+            "last_status": {
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "last_status"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeSourceFields": {
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeStopCause": {
+      "oneOf": [
+        {
+          "const": "usage",
+          "type": "string"
+        },
+        {
+          "const": "local",
+          "type": "string"
+        },
+        {
+          "const": "no_key",
+          "type": "string"
+        },
+        {
+          "const": "transport",
+          "type": "string"
+        },
+        {
+          "const": "status",
+          "type": "string"
+        },
+        {
+          "const": "too_large",
+          "type": "string"
+        },
+        {
+          "const": "reply",
+          "type": "string"
+        },
+        {
+          "const": "backend",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        },
+        {
+          "const": "deadline",
+          "type": "string"
+        },
+        {
+          "const": "defect",
+          "type": "string"
+        }
+      ]
+    },
+    "completeStopped": {
+      "properties": {
+        "at": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "cause": {
+          "$ref": "#/$defs/completeStopCause"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "status": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        }
+      },
+      "required": [
+        "cause",
+        "retryable"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeStringRoot": {
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/completeStringType"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeStringType": {
+      "enum": [
+        "string"
+      ],
+      "type": "string"
+    },
+    "completeSurface": {
+      "oneOf": [
+        {
+          "const": "cli",
+          "type": "string"
+        },
+        {
+          "const": "rust",
+          "type": "string"
+        },
+        {
+          "const": "c",
+          "type": "string"
+        },
+        {
+          "const": "python",
+          "type": "string"
+        },
+        {
+          "const": "pandas",
+          "type": "string"
+        },
+        {
+          "const": "python-polars",
+          "type": "string"
+        },
+        {
+          "const": "rust-polars",
+          "type": "string"
+        },
+        {
+          "const": "javascript",
+          "type": "string"
+        },
+        {
+          "const": "ruby",
+          "type": "string"
+        },
+        {
+          "const": "r",
+          "type": "string"
+        },
+        {
+          "const": "cpp",
+          "type": "string"
+        },
+        {
+          "const": "go",
+          "type": "string"
+        },
+        {
+          "const": "csharp",
+          "type": "string"
+        },
+        {
+          "const": "java",
+          "type": "string"
+        },
+        {
+          "const": "kotlin",
+          "type": "string"
+        },
+        {
+          "const": "scala",
+          "type": "string"
+        },
+        {
+          "const": "swift",
+          "type": "string"
+        },
+        {
+          "const": "zig",
+          "type": "string"
+        },
+        {
+          "const": "php",
+          "type": "string"
+        },
+        {
+          "const": "dart",
+          "type": "string"
+        },
+        {
+          "const": "objective-c",
+          "type": "string"
+        },
+        {
+          "const": "ada",
+          "type": "string"
+        },
+        {
+          "const": "cobol",
+          "type": "string"
+        },
+        {
+          "const": "flutter",
+          "type": "string"
+        },
+        {
+          "const": "duckdb",
+          "type": "string"
+        },
+        {
+          "const": "sqlite",
+          "type": "string"
+        },
+        {
+          "const": "postgresql",
+          "type": "string"
+        },
+        {
+          "const": "mcp",
+          "type": "string"
+        }
+      ]
+    },
+    "completeTag": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "question": {
+              "properties": {
+                "verb": {
+                  "const": "tag"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeUsage": {
+      "anyOf": [
+        {
+          "required": [
+            "input_tokens"
+          ]
+        },
+        {
+          "required": [
+            "output_tokens"
+          ]
+        }
+      ],
+      "properties": {
+        "input_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "output_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        }
+      },
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeVerb": {
+      "enum": [
+        "recognize"
+      ],
+      "type": "string"
+    },
+    "completeVersion": {
+      "enum": [
+        "thinkthen.result/2"
+      ],
+      "type": "string"
+    },
+    "completeWordingVersion": {
+      "format": "uint32",
+      "maximum": 4294967295,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "completeannotatedField": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completevalue"
+        },
+        {
+          "$ref": "#/$defs/completefailed"
+        }
+      ]
+    },
+    "completeannotatedRow": {
+      "additionalProperties": {
+        "$ref": "#/$defs/completeannotatedField"
+      },
+      "type": "object"
+    },
+    "completeanswer": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "yes_no",
+              "type": "string"
+            },
+            "probability": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "probability"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "confidence": {
+              "format": "double",
+              "type": [
+                "number"
+              ]
+            },
+            "kind": {
+              "const": "choice",
+              "type": "string"
+            },
+            "pick": {
+              "type": "string"
+            },
+            "probabilities": {
+              "additionalProperties": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "pick",
+            "probabilities"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "tag",
+              "type": "string"
+            },
+            "probabilities": {
+              "additionalProperties": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "probabilities"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "confidence": {
+              "format": "double",
+              "type": [
+                "number"
+              ]
+            },
+            "kind": {
+              "const": "score",
+              "type": "string"
+            },
+            "level": {
+              "type": "string"
+            },
+            "probabilities": {
+              "additionalProperties": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "level",
+            "probabilities"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeattemptOutcome": {
+      "oneOf": [
+        {
+          "const": "ok",
+          "type": "string"
+        },
+        {
+          "const": "status",
+          "type": "string"
+        },
+        {
+          "const": "transport",
+          "type": "string"
+        }
+      ]
+    },
+    "completebatchSetting": {
+      "anyOf": [
+        {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "completebatchWarning": {
+      "properties": {
+        "running": {
+          "$ref": "#/$defs/completebatchSetting"
+        },
+        "tuned_for": {
+          "$ref": "#/$defs/completebatchSetting"
+        }
+      },
+      "required": [
+        "tuned_for",
+        "running"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeentity": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "length": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "strength": {
+          "format": "double",
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "length",
+        "kind",
+        "strength"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeentityEdge": {
+      "properties": {
+        "either": {
+          "const": true,
+          "type": "boolean"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/completeentity"
+        },
+        "target": {
+          "$ref": "#/$defs/completeentity"
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completefailed": {
+      "additionalProperties": false,
+      "properties": {
+        "failed": {
+          "$ref": "#/$defs/completefailure"
+        }
+      },
+      "required": [
+        "failed"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completefailure": {
+      "properties": {
+        "cause": {
+          "$ref": "#/$defs/completefailureCause"
+        },
+        "kind": {
+          "enum": [
+            "backend"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "cause"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completefailureCause": {
+      "oneOf": [
+        {
+          "const": "missing_answer",
+          "type": "string"
+        },
+        {
+          "const": "wrong_kind",
+          "type": "string"
+        },
+        {
+          "const": "missing_probability",
+          "type": "string"
+        },
+        {
+          "const": "invalid_probability",
+          "type": "string"
+        },
+        {
+          "const": "invalid_distribution",
+          "type": "string"
+        },
+        {
+          "const": "unexpected_probability",
+          "type": "string"
+        }
+      ]
+    },
+    "completefailureKind": {
+      "oneOf": [
+        {
+          "const": "usage",
+          "type": "string"
+        },
+        {
+          "const": "backend",
+          "type": "string"
+        },
+        {
+          "const": "local",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        },
+        {
+          "const": "deadline",
+          "type": "string"
+        },
+        {
+          "const": "defect",
+          "type": "string"
+        }
+      ]
+    },
+    "completefindAnswer": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": [
+            "number"
+          ]
+        },
+        "kind": {
+          "const": "find"
+        },
+        "pick": {
+          "type": "string"
+        },
+        "probabilities": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "pick",
+        "probabilities",
+        "kind"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completenameOdds": {
+      "properties": {
+        "edges": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "end": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kinds": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "start": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "kinds",
+        "edges"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completepairOdds": {
+      "properties": {
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/completeplace"
+        },
+        "target": {
+          "$ref": "#/$defs/completeplace"
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completepieceOdds": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tags": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "tags"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeplace": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeprofileWarning": {
+      "properties": {
+        "running": {
+          "type": "string"
+        },
+        "tuned_for": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tuned_for",
+        "running"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completerecognize": {
+      "properties": {
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/completeentity"
+          },
+          "type": "array"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/completeentityEdge"
+          },
+          "type": [
+            "array"
+          ]
+        }
+      },
+      "required": [
+        "entities"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completerecognizeAnswer": {
+      "properties": {
+        "names": {
+          "items": {
+            "$ref": "#/$defs/completenameOdds"
+          },
+          "type": "array"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/completepairOdds"
+          },
+          "type": "array"
+        },
+        "pieces": {
+          "items": {
+            "$ref": "#/$defs/completepieceOdds"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pieces",
+        "names",
+        "pairs"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completerelateFields": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completerelatedEntity": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completerelatedEntityEdge": {
+      "properties": {
+        "either": {
+          "const": true,
+          "type": "boolean"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completerelatedEntity"
+            },
+            {
+              "$ref": "#/$defs/completesourceRelationEndpoint"
+            }
+          ]
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completerelatedEntity"
+            },
+            {
+              "$ref": "#/$defs/completesourceRelationEndpoint"
+            }
+          ]
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completerelationRule": {
+      "properties": {
+        "either": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "reads": {
+          "type": "string"
+        },
+        "single": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "target",
+        "reads",
+        "either"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completesourceRelationEndpoint": {
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "record": {}
+      },
+      "required": [
+        "name",
+        "kind",
+        "record",
+        "file"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completethreshold": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "completevalue": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "format": "double",
+          "type": "number"
+        }
+      ]
+    }
+  },
+  "$id": "urn:thinkthen:complete-call",
+  "$ref": "#/$defs/completeCall",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a C door value against its verb's definition; released definitions retain result/1 and complete definitions describe result/2 and its additive call envelope.",
+  "title": "thinkthen native results and compatibility structures"
+}

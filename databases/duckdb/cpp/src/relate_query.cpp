@@ -48,6 +48,9 @@ string Boundary(ClientContext &caller, const string &raw) {
 unique_ptr<MaterializedQueryResult> Query(Connection &connection, ClientContext &caller, const string &sql) {
 	auto result = connection.Query(sql);
 	if (!result || result->HasError()) {
+		if (result && result->GetErrorType() == ExceptionType::INTERRUPT) {
+			throw OrdinaryError("thinkthen cancelled: the call was cancelled");
+		}
 		throw OrdinaryError("%s", Boundary(caller, result ? result->GetError() : "the query returned no result").c_str());
 	}
 	return result;

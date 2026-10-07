@@ -63,7 +63,7 @@ fn read(question: &str) -> Result<ReadRank, Failure> {
     let Some(path) = path_of(question) else {
         return Ok((None, None, None));
     };
-    let text = question_text::read(Path::new(path), Failure::OpenQuestionFile)?;
+    let text = question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
     let value = Json::parse(&text).map_err(QuestionFileError::from)?;
     if value.member("questions").is_none() {
         let (file, batch) = QuestionFile::parse_top(&text)?;

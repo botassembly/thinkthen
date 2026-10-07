@@ -71,6 +71,7 @@ feature() {
 # A binding's manifest sits in its folder, or in the crate folder a third field names.
 manifest() {
 	case $2 in
+		libraries/mcp) printf '%s\n' 'crates/thinkthen/Cargo.toml'; return ;;
 		libraries/php) printf '%s\n' 'libraries/php/composer.json'; return ;;
 		libraries/csharp) printf '%s\n' 'libraries/csharp/ThinkThen.csproj'; return ;;
 		libraries/jvm) printf '%s\n' 'libraries/jvm/pom.xml'; return ;;
@@ -87,7 +88,7 @@ manifest() {
 }
 
 noncargo() {
-	case $1 in libraries/php|libraries/csharp|libraries/jvm|libraries/dart|libraries/swift|libraries/zig|libraries/go|libraries/cpp|libraries/ada|libraries/objective-c|libraries/cobol) return 0 ;; *) return 1 ;; esac
+	case $1 in libraries/mcp|libraries/php|libraries/csharp|libraries/jvm|libraries/dart|libraries/swift|libraries/zig|libraries/go|libraries/cpp|libraries/ada|libraries/objective-c|libraries/cobol) return 0 ;; *) return 1 ;; esac
 }
 
 registry() {
@@ -118,6 +119,8 @@ registry() {
 	done
 	for folder in libraries/*/ databases/*/; do
 		[ -d "$folder" ] || continue
+		# MCP WIP is an explicitly planned command adapter, not installed support.
+		if [ "${folder%/}" = libraries/mcp ] && awk '$1 == "libraries/mcp" && $2 == "planned" { found = 1 } END { exit !found }' "$1"; then continue; fi
 		if ! { landed "$1"; feature "$1"; } | grep -qx "${folder%/}"; then
 			printf 'surfaces: %s is not a landed surface in %s\n' "${folder%/}" "$1" >&2
 			status=1

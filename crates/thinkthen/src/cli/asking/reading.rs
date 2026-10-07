@@ -15,12 +15,16 @@ pub(super) fn read_by(
         || !keeping.streams_only()
         || common.unit.as_deref() == Some("file")
     {
-        return Ok(Reading::new(asked, on)?);
+        return Ok(
+            Reading::new(asked, on)?.with_item_schema(settled.metadata().item_schema.clone())
+        );
     }
     let framing = if on.is_empty() {
         Framing::Lines
     } else {
         Framing::Jsonl
     };
-    Ok(Reading::new(framing, on)?.by_default())
+    Ok(Reading::new(framing, on)?
+        .by_default()
+        .with_item_schema(settled.metadata().item_schema.clone()))
 }

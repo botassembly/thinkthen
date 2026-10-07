@@ -80,9 +80,15 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
         .map(serde_json::from_slice)
         .collect::<Result<_, _>>()?;
     assert_eq!(
-        rows,
+        rows.into_iter()
+            .map(|row| if row["schema"] == "thinkthen.result/2" {
+                crate::native_results::compatibility::judgment(row)
+            } else {
+                row
+            })
+            .collect::<Vec<_>>(),
         vec![
-            json!({"schema":"thinkthen.result/1","position":{"file":null,"first":1,"last":1},"input":{"id":"a","body":"first"},
+            json!({"schema":"thinkthen.result/2","position":{"file":null,"first":1,"last":1},"input":{"id":"a","body":"first"},
             "value":{"urgent":true},"answers":{"urgent":{"value":true,
                 "question":{"verb":"decide","text":"Is this urgent?"},
                 "answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,
@@ -92,7 +98,7 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
                 "cached":false,"requests":[first],"failed_questions":0}}),
             json!({"schema":"thinkthen.record-error/1","at":2,
             "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}),
-            json!({"schema":"thinkthen.result/1","position":{"file":null,"first":3,"last":3},"input":{"id":"c","body":"third"},
+            json!({"schema":"thinkthen.result/2","position":{"file":null,"first":3,"last":3},"input":{"id":"c","body":"third"},
             "value":{"urgent":false},"answers":{"urgent":{"value":false,
                 "question":{"verb":"decide","text":"Is this urgent?"},
                 "answer":{"kind":"yes_no","probability":0.1},"threshold":0.5,
@@ -217,8 +223,8 @@ fn details_preserve_shadowed_input_while_bare_mode_refuses_it() -> io::Result<()
     let row: Value = serde_json::from_slice(&detailed.stdout)?;
     let request = keys(listener.url(), FIRST_REQUEST.as_bytes()).remove(0);
     assert_eq!(
-        row,
-        json!({"schema":"thinkthen.result/1","position":{"file":null,"first":1,"last":1},
+        crate::native_results::compatibility::judgment(row),
+        json!({"schema":"thinkthen.result/2","position":{"file":null,"first":1,"last":1},
         "input":{"urgent":"original","body":"first"},"value":{"urgent":true},
         "answers":{"urgent":{"value":true,
             "question":{"verb":"decide","text":"Is this urgent?"},
@@ -378,6 +384,15 @@ fn skipped_row_counts_as_finished_with_only_known_token_usage() -> io::Result<()
     assert_eq!(lines[0], b"thinkthen: 1 record skipped");
     let mut facts: Value = serde_json::from_slice(lines[1])?;
     facts.as_object_mut().expect("run facts").remove("seconds");
+    assert!(facts["command_ms"].is_u64());
+    facts
+        .as_object_mut()
+        .expect("run facts")
+        .remove("command_ms");
+    let call_id = facts.as_object_mut().expect("run facts").remove("call_id");
+    let call_id = call_id.expect("actual invocation identity");
+    let call_id = call_id.as_str().expect("a string identity");
+    assert!(thinkthen::CallId::new(call_id).is_ok());
     assert_eq!(
         facts,
         json!({"schema":"thinkthen.run/1","records":3,

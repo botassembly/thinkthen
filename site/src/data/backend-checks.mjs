@@ -8,6 +8,8 @@
 const RECORDS = 'https://github.com/botassembly/thinkthen/blob/main/sdlc';
 
 export const CHECKS = {
+  // The bounded adapter probe was not a backends check qualification run.
+  openai: [],
   llamacpp: [
     {
       model: 'local (Clef-Flash Q4_K_M)', date: '2026-10-05', exit: 0, critical: 0, warning: 0,

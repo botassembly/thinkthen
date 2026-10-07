@@ -71,6 +71,7 @@ pub(super) fn parse(text: &str, rank: bool) -> Result<QuestionSet, QuestionSetEr
             .cloned()
             .ok_or(QuestionSetError::Render)?;
         questions.push(NamedQuestion {
+            metadata: file.metadata.clone(),
             name: name.clone(),
             question,
             threshold: resolved.threshold(),
