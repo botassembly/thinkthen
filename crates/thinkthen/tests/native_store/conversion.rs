@@ -121,3 +121,79 @@ fn explicit_original_bodies_survive_sqlite_to_fixture_conversion_and_zero_send_r
     drop(replay);
     std::fs::remove_dir_all(place).unwrap();
 }
+
+#[test]
+fn fixture_origin_replay_and_conversion_preserve_history_and_idempotent_bytes() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let place = folder();
+    let url = format!("{}/systemone", listener.base());
+    let key = legacy_key(&url);
+    let digest: String = Sha256::digest(STATE)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    let state = json!({"sha256":digest,"state":STATE});
+    let answer = json!({"key":key,"url":url,"model":"fixed","state":digest,
+        "question":QUESTION,"answer":ANSWER,"answered_by":"fixed","input_tokens":887,
+        "output_tokens":null,"taken_at":0,"origin":"fixture"});
+    let fixture = place.join("thinkthen.jsonl");
+    std::fs::write(&fixture, format!("{state}\n{answer}\n")).unwrap();
+    let original = std::fs::read(&fixture).unwrap();
+    let modified = std::fs::metadata(&fixture).unwrap().modified().unwrap();
+    let expected_id = legacy_observation(&key, "fixture");
+    let question = Question::decide("Refund?").unwrap().cut();
+    let replay = build(&listener).replay(&place).unwrap().build().unwrap();
+    let historical = replay.details(&question, "Refund me.").unwrap();
+    assert_eq!(
+        historical.value().observations(),
+        &[Observation::Answered {
+            observation_id: expected_id.parse().unwrap()
+        }]
+    );
+    assert_eq!(std::fs::read(&fixture).unwrap(), original);
+    assert_eq!(
+        std::fs::metadata(&fixture).unwrap().modified().unwrap(),
+        modified
+    );
+    drop(replay);
+    let converted = convert(&place, false);
+    assert!(
+        converted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&converted.stderr)
+    );
+    let written = std::fs::read(&fixture).unwrap();
+    let entries: Vec<Value> = std::str::from_utf8(&written)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    let mut expected = answer;
+    expected["key"] = framed(
+        "thinkthen.question-key/2",
+        &["systemone", &url, "\"fixed\"", "\"fixed\"", STATE, QUESTION],
+    )
+    .into();
+    expected["key_version"] = 2.into();
+    expected["adapter"] = "systemone".into();
+    expected["observation_id"] = expected_id.into();
+    assert_eq!(entries, [state, expected]);
+    let replay = build(&listener).replay(&place).unwrap().build().unwrap();
+    let held = replay.details(&question, "Refund me.").unwrap();
+    assert_eq!(held.value().value(), historical.value().value());
+    assert_eq!(
+        held.value().observations(),
+        historical.value().observations()
+    );
+    assert_eq!(held.value().question_sources()[0].origin(), Origin::Replay);
+    assert_eq!(
+        held.value().reported_usage().unwrap().input_tokens(),
+        Some(887)
+    );
+    assert_eq!(held.value().reported_usage().unwrap().output_tokens(), None);
+    drop(replay);
+    assert!(convert(&place, false).status.success());
+    assert_eq!(std::fs::read(&fixture).unwrap(), written);
+    assert_eq!(listener.count(), 0);
+    std::fs::remove_dir_all(place).unwrap();
+}

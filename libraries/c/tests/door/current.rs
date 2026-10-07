@@ -56,6 +56,23 @@ fn all_ten_complete_calls_expose_actual_values_identities_attempts_and_owned_vie
         );
         assert_eq!(backend.count(), 13);
     }
+    let backend = conformance_backend::Listener::answering(|_| {
+        conformance_backend::Canned::ok(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","choice":"none","probabilities":{"u001":0.1,"u002":0.1,"none":0.8}}}}"#,
+        )
+    })
+    .expect("owned loopback");
+    let output = run_with(
+        &compile(&crate_dir().join("tests/c/complete_calls.c")),
+        backend.base(),
+        b"",
+        &[("TYPED_FIND_NONE", std::path::Path::new("1"))],
+    );
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(backend.count(), 1, "none retains one actual find request");
 }
 #[test]
 fn complete_failure_snapshots_keep_actual_stops_and_final_joined_facts() {

@@ -114,7 +114,16 @@ mod tests {
                 format!(r#""{token}""#)
             );
         }
-        for rejected in ["", "Rust", "typescript", " rust", "c\n", "SECRET-SURFACE"] {
+        for rejected in [
+            "",
+            "Rust",
+            "typescript",
+            " rust",
+            "c\n",
+            "SECRET-SURFACE",
+            "MCP",
+            "mcp ",
+        ] {
             let error = rejected.parse::<Surface>().unwrap_err();
             assert_eq!(
                 error.to_string(),

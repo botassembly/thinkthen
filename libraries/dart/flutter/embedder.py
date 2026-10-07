@@ -48,7 +48,7 @@ env = {
     'THINKTHEN_API_KEY': 'tt-canary-300', 'THINKTHEN_CACHE': str(home / 'cache'),
     'TT_NATIVE_LIBRARY': str(native),
 }
-receipt = {'status': 'FAIL', 'build': {}, 'run': {}, 'arrivals': [], 'required': {'flutter-embedder': 1}}
+receipt = {'status': 'FAIL', 'build': {}, 'run': {}, 'arrivals': [], 'required': {'flutter-embedder': 2}}
 def run_bounded(command, cwd, output_path, timeout):
     with output_path.open('wb') as output:
         process = subprocess.Popen(command, cwd=cwd, env=env, stdout=output, stderr=subprocess.STDOUT,
@@ -99,9 +99,10 @@ try:
                     result['signals'].append('SIGKILL timeout')
                     process.wait(timeout=5)
             result['exit'] = process.returncode
+    assert 'tt-canary-300' not in (logs / 'embedder-run.log').read_text(errors='replace'), 'credential leaked'
     receipt['arrivals'] = list(server.arrivals)
     receipt['bodies_match'] = matches(barrier / 'requests.jsonl', fixture_root / 'expected-embedder.json')
-    if result.get('marker_seen') and collections.Counter(server.arrivals) == {'flutter-embedder': 1} and receipt['bodies_match']:
+    if result.get('marker_seen') and collections.Counter(server.arrivals) == {'flutter-embedder': 2} and receipt['bodies_match']:
         receipt['status'] = 'PASS'
     else:
         raise RuntimeError('embedder did not produce marker and exact counted arrival')

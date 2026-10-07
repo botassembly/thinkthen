@@ -8232,6 +8232,15 @@
           "sh",
           "libraries/polars/check.sh"
         ]
+      },
+      {
+        "id": "mcp",
+        "surface": "libraries/mcp",
+        "owner": "0455",
+        "baseline": [
+          "sh",
+          "libraries/mcp/check.sh"
+        ]
       }
     ],
     "required_cases": [

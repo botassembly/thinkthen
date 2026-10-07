@@ -109,6 +109,14 @@ check_dart_archive() {
 	printf '%s\n' ./ ./CHANGELOG.md ./LICENSE ./README.md ./pubspec.yaml \
 		./pubspec.lock ./lib/ ./lib/thinkthen_dart.dart ./lib/src/ \
 		./lib/src/allocator.dart ./lib/src/door.dart ./lib/src/typed.dart \
+		./lib/thinkthen_complete.dart ./lib/src/native/ \
+		./lib/src/native/abi.dart ./lib/src/native/abi_0.dart ./lib/src/native/abi_1.dart \
+		./lib/src/native/abi_2.dart ./lib/src/native/api.dart ./lib/src/native/batch.dart \
+		./lib/src/native/engine.dart ./lib/src/native/execution.dart ./lib/src/native/functions.dart \
+		./lib/src/native/input.dart ./lib/src/native/question.dart ./lib/src/native/question_adapter.dart \
+		./lib/src/native/result.dart ./lib/src/native/views.dart ./lib/src/native/views_0.dart \
+		./lib/src/native/views_1.dart ./lib/src/native/views_2.dart ./lib/src/native/views_3.dart \
+		./lib/src/native/views_4.dart \
 		./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
 	tar -xOzf "$dir/$name" ./pubspec.yaml >"$work/package-metadata"
@@ -123,6 +131,11 @@ if [ "$mode" = php-dart ]; then
 		"$first")
 			printf '%s\n' ./ ./LICENSE ./README.md ./composer.json ./autoload.php \
 				./src/ ./src/ThinkThen.php ./examples/ ./examples/direct.php \
+				./src/complete/ ./src/complete/models.php ./src/native/ \
+				./src/native/abi.h ./src/native/batch.php ./src/native/engine.php \
+				./src/native/input.php ./src/native/question.php ./src/native/question_adapter.php \
+				./src/native/result.php ./src/native/views.php ./src/native/views_0.php \
+				./src/native/views_1.php \
 				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
 			tar -xOzf "$dir/$name" ./composer.json >"$work/package-metadata"
 			python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"} and p["autoload"]=={"files":["autoload.php"]}' "$work/package-metadata" || fail 'PHP Composer identity differs'
@@ -141,6 +154,7 @@ if [ "$mode" = dart-flutter ]; then
 	printf '%s\n' ./ ./THINKTHEN-PACKAGE-INPUTS ./flutter/ \
 		./flutter/README.md ./flutter/pubspec.yaml ./flutter/pubspec.lock \
 		./flutter/lib/ ./flutter/lib/thinkthen_flutter.dart \
+		./flutter/lib/thinkthen_complete_flutter.dart \
 		./flutter/example/ ./flutter/example/.metadata ./flutter/example/README.md \
 		./flutter/example/pubspec.yaml ./flutter/example/pubspec.lock \
 		./flutter/example/analysis_options.yaml ./flutter/example/lib/ \

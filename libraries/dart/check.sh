@@ -38,7 +38,7 @@ case ${THINKTHEN_ARTIFACT:-} in
     export PATH="$(dirname "$TT_DART"):$(dirname "$TT_FLUTTER"):$PATH"
     locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" \
       python3 "$FLUTTER/installed.py" "$scratch/dart" "$scratch/flutter-stage" "$scratch/native"
-    echo 'Flutter installed release PASS: one decoded-body Linux app call'
+    echo 'Flutter installed release PASS: legacy and complete Linux app calls, zero-send cancellation and usage'
     exit 0 ;;
 esac
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
@@ -69,7 +69,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_BACKEND_BIN="$ROOT/../../target/debug/conformance-backend" \
     python3 "$CHECKS/portable_batch.py"
   python3 "$CHECKS/release_plants.py" "$package" "$native"
-  echo 'Dart installed release PASS: five typed rows and three literal requests'
+  echo 'Dart installed release PASS: legacy and complete typed rows, two requests per route, zero-send cancellation and usage'
   exit 0
 fi
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
@@ -116,6 +116,7 @@ python3 "$CHECKS/exports.py" "$TT_NATIVE_LIBRARY" "$ROOT/../c/include/thinkthen.
 "$TT_DART" pub get --offline --directory "$ROOT"
 "$TT_DART" format --output=none --set-exit-if-changed "$ROOT/lib" "$CHECKS/consumers"
 "$TT_DART" analyze "$ROOT/lib"
+"$TT_DART" run "$CHECKS/consumers/alpha/bin/complete_carriers.dart" "$ROOT/../php/fixtures/complete.json"
 for consumer in alpha bravo; do
   "$TT_DART" pub get --offline --directory "$CHECKS/consumers/$consumer"
   "$TT_DART" analyze "$CHECKS/consumers/$consumer/bin"
@@ -132,6 +133,13 @@ python3 "$CHECKS/plant-check.py"
 (cd "$FLUTTER/example" && "$TT_FLUTTER" pub get --offline)
 "$TT_FLUTTER" analyze --no-pub "$FLUTTER/lib"
 (cd "$FLUTTER/example" && "$TT_FLUTTER" analyze --no-pub lib test)
+(cd "$FLUTTER/example" && "$TT_FLUTTER" test --no-pub test/complete_carriers_test.dart)
 python3 "$FLUTTER/run.py"
 python3 "$FLUTTER/plant-check.py"
 python3 "$FLUTTER/embedder.py"
+
+if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ]; then
+  "$TT_DART" compile exe "$CHECKS/consumers/alpha/bin/complete_native.dart" -o "$CHECKS/scratch/complete-native"
+  THINKTHEN_COMPLETE_LIBRARY="$TT_NATIVE_LIBRARY" python3 "$ROOT/../php/fixtures/complete_parity.py" dart
+  THINKTHEN_COMPLETE_LIBRARY="$TT_NATIVE_LIBRARY" python3 "$ROOT/../php/fixtures/complete_parity.py" flutter
+fi

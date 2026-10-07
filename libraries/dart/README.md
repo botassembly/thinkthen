@@ -48,3 +48,35 @@ The local Linux file pilot packs this Dart source beside a separately built matc
 `Door.create(settings)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Complete typed calls
+
+Import `package:thinkthen_dart/thinkthen_complete.dart` for the native-backed `Engine`, typed questions/inputs and copied complete views. Existing `Door` methods retain their behavior.
+
+```dart
+import 'package:thinkthen_dart/thinkthen_complete.dart';
+
+final engine = Engine(absoluteLibrary, settingsJson: settingsJson);
+try {
+  final question = Question.spec(QuestionSpec(FunctionKind.decide,
+      text: const Content.text('Does this ask for a refund?')));
+  final result = engine.decide(question,
+      Records([Record(const Content.text('Refund me please.'))]));
+  final answerId = result.rows.first.common.answer_id.data;
+  final probability = result.rows.first.common.answer.value!.data.probability;
+} finally { engine.close(); }
+```
+
+The ten named methods return `CompleteResult<DecideView>`, `ChooseView`, `TagView`, `ScoreView`, `FilterView`, `RankView`, `FindView`, `AnnotateView`, `RecognizeView` and `RelateView`, respectively. `CompleteApi` fixes their compile-time signatures for Dart and the separately executed Flutter facade.
+
+`QuestionSpec` carries typed choices/descriptions, meanings, reading rules, model/profile/batch, pointers, members, recognition kinds and relation rules. `Author`, `Declaration` and `Property` carry names, wording versions and item/context schemas. `Question.file`, `named` and `reference` use native loaders. `Question.saved(LoaderRole.…, json)` explicitly imports saved grammar under one native parser. Text never implies a path.
+
+`Records` preserves ordered `Record` originals, contexts, candidate replacements and `Image` attachments. `Content.text` is literal; `Content.json` is arbitrary caller JSON, including explicit null. `Files` selects native line/window/file/image/JSONL reading. Images remain ordered original JPEG/PNG bytes; native alone decodes and admits their route/limits. Only decide/choose/score support them on admitted routes. Other functions refuse before sending.
+
+Results copy summaries/facts/attempts, every observation and its details/author, full row views/details/authors, annotation member authors, rank member views and located recognition/relation views. Known fields have static property types; arbitrary authored/original JSON retains explicit content bytes. Optional views keep `present` and nullable `value`. Decide's native discriminator preserves uncertainty, ordinary Boolean and authored meanings, including Boolean/null. Find's named-answer reader requires the declared C answer tag 5. Unsigned counters are exact `BigInt`; wording version admission stays native.
+
+`CompleteFailure` exposes `ErrorKind`, message, retryability and copied final native summary. Prestart failures have absent facts/attempts. `Controls` supplies deadlines, cancellation, context, packing and attempts. Cancellation owns a native token; `nativeHandle` is borrowed until close and can be passed to a cooperating native thread/isolate. Free tokens after using calls finish.
+
+`decideBatch`, `chooseBatch`, `tagBatch`, `scoreBatch`, `filterBatch` and `annotateBatch` own native lazy batches. Pull `next()` until exhaustion, read `facts()`, and always close the batch before closing its engine. The native engine owns all reading, packing, scheduling and storage. Returned views survive engine/batch close. Cache/record/refresh/replay settings retain native identities and support changed-reading strict replay without sends.
+
+The older private JSON carrier readers retain their own boundary restrictions; complete views above do not use them. The canonical consumer is AOT-compiled and statically calls the named public methods. `complete_parity.py dart` reuses the shared suite and counted owned loopback backend. Flutter runs its own facade separately.

@@ -75,6 +75,11 @@ command_check() {
 	sent=$(($(backend_count) - before))
 	[ "$sent" = 0 ] || { echo "release-smoke: the no-key block sent $sent requests to the loopback backend" >&2; return 1; }
 	echo "release-smoke: the no-key block printed true and sent 0 requests"
+	before=$(backend_count)
+	python3 "$REPO/libraries/mcp/installed.py" "$prefix/thinkthen" || return 1
+	sent=$(($(backend_count) - before))
+	[ "$sent" = 0 ] || { echo "release-smoke: installed MCP replay sent $sent requests" >&2; return 1; }
+	echo "release-smoke: installed MCP initialized ten tools and replayed with 0 requests"
 	# Ticket 0374: the token cap variable refuses before the first request, with exit 2.
 	before=$(backend_count)
 	refused=$(printf evidence | env -u THINKTHEN_BASE_URL HOME="$prefix/home" THINKTHEN_API_KEY=sk-release-smoke-loopback \
