@@ -1,6 +1,6 @@
 # 0428: Complete C++, Swift, Zig and Objective-C typed parity
 
-Status: in progress. Lane2 adopts actual native constructors, ten complete calls, owned results/failures and lazy batches; full shared consumers expose a C find discriminator mismatch and concurrent-arrival checker gap. Root owns the fresh High whole-family review and landing gates.
+Status: in progress. Lane2 implements native constructors, ten complete calls, owned results/failures and lazy batches. All 247 public cases per family are covered by retained full runs plus passing prerequisite reruns; retained package checks pass. Root owns release archive inventory corrections, the fresh High whole-family review and landing gates.
 
 Milestone: 0.2
 
