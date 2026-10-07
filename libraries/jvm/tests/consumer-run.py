@@ -124,7 +124,7 @@ if len(sys.argv) == 2:
           'classpath':runtime_cp,'native':'/work/native/lib/libthinkthen.so',
           'url':f'http://127.0.0.1:{server.server_port}/generic/v1/systemone'}
         if portable:
-            assert summary['attempts']==summary['connections']==3,summary
+            assert summary['attempts']==summary['connections']==1,summary
         else:
             expected={'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'The text is "release-'+lang+'". Is it?'}},'state':'Each question quotes the text it asks about.'}
             captured=[json.loads(path.read_text()) for path in BARRIER.glob('wire-body-*.json')]
