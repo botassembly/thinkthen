@@ -89,6 +89,18 @@ pub(super) fn dry_run(
         .map_err(|_| Failure::Defect("a plan is too large"))?
         .requests;
     summary.bound_requests(occurrences);
+    print_plan(judging, reading, &summary, count, group_requests, writer)
+}
+
+fn print_plan(
+    judging: &Judging<'_>,
+    reading: &Reading,
+    summary: &PlanSummary,
+    count: usize,
+    group_requests: Vec<usize>,
+    writer: &mut dyn Write,
+) -> Result<ExitCode, Failure> {
+    let backend = judging.engine().backend();
     let Some(first) = summary.first_body() else {
         return Ok(ExitCode::SUCCESS);
     };
