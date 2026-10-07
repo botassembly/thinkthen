@@ -77,16 +77,22 @@ int main(void) {
         levels[1].description=(thinkthen_optional_content_v1){1,TEXT("High quality.")};
         spec=(thinkthen_question_spec_v1){0}; spec.kind=4; spec.text=TEXT("How good?");
         spec.choices=(thinkthen_choices_v1){levels,2};
-        thinkthen_question *scoring=question(e,spec);
-        assert(thinkthen_score_complete(e,scoring,s,&c,&r)==0);
+        const char *base=getenv("THINKTHEN_BASE_URL"); assert(base);
+        const char *arm=strstr(base,"/arm/"); assert(arm);
+        char settings[2048];
+        assert(snprintf(settings,sizeof settings,"{\"base_url\":\"%.*s/generic/v1\",\"cache\":false,\"model\":\"fixed\"}",(int)(arm-base),base)>0);
+        thinkthen_engine *score_engine=thinkthen_engine_new_with(settings); assert(score_engine);
+        thinkthen_question *scoring=question(score_engine,spec);
+        assert(thinkthen_score_complete(score_engine,scoring,s,&c,&r)==0);
         thinkthen_score_view_v1 score={0}; assert(thinkthen_result_score(r,0,&score)==0);
         assert(score.common.question.value.choices.data[0].description.present);
         assert(score.common.question.value.choices.data[0].description.value.kind==2);
         assert(same(score.common.question.value.choices.data[0].description.value.data,"null"));
         thinkthen_question_free(scoring); levels[1].description.present=0;
         scoring=NULL;
-        assert(thinkthen_question_new(e,&spec,&scoring)==THINKTHEN_EUSAGE && !scoring);
-        assert(strcmp(thinkthen_error_message(e),"give every level a description, or none")==0);
+        assert(thinkthen_question_new(score_engine,&spec,&scoring)==THINKTHEN_EUSAGE && !scoring);
+        assert(strcmp(thinkthen_error_message(score_engine),"give every level a description, or none")==0);
+        thinkthen_engine_free(score_engine);
 
     }
     thinkthen_question_free(yes); thinkthen_source_free(s); thinkthen_engine_free(e);

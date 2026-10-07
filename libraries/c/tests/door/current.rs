@@ -231,7 +231,7 @@ fn complete_native_readings_keep_projection_originals_authored_nulls_and_failed_
             let capture: serde_json::Value =
                 serde_json::from_str(&backend.capture()).expect("captured");
             let bodies = capture["bodies"].as_array().expect("bodies");
-            assert_eq!(bodies.len(), 4);
+            assert_eq!(bodies.len(), 3);
             for at in [1, 2] {
                 let body = bodies[at].as_str().expect("request body");
                 assert!(body.contains("selected evidence") && !body.contains("withheld"));
