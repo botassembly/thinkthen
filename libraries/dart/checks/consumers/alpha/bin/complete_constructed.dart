@@ -92,5 +92,40 @@ List<CompleteResult<Object>> constructed(CompleteApi engine) {
     }
     results.add(result);
   }
+  final r = results[5];
+  final legacy = CompleteResult(
+      r.summary,
+      r.rows,
+      r.observations,
+      r.details,
+      r.authors,
+      r.memberAuthors,
+      r.rankMembers,
+      r.observationDetails,
+      r.observationAuthors,
+      r.sourceRecognitions,
+      r.sourceRelations);
+  final supplied = <List<DetailsView>>[
+    [r.details.first]
+  ];
+  final extended = CompleteResult(
+      r.summary,
+      r.rows,
+      r.observations,
+      r.details,
+      r.authors,
+      r.memberAuthors,
+      r.rankMembers,
+      r.observationDetails,
+      r.observationAuthors,
+      r.sourceRecognitions,
+      r.sourceRelations,
+      supplied);
+  supplied.first.clear();
+  supplied.clear();
+  if (legacy.rankMemberDetails.isNotEmpty ||
+      !identical(legacy.rows.first, r.rows.first) ||
+      !identical(extended.rankMemberDetails.first.first, r.details.first))
+    throw StateError('public result constructor compatibility');
   return results;
 }

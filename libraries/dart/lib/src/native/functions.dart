@@ -288,7 +288,8 @@ final class NativeApi {
   late final int Function(Pointer<Void>, int, int, Pointer<CDetailsView>)
       thinkthen_result_rank_member_details = lib.lookupFunction<
           Int32 Function(Pointer<Void>, Size, Size, Pointer<CDetailsView>),
-          int Function(Pointer<Void>, int, int, Pointer<CDetailsView>)>("thinkthen_result_rank_member_details");
+          int Function(Pointer<Void>, int, int,
+              Pointer<CDetailsView>)>("thinkthen_result_rank_member_details");
   late final int Function(Pointer<Void>, int, int, Pointer<CRankView>)
       thinkthen_result_rank_member = lib.lookupFunction<
           Int32 Function(Pointer<Void>, Size, Size, Pointer<CRankView>),

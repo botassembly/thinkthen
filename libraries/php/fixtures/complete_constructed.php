@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__).'/autoload.php';
-use ThinkThen\Native\{Engine,Question,QuestionSpec,FunctionKind,Content,Choice,Member,Relation,Records,Record,Author,Declaration,Property,PropertyKind};
+use ThinkThen\Native\{Engine,Question,QuestionSpec,FunctionKind,Content,Choice,Member,Relation,Records,Record,Author,Declaration,Property,PropertyKind,CompleteResult};
 $e=new Engine($argv[1],$argv[2]);
 try {
     $decide=Question::spec(new QuestionSpec(FunctionKind::DECIDE,Content::text('Does this ask for a refund?'),
@@ -26,6 +26,11 @@ try {
         if($verb==='find' && ($r->summary->function->value!==7 || $r->rows[0]->common->question->value->kind!==7 || $r->rows[0]->common->answer->value->kind!==5))throw new RuntimeException('find ABI tags changed');
         $results[$verb]=$r;
     }
+    $r=$results['rank'];
+    $args=[$r->summary,$r->rows,$r->observations,$r->details,$r->authors,$r->memberAuthors,$r->rankMembers,$r->observationDetails,$r->observationAuthors,$r->sourceRecognitions,$r->sourceRelations];
+    $legacy=new CompleteResult(...$args);
+    $extended=new CompleteResult(...[...$args,[[$r->details[0]]]]);
+    if($legacy->rankMemberDetails!==[] || $legacy->rows!==$r->rows || $extended->rankMemberDetails[0][0]!==$r->details[0])throw new RuntimeException('public result constructor compatibility');
     $e->close();
     foreach($results as $r)if(strlen($r->rows[0]->common->meta->requests->data[0]->data)!==64)throw new RuntimeException('copied result expired');
     echo "ten typed constructors executed; copied values survive close; wording version exact\n";

@@ -275,11 +275,11 @@ extension _Execution on Engine {
         authors,
         members,
         ranks,
-        rankDetails,
         List.generate(s.observation_count, (i) => _observation_details(r, i)),
         List.generate(s.observation_count, (i) => _observation_author(r, i)),
         recognitions,
-        relations);
+        relations,
+        rankDetails);
   }
 
   CompleteResult<T> _execute<T>(

@@ -118,7 +118,7 @@ final class Engine
             $relations[]=$verb==='relate'?$this->view($r,'source_relations','thinkthen_result_source_relations',$i):null;
         }
         $obs=[];$od=[];$oa=[];for($i=0;$i<$summary->observation_count;++$i){$obs[]=$this->view($r,'observation','thinkthen_result_observation',$i);$od[]=$this->view($r,'details','thinkthen_result_observation_details',$i);$oa[]=$this->view($r,'question_author','thinkthen_result_observation_author',$i);}
-        return new CompleteResult($summary,$rows,$obs,$details,$authors,$memberAuthors,$rankMembers,$rankMemberDetails,$od,$oa,$recognitions,$relations);
+        return new CompleteResult($summary,$rows,$obs,$details,$authors,$memberAuthors,$rankMembers,$od,$oa,$recognitions,$relations,$rankMemberDetails);
     }
     private function execute(string $verb,Question $question,Source $input,?Controls $controls,bool $lazy=false): CompleteResult|Batch
     {

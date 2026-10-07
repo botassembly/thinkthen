@@ -68,9 +68,9 @@ def row(result,verb,at):
             usage=details['usage'];target['usage']={key:int(usage[key]['value']) for key in ('input_tokens','output_tokens') if usage[key]['present']}
             target['source_batch_sizes']=[int(source['batch_size']['value']) if source['batch_size']['present'] else None for source in details['question_sources']['data']]
         rank_facts(answer,common,result['details'][at]);answer['question_name']=string(v['question_name']['value']);answer['members']=[]
-        for j,member in enumerate(result['rankMembers'][at]):
-            mc=member['common'];mm=mc['meta'];a=author(result['memberAuthors'][at][j])
-            child={'name':string(member['question_name']['value']),'value':optional(member['value']),'probability':mc['answer']['value']['data']['probability'],
+        for j,rank_member in enumerate(result['rankMembers'][at]):
+            mc=rank_member['common'];mm=mc['meta'];a=author(result['memberAuthors'][at][j])
+            child={'name':string(rank_member['question_name']['value']),'value':optional(rank_member['value']),'probability':mc['answer']['value']['data']['probability'],
                    'answer_id':string(mc['answer_id']),'author':a.get('name'),'observations':mm['observations']['len'],'sources':mm['question_sources']['len']}
             if 'wording_version' in a:child['wording_version']=a['wording_version']
             rank_facts(child,mc,result['rankMemberDetails'][at][j]);answer['members'].append(child)
