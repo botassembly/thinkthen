@@ -26,3 +26,22 @@ pandas, Python Polars and Rust Polars expose all ten functions, equivalent ident
 ## Vision and answer identity in 0.2
 
 Second PM message `2026-10-06-pm-vision-ships-in-0-2-and-the-sdk-stays-one-endpoint-while-the-proxy-owns-the.md`, asks 1–4, supersedes the image deferral. Adopt 0447 typed single/multiple-image and image-source inputs for decide/choose/score, 0448 route admission, and 0450 stable full-result identity/proxy reservations. Preserve image order/duplicates and absent text lines; ordinary strings/bytes do not imply images. Execute text-only refusals for the other seven functions, with zero sends. This ticket owns its public typed carriers/consumers; shared native image behavior stays in 0447 and SQL adaptation in 0452. Respect 0449’s single endpoint/key/API-type boundary. Known image/result/identity fields cannot remain raw JSON.
+
+Native consumer handoff, 2026-10-06: `Tally::facts_with_engine(&Engine)` now supplies the checked engine-priced per-call snapshot required by the dataframe aggregate. Input/output availability is independent; unknown output never drops reported input or becomes zero. The dataframe owner still adopts this method and the complete score/rank-set, observation row mapping and selection identity routes; this native constituent does not close column equivalence.
+
+
+Native consumer views, 2026-10-06: `CompleteFound::selection()` reports the actual mapped unit or explicitly offered synthetic none, including a none tie whose raw backend leading pick names a real unit. `RecordObservation::remap_index` maps retained rows back to original dataframe presentation indices without modifying detail identities, facts, source coordinates or original input. Public tests use independently expected exchanges and retain original observations on coalesced duplicate rows. Complete rank-set and host adoption remain open.
+
+### Added public declarations
+
+```text
+enum FindSelection
+FindSelection::Unit(usize)
+FindSelection::None
+fn CompleteFound::selection(&self) -> FindSelection
+fn RecordObservation::remap_index(self, usize) -> RecordObservation<'_>
+```
+
+Native set-rank handoff: `Engine::rank_set_records_complete_with` and plain/fallible equivalents now supply typed `CompleteSetRank` final/member results through one ordinary engine. Located `RecordInput` originals and explicit contexts use existing composition; member views retain all actual probabilities, identities and partial metadata. Frame adoption remains with its owner.
+
+Native foundation handoff: the existing checked per-call `Tally::facts_with_engine`, observation row remapping and `CompleteFound::selection` are available alongside full complete score/rank-set and composed/located aggregate execution. Typed `CompleteRecognized::source_value` and `CompleteRelated::source_edges` expose actual physical spans and ordered original endpoint occurrences without known-result JSON parsing. Partial reported input survives absent output. The dataframe owner still integrates and checks actual consumers; no column parity/main claim is made.

@@ -5,7 +5,7 @@ Status: **Settled** by ADRs 0015 and 0030. Both accepted live gates passed.
 Picks the unit that best answers a question, out of a set the model sees all at once.
 
 ```text
-thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--none] [--details] [-n] [--scores] [--around N] [BACKEND]
+thinkthen find QUESTION|@FILE [--lines|--jsonl] [--field POINTER] [--none] [--details] [-n] [--scores] [--around N] [BACKEND]
 ```
 
 ## What it reads
@@ -15,6 +15,8 @@ From 2 to 255 lines or records on standard input, or 2 to 254 with `--none`. `--
 `QUESTION` states what the best unit answers. CSV, TSV, and `--jobs` are absent from this command; the parser refuses them as unexpected arguments.
 
 ## One request
+
+`@FILE` loads a saved find reading with `find`, optional `on`, `model`, and calibration `profile`, using the ordinary [question-file grammar](question-file.md). Candidates come from the actual input set; authored candidates, cuts and batch settings are refused. Typed `--field` and `--model` replace saved values.
 
 `find` sends every unit together in one request, with an id on each, and asks which one best answers the question. It is one request where `filter` and `rank` make one per unit.
 

@@ -1,6 +1,8 @@
 //! The one public error: six kinds, a safe message, and the retry signal.
 
 use serde::Serialize;
+mod stopped;
+pub use stopped::{StopCause, Stopped};
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
 use crate::public::results::Facts;
@@ -71,6 +73,7 @@ impl ErrorKind {
 pub struct ErrorDetail {
     message: String,
     retryable: bool,
+    stopped: Stopped,
     send_budget_denial: Option<SendBudgetDenial>,
     estimated_input_denial: Option<EstimatedInputDenial>,
     facts: Option<Box<Facts>>,
@@ -142,6 +145,32 @@ impl Error {
         self.detail().estimated_input_denial
     }
 
+    /// Owned native stop information; unknown record positions remain absent.
+    #[must_use]
+    pub const fn stopped(&self) -> Stopped {
+        self.detail().stopped
+    }
+
+    pub(crate) fn at_record(mut self, ordinal: usize) -> Self {
+        if !matches!(self.kind(), ErrorKind::Cancelled | ErrorKind::Deadline)
+            && self.detail().stopped.at.is_none()
+        {
+            self.detail_mut().stopped.at = ordinal.checked_add(1);
+        }
+        self
+    }
+
+    fn detail_mut(&mut self) -> &mut ErrorDetail {
+        match self {
+            Self::Usage(d)
+            | Self::Backend(d)
+            | Self::Local(d)
+            | Self::Cancelled(d)
+            | Self::Deadline(d)
+            | Self::Defect(d) => d,
+        }
+    }
+
     /// Final facts for a started call, including one that sent nothing.
     #[must_use]
     pub fn facts(&self) -> Option<&Facts> {
@@ -174,6 +203,7 @@ impl Error {
         let detail = ErrorDetail {
             message: message.into(),
             retryable: false,
+            stopped: Stopped::of_kind(kind),
             send_budget_denial: None,
             estimated_input_denial: None,
             facts: None,
@@ -232,6 +262,7 @@ impl From<EngineError> for Error {
             | Self::Deadline(detail)
             | Self::Defect(detail) => {
                 detail.retryable = error.retryable();
+                detail.stopped = Stopped::of_engine(&error);
                 detail.estimated_input_denial = match error {
                     EngineError::EstimatedInput(reason)
                     | EngineError::ImageEstimatedInput(reason) => Some(reason),
@@ -291,6 +322,9 @@ fn message(error: &EngineError) -> String {
             "the cache or recording folder holds a malformed entry"
         }
         EngineError::RecordingStorage => "the recording folder could not be written",
+        EngineError::RecordingForbidden => {
+            "the reply forbids storage, so the recording cannot be written"
+        }
         EngineError::RecordingPathIsFile => "the recording folder names a file",
         EngineError::DefaultCachePrivate => {
             "the default cache folder is not private; set its permissions to 0700 or use no_cache"

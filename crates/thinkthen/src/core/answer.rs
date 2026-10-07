@@ -422,7 +422,6 @@ impl Answer {
     }
 
     /// The label that led, before any threshold, or `None` for a yes/no answer.
-    #[cfg(test)]
     pub(crate) fn leader(&self) -> Option<&str> {
         match &self.0 {
             Shape::YesNo { .. } => None,

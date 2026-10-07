@@ -55,7 +55,8 @@ fn one_member_matches_plain_rank_bytes_requests_keys_and_detailed_answer() -> io
 }
 
 #[test]
-fn one_member_details_add_only_name_and_keep_recorded_keys() -> io::Result<()> {
+fn one_member_details_keep_primitive_answers_and_keys_with_distinct_set_reading() -> io::Result<()>
+{
     let set = saved(
         "rank-set-detail-one",
         r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#,
@@ -102,9 +103,14 @@ fn one_member_details_add_only_name_and_keep_recorded_keys() -> io::Result<()> {
     ] {
         assert_eq!(plain[field], set[field]);
     }
-    for field in ["question_sha256", "requests", "requests_sent", "cache"] {
+    for field in ["requests", "requests_sent", "cached"] {
         assert_eq!(plain["meta"][field], set["meta"][field]);
     }
+    assert_ne!(
+        plain["meta"]["question_sha256"],
+        set["meta"]["question_sha256"]
+    );
+    assert_ne!(plain["answer_id"], set["answer_id"]);
     assert_eq!(
         stored(&plain_record)?
             .iter()
@@ -362,7 +368,8 @@ fn preview_keeps_mixed_member_quoting_and_runtime_packing_in_both_orders() -> io
 }
 
 #[test]
-fn selecting_member_details_have_own_probability_digest_and_receipt() -> io::Result<()> {
+fn selecting_member_details_have_own_probability_with_complete_set_digest_and_receipts()
+-> io::Result<()> {
     let question = saved("rank-set-details", SET)?;
     let listener = Listener::answering(answer)?;
     let output = call(
@@ -388,19 +395,19 @@ fn selecting_member_details_have_own_probability_digest_and_receipt() -> io::Res
             .collect::<Vec<_>>(),
         ["a", "b", "c"]
     );
-    for (row, yes) in rows.iter().zip([0.7, 0.6, 0.99]) {
+    for (at, (row, yes)) in rows.iter().zip([0.7, 0.6, 0.99]).enumerate() {
         assert_eq!(row["question"]["verb"], "decide");
         assert_eq!(row["answer"]["kind"], "yes_no");
         assert_eq!(row["answer"]["probability"], yes);
         assert!(row["threshold"].is_null());
-        assert!(row["value"].is_null());
-        assert_eq!(row["meta"]["requests"].as_array().expect("keys").len(), 1);
+        assert_eq!(row["value"], at + 1);
+        assert_eq!(row["meta"]["requests"].as_array().expect("keys").len(), 2);
     }
     assert_eq!(
         rows[0]["meta"]["question_sha256"],
         rows[1]["meta"]["question_sha256"]
     );
-    assert_ne!(
+    assert_eq!(
         rows[0]["meta"]["question_sha256"],
         rows[2]["meta"]["question_sha256"]
     );

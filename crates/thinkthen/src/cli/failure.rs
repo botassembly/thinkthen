@@ -34,6 +34,8 @@ const UNNAMED: &str = "defect: a usage error with no sentence";
 /// What stopped the command.
 #[derive(Debug)]
 pub(crate) enum Failure {
+    /// A safe native named-question loading refusal.
+    NamedQuestion(String),
     /// The flags and the environment name no backend.
     Backend(BackendError),
     OpenProfile {
@@ -183,6 +185,7 @@ pub(crate) enum Failure {
     StoreHotJournal,
     Entry(String, String),
     RecordingStorage,
+    RecordingForbidden,
     RecordingPathIsFile,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
@@ -282,6 +285,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         | Failure::StoreHotJournal
         | Failure::Entry(_, _)
         | Failure::RecordingStorage
+        | Failure::RecordingForbidden
         | Failure::RecordingPathIsFile => (
             70,
             "defect: a recording failure was not reported".to_owned(),
@@ -378,7 +382,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             "the default cache folder is not private; set its permissions to 0700 or use --no-cache"
                 .to_owned(),
         ),
-        Failure::Configuration(message) => (5, message.clone()),
+        Failure::Configuration(message) | Failure::NamedQuestion(message) => (5, message.clone()),
         Failure::CacheEntry => (5, "the cache contains a malformed final entry".to_owned()),
         Failure::UsedManifestUnreadable => (5, "the --used key file could not be read".to_owned()),
         Failure::ConvertFolder => (5, "cache convert takes an existing folder, and the one named is missing or not a folder".to_owned()),

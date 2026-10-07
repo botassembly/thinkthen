@@ -70,7 +70,7 @@ impl State {
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
             .map_err(|_| Failure::Defect("another command entry is already active"))?;
         self.cancel.reset();
-        environment.cancel = self.cancel.clone();
+        environment.cancel = self.cancel.with_surface(crate::core::Surface::Cli);
         let routing = route().map_err(|error| {
             self.active.store(false, Ordering::SeqCst);
             error.failure()

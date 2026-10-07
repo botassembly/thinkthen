@@ -5,6 +5,8 @@
 //! by the URL path a caller gives as its base.
 
 mod arms;
+mod capture;
+mod images;
 mod lifetime;
 mod listener;
 mod observations;

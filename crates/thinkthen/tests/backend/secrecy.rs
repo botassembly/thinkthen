@@ -487,8 +487,12 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
         let files = written(&dir);
         assert_eq!(
             files,
-            [dir.join("thinkthen.sqlite")],
-            "{name}: the store alone"
+            [
+                dir.join(".thinkthen.timing.lock"),
+                dir.join("thinkthen.sqlite"),
+                dir.join("thinkthen.timing.jsonl"),
+            ],
+            "{name}: answers and screened timing facts"
         );
         let asked: usize = requests
             .iter()

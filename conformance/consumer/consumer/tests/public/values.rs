@@ -4,9 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 
-use serde_json::value::RawValue;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 use thinkthen::{Details, Probabilities};
 
@@ -52,59 +50,9 @@ pub(crate) fn selected_ids(cases: &[Value]) -> Checked<Option<BTreeSet<String>>>
     Ok(Some(selected))
 }
 
-pub(crate) fn digest(url: &str, request: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(b"systemone\n");
-    hasher.update(url.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(request);
-    hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
-/// Every question key of one request body, in wire order, by ADR 0111
-/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
-/// one question as the body carries them, joined by line feeds.
-pub(crate) fn keys(url: &str, body: &[u8]) -> Checked<Vec<String>> {
-    #[derive(serde::Deserialize)]
-    struct Parts<'a> {
-        #[serde(borrow)]
-        state: &'a RawValue,
-        #[serde(borrow)]
-        model: &'a RawValue,
-        #[serde(borrow)]
-        questions: BTreeMap<String, &'a RawValue>,
-    }
-    let parts: Parts<'_> = serde_json::from_slice(body).map_err(|error| error.to_string())?;
-    let mut questions = Vec::new();
-    for (name, question) in parts.questions {
-        let place: usize = name[1..]
-            .parse()
-            .map_err(|_| format!("no qN name: {name}"))?;
-        questions.push((place, question));
-    }
-    questions.sort_by_key(|(place, _)| *place);
-    Ok(questions
-        .into_iter()
-        .map(|(_, question)| {
-            let joined = [
-                "systemone",
-                url,
-                parts.model.get(),
-                parts.state.get(),
-                question.get(),
-            ]
-            .join("\n");
-            Sha256::digest(joined.as_bytes())
-                .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect()
-        })
-        .collect())
-}
+#[path = "keys.rs"]
+mod question_keys;
+pub(crate) use question_keys::fixture_keys;
 
 pub(crate) fn swap(value: &Value, renamed: &BTreeMap<String, Value>) -> Value {
     match value {

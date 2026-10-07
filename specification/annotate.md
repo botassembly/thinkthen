@@ -57,7 +57,7 @@ A not sure answer is `null`. A failed question is a failure marker and never `nu
 {"input":"Payouts have failed for 3 days.","value":{"open":true,"kind":"bug","impact":1.6}}
 ```
 
-`--details` prints `input`, `value`, `answers`, and `meta`, as [result.md](result.md) gives them.
+`--details` prints the complete `thinkthen.result/2` carrier with `input`, `value`, `answers`, and `meta`, as [result.md](result.md) gives them. Successful members carry answer IDs; failed members carry failure IDs.
 
 ### Read a mixed record stream
 
@@ -126,7 +126,7 @@ One document sends every question in one request, across all its `on` groups, be
 
 In record mode, the questions no stored answer covers pack into shared requests across records and `on` groups, by ADR 0111 section 4. A request closes at the `--batch` record count or 4,096 records, an exact byte or profile limit, a change of shared state, a real 50 ms input pause, a full window, or input end. One record whose questions pass a limit alone splits across requests with the state repeated. Every request quotes each record's selected part in its own questions beside the fixed sentence, a batch of one included, by ADR 0111. A structured JSON question text cannot take the quote, so its part goes alone as the evidence. `--batch 1` sends one record a request. One document ignores ambient and file batch settings and refuses a typed `--batch`. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
 
-`--details` reports `meta.usage` as the checked sum over the record's requests only when every reply reports usage. `meta.requests` lists the record's question keys in question-set order, by ADR 0111. `meta.requests_sent` sums each question's share of actual sends, including retries. A detailed row carries no `meta.batches`. `meta.cached` is true only when every question came from the store. Each answer also carries its question's key. Every live reply must report the same model; a stored answer's model takes no part in that check. [result.md](result.md) gives the shape.
+`--details` reports each available `meta.usage` count as the checked sum over the record's requests only when every reply reports that count. A reported input count remains available when output is unknown. `meta.requests` lists the record's question keys in question-set order, by ADR 0111. `meta.requests_sent` sums each question's share of actual sends, including retries. A detailed row carries no `meta.batches`. `meta.cached` is true only when every question came from the store. Each answer also carries its question's key. Every live reply must report the same model; a stored answer's model takes no part in that check. [result.md](result.md) gives the shape.
 
 A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detailed output its entry carries `question`, `failure`, and `request`, and carries no `value`, `answer`, or `threshold`. `meta.failed_questions` counts failed logical questions. It is always present, including zero. `null` means not sure and never means failed.
 
@@ -136,17 +136,34 @@ unusable answer and makes a completed run exit 6. A reply with no usable
 answer in any group stops the run at exit 4. It publishes none of that record's
 answers, even when a sibling `on` group answered successfully. A failed request
 covering several records cannot identify which member caused it;
-`--on-error continue` does not recover that whole batch. Separating questions
-into different `on` groups spends more requests and limits which questions
-share a partial reply or a changed request. It does not preserve sibling-group
-answers when one group wholly fails. Each question is stored alone, so editing one question sends only that
-question again under the same cache.
+The continuation option does not recover that whole batch. An on group
+selects logical evidence; it is not necessarily a separate HTTP request.
+Different selections can share a request when their effective state and
+packing limits permit it. A wholly failed logical group still prevents
+publishing that record's sibling-group answers. Each question is stored alone,
+so editing one question sends only that question again under the same cache.
 
 ## Cautions
 
 A profile enforces only limits stated in bytes, expanded questions, or options. A backend limit stated only in tokens remains unenforceable without a tokenizer or a measured byte ceiling.
 
-Each exact encoded chunk has its own cache key. A group that fits remains one historical chunk, so adding or changing one question asks that whole group again for every record. A split group reuses only chunks whose exact bytes and positions remain unchanged; changing one question can also move later chunk boundaries and their keys. An answer near its threshold can move when neighboring questions change. In six deliberately borderline cases, one answer moved from `false` to not sure when neighboring questions joined it. The largest probability shift was 0.04. Keep the group fixed while comparing runs and retain `--details` probabilities. Use a narrower, distinct `on` group when the record permits it and the questions need separate stability.
+Cache identity belongs to each wire question's effective state, instructions,
+route and model, independently of which neighboring questions share a
+request. Changing a record-batch limit or request boundary therefore sends
+only missing questions and retains already recorded observations. Record
+batching bounds how many records are admitted to one pack; actual wire
+membership counts the questions that pack sends, including expanded tag
+labels and annotation members. Neither the configured bound nor the actual
+count enters a question key.
+
+Grouping can move a model answer. Reuse returns the recorded observation;
+it makes no claim that a fresh scalar request would answer identically.
+Keep the experimental conditions fixed when comparing probabilities. Ticket
+0454 adds optional actual successful-request wire-question counts to result/2
+question sources and stored observations. Cache, replay and coalescing retain
+the original count; split children record their own counts. Missing historical
+counts stay absent. This metadata is an adoption target until the native slice
+lands.
 
 ## An eval is `annotate` and a saved run
 

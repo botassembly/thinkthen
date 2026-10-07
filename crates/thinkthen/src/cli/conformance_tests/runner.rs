@@ -57,6 +57,15 @@ fn facade_answer(
                 .first()
                 .ok_or(EngineError::Defect("an annotate group had no answer"))?;
             Ok(Answered {
+                attempts: Vec::new(),
+                sources: answers
+                    .iter()
+                    .flat_map(|answered| answered.sources.clone())
+                    .collect(),
+                observations: answers
+                    .iter()
+                    .flat_map(|answered| answered.observations.clone())
+                    .collect(),
                 reply: crate::core::Reply::new(
                     first.reply.model().clone(),
                     answers
@@ -152,6 +161,7 @@ fn every_case_crosses_the_private_facade_under_replay() {
                     .to_owned()
             })
             .collect::<Vec<_>>();
+        let metadata_keys = command::metadata_keys(case, backend.url());
         let (_scratch, replay) = command::replay(case);
         let engine = replaying(&backend, replay);
         let mut values = Vec::<Value>::new();
@@ -173,9 +183,8 @@ fn every_case_crosses_the_private_facade_under_replay() {
             assert!(answered.replayed, "{}", case.id);
             assert_eq!(answered.requests_sent, 0, "{}", case.id);
             // A reply names its first question's key, by ADR 0111 section 2.
-            let request_name = command::question_keys(backend.url(), &exchange.request)
-                .into_iter()
-                .next()
+            let request_name = metadata_keys[&requests[place]]
+                .first()
                 .expect("one question");
             assert_eq!(answered.request.as_str(), request_name, "{}", case.id);
             assert_eq!(

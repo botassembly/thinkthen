@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_json::value::RawValue;
 use thinkthen::{
-    Answer, For, Judgment, LoadedQuestion, Probabilities, Question, QuestionKind, Settings,
+    Answer, For, Judgment, LoadedQuestion, Probabilities, Question, QuestionKind, RankSet, Settings,
 };
 
 use crate::engines;
@@ -178,8 +178,47 @@ fn ranked(question: &str, settings: &str) -> Result<(String, LoadedQuestion, Set
     Ok((String::new(), LoadedQuestion::Question(asked), call))
 }
 
+enum KeyedQuestion {
+    Ordinary(LoadedQuestion),
+    Set(RankSet),
+}
+
+fn parse_call(
+    question: &str,
+    file: bool,
+    settings: &str,
+    kind: i32,
+) -> Result<(KeyedQuestion, Settings), String> {
+    if kind != 9 {
+        let (_, asked, controls) = parse(question, file, settings, kind)?;
+        return Ok((KeyedQuestion::Ordinary(asked), controls));
+    }
+    let controls =
+        Settings::parse(settings).map_err(|error| RowError::usage(&error.to_string()).text)?;
+    let fields: serde_json::Value = serde_json::from_str(settings)
+        .map_err(|_| RowError::usage("settings is one JSON object").text)?;
+    if let Some(key) = fields.as_object().and_then(|fields| {
+        fields
+            .keys()
+            .find(|key| !matches!(key.as_str(), "batch" | "context" | "deadline_ms"))
+    }) {
+        return Err(RowError::usage(&format!(
+            "the settings key `{key}` does not belong to this verb"
+        ))
+        .text);
+    }
+    let set = RankSet::from_json(question).map_err(|error| {
+        if file {
+            RowError::local(error.detail().message()).text
+        } else {
+            RowError::from(error).text
+        }
+    })?;
+    Ok((KeyedQuestion::Set(set), controls))
+}
+
 struct KeyedCall {
-    question: LoadedQuestion,
+    question: KeyedQuestion,
     input: Keyed,
     call: Settings,
     query: i64,
@@ -240,8 +279,28 @@ fn run(
             context.as_deref(),
         )?;
         let mut rows = Vec::new();
+        if let KeyedQuestion::Set(set) = &question {
+            if texts.is_empty() {
+                return Ok(b"[]".to_vec());
+            }
+            let call = engine
+                .rank_set_with(set, texts, options)
+                .map_err(|error| engines::call_error(error, total).text)?;
+            for (place, row) in call.value().iter().enumerate() {
+                let (key, _) = input
+                    .0
+                    .get(row.index())
+                    .ok_or("thinkthen defect: a ranked row lost its record")?;
+                rows.push(json!({"key":key,"rank":place + 1,"probability":row.probability(),"question_name":row.question_name(),"facts":call.facts()}));
+            }
+            return serde_json::to_vec(&rows)
+                .map_err(|_| "thinkthen defect: keyed rows could not be written".into());
+        }
+        let KeyedQuestion::Ordinary(question) = &question else {
+            return Err("thinkthen defect: a keyed question was lost".into());
+        };
         if kind == RANK {
-            let LoadedQuestion::Question(question) = &question else {
+            let LoadedQuestion::Question(question) = question else {
                 return Err("thinkthen defect: a rank question was banded".into());
             };
             if texts.is_empty() {
@@ -259,7 +318,7 @@ fn run(
             }
         } else if kind == 0 {
             let decided = engine
-                .decide_many_with(&question, texts, options)
+                .decide_many_with(question, texts, options)
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|error| engines::call_error(error, total).text)?;
             for ((key, _), value) in input.0.iter().zip(decided) {
@@ -269,7 +328,7 @@ fn run(
             }
         } else {
             let answered = engine
-                .details_many_with(&question, texts, options)
+                .details_many_with(question, texts, options)
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|error| engines::call_error(error, total).text)?;
             for ((key, _), value) in input.0.iter().zip(answered) {
@@ -302,9 +361,12 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_portable_many(
         let question = text(question, question_len)?;
         let keyed = text(keyed, keyed_len)?;
         let settings = text(settings, settings_len)?;
-        parse(question, from_file != 0, settings, kind)?;
-        serde_json::from_str::<Keyed>(keyed)
+        parse_call(question, from_file != 0, settings, kind)?;
+        let input = serde_json::from_str::<Keyed>(keyed)
             .map_err(|error| RowError::usage(&error.to_string()).text)?;
+        if kind == 9 && input.0.iter().any(|(_, text)| text.trim().is_empty()) {
+            return Err(RowError::usage("evidence is text, not white space").text);
+        }
         Ok(Vec::new())
     })
 }
@@ -331,7 +393,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_many(
         let question = text(question, question_len)?;
         let keyed = text(keyed, keyed_len)?;
         let settings = text(settings, settings_len)?;
-        let (_, question, call) = parse(question, from_file != 0, settings, kind)?;
+        let (question, call) = parse_call(question, from_file != 0, settings, kind)?;
         let input = serde_json::from_str::<Keyed>(keyed)
             .map_err(|error| RowError::usage(&error.to_string()).text)?;
         run(KeyedCall {

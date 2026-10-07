@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::core::digest::hex;
 use crate::core::plan::Descriptions;
 use crate::core::{
-    Answer, Evidence, Labels, Meta, ModelName, Plan, Question, QuestionText, Record,
+    Answer, Evidence, Labels, Meta, ModelName, Plan, ProfileName, Question, QuestionText, Record,
 };
 
 /// Why a unit set cannot become one find request or result.
@@ -39,9 +39,14 @@ pub(crate) struct Find {
     text: QuestionText,
     none: bool,
     units: usize,
+    profile: Option<ProfileName>,
 }
 
 impl Find {
+    /// Explicit none occupies one option in the existing 255-option primitive bound.
+    pub(crate) const fn maximum(none: bool) -> usize {
+        if none { 254 } else { 255 }
+    }
     /// Build one aggregate request from ordered evidence.
     pub(crate) fn new(
         text: QuestionText,
@@ -49,7 +54,7 @@ impl Find {
         model: ModelName,
         none: bool,
     ) -> Result<Self, FindError> {
-        let most = if none { 254 } else { 255 };
+        let most = Self::maximum(none);
         if !(2..=most).contains(&evidence.len()) {
             return Err(FindError::Count);
         }
@@ -89,7 +94,16 @@ impl Find {
             text,
             none,
             units: evidence.len(),
+            profile: None,
         })
+    }
+
+    pub(crate) fn with_profile(mut self, profile: Option<ProfileName>) -> Self {
+        self.profile = profile;
+        self
+    }
+    pub(crate) fn profile(&self) -> Option<&ProfileName> {
+        self.profile.as_ref()
     }
 
     /// Read the internal choice plan sent to the adapter.
@@ -146,6 +160,7 @@ impl Find {
             verb: "find",
             text: &self.text,
             none: self.none,
+            profile: self.profile.as_ref(),
         })
         .map_err(|_| FindError::Render)
     }
@@ -164,6 +179,7 @@ impl Find {
             question: FindQuestionOwned {
                 text: self.text.clone(),
                 none: self.none,
+                profile: self.profile.clone(),
             },
             answer,
             threshold: None,
@@ -181,14 +197,27 @@ struct FindQuestion<'a> {
     verb: &'static str,
     text: &'a QuestionText,
     none: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<&'a ProfileName>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findQuestion"))]
 #[serde(tag = "verb", rename = "find")]
-struct FindQuestionOwned {
+pub(super) struct FindQuestionOwned {
     text: QuestionText,
     none: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<ProfileName>,
+}
+
+impl FindQuestionOwned {
+    pub(crate) fn profile(&self) -> Option<&str> {
+        self.profile.as_ref().map(ProfileName::as_str)
+    }
+    pub(crate) const fn parts(&self) -> (&QuestionText, bool) {
+        (&self.text, self.none)
+    }
 }
 
 /// The mapped find answer and its selected zero-based unit.
@@ -207,6 +236,15 @@ pub(crate) struct FindAnswer {
 }
 
 impl FindAnswer {
+    pub(crate) fn pick(&self) -> &str {
+        &self.pick
+    }
+
+    /// Confidence reported for this distribution, when supplied.
+    pub(crate) const fn confidence(&self) -> Option<f64> {
+        self.confidence
+    }
+
     /// The selected unit, or none when `none` shares or owns the lead.
     #[must_use]
     pub(crate) const fn selected(&self) -> Option<usize> {
@@ -230,11 +268,11 @@ fn ordered<S: Serializer>(entries: &[(String, f64)], serializer: S) -> Result<S:
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findDetails"))]
 pub(crate) struct FindResult {
     schema: &'static str,
-    value: Option<Record>,
-    question: FindQuestionOwned,
-    answer: FindAnswer,
-    threshold: Option<()>,
-    meta: Meta,
+    pub(super) value: Option<Record>,
+    pub(super) question: FindQuestionOwned,
+    pub(super) answer: FindAnswer,
+    pub(super) threshold: Option<()>,
+    pub(super) meta: Meta,
 }
 
 #[cfg(test)]

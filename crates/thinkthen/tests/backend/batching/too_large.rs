@@ -210,7 +210,7 @@ fn a_split_recording_replays_byte_for_byte() {
     assert!(
         details(&detailed_replay)
             .iter()
-            .all(|row| row["meta"].get("attempts").is_none())
+            .all(|row| row["meta"]["attempts"] == serde_json::json!([]))
     );
     assert_eq!(listener.count(), 3, "replay creates no live attempt");
     let replayed = decide(

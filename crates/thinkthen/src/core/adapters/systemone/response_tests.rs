@@ -45,7 +45,10 @@ fn decode_reads_the_answer_the_fixture_shows() {
 fn validated_usage_survives_when_every_answer_is_refused() {
     let body = br#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","probabilities":{"a":1.0}}},"usage":{"input_tokens":17,"output_tokens":3}}"#;
     let decoded = decode_observed(&urgency_plan(), body);
-    assert_eq!(decoded.usage, Some(Usage::new(17, 3)));
+    assert_eq!(
+        decoded.usage,
+        Some(crate::core::ReportedUsage::from_complete(Usage::new(17, 3)))
+    );
     assert!(matches!(decoded.reply, Err(DecodeError::WrongKind(0))));
 }
 

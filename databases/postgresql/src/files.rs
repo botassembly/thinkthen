@@ -119,7 +119,7 @@ fn resolve(path: &str, directory: Option<&str>) -> PathBuf {
 
 /// Read a file a caller named with `@`. A role without
 /// `pg_read_server_files` reads only inside `thinkthen.file_directory`.
-fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String, Error> {
+pub(crate) fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String, Error> {
     let directory = directory.filter(|held| !held.trim().is_empty());
     let confined = if ffi::may_read_files() {
         None

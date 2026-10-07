@@ -2,9 +2,9 @@
 
 Status: **Settled** for the bare value, the object, the five answer kinds, the full distribution with `confidence`, and request identity. ADR 0010 accepted the original kinds, ADR 0030 accepted `find`, and the 2026-09-21 amendment to ADR 0017 accepted `meta.requests`. ADR 0048 amends `meta` for batches.
 
-## Result/2 target for 0.2
+## Result/2 for 0.2
 
-Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The remaining sections and their result/1 examples describe landed behavior until adoption. The generated [result schema](result.schema.json) continues to describe landed Rust serializers under ADR 0112; implementation changes it with those serializers and the strict complete-result readers, never by hand in this contract ticket.
+Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The native branch implements the complete Rust calls and CLI details. The remaining result/1 examples document the retained explicit compatibility projection; they are not the new CLI details. Whole-code acceptance and host adoption remain open. The generated [result schema](result.schema.json) contains native result/2 definitions alongside retained result/1 compatibility definitions under ADR 0112. The additive native `complete_call_schema()` supplies the packaged strict complete success/error schema to consumers such as MCP. Both artifacts derive from the production serializers; host adoption requires actual consumer execution.
 
 ### Complete results and compatibility
 
@@ -31,6 +31,14 @@ The five atomic answers remain `yes_no:{probability}`, `choice:{pick,probabiliti
 
 An annotate success entry requires `answer_id,value,question,answer,threshold,request`. A failure entry requires `failure_id,question,failure,request` and omits the successful fields. The existing bare failure marker and six backend member causes remain unchanged. Recognize retains `answer:{pieces,names,pairs}` with complete probabilities. Relate retains `answer:{questions}`; each entry keeps `relation,reads,method,direction,source,target,request` and requires either success `answer_id,probability,accepted` or failure `failure_id,failure`. Existing nullable target rules remain.
 
+### Recorded CLI example
+
+This `decide --details --replay` row comes from the existing refund recording. It retains the actual historical observation and reports no current send or attempt. Its original wire-question count was never recorded, so `batch_size` is absent.
+
+```json decide
+{"schema":"thinkthen.result/2","answer_id":"a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e","value":true,"question":{"verb":"decide","text":"Does the customer ask for money back?"},"answer":{"kind":"yes_no","probability":0.99},"threshold":0.5,"meta":{"tool":"thinkthen 0.2.0","question_sha256":"ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":331,"output_tokens":21},"requests_sent":0,"cached":true,"requests":["1c38c6f52bec903f93aef63060bdc08055463afe00b5759223bfc5a64d30dafe"],"failed_questions":0,"attempts":[],"origin":"replay","question_sources":[{"origin":"replay","answered_by":"jev-1.13.0"}],"observations":[{"observation_id":"017420ba535606f3ab3ec3f9364250b5891432862f33194ab3d520cced234017"}],"answered_by":"jev-1.13.0"},"position":{"file":null,"first":1,"last":7}}
+```
+
 ### Identity types and stable answers
 
 `CallId`, `SdkRequestId`, `ObservationId`, `FailureId` and `AnswerId` are distinct opaque validated types. Their JSON/header spelling is exactly 64 lowercase hexadecimal characters. Question keys and `request_sha256` are SHA-256 digests with that spelling, not call or send identities. Provider `request_id` remains its separate screened string type. IDs support correlation, not authentication.
@@ -53,7 +61,7 @@ Normalize numeric spelling and defaults through existing typed serializers. Cano
 
 Retain existing metadata fields and optionality: `tool`, the applicable question/set digest, `url`, historical `model`, `usage?`, `requests_sent`, `cached`, `requests`, `failed_questions` and applicable profile/batch/context warnings. Add required `origin`, `question_sources` and `observations`; add optional scalar `answered_by`. `meta.proxy` is absent throughout 0.2.
 
-`question_sources` aligns one-to-one with `meta.requests` in logical question order, including repeated occurrences. Each entry requires `origin` and `answered_by`, the validated model reported by the response behind that occurrence, including a recoverable member failure in a validated response. `observations` has exactly the same alignment. Each entry is exclusively `{"observation_id":ObservationId}` or `{"failure_id":FailureId}`. Failed occurrences do not become stored answers. Whole transport failures return terminal errors rather than fabricated source entries.
+`question_sources` aligns one-to-one with `meta.requests` in logical question order, including repeated occurrences. Each entry requires `origin` and `answered_by`, the validated model reported by the response behind that occurrence, including a recoverable member failure in a validated response. Each source may additionally carry batch_size, a positive unsigned 32-bit integer: the actual wire-question count in the successful request that produced that observation under corrected ticket 0454. It is outside identity. Retain the original count on cache/replay/coalescing; split children carry their own counts. Omit it when historical data never recorded the count; never infer one. Aggregates expose the aligned constituent counts without a guessed scalar batch size. `observations` has exactly the same alignment. Each entry is exclusively `{"observation_id":ObservationId}` or `{"failure_id":FailureId}`. Failed occurrences do not become stored answers. Whole transport failures return terminal errors rather than fabricated source entries.
 
 Emitted source origins are `live`, `cache`, `replay`. Reserve `proxy` and `memory` as type values without emitting them. A direct call to a proxy hostname over ordinary model wire is `live`. Explicit replay with observations is `replay`; otherwise any required live response makes the result `live`, and wholly cached observations make it `cache`. Mixed cache/live results retain each occurrence's actual source. Emit scalar `answered_by` only when nonempty constituent sources all agree. Retain current mixed-model refusals; this metadata admits no previously refused combination. Historical `meta.model` remains a compatibility field, not proof that mixed sources agree.
 
@@ -75,6 +83,22 @@ Reason: the landed relation planner can produce no questions for a lone entity w
 
 Add required `facts.call_id` to every successful invocation, including zero-send success, and every started failure. Start means typed admission and route resolution succeeded and engine execution began, before lookup. Pre-start refusals have no invented facts. Terminal errors have no successful result, answer ID or fabricated result meta; they retain final facts and opt-in attempts. Keep the six public error kinds. Repeated SQL rows of one call share its call ID and facts; a summed tally does not invent a single call ID.
 
+The additive native `Call::complete()` view serializes `{value,facts}` with a
+concrete result/2 document (or ordered result/2 records) and complete invocation
+facts. The released generic door and count-only `Facts` serialization retain
+their existing fields. `Error::complete()` serializes `{error,facts?}`: error
+contains the existing safe `kind,message,retryable`, structured
+`stopped:{at?,cause,status?,retryable}`, and any actual typed budget denial.
+`at` is the known original one-based stopping record; cancellation, deadlines
+and unknown positions omit it. The cause vocabulary is `usage,local,no_key,
+transport,status,too_large,reply,backend,cancelled,deadline,defect`. Denials use
+a closed `kind` tag and retain their existing limit/last-status fields. A token
+already cancelled during admission has no started facts; a deadline failure
+inside engine execution retains them. No failure envelope contains a successful
+value, answer ID or result metadata. Serialization of caller-owned record/find
+originals requires Serialize only when writing JSON, never to execute or inspect
+the typed result. It retains their authored order and complete original payload.
+
 Every actual send uses:
 
 ```text
@@ -83,7 +107,7 @@ X-ThinkThen-Call-Id: CallId
 X-ThinkThen-Request-Id: SdkRequestId
 ```
 
-The closed surface tokens are `cli`, `rust`, `c`, `python`, `pandas`, `python-polars`, `rust-polars`, `javascript`, `ruby`, `r`, `cpp`, `go`, `csharp`, `java`, `kotlin`, `scala`, `swift`, `zig`, `php`, `dart`, `objective-c`, `ada`, `cobol`, `flutter`, `duckdb`, `sqlite`, `postgresql`. TypeScript uses `javascript`. Outer wrappers explicitly supply their token; C validates it. Unknown tokens refuse locally. The version comes from the compiled Rust engine, not the wrapper package.
+The closed surface tokens are `cli`, `rust`, `c`, `python`, `pandas`, `python-polars`, `rust-polars`, `javascript`, `ruby`, `r`, `cpp`, `go`, `csharp`, `java`, `kotlin`, `scala`, `swift`, `zig`, `php`, `dart`, `objective-c`, `ada`, `cobol`, `flutter`, `duckdb`, `sqlite`, `postgresql`, `mcp`. TypeScript uses `javascript`. Outer wrappers explicitly supply their token; C validates it. Unknown tokens refuse locally. The version comes from the compiled Rust engine, not the wrapper package.
 
 A new invocation receives a new call ID. Each prepared send receives a new SDK request ID; status retries retain it and refusal-split children get new IDs. Every stage uses the engine's fixed endpoint, effective key and provider API type under ADR 0119. IDs contain no caller text, credential, address or model; transient call/request IDs enter neither cache keys, recordings nor count-only usage. Future proxy deduplication scopes request IDs to authenticated callers and compares bodies; differing bodies conflict. SDK accounting still counts actual sends and retries. Keep the existing rule that a transport failure is not retried.
 
@@ -167,6 +191,7 @@ For example, one detailed `decide` result is:
 ```
 
 - `value` is the bare judgment. For `filter --details`, it is the cut's boolean; `filter` keeps the record when that boolean is true.
+- Complete native atomic results include `source` only when the input supplied a physical location. It holds the exact `file`, with paired `first_line` and `last_line` for text units. Image filenames omit line coordinates. The original `input` remains intact; physical location changes no model request, cache key or answer identity.
 - `question` names the question kind and the text the model received. `filter` and ordinary `rank` ask a `decide` question, so their `question.verb` is `decide`. `rank` with a saved `score` question has `question.verb: score`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
@@ -269,7 +294,7 @@ Library and SQL details forms carry the same optional warning in `meta`. The pub
 
 ## The run facts line
 
-On an asking command, `--facts` prints one compact `thinkthen.run/1` JSON object as the last standard-error line. Without the flag, a finished run stays silent there. The line follows a stop diagnostic and any usage-counter warning, and precedes a stopping signal's re-raise. `records` counts finished input records, including filtered rows and rows dropped by `rank --top`; a one-document success and one finished `find` or `relate` set count one, while a plan counts zero and sends nothing. `requests_sent`, `retries`, and `cache_answers` come from this process's counters. `cache_answers` counts answers from the answer cache only, never from a replay or record folder, as [recording.md](recording.md#the-question-store) says. `seconds` is elapsed wall time in seconds, rounded to three decimals. `input_tokens` and `output_tokens` appear only if at least one live reply arrived, every live reply reported usage, and their exact sum remained valid. `model` appears only if at least one reply arrived and all live or stored replies named the same model. With both caller prices configured, `estimated_cost_usd` is a six-decimal string only when every started attempt supplied both token counts and the exact sum remained valid. Priced no-send, cache-only and replay-only work reports `"0.000000"`; an unpriced run omits this member. The estimate uses caller-selected prices, not a provider bill or admission limit.
+On an asking command, `--facts` prints one compact `thinkthen.run/1` JSON object as the last standard-error line. Without the flag, a finished run stays silent there. The line follows a stop diagnostic and any usage-counter warning, and precedes a stopping signal's re-raise. `records` counts finished input records, including filtered rows and rows dropped by `rank --top`; a one-document success and one finished `find` or `relate` set count one, while a plan counts zero and sends nothing. `requests_sent`, `retries`, and `cache_answers` come from this process's counters. `cache_answers` counts answers from the answer cache only, never from a replay or record folder, as [recording.md](recording.md#the-question-store) says. A started invocation includes `call_id`, the same opaque ID sent on its requests; a pre-start refusal or plan omits it. `seconds` is elapsed wall time in seconds, rounded to three decimals. `input_tokens` and `output_tokens` appear only if at least one live reply arrived, every live reply reported usage, and their exact sum remained valid. `model` appears only if at least one reply arrived and all live or stored replies named the same model. With both caller prices configured, `estimated_cost_usd` is a six-decimal string only when every started attempt supplied both token counts and the exact sum remained valid. Priced no-send, cache-only and replay-only work reports `"0.000000"`; an unpriced run omits this member. The estimate uses caller-selected prices, not a provider bill or admission limit.
 
 A failed run adds `stopped` with `cause` and `retryable`, plus `at` when the stop line names a record. A signal stop has no `at`. `status` appears only for the `status` cause. The stable causes are `usage` for exit 2, `local` for exit 5, `no_key`, `transport`, `status`, `too_large`, `reply`, and `backend` for exit 4, `cancelled` for a stopping signal, and `defect` for exit 70. `too_large` covers status 413 and status 400 naming `max_tokens_exceeded`. Only `status` with a retried status (429, 500, 502, 503, 504, 520, 521, 522, 523, 524, or 529, as [backends.md](backends.md) lists) has `retryable:true`; transport has false because the request may have arrived. Exit 6 is a finished partial result and has no `stopped`.
 
@@ -377,4 +402,4 @@ For `filter` and `rank`, every answered row in one run must also name the same r
 
 Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It says that a cache or recording folder may hold answers from the other version, and it tells the user to rerun with `--no-cache` or to prune that folder with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a `--no-cache` run returns. The library says the same of its cache.
 
-0447 image location addition preserves text SourceRecord's required line fields. Native ImageSourceRecord has record and file only. CLI image file details add flat file and position.file and omit first/last and first_line/last_line. Attachment details carry ordered source names in position.images beside typed input images; filenames never enter model state or identity. Native typed image calls return existing scalar/details/facts carriers until the separately owned result/2 implementation adopts shared identifiers.
+0447 image location addition preserves text SourceRecord's required line fields. Native ImageSourceRecord has record and file only. CLI image file details add flat file and position.file and omit first/last and first_line/last_line. Attachment details carry ordered source names in position.images beside typed input images; filenames never enter model state or identity. Existing native scalar/details/facts carriers remain available; additive complete image calls use the same result/2 identities and provenance as text.

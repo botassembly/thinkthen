@@ -115,9 +115,15 @@ fn ten_folder_examples_retain_original_records_and_physical_sources() -> io::Res
         let normalized = text(&output.stdout)
             .replace(prefix.trim_matches('"'), "")
             .replace(r"\\", "/");
+        let expected = fs::read_to_string(examples.join(format!("{golden}.out")))?;
+        let parse = |text: &str| {
+            text.lines()
+                .map(|line| serde_json::from_str::<Value>(line).unwrap())
+                .collect::<Vec<_>>()
+        };
         assert_eq!(
-            normalized,
-            fs::read_to_string(examples.join(format!("{golden}.out")))?,
+            parse(&normalized),
+            parse(&expected),
             "{verb} published output"
         );
         assert!(!rows.is_empty(), "{verb}");

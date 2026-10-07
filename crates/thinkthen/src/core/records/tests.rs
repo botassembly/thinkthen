@@ -345,7 +345,7 @@ fn a_candidate_list_the_verb_does_not_take_names_no_part_of_the_record() {
         ),
         (
             br#"{"note":"n","codes":{"late":null}}"#,
-            RecordError::OptionsShape("/codes".to_owned()),
+            RecordError::Options(LabelsError::OptionCount),
         ),
         (
             br#"{"note":"n","codes":["late"]}"#,

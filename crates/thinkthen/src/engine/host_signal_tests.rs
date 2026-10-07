@@ -209,6 +209,8 @@ fn file_size_child() {
         "x".repeat(8_192)
     );
     let row = Row {
+        observation_id: crate::core::ObservationId::new("b".repeat(64)).unwrap(),
+        batch_size: None,
         key: QuestionKey::of(&url, r#""jev-1""#, state.json(), question),
         url: url.as_str(),
         model: "jev-1",
