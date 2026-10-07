@@ -10,7 +10,7 @@ The transport must reuse native admission, including explicit-field precedence a
 
 ## Complete adoption
 
-Slice B passes all 250 required cases through the installed command. Explicit typed input descriptors retain JSON, separate context, ordered candidates, images and physical source. Native complete results retain original ordinals, find candidates and ancillary images; failed incremental calls retain the actual completed prefix and final facts. Incoming frames remain bounded at 16 MiB; both equivalent output representations share a 192 MiB limit including the newline. One fresh High whole-change review accepted the native and MCP changes. Focused evidence includes 35 Rust tests, native schema checks, capture limits, Clippy and 16 installed behavior groups. Full landing checks are running on the combined MCP/npm commit.
+Slice B passes all 250 required cases through the installed command. Explicit typed input descriptors retain JSON, separate context, ordered candidates, images and physical source. Native complete results retain original ordinals, find candidates and ancillary images; failed incremental calls retain the actual completed prefix and final facts. Incoming frames remain bounded at 16 MiB; both equivalent output representations share a 192 MiB limit including the newline. One fresh High whole-change review accepted the native and MCP changes. Focused evidence includes 35 Rust tests, native schema checks, capture limits, Clippy and 16 installed behavior groups. Full tests, lint and specification checks passed on combined commit 4d9d6e794. Integration corrections updated the find fixture and extracted two test helpers without removing assertions.
 
 ## Remaining
 
