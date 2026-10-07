@@ -2,7 +2,7 @@
 
 The C door serves every language that can call a C library (ADR 0037, Ian: "Whatever you need, let's support everything through C"). The library team owns its ABI. Ticket 0094 ported it from the retired `surfaces` branch (tag `surfaces-wave7-final`) onto the public API. This page keeps the branch's options and ownership design and records what the port changed.
 
-The shape: one engine value built from the environment, one JSON door that carries any request, typed doors for the hot paths, and JSON text for every result of open size. The drawn slide's four plain signatures stay frozen. Each control sits on an `_opts` twin beside them.
+The shape: one engine value built from the environment, one JSON door that carries any request, typed doors for the hot paths, and JSON text for every result of open size. The drawn slide's four plain signatures stay frozen. Each control sits on an `_opts` twin beside them. An engine holds no thread between calls and rebuilds its state after a fork. The single installed header retains the adjacent pointer, lifetime, cancellation and failure contracts; this reference holds the extended settings and JSON schemas.
 
 ## The header table
 
@@ -63,6 +63,20 @@ With `"details": true`, a single judgment puts the `thinkthen.result/1` object u
 
 The door writes the `value` for `decide`, `choose`, `score`, `tag`, `filter`, `rank`, and `find` with the existing result writer. `tests/door/bytes.rs` compares that value with the command's output on the shared cases.
 
+## Settings, question files and plans
+
+`thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE` and the native XDG cache/configuration defaults. `thinkthen_engine_new_with` adds one UTF-8 JSON settings object. NULL or `{}` uses the environment alone. Its keys are `backend`, `base_url`, `model`, `throttle`, `max_requests`, `max_requests_total`, `max_estimated_input_tokens_total`, `max_request_bytes`, `batch`, `cache`, `record`, `replay`, `timeout` (whole seconds), `max_retries` and `profile`. `cache` accepts false or a folder; `max_requests` and the two process totals may be null. The estimated token total charges each final encoded live request body at `ceil(bytes * 908 / 1000)`; it is not a provider token or billing cap. A named backend selects its captured key and default model, and an explicit `base_url` receives that key. No key is accepted in settings. Invalid keys, repeated keys or wrong types fail in the calling thread's null-engine error slot, and building sends nothing.
+
+`thinkthen_question_file` reads at most 1 MiB through the shared single-question grammar and returns the validated original JSON. Its owned NUL-terminated result can be passed to a typed question verb or used when constructing a JSON-door request. Its adjacent declaration specifies output ownership, local/usage refusals and path/content secrecy.
+
+`thinkthen_plan_json` accepts one closed `thinkthen.plan-input/1` object with `verb` (`decide`, `choose`, `score` or `tag`), `question` (bare question text or one question object asking that verb), `input` (one text or an array of texts) and optional portable `thinkthen.settings/1` settings. Bare text takes question fields such as `options` and `threshold` from settings; a question object takes only `batch`, `context` and `deadline_ms` from them. Success returns the result schema's `plan` object: `records`, `requests`, `estimated_bytes`, `estimated_input_tokens` (`lower` and `upper`), `upper_bound` and `first_body_utf8` (the first request body, or null for no input). Ordinary requests count admitted wire-question occurrences as a conservative initial-request bound before refusal splits and retries; bytes and tokens describe the uncoalesced uninterrupted packed preview, as [ADR 0123](../../sdlc/planning/adr/0123-conservative-plan-request-bounds.md) specifies. Planning reads no key or cache and sends nothing. Unknown/repeated members, a wrong verb or input shape, bad settings, settings repeated by the question, or null pointers return `THINKTHEN_EUSAGE` without changing either output.
+
+## Recognition and relation JSON
+
+`thinkthen_recognize` accepts version-one question JSON with a `recognize` section (`kinds`, `relations`) and optional `threshold` and `relation_threshold`. It follows native cache/replay settings. Success returns `{"entities": [...], "relations": [...]}`; entities carry `text`, `start`, `end`, `length`, `kind` and `strength`. Offsets and lengths count code points of `text`; with no kinds, names use `ENTITY`. Relation ends carry `source` and `target` in both returned JSON and question-file rules.
+
+`thinkthen_relate` accepts version-one question JSON with a `relate` section (`relations`) and optional `threshold`. Each counted record is JSON with string `name` and `kind`; a record with `text` and no `name` uses its `text`. `count` above 255 is refused before pointer reads. A `fields` pointer other than `/name` and `/kind` is a usage refusal. Success returns `{"edges": [...]}` in rule order. Each edge carries `relation`, `source` and `target` (`name` and `kind`) and `probability`; a both-ways rule adds `either: true` last and keeps its ends in input order. Both typed JSON calls return `THINKTHEN_OK` on success or the error-kind code on failure, leaving outputs unchanged. Plain forms use `THINKTHEN_NO_DEADLINE` and a null token; owned outputs use `thinkthen_free_string`.
+
 ## 1. Cancellation
 
 The door owns a token handle. `thinkthen_cancel_token_new` creates it, `thinkthen_cancel` fires it, and `thinkthen_cancel_token_free` frees it. Every `_opts` spelling takes a token, and a null token means none. A fired token stays fired, and one token can stop many calls. No new request or retry starts after the fire. A request already sent finishes within its attempt timeout and the budget. A complete answer reaches the cache, and every reply reaches the counters, so the same call with a fresh token replays it and pays nothing more. The call that carried the token then returns `THINKTHEN_ECANCELLED` with no results, whatever the reply held, a failure included. The call reads the token on every thread it uses, and once more after its last request ends. A fire after that last read does not change the result.
@@ -77,6 +91,8 @@ Every `_opts` spelling takes an `int64_t deadline_ms` beside the token. The door
 - Zero is a spent budget. The call returns `THINKTHEN_EDEADLINE` before anything is sent.
 - Any other negative value, and any value past 4,294,967,295 seconds, is a usage failure before anything is sent.
 - A positive value is that many milliseconds from the call.
+
+A spent budget ends within one polling tick. The maximum is 4,294,967,295,000 milliseconds. Clamp a computed elapsed deadline at zero (`end > now ? end - now : 0`) so it never becomes the no-deadline sentinel.
 
 Every plain spelling is its `_opts` twin called with `THINKTHEN_NO_DEADLINE` and a null token. `tests/c/opts.c` proves this on the answer path and the failure path.
 
@@ -103,7 +119,7 @@ The door checks its pointers before it asks the engine, so a refusal sends nothi
 
 ## 5. Allocated results
 
-- A string from `thinkthen_call`, `thinkthen_recognize`, or `thinkthen_relate` is freed with `thinkthen_free_string`, once.
+- A string from `thinkthen_call`, `thinkthen_question_file`, `thinkthen_plan_json`, `thinkthen_recognize`, or `thinkthen_relate` is freed with `thinkthen_free_string`, once.
 - Each new typed facts string, and each new recognition or relation result string, is independently owned and freed with `thinkthen_free_string` once.
 - The token is freed with `thinkthen_cancel_token_free` after every call that carried it has returned.
 - The engine is freed with `thinkthen_engine_free` after every call on it has returned.
