@@ -122,7 +122,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
     # The static consumers compile their actual public accessors before executing cells.
     source=Path(command[-1])
     compiler=None
-    if consumer=='python':
+    if consumer in ('python','pandas','python-polars'):
         compiler=[sys.executable,'-m','mypy','--strict','--python-executable',command[0],str(source.with_name('native_types.py'))]
     elif consumer=='typescript':
         compiler=[command[0],str(root/'libraries/typescript/target/npm/node_modules/typescript/bin/tsc'),'--strict','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','--rootDir',str(source.parent),'--outDir',str(source.parent),str(source.with_suffix('.ts'))]
@@ -247,4 +247,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
 if __name__=='__main__':
     import os,sys
     root=Path(__file__).resolve().parents[3]
-    sys.exit(bool(run('python',[sys.executable,str(root/'libraries/python/tests/native_case.py')],root,{'PYTHONPATH':str(root/'libraries/python')})))
+    failures=run('python',[sys.executable,str(root/'libraries/python/tests/native_case.py')],root,{'PYTHONPATH':str(root/'libraries/python')})
+    for consumer,library in [('pandas','pandas'),('python-polars','polars')]:
+        failures += run(consumer,[sys.executable,str(root/'libraries/python/tests/native_frame_case.py')],root,{'PYTHONPATH':str(root/'libraries/python'),'THINKTHEN_FRAME_LIBRARY':library})
+    sys.exit(bool(failures))

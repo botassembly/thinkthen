@@ -104,7 +104,10 @@ import sys
 from pathlib import Path
 root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
-sys.exit(bool(run('python',[sys.executable,sys.argv[2]],root)))
+failures=run('python',[sys.executable,sys.argv[2]],root)
+for consumer,library in [('pandas','pandas'),('python-polars','polars')]:
+    failures += run(consumer,[sys.executable,str(Path(sys.argv[2]).with_name('native_frame_case.py'))],root,extra_env={'THINKTHEN_FRAME_LIBRARY':library})
+sys.exit(bool(failures))
 PYNATIVE
 
 	exit 0
