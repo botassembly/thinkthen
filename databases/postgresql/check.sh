@@ -734,7 +734,7 @@ check the_file_gate
 complete_question_resolution_keeps_privilege_and_content_boundaries() {
 	local catalog="$SCRATCH/.config/thinkthen/questions" allowed="$RUN/complete-questions" kind name
 	mkdir -p "$catalog" "$allowed"
-	trap "$(printf 'rm -rf -- %q' "$catalog")" EXIT
+	trap "$(printf 'rm -f -- %q; rmdir -- %q' "$catalog/refund.json" "$catalog")" EXIT
 	printf '{"decide":"Refund?"}' >"$catalog/refund.json"
 	printf '{"decide":"Refund?"}' >"$allowed/refund.json"
 	printf '{"score":"Strength?","levels":["low","medium","high"]}' >"$allowed/wrong.json"
