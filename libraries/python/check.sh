@@ -86,6 +86,7 @@ assert importlib.util.find_spec("thinkthen._labels")
 assert importlib.util.find_spec("thinkthen.pydantic")
 assert importlib.util.find_spec("thinkthen.judge")
 assert importlib.util.find_spec("thinkthen.stream")
+assert importlib.util.find_spec("thinkthen.complete")
 assert any(need.startswith("pydantic") and "2.11" in need and "<3" in need
            for need in importlib.metadata.requires("thinkthen"))' ||
 		{ echo "libraries/python: the installed wheel lacks its label modules or optional extra" >&2; exit 1; }

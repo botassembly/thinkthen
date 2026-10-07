@@ -63,7 +63,7 @@ if [ "$profile" = smoke ]; then
     case $(uname -s) in Darwin) library=libthinkthen_typescript.dylib ;; *) library=libthinkthen_typescript.so ;; esac
     scratch_dir project
     mkdir -p "$project/node_modules/thinkthen"
-    cp package.json index.js index.mjs index.d.ts loader.js LICENSE "$project/node_modules/thinkthen/"
+    cp package.json index.js index.mjs index.d.ts loader.js complete.js complete.d.ts _complete.js _complete.d.ts LICENSE "$project/node_modules/thinkthen/"
     cp -- "${CARGO_TARGET_DIR:-target}/debug/$library" \
         "$project/node_modules/thinkthen/thinkthen-$(node -p 'process.platform + "-" + process.arch').node"
     cd "$project"
@@ -162,7 +162,7 @@ addon="thinkthen-$(node -p 'process.platform + "-" + process.arch').node"
 mkdir -p target/pack
 npm pack --json --offline --pack-destination target/pack 2>/dev/null >"$plant/pack"
 packed=$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))[0].files.map((f) => f.path).sort().join(" "))' "$plant/pack")
-[ "$packed" = "LICENSE README.md index.d.ts index.js index.mjs loader.js package.json $addon" ] || fail "npm pack lists $packed"
+[ "$packed" = "LICENSE README.md _complete.d.ts _complete.js complete.d.ts complete.js index.d.ts index.js index.mjs loader.js package.json $addon" ] || fail "npm pack lists $packed"
 [ "$(node -p 'require("./package.json").license')" = MIT ] || fail 'package.json names no MIT license'
 [ "$(grep -c -- "$HOME" "$addon" || true)" = 0 ] || fail "$addon names $HOME"
 

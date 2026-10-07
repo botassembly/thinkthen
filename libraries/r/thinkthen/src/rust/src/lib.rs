@@ -15,6 +15,7 @@
 pub mod ffi;
 
 mod calls;
+mod complete;
 mod files;
 mod plan;
 mod relate;
@@ -39,7 +40,10 @@ fn packed(kind: &str, retryable: bool, message: &str) -> String {
 
 /// The one error-kind table: the engine's own words (ADR 0047 item 7).
 fn carry(error: &Error) -> String {
-    packed(error.kind().name(), error.retryable(), &error.to_string())
+    let base = packed(error.kind().name(), error.retryable(), &error.to_string());
+    complete::stream::failure(error).map_or(base.clone(), |snapshot| {
+        format!("{base}{SEP}{}", snapshot.replace('%', "%%"))
+    })
 }
 
 /// A caller's mistake the shim refuses before any request.
@@ -75,6 +79,7 @@ pub(crate) struct Settings {
     pub(crate) replay: Option<String>,
     pub(crate) profile: Option<String>,
     pub(crate) batch: Option<BatchSetting>,
+    pub(crate) refresh_cache: bool,
 }
 
 impl Settings {
@@ -116,7 +121,7 @@ impl Settings {
 
     /// The engine these settings build over the environment's own.
     fn build(&self) -> Result<Engine, Error> {
-        let mut builder = EngineBuilder::from_env()?;
+        let mut builder = EngineBuilder::from_env()?.refresh_cache(self.refresh_cache);
         if let Some(backend) = &self.backend {
             builder = builder.backend(backend)?;
         }

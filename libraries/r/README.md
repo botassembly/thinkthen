@@ -165,29 +165,54 @@ No key is needed. Select replay before any asking call because R keeps one engin
 
 From `libraries/r`, `./check.sh` runs the complete offline surface check. It exits 77 and reports "not run" if R, a tested R dependency or a cached crate is missing. `tools/setup.sh` prepares pinned R dependencies on a networked machine. From the repository root, `sdlc/scripts/smoke libraries/r` installs into owned scratch, loads the native package and replays a saved answer; its loopback counter proves the consumer adds no requests.
 
-The [index conventions](#indexes-and-source-coordinates) distinguish R positions, native offsets and physical source lines. Explicit files and folders use the [library reader contract](../files.md) and [`tt_files` helper reference](thinkthen/man/tt_files.Rd), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments. 0431 owns the typed R carriers. R image support remains required for 0.2 under 0431/0447; this installation ticket does not implement it.
+The [index conventions](#indexes-and-source-coordinates) distinguish R positions, native offsets and physical source lines. Explicit files and folders use the [library reader contract](../files.md) and [`tt_files` helper reference](thinkthen/man/tt_files.Rd), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments. The complete calls below expose typed native image and located result carriers.
 
-## Result/2 integration in progress (0431)
+## Complete native calls
 
-Private host carriers and named request builders cover the reviewed result/2
-contract for all ten functions. They preserve explicit question files, described
-options/kinds and annotation members, JSON records/context/candidates, located
-files and ordered duplicate image attachments. Strict carrier decoding retains
-probabilities, IDs, provenance, final facts, attempts, annotation failures, spans
-and both relation endpoints; it never promotes result/1 or generates missing IDs.
-The independent fixtures test serialization and accessors, not installed parity.
+`tt_decide_complete`, `tt_choose_complete`, `tt_tag_complete`,
+`tt_score_complete`, `tt_filter_complete`, `tt_rank_complete`,
+`tt_find_complete`, `tt_annotate_complete`, `tt_recognize_complete` and
+`tt_relate_complete` return typed `results`, native final `facts`, original
+`inputs` and `ordinals`. Known fields are validated classes with ordinary named
+accessors; arbitrary caller payloads remain lists/JSON.
 
-Complete execution remains private until the native owner supplies result/2
-serializers, identity/provenance/facts/attempts and complete results for every
-admitted input; C-backed integration also needs 0426's actual complete calls,
-accessors and owned failure snapshots. Native image construction/admission,
-question-file loading, file reading, cache/replay and cancellation stay native.
-Private builders retain original bytes without guessing media or dimensions;
-the other seven functions explicitly refuse images. Rich rank and rank sets
-await the native complete path. Existing bare and generic JSON calls keep their
-current behavior. Public complete consumers and counted replay/storage/image
-conformance cases have not run, so this work makes no complete parity claim.
+```r
+question <- list(role="atomic", body=list(decide="Is this a complaint?"))
+input <- list(kind="records", records=list(
+  list(content=list(kind="text", value="Please refund."))))
+call <- tt_decide_complete(question, input, attempts=TRUE)
+probability <- call$results[[1L]]$answer$probability
+requests <- call$facts$requests_sent
+```
 
-Private wire carriers keep native scalar offsets. Public R accessors retain
-the documented one-based text positions and separate zero-based located native
-spans; no offset is converted without the actual original source.
+Question sources choose one body, raw JSON, path, name or reference, with an
+explicit atomic, dynamic, rank, set, find, recognize or relate role. Rank sets
+use set. Native loaders preserve structured descriptions, author names, wording
+versions, declarations and annotation members.
+
+File sources use `kind="files"`, `paths=list("report.txt")` and
+`options=list(reading=list(unit="file"), media="text")`. Line/window readings
+retain physical coordinates; `jsonl=TRUE` reads records and `media="image"`
+reads explicit image files. Records may carry ordered PNG/JPEG byte attachments,
+explicit context and described options. Images are admitted for decide, choose
+and score and refused before sending for the other seven functions.
+
+The six `tt_decide_batch`, `tt_choose_batch`, `tt_tag_batch`, `tt_score_batch`,
+`tt_filter_batch` and `tt_annotate_batch` constructors return native lazy batches.
+`next_row()` yields a typed result, ordinal and input; `facts()` is final after
+exhaustion or terminal failure. `poll()` waits for one native polling interval
+and returns NULL while pending, distinguished from EOF by `facts()`; this lets
+R's main thread call `cancel()`. Use `close()` on early exit. Files and requests
+wait for the first pull. R interrupts and native limits remain effective.
+
+Complete failures retain the six ordinary condition kinds and expose typed
+`complete`, including available native final facts and stopped position. Cache,
+record, replay, attempts and changed-reading identity stay native. Printing a
+carrier withholds its contents.
+
+Complete carriers preserve native coordinates: ordinals and recognition starts
+are zero-based, recognition ends are exclusive Unicode scalar offsets, and
+physical lines are one-based inclusive. Native rank values remain one-based
+ranks. Ordinary R rank/find `place` remains the original input index plus one;
+ordinary recognition frame starts retain R's one-based inclusive convention.
+Result and cache identity are computed before any compatibility conversion.

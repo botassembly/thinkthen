@@ -28,6 +28,7 @@ use crate::calls::{self, Crossed};
 use crate::relate::{self};
 use crate::usage;
 
+mod complete;
 mod engine;
 mod settings;
 mod values;
@@ -466,51 +467,13 @@ fn tt_relate_frame(
 }
 
 #[extendr]
-#[expect(
-    clippy::too_many_arguments,
-    reason = "R's engine constructor passes its public settings through this binding"
-)]
-fn tt_engine_set(
-    base_url: Robj,
-    model: Robj,
-    throttle: Robj,
-    max_requests: Robj,
-    max_requests_total: Robj,
-    max_request_bytes: Robj,
-    cache: Robj,
-    timeout: Robj,
-    max_retries: Robj,
-    record: Robj,
-    replay: Robj,
-    profile: Robj,
-    batch: Robj,
-    backend: Robj,
-) -> Crossed<()> {
-    engine::configure([
-        base_url,
-        model,
-        throttle,
-        max_requests,
-        max_requests_total,
-        max_request_bytes,
-        cache,
-        timeout,
-        max_retries,
-        record,
-        replay,
-        profile,
-        batch,
-        backend,
-    ])
-}
-
-#[extendr]
 fn tt_source_files(question: Robj, selection: Robj, deadline: Robj) -> Crossed<List> {
     crate::files::from_robj(question, selection, deadline, &interrupt_pending)
 }
 
 extendr_module! {
     mod thinkthen;
+    use complete;
     fn tt_question_check;
     fn tt_source_files;
     fn tt_question_file;
@@ -527,7 +490,7 @@ extendr_module! {
     fn tt_interrupt_pending;
     fn tt_recognize_column;
     fn tt_relate_frame;
-    fn tt_engine_set;
+
     fn tt_completion_new;
     fn tt_completion_claim;
     fn tt_completion_read_native;

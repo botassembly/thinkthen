@@ -216,7 +216,7 @@ sh "$LIMIT" 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
 "$RUBY" -rrubygems/package -I lib -rthinkthen/version -e '
   spec = Gem::Package.new(Dir["thinkthen-*-*.gem"].fetch(0)).spec
   version = File.read("../../crates/thinkthen/Cargo.toml")[/^version = "([^"]+)"/, 1]
-  files = ["lib/thinkthen.rb", "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}", "lib/thinkthen/version.rb"]
+  files = ["lib/thinkthen.rb", "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}", "lib/thinkthen/version.rb", "lib/thinkthen/complete.rb", "lib/thinkthen/native_complete.rb"]
   abort "the gem is not MIT" unless spec.licenses == ["MIT"]
   abort "the gem names no platform" if spec.platform.to_s == "ruby"
   abort "the gem is #{spec.version}, the engine is #{version}" unless spec.version.to_s == version

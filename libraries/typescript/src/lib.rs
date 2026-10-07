@@ -12,6 +12,10 @@
     )
 )]
 
+#[path = "../../r/thinkthen/src/rust/src/complete/mod.rs"]
+mod complete;
+#[cfg(not(test))]
+pub mod complete_node;
 mod door;
 
 #[cfg(not(test))]

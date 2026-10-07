@@ -1,3 +1,6 @@
+import type { Functions as CompleteFunctions } from './complete.js';
+export * as CompleteTypes from './_complete.js';
+export const complete: CompleteFunctions;
 // The typed face of `thinkthen` for Node. Every verb is async, `null` is
 // unsure, a list crosses into the engine once, an `AbortSignal` cancels a
 // call at once, and `deadlineMs` bounds a whole call.
@@ -91,7 +94,7 @@ export interface ScoreManyOptions extends ManyCallOptions { levels: LabelSet; }
 export interface TagManyOptions extends ManyCallOptions { labels: LabelSet; }
 
 /** Current native rank/find text form. Rich rank specifications use the private
- * integration carriers until the native complete execution path lands. */
+ * compatibility carriers; complete native calls use CompleteTypes. */
 export interface TextQuestion {
   decide: string;
   threshold?: never;
@@ -326,6 +329,7 @@ export interface Usage {
 
 /** The engine's failure, its kind, and whether the same call may pass later. */
 export class ThinkThenError extends Error {
+  readonly complete?: import("./_complete.js").CallError;
   kind: 'usage' | 'backend' | 'local' | 'cancelled' | 'deadline' | 'defect';
   /** The kind's code in the C door: usage 1, backend 2, deadline 3, local 4, cancelled 5, defect 6. */
   code: 1 | 2 | 3 | 4 | 5 | 6;
@@ -389,6 +393,7 @@ export interface Verbs {
 
 /** An engine with its own settings, built on the environment. */
 export class Engine implements Verbs {
+  readonly complete: CompleteFunctions;
   files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: ManyCallOptions): Promise<Call<JsonValue>>;
   constructor(options?: EngineOptions);
   decide: Verbs['decide'];

@@ -89,23 +89,49 @@ A question read with `tt.question(file=...)` keeps its saved calibration `profil
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
 
-## Result/2 integration in progress (0431)
+## Complete native calls
 
-Private host carriers and named request builders cover the reviewed result/2
-contract for all ten functions. They preserve explicit question files, described
-options/kinds and annotation members, JSON records/context/candidates, located
-files and ordered duplicate image attachments. Strict carrier decoding retains
-probabilities, IDs, provenance, final facts, attempts, annotation failures, spans
-and both relation endpoints; it never promotes result/1 or generates missing IDs.
-The independent fixtures test serialization and accessors, not installed parity.
+`engine.complete` exposes `decide`, `choose`, `tag`, `score`, `filter`, `rank`,
+`find`, `annotate`, `recognize` and `relate`. Each returns a `Completed` with typed
+`results`, native final `facts`, original `inputs` and zero-based `ordinals`.
+The same facade is available as `thinkthen.complete.Engine`.
 
-Complete execution remains private until the native owner supplies result/2
-serializers, identity/provenance/facts/attempts and complete results for every
-admitted input; C-backed integration also needs 0426's actual complete calls,
-accessors and owned failure snapshots. Native image construction/admission,
-question-file loading, file reading, cache/replay and cancellation stay native.
-Private builders retain original bytes without guessing media or dimensions;
-the other seven functions explicitly refuse images. Rich rank and rank sets
-await the native complete path. Existing bare and generic JSON calls keep their
-current behavior. Public complete consumers and counted replay/storage/image
-conformance cases have not run, so this work makes no complete parity claim.
+```python
+from thinkthen import complete as c
+
+engine = c.Engine(cache=False)
+question = c.QuestionSource(role="atomic", body={"decide": "Is this a complaint?"})
+source = c.Records((c.Item(value="Please refund.", text=True),))
+call = engine.decide(question, source, attempts=True)
+probability = call.results[0].answer.probability
+requests = call.facts.requests_sent
+```
+
+Use `QuestionSource(path="question.json", role="atomic")` for a question file,
+`name=` for a native named question, or `reference=` for the native reference
+syntax. `body=` accepts caller JSON or a typed question carrier. Set, rank,
+find, recognize and relate use their explicit grammar roles; a rank set uses
+`role="set"`. Native loaders preserve author names, wording versions,
+declarations, structured descriptions and question-set members.
+
+`Files(paths=("report.txt",), unit="file")` uses the native located reader;
+`unit="line"` and `unit="window", window=3` select physical units. Set
+`jsonl=True` for records, or `media="image"` for explicit image files.
+`Item.images` accepts ordered `Image(media="image/png", data=bytes)` attachments.
+`Item.context` distinguishes absent, empty text and JSON null; `Item.options`
+accepts ordered `(name, description)` pairs. Native admission permits images
+for decide, choose and score and refuses them for the other seven functions.
+
+Six methods (`decide_batch`, `choose_batch`, `tag_batch`, `score_batch`,
+`filter_batch`, `annotate_batch`) return native lazy `Batch` iterators. Each row
+contains a typed `result`, native `ordinal` and `input`; `facts` becomes available
+at exhaustion or a terminal failure. Use a context manager or `close()` when
+leaving early; `cancel()` and the ordinary token/deadline controls stop native
+work. Creating a batch does not read source files or send a request.
+
+Complete failures retain the six ordinary error kinds and expose typed
+`error.complete`, including available native final facts and stopped position.
+`attempts=True` includes native attempt data. Native cache, record and replay
+settings apply to these calls, including zero-send strict replay and changed
+reading identity. Known results are validated carriers; arbitrary caller values
+remain JSON. Existing bare, dataframe and JSON APIs retain their behavior.

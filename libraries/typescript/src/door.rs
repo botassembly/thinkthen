@@ -25,6 +25,7 @@ pub(crate) struct Failure {
     retryable: bool,
     message: String,
     facts: Option<Box<Facts>>,
+    native_complete: Option<Value>,
 }
 
 impl Failure {
@@ -34,6 +35,7 @@ impl Failure {
             retryable: false,
             message: message.into(),
             facts: None,
+            native_complete: None,
         }
     }
 
@@ -60,6 +62,9 @@ impl Failure {
             "retryable": self.retryable,
             "message": self.message,
         });
+        if let (Some(snapshot), Some(fields)) = (&self.native_complete, error.as_object_mut()) {
+            fields.insert("native_complete".to_owned(), snapshot.clone());
+        }
         if let (Some(facts), Some(fields)) = (&self.facts, error.as_object_mut()) {
             fields.insert("facts".to_owned(), json!(facts));
             fields.insert("details".to_owned(), details.clone());
@@ -75,6 +80,9 @@ impl From<Error> for Failure {
             retryable: error.retryable(),
             message: error.to_string(),
             facts: error.facts().cloned().map(Box::new),
+            native_complete: crate::complete::stream::failure(&error)
+                .ok()
+                .and_then(|s| serde_json::from_str(&s).ok()),
         }
     }
 }
@@ -322,6 +330,7 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
             u32::try_from(whole()?)
                 .map_err(|_| Failure::usage("options.maxRetries is a whole number"))?,
         ),
+        ("refreshCache", Value::Bool(refresh)) => builder.refresh_cache(*refresh),
         ("record", _) => builder.record(text()?)?,
         ("replay", _) => builder.replay(text()?)?,
         ("profile", _) => builder.profile(text()?)?,

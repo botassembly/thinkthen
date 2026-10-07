@@ -6,7 +6,7 @@ tt_engine(base_url = NULL, model = NULL, throttle = NULL,
   max_requests = NULL, max_requests_total = NULL,
   max_request_bytes = NULL, cache = NULL, timeout = NULL,
   max_retries = NULL, record = NULL, replay = NULL, profile = NULL,
-  batch = NULL, ..., backend = NULL)
+  batch = NULL, ..., backend = NULL, refresh_cache = FALSE)
 }
 \arguments{
 \item{base_url, model}{Override the selected backend's address and model.}
@@ -19,6 +19,7 @@ tt_engine(base_url = NULL, model = NULL, throttle = NULL,
 \item{profile}{Backend profile file.}
 \item{batch}{Positive record count per request, or \code{"max"}.}
 \item{...}{Unknown arguments are refused.}
+\item{refresh_cache}{Ignore held cache answers while retaining native recording and cache identity.}
 \item{backend}{One backend name, or \code{NULL} to retain environment selection. Use the full keyword name.}
 }
 \value{Invisibly returns \code{NULL}.}

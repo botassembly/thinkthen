@@ -391,6 +391,11 @@ class Engine:
     def __repr__(self):
         return "Engine()"
 
+    @property
+    def complete(self):
+        from .complete import Engine as CompleteEngine
+        return CompleteEngine(_engine=self._engine)
+
     def decide(self, question, text=_MISSING, *, token=None, **keywords):
         """Build a judge, or answer one text, ordered input, or column."""
         return self._judged("decide", question, text, token, keywords)

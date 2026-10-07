@@ -35,6 +35,7 @@ struct Fault {
     retryable: bool,
     facts: Option<Box<Facts>>,
     details: Vec<String>,
+    native_complete: Option<String>,
 }
 
 impl Fault {
@@ -45,6 +46,7 @@ impl Fault {
             retryable: false,
             facts: None,
             details: Vec::new(),
+            native_complete: None,
         }
     }
 
@@ -64,6 +66,7 @@ impl From<thinkthen::Error> for Fault {
             message: error.detail().message().to_owned(),
             retryable: error.retryable(),
             facts: error.facts().cloned().map(Box::new),
+            native_complete: call::complete::stream::failure(&error).ok(),
             details: Vec::new(),
         }
     }
@@ -211,6 +214,7 @@ struct Settings {
     max_request_bytes: Option<i64>,
     cache_at: Option<String>,
     no_cache: bool,
+    refresh_cache: bool,
     timeout: Option<i64>,
     max_retries: Option<i64>,
     record: Option<String>,
@@ -251,6 +255,7 @@ impl Settings {
         if let Some(folder) = &self.cache_at {
             builder = builder.cache_at(folder)?;
         }
+        builder = builder.refresh_cache(self.refresh_cache);
         if self.no_cache {
             builder = builder.no_cache();
         }

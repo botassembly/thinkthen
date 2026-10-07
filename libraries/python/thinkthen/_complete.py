@@ -82,11 +82,14 @@ class Facts(Carrier):
     model: str | Absent = ABSENT
     estimated_cost_usd: str | Absent = ABSENT
     command_ms: int | Absent = ABSENT
+    attempts: tuple[Attempt, ...] | Absent = ABSENT
+    held_model_mismatch: bool | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class QuestionSource(Carrier):
     origin: Literal['live', 'cache', 'replay', 'proxy', 'memory']
     answered_by: str
+    batch_size: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class Observed(Carrier):
@@ -155,30 +158,50 @@ class DecideQuestion(Carrier):
     text: QuestionText
     true_: Description | Absent = ABSENT
     false_: Description | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ChooseQuestion(Carrier):
     verb: Literal['choose']
     text: QuestionText
     options: tuple[str, ...]
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class TagQuestion(Carrier):
     verb: Literal['tag']
     text: QuestionText
     labels: tuple[str, ...]
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ScoreQuestion(Carrier):
     verb: Literal['score']
     text: QuestionText
     levels: tuple[str, ...]
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FindQuestion(Carrier):
     verb: Literal['find']
     text: QuestionText
     none: bool
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RelationRule(Carrier):
@@ -201,6 +224,10 @@ class RelateQuestion(Carrier):
     relations: tuple[RelationRule, ...]
     threshold: float | str | None
     profile: str | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RecognizeQuestion(Carrier):
@@ -211,6 +238,10 @@ class RecognizeQuestion(Carrier):
     relation_threshold: float | str | None
     on: str | tuple[str, ...] | Absent = ABSENT
     profile: str | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class Failure(Carrier):
@@ -322,6 +353,7 @@ class RelationSuccess(Carrier):
     answer_id: AnswerId
     probability: float
     accepted: bool
+    answer: AtomicAnswer | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RelationFailure(Carrier):
@@ -351,6 +383,10 @@ class DecideResult(Carrier):
     input: JsonValue | Absent = ABSENT
     position: Position | Absent = ABSENT
     input_file: str | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ChooseResult(Carrier):
@@ -364,6 +400,10 @@ class ChooseResult(Carrier):
     input: JsonValue | Absent = ABSENT
     position: Position | Absent = ABSENT
     input_file: str | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class TagResult(Carrier):
@@ -377,6 +417,10 @@ class TagResult(Carrier):
     input: JsonValue | Absent = ABSENT
     position: Position | Absent = ABSENT
     input_file: str | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ScoreResult(Carrier):
@@ -390,6 +434,10 @@ class ScoreResult(Carrier):
     input: JsonValue | Absent = ABSENT
     position: Position | Absent = ABSENT
     input_file: str | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FilterResult(Carrier):
@@ -402,6 +450,10 @@ class FilterResult(Carrier):
     answer: YesNo
     threshold: float | str | None
     position: Position | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RankResult(Carrier):
@@ -415,6 +467,10 @@ class RankResult(Carrier):
     threshold: None
     question_name: str | Absent = ABSENT
     position: Position | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FindResult(Carrier):
@@ -426,6 +482,9 @@ class FindResult(Carrier):
     answer: FindAnswer
     threshold: None
     position: Position | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class AnnotateResult(Carrier):
@@ -436,6 +495,9 @@ class AnnotateResult(Carrier):
     value: Mapping[str, AnnotatedValue]
     answers: Mapping[str, AnnotationEntry]
     position: Position | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RecognizeResult(Carrier):
@@ -446,15 +508,22 @@ class RecognizeResult(Carrier):
     question: RecognizeQuestion
     answer: RecognitionAnswer
     input: JsonValue | Absent = ABSENT
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RelateResult(Carrier):
+    input: JsonValue | Absent = ABSENT
     schema: Literal['thinkthen.result/2']
     answer_id: AnswerId
     meta: Meta
     value: tuple[Edge, ...]
     question: RelateQuestion
     answer: RelationAnswer
+    file: str | Absent = ABSENT
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class CallError(Carrier):
@@ -463,7 +532,7 @@ class CallError(Carrier):
     retryable: bool
     facts: Facts | Absent = ABSENT
     attempts: tuple[Attempt, ...] | Absent = ABSENT
-
+    stopped: Stopped | Absent = ABSENT
 
 Observation = Observed | FailedObservation
 
@@ -643,6 +712,10 @@ class DecideSpec(Carrier):
     profile: str | Absent = ABSENT
     batch: int | Literal['max'] | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ChooseSpec(Carrier):
@@ -653,6 +726,10 @@ class ChooseSpec(Carrier):
     profile: str | Absent = ABSENT
     batch: int | Literal['max'] | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class TagSpec(Carrier):
@@ -663,6 +740,10 @@ class TagSpec(Carrier):
     profile: str | Absent = ABSENT
     batch: int | Literal['max'] | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ScoreSpec(Carrier):
@@ -672,12 +753,22 @@ class ScoreSpec(Carrier):
     profile: str | Absent = ABSENT
     batch: int | Literal['max'] | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FindSpec(Carrier):
     find: QuestionText
     none: bool | Absent = ABSENT
     model: str | Absent = ABSENT
+    profile: str | Absent = ABSENT
+    on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class QuestionFile(Carrier):
@@ -714,6 +805,10 @@ class RecognitionSpec(Carrier):
     model: str | Absent = ABSENT
     profile: str | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RelationPlan(Carrier):
@@ -727,6 +822,10 @@ class RelationSpec(Carrier):
     threshold: float | Absent = ABSENT
     model: str | Absent = ABSENT
     profile: str | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class Files(Carrier):
@@ -793,6 +892,10 @@ class DecideMember(Carrier):
     false_: Description | Absent = ABSENT
     threshold: float | str | None | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ChooseMember(Carrier):
@@ -800,6 +903,10 @@ class ChooseMember(Carrier):
     options: Labels
     threshold: float | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class TagMember(Carrier):
@@ -807,14 +914,68 @@ class TagMember(Carrier):
     labels: Labels
     threshold: float | Absent = ABSENT
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ScoreMember(Carrier):
     score: QuestionText
     levels: Labels
     on: str | tuple[str, ...] | Absent = ABSENT
+    name: str | Absent = ABSENT
+    wording_version: int | Absent = ABSENT
+    item_schema: InputDeclaration | Absent = ABSENT
+    context_schema: InputDeclaration | Absent = ABSENT
 
 AnnotationSpec = DecideMember | ChooseMember | TagMember | ScoreMember
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class StringDeclaration(Carrier):
+    type: Literal['string']
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class NumberDeclaration(Carrier):
+    type: Literal['number']
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class BooleanDeclaration(Carrier):
+    type: Literal['boolean']
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class ArrayDeclaration(Carrier):
+    type: Literal['array']
+    items: StringDeclaration
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class ObjectDeclaration(Carrier):
+    type: Literal['object']
+    properties: Mapping[str, PropertyDeclaration]
+    required: tuple[str, ...] | Absent = ABSENT
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class PhysicalSource(Carrier):
+    file: str
+    first_line: int | Absent = ABSENT
+    last_line: int | Absent = ABSENT
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class NativeImage(Carrier):
+    media: Literal['image/png', 'image/jpeg']
+    base64: str
+    width: int
+    height: int
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class Stopped(Carrier):
+    cause: str
+    retryable: bool
+    status: int | Absent = ABSENT
+    at: int | Absent = ABSENT
+
+InputDeclaration = StringDeclaration | ObjectDeclaration
+PropertyDeclaration = StringDeclaration | NumberDeclaration | BooleanDeclaration | ArrayDeclaration
 
 _MODELS = {
     'Position': {'file?': 'str', 'first?': 'positive', 'last?': 'positive', 'images?': '[str]'},
@@ -822,8 +983,8 @@ _MODELS = {
     'ProfileWarning': {'tuned_for': 'str', 'running': 'str'},
     'BatchWarning': {'tuned_for': 'batch', 'running': 'batch'},
     'Attempt': {'ordinal': 'positive', 'request_sha256': 'Digest', 'wall_ms': 'uint', 'outcome': 'outcome', 'sdk_request_id': 'SdkRequestId', 'status?': 'uint', 'server_ms?': 'uint', 'request_id?': 'str'},
-    'Facts': {'call_id': 'CallId', 'records': 'uint', 'requests_sent': 'uint', 'cache_answers': 'uint', 'seconds': 'number', 'input_tokens?': 'uint', 'output_tokens?': 'uint', 'model?': 'str', 'estimated_cost_usd?': 'cost', 'command_ms?': 'uint'},
-    'QuestionSource': {'origin': 'origin', 'answered_by': 'str'},
+    'Facts': {'call_id': 'CallId', 'records': 'uint', 'requests_sent': 'uint', 'cache_answers': 'uint', 'seconds': 'number', 'input_tokens?': 'uint', 'output_tokens?': 'uint', 'model?': 'str', 'estimated_cost_usd?': 'cost', 'command_ms?': 'uint', 'attempts?': '[Attempt]', 'held_model_mismatch?': 'bool'},
+    'QuestionSource': {'origin': 'origin', 'answered_by': 'str', 'batch_size?': 'positive'},
     'Observed': {'observation_id': 'ObservationId'},
     'FailedObservation': {'failure_id': 'FailureId'},
     'Meta': {'tool': 'str', 'url': 'str', 'model': 'str', 'requests_sent': 'uint', 'cached': 'bool', 'requests': '[Digest]', 'failed_questions': 'uint', 'origin': 'origin|null', 'question_sources': '[QuestionSource]', 'observations': '[Observation]', 'question_sha256?': 'Digest', 'questions_sha256?': 'Digest', 'answered_by?': 'str', 'usage?': 'Usage', 'profile_warning?': 'ProfileWarning', 'batch_setting?': 'batch', 'batch_warning?': 'BatchWarning', 'context_sha256?': 'Digest', 'attempts?': '[Attempt]'},
@@ -832,15 +993,15 @@ _MODELS = {
     'Tags': {'kind': '=tag', 'probabilities': '{probability}'},
     'Score': {'kind': '=score', 'level': 'str', 'probabilities': '{probability}', 'confidence?': 'probability'},
     'FindAnswer': {'kind': '=find', 'pick': 'str', 'probabilities': '{probability}', 'confidence?': 'probability'},
-    'DecideQuestion': {'verb': '=decide', 'text': 'text', 'true?': 'description', 'false?': 'description'},
-    'ChooseQuestion': {'verb': '=choose', 'text': 'text', 'options': '[str]'},
-    'TagQuestion': {'verb': '=tag', 'text': 'text', 'labels': '[str]'},
-    'ScoreQuestion': {'verb': '=score', 'text': 'text', 'levels': '[str]'},
-    'FindQuestion': {'verb': '=find', 'text': 'text', 'none': 'bool'},
+    'DecideQuestion': {'verb': '=decide', 'text': 'text', 'true?': 'description', 'false?': 'description', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'ChooseQuestion': {'verb': '=choose', 'text': 'text', 'options': '[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'TagQuestion': {'verb': '=tag', 'text': 'text', 'labels': '[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'ScoreQuestion': {'verb': '=score', 'text': 'text', 'levels': '[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'FindQuestion': {'verb': '=find', 'text': 'text', 'none': 'bool', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'RelationRule': {'name': 'str', 'source': 'str', 'target': 'str', 'reads': 'str', 'either': 'bool', 'single?': 'bool'},
     'RelateFields': {'name': 'str', 'kind': 'str'},
-    'RelateQuestion': {'verb': '=relate', 'fields': 'RelateFields|null', 'relations': '[RelationRule]', 'threshold': 'threshold', 'profile?': 'str'},
-    'RecognizeQuestion': {'verb': '=recognize', 'kinds': '{description}', 'relations?': '[RelationRule]', 'threshold': 'threshold', 'relation_threshold': 'threshold', 'on?': 'str|[str]', 'profile?': 'str'},
+    'RelateQuestion': {'verb': '=relate', 'fields': 'RelateFields|null', 'relations': '[RelationRule]', 'threshold': 'threshold', 'profile?': 'str', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'RecognizeQuestion': {'verb': '=recognize', 'kinds': '{description}', 'relations?': '[RelationRule]', 'threshold': 'threshold', 'relation_threshold': 'threshold', 'on?': 'str|[str]', 'profile?': 'str', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'Failure': {'kind': '=backend', 'cause': 'cause'},
     'FailedField': {'failed': 'Failure'},
     'Entity': {'text': 'text', 'start': 'uint', 'end': 'uint', 'length': 'uint', 'kind': 'str', 'strength': 'number', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
@@ -855,32 +1016,32 @@ _MODELS = {
     'RecognitionAnswer': {'pieces': '[PieceOdds]', 'names': '[NameOdds]', 'pairs': '[PairOdds]'},
     'AnnotationSuccess': {'answer_id': 'AnswerId', 'value': 'SuccessValue', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'threshold', 'request': 'Digest'},
     'AnnotationFailure': {'failure_id': 'FailureId', 'question': 'AtomicQuestion', 'failure': 'Failure', 'request': 'Digest'},
-    'RelationSuccess': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'answer_id': 'AnswerId', 'probability': 'probability', 'accepted': 'bool'},
+    'RelationSuccess': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'answer_id': 'AnswerId', 'probability': 'probability', 'accepted': 'bool', 'answer?': 'AtomicAnswer'},
     'RelationFailure': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'failure_id': 'FailureId', 'failure': 'Failure'},
     'RelationAnswer': {'questions': '[RelationEntry]'},
-    'DecideResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool|null', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str'},
-    'ChooseResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'str|null', 'question': 'ChooseQuestion', 'answer': 'Choice', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str'},
-    'TagResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[str]', 'question': 'TagQuestion', 'answer': 'Tags', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str'},
-    'ScoreResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'number', 'question': 'ScoreQuestion', 'answer': 'Score', 'threshold': 'null', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str'},
-    'FilterResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool', 'input': 'json', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'position?': 'Position'},
-    'RankResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'positive', 'input': 'json', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'null', 'question_name?': 'str', 'position?': 'Position'},
-    'FindResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'json', 'question': 'FindQuestion', 'answer': 'FindAnswer', 'threshold': 'null', 'position?': 'Position'},
-    'AnnotateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'input': 'json', 'value': '{AnnotatedValue}', 'answers': '{AnnotationEntry}', 'position?': 'Position'},
-    'RecognizeResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'Recognition', 'question': 'RecognizeQuestion', 'answer': 'RecognitionAnswer', 'input?': 'json'},
-    'RelateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[Edge]', 'question': 'RelateQuestion', 'answer': 'RelationAnswer'},
-    'CallError': {'kind': 'error_kind', 'message': 'str', 'retryable': 'bool', 'facts?': 'Facts', 'attempts?': '[Attempt]'},
-    'DecideSpec': {'decide': 'text', 'true?': 'description', 'false?': 'description', 'threshold?': 'threshold', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]'},
-    'ChooseSpec': {'choose': 'text', 'options': 'Labels', 'threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]'},
-    'TagSpec': {'tag': 'text', 'labels': 'Labels', 'threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]'},
-    'ScoreSpec': {'score': 'text', 'levels': 'Labels', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]'},
-    'FindSpec': {'find': 'text', 'none?': 'bool', 'model?': 'str'},
+    'DecideResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool|null', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
+    'ChooseResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'str|null', 'question': 'ChooseQuestion', 'answer': 'Choice', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
+    'TagResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[str]', 'question': 'TagQuestion', 'answer': 'Tags', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
+    'ScoreResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'number', 'question': 'ScoreQuestion', 'answer': 'Score', 'threshold': 'null', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
+    'FilterResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool', 'input': 'json', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
+    'RankResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'positive', 'input': 'json', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'null', 'question_name?': 'str', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
+    'FindResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'json', 'question': 'FindQuestion', 'answer': 'FindAnswer', 'threshold': 'null', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
+    'AnnotateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'input': 'json', 'value': '{AnnotatedValue}', 'answers': '{AnnotationEntry}', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
+    'RecognizeResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'Recognition', 'question': 'RecognizeQuestion', 'answer': 'RecognitionAnswer', 'input?': 'json', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
+    'RelateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[Edge]', 'question': 'RelateQuestion', 'answer': 'RelationAnswer', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'input?': 'json'},
+    'CallError': {'kind': 'error_kind', 'message': 'str', 'retryable': 'bool', 'facts?': 'Facts', 'attempts?': '[Attempt]', 'stopped?': 'Stopped'},
+    'DecideSpec': {'decide': 'text', 'true?': 'description', 'false?': 'description', 'threshold?': 'threshold', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'ChooseSpec': {'choose': 'text', 'options': 'Labels', 'threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'TagSpec': {'tag': 'text', 'labels': 'Labels', 'threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'ScoreSpec': {'score': 'text', 'levels': 'Labels', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'FindSpec': {'find': 'text', 'none?': 'bool', 'model?': 'str', 'profile?': 'str', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'QuestionFile': {'path': 'str'},
     'QuestionSet': {'version': 'one', 'questions': '{AnnotationSpec}', 'batch?': 'batch', 'threshold?': 'threshold', 'profile?': 'str'},
     'RecognitionPlan': {'kinds?': 'Labels', 'relations?': '[PlanRule]'},
     'PlanRule': {'name': 'str', 'source': 'str', 'target': 'str', 'reads?': 'str', 'either?': 'bool', 'single?': 'bool'},
-    'RecognitionSpec': {'version': 'one', 'recognize': 'RecognitionPlan', 'threshold?': 'probability', 'relation_threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'on?': 'str|[str]'},
+    'RecognitionSpec': {'version': 'one', 'recognize': 'RecognitionPlan', 'threshold?': 'probability', 'relation_threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'RelationPlan': {'relations': '[PlanRule]', 'fields?': 'RelateFields'},
-    'RelationSpec': {'version': 'one', 'relate': 'RelationPlan', 'threshold?': 'probability', 'model?': 'str', 'profile?': 'str'},
+    'RelationSpec': {'version': 'one', 'relate': 'RelationPlan', 'threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'Files': {'paths': '[str]', 'unit': 'unit', 'window?': 'positive', 'media?': 'media'},
     'TextInput': {'text': 'json'},
     'RecordInput': {'records': '[json]', 'context?': 'json'},
@@ -888,9 +1049,32 @@ _MODELS = {
     'ImageBytes': {'data': 'bytes', 'name?': 'str'},
     'ImageInput': {'images': '[ImageBytes]', 'text?': 'json'},
     'Controls': {'batch?': 'batch', 'context?': 'json', 'on?': 'str|[str]', 'threshold?': 'threshold', 'top?': 'positive', 'none?': 'bool', 'model?': 'str', 'attempts?': 'bool', 'deadline_ms?': 'uint'},
-    'DecideMember': {'decide': 'text', 'true?': 'description', 'false?': 'description', 'threshold?': 'threshold', 'on?': 'str|[str]'},
-    'ChooseMember': {'choose': 'text', 'options': 'Labels', 'threshold?': 'probability', 'on?': 'str|[str]'},
-    'TagMember': {'tag': 'text', 'labels': 'Labels', 'threshold?': 'probability', 'on?': 'str|[str]'},
-    'ScoreMember': {'score': 'text', 'levels': 'Labels', 'on?': 'str|[str]'},
+    'DecideMember': {'decide': 'text', 'true?': 'description', 'false?': 'description', 'threshold?': 'threshold', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'ChooseMember': {'choose': 'text', 'options': 'Labels', 'threshold?': 'probability', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'TagMember': {'tag': 'text', 'labels': 'Labels', 'threshold?': 'probability', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'ScoreMember': {'score': 'text', 'levels': 'Labels', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'StringDeclaration': {'type': '=string'},
+    'NumberDeclaration': {'type': '=number'},
+    'BooleanDeclaration': {'type': '=boolean'},
+    'ArrayDeclaration': {'type': '=array', 'items': 'StringDeclaration'},
+    'ObjectDeclaration': {'type': '=object', 'properties': '{PropertyDeclaration}', 'required?': '[str]'},
+    'PhysicalSource': {'file': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
+    'NativeImage': {'media': 'image_media', 'base64': 'str', 'width': 'positive', 'height': 'positive'},
+    'Stopped': {'cause': 'stop_cause', 'retryable': 'bool', 'status?': 'uint', 'at?': 'uint'},
+    'NativeInput': {'original': 'json', 'location?': 'PhysicalSource', 'images': '[NativeImage]'}
 }
+
 _ALIASES["AnnotationSpec"] = ["DecideMember", "ChooseMember", "TagMember", "ScoreMember"]
+
+_ALIASES.update(InputDeclaration=['StringDeclaration','ObjectDeclaration'], PropertyDeclaration=['StringDeclaration','NumberDeclaration','BooleanDeclaration','ArrayDeclaration'])
+_ENUMS.update(image_media=['image/png','image/jpeg'], stop_cause=['usage','local','no_key','transport','status','too_large','reply','backend','cancelled','deadline','defect'])
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class NativeInput(Carrier):
+    original: JsonValue
+    images: tuple[NativeImage, ...]
+    location: PhysicalSource | Absent = ABSENT
+
+_MODELS["NativeInput"] = {'original': 'json', 'location?': 'PhysicalSource', 'images': '[NativeImage]'}
+
+_MODELS["RelateResult"]["input?"]="json"

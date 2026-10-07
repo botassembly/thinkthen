@@ -62,23 +62,46 @@ From a source checkout, `setup-ruby.sh` builds the pinned Ruby 3.4.11 once per m
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
 
-## Result/2 integration in progress (0431)
+## Complete native calls
 
-Private host carriers and named request builders cover the reviewed result/2
-contract for all ten functions. They preserve explicit question files, described
-options/kinds and annotation members, JSON records/context/candidates, located
-files and ordered duplicate image attachments. Strict carrier decoding retains
-probabilities, IDs, provenance, final facts, attempts, annotation failures, spans
-and both relation endpoints; it never promotes result/1 or generates missing IDs.
-The independent fixtures test serialization and accessors, not installed parity.
+`engine.complete` exposes all ten named functions: decide, choose, tag, score,
+filter, rank, find, annotate, recognize and relate. Each returns a
+`ThinkThen::Complete::Completed` with typed `results`, native final `facts`,
+original `inputs` and zero-based `ordinals`.
 
-Complete execution remains private until the native owner supplies result/2
-serializers, identity/provenance/facts/attempts and complete results for every
-admitted input; C-backed integration also needs 0426's actual complete calls,
-accessors and owned failure snapshots. Native image construction/admission,
-question-file loading, file reading, cache/replay and cancellation stay native.
-Private builders retain original bytes without guessing media or dimensions;
-the other seven functions explicitly refuse images. Rich rank and rank sets
-await the native complete path. Existing bare and generic JSON calls keep their
-current behavior. Public complete consumers and counted replay/storage/image
-conformance cases have not run, so this work makes no complete parity claim.
+```ruby
+engine = ThinkThen::Engine.new(cache: false)
+call = engine.complete.decide(
+  { role: 'atomic', body: { decide: 'Is this a complaint?' } },
+  { kind: 'records', records: [{ content: { kind: 'text', value: 'Please refund.' } }] },
+  attempts: true
+)
+probability = call.results.first.answer.probability
+requests = call.facts.requests_sent
+```
+
+Question sources select exactly one body, raw JSON, path, name or reference,
+with an explicit role: atomic, dynamic, rank, set, find, recognize or relate.
+Rank sets use set. Native loaders retain structured descriptions, author names,
+wording versions, declarations and annotation members. Caller inputs may be
+hashes or `ThinkThen::Complete` carriers.
+
+File sources use `kind: 'files'`, `paths: ['report.txt']` and
+`options: { reading: { unit: 'file' }, media: 'text' }`. Line/window readings
+retain physical coordinates; `jsonl: true` reads records and `media: 'image'`
+reads explicit image files. Records can carry ordered PNG/JPEG attachments,
+explicit context and described options. Images are admitted for decide, choose
+and score; the other seven functions refuse before sending.
+
+`decide_batch`, `choose_batch`, `tag_batch`, `score_batch`, `filter_batch` and
+`annotate_batch` return native lazy enumerable batches. Each row has typed
+`result`, `ordinal` and `input`; final `facts` is available at exhaustion or
+terminal failure. Enumeration closes on early exit; direct `next` users should
+`close` when leaving early. `cancel` and the ordinary cancellation/deadline
+controls stop native work. Source files and sends wait for the first pull.
+
+Complete failures retain the six ordinary error kinds and add typed `complete`,
+with available native final facts and stopped position. Native cache, record,
+replay and attempts apply, including zero-send replay and changed reading
+identity. Carrier inspection withholds contents. Existing bare calls retain
+their behavior.

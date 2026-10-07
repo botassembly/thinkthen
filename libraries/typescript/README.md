@@ -56,28 +56,48 @@ Facts, details, and annotate rows are the engine's JSON, so a member this packag
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
 
-## Result/2 integration in progress (0431)
+## Complete native calls
 
-Private host carriers and named request builders cover the reviewed result/2
-contract for all ten functions. They preserve explicit question files, described
-options/kinds and annotation members, JSON records/context/candidates, located
-files and ordered duplicate image attachments. Strict carrier decoding retains
-probabilities, IDs, provenance, final facts, attempts, annotation failures, spans
-and both relation endpoints; it never promotes result/1 or generates missing IDs.
-The independent fixtures test serialization and accessors, not installed parity.
+`engine.complete` and the default `complete` facade expose all ten named
+functions: decide, choose, tag, score, filter, rank, find, annotate, recognize and
+relate. Each resolves to a `Completed<ResultType>` with typed `results`, native
+final `facts`, original `inputs` and zero-based `ordinals`. `CompleteTypes`
+exports the result, probability, author declaration, identity and source types.
 
-Complete execution remains private until the native owner supplies result/2
-serializers, identity/provenance/facts/attempts and complete results for every
-admitted input; C-backed integration also needs 0426's actual complete calls,
-accessors and owned failure snapshots. Native image construction/admission,
-question-file loading, file reading, cache/replay and cancellation stay native.
-Private builders retain original bytes without guessing media or dimensions;
-the other seven functions explicitly refuse images. Rich rank and rank sets
-await the native complete path. Existing bare and generic JSON calls keep their
-current behavior. Public complete consumers and counted replay/storage/image
-conformance cases have not run, so this work makes no complete parity claim.
+```typescript
+import { Engine } from 'thinkthen';
 
-The public rank/find text declaration now matches its current native admission:
-a literal string, a text-only `{decide: string}` or a built question checked at
-runtime. Score/criteria/model/profile/cut forms are available as private target
-carriers for rank; current public execution still refuses them.
+const engine = new Engine({ cache: false });
+const call = await engine.complete.decide(
+  { role: 'atomic', body: { decide: 'Is this a complaint?' } },
+  { kind: 'records', records: [{ content: { kind: 'text', value: 'Please refund.' } }] },
+  { attempts: true },
+);
+const probability: number = call.results[0].answer.probability;
+```
+
+Question sources select exactly one of `body`, `raw`, `path`, `name` or
+`reference`, with an explicit `role`: atomic, dynamic, rank, set, find, recognize
+or relate. Rank sets use set. Native loaders retain structured descriptions,
+author names, wording versions, declarations and annotation members. Complete
+rank accepts the native rich grammar and question sets.
+
+A file source is `{ kind: 'files', paths: ['report.txt'], options: { reading:
+{ unit: 'file' }, media: 'text' } }`; line and window readings retain physical
+locations. `jsonl: true` reads records; `media: 'image'` reads explicit images.
+Records may include ordered `{ media: 'image/png', bytes: [...] }` attachments,
+explicit text/JSON context and described options. Images are admitted for
+decide, choose and score; the other seven functions refuse before sending.
+
+`decideBatch`, `chooseBatch`, `tagBatch`, `scoreBatch`, `filterBatch` and
+`annotateBatch` are native lazy async iterators. Rows have typed `result`,
+`ordinal` and `input`; `facts` is final at exhaustion or terminal failure.
+Breaking `for await` closes the batch; explicit `return()` closes it and
+`cancel()` stops native work. Source files and requests wait for the first pull.
+The ordinary `signal`, `deadlineMs`, `context` and `attempts` controls apply.
+
+Failures are ordinary `ThinkThenError` values with typed `complete`, including
+available final native facts and stopped position. Cache, record and replay
+remain native, including changed-reading identity and zero-send strict replay.
+JavaScript uses the same runtime; its tests execute separately from the compiled
+TypeScript consumer. Existing bare calls and their declarations stay compatible.

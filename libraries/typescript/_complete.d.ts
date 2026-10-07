@@ -53,10 +53,13 @@ export interface Facts {
   readonly model?: string;
   readonly estimated_cost_usd?: string;
   readonly command_ms?: number;
+  readonly attempts?: readonly (Attempt)[];
+  readonly held_model_mismatch?: boolean;
 }
 export interface QuestionSource {
   readonly origin: "live" | "cache" | "replay" | "proxy" | "memory";
   readonly answered_by: string;
+  readonly batch_size?: number;
 }
 export interface Observed {
   readonly observation_id: ObservationId;
@@ -116,26 +119,46 @@ export interface DecideQuestion {
   readonly text: QuestionText;
   readonly true?: Description;
   readonly false?: Description;
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface ChooseQuestion {
   readonly verb: "choose";
   readonly text: QuestionText;
   readonly options: readonly (string)[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface TagQuestion {
   readonly verb: "tag";
   readonly text: QuestionText;
   readonly labels: readonly (string)[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface ScoreQuestion {
   readonly verb: "score";
   readonly text: QuestionText;
   readonly levels: readonly (string)[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface FindQuestion {
   readonly verb: "find";
   readonly text: QuestionText;
   readonly none: boolean;
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface RelationRule {
   readonly name: string;
@@ -155,6 +178,10 @@ export interface RelateQuestion {
   readonly relations: readonly (RelationRule)[];
   readonly threshold: number | string | null;
   readonly profile?: string;
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface RecognizeQuestion {
   readonly verb: "recognize";
@@ -164,6 +191,10 @@ export interface RecognizeQuestion {
   readonly relation_threshold: number | string | null;
   readonly on?: string | readonly string[];
   readonly profile?: string;
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface Failure {
   readonly kind: "backend";
@@ -260,6 +291,7 @@ export interface RelationSuccess {
   readonly answer_id: AnswerId;
   readonly probability: number;
   readonly accepted: boolean;
+  readonly answer?: AtomicAnswer;
 }
 export interface RelationFailure {
   readonly relation: string;
@@ -286,6 +318,10 @@ export interface DecideResult {
   readonly input?: JsonValue;
   readonly position?: Position;
   readonly input_file?: string;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
+  readonly source?: PhysicalSource;
 }
 export interface ChooseResult {
   readonly schema: "thinkthen.result/2";
@@ -298,6 +334,10 @@ export interface ChooseResult {
   readonly input?: JsonValue;
   readonly position?: Position;
   readonly input_file?: string;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
+  readonly source?: PhysicalSource;
 }
 export interface TagResult {
   readonly schema: "thinkthen.result/2";
@@ -310,6 +350,10 @@ export interface TagResult {
   readonly input?: JsonValue;
   readonly position?: Position;
   readonly input_file?: string;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
+  readonly source?: PhysicalSource;
 }
 export interface ScoreResult {
   readonly schema: "thinkthen.result/2";
@@ -322,6 +366,10 @@ export interface ScoreResult {
   readonly input?: JsonValue;
   readonly position?: Position;
   readonly input_file?: string;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
+  readonly source?: PhysicalSource;
 }
 export interface FilterResult {
   readonly schema: "thinkthen.result/2";
@@ -333,6 +381,10 @@ export interface FilterResult {
   readonly answer: YesNo;
   readonly threshold: number | string | null;
   readonly position?: Position;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
+  readonly source?: PhysicalSource;
 }
 export interface RankResult {
   readonly schema: "thinkthen.result/2";
@@ -345,6 +397,10 @@ export interface RankResult {
   readonly threshold: null;
   readonly question_name?: string;
   readonly position?: Position;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
+  readonly source?: PhysicalSource;
 }
 export interface FindResult {
   readonly schema: "thinkthen.result/2";
@@ -355,6 +411,9 @@ export interface FindResult {
   readonly answer: FindAnswer;
   readonly threshold: null;
   readonly position?: Position;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
 }
 export interface AnnotateResult {
   readonly schema: "thinkthen.result/2";
@@ -364,6 +423,9 @@ export interface AnnotateResult {
   readonly value: Readonly<Record<string, AnnotatedValue>>;
   readonly answers: Readonly<Record<string, AnnotationEntry>>;
   readonly position?: Position;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
 }
 export interface RecognizeResult {
   readonly schema: "thinkthen.result/2";
@@ -373,14 +435,21 @@ export interface RecognizeResult {
   readonly question: RecognizeQuestion;
   readonly answer: RecognitionAnswer;
   readonly input?: JsonValue;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
 }
 export interface RelateResult {
+  readonly input?: JsonValue;
   readonly schema: "thinkthen.result/2";
   readonly answer_id: AnswerId;
   readonly meta: Meta;
   readonly value: readonly (Edge)[];
   readonly question: RelateQuestion;
   readonly answer: RelationAnswer;
+  readonly file?: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
 }
 export interface CallError {
   readonly kind: "usage" | "backend" | "local" | "cancelled" | "deadline" | "defect";
@@ -388,6 +457,7 @@ export interface CallError {
   readonly retryable: boolean;
   readonly facts?: Facts;
   readonly attempts?: readonly (Attempt)[];
+  readonly stopped?: Stopped;
 }
 export type Observation = Observed | FailedObservation;
 export type AtomicAnswer = YesNo | Choice | Tags | Score | FindAnswer;
@@ -469,6 +539,10 @@ export interface DecideSpec {
   readonly profile?: string;
   readonly batch?: number | "max";
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface ChooseSpec {
   readonly choose: QuestionText;
@@ -478,6 +552,10 @@ export interface ChooseSpec {
   readonly profile?: string;
   readonly batch?: number | "max";
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface TagSpec {
   readonly tag: QuestionText;
@@ -487,6 +565,10 @@ export interface TagSpec {
   readonly profile?: string;
   readonly batch?: number | "max";
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface ScoreSpec {
   readonly score: QuestionText;
@@ -495,11 +577,21 @@ export interface ScoreSpec {
   readonly profile?: string;
   readonly batch?: number | "max";
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface FindSpec {
   readonly find: QuestionText;
   readonly none?: boolean;
   readonly model?: string;
+  readonly profile?: string;
+  readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface QuestionFile {
   readonly path: string;
@@ -531,6 +623,10 @@ export interface RecognitionSpec {
   readonly model?: string;
   readonly profile?: string;
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface RelationPlan {
   readonly relations: readonly (PlanRule)[];
@@ -542,6 +638,10 @@ export interface RelationSpec {
   readonly threshold?: number;
   readonly model?: string;
   readonly profile?: string;
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export interface Files {
   readonly paths: readonly (string)[];
@@ -615,6 +715,10 @@ export interface DecideMember {
   readonly false?: Description;
   readonly threshold?: number | string | null;
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 
 export interface ChooseMember {
@@ -622,6 +726,10 @@ export interface ChooseMember {
   readonly options: Labels;
   readonly threshold?: number;
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 
 export interface TagMember {
@@ -629,12 +737,20 @@ export interface TagMember {
   readonly labels: Labels;
   readonly threshold?: number;
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 
 export interface ScoreMember {
   readonly score: QuestionText;
   readonly levels: Labels;
   readonly on?: string | readonly string[];
+  readonly name?: string;
+  readonly wording_version?: number;
+  readonly item_schema?: InputDeclaration;
+  readonly context_schema?: InputDeclaration;
 }
 export type AnnotationSpec = DecideMember | ChooseMember | TagMember | ScoreMember;
 export interface Models {
@@ -644,3 +760,43 @@ export interface Models {
   ScoreMember: ScoreMember;
   AnnotationSpec: AnnotationSpec;
 }
+
+export interface StringDeclaration {
+  readonly type: "string";
+}
+export interface NumberDeclaration {
+  readonly type: "number";
+}
+export interface BooleanDeclaration {
+  readonly type: "boolean";
+}
+export interface ArrayDeclaration {
+  readonly type: "array";
+  readonly items: StringDeclaration;
+}
+export interface ObjectDeclaration {
+  readonly type: "object";
+  readonly properties: Readonly<Record<string, PropertyDeclaration>>;
+  readonly required?: readonly (string)[];
+}
+export interface PhysicalSource {
+  readonly file: string;
+  readonly first_line?: number;
+  readonly last_line?: number;
+}
+export interface NativeImage {
+  readonly media: "image/png" | "image/jpeg";
+  readonly base64: string;
+  readonly width: number;
+  readonly height: number;
+}
+export interface Stopped {
+  readonly cause: string;
+  readonly retryable: boolean;
+  readonly status?: number;
+  readonly at?: number;
+}
+export type InputDeclaration = StringDeclaration | ObjectDeclaration;
+export type PropertyDeclaration = StringDeclaration | NumberDeclaration | BooleanDeclaration | ArrayDeclaration;
+
+export interface NativeInput { readonly original: JsonValue; readonly images: readonly NativeImage[]; readonly location?: PhysicalSource; }

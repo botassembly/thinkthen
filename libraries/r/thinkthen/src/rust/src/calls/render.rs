@@ -48,7 +48,9 @@ pub(crate) fn receipt(state: &State) -> Crossed<String> {
         State::Unused => ("unused", None, None),
         State::Claimed => ("claimed", None, None),
         State::Running => ("running", None, None),
-        State::Terminal { kind, snapshot } => ("terminal", Some(kind.as_str()), Some(snapshot)),
+        State::Terminal { kind, snapshot } => {
+            ("terminal", Some(kind.as_str()), Some(snapshot.as_ref()))
+        }
     };
     serde_json::to_string(&Receipt {
         state,
