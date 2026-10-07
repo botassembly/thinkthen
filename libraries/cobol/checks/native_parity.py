@@ -1,8 +1,9 @@
 """Execute shared cases through compiled COBOL named calls and typed views."""
-import inspect
 from pathlib import Path
 import re
 import subprocess
+import tempfile
+import os
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -10,13 +11,13 @@ sys.path.insert(0, str(ROOT / 'conformance'))
 import c_parity as shared
 
 run = subprocess.run
+PACKAGE = Path(os.environ.get("THINKTHEN_PARITY_PACKAGE", ROOT / "libraries/cobol" )).resolve(strict=True)
+HEADER = Path(os.environ.get("THINKTHEN_C_HEADER", ROOT / "libraries/c/include/thinkthen.h")).resolve(strict=True)
+if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_PARITY_PACKAGE"):
+    raise ValueError("installed cobol parity requires its extracted package")
 
-def compile_consumer(command, *args, **kwargs):
-    if command[0] != 'cc' or '-fsanitize=address' not in command:
-        return run(command, *args, **kwargs)
-    source = Path(next(part for part in command if part.endswith('/driver.c')))
-    scratch = source.parent
-    header = (ROOT / 'libraries/c/include/thinkthen.h').read_text()
+def adapter(scratch):
+    header = HEADER.read_text()
     header = re.sub(r'/\*.*?\*/', '', header, flags=re.S)
     signatures = []
     for match in re.finditer(r'\b(int|void)\s+(thinkthen_\w+)\s*\(([^;{}]+)\)\s*;', header):
@@ -57,17 +58,24 @@ def compile_consumer(command, *args, **kwargs):
         values = ','.join('(void *)&bridge_'+p if typ in ('thinkthen_string_v1','thinkthen_optional_string_v1') else '(void *)&'+p for typ,p in parameters)
         definitions.append(f'{ret} cobol_{name}({params}) {{ '+aliases+f'void *arguments[]={{{values}}}; '+('' if ret=='void' else 'return ')+f'cob_call("{program_name}",{len(parameters)},arguments); }}')
     cobol = scratch / 'consumer.cob'; cobol.write_text('\n'.join(programs))
-    obj = scratch / 'consumer.o'
-    run(['cobc', '-c', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call', '-o', str(obj), '-A', '-include '+str(ROOT / 'libraries/cobol/src/tt_native.h')+' -Wno-incompatible-pointer-types', '-I', str(ROOT / 'libraries/c/include'), str(cobol)], check=True, env=kwargs.get('env'))
     prefix = '#include "thinkthen.h"\n#include <libcob.h>\n' + '\n'.join(declarations + definitions) + '\n'
     prefix += '\n'.join('#define '+name+' cobol_'+name for _,name,_ in signatures) + '\n'
-    text = source.read_text().replace('int main(int argc,char **argv) {', 'int main(int argc,char **argv) { cob_init(0,NULL);')
-    source.write_text(prefix + text)
-    bridge = [str(ROOT / ('libraries/cobol/src/' + name)) for name in ('tt_complete.c','tt_inputs.c')]
-    index = command.index('-o')
-    return run(command[:index] + [str(obj), *bridge, '-lcob', '-rdynamic'] + command[index:], *args, **kwargs)
+    path = scratch / 'adapter.h'; path.write_text(prefix)
+    return path
 
-subprocess.run = compile_consumer
-source = inspect.getsource(shared.main).replace("required_cases(inventory, 'c')", "required_cases(inventory, 'cobol')").replace("'consumer': 'c'", "'consumer': 'cobol'").replace('C fixture ', 'COBOL fixture ').replace('C shared fixture results:', 'COBOL shared fixture results:')
-exec(compile(source, __file__, 'exec'), shared.__dict__)
-raise SystemExit(shared.main())
+
+def compile_consumer(scratch, env, include, library, source):
+    (scratch / 'consumer.cob').write_text((ADAPTER.parent / 'consumer.cob').read_text())
+    cobol = scratch / 'consumer.cob'
+    obj = scratch / 'consumer.o'
+    run(['cobc', '-c', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call', '-o', str(obj), '-A', '-include '+str(PACKAGE / 'src/tt_native.h')+' -Wno-incompatible-pointer-types', '-I', str(include), str(cobol)], check=True, env=env)
+    output = scratch / 'driver'
+    bridge = [str(PACKAGE / 'src' / name) for name in ('tt_complete.c','tt_inputs.c')]
+    run(['cc', '-pthread', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(include), str(source), str(obj), *bridge, str(library), '-lcob', '-rdynamic', '-Wl,-rpath,' + str(scratch), '-o', str(output)], env=env, check=True)
+    return output
+
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-cobol-adapter-') as folder:
+    ADAPTER = adapter(Path(folder))
+    raise SystemExit(shared.main(consumer='cobol', compile_consumer=compile_consumer,
+                                adapter_header=ADAPTER, initialize='cob_init(0,NULL);'))

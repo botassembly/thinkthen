@@ -58,6 +58,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$root/Cargo.toml" --package conformance-backend -j2
     THINKTHEN_PORTABLE_SWIFT_SOURCE="$wrapper" THINKTHEN_NATIVE_ROOT="$native" \
         python3 "$here/Tests/fixtures/portable_batch.py"
+    THINKTHEN_PARITY_PACKAGE="$wrapper" THINKTHEN_NATIVE_ROOT="$native" \
+      python3 "$here/Tests/fixtures/complete_parity.py"
     echo 'Swift installed release PASS: three literal portable sends'
     exit 0
 fi

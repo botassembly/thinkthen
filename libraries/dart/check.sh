@@ -40,6 +40,8 @@ case ${THINKTHEN_ARTIFACT:-} in
     python3 "$CHECKS/exports.py" "$scratch/native/lib/libthinkthen.so" "$scratch/native/include/thinkthen.h" "$scratch/exports.txt" "$scratch/dart"
     locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" \
       python3 "$FLUTTER/installed.py" "$scratch/dart" "$scratch/flutter-stage" "$scratch/native"
+    export TT_DART TT_FLUTTER
+    python3 "$CHECKS/installed_complete.py" "$scratch/dart" "$scratch/native" flutter
     echo 'Flutter installed release PASS: legacy and complete Linux app calls, zero-send cancellation and usage'
     exit 0 ;;
 esac
@@ -72,6 +74,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_BACKEND_BIN="$ROOT/../../target/debug/conformance-backend" \
     python3 "$CHECKS/portable_batch.py"
   python3 "$CHECKS/release_plants.py" "$package" "$native"
+  export TT_DART
+  python3 "$CHECKS/installed_complete.py" "$package" "$native" dart
   echo 'Dart installed release PASS: legacy and complete typed rows, two requests per route, zero-send cancellation and usage'
   exit 0
 fi

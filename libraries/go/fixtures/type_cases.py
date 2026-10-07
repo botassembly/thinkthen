@@ -9,6 +9,12 @@ import tempfile
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
+if os.environ.get("THINKTHEN_ARTIFACT"):
+    for name in ("THINKTHEN_GO_TYPECASE", "THINKTHEN_GO_NATIVE_LIB"):
+        if not os.environ.get(name):
+            raise ValueError("installed Go parity requires its compiled caller and native library")
+        Path(os.environ[name]).resolve(strict=True)
+
 PORT = ROOT / "libraries/go"
 CORPUS = ROOT / "specification/fixtures/types/corpus.json"
 SPEC = importlib.util.spec_from_file_location("types_check", ROOT / "specification/fixtures/types/check.py")
@@ -21,7 +27,7 @@ FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backe
 
 
 def run_case(mode, stdin, env, name):
-    process = subprocess.run([str(ROOT / "target/go/type-case"), *mode],
+    process = subprocess.run([os.environ.get("THINKTHEN_GO_TYPECASE", str(ROOT / "target/go/type-case")), *mode],
                              input=json.dumps(stdin, ensure_ascii=False, separators=(",", ":")),
                              text=True, capture_output=True, env=env, timeout=30)
     assert process.returncode == 0 and not process.stderr, (name, process.returncode, process.stderr)
@@ -30,7 +36,7 @@ def run_case(mode, stdin, env, name):
 
 
 def native_parity():
-    consumer, command = "go", [str(ROOT / "target/go/type-case")]
+    consumer, command = "go", [os.environ.get("THINKTHEN_GO_TYPECASE", str(ROOT / "target/go/type-case"))]
     # Shared recipes/assertions are read-only; execution uses each actual named consumer.
     import sqlite3
     sys.path.insert(0, str(ROOT / "conformance"))
@@ -47,7 +53,7 @@ def native_parity():
                 env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": folder,
                        "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
                        "XDG_STATE_HOME": str(home / "state"), "LC_ALL": "C.UTF-8",
-                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": str(ROOT / "target/go/native/lib")}
+                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": os.environ.get("THINKTHEN_GO_NATIVE_LIB", str(ROOT / "target/go/native/lib"))}
                 backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
@@ -164,7 +170,7 @@ def main():
                     env = {"PATH": "/usr/bin:/bin", "HOME": folder,
                            "THINKTHEN_BASE_URL": f"http://127.0.0.1:{port}/generic/v1",
                            "THINKTHEN_CACHE": str(Path(folder) / str(index)),
-                           "LD_LIBRARY_PATH": str(ROOT / "target/go/native/lib")}
+                           "LD_LIBRARY_PATH": os.environ.get("THINKTHEN_GO_NATIVE_LIB", str(ROOT / "target/go/native/lib"))}
                     actual = run_case(["plan"], case["plan_input"], env, case["name"])
                     assert actual == case["response"], (case["name"], actual)
                     assert checks[case["definition"]].is_valid(actual), case["name"]
@@ -179,7 +185,7 @@ def main():
                        "THINKTHEN_BASE_URL": f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1",
                        "THINKTHEN_API_KEY": "sk-type-contract-loopback",
                        "THINKTHEN_CACHE": str(Path(folder) / str(index)),
-                       "LD_LIBRARY_PATH": str(ROOT / "target/go/native/lib")}
+                       "LD_LIBRARY_PATH": os.environ.get("THINKTHEN_GO_NATIVE_LIB", str(ROOT / "target/go/native/lib"))}
                 actual = run_case([], case["request"], env, case["name"])
                 if case["name"] in FIELDS:
                     # The shared null and failed annotate members, read through ReadField.

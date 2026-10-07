@@ -42,7 +42,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     python3 "$root/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
     python3 "$here/tests/package_check.py" "$native/include/thinkthen.h" "$managed/thinkthen-door.jar" "$native/lib/libthinkthen.so"
     THINKTHEN_RELEASE_JVM_DIR="$managed" THINKTHEN_RELEASE_C_DIR="$native" \
-        python3 "$here/tests/installed.py"
+        python3 "$here/tests/public_types.py"
     if [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then
         echo 'JVM portable batch PASS: Java, Kotlin and Scala installed files'
     else

@@ -53,6 +53,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$root/Cargo.toml" --package conformance-backend -j2
     THINKTHEN_PORTABLE_ZIG_PROJECT="$release_root/project" THINKTHEN_NATIVE_ROOT="$native" \
         python3 "$here/Tests/portable_batch.py"
+    THINKTHEN_PARITY_PACKAGE="$release_root/package" THINKTHEN_NATIVE_ROOT="$native" \
+      python3 "$here/Tests/complete_parity.py"
     echo 'Zig installed release PASS: three literal portable sends'
     exit 0
 fi
