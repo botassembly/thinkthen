@@ -152,7 +152,15 @@ fn each_group_sees_its_part_and_a_bad_part_sends_nothing() {
     let root = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"}}}"#;
     assert_eq!(states(root, NOTE).expect("answered"), [Value::from(NOTE)]);
     let twice = r#"{"a":1,"a":2}"#;
-    assert_eq!(states(root, twice).expect("answered"), [Value::from(twice)]);
+    usage(
+        &states(root, twice).expect_err("duplicate members refuse before a send"),
+        "a JSON record holds each member name once, and one name arrived twice",
+    );
+    let malformed = "{unfinished";
+    assert_eq!(
+        states(root, malformed).expect("text answers"),
+        [Value::from(malformed)]
+    );
     let mixed = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
     let record = r#"{"body":"Refund me."}"#;
     let mixed = states(mixed, record).expect("answered");

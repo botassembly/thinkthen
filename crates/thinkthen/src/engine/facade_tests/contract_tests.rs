@@ -160,7 +160,7 @@ fn no_key_reaches_a_result_an_error_a_recording_or_a_count() {
 #[test]
 fn a_folder_asked_at_another_address_misses_and_keeps_both_answers() {
     let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+        Canned::ok(r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
     })
     .expect("listener");
     let folder = Scratch::new("other-backend");

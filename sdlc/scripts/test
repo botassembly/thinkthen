@@ -74,6 +74,7 @@ CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/library-only" \
 cargo $runner --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace
 python3 conformance/parity.py --validate
+python3 -m unittest conformance.test_parity
 sh specification/fixtures/question-file/self-test
 sh specification/fixtures/types/self-test
 sh conformance/children/test.sh

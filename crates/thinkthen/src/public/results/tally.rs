@@ -14,6 +14,7 @@ struct State {
     records: u64,
     requests_sent: u64,
     cache_answers: u64,
+    // Checked known totals; missing reports affect snapshots, not accumulation.
     input_tokens: Option<u64>,
     output_tokens: Option<u64>,
     missing_input: bool,
@@ -100,18 +101,19 @@ impl Tally {
 
 impl Tally {
     /// Snapshot checked raw totals, rounding once under this engine's prices.
-    /// Every included call must have complete priced facts. Empty priced work
-    /// estimates zero; missing usage or prices remain absent.
+    /// Live calls need complete priced facts; priced zero-send calls add zero.
+    /// Missing reported tokens stay absent even when current cost is known.
     #[must_use]
     pub fn facts_with_engine(&self, engine: &crate::public::Engine) -> Facts {
         let state = self.0.lock().unwrap_or_else(PoisonError::into_inner);
         let mut facts = state.snapshot();
-        let totals = if state.first.is_none() {
-            Some((0, 0))
-        } else if state.missing_priced_facts {
+        let totals = if state.missing_priced_facts {
             None
         } else {
-            facts.input_tokens.zip(facts.output_tokens)
+            Some((
+                state.input_tokens.unwrap_or(0),
+                state.output_tokens.unwrap_or(0),
+            ))
         };
         facts.estimated_cost_usd =
             totals.and_then(|(input, output)| engine.estimate_reported_cost(input, output));
@@ -174,7 +176,7 @@ impl TallyStart<'_> {
                     .ok_or_else(|| Error::defect("tally token count overflowed"))?,
             ),
             (None, Some(b)) => Some(b),
-            _ => None,
+            (previous, None) => previous,
         };
         let output = match (state.output_tokens, facts.output_tokens) {
             (Some(a), Some(b)) => Some(
@@ -182,7 +184,7 @@ impl TallyStart<'_> {
                     .ok_or_else(|| Error::defect("tally token count overflowed"))?,
             ),
             (None, Some(b)) => Some(b),
-            _ => None,
+            (previous, None) => previous,
         };
         state.first = Some(
             state
@@ -199,8 +201,8 @@ impl TallyStart<'_> {
         state.missing_input |= facts.input_tokens.is_none();
         state.missing_output |= facts.output_tokens.is_none();
         state.missing_priced_facts |= facts.estimated_cost_usd.is_none()
-            || facts.input_tokens.is_none()
-            || facts.output_tokens.is_none();
+            || (facts.requests_sent > 0
+                && (facts.input_tokens.is_none() || facts.output_tokens.is_none()));
         match facts
             .estimated_cost_usd
             .as_deref()

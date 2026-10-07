@@ -365,3 +365,27 @@ Focused checks pass: all four native-name/CLI cases, affected Clippy, format and
 Native schema adoption WIP: complete resolved questions serialize the four admitted author fields through the production readable-question carrier. Those concrete declarations also derive the shared result/2 schema and packaged complete-call schema, with strict refusal of unknown declaration features and nullable omissions. The existing native metadata-edit/replay exchange validates the actual complete output against it. Named/reference loaders, native typed admission and owned getters are implemented in this branch; host adoption and the whole landing review remain open.
 
 Native foundation update: the single native grammar/loaders and all applicable complete/convenience/CLI admission routes implement the four author fields, explicit named/reference loading, typed selected item/per-item-context validation, finite versus staged refusal, ancillary image text and annotate JSON-document rules. Actual metadata/declaration getters and generated shared/package schemas are available to host owners; authored metadata does not enter semantic keys or stable identity. Old files, paths, lexical content and six safe error kinds remain. C/MCP/families/frames/SQL adoption and root whole review/landing remain open.
+Lane1 reviewer correction on coherent 2922fd8a1: the coordinator retains whether
+deadline admission abandoned staged inputs, so EOF cannot suppress their
+terminal stop. Controlled public iterators pin deadline delivery with zero
+sends and after two completed rows, retaining actual prefix counts, usage,
+attempts and invocation facts. The original EOF case returned normal exhaustion
+before this fix. Together with the 0300 pricing correction, measured source
+grows 186 nonblank Rust lines (143695 → 143881), mainly public regressions using
+the existing loopback fixtures and a controlled iterator. Root owns original
+reviewer confirmation and full landing gates; remaining adoption stays open.
+
+The fourth existing `public_controls` failure is now reconciled in lane1's
+bounded test-only step. Ticket 0414's admitted outcome includes find, recognize
+and relate: their old shared-context refusal rows were obsolete. The released
+calls now use valid choice/boundary/decision replies and check typed results,
+one actual send each, original candidate/entity evidence and separate context.
+The still-ineligible decide/details calls retain exact Usage sentences, absent
+started facts and zero-send assertions. Full `public_controls` passes 24 cases
+with its one existing stress ignore. No staging/context production source is
+changed; 0300 records this step's measured source growth. All four new pricing/
+EOF regressions fail on original source and pass on corrected source.
+Corrected-source checks: 63 native complete and 63 routine public batch cases
+pass (two existing batch stress cases remain explicitly ignored), along with
+two tally unit cases and three legacy public tally consumers. Focused library/
+native-test Clippy, offline policy, formatting and the exact ratchet pass.

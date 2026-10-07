@@ -60,7 +60,11 @@ pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
     };
     if let Some(connection) = &live {
         held = held.normalized()?;
-        held.merge(Entries::read(connection)?.normalized()?)?;
+        held.merge(
+            Entries::read(connection)
+                .and_then(Entries::normalized)
+                .map_err(super::versioned::sqlite_error)?,
+        )?;
     }
     let mut summary = Summary::default();
     held = held.normalized()?;

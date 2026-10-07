@@ -75,3 +75,100 @@ main landing remain open.
 Held-model warning constituent WIP: cache lookup checks a missed exact key for validated historical answers on the same configured URL, literal requested model, selected state and wire question. Excluded mismatches trigger a fixed command warning and a call-scoped `Facts::held_model_mismatch()` getter, with optional true-only complete-facts serialization. Stored model/address values never enter the warning. Exact corrected hits, unrelated questions and offline historical replay remain silent; ambiguous replay still refuses before sends. Primitive keys, grouping, image domains and accepted observation identity are unchanged. The getter is recorded in 0443's canonical inventory delta. Bounded timing history and final whole review/host adoption remain open.
 
 Native foundation update: versioned per-question keys, accepted persistent observations, partial reported usage, original ordered image domains, atomic validated migration and read-only replay are implemented in this branch. Corrected 0454 batching remains outside key/legacy observation identity. Complete getters/CLI preserve original per-observation wire counts and actual cache/replay provenance. Optional timing recording and the fixed held-model warning are implemented; their failure boundaries are documented in 0445/recording.md. Root whole review/landing and required host adoption remain open.
+Lane1 legacy-key diagnosis: the saved C integration log's two failures are
+`cases::portable::c_json_records_keep_fixture_questions_and_keys_in_one_request`
+and `cases::every_applicable_shared_case_passes_through_the_door`. Committed C
+consumer be26fdc13 computes LF-joined v1 keys in tests/door/cases/wire.rs; the
+shared-case planner uses that same helper. Native public calls reproduce the
+distinction for the portable questions and shared case 01: wire questions remain
+byte-identical, while metadata keys match independently framed question-key/2.
+The accepted cache contract, committed in e3d665981, explicitly rules under
+Validation and migration: "`meta.requests` uses v2 question keys after adoption,
+requiring one controlled example/fixture update by 0444." ADR 0120 decisions 3–4
+retain original v1 validation before rekeying and committed offline fixtures.
+The added public regression replays original valid v1 rows without sends or
+file writes; existing recording/1 conversion regressions remain passing.
+No native compatibility exception or C expectation edit is made here. Root must
+coordinate the authorized metadata-oracle adoption with the C/corpus owners;
+original v1 stored keys and request-envelope validation remain distinct.
+
+Lane1 CLI oracle correction on actual native-foundation candidate 1bbcc0bb1:
+the full-test replay failure reproduces in shared case 01 (v2 1c38… versus
+legacy v1 2bc2…). Current facade/staged metadata now uses the accepted shared
+oracle from 54c557c3e, including each saved response's literal reported model.
+The unchanged v1 helper stays with historical captured-fixture validation;
+original exchange digest placeholders, questions and recording bytes stay
+distinct. The all-selected command wire run also reproduced 30 key failures
+from substituting the requested model for different saved reported models;
+its endpoint mapping now reuses that same shared oracle. No C/corpus or
+production key/hash change, regenerated expectation, ignore or weakened
+identity assertion is introduced.
+
+The affected Relate replay example independently reproduces its original
+v1 missing-pair key from unchanged state/question bytes; documented v2 framing
+gives the current 9be378… key. Only that diagnostic's expected hash changes;
+the complete page passes all four blocks and its historical recording stays
+unchanged. Focused replay case passes, the whole private CLI corpus passes
+seven tests (two existing child entrypoints remain runner-owned), all 55 wire
+cases are selected with 46 passes and the same nine in-process/repacked cases,
+and all ten public native-store tests pass, including byte/mtime read-only
+replay, distinct v1/v2 identity, mismatches and original body conversion.
+Library/backend Clippy, offline policy (268 packages), formatting and ratchet
+pass. Additional `cargo clippy -p thinkthen --tests -- -D warnings` fails on
+the unchanged image test's unfulfilled `clippy::unwrap_used` expectation at
+`core/adapters/systemone/images/local_tests.rs:16`; no allowance, ignore or
+out-of-scope image edit is made. Root retains this broader lint finding.
+
+Measured source grows 17 nonblank Rust lines (143995 → 144012): reuse the
+already accepted shared metadata map, keep the historical validator separate,
+and remove the wire runner's duplicated model assumption. The four affected
+Rust files have 487, 298, 465 and 476 nonblank lines; no new framework or
+dependency is needed. Checks use empty owned configuration, stripped key
+variables, offline two-job 10G/1G scopes and lane/shared locks. The count-only
+private-name scan checks 35 patterns: zero path hits, one starting/current
+tracked-file hit with an unchanged hit set, zero edited-file hits. Root retains
+that existing scan issue and reruns full gates on the actual new merge
+candidate; overall native/host parity remains open.
+
+The bounded cache-contract reconciliation from c0551ed17 reproduces all 23
+collected workspace failures. Fixture corrections follow cache.md:24,54–60:
+matching-model cache tests serve their literal requested model; current keys
+use the accepted shared v2 oracle with the saved reported model; unversioned
+fixtures and legacy SQLite rows retain independently checked LF-framed v1
+keys. The original pinned v1 conversion keys remain asserted. Conversion
+matches expected state/origin rather than historical hash order. Conflicting
+histories now assert local refusal and unchanged sources; the existing lock
+test retains a writer's distinct row. Damaged-answer cache/replay tests assert
+zero sends, stopped facts and preservation instead of the superseded resend.
+Hostile fixtures retain their secrecy and request-count checks while pinning
+the safe v2 validation diagnostic. Original saved recordings remain unchanged.
+
+Two production defects are corrected: SQLite snapshot validation names the
+actual SQLite source, and refusal of a damaged JSONL fixture validates before
+creating SQLite. The latter independently failed the public cache regression
+by leaving an empty competing store. Corrupt image cache and replay both
+assert exit 5, empty output, zero additional sends and unchanged database
+bytes. The separate usage-decoy failure is test isolation: the two live CLI
+cases in native_named_questions inherited XDG_STATE_HOME. Their existing
+helper now clears the environment and reuses the platform child helper for
+owned configuration/cache/usage, retaining exact requests and completed-prefix
+assertions. No key formula, result serializer, C/corpus or active lane0 file
+changes are made.
+
+All 26 focused cases pass with a clean usage guard. Final existing workspace
+`cargo nextest run --locked --offline --workspace --all-targets --no-fail-fast
+--test-threads 2` passes all 1,616 tests with the same 26 existing skips and a
+clean usage guard. Policy checks 268 resolved packages; formatting, affected
+`cargo clippy -p thinkthen --tests --locked --offline -- -D warnings`, and
+exact ratchet pass. Checks use stripped key variables, empty owned config,
+bwrap-isolated state, offline two-job 10G/1G scopes and lane/shared locks.
+Measured source grows 106 nonblank Rust lines (144011 → 144117): 27 production
+lines for source context and pre-creation validation, 79 test lines for the
+independent legacy/v2 assertions and owned state checks. The shared v2 oracle
+is loaded once per backend test binary, removing its duplicate module import;
+legacy framing stays separate. Every changed Rust file remains at or below
+500 nonblank lines. Count-only private-name checks retain one unchanged
+starting tracked-file hit, zero path hits and zero edited-file hits. No
+collected failure or legacy-key contract conflict remains; root retains that
+starting scan issue, narrow confirmation and the final actual landing ladder.
+Overall parity remains open.

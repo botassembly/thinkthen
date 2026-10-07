@@ -456,7 +456,7 @@ fn captured(fixture: &str, exchange: &Exchange) -> Result<(), String> {
         }
     }
     let url = crate::core::Url::new("https://api.typesafe.ai/v1/systemone").map_err(|_| "URL")?;
-    for (place, key) in super::command::question_keys(&url, &exchange.request)
+    for (place, key) in legacy_question_keys(&url, &exchange.request)
         .iter()
         .enumerate()
     {
@@ -472,4 +472,36 @@ fn captured(fixture: &str, exchange: &Exchange) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// Original v1 question keys validate historical fixture bytes before rekeying.
+fn legacy_question_keys(url: &crate::core::Url, body: &str) -> Vec<String> {
+    #[derive(Deserialize)]
+    struct Parts<'a> {
+        #[serde(borrow)]
+        state: &'a serde_json::value::RawValue,
+        #[serde(borrow)]
+        model: &'a serde_json::value::RawValue,
+        #[serde(borrow)]
+        questions: std::collections::BTreeMap<String, &'a serde_json::value::RawValue>,
+    }
+    let parts: Parts<'_> = serde_json::from_str(body).expect("a request body");
+    let mut questions: Vec<_> = parts
+        .questions
+        .into_iter()
+        .map(|(name, question)| (name[1..].parse::<usize>().expect("a qN name"), question))
+        .collect();
+    questions.sort_by_key(|(place, _)| *place);
+    questions
+        .into_iter()
+        .map(|(_, question)| {
+            crate::core::pack::QuestionKey::of(
+                url,
+                parts.model.get(),
+                parts.state.get(),
+                question.get(),
+            )
+            .hex()
+        })
+        .collect()
 }

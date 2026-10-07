@@ -2,6 +2,16 @@
 
 Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
+Lane1 foundation correction against reviewed 30e42a974 plus main e316a9a7e:
+CallFacts permanently retains reported-model disagreement and omits the scalar
+on success and started failure. Public regressions use separate fixed/other/fixed
+replies, mixed cache/live and replay origins, and a later 503 after disagreement;
+actual observation models, configured request model, bare values and joined facts
+remain intact. Root owns narrow reviewer confirmation and full landing gates;
+this correction makes no whole native/C parity claim.
+Focused checks: 78 native public cases, affected Clippy, offline policy and the
+measured source ratchet pass; both model regressions failed before the fix.
+
 Milestone: 0.2
 
 Owner: builder.

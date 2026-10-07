@@ -16,7 +16,8 @@ use serde_json::Value;
 use serde_json::value::RawValue;
 
 use crate::harness::spawn_one as spawn;
-use crate::support::{digest, keys};
+
+use crate::support::shared_keys;
 
 mod selection;
 use selection::selected_ids;
@@ -110,14 +111,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let base = format!("{}/case/{id}/v1", backend.origin());
     let served = format!("{base}/systemone");
     // Every row lists question keys by ADR 0111.
-    let mut renamed = BTreeMap::new();
-    for exchange in list(&case["exchanges"]) {
-        let request = text(&exchange["request"]).as_bytes();
-        renamed.insert(
-            digest(CANONICAL, request),
-            Value::from(keys(&served, request)),
-        );
-    }
+    let renamed = shared_keys::fixture_keys(CANONICAL, &served, list(&case["exchanges"]))?;
     let success = &case["expect"]["success"];
     let answers = recomputed(&success["answers"], &renamed);
     let tail = ["--details", "--url", base.as_str(), "--no-cache"].map(str::to_owned);

@@ -454,6 +454,56 @@ rank_empty_null_and_refusals_send_nothing() {
 	same "$(bcount)" 0
 }
 check rank_empty_null_and_refusals_send_nothing
+rank_sets_turns_keys_descriptions_and_refusals() {
+	fresh generic
+	proxy_start ranksets python3 ../sqlite/tests/rank_backend.py "$RUN/ranksets.bodies"
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/rank_sets_cases.py invalid "$SOCK"
+	proxy_stop
+	same "$PROXYCOUNT" 0
+	proxy_start ranksetsvalid python3 ../sqlite/tests/rank_backend.py "$RUN/ranksets.bodies"
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/rank_sets_cases.py verify "$SOCK" "$RUN"
+	proxy_stop
+	same "$PROXYCOUNT" 6
+	python3 tests/rank_sets_cases.py bodies "$RUN/ranksets.bodies"
+}
+check rank_sets_turns_keys_descriptions_and_refusals
+rank_sets_plain_member_recordings_replay_without_sends() {
+	fresh generic
+	proxy_start rankreplay python3 ../sqlite/tests/rank_backend.py "$RUN/rankreplay.bodies"
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/rank_sets_cases.py members "$SOCK" "$RUN/rank-record"
+	pg_stop
+	mkdir "$RUN/rank-replay-cache"
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$RUN/rank-replay-cache"
+	python3 tests/rank_sets_cases.py replay "$SOCK" "$RUN/rank-record"
+	proxy_stop
+	same "$PROXYCOUNT" 6
+}
+check rank_sets_plain_member_recordings_replay_without_sends
+rank_set_ties_keep_key_order_and_public_types() {
+	fresh generic
+	local spec='{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}'
+	local input='{"z":"one","b":"two","aa":"three"}'
+	same "$(q -c "SELECT string_agg(key || ':' || rank || ':' || probability || ':' || question_name, ' ' ORDER BY rank) FROM thinkthen_rank_set('$spec','$input'::jsonb,'{\"batch\":\"max\"}'::json)")" 'aa:1:0.9:first b:2:0.9:first z:3:0.9:first'
+	same "$(q -c "SELECT pg_typeof(key)::text || ',' || pg_typeof(rank)::text || ',' || pg_typeof(probability)::text || ',' || pg_typeof(question_name)::text || ',' || pg_typeof(facts)::text FROM thinkthen_rank_set('$spec','$input'::jsonb,'{\"batch\":\"max\"}'::json) LIMIT 1")" 'text,bigint,double precision,text,jsonb'
+	same "$(bcount)" 1
+}
+check rank_set_ties_keep_key_order_and_public_types
+rank_set_backend_failure_preserves_error_and_secrecy() {
+	fresh generic
+	proxy_start rankfailure python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence'
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/rank_sets_cases.py failure "$SOCK"
+	proxy_stop
+	same "$PROXYCOUNT" 1
+}
+check rank_set_backend_failure_preserves_error_and_secrecy
 find_settings_choose_the_model() {
 	fresh arm/full/capture
 	local out
@@ -578,6 +628,72 @@ bare_text_is_never_a_path() {
 check bare_text_is_never_a_path
 
 echo "== named files"
+explicit_question_loader_keeps_authored_json_and_privilege_gate() {
+	fresh generic
+	mkdir -p "$RUN/question-loader"
+	printf ' {"decide":"Is red visible?"}\n' >"$RUN/question-loader/question.json"
+	printf '{"version":1,"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}\n' >"$RUN/question-loader/set.json"
+	printf '{"decide":"one","decide":"two"}\n' >"$RUN/question-loader/duplicate.json"
+	printf '{"version":1,"questions":{"first":{"decide":"First?"},"first":{"decide":"Second?"}}}\n' >"$RUN/question-loader/duplicate-set.json"
+	printf '{"decide":"private-loader-evidence"' >"$RUN/question-loader/broken.json"
+	printf '{"decide":"literal at filename?"}' >"$RUN/question-loader/@literal"
+	q -c 'CREATE ROLE tt_loader LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_question_file(text) TO tt_loader' >/dev/null
+	same "$(q -c "SELECT has_function_privilege('public','thinkthen_question_file(text)','EXECUTE')")" f
+	same "$(q -c 'SELECT thinkthen_question_file(NULL) IS NULL')" t
+	has "$(q -c "SELECT thinkthen_question_file('')")" 'thinkthen usage: question file path must be nonempty text without NUL (retryable: no)'
+	same "$(q -c "SELECT thinkthen_question_file('$RUN/question-loader/question.json') = pg_read_file('$RUN/question-loader/question.json')")" t
+	same "$(q -c "SELECT thinkthen_question_file('$RUN/question-loader/set.json') = pg_read_file('$RUN/question-loader/set.json')")" t
+	has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('$RUN/question-loader/question.json')")" 'a named file needs pg_read_server_files'
+	fresh generic "thinkthen.file_directory = '$RUN/question-loader'"
+	same "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('question.json') = ' {\"decide\":\"Is red visible?\"}' || chr(10)")" t
+	same "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('@literal')")" '{"decide":"literal at filename?"}'
+	ln -s question.json "$RUN/question-loader/symlink.json"
+	ln "$RUN/question-loader/set.json" "$RUN/question-loader/hardlink.json"
+	mkfifo "$RUN/question-loader/fifo"
+	for name in symlink.json hardlink.json fifo . ../postgresql.conf.base; do
+		has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('$name')")" 'thinkthen local:'
+	done
+	for name in duplicate.json duplicate-set.json broken.json; do
+		has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('$name')")" 'the question file does not parse as a question or question set'
+	done
+	python3 -c 'import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b" " * 1048577)' "$RUN/question-loader/big.json"
+	has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('big.json')")" 'over the 1048576 byte cap'
+	same "$(bcount)" 0
+}
+check explicit_question_loader_keeps_authored_json_and_privilege_gate
+
+stored_image_composites_use_native_order_and_strict_replay() {
+	export LIQUIDAI_API_KEY=sk-sql-image-loopback THINKTHEN_BACKEND=liquid
+	fresh generic
+	proxy_start images python3 ../sqlite/tests/image_backend.py "$RUN/images.bodies"
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/image_cases.py invalid "$SOCK"
+	# Recording is a server setting; the first public consumer stores originals
+	# in a persisted SQL table and reads its array in ordinal order.
+	q -c "ALTER SYSTEM SET thinkthen.record = '$RUN/image-record'" >/dev/null
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/image_cases.py verify "$SOCK"
+	q -c "ALTER SYSTEM RESET thinkthen.record" -c "ALTER SYSTEM SET thinkthen.replay = '$RUN/image-record'" -c 'ALTER SYSTEM SET thinkthen.max_requests_total = 0' >/dev/null
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/image_cases.py replay "$SOCK"
+	proxy_stop
+	same "$PROXYCOUNT" 3
+	python3 tests/image_cases.py bodies "$RUN/images.bodies"
+	q -c 'ALTER SYSTEM RESET thinkthen.replay' -c 'ALTER SYSTEM RESET thinkthen.max_requests_total' >/dev/null
+}
+check stored_image_composites_use_native_order_and_strict_replay
+client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends() {
+	fresh generic
+	cargo build --locked --offline --example client_files
+	"${CARGO_TARGET_DIR:-target}/debug/examples/client_files" "$SOCK" "$RUN/client-source.txt"
+	# Two rank records, one find, two native recognition stages per source,
+	# and one relation request; readers and span mapping add no sends.
+	same "$(bcount)" 8
+}
+check client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends
 DID_NOT_READ="did not read: it must be a regular file at most 1048576 bytes"
 dev_zero_refuses_fast() {
 	fresh generic
@@ -683,6 +799,17 @@ find_cancel() {
 	same "$(bcount)" 1
 }
 check find_cancel
+rank_set_cancel() {
+	fresh arm/held
+	held "SELECT key FROM thinkthen_rank_set('{\"version\":1,\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb, '{\"batch\":\"max\"}'::json)"
+	bwait 1
+	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
+	wait "$HELD" || true
+	has "$(cat "$RUN/held.out")" 'canceling statement due to user request'
+	brelease
+	same "$(bcount)" 1
+}
+check rank_set_cancel
 single_statement_timeout() {
 	fresh arm/held
 	start=$(now_ms)

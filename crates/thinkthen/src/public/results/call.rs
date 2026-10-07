@@ -150,7 +150,7 @@ impl Facts {
         self.seconds
     }
 
-    /// The validated model a reply reported, when one was received.
+    /// The reported model, only when all live or stored replies agree.
     #[must_use]
     pub fn model(&self) -> Option<&str> {
         self.model.as_deref()
