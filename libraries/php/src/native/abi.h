@@ -350,7 +350,7 @@ typedef struct thinkthen_score_answer_v1 {
 typedef struct thinkthen_answer_v1 {
     uint32_t kind;
     union {
-        double probability; 
+        double probability;
         thinkthen_named_answer_v1 choice;
         thinkthen_probabilities_v1 tag;
         thinkthen_score_answer_v1 score;
@@ -481,7 +481,7 @@ typedef struct thinkthen_relation_answer_v1 {
     thinkthen_endpoint_v1 source;
     thinkthen_optional_endpoint_v1 target;
     thinkthen_string_v1 request;
-    uint32_t state; 
+    uint32_t state;
     union {
         thinkthen_relation_success_v1 success;
         thinkthen_member_failure_v1 failure;
@@ -587,7 +587,7 @@ typedef struct thinkthen_stopped_v1 {
 } thinkthen_stopped_v1;
 typedef struct thinkthen_optional_stopped_v1 { int present; thinkthen_stopped_v1 value; } thinkthen_optional_stopped_v1;
 typedef struct thinkthen_error_v1 {
-    int code; 
+    int code;
     thinkthen_string_v1 message;
     int retryable;
     thinkthen_optional_stopped_v1 stopped;
@@ -850,5 +850,3 @@ int thinkthen_source_files(const thinkthen_engine *, const thinkthen_source_spec
 
 int thinkthen_source_image_files(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
 void thinkthen_source_free(thinkthen_source *);
-
-
