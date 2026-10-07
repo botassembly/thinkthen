@@ -1,6 +1,6 @@
 # 0418: Rank question sets through typed language and frame APIs
 
-Status: inprogress. Native complete execution is being built; host adoption and whole review remain open.
+Status: in progress. Native complete execution is being built; host adoption and whole review remain open.
 
 Milestone: 0.2
 
