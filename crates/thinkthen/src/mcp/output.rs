@@ -2,7 +2,7 @@
 
 use super::protocol::{Fault, Id};
 use serde::Serialize;
-use serde_json::{Value, json, value::RawValue};
+use serde_json::{json, value::RawValue};
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 
@@ -122,13 +122,6 @@ impl Write for Counter {
 }
 
 /// Existing safe errors and observed facts. Admission invents no started facts.
-pub(super) fn native_error(error: &crate::Error) -> Value {
-    let mut object = json!({"error":{"kind":error.kind(),
-        "message":error.detail().message(),"retryable":error.retryable()}});
-    if let Some(map) = object.as_object_mut()
-        && let Some(facts) = error.facts()
-    {
-        map.insert("facts".into(), json!(facts));
-    }
-    object
+pub(super) fn native_error(error: &crate::Error) -> crate::CompleteError<'_> {
+    error.complete()
 }

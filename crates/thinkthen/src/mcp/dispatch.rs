@@ -1,100 +1,110 @@
-//! Native input preparation, reusable by the pending complete dispatch adapter.
-
+//! Ordinary native preparation; no compatibility execution or host question parser.
 use super::{admission::Invocation, tools::Tool};
-use crate::{Error, LoadedQuestion, Question, QuestionSet, RankSet, Recognize, Relate};
+use crate::{Error, LoadedQuestion, Question, QuestionSet, RankSet, RecognizeQuestionFile, Relate};
 
 #[derive(Debug)]
 pub(super) enum PreparedQuestion {
     Atomic(LoadedQuestion),
     Annotate(QuestionSet),
     RankSet(RankSet),
-    Recognize(Recognize),
+    Rank(Question),
+    Find(crate::FindQuestionFile),
+    Recognize(RecognizeQuestionFile),
     Relate(Relate),
+    Dynamic(crate::RecordChooseQuestion),
+    FindPrepared(Question, crate::RecordReading),
+    RecognizePrepared(crate::Recognize, crate::RecordReading),
 }
-
 impl Invocation {
-    /// Use the existing loaders. Inline @ prefixes remain literal text.
-    /// Call on the dispatch worker, never the protocol reader.
     pub(super) fn question(&self) -> Result<PreparedQuestion, Error> {
+        if let Some(name) = &self.arguments.question_name {
+            let text = crate::public::named_question::named_text(name)?;
+            return self
+                .saved(&text)
+                .map_err(|e| Error::local(e.detail().message()));
+        }
         if let Some(path) = &self.arguments.question_file {
-            return match self.tool {
-                Tool::Annotate => QuestionSet::load(path).map(PreparedQuestion::Annotate),
-                Tool::Rank => RankSet::load(path).map(PreparedQuestion::RankSet),
-                Tool::Recognize => Recognize::load(path).map(PreparedQuestion::Recognize),
-                Tool::Relate => Relate::load(path).map(PreparedQuestion::Relate),
-                _ => Question::load(path).and_then(|question| self.atomic(question)),
-            };
+            let text = crate::read_question_file(path).map_err(|reason| match reason {
+                crate::QuestionFileError::TooLarge => {
+                    Error::local("the question file is too large")
+                }
+                _ => Error::local("the question file could not be read"),
+            })?;
+            return self
+                .saved(&text)
+                .map_err(|e| Error::local(e.detail().message()));
         }
         let raw = self
             .arguments
             .question
             .as_ref()
             .ok_or_else(|| Error::usage("missing question"))?;
-        let value: serde_json::Value =
-            serde_json::from_str(raw.get()).map_err(|_| Error::usage("invalid question"))?;
-        if let Some(text) = value.as_str() {
-            return self.text_question(text);
+        // Decode only the transport string carrier. Structured grammar stays native.
+        if raw.get().starts_with('"') {
+            let text: String =
+                serde_json::from_str(raw.get()).map_err(|_| Error::usage("invalid question"))?;
+            return self.text_question(&text);
         }
-        match self.tool {
-            Tool::Annotate => QuestionSet::from_json(raw.get()).map(PreparedQuestion::Annotate),
-            Tool::Rank => RankSet::from_json(raw.get()).map(PreparedQuestion::RankSet),
-            Tool::Recognize => Recognize::from_json(raw.get()).map(PreparedQuestion::Recognize),
-            Tool::Relate => Relate::from_json(raw.get()).map(PreparedQuestion::Relate),
-            _ => Question::from_json(raw.get()).and_then(|q| self.atomic(q)),
-        }
+        self.saved(raw.get())
     }
-
-    fn text_question(&self, text: &str) -> Result<PreparedQuestion, Error> {
-        let question = match self.tool {
-            Tool::Decide | Tool::Filter => Question::decide(text)?.cut(),
-            Tool::Rank => Question::rank(text)?,
-            Tool::Find => {
-                let question = Question::find(text)?;
-                if self.arguments.options.none {
-                    question.offering_none()?
+    fn saved(&self, text: &str) -> Result<PreparedQuestion, Error> {
+        match self.tool {
+            Tool::Annotate => QuestionSet::from_json(text).map(PreparedQuestion::Annotate),
+            Tool::Rank => {
+                // Native role discrimination chooses the existing atomic or set loader.
+                if crate::core::QuestionRole::Set.differs(text) {
+                    Question::rank_from_json(text).map(PreparedQuestion::Rank)
                 } else {
-                    question
+                    RankSet::from_json(text).map(PreparedQuestion::RankSet)
                 }
             }
-            _ => {
-                return Err(Error::usage(
-                    "this function requires the ordinary JSON question grammar",
-                ));
+            Tool::Find => crate::FindQuestionFile::from_json(text).map(PreparedQuestion::Find),
+            Tool::Recognize => {
+                RecognizeQuestionFile::from_json(text).map(PreparedQuestion::Recognize)
             }
-        };
-        Ok(PreparedQuestion::Atomic(LoadedQuestion::Question(question)))
+            Tool::Relate => Relate::from_records_json(text).map(PreparedQuestion::Relate),
+            Tool::Choose if self.arguments.options.options_field.is_some() => {
+                crate::RecordChooseQuestion::from_json(text).map(PreparedQuestion::Dynamic)
+            }
+            _ => Question::from_json(text).and_then(|q| self.atomic(q)),
+        }
     }
-
+    fn text_question(&self, text: &str) -> Result<PreparedQuestion, Error> {
+        match self.tool {
+            Tool::Decide | Tool::Filter => {
+                self.atomic(LoadedQuestion::Question(Question::decide(text)?.cut()))
+            }
+            Tool::Rank => Question::rank(text).map(PreparedQuestion::Rank),
+            Tool::Find => Ok(PreparedQuestion::Atomic(LoadedQuestion::Question(
+                Question::find(text)?,
+            ))),
+            _ => Err(Error::usage(
+                "this function requires the ordinary JSON question grammar",
+            )),
+        }
+    }
     fn atomic(&self, question: LoadedQuestion) -> Result<PreparedQuestion, Error> {
         use crate::QuestionKind as Kind;
-        let expected = match self.tool {
-            Tool::Decide | Tool::Filter => Kind::Decide,
-            Tool::Choose => Kind::Choose,
-            Tool::Tag => Kind::Tag,
-            Tool::Score => Kind::Score,
-            _ => {
-                return Err(Error::usage(
-                    "this function requires its set or plan grammar",
-                ));
-            }
+        let valid = match self.tool {
+            Tool::Decide => question.kind() == Kind::Decide,
+            Tool::Filter => question.kind() == Kind::Decide,
+            Tool::Choose => question.kind() == Kind::Choose,
+            Tool::Tag => question.kind() == Kind::Tag,
+            Tool::Score => question.kind() == Kind::Score,
+            _ => false,
         };
-        if question.kind() != expected {
+        if !valid {
             return Err(Error::usage("question kind does not match the named tool"));
         }
         Ok(PreparedQuestion::Atomic(question))
     }
-
-    /// Reuse native enumeration, bounded decode, order and original locations.
     pub(super) fn source(&self) -> Result<Option<crate::SourceItems>, Error> {
         self.arguments
             .source
             .as_ref()
-            .map(|source| crate::read_inputs(&source.paths, source.options()))
+            .map(|s| crate::read_inputs(&s.paths, s.options()))
             .transpose()
     }
-
-    /// The shared reader decodes explicit attachments in authored order, with
-    /// duplicates intact. Names remain positions, never model evidence.
     pub(super) fn attachments(&self) -> Result<Option<crate::ImageEvidence>, Error> {
         if self.arguments.images.is_empty() {
             return Ok(None);

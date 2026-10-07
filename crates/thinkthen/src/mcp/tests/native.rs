@@ -24,7 +24,8 @@ fn started_backend_errors_preserve_observed_facts_and_secrecy() {
         .cut();
     let failure = engine.decide(&question, "private-evidence").unwrap_err();
     assert_eq!(backend.count(), 1);
-    let expected = serde_json::to_value(failure.facts().expect("started facts")).unwrap();
+    let expected =
+        serde_json::to_value(failure.facts().expect("started facts").complete().unwrap()).unwrap();
     let reply = serde_json::to_value(tool_result(
         NativeObject::new(&native_error(&failure)).unwrap(),
         true,
@@ -81,7 +82,10 @@ fn a_cancelled_sent_attempt_finishes_before_native_facts_are_serialized() {
     });
     assert_eq!(backend.count(), 1);
     assert_eq!(failure.kind(), ErrorKind::Cancelled);
-    assert_eq!(native_error(&failure)["facts"]["requests_sent"], 1);
+    assert_eq!(
+        serde_json::to_value(native_error(&failure)).unwrap()["facts"]["requests_sent"],
+        1
+    );
 }
 
 #[test]
@@ -103,7 +107,10 @@ fn failed_calls_never_become_cache_answers_and_replay_misses_send_nothing() {
     for expected in 1..=2 {
         let failure = engine.decide(&question, "x").unwrap_err();
         assert_eq!(failure.kind(), ErrorKind::Backend);
-        assert_eq!(native_error(&failure)["facts"]["requests_sent"], 1);
+        assert_eq!(
+            serde_json::to_value(native_error(&failure)).unwrap()["facts"]["requests_sent"],
+            1
+        );
         assert_eq!(backend.count(), expected);
     }
     let replay = Engine::builder()
@@ -118,7 +125,10 @@ fn failed_calls_never_become_cache_answers_and_replay_misses_send_nothing() {
         .unwrap();
     let failure = replay.decide(&question, "x").unwrap_err();
     assert_eq!(failure.kind(), ErrorKind::Local);
-    assert_eq!(native_error(&failure)["facts"]["requests_sent"], 0);
+    assert_eq!(
+        serde_json::to_value(native_error(&failure)).unwrap()["facts"]["requests_sent"],
+        0
+    );
     assert_eq!(backend.count(), 2, "strict replay miss sends no request");
     drop(engine);
     drop(replay);

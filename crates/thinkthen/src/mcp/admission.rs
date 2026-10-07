@@ -23,6 +23,8 @@ pub(super) struct Arguments {
     #[serde(default, deserialize_with = "present")]
     pub(super) question_file: Option<PathBuf>,
     #[serde(default, deserialize_with = "present")]
+    pub(super) question_name: Option<String>,
+    #[serde(default, deserialize_with = "present")]
     pub(super) evidence: Option<String>,
     #[serde(default, deserialize_with = "present")]
     pub(super) records: Option<Vec<Box<RawValue>>>,
@@ -77,6 +79,10 @@ pub(super) struct Options {
     #[serde(default, deserialize_with = "present")]
     pub(super) model: Option<String>,
     #[serde(default, deserialize_with = "present")]
+    pub(super) threshold: Option<Reading>,
+    #[serde(default)]
+    pub(super) attempts: bool,
+    #[serde(default, deserialize_with = "present")]
     pub(super) batch: Option<usize>,
     #[serde(default, deserialize_with = "present")]
     pub(super) top: Option<usize>,
@@ -120,9 +126,13 @@ impl Invocation {
     /// Admission performs no file reads and constructs no engine.
     pub(super) fn admit(params: CallParams) -> Result<Self, Error> {
         let arguments = params.arguments;
-        if arguments.question.is_some() == arguments.question_file.is_some() {
+        if usize::from(arguments.question.is_some())
+            + usize::from(arguments.question_file.is_some())
+            + usize::from(arguments.question_name.is_some())
+            != 1
+        {
             return Err(Error::usage(
-                "give exactly one of question or question_file",
+                "give exactly one of question, question_file or question_name",
             ));
         }
         let inputs = usize::from(arguments.evidence.is_some())
@@ -158,6 +168,9 @@ impl Invocation {
             source.options().validate()?;
         }
         arguments.validate_paths()?;
+        if let Some(name) = &arguments.question_name {
+            crate::QuestionName::new(name)?;
+        }
         let options = &arguments.options;
         if let Some(model) = &options.model {
             crate::core::ModelName::new(model).map_err(|_| Error::usage("invalid model name"))?;
@@ -169,6 +182,7 @@ impl Invocation {
         {
             return Err(Error::usage("image input cannot accompany field pointers"));
         }
+        options.validate_reading(params.name)?;
         if options.none && params.name != Tool::Find {
             return Err(Error::usage("none applies only to find"));
         }
@@ -207,6 +221,8 @@ impl Invocation {
         let options = &self.arguments.options;
         let mut controls = CallOptions::new()
             .cancel(token)
+            .surface(crate::Surface::Mcp)
+            .attempts(options.attempts)
             .max_requests_total(options.max_requests_total);
         if let Some(ms) = options.deadline_ms {
             controls = controls.deadline_ms(ms)?;
@@ -254,4 +270,37 @@ where
         ));
     }
     Ok(paths)
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub(super) enum Reading {
+    Cut(f64),
+    Rule(String),
+}
+impl Reading {
+    pub(super) fn native(&self) -> Result<crate::core::Threshold, Error> {
+        match self {
+            Self::Cut(value) => crate::core::Threshold::cut(*value),
+            Self::Rule(value) => value.parse(),
+        }
+        .map_err(Error::refused)
+    }
+}
+
+impl Options {
+    fn validate_reading(&self, tool: Tool) -> Result<(), Error> {
+        if let Some(reading) = &self.threshold {
+            let rule = reading.native()?;
+            if !matches!(tool, Tool::Decide | Tool::Choose | Tool::Tag | Tool::Filter)
+                || (tool != Tool::Decide && !rule.is_cut())
+            {
+                return Err(Error::usage("this function does not accept this threshold"));
+            }
+        }
+        if self.options_field.is_some() && tool != Tool::Choose {
+            return Err(Error::usage("options_field applies only to choose"));
+        }
+        Ok(())
+    }
 }

@@ -98,11 +98,10 @@ fn supervise<W: Write + Send + 'static, D: Executor>(
     state: &mut State,
 ) -> io::Result<()> {
     while !stop.is_cancelled() {
-        if state.worker.as_ref().is_some_and(JoinHandle::is_finished) {
-            if let Some(done) = state.worker.take() {
-                join(done)?;
-            }
-            clear_active(active);
+        if state.worker.as_ref().is_some_and(JoinHandle::is_finished)
+            && let Some(done) = state.worker.take()
+        {
+            join(done)?;
         }
         let event = match receiver.recv_timeout(Duration::from_millis(20)) {
             Ok(event) => event,
@@ -129,14 +128,7 @@ fn supervise<W: Write + Send + 'static, D: Executor>(
             continue;
         };
         if message.method == "tools/call" {
-            let outcome = start_call(
-                message,
-                token,
-                output,
-                executor,
-                &state.phase,
-                &mut state.worker,
-            );
+            let outcome = start_call(message, token, output, executor, state, active);
             if let Err((id, fault)) = outcome {
                 clear_active(active);
                 output.fault(Some(&id), fault)?;
@@ -157,23 +149,39 @@ fn start_call<W: Write + Send + 'static, D: Executor>(
     token: Option<CancelToken>,
     output: &Output<W>,
     executor: &Arc<D>,
-    phase: &Phase,
-    worker: &mut Option<JoinHandle<io::Result<()>>>,
+    state: &mut State,
+    active: &Registry,
 ) -> Result<(), (Id, Fault)> {
     let Some(id) = message.id.clone() else {
         return Ok(());
     };
-    if !matches!(phase, Phase::Ready) {
+    if !matches!(state.phase, Phase::Ready) {
         return Err((id, Fault::STATE));
     }
     let params = protocol::params::<CallParams>(&message).map_err(|fault| (id.clone(), fault))?;
     let token = token.ok_or_else(|| (id.clone(), Fault::BUSY))?;
+    if let Some(done) = state.worker.take() {
+        join(done).map_err(|_| {
+            (
+                id.clone(),
+                Fault {
+                    code: -32603,
+                    message: "MCP dispatch failed",
+                },
+            )
+        })?;
+    }
+    let registry = Arc::clone(active);
     let executor = Arc::clone(executor);
     let output = output.clone();
     let refusal_id = id.clone();
     let handle = thread::Builder::new()
         .name("thinkthen-mcp-call".into())
         .spawn(move || {
+            let mut owned = ActiveCall {
+                registry,
+                id: Some(id.clone()),
+            };
             if token.is_cancelled() {
                 return Ok(());
             }
@@ -184,6 +192,7 @@ fn start_call<W: Write + Send + 'static, D: Executor>(
                         return Ok(());
                     }
                     let error = encode_error(&error)?;
+                    owned.retire();
                     return output.result(&id, tool_result(error.object, true));
                 }
             };
@@ -196,6 +205,7 @@ fn start_call<W: Write + Send + 'static, D: Executor>(
             if token.is_cancelled() {
                 return Ok(());
             }
+            owned.retire();
             output.result(&id, tool_result(result.object, result.failed))
         })
         .map_err(|_| {
@@ -207,7 +217,7 @@ fn start_call<W: Write + Send + 'static, D: Executor>(
                 },
             )
         })?;
-    *worker = Some(handle);
+    state.worker = Some(handle);
     Ok(())
 }
 
@@ -365,4 +375,26 @@ fn encode_error(error: &crate::Error) -> io::Result<NativeReply> {
         object,
         failed: true,
     })
+}
+
+// Retire only this call before publishing its response. The next sequential
+// call may arrive immediately; joining the previous worker cannot clear it.
+struct ActiveCall {
+    registry: Registry,
+    id: Option<Id>,
+}
+impl ActiveCall {
+    fn retire(&mut self) {
+        let Some(id) = self.id.take() else { return; };
+        if let Ok(mut registry) = self.registry.lock()
+            && registry.as_ref().is_some_and(|call| call.id == id)
+        {
+            *registry = None;
+        }
+    }
+}
+impl Drop for ActiveCall {
+    fn drop(&mut self) {
+        self.retire();
+    }
 }

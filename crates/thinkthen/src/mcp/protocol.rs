@@ -134,7 +134,8 @@ pub(super) fn read_line(reader: &mut impl BufRead) -> io::Result<FramedLine> {
 pub(super) struct Initialize {
     #[serde(rename = "protocolVersion")]
     pub(super) version: String,
-    pub(super) capabilities: serde_json::Map<String, serde_json::Value>,
+    #[serde(rename = "capabilities")]
+    _capabilities: serde_json::Map<String, serde_json::Value>,
     #[serde(rename = "clientInfo")]
     pub(super) client: ClientInfo,
 }

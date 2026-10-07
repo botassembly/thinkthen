@@ -71,6 +71,7 @@ fn input_schema(tool: Tool) -> Value {
         "question":{"oneOf":[{"type":"string"},{"type":"object"}],
             "description":"Literal text or the ordinary native question/set/plan JSON grammar; @ stays text."},
         "question_file":{"type":"string","minLength":1},
+        "question_name":{"type":"string","minLength":1},
         "evidence":{"type":"string"},"records":{"type":"array"},
         "source":{"type":"object","additionalProperties":false,"required":["paths"],
             "properties":{"paths":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
@@ -81,7 +82,8 @@ fn input_schema(tool: Tool) -> Value {
             "max_requests_total":{"type":"integer","minimum":0},
             "batch":{"type":"integer","minimum":1},"context":{"type":"string"},
             "field":{"type":"string"},"context_field":{"type":"string"},"options_field":{"type":"string"},
-            "model":{"type":"string"},"top":{"type":"integer","minimum":0},"files_only":{"type":"boolean"},"none":{"type":"boolean"}}}
+            "model":{"type":"string"},"attempts":{"type":"boolean"},
+            "threshold":{"oneOf":[{"type":"number"},{"type":"string"}]},"top":{"type":"integer","minimum":0},"files_only":{"type":"boolean"},"none":{"type":"boolean"}}}
     });
     if !matches!(tool, Tool::Decide | Tool::Filter | Tool::Rank | Tool::Find)
         && let Some(question) = properties.get_mut("question")
@@ -93,6 +95,12 @@ fn input_schema(tool: Tool) -> Value {
         .and_then(|value| value.get_mut("properties"))
         .and_then(Value::as_object_mut)
     {
+        if !matches!(tool, Tool::Decide | Tool::Choose | Tool::Tag | Tool::Filter) {
+            options.remove("threshold");
+        }
+        if tool != Tool::Choose {
+            options.remove("options_field");
+        }
         if tool != Tool::Rank {
             options.remove("top");
         }
@@ -120,8 +128,9 @@ fn input_schema(tool: Tool) -> Value {
     json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
     "additionalProperties":false,"properties":properties,
     "allOf":[
-        {"oneOf":[{"required":["question"],"not":{"required":["question_file"]}},
-            {"required":["question_file"],"not":{"required":["question"]}}]},
+        {"oneOf":[{"required":["question"],"not":{"anyOf":[{"required":["question_file"]},{"required":["question_name"]}]}},
+            {"required":["question_file"],"not":{"anyOf":[{"required":["question"]},{"required":["question_name"]}]}},
+            {"required":["question_name"],"not":{"anyOf":[{"required":["question"]},{"required":["question_file"]}]}}]},
         {"oneOf":[{"required":["evidence"],"not":{"anyOf":[{"required":["records"]},{"required":["source"]}]}},
             {"required":["records"],"not":{"anyOf":[{"required":["evidence"]},{"required":["source"]},{"required":["images"]}]}},
             {"required":["source"],"not":{"anyOf":[{"required":["evidence"]},{"required":["records"]},{"required":["images"]}]}},
