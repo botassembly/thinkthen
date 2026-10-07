@@ -75,3 +75,11 @@ const fn CompleteFacts::call_id(&self) -> &CallId
 const fn CompleteFacts::counts(&self) -> &Facts
 fn CompleteFacts::attempts(&self) -> Option<&[AttemptObservation]>
 ```
+
+### Native bounded recording timing constituent
+
+Explicit recording now uses the existing attempts opt-in (`CallOptions::attempts(true)` or CLI `--details --record`) to append `thinkthen.timing.jsonl`. Cache/refresh and ordinary recording create no timing history. Entries contain only saved question key and actual attempt ordinal/wall/outcome/status/server time. Parent size refusals accompany both accepted split children; current replay attempts remain empty and replay does not mutate history. Stable folder locking preserves concurrent appends, with 8 MiB/65,536-entry limits checked before the answer/original transaction. Invalid or full history preserves previous answers/history and fails locally after the actual send without retry. The separate durable replacement is not a cross-file SQLite transaction; a post-commit filesystem failure can retain answers without the new history and returns the existing safe local error. No-store refuses before sidecar creation.
+
+Five native outside-in cases and the compiled CLI recording/replay case cover opt-in, retry, split, both bounds, no-store, secrecy and concurrent writers. The scalar prior-failing case also fixes attempt collection in the ordinary single-input pipeline, reusing the existing sink. Relevant format, policy and package Clippy are required before this constituent push. Whole native/host integration, fresh High review and root landing gates remain open.
+
+Source grows 545 nonblank Rust lines (147730 to 148275) for the bounded writer and actual storage/CLI regressions. Checked existing original-body transaction, conversion durability and attempt collection for duplication; reuse their transaction, folder sync, pipeline attempts and unchanged options rather than adding a second recorder or control.

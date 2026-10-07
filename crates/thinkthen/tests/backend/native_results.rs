@@ -10,6 +10,7 @@ mod find;
 mod rank;
 mod recognize;
 mod relate;
+mod timing;
 
 #[cfg(test)]
 pub(crate) fn validate(rows: &[(String, Value)]) {

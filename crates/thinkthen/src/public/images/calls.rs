@@ -172,7 +172,8 @@ impl Engine {
         let engine = self.asking(question)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let asker = Decisions::new(&engine, question, None);
-        let packing = pull::packing(core::Setting::Max, false, false);
+        let mut packing = pull::packing(core::Setting::Max, false, false);
+        packing.detailed = stop.facts().attempts().is_some();
         let input = Text {
             at: 0,
             input: input.clone(),

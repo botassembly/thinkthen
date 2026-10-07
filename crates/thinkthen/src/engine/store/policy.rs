@@ -9,10 +9,11 @@ impl Store {
         rows: &[Row<'_>],
         storable: bool,
         original: Option<&super::Original>,
+        attempts: &[crate::core::AttemptObservation],
         cancel: &Cancel,
     ) -> Result<(), Error> {
         if storable {
-            return self.write_original(rows, original, cancel);
+            return self.write_original(rows, original, attempts, cancel);
         }
         match self.mode {
             Mode::Record => Err(Error::RecordingForbidden),

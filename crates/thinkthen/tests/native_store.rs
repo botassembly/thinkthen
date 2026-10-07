@@ -301,3 +301,6 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
 mod conversion;
 #[path = "native_store/history.rs"]
 mod history;
+
+#[path = "native_store/timing.rs"]
+mod timing;

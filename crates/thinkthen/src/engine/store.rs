@@ -29,6 +29,7 @@ mod migration;
 mod mismatch;
 mod original;
 mod policy;
+mod timing;
 mod versioned;
 pub(crate) use original::Original;
 mod probe;
