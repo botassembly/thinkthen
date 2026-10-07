@@ -169,3 +169,28 @@ impl QuestionHandle {
         }
     }
 }
+
+/// Import an explicit native saved grammar role, without host shape detection.
+pub(crate) fn parse_role(role: u32, json: &str) -> Result<QuestionHandle, Failure> {
+    let mut reading = None;
+    let native = match role {
+        1 => Native::Atomic(Question::from_json(json)?),
+        2 => Native::Set(QuestionSet::from_json(json)?),
+        3 => Native::DynamicChoose(RecordChooseQuestion::from_json(json)?),
+        4 => {
+            let (q, selected) = thinkthen::RecognizeQuestionFile::from_json(json)?.into_parts();
+            reading = Some(selected);
+            Native::Recognize(q)
+        }
+        5 => Native::Relate(Relate::from_records_json(json)?),
+        6 => Native::Rank(Question::rank_from_json(json)?),
+        7 => Native::RankSet(RankSet::from_json(json)?),
+        8 => {
+            let (q, selected) = thinkthen::FindQuestionFile::from_json(json)?.into_parts();
+            reading = Some(selected);
+            Native::Find(q)
+        }
+        _ => return Err(Failure::usage("invalid native question grammar role")),
+    };
+    Ok(finish(json.to_owned(), native, reading))
+}

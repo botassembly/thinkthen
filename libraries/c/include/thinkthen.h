@@ -1123,6 +1123,11 @@ int thinkthen_question_author(const thinkthen_question *, thinkthen_question_aut
  * These native-loaded handles execute directly. Embedding them as typed set
  * members awaits a native authored serialization/set composition API.
  */
+/* Import saved question-file JSON through an explicit native grammar role.
+ * This imports a question only; judgment calls and result fields remain typed.
+ * Inline grammar failures return EUSAGE; no role guessing or parser fallback.
+ * The immutable handle owns every byte independently of json's lifetime. */
+int thinkthen_question_parse(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 json, thinkthen_question **);
 int thinkthen_question_load_named(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 name, thinkthen_question **);
 int thinkthen_question_load_reference(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 reference, thinkthen_question **);
 /* Borrow native author snapshots until result_free. Row/member ordinals

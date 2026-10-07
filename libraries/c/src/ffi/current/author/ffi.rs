@@ -205,3 +205,29 @@ pub(crate) unsafe extern "C" fn thinkthen_question_load_reference(
 unsafe impl Send for crate::current::author::AuthorOwner {}
 // SAFETY: the same closed, immutable backing construction permits shared reads.
 unsafe impl Sync for crate::current::author::AuthorOwner {}
+
+/// Import counted saved-question grammar through an explicitly selected native parser.
+/// # Safety
+/// Counted bytes and output obey the header's storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_question_parse(
+    engine: *const Door,
+    role: u32,
+    json: StringV1,
+    out: *mut *mut QuestionHandle,
+) -> i32 {
+    // SAFETY: common edge validates live engine/output and counted UTF-8 storage.
+    unsafe {
+        crate::ffi::typed(
+            engine,
+            |_| {
+                read::required(out)?;
+                current::question::parse_role(role, read::string(json)?)
+            },
+            |_, value| {
+                *out = Box::into_raw(Box::new(value));
+                OK
+            },
+        )
+    }
+}

@@ -66,6 +66,7 @@ typedef int (*authored_fn)(const thinkthen_engine *, const thinkthen_question_sp
 SIGNATURE(thinkthen_question_new_authored, authored_fn);
 typedef int (*load_named_fn)(const thinkthen_engine *, uint32_t, thinkthen_string_v1, thinkthen_question **);
 SIGNATURE(thinkthen_question_load_named, load_named_fn);
+SIGNATURE(thinkthen_question_parse, load_named_fn);
 SIGNATURE(thinkthen_question_load_reference, load_named_fn);
 typedef int (*author_fn)(const thinkthen_question *, thinkthen_question_author_v1 *);
 SIGNATURE(thinkthen_question_author, author_fn);

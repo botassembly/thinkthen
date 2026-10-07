@@ -224,7 +224,8 @@ def run(port, baseline=False):
     output_dir.mkdir(parents=True, exist_ok=True)
     commands = {}
     for row in consumers.values():
-        commands.setdefault(tuple(row['baseline']), []).append(row['id'])
+        command = ['python3', 'conformance/c_parity.py'] if row['id'] == 'c' else row['baseline']
+        commands.setdefault(tuple(command), []).append(row['id'])
     matrix = []
     for command, ids in commands.items():
         label = '+'.join(ids)
