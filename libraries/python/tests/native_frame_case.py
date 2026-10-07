@@ -7,6 +7,7 @@ import native_case
 LIBRARY = os.environ['THINKTHEN_FRAME_LIBRARY']
 if LIBRARY == 'pandas':
     import pandas as pd
+    import thinkthen.pandas
 else:
     import polars as pl
 
@@ -24,7 +25,10 @@ class FrameConsumer:
     def __getattr__(self, verb):
         def call(question, source, **controls):
             source = column(source)
-            done = getattr(self._engine, verb)(question, source, **controls)
+            if LIBRARY == 'pandas' and not isinstance(source, c.Files) and not verb.endswith('_batch'):
+                done = getattr(source.tt.complete(engine=self._engine._engine), verb)(question, **controls)
+            else:
+                done = getattr(self._engine, verb)(question, source, **controls)
             if verb.endswith('_batch'):
                 assert isinstance(done, frames.FrameBatch)
                 assert done.source is source or isinstance(source, c.Files)
