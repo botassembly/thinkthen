@@ -15,6 +15,7 @@ int tt_native_author(const TTNativeResult *,size_t,thinkthen_question_author_v1 
 int tt_native_observation_author(const TTNativeResult *,size_t,thinkthen_question_author_v1 *);
 int tt_native_member_author(const TTNativeResult *,size_t,size_t,thinkthen_question_author_v1 *);
 int tt_native_rank_member_count(const TTNativeResult *,size_t,size_t *);
+int tt_native_rank_member_details(const TTNativeResult *,size_t,size_t,thinkthen_details_v1 *);
 int tt_native_rank_member(const TTNativeResult *,size_t,size_t,thinkthen_rank_view_v1 *);
 int tt_native_source_recognition(const TTNativeResult *,size_t,thinkthen_source_recognition_v1 *);
 int tt_native_source_relations(const TTNativeResult *,size_t,thinkthen_source_relations_v1 *);

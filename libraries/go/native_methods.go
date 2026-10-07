@@ -110,6 +110,16 @@ func readRankRow(result *C.thinkthen_result, i C.size_t) (RankRow, error) {
 			return row, fmt.Errorf("native rank member failed: %d", rc)
 		}
 		row.Members[j] = nativeRankRow(member)
+		var author C.thinkthen_question_author_v1
+		var details C.thinkthen_details_v1
+		if rc := C.thinkthen_result_member_author(result, i, C.size_t(j), &author); rc != 0 {
+			return row, fmt.Errorf("native rank member author failed: %d", rc)
+		}
+		if rc := C.thinkthen_result_rank_member_details(result, i, C.size_t(j), &details); rc != 0 {
+			return row, fmt.Errorf("native rank member details failed: %d", rc)
+		}
+		row.Members[j].Common.Author = nativeQuestionAuthor(author)
+		row.Members[j].Common.Details = nativeDetails(details)
 	}
 	return row, nil
 }

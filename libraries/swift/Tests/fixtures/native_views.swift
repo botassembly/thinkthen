@@ -651,6 +651,7 @@ try c.encode(authors,forKey:NativeKey("authors"))
 try c.encode(observationAuthors,forKey:NativeKey("observation_authors"))
 try c.encode(memberAuthors,forKey:NativeKey("member_authors"))
 try c.encode(rankMembers,forKey:NativeKey("rank_members"))
+try c.encode(rankMemberDetails,forKey:NativeKey("rank_member_details"))
 try c.encode(locatedRecognition,forKey:NativeKey("located_recognition"))
 try c.encode(locatedRelations,forKey:NativeKey("located_relations"))
 } }

@@ -8,10 +8,12 @@ with Thinkthen.Typed.Complete; use Thinkthen.Typed.Complete;
 with Thinkthen.Views;
 with Thinkthen_C_Inputs; use Thinkthen_C_Inputs;
 with Thinkthen_C_Rows; use Thinkthen_C_Rows;
+with Thinkthen_C_Events; use Thinkthen_C_Events;
 with Thinkthen_C_Extensions; use Thinkthen_C_Extensions;
 procedure Native is
    Output : Result;
    Row : Decide_View_V1;
+   Final_Row : Row_Observation_V1;
    Detail : Details_V1;
    Code : int;
    procedure Require (Condition : Boolean) is
@@ -46,6 +48,15 @@ begin
    Decide (Output, 0, Row, Code); Require (Code = 0);
    Require (Row.Value.Kind = C_DECIDE_BOOLEAN_V1 and then Row.Value.Data.Boolean = 1);
    Require (Thinkthen.Views.Value (Row.Common.Answer_Id)'Length = 64);
+   Thinkthen.Typed.Complete.Row (Output, 0, Final_Row, Code); Require (Code = 0);
+   Require (Final_Row.Index = 0 and then Final_Row.Function_Code = C_FUNCTION_DECIDE_V1);
+   Require (Thinkthen.Views.Value (Final_Row.Data.Decide.Common.Answer_Id) =
+     Thinkthen.Views.Value (Row.Common.Answer_Id));
+   Final_Row.Index := 37;
+   Thinkthen.Typed.Complete.Row (Output, 1, Final_Row, Code);
+   Require (Code = 1 and then Final_Row.Index = 37);
+   Require (Thinkthen.Views.Value (Final_Row.Data.Decide.Common.Answer_Id) =
+     Thinkthen.Views.Value (Row.Common.Answer_Id));
    Details (Output, 0, Detail, Code); Require (Code = 0);
    Require (Thinkthen.Views.Element (Detail.Inputs, 0).Original.Present = 1);
    Require (Thinkthen.Views.Value

@@ -253,6 +253,7 @@ struct TTNativeResult {
     thinkthen_question_author_v1 *authors, *event_authors, **member_authors;
     size_t *member_counts, *rank_counts;
     thinkthen_rank_view_v1 **rank_members;
+    thinkthen_details_v1 **rank_member_details;
     thinkthen_source_recognition_v1 *recognition;
     thinkthen_source_relations_v1 *relations;
 };
@@ -268,7 +269,7 @@ int tt_native_snapshot(thinkthen_result *raw,TTNativeResult **out) {
     r->summary=clone_summary(a,s);
 #define ARRAY(field,n) r->field=allocate(a,n,sizeof(*r->field),raw); if((n) && !r->field) goto done;
     ARRAY(rows,s.count) ARRAY(details,s.count) ARRAY(authors,s.count)
-    ARRAY(member_authors,s.count) ARRAY(member_counts,s.count) ARRAY(rank_members,s.count) ARRAY(rank_counts,s.count)
+    ARRAY(member_authors,s.count) ARRAY(member_counts,s.count) ARRAY(rank_members,s.count) ARRAY(rank_counts,s.count) ARRAY(rank_member_details,s.count)
     ARRAY(recognition,s.count) ARRAY(relations,s.count)
     ARRAY(events,s.observation_count) ARRAY(event_details,s.observation_count) ARRAY(event_authors,s.observation_count)
 #undef ARRAY
@@ -296,9 +297,13 @@ int tt_native_snapshot(thinkthen_result *raw,TTNativeResult **out) {
             for(size_t j=0;j<n;++j) { code=thinkthen_result_member_author(raw,i,j,&author); if(code) goto done; r->member_authors[i][j]=clone_question_author(a,author); }
         }
         if(v.function==6) {
-            size_t n=0; code=thinkthen_result_rank_member_count(raw,i,&n); if(code) goto done; r->rank_counts[i]=n;
+            size_t n=0; code=thinkthen_result_rank_member_count(raw,i,&n); if(code) goto done; r->rank_counts[i]=n; r->member_counts[i]=n;
+            r->member_authors[i]=allocate(a,n,sizeof(author),raw); if(n && !r->member_authors[i]) goto done;
+            r->rank_member_details[i]=allocate(a,n,sizeof(d),raw); if(n && !r->rank_member_details[i]) goto done;
             r->rank_members[i]=allocate(a,n,sizeof(thinkthen_rank_view_v1),raw); if(n && !r->rank_members[i]) goto done;
-            for(size_t j=0;j<n;++j) { thinkthen_rank_view_v1 rank={0}; code=thinkthen_result_rank_member(raw,i,j,&rank); if(code) goto done; r->rank_members[i][j]=clone_rank_view(a,rank); }
+            for(size_t j=0;j<n;++j) { thinkthen_rank_view_v1 rank={0}; code=thinkthen_result_rank_member(raw,i,j,&rank); if(code) goto done; r->rank_members[i][j]=clone_rank_view(a,rank);
+                code=thinkthen_result_member_author(raw,i,j,&author); if(code) goto done; r->member_authors[i][j]=clone_question_author(a,author);
+                code=thinkthen_result_rank_member_details(raw,i,j,&d); if(code) goto done; r->rank_member_details[i][j]=clone_details(a,d); }
         }
         if(v.function==9) { thinkthen_source_recognition_v1 rec={0}; code=thinkthen_result_source_recognition(raw,i,&rec); if(code) goto done; r->recognition[i]=clone_source_recognition(a,rec); }
         if(v.function==10) { thinkthen_source_relations_v1 rel={0}; code=thinkthen_result_source_relations(raw,i,&rel); if(code) goto done; r->relations[i]=clone_source_relations(a,rel); }
@@ -321,6 +326,7 @@ VIEW(decide,1) VIEW(choose,2) VIEW(tag,3) VIEW(score,4) VIEW(filter,5) VIEW(rank
 #undef VIEW
 int tt_native_member_author(const TTNativeResult *r,size_t i,size_t j,thinkthen_question_author_v1 *out) { if(!r || !out || i>=r->summary.count || j>=r->member_counts[i]) return THINKTHEN_EUSAGE; *out=r->member_authors[i][j]; return 0; }
 int tt_native_rank_member_count(const TTNativeResult *r,size_t i,size_t *out) { if(!r || !out || i>=r->summary.count || r->rows[i].function!=6) return THINKTHEN_EUSAGE; *out=r->rank_counts[i]; return 0; }
+int tt_native_rank_member_details(const TTNativeResult *r,size_t i,size_t j,thinkthen_details_v1 *out) { if(!r || !out || i>=r->summary.count || r->rows[i].function!=6 || j>=r->rank_counts[i]) return THINKTHEN_EUSAGE; *out=r->rank_member_details[i][j]; return 0; }
 int tt_native_rank_member(const TTNativeResult *r,size_t i,size_t j,thinkthen_rank_view_v1 *out) { if(!r || !out || i>=r->summary.count || j>=r->rank_counts[i]) return THINKTHEN_EUSAGE; *out=r->rank_members[i][j]; return 0; }
 
 int tt_native_source_recognition(const TTNativeResult *r,size_t i,thinkthen_source_recognition_v1 *out) { if(!r || !out || i>=r->summary.count || r->rows[i].function!=9) return THINKTHEN_EUSAGE; *out=r->recognition[i]; return 0; }
