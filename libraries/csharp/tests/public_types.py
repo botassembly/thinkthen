@@ -21,8 +21,12 @@ corpus = json.loads((SHARED / "corpus.json").read_text())
 checks = shared.validators(json.loads((ROOT / "specification/result.schema.json").read_text()))
 shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
+run = Path(os.environ.get("THINKTHEN_TYPECASE_DLL", HERE / "bin/Release/net8.0/TypeCase.dll")).resolve(strict=True)
+native = Path(os.environ["THINKTHEN_RELEASE_C_DIR"]) / "lib" if os.environ.get("THINKTHEN_RELEASE_C_DIR") else HERE.parent / "target/scratch/lib"
+if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_TYPECASE_DLL"):
+    raise ValueError("installed C# parity requires its package-referenced caller")
+(native / "libthinkthen.so").resolve(strict=True)
 backend, port = shared.start_backend()
-run = HERE / "bin/Release/net8.0/TypeCase.dll"
 count = 0
 FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
                                    "severity": "answered", "topics": "answered"}]}
@@ -57,7 +61,7 @@ def native_parity(consumer, command):
                 env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": folder,
                        "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
                        "XDG_STATE_HOME": str(home / "state"), "LC_ALL": "C.UTF-8",
-                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": str(ROOT / ("libraries/csharp/target/scratch/lib" if consumer == "csharp" else "libraries/jvm/target/native"))}
+                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": str(native)}
                 backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
@@ -166,7 +170,7 @@ try:
         # cap refuse; the backend has read no request.
         env = child_env(HOME=cache, XDG_CACHE_HOME=cache, DOTNET_CLI_HOME=cache,
                         THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
-                        THINKTHEN_CACHE=str(Path(cache) / "plan"), LD_LIBRARY_PATH=str(HERE.parent / "target/scratch/lib"))
+                        THINKTHEN_CACHE=str(Path(cache) / "plan"), LD_LIBRARY_PATH=str(native))
         p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
         actual = type_case(["plan", json.dumps(p1["plan_input"])], env, "plan-p1")
         assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
@@ -185,7 +189,7 @@ try:
             env = child_env(HOME=cache, XDG_CACHE_HOME=cache, DOTNET_CLI_HOME=cache)
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1",
                        THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)),
-                       LD_LIBRARY_PATH=str(HERE.parent / "target/scratch/lib"))
+                       LD_LIBRARY_PATH=str(native))
             request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
             actual = type_case([request], env, case["name"])
             if case["name"] in FIELDS:
@@ -216,7 +220,7 @@ try:
         settings=json.dumps({"base_url":f"http://127.0.0.1:{port}/arm/full/v1","model":"fixed","cache":False,"batch":"max","throttle":1,"max_retries":0})
         env=child_env(HOME=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
                       THINKTHEN_API_KEY="sk-native-complete-loopback",THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
-                      TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path),LD_LIBRARY_PATH=str(HERE.parent / "target/scratch/lib"))
+                      TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path),LD_LIBRARY_PATH=str(native))
         for lang in ("csharp",):
             before=sent()
             assert type_case(["native"],env,"native complete")=={"native":"pass"}

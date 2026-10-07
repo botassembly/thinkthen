@@ -1,96 +1,20 @@
-"""Count exact shared Max bodies from the public C++ bulk call."""
-
 import json
 import os
-from pathlib import Path
-import shutil
-import subprocess
 import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
-from children import child_env
-from backend_cases import ROWS, alias, configuration, paths
-from portable import one_portable_request
-import tempfile
-
-ROOT = Path(__file__).resolve().parents[3]
-FIXTURES = ROOT / "specification/fixtures/batching"
-NATIVE = Path(os.environ["THINKTHEN_PORTABLE_NATIVE"])
-CPP_INCLUDE = Path(os.environ.get("THINKTHEN_PORTABLE_CPP_INCLUDE", ROOT / "libraries/cpp/include"))
-target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
-if not target.is_absolute():
-    target = ROOT / target
-BACKEND = Path(os.environ.get("THINKTHEN_BACKEND_BIN", target / "debug/conformance-backend"))
-CORPUS = FIXTURES / "portable-records.json"
-corpus = json.loads(CORPUS.read_text())
-assert corpus["schema"] == "thinkthen.portable-batch-records/1" and len(corpus["texts"]) == 5
-
-with tempfile.TemporaryDirectory(prefix="thinkthen-cpp-portable-") as scratch:
-    folder = Path(scratch)
-    include = folder / "include/thinkthen"
-    include.mkdir(parents=True)
-    header = NATIVE / "include/thinkthen.h"
-    if not header.exists():
-        header = NATIVE / "include/thinkthen/thinkthen.h"
-    shutil.copyfile(header, include / "thinkthen.h")
-    consumer = folder / "portable-consumer"
-    library = NATIVE / "lib/libthinkthen.so"
-    if not library.exists():
-        library = NATIVE / "lib/libthinkthen.so.0"
-    subprocess.run([os.environ.get("CXX", "c++"), "-std=c++17", "-I", str(CPP_INCLUDE),
-                    "-I", str(folder / "include"), str(ROOT / "libraries/cpp/fixtures/portable_consumer.cpp"),
-                    "-L", str(NATIVE / "lib"), "-Wl,-rpath," + str(NATIVE / "lib"), "-l:" + library.name,
-                    "-o", str(consumer)], env=child_env(), check=True, timeout=60)
-    for named in (False, True):
-        server = subprocess.Popen([BACKEND], env=child_env(THINKTHEN_TEST_MARKERS=json.dumps({"local":"tt-named-loopback"})), stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
-        try:
-            port = int(server.stdout.readline())
-            base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
-            env = child_env()
-            env.update(THINKTHEN_API_KEY="sk-loopback-cpp-portable", THINKTHEN_BASE_URL=base,
-                       TT_PORTABLE_SETTINGS=json.dumps({"base_url": base, "model": corpus["model"],
-                                                        "batch": "max", "cache": False, "max_retries": 0,
-                                                        "throttle": 1}),
-                       TT_PORTABLE_CORPUS=str(CORPUS), HOME=scratch, THINKTHEN_CACHE=str(folder / "cache"),
-                       LD_LIBRARY_PATH=str(NATIVE / "lib"))
-            if named:
-                row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
-                base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
-                configuration(env, {"local": alias(row, base)})
-                env[row["key"]] = "tt-named-loopback"
-                env["THINKTHEN_BASE_URL"] = f"http://127.0.0.1:{port}/generic/v1"
-                env["TT_PORTABLE_SETTINGS"] = json.dumps({"backend":"local", "batch":"max", "cache":False, "max_retries":0, "throttle":1})
-            run = subprocess.run([consumer], env=env, capture_output=True, text=True, timeout=60)
-            assert run.returncode == 0 and "CPP_PORTABLE_BATCH_PASS" in run.stdout, (run.stdout, run.stderr)
-            server.stdin.write("count\n")
-            server.stdin.flush()
-            count = int(server.stdout.readline())
-            server.stdin.write("capture\n")
-            server.stdin.flush()
-            captured = json.loads(server.stdout.readline())
-            assert count == 1, (count, captured)
-            one_portable_request(captured["bodies"])
-            if named:
-                for command, expected in (("paths", paths(row["path"])),
-                                          ("bearers", {"markers":{"local":1},"absent":0,"unknown":0,"overflow":False})):
-                    server.stdin.write(command + "\n"); server.stdin.flush()
-                    assert json.loads(server.stdout.readline()) == expected, command
-                assert "tt-named-loopback" not in run.stdout + run.stderr
-                assert "tt-named-loopback" not in json.dumps(captured["bodies"])
-                print("cpp named backend: selected path, bearer, result and secrecy PASS")
-            print("cpp portable: five typed rows, one request with the fixture questions")
-        finally:
-            server.stdin.close()
-            server.wait(timeout=10)
-
 from pathlib import Path
 import subprocess, tempfile
 ROOT = Path(__file__).resolve().parents[3]
-CONSUMER = 'cpp'
+CONSUMER = 'objective-c'
+PACKAGE = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / 'libraries/objective-c')).resolve(strict=True)
+NATIVE = Path(os.environ.get('THINKTHEN_NATIVE_ROOT', ROOT / 'libraries/c')).resolve(strict=True)
+FIXTURES = Path(__file__).resolve().parent
+if os.environ.get('THINKTHEN_ARTIFACT') and not os.environ.get('THINKTHEN_PARITY_PACKAGE'):
+    raise ValueError('installed objective-c parity requires its extracted package')
 # Complete native public cases, using the shared input and assertion inventory.
 import sqlite3
-sys.path.insert(0, str(ROOT / 'conformance'))
+sys.path[:0] = [str(ROOT / 'conformance/children'), str(ROOT / 'conformance')]
 import c_parity as shared
+from children import child_env
 import parity
 
 def native_content(v):
@@ -126,6 +50,11 @@ def native_projection(raw):
         if error['stopped'] and error['stopped']['at'] is not None:out['stopped_at']=error['stopped']['at']
         return out
     out.update(schema=s['schema'],observations=s['observation_count'],rows=[])
+    ordinals={}
+    for event in raw['observations']:
+        if event['kind'] == 2:
+            r=event['data']['row']; v=r['data'][shared.FUNCTIONS[r['function']-1]]
+            ordinals[v['common']['answer_id']]=r['index']
     for i,r in enumerate(raw['rows']):
         k=r['function']; v=r['data'][shared.FUNCTIONS[k-1]]; common=v['common']; meta=common['meta']
         value=v.get('value')
@@ -133,7 +62,7 @@ def native_projection(raw):
             causes=['','missing_answer','wrong_kind','missing_probability','invalid_probability','invalid_distribution','unexpected_probability']
             value={m['name']:native_member(m['data']['success']['value']) if m['state']==1 else {'failed':{'kind':'backend','cause':causes[m['data']['failure']['cause']]}} for m in v['answers']}
         else:value=native_value(k,value)
-        row={'value':value,'answer_id':common['answer_id'],'index':v['index'] if k==7 else r['index'],
+        row={'value':value,'answer_id':common['answer_id'],'index':v['index'] if k==7 else ordinals.get(common['answer_id'],0),
              'origin':meta['origin'],'answered_by':meta['answered_by'], 'observations':len(meta['observations']),'sources':len(meta['question_sources']),
              'observation_ids':[entry['data']['observation_id'] or entry['data']['failure_id'] for entry in meta['observations']],
              'input':native_content(common['input']) if common['input'] is not None else None}
@@ -202,20 +131,13 @@ def native_cases(binary):
     inventory=parity.inventory(); rows=list(parity.required_cases(inventory,CONSUMER).values())
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
-    required = {row['id'] for row in rows}
-    rows += [{**row,'id':'native-filter-first-excluded'} for row in rows if row['id']=='15-rank-records']
-    rows += [{**row,'id':'native-duplicate-row-indices'} for row in rows if row['id']=='complete-decide']
     failed=0
     for at,row in enumerate(rows):
         error=None
         try:
-            original={'native-filter-first-excluded':'15-rank-records','native-duplicate-row-indices':'complete-decide'}.get(row['id'],row['id'])
-            value=shared.document({**row,'id':original},cases,named)
-            if row['id']=='native-filter-first-excluded':
-                value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
-            if row['id']=='native-duplicate-row-indices':value['items'] *= 2
+            value=shared.document(row,cases,named)
             with tempfile.TemporaryDirectory(prefix='thinkthen-'+CONSUMER+'-complete-') as folder:
-                home=Path(folder); child={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':folder,'XDG_CONFIG_HOME':str(home/'config'),'XDG_CACHE_HOME':str(home/'cache'),'XDG_STATE_HOME':str(home/'state'),'ASAN_OPTIONS':'detect_leaks=1','UBSAN_OPTIONS':'halt_on_error=1'}
+                home=Path(folder); child={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':folder,'XDG_CONFIG_HOME':str(home/'config'),'XDG_CACHE_HOME':str(home/'cache'),'XDG_STATE_HOME':str(home/'state'),'ASAN_OPTIONS':'detect_leaks=0','UBSAN_OPTIONS':'halt_on_error=1'}
                 backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
                 try:
                     child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s'%(backend.port,value['arm']),THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback')
@@ -262,12 +184,6 @@ def native_cases(binary):
                             from c_images import assert_images
                             assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
                         shared.assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
-                        if row['id']=='native-filter-first-excluded':
-                            assert [r['index'] for r in got['rows']]==[0,1,2] and [r['value'] for r in got['rows']]==[False,True,True],got
-                            assert int(backend.read('count'))==3,got
-                        if row['id']=='native-duplicate-row-indices':
-                            assert [r['index'] for r in got['rows']]==[0,1] and got['rows'][0]['input']==got['rows'][1]['input'],got
-                            assert got['records']==2 and int(backend.read('count'))==1,got
                         if row['kind'] in ('images','image-location'):
                             before=int(backend.read('count'));replay={k:v for k,v in settings.items() if k!='record'};replay['replay']=str(home/'recorded')
                             repeated=subprocess.run([str(binary),str(input_file),shared.compact(replay)],env=child,cwd=home,capture_output=True,text=True,timeout=60)
@@ -283,17 +199,68 @@ def native_cases(binary):
         except (AssertionError,ValueError,KeyError,TypeError,subprocess.SubprocessError,OSError) as f:error=type(f).__name__+': '+str(f)
         if error:
             failed+=1;print(CONSUMER+' complete fixture '+row['id']+' failed: '+error,file=sys.stderr)
-        print(('parity: ' if row['id'] in required else 'regression: ')+json.dumps({'consumer':CONSUMER,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail' if error else 'pass'}),flush=True)
+        print('parity: '+json.dumps({'consumer':CONSUMER,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail' if error else 'pass'}),flush=True)
     print(CONSUMER+' complete shared cases: %d/%d passed'%(len(rows)-failed,len(rows)))
     if failed:raise SystemExit(1)
 
-with tempfile.TemporaryDirectory(prefix='thinkthen-cpp-complete-consumer-') as folder:
-    scratch = Path(folder); include = scratch/'include/thinkthen'; include.mkdir(parents=True)
-    header = NATIVE/'include/thinkthen.h'
-    if not header.is_file(): header = NATIVE/'include/thinkthen/thinkthen.h'
-    shutil.copyfile(header,include/'thinkthen.h')
-    binary=scratch/'consumer'; library=NATIVE/'lib/libthinkthen.so'
-    if not library.is_file(): library=NATIVE/'lib/libthinkthen.so.0'
-    subprocess.run([os.environ.get('CXX','c++'),'-std=c++17','-Wall','-Wextra','-Werror','-I',str(CPP_INCLUDE),'-I',str(scratch/'include'),
-                    str(ROOT/'libraries/cpp/fixtures/native_consumer.cpp'),'-L',str(NATIVE/'lib'),'-l:'+library.name,'-Wl,-rpath,'+str(NATIVE/'lib'),'-o',str(binary)],env=child_env(HOME=str(scratch),LANG='C.UTF-8'),check=True)
+def generated(at,v):
+ s=shared.generated(at,v)
+ s=s.replace('thinkthen_engine *e','TTClient *e').replace('thinkthen_question *q=NULL; thinkthen_source *source=NULL; thinkthen_result *result=NULL;','TTQuestion *q=nil; TTSource *source=nil; TTNativeResult *result=NULL, *failed=NULL;')
+ s=s.replace('thinkthen_image *images','TTImage *images')
+ # Distinct raw references are cloned by the source constructor.
+ s=s.replace('char *caption_allocations', 'const thinkthen_image *raw_images[%d]={0}; char *caption_allocations'%max(1,len(v.get('image_paths',[]))))
+ # balanced calls are parsed so nested counted compound literals remain intact
+ def rewrite(name,body):
+  nonlocal s
+  pattern=name+'('
+  pos=0
+  while True:
+   a=s.find(pattern,pos)
+   if a<0:break
+   i=a+len(pattern);start=i;depth=1;braces=0;args=[]
+   while depth:
+    c=s[i]
+    if c=='(':depth+=1
+    elif c==')':depth-=1
+    elif c=='{':braces+=1
+    elif c=='}':braces-=1
+    elif c==',' and depth==1 and braces==0:args.append(s[start:i]);start=i+1
+    i+=1
+   args.append(s[start:i-1]);replacement=body(args);s=s[:a]+replacement+s[i:];pos=a+len(replacement)
+ rewrite('thinkthen_question_parse',lambda a:'[e parseQuestion:'+a[2]+' role:'+a[1]+' output:'+a[3]+' failure:&failed]')
+ rewrite('thinkthen_question_load',lambda a:'[e loadQuestion:'+a[1]+' output:'+a[2]+' failure:&failed]')
+ for method,selector in [('load_named','namedQuestion'),('load_reference','referenceQuestion')]:rewrite('thinkthen_question_'+method,lambda a,sel=selector:'[e '+sel+':'+a[2]+' role:'+a[1]+' output:'+a[3]+' failure:&failed]')
+ rewrite('thinkthen_question_new',lambda a:'[e question:'+a[1]+' author:NULL output:'+a[2]+' failure:&failed]')
+ rewrite('thinkthen_question_new_authored',lambda a:'[e question:'+a[1]+' author:'+a[2]+' output:'+a[3]+' failure:&failed]')
+ rewrite('thinkthen_image_clone',lambda a:'[e image:'+a[1]+' length:'+a[2]+' media:'+a[3]+' filename:'+a[4]+' output:'+a[5]+' failure:&failed]')
+ # fill source references only after all images clone successfully
+ s=s.replace('thinkthen_record_v1 records', 'for(size_t i=0;i<%d;++i) raw_images[i]=images[i]->native; thinkthen_record_v1 records'%len(v.get('image_paths',[]) if not v.get('paths') else []))
+ s=s.replace('(const thinkthen_image *const *)images','raw_images')
+ rewrite('thinkthen_source_records',lambda a:'[e records:'+a[1]+' count:'+a[2]+' output:'+a[3]+' failure:&failed]')
+ for method,flag in [('files','0'),('image_files','1')]:rewrite('thinkthen_source_'+method,lambda a,flag=flag:'[e sourceFiles:'+a[1]+' imageReader:'+flag+' output:'+a[2]+' failure:&failed]')
+ for name in shared.FUNCTIONS:
+  rewrite('thinkthen_'+name+'_complete',lambda a,n=name:'[e '+n+'Complete:'+a[1]+' source:'+a[2]+' controls:'+a[3]+' output:'+a[4]+' failure:&failed]')
+  rewrite('thinkthen_'+name+'_batch_start',lambda a,n=name:'[e '+n+'Batch:'+a[1]+' source:'+a[2]+' controls:'+a[3]+' output:'+a[4]+' failure:&failed]')
+ s=s.replace('thinkthen_batch *batch=NULL','TTBatch *batch=nil').replace('thinkthen_batch_next(batch,&result)','[batch next:&result failure:&failed]').replace('thinkthen_batch_facts(batch,&result)','[batch facts:&result failure:NULL]').replace('thinkthen_batch_free(batch)','[batch dealloc]')
+ s=s.replace('thinkthen_result_free(result)','tt_native_result_free(result)').replace('thinkthen_source_free(source)','[source dealloc]').replace('thinkthen_question_free(q)','[q dealloc]').replace('thinkthen_image_free(images[i])','[images[i] dealloc]')
+ s=s.replace('code,result); tt_native_result_free(result);','code,code?failed:result); tt_native_result_free(failed); tt_native_result_free(result);')
+ return s
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-objc-complete-consumer-') as folder:
+    scratch=Path(folder); binary=scratch/'consumer'; source=scratch/'consumer.m'
+    inventory=parity.inventory();rows=list(parity.required_cases(inventory,CONSUMER).values())
+    cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']};named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
+    numbers=[];defs=[]
+    for at,row in enumerate(rows):
+        v=shared.document(row,cases,named)
+        for si,step in enumerate(v.get('steps',[v])):
+            number=10000+at*100+si if 'steps' in v else at;numbers.append(number);defs.append(generated(number,step))
+    source.write_text('#include <threads.h>\n#include "native_output.h"\nint cancel_on_input(void *token) { if(getchar()!=33) abort(); thinkthen_cancel(token); puts("cancel-fired"); fflush(stdout); return 0; }\nchar *read_caption(const char *path,thinkthen_optional_content_v1 *out) { FILE *f=fopen(path,"rb"); if(!f || fseek(f,0,SEEK_END)) abort(); long n=ftell(f); if(n<0 || n>16777216 || fseek(f,0,SEEK_SET)) abort(); char *s=malloc((size_t)n+1); if(!s || fread(s,1,(size_t)n,f)!=(size_t)n || fclose(f)) abort(); s[n]=0; *out=(thinkthen_optional_content_v1){1,{1,{s,(size_t)n}}}; return s; }\n'+'\n'.join(defs)+'\nint main(int argc,char **argv) { if(argc!=3) return 2; FILE *f=fopen(argv[1],"rb"); if(!f || fseek(f,0,SEEK_END)) abort(); long len=ftell(f); rewind(f); char *s=calloc((size_t)len+1,1); if(!s || fread(s,1,(size_t)len,f)!=(size_t)len) abort(); fclose(f); TTJSON *input=tt_json_parse(s,(size_t)len); free(s); const TTJSON *number=tt_json_get(input,"case_number"); if(!number) abort(); int case_id=atoi(number->text); tt_json_free(input); if(!strstr(argv[2],"http://127.0.0.1:")) return 3; TTFailure failure={0}; TTClient *e=[TTClient createWithSettings:argv[2] length:strlen(argv[2]) failure:&failure]; if(!e) { thinkthen_result *raw=NULL; TTNativeResult *r=NULL; if(thinkthen_error_complete(NULL,&raw) || tt_native_snapshot(raw,&r)) abort(); output(nil,1,failure.kind,r); tt_native_result_free(r); tt_failure_clear(&failure); return 0; } switch(case_id) {\n'+'\n'.join('case %d:case_%d(e);break;'%(n,n) for n in numbers)+'\ndefault:abort(); } tt_failure_clear(&failure); [e dealloc]; return 0; }')
+    native=NATIVE / 'lib' if os.environ.get('THINKTHEN_NATIVE_ROOT') else NATIVE / 'target/debug'
+    library=native / ('libthinkthen.so' if os.environ.get('THINKTHEN_NATIVE_ROOT') else 'libthinkthen_c.so')
+    (scratch/'libthinkthen.so.0').symlink_to(library)
+    package=PACKAGE
+    # ASan/UBSan inspect reads of every host-owned field after native result_free.
+    subprocess.run(['gcc','-std=gnu11','-g','-no-pie','-fsanitize=address,undefined','-fno-omit-frame-pointer','-x','objective-c','-I',str(NATIVE/'include'),'-I',str(package/'Sources'),'-I',str(FIXTURES),
+                    str(source),*[str(package/'Sources'/name) for name in ['ThinkThen.m','TTNativeAPI.m','TTNativeViews.c','TTJSON.c']],'-x','none',str(library),'-lobjc','-pthread','-lm','-Wl,-rpath,'+str(scratch),'-o',str(binary)],env=child_env(HOME=str(scratch),LANG='C.UTF-8'),check=True)
     native_cases(binary)

@@ -475,10 +475,15 @@ def prepare(home, value):
         (home / value['reference']).write_text(compact(value['file_body']))
 
 
-def main():
+def main(*, consumer='c', header=None, library=None, compile_consumer=None,
+         adapter_header=None, initialize=''):
     import parity
     inventory = parity.inventory()
-    rows = list(parity.required_cases(inventory, 'c').values())
+    if consumer not in {row['id'] for row in parity.all_consumers(inventory)}:
+        raise ValueError('unknown C-backed public consumer')
+    if consumer != 'c' and compile_consumer is None:
+        raise ValueError('a language consumer requires its actual public compiler callback')
+    rows = list(parity.required_cases(inventory, consumer).values())
     cases = {row['id']: row for row in json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
     named = {row['id']: row for row in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']}
     names = ('PATH', 'HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN',
@@ -486,7 +491,17 @@ def main():
              'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     env.update(CARGO_BUILD_JOBS='1', CARGO_NET_OFFLINE='true')
-    subprocess.run(['cargo', 'build', '--locked', '--offline', '--lib'], cwd=ROOT / 'libraries/c', env=env, check=True)
+    header = header or os.environ.get('THINKTHEN_C_HEADER')
+    library = library or os.environ.get('THINKTHEN_C_LIBRARY')
+    if bool(header) != bool(library) or (os.environ.get('THINKTHEN_ARTIFACT') and not header):
+        raise ValueError('installed C parity requires its explicit header and library')
+    if header:
+        header, library = Path(header).resolve(strict=True), Path(library).resolve(strict=True)
+        if not header.is_file() or not library.is_file():
+            raise ValueError('installed C parity header or library is missing')
+    else:
+        subprocess.run(['cargo', 'build', '--locked', '--offline', '--lib'], cwd=ROOT / 'libraries/c', env=env, check=True)
+        header, library = ROOT / 'libraries/c/include/thinkthen.h', ROOT / 'libraries/c/target/debug/libthinkthen_c.so'
     subprocess.run(['cargo', 'build', '--locked', '--offline', '-p', 'conformance-backend'], cwd=ROOT, env=env, check=True)
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-parity-') as folder:
         scratch = Path(folder)
@@ -508,20 +523,25 @@ def main():
                        if 'steps' in value for step in range(len(value['steps'])))
         dispatch = '\n'.join('case %d: case_%d(e); break;' % (number, number)
                              for number in numbers)
-        source.write_text('#include <threads.h>\n#include "%s"\n' % (ROOT / 'libraries/c/tests/c/parity_output.c')
+        source.write_text(('#include "%s"\n' % Path(adapter_header).resolve(strict=True) if adapter_header else '')
+                          + '#include <threads.h>\n#include "%s"\n' % (ROOT / 'libraries/c/tests/c/parity_output.c')
                           + '\nint cancel_on_input(void *token) { if(getchar()!=\'!\') abort(); thinkthen_cancel(token); fputs("cancel-fired\\n",stdout); fflush(stdout); return 0; }\n'
                           + '\nchar *read_caption(const char *path,thinkthen_optional_content_v1 *out) { FILE *f=fopen(path,"rb"); if(!f || fseek(f,0,SEEK_END)) abort(); long n=ftell(f); if(n<0 || n>16777216 || fseek(f,0,SEEK_SET)) abort(); char *s=malloc((size_t)n+1); if(!s || fread(s,1,(size_t)n,f)!=(size_t)n || fclose(f)) abort(); s[n]=0; *out=(thinkthen_optional_content_v1){1,{1,{s,(size_t)n}}}; return s; }\n'
                           + '\n'.join(definitions)
-                          + '\nint main(int argc,char **argv) { if(argc!=3) return 2; '
+                          + '\nint main(int argc,char **argv) { ' + initialize + ' if(argc!=3) return 2; '
                           'if(!strstr(argv[2], \"\\\"base_url\\\":\\\"http://127.0.0.1:\")) return 3; '
                           'thinkthen_engine *e=thinkthen_engine_new_with(argv[2]); '
                           'if(!e) { output(NULL,1,thinkthen_error_code(NULL),NULL); return 0; } switch(atoi(argv[1])) {\n' + dispatch
                           + '\ndefault: return 2; } thinkthen_engine_free(e); return 0; }\n')
         binary = scratch / 'driver'
-        library = ROOT / 'libraries/c/target/debug'
         # Match the shipped soname using an owned directory; do not alter build files.
-        (scratch / 'libthinkthen.so.0').symlink_to(library / 'libthinkthen_c.so')
-        subprocess.run(['cc', '-pthread', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(ROOT / 'libraries/c/include'), str(source), '-L', str(library), '-lthinkthen_c', '-Wl,-rpath,' + str(scratch), '-o', str(binary)], env=env, check=True)
+        (scratch / 'libthinkthen.so.0').symlink_to(library)
+        if compile_consumer:
+            binary = Path(compile_consumer(scratch, env, header.parent, library, source))
+        else:
+            subprocess.run(['cc', '-pthread', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(header.parent), str(source), str(library), '-Wl,-rpath,' + str(scratch), '-o', str(binary)], env=env, check=True)
+        if not binary.is_file() or not os.access(binary, os.X_OK):
+            raise ValueError('public consumer compiler did not produce an executable')
         failures = 0
         for at, row in enumerate(rows):
             error = errors.get(at)
@@ -626,7 +646,7 @@ def main():
             if error is not None:
                 failures += 1
                 print('C fixture %s failed: %s' % (row['id'], error), file=sys.stderr)
-            print('parity: ' + json.dumps({'consumer': 'c', 'case': row['id'], 'checks': row.get('checks', ['named', 'runtime']), 'status': 'fail' if error is not None else 'pass'}), flush=True)
+            print('parity: ' + json.dumps({'consumer': consumer, 'case': row['id'], 'checks': row.get('checks', ['named', 'runtime']), 'status': 'fail' if error is not None else 'pass'}), flush=True)
         print('C shared fixture results: %d passed, %d failed' % (len(rows) - failures, failures))
         return bool(failures)
 

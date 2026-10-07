@@ -124,7 +124,7 @@ def assert_required(packet,row,value,bodies,root):
             assert original['original']==path.read_text()
             assert location['first_line']==1 and location['last_line']==len(path.read_text().splitlines())
 
-def run(consumer, command, root, extra_env=None, settings_names=None):
+def run(consumer, command, root, extra_env=None, settings_names=None, rust_manifest=None):
     import os, subprocess, sys, tempfile, sqlite3
     sys.path.insert(0,str(root/'conformance'))
     import parity,c_parity,c_images
@@ -143,7 +143,9 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
     elif consumer=='typescript':
         compiler=[command[0],str(root/'libraries/typescript/target/npm/node_modules/typescript/bin/tsc'),'--strict','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','--rootDir',str(source.parent),'--outDir',str(source.parent),str(source.with_suffix('.ts'))]
     elif consumer=='rust':
-        compiler=['cargo','build','--locked','--offline','--manifest-path',str(root/'libraries/python/Cargo.toml'),'--example','native_case']
+        compiler=['cargo','build','--locked','--offline','--manifest-path',str(rust_manifest or root/'libraries/python/Cargo.toml')]
+        if rust_manifest is None:compiler+=['--example','native_case']
+        else:compiler+=['--target-dir',str(root/'libraries/python/target')]
     if compiler:
         with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
             env={name:value for name in ('PATH','CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS') if (value:=os.environ.get(name)) is not None}

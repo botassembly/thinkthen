@@ -30,6 +30,7 @@ export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTH
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/polars"
 consumer=libraries/polars/consumer/Cargo.toml
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'polars: installed crate is missing or linked' >&2; exit 1; }
     # The same public consumer links the unpacked source archive.
     scratch_dir source
     scratch_dir installed

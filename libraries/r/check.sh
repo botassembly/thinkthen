@@ -36,6 +36,26 @@ R_LIBS=$libs Rscript -e 'v <- function(p) tryCatch(packageVersion(p), error = fu
   if (v("jsonlite") < "2.0.0") quit(status = 1)
   for (p in c("dplyr", "dbplyr", "purrr", "tidyr", "igraph")) if (identical(v(p), "0")) quit(status = 1)' ||
   not_run "jsonlite 2.0.0 or a tested Suggests package is missing; run libraries/r/tools/setup.sh on a networked machine"
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+  [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'r: installed tarball is missing or linked' >&2; exit 1; }
+  mkdir -p "$scratch/lib"
+  pinned=$(sed -n 's/^channel = "\(.*\)"/\1/p' "$root/rust-toolchain.toml")
+  RUSTUP_TOOLCHAIN=$pinned CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$root/target/r" \
+    R CMD INSTALL -l "$scratch/lib" "$THINKTHEN_ARTIFACT" >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
+  installed_libs="$scratch/lib:$libs"
+  R_LIBS="$installed_libs" Rscript -e 'stopifnot(startsWith(find.package("thinkthen"), commandArgs(TRUE)[1]))' "$scratch/lib/"
+  . "$root/sdlc/scripts/installed.sh"
+  own_panic_hook "$scratch/lib/thinkthen/libs/thinkthen.so"
+  python3 - "$root" "$installed_libs" <<'RNATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+sys.exit(bool(run('r',['Rscript','--vanilla',str(root/'libraries/r/tests/native_case.R')],root,{'R_LIBS':sys.argv[2]})))
+RNATIVE
+  echo 'r: check passed, installed'
+  exit 0
+fi
 cargo fetch --locked --offline --manifest-path "$rust/Cargo.toml" >/dev/null 2>&1 ||
   not_run "the cargo cache misses a crate; run cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml on a networked machine"
 

@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import contextlib
 import io
+import os
 import shutil
 import sys
 import tempfile
@@ -142,7 +143,12 @@ class PublicAssertions(unittest.TestCase):
             'HOME': '/ambient/home', 'THINKTHEN_BASE_URL': 'https://example.invalid',
             'THINKTHEN_API_KEY': 'ambient-secret', 'THINKTHEN_CONFORMANCE_IDS': '/selector',
             'THINKTHEN_TEST_PROFILE': 'routine', 'OTHER_API_KEY': 'unrelated-secret',
+            'THINKTHEN_TOOLCHAINS': str(Path(scratch) / 'tools'), 'CARGO_BUILD_JOBS': '1',
+            'R_LIBS_USER': str(Path(scratch) / 'r-library'), 'PUB_CACHE': str(Path(scratch) / 'pub-cache'),
+            'UV_CACHE_DIR': str(Path(scratch) / 'uv-cache'),
+            'UV_PYTHON_INSTALL_DIR': str(Path(scratch) / 'uv-python'),
         }):
+            (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
@@ -151,6 +157,14 @@ class PublicAssertions(unittest.TestCase):
                 self.assertTrue(Path(env[name]).is_relative_to(scratch))
             self.assertNotIn('THINKTHEN_CONFORMANCE_IDS', env)
             self.assertNotIn('OTHER_API_KEY', env)
+            self.assertEqual(env['CARGO_BUILD_JOBS'], '1')
+            self.assertEqual(env['R_LIBS_USER'], str(Path(scratch) / 'r-library'))
+            self.assertEqual(env['PUB_CACHE'], str(Path(scratch) / 'pub-cache'))
+            self.assertEqual(env['UV_CACHE_DIR'], str(Path(scratch) / 'uv-cache'))
+            self.assertEqual(env['UV_PYTHON_INSTALL_DIR'], str(Path(scratch) / 'uv-python'))
+            self.assertEqual((Path(env['HOME']) / '.cache/thinkthen-toolchains').resolve(),
+                             Path(scratch) / 'tools')
+            self.assertFalse((Path(env['HOME']) / '.config').exists())
 
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):
         contract = {'functions': ['decide'], 'consumers': [
@@ -200,6 +214,227 @@ class PublicAssertions(unittest.TestCase):
         for port in ['https://example.invalid', '0', '65536', '-1']:
             with self.assertRaisesRegex(ValueError, 'owned loopback port'):
                 parity.run(port)
+
+
+class CliApplicability(unittest.TestCase):
+    def setUp(self):
+        self.contract = json.loads(parity.DOCUMENT.read_text())['parity']
+        self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
+        self.cli['required_checks'] = ['named', 'runtime']
+        self.cli['case_rulings'] = {
+            case_id: {'boundary': boundary, 'reason': 'Actual CLI boundary'}
+            | ({} if boundary == 'sdk-only' else {'expect': {
+                'error': 'local', 'exit': 5, 'requests_sent': 0, 'no_result': True, 'secrecy': True}
+               if boundary == 'question-file' else {'signals': ['SIGINT', 'SIGTERM'], 'requests_sent': 1, 'completed_rows': 1,
+                     'completed_rows_ordered': True, 'no_suffix_output': True, 'cancelled_facts': True,
+                     'signal_exit': True, 'secrecy': True}})
+            for case_id, boundary in parity.CLI_BOUNDARIES.items()}
+
+    def test_cli_resolves_actual_boundary_checks_without_changing_sdk_or_mcp(self):
+        original = copy.deepcopy(self.contract['required_cases'])
+        parity.validate_consumer_contracts(self.contract)
+        cli = parity.required_cases(self.contract, 'cli')
+        self.assertEqual(len(cli), 238)
+        self.assertEqual(len(parity.required_cases(self.contract, 'rust')), 248)
+        self.assertEqual(len(parity.required_cases(self.contract, 'mcp')), 251)
+        self.assertTrue(all(case['checks'] == ['named', 'runtime'] for case in cli.values()))
+        self.assertEqual(cli['declaration-null']['expect']['error'], 'local')
+        self.assertEqual(cli['cancellation-held-call']['cli_boundary'], 'signal-drain')
+        self.assertEqual(parity.required_cases(self.contract, 'rust')['typed-decide']['checks'],
+                         ['named', 'compile', 'runtime'])
+        self.assertEqual(original, self.contract['required_cases'])
+
+    def test_closed_rulings_refuse_unrelated_exclusions_and_other_consumers(self):
+        for defect in ['missing-all', 'missing', 'unrelated', 'wrong-boundary', 'other-consumer', 'checks', 'expect', 'signal-expect']:
+            with self.subTest(defect=defect):
+                changed = copy.deepcopy(self.contract)
+                cli = next(row for row in changed['consumers'] if row['id'] == 'cli')
+                if defect == 'missing-all':
+                    del cli['required_checks']
+                    del cli['case_rulings']
+                elif defect == 'missing':
+                    del cli['case_rulings']['named-uppercase']
+                elif defect == 'unrelated':
+                    cli['case_rulings']['typed-decide'] = {'boundary': 'sdk-only', 'reason': 'unsupported'}
+                elif defect == 'wrong-boundary':
+                    cli['case_rulings']['declaration-null']['boundary'] = 'sdk-only'
+                elif defect == 'other-consumer':
+                    changed['consumers'][1]['case_rulings'] = cli['case_rulings']
+                elif defect == 'checks':
+                    cli['required_checks'] = ['runtime']
+                elif defect == 'signal-expect':
+                    cli['case_rulings']['cancellation-held-call']['expect']['requests_sent'] = 2
+                else:
+                    cli['case_rulings']['declaration-null']['expect'] = {'error': 'Usage'}
+                with self.assertRaises(ValueError):
+                    parity.validate_consumer_contracts(changed)
+
+    def test_cells_require_actual_cli_checks_and_refuse_sdk_only_passes(self):
+        cases = {case['id']: case for case in self.contract['required_cases']}
+        def cell(case_id, checks):
+            return parity.PREFIX + json.dumps({'consumer': 'cli', 'case': case_id,
+                                               'checks': checks, 'status': 'pass'})
+        self.assertEqual(parity.cells(cell('typed-decide', ['named', 'runtime']), ['cli'], cases,
+                                      self.contract), {('cli', 'typed-decide'): 'pass'})
+        for case_id, checks, cause in [
+            ('named-uppercase', ['named', 'runtime'], 'sdk-only CLI case'),
+            ('typed-decide', ['named', 'compile', 'runtime'], 'missing named/compiler/runtime'),
+            ('typed-decide', ['runtime'], 'missing named/compiler/runtime'),
+        ]:
+            with self.subTest(case_id=case_id, checks=checks), self.assertRaisesRegex(ValueError, cause):
+                parity.cells(cell(case_id, checks), ['cli'], cases, self.contract)
+
+    def test_matrix_keeps_rulings_separate_and_analogue_missing_when_unexecuted(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            cli_contract = self.contract | {'consumers': [self.cli], 'pending_consumers': []}
+            def command(args, **kwargs):
+                return subprocess.CompletedProcess(args, 0)
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                self.assertEqual(parity.run('12345'), 1)
+            row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
+            self.assertEqual(row['case_rulings'], self.cli['case_rulings'])
+            self.assertNotIn('named-uppercase', row['cells'])
+            self.assertEqual(row['cells']['declaration-null'], 'missing')
+            table = (Path(scratch) / 'target/parity/matrix.md').read_text()
+            self.assertIn('named-uppercase: sdk-only, outside CLI', table)
+            self.assertIn('declaration-null: question-file, boundary coverage missing', table)
+
+
+class InstalledInputs(unittest.TestCase):
+    def setUp(self):
+        self.consumers = {row['id']: row for row in parity.all_consumers(parity.inventory())}
+        self.native = 'thinkthen-c-0.2.0-x86_64-unknown-linux-gnu.tar.gz'
+        self.command = 'thinkthen-0.2.0-x86_64-unknown-linux-musl.tar.gz'
+        self.dart = 'thinkthen-dart-0.2.0-x86_64-unknown-linux-gnu.tar.gz'
+
+    def packages(self, folder):
+        names = [self.command, self.native, self.dart, 'thinkthen-0.2.0.crate',
+                 'thinkthen-0.2.0-cp310-abi3-linux_x86_64.whl', 'thinkthen-0.2.0.tgz',
+                 'thinkthen-0.2.0-x86_64-linux.gem', 'thinkthen_0.2.0.tar.gz']
+        names += [f'thinkthen-{family}-0.2.0-x86_64-unknown-linux-gnu.tar.gz' for family in
+                  ['go', 'csharp', 'jvm', 'cpp', 'swift', 'zig', 'objective-c', 'php',
+                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16']]
+        for name in names:
+            (folder / name).touch()
+        # The plain diagnostic gem is shipped alongside the actual native gem.
+        (folder / 'thinkthen-0.2.0.gem').touch()
+
+    def select(self, folder):
+        with patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
+            return parity.installed_artifacts(folder, self.consumers)
+
+    def test_each_group_uses_its_actual_package_and_shared_native_inputs(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch)
+            self.packages(folder)
+            inputs, command, native = self.select(folder)
+            self.assertEqual(set(inputs), set(self.consumers))
+            self.assertEqual(Path(command).name, self.command)
+            self.assertEqual(Path(native).name, self.native)
+            for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
+                          ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
+                          ('dart', 'flutter'), ('rust', 'rust-polars')]:
+                self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
+            self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
+                             'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for row in inputs.values():
+                self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
+                self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
+                self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+
+    def test_missing_ambiguous_linked_and_non_file_inputs_refuse(self):
+        for defect in ['missing', 'ambiguous', 'linked', 'directory']:
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as scratch:
+                folder = Path(scratch)
+                self.packages(folder)
+                if defect == 'ambiguous':
+                    (folder / 'thinkthen-0.2.0-x86_64-unknown-linux-gnu.tar.gz').touch()
+                else:
+                    required = folder / self.native
+                    required.unlink()
+                    if defect == 'linked':
+                        required.symlink_to(folder / self.dart)
+                    elif defect == 'directory':
+                        required.mkdir()
+                with self.assertRaisesRegex(ValueError, 'one regular artifact'):
+                    self.select(folder)
+
+    def test_installed_c_inputs_refuse_before_any_checkout_build(self):
+        for inputs in [dict(THINKTHEN_ARTIFACT='/missing/archive'),
+                       dict(THINKTHEN_C_HEADER='/missing/header'),
+                       dict(THINKTHEN_C_HEADER='/missing/header', THINKTHEN_C_LIBRARY='/missing/library')]:
+            with self.subTest(inputs=inputs):
+                result = subprocess.run([sys.executable, str(parity.ROOT / 'conformance/c_parity.py')],
+                                        env={'PATH': '/nonexistent', **inputs}, capture_output=True,
+                                        text=True, check=False)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn("'cargo'", result.stderr)
+                self.assertTrue('explicit header and library' in result.stderr or 'No such file or directory' in result.stderr)
+
+
+class FullCheckpoint(unittest.TestCase):
+    def test_required_parity_keeps_private_safety_and_release_checks_without_duplicate_consumers(self):
+        for entry, args in [('test-full-cases', ['--run']),
+                            ('surfaces', ['--full-functional']), ('surfaces', ['--parity']),
+                            ('surfaces', ['--full-functional', '--publish', 'checkpoint/surfaces/test',
+                                          '--publish-root', '/unused-publication-root']),
+                            ('test-full-cases', ['--run', '--artifacts', '.']),
+                            ('surfaces', ['--full-functional', '--artifacts', '.'])]:
+            installed = '--artifacts' in args
+            for failed in [None, 'safety', 'parity'] + ([] if installed else ['smoke']):
+                with self.subTest(entry=entry, failed=failed), tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder)
+                    scripts = root / 'sdlc/scripts'
+                    scripts.mkdir(parents=True)
+                    for name in ['test-full-cases', 'surfaces', 'verdict.sh']:
+                        shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+                    files = {
+                        'sdlc/scripts/heavy-lock': '',
+                        'sdlc/scripts/scratch.sh': 'usage_guard() { :; }\nscratch_dir() { packed=$PWD/packed; mkdir -p "$packed"; }\n',
+                        'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
+                        'sdlc/scripts/test': 'printf "workspace\\n" >> calls\n',
+                        'sdlc/surfaces.txt': 'libraries/c landed\n',
+                        'libraries/c/Cargo.toml': '',
+                        'libraries/c/check.sh': 'printf "safety\\n" >> calls\nexit "$SAFETY_CODE"\n',
+                        'sdlc/scripts/release-pack': 'if [ "${4:-}" = crate ]; then printf "extra-pack\\n" >> calls; else printf "pack\\n" >> calls; fi\n',
+                        'sdlc/scripts/release-smoke': 'printf "smoke\\n" >> calls\nexit "$SMOKE_CODE"\n',
+                        'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
+                        'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
+                        'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
+                        'conformance/parity.py': (
+                            'import os,sys\n'
+                            'if sys.argv[1:] != ["--validate"]:\n'
+                            ' assert "THINKTHEN_CONFORMANCE_IDS" not in os.environ\n'
+                            ' assert os.environ["THINKTHEN_TEST_PROFILE"] == "full"\n'
+                            ' assert ("--artifacts" in sys.argv) == bool(os.environ["INSTALLED"])\n'
+                            ' with open("calls", "a") as f: f.write("parity\\n")\n'
+                            ' sys.exit(int(os.environ["PARITY_CODE"]))\n'),
+                    }
+                    for path, text in files.items():
+                        target = root / path
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_text(text)
+                    (root / 'bin/rustc').chmod(0o755)
+                    (root / 'bin/git').chmod(0o755)
+                    env = {'PATH': str(root / 'bin') + ':' + os.defpath,
+                           'HOME': str(root / 'home'), 'SAFETY_CODE': '77' if failed == 'safety' else '0',
+                           'PARITY_CODE': '1' if failed == 'parity' else '0',
+                           'SMOKE_CODE': '77' if failed == 'smoke' else '0',
+                           'INSTALLED': 'yes' if installed else '',
+                           'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
+                    result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
+                                            env=env, capture_output=True, text=True, check=False)
+                    expected = ['safety'] if failed == 'safety' else ['safety', 'parity']
+                    if failed not in ('safety', 'parity') and not installed:
+                        expected += ['pack', 'smoke']
+                    if entry == 'test-full-cases':
+                        expected.insert(0, 'workspace')
+                    if '--publish' in args:
+                        expected.insert(0, 'stage-check')
+                        if failed is None:
+                            expected += ['extra-pack', 'stage']
+                    self.assertEqual((root / 'calls').read_text().splitlines(), expected, result.stderr)
+                    self.assertEqual(result.returncode == 0, failed is None, result.stdout + result.stderr)
 
 
 if __name__ == '__main__':
