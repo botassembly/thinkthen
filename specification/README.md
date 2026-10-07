@@ -10,6 +10,7 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 
 | Document | What it fixes | Status |
 | --- | --- | --- |
+| [mcp.md](mcp.md) | Local ten-tool stdio SDK, native inputs and complete results | Settled for 0.2; adoption pending |
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--plan`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |

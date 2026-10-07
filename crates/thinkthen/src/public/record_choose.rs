@@ -87,6 +87,11 @@ impl RecordChooseQuestion {
         model_of(&mut self.model, value)?;
         Ok(self)
     }
+    /// Use evidence already selected by native record composition; retain all other preparation.
+    pub(crate) fn without_authored_on(mut self) -> Self {
+        self.metadata.reading.on.clear();
+        self
+    }
     /// Exact authored question content, including structured saved questions.
     #[must_use]
     pub fn text(&self) -> QuestionContent<'_> {

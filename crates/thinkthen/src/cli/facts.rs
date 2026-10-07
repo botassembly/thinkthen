@@ -47,6 +47,7 @@ pub(crate) fn enabled(command: &Command) -> bool {
         Command::Relate(value) => value.common.facts,
         Command::Cache(_)
         | Command::Status(_)
+        | Command::Mcp(_)
         | Command::Check(_)
         | Command::Backends(_)
         | Command::Transform(_)

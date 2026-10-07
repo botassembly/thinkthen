@@ -61,6 +61,9 @@ pub fn entry() -> ExitCode {
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
     }
+    if let Some(Command::Mcp(arguments)) = &cli.command {
+        return mcp_entry(arguments);
+    }
     let offline = match &cli.command {
         Some(Command::Transform(arguments)) => {
             Some(transform::run(&arguments.command, stdout.lock()))
@@ -74,10 +77,7 @@ pub fn entry() -> ExitCode {
         _ => None,
     };
     if let Some(result) = offline {
-        return match result {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(failure) => failure::report(&failure, stderr.lock()),
-        };
+        return report_offline(result, stderr.lock());
     }
     // Every command that reads input may write a recording or a cache entry.
     if cli.command.as_ref().is_some_and(Command::reads_input)
@@ -136,6 +136,13 @@ pub fn entry() -> ExitCode {
     match activation.finish(code) {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
+    }
+}
+
+fn mcp_entry(arguments: &crate::mcp::startup::Arguments) -> ExitCode {
+    match file_size::claim() {
+        Ok(()) => crate::mcp::startup::entry(arguments),
+        Err(failure) => failure::report(&failure, io::stderr().lock()),
     }
 }
 
@@ -226,6 +233,7 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
     }
     let input = io::stdin();
     match &cli.command {
+        Some(Command::Mcp(_)) => Err(Failure::Defect("MCP command bypassed startup")),
         Some(Command::Decide(arguments)) => judge::decide(arguments, environment, input, writer),
         Some(Command::Choose(arguments)) => judge::choose(arguments, environment, input, writer),
         Some(Command::Tag(arguments)) => judge::tag(arguments, environment, input, writer),
@@ -314,11 +322,19 @@ fn in_default_cache(command: &Command, environment: &Environment) -> bool {
         Command::Relate(arguments) => default(&arguments.common),
         Command::Cache(_)
         | Command::Status(_)
+        | Command::Mcp(_)
         | Command::Check(_)
         | Command::Backends(_)
         | Command::Transform(_)
         | Command::Runs(_)
         | Command::Audit(_)
         | Command::Diff(_) => false,
+    }
+}
+
+fn report_offline(result: Result<(), Failure>, writer: impl Write) -> ExitCode {
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(failure) => failure::report(&failure, writer),
     }
 }
