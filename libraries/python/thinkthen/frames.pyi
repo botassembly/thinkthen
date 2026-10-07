@@ -21,6 +21,8 @@ class FrameBatch(Iterator[c.BatchRow[R]], Generic[R]):
     native: c.Batch[R]
     source: object
     positions: tuple[int, ...] | None
+    index: object
+    name: object
     @property
     def facts(self) -> c.Facts | None: ...
     def __iter__(self) -> FrameBatch[R]: ...

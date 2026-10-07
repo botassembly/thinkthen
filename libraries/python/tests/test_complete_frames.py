@@ -66,3 +66,27 @@ def test_complete_frame_refuses_bad_rows_and_preserves_cancel_deadline_secrecy(b
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ['usage','cancelled','deadline']
     assert backend.count() == 0
+
+
+def test_complete_filter_retains_multiindex_names_and_batch_snapshots_presentation(backend, tmp_path):
+    output = run('''
+        import pandas as pd
+        from thinkthen import complete as c, frames
+        source = pd.Series(['one',None,'two'], index=pd.MultiIndex.from_tuples([('a',1),('a',1),('b',2)],names=['group','row']),name='body',dtype=object)
+        q = c.QuestionSource(role='atomic',body={'decide':'Need attention?'})
+        facade = frames.Engine(engine=c.Engine(cache=False,batch=1))
+        filtered = facade.filter(q,source)
+        assert isinstance(filtered.frame.index,pd.MultiIndex)
+        assert filtered.frame.index.names == ['group','row']
+        assert filtered.frame.index.equals(source.index.take(filtered.positions))
+        batch = facade.decide_batch(q,source)
+        original = source.index.copy()
+        source.index = [3,4,5]; source.name = 'changed'
+        assert batch.index.equals(original) and batch.name == 'body'
+        rows = list(batch)
+        assert [batch.position(row) for row in rows] == [0,2]
+        assert [row.input.original for row in rows] == ['one','two']
+        print(batch.facts.records)
+    ''',child_env(backend,tmp_path))
+    assert output.strip() == '2'
+    assert backend.count() == 4

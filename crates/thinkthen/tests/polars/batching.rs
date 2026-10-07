@@ -48,9 +48,7 @@ fn question_count(request: &Recorded) -> usize {
         .len()
 }
 
-/// Every question key of one request body, in wire order, by ADR 0111
-/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
-/// one question as the body carries them, joined by line feeds.
+/// Independent result/2 normalized question keys include actual requested and reported models.
 fn keys(url: &str, body: &[u8]) -> Vec<String> {
     type Raw = std::collections::BTreeMap<String, Box<serde_json::value::RawValue>>;
     let parts: Raw = serde_json::from_slice(body).expect("request parts");
@@ -67,8 +65,21 @@ fn keys(url: &str, body: &[u8]) -> Vec<String> {
     placed
         .into_iter()
         .map(|(_, question)| {
-            let joined = ["systemone", url, part("model"), part("state"), question].join("\n");
-            Sha256::digest(joined.as_bytes())
+            let mut digest = Sha256::new();
+            digest.update(b"thinkthen.question-key/2\0");
+            for part in [
+                "systemone",
+                url,
+                part("model"),
+                "\"jev-latest\"",
+                part("state"),
+                question,
+            ] {
+                digest.update((part.len() as u64).to_be_bytes());
+                digest.update(part.as_bytes());
+            }
+            digest
+                .finalize()
                 .iter()
                 .map(|byte| format!("{byte:02x}"))
                 .collect()
@@ -301,14 +312,23 @@ fn polars_columns_keep_final_call_facts() {
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"answer":{"decide":"Ready?"}}}"#)
         .expect("set");
     let before = listener.count();
-    let error = engine
+    let annotated = engine
         .annotate_frame(
             &set,
             &frame(vec![texts]),
             "body",
             CallOptions::new().context("forbidden"),
         )
-        .expect_err("annotation context");
-    assert_eq!(error.kind(), ErrorKind::Usage);
-    assert_eq!(listener.count(), before);
+        .expect("shared annotation context");
+    assert_eq!(annotated.facts().records(), 3);
+    assert_eq!(annotated.facts().requests_sent(), 1);
+    assert_eq!(listener.count(), before + 1);
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let body: Value = serde_json::from_slice(&requests[0].body).expect("context request");
+    assert_eq!(
+        body["state"],
+        json!({"context":"forbidden","evidence":"Each question quotes the text it asks about."})
+    );
+    assert_eq!(questions(&body).len(), 3);
 }

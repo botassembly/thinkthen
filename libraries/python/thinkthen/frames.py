@@ -55,13 +55,17 @@ def _records(value):
     return c.Records(tuple(items)), tuple(present)
 
 
-def _presented(native, source, present, verb, library):
+def _presentation(source, library):
+    return (source.index.copy() if library == 'pandas' else tuple(range(len(source)))), source.name
+
+
+def _presented(native, source, present, verb, library, presentation):
     positions = tuple(None if at is None else present[at] for at in native.ordinals)
     per_row = verb in ('decide', 'choose', 'tag', 'score', 'annotate', 'recognize')
     if source is None:
         labels, name = tuple(range(len(native.inputs))), 'result'
     else:
-        labels, name = (source.index.copy() if library == 'pandas' else tuple(range(len(source)))), source.name
+        labels, name = presentation
     if per_row:
         rows = [None] * len(labels)
         for result, at in zip(native.results, positions, strict=True): rows[at] = result
@@ -69,7 +73,9 @@ def _presented(native, source, present, verb, library):
     else:
         rows = list(native.results)
         # Aggregate find/relate can have no selected original row.
-        selected = [labels[at] if at is not None else None for at in positions]
+        selected = (labels.take(positions) if library == 'pandas' and source is not None
+                    and all(at is not None for at in positions)
+                    else [labels[at] if at is not None else None for at in positions])
     if library == 'pandas':
         import pandas as pd
         output = pd.Series(rows, index=selected, name=name, dtype='object')
@@ -92,16 +98,18 @@ class Engine:
         if isinstance(source, (c.Files, carriers.Files)):
             if on is not None: raise UsageError('on selects a dataframe column')
             original = None
+            presentation = None
             inputs = source
             present = None
             library = self._library
         else:
             original = _series(source, on)
             library = 'pandas' if type(original).__module__.partition('.')[0] == 'pandas' else 'polars'
+            presentation = _presentation(original, library)
             inputs, present = _records(original)
         done = getattr(self._engine, verb)(question, inputs, **controls)
         if present is None: present = tuple(range(len(done.inputs)))
-        return _presented(done, original, present, verb, library)
+        return _presented(done, original, present, verb, library, presentation)
 
     def decide(self, question, source, **controls): return self._call('decide', question, source, **controls)
     def choose(self, question, source, **controls): return self._call('choose', question, source, **controls)
@@ -136,6 +144,8 @@ class FrameBatch:
     """The native pull iterator with original nullable frame positions."""
     def __init__(self, native, source, present):
         self.native, self.source, self.positions = native, source, present
+        library = 'pandas' if source is not None and type(source).__module__.partition('.')[0] == 'pandas' else 'polars'
+        self.index, self.name = (None, None) if source is None else _presentation(source, library)
     def __repr__(self): return '<CompleteFrameBatch>'
     def __iter__(self): return self
     def __next__(self): return next(self.native)

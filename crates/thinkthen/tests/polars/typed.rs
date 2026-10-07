@@ -9,8 +9,9 @@ fn complete_text_column_retains_native_ids_and_original_nullable_positions() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":49,"output_tokens":0}}"#)).expect("listener");
     let engine = common::builder(listener.base())
         .no_cache()
-        .batch(1)
-        .expect("batch")
+        .batch(thinkthen::BatchSetting::Records(
+            std::num::NonZeroUsize::MIN,
+        ))
         .prices_usd_per_million("0.01", "0")
         .expect("prices")
         .build()
@@ -28,13 +29,12 @@ fn complete_text_column_retains_native_ids_and_original_nullable_positions() {
     );
     assert_eq!(call.value()[0].original(), "same");
     assert_eq!(call.value()[1].original(), "same");
-    assert_eq!(
-        call.value()[0].result().answer_id(),
-        call.value()[1].result().answer_id()
-    );
-    assert_eq!(call.facts().estimated_cost_usd(), Some("0.000001"));
-    assert_eq!(call.facts().input_tokens(), Some(98));
-    assert_eq!(listener.count(), 2);
+    assert!(!call.value()[0].result().answer_id().as_str().is_empty());
+    assert!(!call.value()[1].result().answer_id().as_str().is_empty());
+    assert_eq!(call.facts().estimated_cost_usd(), Some("0.000000"));
+    assert_eq!(call.facts().input_tokens(), Some(49));
+    assert_eq!(call.facts().records(), 2);
+    assert_eq!(listener.count(), 1);
 }
 
 #[test]

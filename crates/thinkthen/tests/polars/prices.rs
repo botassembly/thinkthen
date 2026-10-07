@@ -86,5 +86,18 @@ fn priced_recognition_collection_uses_one_checked_native_token_total() {
         .expect("native priced collection");
     assert_eq!(call.facts().input_tokens(), Some(196));
     assert_eq!(call.facts().estimated_cost_usd(), Some("0.000002"));
-    assert_eq!(listener.count(), 4);
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 4);
+    for (at, request) in requests.iter().enumerate() {
+        let body: serde_json::Value =
+            serde_json::from_slice(&request.body).expect("captured request");
+        let expected: serde_json::Value = serde_json::from_str(
+            replies[at % replies.len()]["request"]
+                .as_str()
+                .expect("literal saved request"),
+        )
+        .expect("saved request");
+        assert_eq!(body["questions"], expected["questions"]);
+        assert_eq!(body["state"], expected["state"]);
+    }
 }
