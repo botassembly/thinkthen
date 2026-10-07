@@ -213,3 +213,56 @@ fn case_view_sends_nothing_with_a_configured_backend_and_key() {
     assert!(output.stderr.is_empty());
     assert!(!output.stdout.windows(11).any(|part| part == b"canary-0257"));
 }
+
+#[test]
+fn saved_decision_meanings_grade_the_run_verdict_and_keep_explicit_cuts() {
+    let base: Value = serde_json::from_str(
+        fixture("small/decide.jsonl")
+            .lines()
+            .next()
+            .expect("first decision"),
+    )
+    .expect("decision row");
+    for meaning in [
+        json!("authored yes"),
+        Value::Null,
+        json!(false),
+        json!({"decision":"yes"}),
+        json!(["yes"]),
+    ] {
+        for (probability, threshold, expected) in [
+            (0.9, json!(0.5), [1, 0, 0]),
+            (0.7, json!(0.8), [0, 1, 0]),
+            (0.7, json!("0.7:0.9"), [0, 0, 1]),
+            (0.9, json!("0.7:0.9"), [1, 0, 0]),
+            (0.6, json!("0.7:0.9"), [0, 1, 0]),
+        ] {
+            let mut saved = base.clone();
+            saved["schema"] = json!("thinkthen.result/2");
+            saved["value"] = meaning.clone();
+            saved["threshold"] = threshold;
+            saved["answer"]["probability"] = json!(probability);
+            let input = serde_json::to_vec(&saved).expect("saved row");
+            for (arguments, grade) in [
+                (vec!["-", "small/decide-key.jsonl"], expected),
+                (
+                    vec!["-", "small/decide-key.jsonl", "--threshold", "0.5"],
+                    [1, 0, 0],
+                ),
+            ] {
+                let (code, stdout, stderr) = audit(&arguments, &input);
+                assert_eq!((code, stderr.as_str()), (0, ""));
+                let report = rows(&stdout).remove(0);
+                assert_eq!(
+                    [
+                        report["right"].as_u64(),
+                        report["wrong"].as_u64(),
+                        report["unsure"].as_u64()
+                    ],
+                    grade.map(Some),
+                    "{saved}"
+                );
+            }
+        }
+    }
+}

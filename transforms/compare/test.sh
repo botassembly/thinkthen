@@ -279,4 +279,52 @@ then
 fi
 sed 's/^jq: error (at [^)]*): //' "$work/error" | mustmatch 'compare: rows must all be scalar or annotate'
 
+# Saved decision meanings cannot identify the verdict. Compare the saved rule.
+jq -n -c '
+  [null,false,true,"same",{},["yes"]] | to_entries[] as $meaning
+  | [ {p:0.5,t:0.5,v:true}, {p:0.2,t:"0.2:0.8",v:null},
+      {p:0.8,t:"0.2:0.8",v:true}, {p:0.19,t:"0.2:0.8",v:false} ]
+  | to_entries[]
+  | {schema:"thinkthen.result/2",input:{id:(($meaning.key|tostring)+"-"+(.key|tostring))},
+     value:.value.v,question:{verb:"decide",text:"same"},threshold:.value.t,
+     answer:{kind:"yes_no",probability:.value.p},meta:{model:"same"}}' > "$work/meaning-before.jsonl"
+jq -c '.value = ([null,false,true,"same",{},["yes"]][(.input.id | split("-")[0] | tonumber)])' \
+  "$work/meaning-before.jsonl" > "$work/meaning-after.jsonl"
+jq -n --slurpfile before "$work/meaning-before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
+  "$work/meaning-after.jsonl" | jq -c '{compared,same,changed_values,flips,changes}' \
+  | mustmatch '{"compared":24,"same":24,"changed_values":0,"flips":{},"changes":[]}'
+
+# Validation runs before comparison, including values on unpaired records.
+for bad in '0' '1.1' 'true' '"hostile threshold"' '"0.8:0.2"' '"0.2:1.1"'; do
+  jq -c --argjson bad "$bad" '.threshold=$bad | .input.id = ("unpaired-" + .input.id)' "$work/meaning-after.jsonl" > "$work/invalid.jsonl"
+  if jq -n --slurpfile before "$work/meaning-before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
+    "$work/invalid.jsonl" > "$work/out" 2> "$work/error"; then
+    printf '%s\n' 'compare accepted an invalid decision threshold' >&2; exit 1
+  fi
+  sed 's/^jq: error (at [^)]*): //' "$work/error" | mustmatch 'compare: invalid decision threshold'
+done
+jq -c 'del(.value)' "$work/meaning-after.jsonl" > "$work/invalid.jsonl"
+if jq -n --slurpfile before "$work/meaning-before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
+  "$work/invalid.jsonl" > "$work/out" 2> "$work/error"; then
+  printf '%s\n' 'compare accepted a missing saved decision value' >&2; exit 1
+fi
+sed 's/^jq: error (at [^)]*): //' "$work/error" \
+  | mustmatch 'compare: value must be null, boolean, string, or number'
+
+# Legacy, rank, null-threshold and choose values retain literal comparisons.
+for route in legacy rank null-threshold choose; do
+  jq -c --arg route "$route" '
+    select(.input.id=="1-0") | .value=false |
+    if $route=="legacy" then .schema="thinkthen.result/1"
+    elif $route=="rank" then .question.verb="rank" | .threshold=null
+    elif $route=="null-threshold" then .threshold=null
+    else .question.verb="choose" | .answer={kind:"choice"} | .value="first" end' \
+    "$work/meaning-before.jsonl" > "$work/literal-before.jsonl"
+  jq -c '.value = (if .question.verb=="choose" then "second" else true end)' \
+    "$work/literal-before.jsonl" > "$work/literal-after.jsonl"
+  jq -n --slurpfile before "$work/literal-before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
+    "$work/literal-after.jsonl" | jq -c '{compared,same,changed_values}' \
+    | mustmatch '{"compared":1,"same":0,"changed_values":1}'
+done
+
 printf '%s\n' 'compare transform tests pass'

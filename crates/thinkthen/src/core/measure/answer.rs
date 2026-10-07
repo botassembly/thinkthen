@@ -388,7 +388,43 @@ impl Answer {
                 read.top = distribution.map(|held| top(line, held)).transpose()?;
             }
         }
+        read.saved_decision(entry)?;
         Ok(vec![read])
+    }
+
+    /// Read a saved decision's run verdict independently of its authored meaning.
+    fn saved_decision(&mut self, entry: &Json) -> Result<(), MeasureError> {
+        if self.failed
+            || self.verb != Verb::Decide
+            || entry.member("schema").and_then(Json::as_str) != Some("thinkthen.result/2")
+            || entry
+                .member("answer")
+                .and_then(|answer| answer.member("kind"))
+                .and_then(Json::as_str)
+                != Some("yes_no")
+        {
+            return Ok(());
+        }
+        let Some(threshold) = entry
+            .member("threshold")
+            .filter(|held| **held != Json::Null)
+        else {
+            return Ok(());
+        };
+        let threshold = match threshold {
+            Json::Number(number) => number.as_f64().and_then(|cut| Threshold::cut(cut).ok()),
+            Json::String(band) => band.parse::<Threshold>().ok(),
+            _ => None,
+        }
+        .ok_or(MeasureError::Ungradable(self.line))?;
+        if entry.member("value").is_none() {
+            return Err(MeasureError::Ungradable(self.line));
+        }
+        self.value = self
+            .probability
+            .and_then(|p| threshold.judge(p).value())
+            .map(Printed::Bool);
+        Ok(())
     }
 
     /// True when the answer saved what a rule reads.
