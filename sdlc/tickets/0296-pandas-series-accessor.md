@@ -1,6 +1,6 @@
 # 0296: Add the pandas Series accessor for all ten functions
 
-Status: in progress. The complete Series accessor passed all 248 source pandas cases; installed qualification, family review and landing gates remain open.
+Status: reviewed and qualified with 0410. The actual complete Series accessor passed all 248 source and installed pandas cases; fresh whole-family High review ACCEPT. Final family gates and coordinator landing remain.
 
 Milestone: 0.2
 
@@ -36,3 +36,5 @@ Builder: Sol High on `ticket/0410-dataframes-ten-functions`, lane claude-2. Risk
 Optional `import thinkthen.pandas` registers all ten `Series.tt` accessors, delegating to the selected existing engine. Base import succeeds while pandas imports are blocked. pandas/Python Polars consumers preserve names, duplicate pandas indices, nullable row positions, complete native recognition spans/relations and whole logical candidate/entity sets. Filter reconstruction uses the native record snapshot and original index labels. Saved find/recognition and strict replay cases run with actual loopback send counts.
 
 Installed public consumers passed 53 tests on pandas 3; the Series/pandas subset passed 19 on pandas 2 with no skipped cases. Stress selections were not run. Ordinary typed SDK types and ordinary method semantics on saved 0431 were not rewritten. Typed image/file accessor carriers, complete-result/2 identities and accepted context/schema adoption remain private and incomplete until their actual native/0431 interfaces land. Root still owns fresh whole-family High review and landing checks.
+
+Final accessor adoption is covered by the reviewed 0410 family checklist and its single record. Typed files/images, native result identities and ordered rank members are implemented and qualified by the actual installed public consumer. Earlier private-slice deferrals above are historical; no second accessor record or review is required.

@@ -1,6 +1,6 @@
 # 0410: Complete all ten dataframe functions and located files
 
-Status: in progress. Dataframe APIs are implemented; installed qualification, fresh whole-family review and final landing gates remain open.
+Status: reviewed and qualified. All three source and installed dataframe consumers passed 248 required cases each; fresh whole-family High review ACCEPT at `9c8ba1817`. Final full gates and coordinator landing remain.
 
 Milestone: 0.2
 
@@ -96,3 +96,18 @@ The shared helper adds thirteen nonblank Rust lines. Both R and Python ratchets 
 TypeScript and Ruby also include the same shared complete fixture module in their measured Rust totals. Their ceilings rise by the same thirteen lines to 2328 and 2773; no host implementation changed.
 
 Review candidate qualification: all three source and installed public dataframe consumers passed 248 required shared cases each with no skips. The final rebuilt wheel retained its unchanged full-matrix qualification and passed affected record-limit, ordered rank-member, strict frame type and seven frame regression checks. Existing registry plants, policy and full pre-review lint passed at `535b6d94a`. This checkpoint changes only the true qualification note and assigned metadata ownership. No family landing record or final test/spec completion is claimed before the fresh whole-family review.
+
+## Reviewed family checklist, 2026-10-07
+
+Fresh native Sol High review ACCEPT `9c8ba1817322b8b013237ee1c36f95c3da7fd16d` against `e2641d87c`; no blocking findings. One family record covers 0410, 0296 and dataframe adoption of the shared semantic tickets.
+
+- [x] All ten named functions on actual pandas, Python Polars and Rust Polars consumers; 248 required source and installed cases per surface, no skips.
+- [x] 0296: eager pandas cases use the actual complete Series accessor; original frame, null positions, duplicate index/name and MultiIndex metadata survive separately from native identities.
+- [x] 0300 dataframe adoption: native checked once-rounded prices and independent partial token dimensions; no host money arithmetic or rewritten facts.
+- [x] 0407/0414 dataframe adoption: per-record and shared contexts remain separate from evidence, file coordinates and native identities.
+- [x] 0411/0418 dataframe adoption: native cache/record/replay and ordered typed rank members preserve their own results, facts and provenance without extra judgments or usage.
+- [x] Typed file/image inputs, physical spans/edges, eager/lazy native Surface identity, cancellation, secrecy and zero-send refusals use existing native carriers and fixtures.
+- [x] Existing policy, registry plants and full pre-review lint; fresh whole-family High review.
+- [ ] Full test/lint/spec on the fixed candidate containing this checklist and the single family record; coordinator landing follows their success.
+
+Cross-surface 0300, 0407, 0411, 0414 and 0418 outcomes remain with their other family/SQL/MCP owners. This checklist establishes dataframe adoption only. Platform/release qualification and publication remain separate.

@@ -127,3 +127,5 @@ Shared-context checks move to one cohesive child test module to keep the source
 cap: parent 497, call-facts 465, context 105 nonblank lines. This step changes no
 production source, C/corpus files or saved v1 fixture; root owns confirmation
 and full landing gates.
+
+Dataframe adoption, 2026-10-07: the 0410 family uses the existing native checked pricing/facts path on pandas, Python Polars and Rust Polars. All three actual source and installed consumers passed 248 required cases each; retained aggregate rounding, partial-usage and error regressions are covered by the whole-family High ACCEPT at `9c8ba1817`. The single 0410 record/checklist owns final dataframe gate qualification. Other host/SQL requirements keep this umbrella ticket open.
