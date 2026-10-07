@@ -20,6 +20,9 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
+# Isolate read-only test configuration from the caller's configuration.
+scratch_dir fixture_config
+export XDG_CONFIG_HOME="$fixture_config"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   smoke_guard
   # The replay smoke (ticket 0335): the package source over the installed C door.
@@ -53,7 +56,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
   THINKTHEN_PORTABLE_PACKAGE="$wrapper" THINKTHEN_PORTABLE_NATIVE="$consumer" \
     THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
-  echo 'Ada installed release PASS: five typed rows and three literal sends'
+  echo 'Ada installed release PASS: five legacy rows and owned native results for direct and named backends'
   exit 0
 fi
 command -v node >/dev/null 2>&1 || { echo 'Ada gate missing node' >&2; exit 77; }
@@ -82,10 +85,18 @@ gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/facts_boundary.adb" -D "$TARGET" 
 for name in main direct; do
   gnatmake -gnat2022 -I"$ROOT/checks/legacy" "$ROOT/checks/legacy/$name.adb" -D "$TARGET/legacy" -o "$TARGET/legacy/$name" -largs -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
 done
+gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/buffer_bounds.adb" -D "$TARGET" -o "$TARGET/buffer_bounds" \
+  -largs -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
+LD_LIBRARY_PATH="$TARGET" "$TARGET/buffer_bounds"
+gcc -std=c11 -Wall -Wextra -Werror -pedantic -I"$REPO/libraries/c/include" -c "$ROOT/checks/typed_boundary.c" -o "$TARGET/typed_boundary.o"
+gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/carrier_bounds.adb" -D "$TARGET" -o "$TARGET/carrier_bounds" \
+  -largs "$TARGET/typed_boundary.o" -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
+LD_LIBRARY_PATH="$TARGET" "$TARGET/carrier_bounds"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
 python3 "$ROOT/checks/failure.py"
 python3 "$ROOT/checks/typed_matrix.py"
 python3 "$ROOT/checks/run_matrix.py"
 python3 "$ROOT/checks/negative.py"
+python3 "$ROOT/checks/native_parity.py"
 echo 'Ada package gate passed'

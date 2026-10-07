@@ -20,6 +20,9 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
+# Isolate read-only test configuration from the caller's configuration.
+scratch_dir fixture_config
+export XDG_CONFIG_HOME="$fixture_config"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   smoke_guard
   # The replay smoke (ticket 0335): the source package over the installed C door.
@@ -55,7 +58,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
   THINKTHEN_PORTABLE_PACKAGE="$wrapper" THINKTHEN_PORTABLE_NATIVE="$consumer" \
     THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
-  echo 'COBOL installed release PASS: five JSON rows and three literal sends'
+  echo 'COBOL installed release PASS: five legacy rows and owned native results for direct and named backends'
   exit 0
 fi
 command -v node >/dev/null 2>&1 || { echo 'COBOL gate missing node' >&2; exit 77; }
@@ -88,10 +91,19 @@ cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/proofs" "$ROOT/checks/
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/failure" "$ROOT/checks/failure.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_call.cob" "$ROOT/src/tt_files.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/matrix" "$ROOT/checks/matrix.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/files" "$ROOT/checks/files.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_call.cob" "$ROOT/src/tt_files.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c
+cc -std=c11 -Wall -Wextra -Werror -pedantic -c "$ROOT/src/tt_counted.c" -o "$TARGET/tt_counted.o"
+cobc -x -free -I "$ROOT/copybooks" -o "$TARGET/counted_bounds" \
+  "$ROOT/checks/counted_bounds.cob" "$TARGET/tt_counted.o"
+"$TARGET/counted_bounds"
+cc -std=c11 -Wall -Wextra -Werror -pedantic -I"$REPO/libraries/c/include" -c "$REPO/libraries/ada/checks/typed_boundary.c" -o "$TARGET/typed_boundary.o"
+cobc -x -free -I "$ROOT/copybooks" -o "$TARGET/carrier_bounds" \
+  "$ROOT/checks/carrier_bounds.cob" "$TARGET/typed_boundary.o" "$TARGET/tt_counted.o"
+"$TARGET/carrier_bounds"
 python3 "$ROOT/checks/files.py"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
 python3 "$ROOT/checks/failure.py"
 python3 "$ROOT/checks/run_matrix.py"
 python3 "$ROOT/checks/negative.py"
+python3 "$ROOT/checks/native_parity.py"
 echo 'COBOL package gate passed'

@@ -45,7 +45,7 @@ pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Buil
         @panic("thinkthen supports only x86_64-linux-gnu in this rehearsal");
     if (!std.fs.path.isAbsolute(archive)) @panic("-Dnative must name an absolute unpacked C archive directory");
     const header = b.pathJoin(&.{ archive, "include/thinkthen.h" });
-    const bytes = std.fs.cwd().readFileAlloc(b.allocator, header, 65536) catch @panic("thinkthen C header missing or unreadable");
+    const bytes = std.fs.cwd().readFileAlloc(b.allocator, header, std.math.maxInt(usize)) catch @panic("thinkthen C header missing or unreadable");
     if (!headerVersionMatches(bytes)) @panic("thinkthen C header does not match package ABI 0.2.0");
     for ([_][]const u8{ "typedef struct thinkthen_answer", "thinkthen_decide_many_opts", "thinkthen_call_opts" }) |needle| {
         if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 0.2.0");

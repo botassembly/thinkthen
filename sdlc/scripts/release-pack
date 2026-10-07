@@ -238,7 +238,9 @@ cpp)
 		mkdir -p "$folder/cmake" "$folder/include/thinkthen"
 		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
 		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
-		cp libraries/cpp/include/thinkthen/door.hpp libraries/cpp/include/thinkthen/json.hpp "$folder/include/thinkthen/"
+		cp libraries/cpp/include/thinkthen/door.hpp libraries/cpp/include/thinkthen/json.hpp \
+			libraries/cpp/include/thinkthen/complete.hpp libraries/cpp/include/thinkthen/native.hpp \
+			libraries/cpp/include/thinkthen/native_views.hpp "$folder/include/thinkthen/"
 		;;
 csharp)
 		mkdir -p "$folder/feed"
@@ -266,7 +268,9 @@ swift)
 		cp libraries/swift/Examples/main.swift "$folder/Examples/"
 		cp libraries/swift/Sources/CThinkThen/module.modulemap "$folder/Sources/CThinkThen/"
 		cp libraries/c/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
-		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift "$folder/Sources/ThinkThen/"
+		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift libraries/swift/Sources/ThinkThen/Complete.swift \
+			libraries/swift/Sources/ThinkThen/Native.swift libraries/swift/Sources/ThinkThen/NativeResult.swift \
+			libraries/swift/Sources/ThinkThen/NativeViews.swift "$folder/Sources/ThinkThen/"
 		cp libraries/swift/Tests/TypeCase/main.swift "$folder/Tests/TypeCase/"
 		;;
 zig)
@@ -274,7 +278,7 @@ zig)
 		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
 			libraries/zig/build.zig.zon "$folder/"
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/thinkthen.zig "$folder/src/"
+		cp libraries/zig/src/thinkthen.zig libraries/zig/src/complete.zig libraries/zig/src/native.zig "$folder/src/"
 		;;
 php)
 		mkdir -p "$folder/examples" "$folder/src/complete" "$folder/src/native"
@@ -324,29 +328,33 @@ flutter)
 ada)
 		mkdir -p "$folder/src" "$folder/examples"
 		cp libraries/ada/LICENSE libraries/ada/README.md libraries/ada/thinkthen.gpr "$folder/"
-		cp libraries/ada/src/thinkthen.ads libraries/ada/src/thinkthen.adb \
-			libraries/ada/src/thinkthen_c.ads "$folder/src/"
-		cp libraries/ada/examples/consumer.adb "$folder/examples/"
+		cp libraries/ada/src/*.ads libraries/ada/src/*.adb "$folder/src/"
+		cp libraries/ada/examples/consumer.adb libraries/ada/examples/native.adb "$folder/examples/"
 		;;
 objective-c)
 		mkdir -p "$folder/Sources" "$folder/Examples"
 		cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
 			libraries/objective-c/source-package.json "$folder/"
 		cp libraries/objective-c/Sources/ThinkThen.h libraries/objective-c/Sources/ThinkThen.m \
-			libraries/objective-c/Sources/TTJSON.h libraries/objective-c/Sources/TTJSON.c "$folder/Sources/"
+			libraries/objective-c/Sources/TTJSON.h libraries/objective-c/Sources/TTJSON.c \
+			libraries/objective-c/Sources/TTComplete.h libraries/objective-c/Sources/TTComplete.c \
+			libraries/objective-c/Sources/TTNative.h libraries/objective-c/Sources/TTNativeAPI.h \
+			libraries/objective-c/Sources/TTNativeAPI.m libraries/objective-c/Sources/TTNativeViews.c "$folder/Sources/"
 		cp libraries/objective-c/Examples/consumer.m "$folder/Examples/"
 		;;
 cobol)
 		mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples"
 		cp libraries/cobol/LICENSE libraries/cobol/README.md libraries/cobol/source-package.json "$folder/"
-		cp libraries/cobol/copybooks/thinkthen.cpy "$folder/copybooks/"
+		cp libraries/cobol/copybooks/*.cpy "$folder/copybooks/"
 		cp libraries/cobol/src/TTJSON.c libraries/cobol/src/TTJSON.h \
 			libraries/cobol/src/tt_shape.c libraries/cobol/src/tt_engine.cob \
 			libraries/cobol/src/tt_error.cob libraries/cobol/src/tt_call.cob libraries/cobol/src/tt_files.cob \
 			libraries/cobol/src/tt_decide.cob libraries/cobol/src/tt_validate.cob \
-			libraries/cobol/src/tt_plan.cob "$folder/src/"
+			libraries/cobol/src/tt_plan.cob libraries/cobol/src/tt_counted.c \
+			libraries/cobol/src/tt_complete.c libraries/cobol/src/tt_inputs.c \
+			libraries/cobol/src/tt_native.h "$folder/src/"
 		cp libraries/cobol/examples/direct.cob libraries/cobol/examples/settings.cob \
-			libraries/cobol/examples/types.cob "$folder/examples/"
+			libraries/cobol/examples/types.cob libraries/cobol/examples/native.cob "$folder/examples/"
 		;;
 	esac
 	# A case-blind volume, such as a default Mac one, keeps only one of two names that differ only in case.

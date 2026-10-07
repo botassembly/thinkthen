@@ -30,7 +30,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     scratch_dir smoke
     native_install "$repo" "$smoke"
     mkdir "$smoke/include/thinkthen"
-    cp include/thinkthen/door.hpp include/thinkthen/json.hpp "$smoke/include/thinkthen/"
+    cp include/thinkthen/door.hpp include/thinkthen/json.hpp include/thinkthen/complete.hpp "$smoke/include/thinkthen/"
     mv "$smoke/include/thinkthen.h" "$smoke/include/thinkthen/thinkthen.h"
     c++ -std=c++17 -Wall -Wextra -Werror -I "$smoke/include" fixtures/smoke.cpp -L "$smoke/lib" -l:libthinkthen.so.0 \
         -Wl,-rpath,"$smoke/lib" -o "$smoke/smoke"
@@ -107,6 +107,8 @@ fi
 c++ -std=c++17 -Wall -Wextra -Werror -I "$out/install/include" \
     fixtures/tests/json_test.cpp -o "$out/json-test"
 "$out/json-test"
+c++ -std=c++17 -Wall -Wextra -Werror -I "$out/install/include" fixtures/complete.cpp -o "$out/complete-models"
+"$out/complete-models"
 c++ -std=c++17 -Wall -Wextra -Werror -I "$out/install/include" \
     fixtures/type_case.cpp -L "$out/install/lib" -l:libthinkthen.so.0 \
     -Wl,-rpath,"$out/install/lib" -o "$out/type-case"

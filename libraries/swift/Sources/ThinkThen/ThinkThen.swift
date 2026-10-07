@@ -100,9 +100,19 @@ public final class CancelToken: @unchecked Sendable {
     public func cancel() { thinkthen_cancel(handle) }
 }
 
+final class EngineOwner {
+    let handle: OpaquePointer
+    init(_ handle: OpaquePointer) { self.handle = handle }
+    deinit { thinkthen_engine_free(handle) }
+}
+
 // Native engine is thread-safe. Callers must join all users before close/deinit.
 public final class Engine: @unchecked Sendable {
-    private var handle: OpaquePointer?
+    var owner: EngineOwner?
+    private var handle: OpaquePointer? {
+        get { owner?.handle }
+        set { owner = newValue.map(EngineOwner.init) }
+    }
     public init() throws {
         guard let engine = thinkthen_engine_new() else {
             throw DoorFailure(code: thinkthen_error_code(nil), retryable: thinkthen_error_retryable(nil) != 0,
@@ -120,8 +130,8 @@ public final class Engine: @unchecked Sendable {
     }
     deinit { close() }
     // Only call close after all users have joined; no in-flight call may use a freed engine.
-    public func close() { if let h = handle { thinkthen_engine_free(h); handle = nil } }
-    private func open() throws -> OpaquePointer {
+    public func close() { owner = nil }
+    func open() throws -> OpaquePointer {
         guard let h = handle else { throw DoorFailure(code: 1, retryable: false, message: "closed engine") }
         return h
     }

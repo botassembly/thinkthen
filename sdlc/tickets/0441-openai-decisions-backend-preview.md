@@ -1,6 +1,6 @@
 # 0441: Ship the OpenAI Decisions text backend in 0.2
 
-Status: ready. The fresh review found one request-local-name identity gap; this correction awaits root-owned narrow confirmation before implementation.
+Status: in progress. The native OpenAI text adapter, saved reply fixtures and cache identity corrections are on main with passing integration checks. Cross-surface adoption and the complete parity run remain with the binding and SQL owners.
 
 Milestone: 0.2
 
