@@ -2,7 +2,7 @@
 
 Ada and COBOL expose all ten named native functions, typed question/input/result views, files, images, final facts and six lazy batches. Native code retains admission, scheduling, cache, record and replay. By-value Ada descriptors use C_Pass_By_Copy. The COBOL embedding calls public bridges with the supported zero-argument runtime initialization.
 
-Both full source gates pass all 247 applicable shared cases, including 24 image cases each, with no skips. Actual installed archive consumers pass direct and named backend calls, counted sends, 9,000-byte cloning and copied-result lifetime after input and engine free. Exact archives include all public modules and matching C headers/libraries. A fresh High whole-family review accepted the implementation and the independent cache/2 compatibility oracle correction. Full integration tests and lint run before the main push.
+Both full source gates pass all 247 applicable shared cases, including 24 image cases each, with no skips. Actual installed archive consumers pass direct and named backend calls, counted sends, 9,000-byte cloning and copied-result lifetime after input and engine free. Exact archives include all public modules and matching C headers/libraries. A fresh High whole-family review accepted the implementation and the independent cache/2 compatibility oracle correction. Full integration tests, lint and executable documentation passed before the main push.
 
 ## What the build taught us
 

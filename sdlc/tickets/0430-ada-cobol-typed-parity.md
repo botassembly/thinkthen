@@ -1,6 +1,6 @@
 # 0430: Complete Ada and COBOL typed parity
 
-Status: native APIs implemented; complete source/archive checks and whole-family review remain pending.
+Status: complete. Ada and COBOL each pass all 247 required cases, full source checks and actual installed archives. A fresh whole High review accepted the implementation and cache/2 compatibility oracle correction; combined full tests, lint and executable documentation passed. Final global/platform qualification belongs to 0432 and 0425.
 
 Milestone: 0.2
 
