@@ -13419,19 +13419,22 @@
         "wire": "ordered top-level data URL images",
         "supported_revision": "d81235049384534c167caea52b85a694f6103d14",
         "unsupported_revision": "a7b94df2c616bc1f62a73b964b4a71cb0dcc488e",
-        "max_images": 8,
+        "max_images": 2,
         "vendor_body_limit": null,
         "runtime_prerequisites": [
-          "reviewed vision-capable model revision",
-          "matching projector",
-          "explicit configured context/batch/ubatch",
-          "proved model-specific vision-token upper bound"
+          "operator selects retained clef-llamacpp-v0.6.0-0036 profile",
+          "matching retained model and projector",
+          "context/batch/ubatch8192 and one slot"
         ],
-        "unresolved_budget": {
-          "kind": "usage",
-          "requests": 0
-        },
-        "local_model_name_is_not_capability": true
+        "local_model_name_is_not_capability": true,
+        "model": "clef-local-0036",
+        "profile_file": "specification/fixtures/images/local/clef-profile.json",
+        "setup_fixture": "specification/fixtures/images/local/setups.json",
+        "setup_ref": "clef",
+        "max_original_image_bytes": 1048576,
+        "max_longest_edge": 1024,
+        "sdk_body_limit": 2800000,
+        "local_token_estimate": null
       }
     },
     "image_admission_contract": {
@@ -13471,12 +13474,13 @@
           "id": "jpeg-valid",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "valid fully decoded JPEG",
             "media": "image/jpeg",
             "dimensions": [
-              1,
-              1
-            ]
+              32,
+              32
+            ],
+            "existing_image": "specification/fixtures/images/red.jpg",
+            "decode": "valid"
           },
           "expect": {
             "requests": 1,
@@ -13488,8 +13492,13 @@
           "id": "webp-unsupported",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "valid container in the unsupported format",
-            "media": "image/webp"
+            "media": "image/webp",
+            "existing_image": "specification/fixtures/images/red.webp",
+            "dimensions": [
+              1,
+              1
+            ],
+            "decode": "valid"
           },
           "expect": {
             "kind": "usage",
@@ -13501,8 +13510,13 @@
           "id": "gif-unsupported",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "valid container in the unsupported format",
-            "media": "image/gif"
+            "media": "image/gif",
+            "existing_image": "specification/fixtures/images/red.gif",
+            "dimensions": [
+              1,
+              1
+            ],
+            "decode": "valid"
           },
           "expect": {
             "kind": "usage",
@@ -13535,7 +13549,8 @@
               3200
             ],
             "decode": "valid",
-            "patches": 10000
+            "patches": 10000,
+            "existing_image": "specification/fixtures/images/boundary-3200x3200.png"
           },
           "expect": {
             "requests": 1,
@@ -13553,7 +13568,8 @@
               3200
             ],
             "decode": "valid",
-            "patches": 10100
+            "patches": 10100,
+            "existing_image": "specification/fixtures/images/boundary-3232x3200.png"
           },
           "expect": {
             "kind": "usage",
@@ -13571,7 +13587,8 @@
               32
             ],
             "decode": "valid",
-            "aspect_ratio": 100
+            "aspect_ratio": 100,
+            "existing_image": "specification/fixtures/images/boundary-3200x32.png"
           },
           "expect": {
             "requests": 1,
@@ -13589,7 +13606,8 @@
               32
             ],
             "decode": "valid",
-            "aspect_ratio": 101
+            "aspect_ratio": 101,
+            "existing_image": "specification/fixtures/images/boundary-3232x32.png"
           },
           "expect": {
             "kind": "usage",
@@ -13607,7 +13625,8 @@
               1440
             ],
             "decode": "valid",
-            "tiles": 2025
+            "tiles": 2025,
+            "existing_image": "specification/fixtures/images/boundary-1440x1440.png"
           },
           "expect": {
             "requests": 1,
@@ -13625,7 +13644,8 @@
               1024
             ],
             "decode": "valid",
-            "tiles": 2048
+            "tiles": 2048,
+            "existing_image": "specification/fixtures/images/boundary-2048x1024.png"
           },
           "expect": {
             "requests": 1,
@@ -13643,7 +13663,8 @@
               1310
             ],
             "decode": "valid",
-            "tiles": 2050
+            "tiles": 2050,
+            "existing_image": "specification/fixtures/images/boundary-1600x1310.png"
           },
           "expect": {
             "kind": "usage",
@@ -13686,14 +13707,14 @@
           }
         },
         {
-          "id": "llama-clef-count-8",
+          "id": "llama-clef-count-2",
           "profile_ref": "llama-clef",
           "construction": {
             "existing_image": "specification/fixtures/images/red.png",
-            "repeat": 8,
+            "repeat": 2,
             "preserve_duplicates": true,
             "other_limits": "within bounds",
-            "runtime_prerequisites": "satisfied by owner proof"
+            "runtime_prerequisites": "explicit retained profile and setup fixture"
           },
           "expect": {
             "requests": 1,
@@ -13702,14 +13723,14 @@
           }
         },
         {
-          "id": "llama-clef-count-9",
+          "id": "llama-clef-count-3",
           "profile_ref": "llama-clef",
           "construction": {
             "existing_image": "specification/fixtures/images/red.png",
-            "repeat": 9,
+            "repeat": 3,
             "preserve_duplicates": true,
             "other_limits": "within bounds",
-            "runtime_prerequisites": "satisfied by owner proof"
+            "runtime_prerequisites": "explicit retained profile and setup fixture"
           },
           "expect": {
             "kind": "usage",
@@ -13727,7 +13748,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 4499999,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 642789,
+                  "ascii_tail_bytes": 6
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 642784,
+                  "ascii_tail_bytes": 6
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 642787,
+                  "ascii_tail_bytes": 0
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "requests": 1,
@@ -13743,7 +13810,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 4500000,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 642790,
+                  "ascii_tail_bytes": 0
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 642785,
+                  "ascii_tail_bytes": 0
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 642787,
+                  "ascii_tail_bytes": 1
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -13759,7 +13872,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 33554432,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 4793404,
+                  "ascii_tail_bytes": 3
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 4793399,
+                  "ascii_tail_bytes": 3
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 4793401,
+                  "ascii_tail_bytes": 4
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "requests": 1,
@@ -13775,7 +13934,53 @@
             "decode": "valid",
             "final_serialized_body_bytes": 33554433,
             "image_count_dimensions_aspect": "within bounds",
-            "explicit_sdk_byte_limit": "unset"
+            "explicit_sdk_byte_limit": "unset",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 4793404,
+                  "ascii_tail_bytes": 4
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 4793399,
+                  "ascii_tail_bytes": 4
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 4793401,
+                  "ascii_tail_bytes": 5
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -13789,8 +13994,8 @@
           "id": "png-malformed-idat",
           "profile_ref": "liquid-d1",
           "construction": {
-            "existing_image": "specification/fixtures/images/red.png",
-            "mutation": "invalid compressed pixel data with independently correct container CRC; header alone stays valid"
+            "existing_image": "specification/fixtures/images/malformed-pixels.png",
+            "media": "image/png"
           },
           "expect": {
             "kind": "usage",
@@ -13802,7 +14007,8 @@
           "id": "jpeg-malformed-scan",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "JPEG with valid dimensions/container header and invalid scan data"
+            "existing_image": "specification/fixtures/images/malformed-scan.jpg",
+            "media": "image/jpeg"
           },
           "expect": {
             "kind": "usage",
@@ -13816,8 +14022,8 @@
           "id": "png-truncated",
           "profile_ref": "liquid-d1",
           "construction": {
-            "existing_image": "specification/fixtures/images/red.png",
-            "mutation": "truncate compressed IDAT stream before completion"
+            "existing_image": "specification/fixtures/images/truncated.png",
+            "media": "image/png"
           },
           "expect": {
             "kind": "usage",
@@ -13829,7 +14035,8 @@
           "id": "jpeg-truncated",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "JPEG truncated within scan data"
+            "existing_image": "specification/fixtures/images/truncated.jpg",
+            "media": "image/jpeg"
           },
           "expect": {
             "kind": "usage",
@@ -13855,7 +14062,53 @@
             "indivisible_attachments": "cannot fit a single complete question even after splitting",
             "no_drop_or_text_retry": true,
             "individual_images": "fit the exact route limit separately",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 642790,
+                  "ascii_tail_bytes": 0
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 642785,
+                  "ascii_tail_bytes": 0
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 642787,
+                  "ascii_tail_bytes": 1
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -13879,7 +14132,53 @@
             "indivisible_attachments": "cannot fit a single complete question even after splitting",
             "no_drop_or_text_retry": true,
             "individual_images": "fit the exact route limit separately",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 4793404,
+                  "ascii_tail_bytes": 4
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 4793399,
+                  "ascii_tail_bytes": 4
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 4793401,
+                  "ascii_tail_bytes": 5
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            }
           },
           "expect": {
             "kind": "usage",
@@ -13897,7 +14196,58 @@
             "each_complete_question_bytes": "within route limit",
             "unsplit_final_body_bytes_min": 4500001,
             "each_question_retains": "all ordered images, duplicates and context",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 470,
+                  "repeat_count": 642789,
+                  "ascii_tail_bytes": 6,
+                  "each_final_body_bytes": 4499999
+                },
+                "choose": {
+                  "base_body_bytes": 505,
+                  "repeat_count": 642784,
+                  "ascii_tail_bytes": 6,
+                  "each_final_body_bytes": 4499999
+                },
+                "score": {
+                  "base_body_bytes": 490,
+                  "repeat_count": 642787,
+                  "ascii_tail_bytes": 0,
+                  "each_final_body_bytes": 4499999
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            },
+            "distinct_state_construction": "replace the first prefix character with another ASCII character in the second input",
+            "repeat_state_byte_split": true
           },
           "expect": {
             "requests": 2,
@@ -13916,7 +14266,58 @@
             "each_complete_question_bytes": "within route limit",
             "unsplit_final_body_bytes_min": 33554433,
             "each_question_retains": "all ordered images, duplicates and context",
-            "all_other_limits": "within exact profile bounds"
+            "all_other_limits": "within exact profile bounds",
+            "images": [
+              "specification/fixtures/images/red.png",
+              "specification/fixtures/images/blue.png",
+              "specification/fixtures/images/red.png"
+            ],
+            "text_recipe": {
+              "prefix": "image boundary:",
+              "repeat_token": "x\"\\\n",
+              "encoded_repeat_bytes": 7,
+              "by_function": {
+                "decide": {
+                  "base_body_bytes": 601,
+                  "repeat_count": 4793404,
+                  "ascii_tail_bytes": 3,
+                  "each_final_body_bytes": 33554432
+                },
+                "choose": {
+                  "base_body_bytes": 636,
+                  "repeat_count": 4793399,
+                  "ascii_tail_bytes": 3,
+                  "each_final_body_bytes": 33554432
+                },
+                "score": {
+                  "base_body_bytes": 621,
+                  "repeat_count": 4793401,
+                  "ascii_tail_bytes": 4,
+                  "each_final_body_bytes": 33554432
+                }
+              }
+            },
+            "question_files": {
+              "decide": {
+                "decide": "Is red visible?"
+              },
+              "choose": {
+                "choose": "Which color?",
+                "options": [
+                  "red",
+                  "blue"
+                ]
+              },
+              "score": {
+                "score": "How red?",
+                "levels": [
+                  "none",
+                  "all"
+                ]
+              }
+            },
+            "distinct_state_construction": "replace the first prefix character with another ASCII character in the second input",
+            "repeat_state_byte_split": true
           },
           "expect": {
             "requests": 2,
@@ -13931,17 +14332,18 @@
           "id": "liquid-valid-above-both-spike-caps",
           "profile_ref": "liquid-d1",
           "construction": {
-            "fixture_requirement": "original valid PNG above the historical spike cap; not padding a malformed container",
             "media": "image/png",
             "dimensions": [
-              256,
-              256
+              192,
+              192
             ],
             "compressed_bytes_min": 32769,
             "final_body_bytes_min": 65537,
             "final_body_bytes_max": 4499999,
-            "patches": 64,
-            "explicit_sdk_byte_limit": "unset"
+            "patches": 36,
+            "explicit_sdk_byte_limit": "unset",
+            "existing_image": "specification/fixtures/images/above-spike.png",
+            "decode": "valid"
           },
           "expect": {
             "requests": 1,
