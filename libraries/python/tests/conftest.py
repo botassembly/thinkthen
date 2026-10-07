@@ -123,7 +123,7 @@ def start(code, env):
                             stderr=subprocess.PIPE, text=True, bufsize=1)
 
 
-def one_request(url, bodies, fixtures):
+def one_request(url, bodies, fixtures, reported_model):
     """The portable fixture's questions, in order, as one request now that the
     content cut is gone, and each question's key."""
     import json
@@ -135,4 +135,4 @@ def one_request(url, bodies, fixtures):
     sent = json.loads(bodies[0])
     assert (sent["state"], sent["model"]) == (first["state"], first["model"])
     assert [sent["questions"][f"q{place}"] for place in range(1, len(sent["questions"]) + 1)] == questions
-    return question_keys(url, bodies[0])
+    return question_keys(url, bodies[0], reported_model)

@@ -29,7 +29,7 @@ class TestBatchFacts < Minitest::Test
       assert_equal [true] * 5, values
       assert_equal [0, 1, 2, 3, 4], details.map { |row| row.fetch("index") }
       assert_equal [5, 1], facts.values_at("records", "requests_sent")
-      keys = QuestionKeys.of("#{backend.url('arm/full/capture')}/systemone", bodies.first)
+      keys = QuestionKeys.of("#{backend.url('arm/full/capture')}/systemone", bodies.first, "jev-1.13.0")
       assert_equal keys.map { |key| [key] }, details.map { |row| row.fetch("requests") }
     end
   end
@@ -227,7 +227,7 @@ class TestBatchFacts < Minitest::Test
       assert_equal [true, true, true], values
       assert_equal [3, 1, 0, 6, 3], facts.values_at("records", "requests_sent", "cache_answers", "input_tokens", "output_tokens")
       assert_equal [0, 1, 2], details.map { |row| row.fetch("index") }
-      alpha, beta = QuestionKeys.of("#{url}/systemone", body)
+      alpha, beta = QuestionKeys.of("#{url}/systemone", body, "jev-1.13.0")
       assert_equal [[alpha], [beta], [alpha]], details.map { |row| row.fetch("requests") }, "a repeated record shares its question"
       assert_equal inspection.include?("alpha"), false
       assert_equal inspection.include?("beta"), false
@@ -240,7 +240,7 @@ class TestBatchFacts < Minitest::Test
       assert_equal %w[billing billing], chosen
       assert_equal [2, 1], chosen_facts.values_at("records", "requests_sent")
       assert_equal [0, 1], chosen_details.map { |row| row.fetch("index") }
-      assert_equal QuestionKeys.of("#{url}/systemone", expected_choice).map { |key| [key] },
+      assert_equal QuestionKeys.of("#{url}/systemone", expected_choice, "jev-1.13.0").map { |key| [key] },
                    chosen_details.map { |row| row.fetch("requests") }
     end
   ensure

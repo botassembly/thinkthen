@@ -141,7 +141,7 @@ def succeeded(port, case):
     served = base + "/systemone"
     exchanges = case.get("exchanges", [])
     # Every row lists question keys, by ADR 0111.
-    renamed = {digest(CANONICAL, e["request"]): question_keys(served, e["request"]) for e in exchanges}
+    renamed = {digest(CANONICAL, e["request"]): question_keys(served, e["request"], e["response"]["model"]) for e in exchanges}
     success = swap(case["expect"]["success"], renamed)
     texts = [exchange["evidence"] for exchange in exchanges]
     engine = tt.Engine(base_url=base, cache=False)

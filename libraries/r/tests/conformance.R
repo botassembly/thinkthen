@@ -71,7 +71,7 @@ run_case <- function(case, served) {
   # Every row lists question keys by ADR 0111, so each digest becomes the
   # keys of the request it named.
   for (exchange in exchanges) {
-    renamed[[sha(canonical, exchange$request)]] <- as.list(question_keys(served, exchange$request))
+    renamed[[sha(canonical, exchange$request)]] <- as.list(question_keys(served, exchange$request, exchange$response$model))
   }
   swap <- function(value) {
     if (is.list(value)) {

@@ -10,7 +10,7 @@ require "rbconfig"
 require_relative "../../../conformance/children/children"
 
 class TestPublicNames < Minitest::Test
-  CONSTANTS = %i[BackendError Call Cancel CancelledError Completion DeadlineError DefectError Edge Engine Entity Error Found
+  CONSTANTS = %i[BackendError Call Cancel CancelledError Complete Completion DeadlineError DefectError Edge Engine Entity Error Found
                  LocalError NO Question QuestionSet Ranked Recognized RecognizedEntity Relation UNSURE UsageError VERSION YES].freeze
   VERBS = %i[annotate choose choose_many decide decide_many decide_many_with_probabilities details files filter find plan rank
              recognize relate score score_many score_with_level tag tag_many usage with_tick].freeze
@@ -35,7 +35,7 @@ class TestPublicNames < Minitest::Test
     assert_equal({
                    constants: CONSTANTS,
                    module: (VERBS + %i[failed outcome question set]).sort,
-                   engine: (VERBS + %i[inspect]).sort,
+                   engine: (VERBS + %i[complete inspect]).sort,
                    engine_class: [],
                    cancel: %i[cancel cancelled?],
                    question: %i[json],
