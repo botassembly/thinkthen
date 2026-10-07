@@ -1,6 +1,6 @@
 # 0426: Expose typed C calls and complete result carriers
 
-Status: in progress. The C library exposes all ten named complete functions, typed authored and located results, image inputs and owned native file batches on the current shared native implementation. Final shared-case execution, whole-change review and landing checks remain.
+Status: complete. All ten typed C functions and owned readers pass 247 applicable shared cases, installed sanitizer consumers and fresh review. Full integration tests, lint and executable documentation passed; final platform qualification belongs to 0425.
 
 Milestone: 0.2
 

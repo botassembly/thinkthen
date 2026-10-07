@@ -1,6 +1,6 @@
 # 0429: Complete PHP, Dart and Flutter typed parity
 
-Status: native PHP/Dart/Flutter adoption accepted at 088d7d0bc; all 247 actual cases per family retained. Published native/cache prerequisites adopted, find answer tag 5 enforced while question/result kind 7 remain, and public archive inventories fixed. Nine affected find cells and ten-function constructors per family plus actual PHP/Dart/Flutter archive consumers pass. Coordinator owns narrow review, full landing gates and landing; private-slice notes below are historical.
+Status: complete. PHP, Dart and the separate Flutter facade each pass all 247 required cases and actual archive consumers. Whole-family and packaging reviews accepted the implementation; full integration tests, lint and executable documentation passed. Final global/platform qualification belongs to 0425.
 
 Milestone: 0.2
 

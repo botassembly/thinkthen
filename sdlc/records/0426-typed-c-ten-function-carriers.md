@@ -1,6 +1,6 @@
 # 0426: Complete typed C calls and owned results
 
-Status: implementation reviewed; full landing checks run before the main push. Final platform qualification remains part of 0425.
+Status: complete. Full integration tests, lint and executable documentation passed before the main push. Final platform qualification remains part of 0425.
 
 The C library exposes all ten named functions through typed question, record, source, image and result handles. Consumers inspect probabilities, locations, authored question metadata, answer and call identities, provenance, usage, costs, failures and detailed observations without decoding a whole result. Existing symbols and layouts remain compatible.
 
