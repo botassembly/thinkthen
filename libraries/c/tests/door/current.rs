@@ -380,3 +380,50 @@ fn saved_rank_sets_retain_turns_order_and_each_native_member_judgment() {
             && body.contains("Two")
     );
 }
+
+#[test]
+fn lazy_jsonl_batches_keep_completed_prefix_refuse_whole_bad_stages_and_join_on_drop() {
+    let binary = compile(&crate_dir().join("tests/c/complete_batches.c"));
+    for mode in ["later", "first", "literal", "cancel", "drop", "drop-prefix"] {
+        let backend = Backend::start().expect("owned backend");
+        let folder = super::scratch(&format!("lazy-{mode}"));
+        let path = folder.join("records.jsonl");
+        let input = if mode == "first" {
+            "{\"body\":\"first\"}\n{\"ready\":false}\ninvalid unread JSON\n"
+        } else {
+            "{\"body\":\"first\"}\n{\"body\":\"second\"}\n{\"body\":\"third\"}\n{\"ready\":false}\ninvalid unread JSON\n"
+        };
+        std::fs::write(&path, input).expect("owned JSONL input");
+        let mode_path = std::path::PathBuf::from(mode);
+        let output = run_with(
+            &binary,
+            &format!("{}/arm/full/capture/v1", backend.origin()),
+            b"",
+            &[("TYPED_JSONL", &path), ("TYPED_BATCH_MODE", &mode_path)],
+        );
+        assert_eq!(
+            (output.status.code(), text(&output.stderr)),
+            (Some(0), String::new()),
+            "{mode}"
+        );
+        assert_eq!(
+            backend.count(),
+            usize::from(matches!(mode, "later" | "drop-prefix")),
+            "{mode}"
+        );
+        if matches!(mode, "later" | "drop-prefix") {
+            let capture: serde_json::Value =
+                serde_json::from_str(&backend.capture()).expect("captured");
+            let bodies = capture["bodies"].as_array().expect("body list");
+            assert_eq!(bodies.len(), 1);
+            let actual: serde_json::Value =
+                serde_json::from_str(bodies[0].as_str().expect("body")).expect("request");
+            assert_eq!(
+                actual,
+                serde_json::json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{
+                "q1":{"type":"noul","instructions":"The text is {\"body\":\"first\"}. Refund?"},
+                "q2":{"type":"noul","instructions":"The text is {\"body\":\"second\"}. Refund?"}}})
+            );
+        }
+    }
+}

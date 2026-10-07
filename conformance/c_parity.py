@@ -46,23 +46,71 @@ def document(row, cases, named):
         if kind == 'refusal':
             base['expect'] = {'error': 'usage', 'requests_sent': 0}
         return base
+    if kind == 'boundary':
+        base = {'verb': row['verb'], 'question': {'decide': 'Does this need attention?'},
+                'items': ['evidence'], 'text': True, 'arm': 'arm/full/capture/v1',
+                'expect': {'error': row['expect'].get('kind'), 'requests_sent': row['expect'].get('requests', 0)}}
+        if row['id'] == 'image-dropping-route':
+            return {**base, 'image_paths': row['input']['images'], 'settings': {'backend': 'openrouter', 'model': 'arcee-ai/clef'}}
+        if row['id'] in ('image-line-refusal', 'image-window-refusal'):
+            return {**base, 'paths': ['missing-image-for-admission-order'], 'image_reader': True,
+                    'source_unit': 1 if row['input']['unit'] == 'line' else 2, 'window': row['input'].get('window', 0)}
+        if row['id'] == 'proxy-reservation-refusal':
+            return {**base, 'settings': {'proxy': row['input']['proxy']}}
+        if row['id'] == 'zero-observation-relate':
+            return {**base, 'question': {'version': 1, 'relate': {'relations': [{'name': 'linked', **row['input']['relation']}]}},
+                    'items': row['input']['entities'], 'text': False, 'zero_observations': True, 'expect': {}}
+        raise ValueError('shared boundary projection not yet implemented')
     if kind == 'settings':
         fixture = next(c for c in json.loads((ROOT / 'conformance/settings.json').read_text())['cases'] if c['id'] == row['input']['case_ref'])
         steps = []
         for step in fixture['steps']:
-            verb = step.get('verb', 'decide')
-            verb = 'decide' if verb == 'decide_many' else verb
-            steps.append({'verb': verb, 'question': {'decide': json.loads((ROOT / 'conformance/settings.json').read_text())['question']}, 'items': step.get('records', [step.get('text', 'refund now')]), 'text': True, 'expect': step, 'settings': step['settings']})
+            original_verb = step.get('verb', 'decide')
+            verb = 'decide' if original_verb == 'decide_many' else original_verb
+            question = {'decide': json.loads((ROOT / 'conformance/settings.json').read_text())['question']}
+            items = step.get('records', [step.get('text', 'refund now')])
+            if verb == 'relate':
+                name, kinds = fixture['relation'].split('=')
+                source, target = kinds.split(':')
+                question = {'version': 1, 'relate': {'relations': [{'name': name, 'source': source, 'target': target}]}}
+                items = fixture['entities']
+            steps.append({'verb': verb, 'question': question, 'items': items, 'text': verb != 'relate', 'expect': step, 'settings': step['settings'], 'incremental': original_verb == 'decide_many'})
         return {'steps': steps, 'arm': fixture['arm'], 'profile': fixture.get('profile')}
     if kind == 'named-input':
         case = named[row['input']['case_ref']]
         given = case['input']
         if 'source_case' in given:
             base = document({**row, 'kind': 'behavior', 'input': {'case_ref': given['source_case']}}, cases, named)
-            base['question'] = {**base['question'], **given['metadata']}
+            if row['verb'] == 'annotate':
+                base['question'] = {**base['question'], 'questions': {
+                    name: {**question, **given['metadata']}
+                    for name, question in base['question']['questions'].items()}}
+            else:
+                base['question'] = {**base['question'], **given['metadata']}
             base['metadata'] = given['metadata']
             return base
-        if any(key in given for key in ('reader', 'store', 'images', 'mode', 'arguments')):
+        if given.get('mode') == 'incremental':
+            return {'verb': row['verb'], 'question': given['question'], 'items': given['records'],
+                    'text': False, 'expect': case['expect'], 'settings': {'batch': given['batch']},
+                    'owned_jsonl': True, 'paths': ['records.jsonl'], 'source_unit': 5,
+                    'incremental': True, 'arm': 'arm/full/capture/v1'}
+        if given.get('mode') == 'finite':
+            return {'verb': row['verb'], 'question': given['question'], 'items': given['records'],
+                    'text': False, 'expect': case['expect'], 'settings': {'batch': given['batch']},
+                    'arm': 'arm/full/capture/v1'}
+        if 'store' in given:
+            store = given['store']
+            return {'arm': 'arm/full/capture/v1', 'steps': [
+                {'verb': row['verb'], 'question': store['seed_question'], 'items': [store['seed_item']], 'text': False,
+                 'settings': {'record' if store['mode'] == 'replay' else 'cache': '$FOLDER'},
+                 'expect': {'value': True, 'requests_sent': 1}},
+                {'verb': row['verb'], 'question': given['question'], 'items': [given['item']], 'text': False,
+                 'settings': {store['mode']: '$FOLDER'}, 'expect': case['expect'], 'count_delta': True}]}
+        if given.get('reader') == 'csv':
+            import csv, io
+            return {'verb': row['verb'], 'question': given['question'], 'items': list(csv.DictReader(io.StringIO(given['data']))),
+                    'text': False, 'expect': case['expect'], 'arm': 'arm/full/capture/v1'}
+        if any(key in given for key in ('reader', 'store', 'mode', 'arguments')):
             raise ValueError('shared input projection not yet implemented: ' + ','.join(given))
         question = given.get('question', given.get('question_set'))
         raw = given.get('question_json')
@@ -73,12 +121,12 @@ def document(row, cases, named):
             question = {**question, 'on': given['field']}
         item = given.get('item', given.get('record', given.get('document')))
         return {'verb': row['verb'], 'question': question, 'raw': raw,
-                'items': [item], 'text': isinstance(item, str),
+                'items': [item], 'text': isinstance(item, str), 'image_only': item is None and bool(given.get('images')), 'image_paths': given.get('images', []), 'settings': {'backend': 'liquid', 'model': 'd1'} if given.get('images') else {},
                 'context': given.get('per_item_context'), 'context_present': 'per_item_context' in given,
                 'shared_context': given.get('shared_context'), 'loader': given.get('loader'),
                 'reference': given.get('reference', given.get('path')), 'file_body': given.get('question'), 'setup': given.get('setup'),
                 'expect': case['expect'], 'arm': 'arm/full/capture/v1'}
-    if kind not in ('behavior', 'typed-result', 'result2', 'type-fixture', 'located', 'error'):
+    if kind not in ('behavior', 'typed-result', 'result2', 'type-fixture', 'located', 'error', 'packing'):
         raise ValueError('shared ' + kind + ' projection not yet implemented')
     reference = row['input'].get('case_ref')
     if kind == 'type-fixture':
@@ -139,7 +187,15 @@ def generated(at, value):
              'thinkthen_image *images[%d]={0};' % max(1, len(image_paths))]
     if verb == 'find' and value['question'].get('none'):
         text = value['question']['find']
-        lines.extend(['thinkthen_question_spec_v1 question_spec={0}; question_spec.kind=7; question_spec.none=1;', 'question_spec.text=%s;' % content(text, isinstance(text, str)), 'code=thinkthen_question_new(e,&question_spec,&q);'])
+        lines.extend(['thinkthen_question_spec_v1 question_spec={0}; question_spec.kind=7; question_spec.none=1;', 'question_spec.text=%s;' % content(text, isinstance(text, str)),  ])
+        if value.get('metadata'):
+            metadata = value['metadata']
+            lines.extend(['thinkthen_question_author_v1 author={0};',
+                          'author.name=(thinkthen_optional_string_v1){1,%s};' % counted(metadata['name']),
+                          'author.wording_version=(thinkthen_optional_u64_v1){1,%d};' % metadata['wording_version'],
+                          'code=thinkthen_question_new_authored(e,&question_spec,&author,&q);'])
+        else:
+            lines.append('code=thinkthen_question_new(e,&question_spec,&q);')
     elif value.get('loader'):
         loader = value['loader']
         method = {'load_named': 'load_named', 'load_reference': 'load_reference', 'load': 'load', 'named': 'load_named', 'reference': 'load_reference', 'file': 'load'}.get(loader)
@@ -164,25 +220,35 @@ def generated(at, value):
         lines.extend(['code=thinkthen_image_clone(e,(const uint8_t *)%s,%d,2,(thinkthen_optional_string_v1){0},&images[%d]);' % (data, len(raw), index), 'if(code) goto finished;'])
     items = value['items']
     if value.get('paths') or (value.get('operation') or {}).get('injection') == 'recording_read_failure':
-        paths = [str(ROOT / path) for path in (value.get('paths') or ['target/c-parity-missing-input'])]
+        paths = [path if value.get('owned_jsonl') else str(ROOT / path) for path in (value.get('paths') or ['target/c-parity-missing-input'])]
         lines.extend(['thinkthen_string_v1 paths[]={%s};' % ','.join(map(counted, paths)),
-                      'thinkthen_source_spec_v1 spec={{paths,%d},%d,0};' % (len(paths), value.get('source_unit', 3)),
-                      'code=thinkthen_source_files(e,&spec,&source);'])
+                      'thinkthen_source_spec_v1 spec={{paths,%d},%d,%d};' % (len(paths), value.get('source_unit', 3), value.get('window', 0)),
+                      'code=thinkthen_source_%s(e,&spec,&source);' % ('image_files' if value.get('image_reader') else 'files')])
     else:
         lines.append('thinkthen_record_v1 records[%d]={0};' % max(1, len(items)))
         for index, item in enumerate(items):
+            if value.get('image_only'):
+                continue
             lines.append('records[%d].original=(thinkthen_optional_content_v1){1,%s};' % (index, content(item, value.get('text', False) and isinstance(item, str))))
             if image_paths:
                 lines.append('records[%d].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % (index, len(image_paths)))
             if value.get('context_present'):
                 context = value['context']
                 lines.append('records[%d].context=(thinkthen_optional_content_v1){1,%s};' % (index, content(context, isinstance(context, str))))
+        if value.get('image_only'):
+            lines.append('records[0].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % len(image_paths))
         lines.append('code=thinkthen_source_records(e,records,%d,&source);' % len(items))
     if value.get('shared_context') is not None:
         context = value['shared_context']
         lines.append('controls.context=(thinkthen_optional_content_v1){1,%s};' % content(context, isinstance(context, str)))
-    lines.extend(['if(code) goto finished;', 'code=thinkthen_%s_complete(e,q,source,&controls,&result);' % verb,
-                  'finished: output(e,%d,code,result); thinkthen_result_free(result); thinkthen_source_free(source); thinkthen_question_free(q); thinkthen_cancel_token_free(cancel); for(size_t i=0;i<%d;++i) thinkthen_image_free(images[i]);' % (kind, max(1, len(image_paths))), '}'])
+    if value.get('incremental'):
+        lines.extend(['if(code) goto finished;', 'thinkthen_batch *batch=NULL;',
+                      'code=thinkthen_%s_batch_start(e,q,source,&controls,&batch); if(code) goto finished;' % verb,
+                      'while((code=thinkthen_batch_next(batch,&result))==0 && result) { output(e,%d,0,result); thinkthen_result_free(result); result=NULL; }' % kind,
+                      'if(thinkthen_batch_facts(batch,&result)) abort();', 'thinkthen_batch_free(batch);'])
+    else:
+        lines.extend(['if(code) goto finished;', 'code=thinkthen_%s_complete(e,q,source,&controls,&result);' % verb])
+    lines.extend(['finished: output(e,%d,code,result); thinkthen_result_free(result); thinkthen_source_free(source); thinkthen_question_free(q); thinkthen_cancel_token_free(cancel); for(size_t i=0;i<%d;++i) thinkthen_image_free(images[i]);' % (kind, max(1, len(image_paths))), '}'])
     return '\n'.join(lines)
 
 
@@ -220,18 +286,33 @@ def assertions(row, value, got, count):
         error = error.get('kind') if isinstance(error, dict) else error
         assert got['code'] == ERRORS[error], got
         assert got['message'], got
+        if 'message' in expect:
+            assert got['message'] == expect['message'], got
+        if 'completed_prefix' in expect:
+            assert [answer['index'] for answer in got['completed']] == expect['completed_prefix'], got
+            assert all(len(answer['answer_id']) == 64 and answer['observations'] == answer['sources'] > 0 for answer in got['completed']), got
+            assert got['stopped_at'] == expect['stopped_at'] and got['message'] == expect['message'], got
+            assert got['requests_sent'] == expect['requests_sent'] and got['records'] == len(expect['completed_prefix']), got
         if 'requests_sent' in expect or 'count' in expect:
             assert count == expect.get('requests_sent', expect.get('count')), (count, expect)
         return
     assert got['code'] == 0, got
     assert got['schema'] == 'thinkthen.result/2' and len(got['call_id']) == 64, got
+    if value.get('zero_observations'):
+        answer = got['rows'][0]
+        assert count == 0 and got['requests_sent'] == 0 and answer['value'] == [], got
+        assert answer['origin'] is None and answer['answered_by'] is None and answer['observations'] == answer['sources'] == 0, got
+        return
     for answer in got['rows']:
         assert len(answer['answer_id']) == 64 and answer['observations'] == answer['sources'] > 0, answer
         assert answer['origin'] in (1, 2, 3) and answer['answered_by'], answer
         if value.get('metadata'):
             for name, field in value['metadata'].items():
                 if name in ('name', 'wording_version'):
-                    assert answer[name] == field, answer
+                    if value['verb'] == 'annotate':
+                        assert all(author.get(name) == field for author in answer['member_authors']), answer
+                    else:
+                        assert answer.get(name) == field, answer
     if row['kind'] in ('images', 'image-location'):
         expected = value.get('image_paths') or value['paths']
         assert [bytes.fromhex(data) for data in got['rows'][0]['images']] == [(ROOT / path).read_bytes() for path in expected], got
@@ -243,11 +324,17 @@ def assertions(row, value, got, count):
         if value['verb'] not in ('find', 'relate'):
             assert {Path(answer['file']).name for answer in got['rows']} == set(row['expect']['locations']), got
         else:
-            raise ValueError('whole-set located detail input assertions not yet implemented')
+            inputs = got['rows'][0]['detail_inputs']
+            assert {Path(answer['file']).name for answer in inputs} == set(row['expect']['locations']), got
+            for original in inputs:
+                assert original['input'] == Path(original['file']).read_text(), original
+                assert original['first_line'] == 1 and original['last_line'] >= 1, original
         return
     if value.get('metadata_only'):
         assert got['rows'], got
         return
+    if 'edges' in expect:
+        assert len(got['rows'][0]['value']) == expect['edges'], got
     if 'success' not in expect:
         for key in ('value', 'probability'):
             if key in expect:
@@ -290,6 +377,8 @@ def assertions(row, value, got, count):
 
 
 def prepare(home, value):
+    if value.get('owned_jsonl'):
+        (home / 'records.jsonl').write_text(''.join(compact(item) + '\n' for item in value['items']))
     if value.get('profile'):
         (home / 'profile.json').write_text(compact(value['profile']))
     if value.get('question_form') == 'file':
@@ -316,8 +405,8 @@ def prepare(home, value):
         (home.parent / 'refund.json').write_text(compact(setup['parent_refund_json']))
     if setup.get('cwd_refund_directory'):
         (home / 'refund').mkdir()
-    if value.get('loader') == 'load' and value.get('reference') == '$FILE':
-        (home / '$FILE').write_text(compact(value['file_body']))
+    if value.get('loader') == 'load' and value.get('file_body') is not None:
+        (home / value['reference']).write_text(compact(value['file_body']))
 
 
 def main():
@@ -353,8 +442,9 @@ def main():
         source.write_text('#include "%s"\n' % (ROOT / 'libraries/c/tests/c/parity_output.c')
                           + '\n'.join(definitions)
                           + '\nint main(int argc,char **argv) { if(argc!=3) return 2; '
+                          'if(!strstr(argv[2], \"\\\"base_url\\\":\\\"http://127.0.0.1:\")) return 3; '
                           'thinkthen_engine *e=thinkthen_engine_new_with(argv[2]); '
-                          'if(!e) return 3; switch(atoi(argv[1])) {\n' + dispatch
+                          'if(!e) { output(NULL,1,thinkthen_error_code(NULL),NULL); return 0; } switch(atoi(argv[1])) {\n' + dispatch
                           + '\ndefault: return 2; } thinkthen_engine_free(e); return 0; }\n')
         binary = scratch / 'driver'
         library = ROOT / 'libraries/c/target/debug'
@@ -378,14 +468,25 @@ def main():
                             for step_at, step in enumerate(steps):
                                 settings = {'cache': False, 'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0', 'batch': 1, 'max_retries': 0}
                                 settings.update(step.get('settings', {}))
+                                settings['base_url'] = child['THINKTHEN_BASE_URL']
                                 settings = {key: (str(home / 'saved') if entry == '$FOLDER' else str(home / 'profile.json') if entry == '$PROFILE' else entry) for key, entry in settings.items()}
                                 if row['kind'] in ('images', 'image-location'):
                                     settings['record'] = str(home / 'recorded')
                                 number = 10000 + at * 100 + step_at if 'steps' in value else at
+                                before = int(backend.read('count'))
                                 output = subprocess.run([str(binary), str(number), compact(settings)], env=child, cwd=home, capture_output=True, text=True, timeout=60)
                                 assert output.returncode == 0 and not output.stderr, output.stderr
-                                got = json.loads(output.stdout)
-                                assertions(row, step, got, int(backend.read('count')))
+                                if step.get('incremental'):
+                                    emitted = [json.loads(line) for line in output.stdout.splitlines()]
+                                    got = {**emitted[-1], 'completed': [answer for partial in emitted[:-1] for answer in partial['rows']]}
+                                    if step.get('owned_jsonl'):
+                                        bodies = json.loads(backend.read('capture'))['bodies']
+                                        request = json.loads(bodies[0])
+                                        expected = {'q%d' % (index + 1): {'type': 'noul', 'instructions': 'The text is %s. %s' % (compact(item), step['question']['decide'])} for index, item in enumerate(step['items'][:2])}
+                                        assert request['questions'] == expected, request
+                                else:
+                                    got = json.loads(output.stdout)
+                                assertions(row, step, got, int(backend.read('count')) - (before if step.get('count_delta') else 0))
                                 if row['kind'] in ('images', 'image-location'):
                                     before = int(backend.read('count'))
                                     replay = {key: entry for key, entry in settings.items() if key != 'record'}

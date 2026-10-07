@@ -513,3 +513,6 @@ pub unsafe extern "C" fn thinkthen_free_string(text: *mut c_char) {
 
 #[path = "ffi/complete/ffi.rs"]
 mod complete;
+
+#[path = "ffi/batch/ffi.rs"]
+mod batch;

@@ -6,7 +6,7 @@ use thinkthen::{
     RecordReading, SourceLocation,
 };
 #[derive(Clone)]
-pub(super) struct Original {
+pub(crate) struct Original {
     pub(super) retained: Input,
     pub(super) native: QuestionInput,
 }
@@ -26,15 +26,15 @@ pub(super) fn records(
         .enumerate()
         .map(|(at, record)| {
             engine.check_record_limit(at)?;
-            compose(record?, kind, reading)
+            compose(record?, kind, reading).map_err(Failure::from)
         })
         .collect()
 }
-fn compose(
+pub(super) fn compose(
     retained: Input,
     kind: u32,
     reading: Option<&RecordReading>,
-) -> Result<RecordInput<Original>, Failure> {
+) -> Result<RecordInput<Original>, thinkthen::Error> {
     let native = match retained.original.as_ref() {
         Some(Content::Text(text)) if kind == 8 && retained.images.is_empty() => {
             // Native annotation keeps structural JSON and literal text distinct at every location.
@@ -87,10 +87,12 @@ fn compose(
                 .as_ref()
                 .map(|p| p.file.clone())
                 .unwrap_or_default();
-            let image = retained
-                .images
-                .first()
-                .ok_or_else(|| Failure::defect("native image source lost its image"))?;
+            let image = retained.images.first().ok_or_else(|| {
+                thinkthen::Error::new(
+                    thinkthen::ErrorKind::Defect,
+                    "native image source lost its image",
+                )
+            })?;
             thinkthen::ImageSourceRecord {
                 record: image.native.clone(),
                 file,
@@ -121,7 +123,7 @@ fn compose(
     })
 }
 
-fn options(choices: &[crate::current::Choice]) -> Result<Option<RecordOptions>, Failure> {
+fn options(choices: &[crate::current::Choice]) -> Result<Option<RecordOptions>, thinkthen::Error> {
     let options = if choices.is_empty() {
         None
     } else {
@@ -129,7 +131,10 @@ fn options(choices: &[crate::current::Choice]) -> Result<Option<RecordOptions>, 
             .iter()
             .map(|choice| {
                 if choice.weight.is_some() {
-                    return Err(Failure::usage("record options do not accept weights"));
+                    return Err(thinkthen::Error::new(
+                        thinkthen::ErrorKind::Usage,
+                        "record options do not accept weights",
+                    ));
                 }
                 Ok(RecordOption {
                     name: choice.name.clone(),
@@ -143,7 +148,7 @@ fn options(choices: &[crate::current::Choice]) -> Result<Option<RecordOptions>, 
                         .transpose()?,
                 })
             })
-            .collect::<Result<Vec<_>, Failure>>()?;
+            .collect::<Result<Vec<_>, thinkthen::Error>>()?;
         Some(RecordOptions::new(choices)?)
     };
     Ok(options)
@@ -153,23 +158,36 @@ fn source_input(
     retained: &Input,
     text: &str,
     reading: Option<&RecordReading>,
-) -> Result<QuestionInput, Failure> {
-    let position = retained
-        .position
-        .as_ref()
-        .ok_or_else(|| Failure::defect("native source lost its position"))?;
+) -> Result<QuestionInput, thinkthen::Error> {
+    let position = retained.position.as_ref().ok_or_else(|| {
+        thinkthen::Error::new(
+            thinkthen::ErrorKind::Defect,
+            "native source lost its position",
+        )
+    })?;
     let source = thinkthen::SourceRecord {
         record: text.to_owned(),
         file: position.file.clone(),
-        first_line: position
-            .first_line
-            .ok_or_else(|| Failure::defect("native text source lost its first line"))?,
-        last_line: position
-            .last_line
-            .ok_or_else(|| Failure::defect("native text source lost its last line"))?,
+        first_line: position.first_line.ok_or_else(|| {
+            thinkthen::Error::new(
+                thinkthen::ErrorKind::Defect,
+                "native text source lost its first line",
+            )
+        })?,
+        last_line: position.last_line.ok_or_else(|| {
+            thinkthen::Error::new(
+                thinkthen::ErrorKind::Defect,
+                "native text source lost its last line",
+            )
+        })?,
     };
     Ok(reading
-        .ok_or_else(|| Failure::defect("native selected source lost its reading"))?
+        .ok_or_else(|| {
+            thinkthen::Error::new(
+                thinkthen::ErrorKind::Defect,
+                "native selected source lost its reading",
+            )
+        })?
         .compose_source(thinkthen::SourceItem::Text(source))?
         .original)
 }

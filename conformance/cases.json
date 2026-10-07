@@ -1764,7 +1764,36 @@
             }
           ]
         }
-      }
+      },
+      "runtime_exchanges": [
+        {
+          "provenance": {
+            "kind": "synthetic_contract"
+          },
+          "evidence": {
+            "summary": "Short note.",
+            "body": "Please refund me."
+          },
+          "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Short note.\\\". Is this concise?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Please refund me.\\\". Does this ask for a refund?\"}}}",
+          "response": {
+            "model": "jev-latest",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.9
+              },
+              "q2": {
+                "type": "noul",
+                "noul": 0.8
+              }
+            },
+            "usage": {
+              "input_tokens": 21,
+              "output_tokens": 4
+            }
+          }
+        }
+      ]
     },
     {
       "id": "18-find-second",

@@ -181,10 +181,13 @@ impl Input {
     }
 }
 /// An immutable record snapshot or explicit shared native reader selection.
+#[derive(Clone)]
 pub struct SourceHandle(pub(crate) Source);
+#[derive(Clone)]
 pub(crate) enum Source {
     Records(Vec<Input>),
     Files(Vec<String>, InputReaderOptions),
+    JsonLines(Vec<String>),
 }
 impl fmt::Debug for SourceHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -193,9 +196,23 @@ impl fmt::Debug for SourceHandle {
 }
 pub(crate) type Inputs<'a> = Box<dyn Iterator<Item = Result<Input, thinkthen::Error>> + 'a>;
 impl SourceHandle {
-    pub(crate) fn read(&self) -> Result<Inputs<'_>, Failure> {
+    pub(crate) fn read(&self) -> Result<Inputs<'_>, thinkthen::Error> {
         match &self.0 {
             Source::Records(records) => Ok(Box::new(records.iter().cloned().map(Ok))),
+            Source::JsonLines(paths) => {
+                let reader = thinkthen::read_files(
+                    paths,
+                    thinkthen::ReaderOptions {
+                        unit: thinkthen::SourceUnit::Line,
+                        window: None,
+                    },
+                )?;
+                Ok(Box::new(
+                    reader
+                        .enumerate()
+                        .map(|(index, record)| json_line(index, record?)),
+                ))
+            }
             Source::Files(paths, options) => {
                 let reader = thinkthen::read_inputs(paths, *options)?;
                 Ok(Box::new(reader.enumerate().map(|(index, record)| {
@@ -204,6 +221,22 @@ impl SourceHandle {
             }
         }
     }
+}
+
+fn json_line(
+    index: usize,
+    record: thinkthen::SourceRecord<String>,
+) -> Result<Input, thinkthen::Error> {
+    thinkthen::RawRecord::json(&record.record)?;
+    let raw = serde_json::from_str(&record.record).map_err(|_| {
+        thinkthen::Error::new(
+            thinkthen::ErrorKind::Defect,
+            "native JSON record could not be retained",
+        )
+    })?;
+    let mut input = Input::from_source(index, thinkthen::SourceItem::Text(record));
+    input.original = Some(Content::Json(raw));
+    Ok(input)
 }
 
 /// Owned view backing allocations. Moving the owner cannot move their bytes.

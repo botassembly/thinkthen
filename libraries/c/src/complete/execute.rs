@@ -41,20 +41,33 @@ pub(crate) fn ask(
         (&mut storage, &events, completed),
     )?;
     let events = events.into_inner().unwrap_or_else(PoisonError::into_inner);
+    let facts = completed
+        .as_ref()
+        .ok_or_else(|| Failure::defect("complete native execution held no final facts"))?;
+    result(storage, rows, &events, kind, Some(facts))
+}
+
+pub(super) fn result(
+    mut storage: Storage,
+    rows: Vec<RowObservationV1>,
+    events: &[OwnedRecordObservation],
+    kind: u32,
+    facts_native: Option<&Facts>,
+) -> Result<ResultHandle, Failure> {
     let authors = std::mem::take(&mut storage.3);
     let member_authors = std::mem::take(&mut storage.4);
-    let observation_authors = observations::authors(&mut storage, &events, &rows, &authors)?;
+    let observation_authors = observations::authors(&mut storage, events, &rows, &authors)?;
     let row_details = std::mem::take(&mut storage.1);
-    let observation_details = observation_details(&mut storage, &events, &rows, &row_details)?;
+    let observation_details = observation_details(&mut storage, events, &rows, &row_details)?;
     let source_recognition = std::mem::take(&mut storage.6);
     let source_relations = std::mem::take(&mut storage.7);
     let rank_members = std::mem::take(&mut storage.5);
-    let observations = observations::convert(&mut storage, &events, &rows)?;
-    let f = completed
-        .as_ref()
-        .ok_or_else(|| Failure::defect("complete native execution held no final facts"))?;
-    let facts = metadata::facts(&mut storage, f)?;
-    let attempts = storage.attempts(f.attempts());
+    let observations = observations::convert(&mut storage, events, &rows)?;
+    let facts = facts_native
+        .map(|f| metadata::facts(&mut storage, f))
+        .transpose()?
+        .unwrap_or_default();
+    let attempts = storage.attempts(facts_native.and_then(Facts::attempts));
     let singular = if rows.len() == 1 {
         storage.2.first().copied()
     } else {

@@ -131,6 +131,9 @@ pub(crate) fn load(path: &str) -> Result<QuestionHandle, Failure> {
     } else {
         1
     };
+    if kind == 1 && (!body.contains_key("choose") || body.contains_key("options")) {
+        return Ok(finish(json, Native::Atomic(Question::load(path)?), None));
+    }
     let parsed = if body.contains_key("choose") && !body.contains_key("options") {
         dynamic(json)
     } else {

@@ -111,6 +111,27 @@ pub unsafe extern "C" fn thinkthen_source_files(
     spec: *const SourceSpecV1,
     out: *mut *mut SourceHandle,
 ) -> i32 {
+    // SAFETY: unchanged descriptors go through the same guarded reader edge.
+    unsafe { source_files(engine, spec, out, false) }
+}
+/// Clone an explicitly image-only native reader, validating physical units before opening paths.
+/// # Safety
+/// All pointers obey the installed header's storage and lifetime contract.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_source_image_files(
+    engine: *const Door,
+    spec: *const SourceSpecV1,
+    out: *mut *mut SourceHandle,
+) -> i32 {
+    // SAFETY: unchanged descriptors go through the same guarded reader edge.
+    unsafe { source_files(engine, spec, out, true) }
+}
+unsafe fn source_files(
+    engine: *const Door,
+    spec: *const SourceSpecV1,
+    out: *mut *mut SourceHandle,
+    images: bool,
+) -> i32 {
     // SAFETY: counted paths and descriptors are readable through this call.
     unsafe {
         super::typed(
@@ -118,6 +139,12 @@ pub unsafe extern "C" fn thinkthen_source_files(
             |_| {
                 read::required(out)?;
                 let spec = read::reference(spec)?;
+                if spec.unit == 5 && !images {
+                    if spec.window != 0 {
+                        return Err(Failure::usage("JSONL sources do not accept windows"));
+                    }
+                    return Ok(SourceHandle(Source::JsonLines(read::strings(spec.paths)?)));
+                }
                 let unit = match spec.unit {
                     1 => thinkthen::SourceUnit::Line,
                     2 => thinkthen::SourceUnit::Window,
@@ -131,7 +158,7 @@ pub unsafe extern "C" fn thinkthen_source_files(
                         unit,
                         window: (spec.window != 0).then_some(spec.window),
                     },
-                    media: if spec.unit == 4 {
+                    media: if images || spec.unit == 4 {
                         thinkthen::ReaderMedia::Image
                     } else {
                         thinkthen::ReaderMedia::Text

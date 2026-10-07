@@ -62,7 +62,7 @@ unsafe fn run(
         }
     })
 }
-unsafe fn options<'a>(
+pub(super) unsafe fn options<'a>(
     controls: Option<&'a ControlsV1>,
     context: Option<&'a str>,
 ) -> Result<CallOptions<'a>, Failure> {

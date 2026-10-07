@@ -41,9 +41,8 @@
  * what it held before the call, and `thinkthen_error_code`,
  * `thinkthen_error_message`, and `thinkthen_error_retryable` name the
  * failure. `thinkthen_error_facts_json` names final facts when the failed
- * call started; it is NULL for a pre-call refusal. Nothing partial is
- * delivered: a cancelled or deadline-expired
- * bulk call returns its code with no rows. With a null engine, the error accessors
+ * call started; it is NULL for a pre-call refusal. The eager calls deliver no partial rows: a cancelled or deadline-expired
+ * bulk call returns its code with no rows. The additive lazy batch calls below retain their completed prefix. With a null engine, the error accessors
  * name the calling thread's last failed `thinkthen_engine_new` until that
  * thread's next engine builds.
  *
@@ -78,7 +77,7 @@ extern "C" {
  * failed.
  */
 #define THINKTHEN_OK 0
-#define THINKTHEN_EUSAGE 1      /* the request broke the grammar or the argument rules; nothing was sent */
+#define THINKTHEN_EUSAGE 1      /* the arguments/input broke the grammar; the rejected stage was not sent */
 #define THINKTHEN_EBACKEND 2   /* the wire failed or refused */
 #define THINKTHEN_EDEADLINE 3  /* the caller's own budget ran out; no rows came */
 #define THINKTHEN_ELOCAL 4     /* a named local file, cache, or recording failed */
@@ -432,6 +431,7 @@ typedef struct thinkthen_question thinkthen_question;
 typedef struct thinkthen_source thinkthen_source;
 typedef struct thinkthen_image thinkthen_image;
 typedef struct thinkthen_result thinkthen_result;
+typedef struct thinkthen_batch thinkthen_batch;
 
 typedef struct thinkthen_string_v1 { const char *data; size_t len; } thinkthen_string_v1;
 typedef struct thinkthen_strings_v1 { const thinkthen_string_v1 *data; size_t len; } thinkthen_strings_v1;
@@ -559,6 +559,7 @@ typedef struct thinkthen_record_v1 {
 #define THINKTHEN_SOURCE_WINDOW_V1 UINT32_C(2)
 #define THINKTHEN_SOURCE_FILE_V1 UINT32_C(3)
 #define THINKTHEN_SOURCE_IMAGE_FILE_V1 UINT32_C(4)
+#define THINKTHEN_SOURCE_JSONL_V1 UINT32_C(5)
 typedef struct thinkthen_source_spec_v1 {
     thinkthen_strings_v1 paths;
     uint32_t unit;
@@ -1023,6 +1024,36 @@ int thinkthen_result_source_relations(const thinkthen_result *, size_t, thinkthe
 int thinkthen_result_details(const thinkthen_result *, size_t, thinkthen_details_v1 *);
 int thinkthen_result_observation_details(const thinkthen_result *, size_t, thinkthen_details_v1 *);
 
+/* Lazy record batches use the existing native scheduler for decide, choose,
+ * tag, score, filter and annotate. Start clones question, source selection,
+ * shared context and cancellation flag; callers may free question/source/token
+ * after start. The engine must remain live through batch_free. Start, next,
+ * facts and free must run on the creating thread with exclusive batch access.
+ * Ordinary packing and real input pauses determine stages; there are no caller
+ * stage markers. A source_records snapshot retains finite source bytes, while
+ * source_files pulls the native reader lazily. Reader unit 5 explicitly reads
+ * JSONL as typed JSON; ordinary text units never infer JSON from text.
+ * next returns OK with one independently owned typed result, or OK with NULL
+ * after exhaustion. Completed rows precede one terminal error; that error
+ * leaves out unchanged, then next returns OK with NULL. Returned row results
+ * outlive the batch, question, source and engine. Per-row summary facts are
+ * absent while work continues; batch_facts returns an owned final summary
+ * after exhaustion/error, and EUSAGE before termination without writing out.
+ * batch_free stops and joins native workers before releasing owned backing.
+ * The existing eager complete calls keep their all-before-send admission rule.
+ * Rank, find, recognize and relate retain their native aggregate semantics
+ * through the complete calls; they have no invented lazy batch interface.
+ */
+int thinkthen_decide_batch_start(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
+int thinkthen_choose_batch_start(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
+int thinkthen_tag_batch_start(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
+int thinkthen_score_batch_start(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
+int thinkthen_filter_batch_start(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
+int thinkthen_annotate_batch_start(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
+int thinkthen_batch_next(thinkthen_batch *, thinkthen_result **);
+int thinkthen_batch_facts(const thinkthen_batch *, thinkthen_result **);
+void thinkthen_batch_free(thinkthen_batch *);
+
 int thinkthen_decide_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
 int thinkthen_choose_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
 int thinkthen_tag_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
@@ -1145,6 +1176,10 @@ int thinkthen_image_view(const thinkthen_image *, thinkthen_image_view_v1 *);
 void thinkthen_image_free(thinkthen_image *);
 int thinkthen_source_records(const thinkthen_engine *, const thinkthen_record_v1 *, size_t, thinkthen_source **);
 int thinkthen_source_files(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
+/* Explicit image media with physical unit line/window/file from the same
+ * descriptor. Native admission rejects line/window before opening any path.
+ * Existing source_files unit IMAGE_FILE remains a whole-image convenience. */
+int thinkthen_source_image_files(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
 void thinkthen_source_free(thinkthen_source *);
 
 #ifdef __cplusplus

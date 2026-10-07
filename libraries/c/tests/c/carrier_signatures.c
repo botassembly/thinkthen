@@ -12,6 +12,19 @@
 #endif
 
 typedef int (*complete_fn)(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+typedef int (*batch_start_fn)(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
+SIGNATURE(thinkthen_decide_batch_start, batch_start_fn);
+SIGNATURE(thinkthen_choose_batch_start, batch_start_fn);
+SIGNATURE(thinkthen_tag_batch_start, batch_start_fn);
+SIGNATURE(thinkthen_score_batch_start, batch_start_fn);
+SIGNATURE(thinkthen_filter_batch_start, batch_start_fn);
+SIGNATURE(thinkthen_annotate_batch_start, batch_start_fn);
+typedef int (*batch_next_fn)(thinkthen_batch *, thinkthen_result **);
+SIGNATURE(thinkthen_batch_next, batch_next_fn);
+typedef int (*batch_facts_fn)(const thinkthen_batch *, thinkthen_result **);
+SIGNATURE(thinkthen_batch_facts, batch_facts_fn);
+typedef void (*batch_free_fn)(thinkthen_batch *);
+SIGNATURE(thinkthen_batch_free, batch_free_fn);
 SIGNATURE(thinkthen_decide_complete, complete_fn);
 SIGNATURE(thinkthen_choose_complete, complete_fn);
 SIGNATURE(thinkthen_tag_complete, complete_fn);
@@ -22,6 +35,8 @@ SIGNATURE(thinkthen_find_complete, complete_fn);
 SIGNATURE(thinkthen_annotate_complete, complete_fn);
 SIGNATURE(thinkthen_recognize_complete, complete_fn);
 SIGNATURE(thinkthen_relate_complete, complete_fn);
+typedef int (*source_fn)(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
+SIGNATURE(thinkthen_source_image_files, source_fn);
 typedef int (*image_clone_fn)(const thinkthen_engine *, const uint8_t *, size_t, uint32_t, thinkthen_optional_string_v1, thinkthen_image **);
 SIGNATURE(thinkthen_image_clone, image_clone_fn);
 typedef int (*image_view_fn)(const thinkthen_image *, thinkthen_image_view_v1 *);

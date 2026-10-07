@@ -8,6 +8,7 @@ mod observations;
 mod questions;
 mod rank_set;
 mod rows;
+pub(crate) mod streaming;
 mod structured;
 use crate::current::Storage;
 use crate::ffi::carriers::{ObservationV1, RowObservationV1, SummaryV1};

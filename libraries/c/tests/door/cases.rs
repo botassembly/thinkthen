@@ -4,14 +4,9 @@
 //! and, where one fits, a typed function. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
 //! backend served. A record function's row lists question keys by ADR 0111,
-//! so its digests become the keys of the request each digest named. Two cases
-//! do not apply to the door:
-//!
-//! - `18-annotate-two-groups` recorded each group in its own request, and ADR
-//!   0111 section 5 packs a record's groups into one, as the command's wire run
-//!   and the public API consumer also skip it.
-//! - `25-defect-fault` injects an internal invariant failure, which no outside
-//!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
+//! so its digests become the keys of the request each digest named.
+//! Only `25-defect-fault` is private: the panic test in `src/failures.rs`
+//! covers its invariant boundary without a caller-injectable failure.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -36,7 +31,7 @@ use wire::{parsed, same};
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 2] = ["18-annotate-two-groups", "25-defect-fault"];
+const SKIPPED: [&str; 1] = ["25-defect-fault"];
 
 type Checked<T = ()> = Result<T, String>;
 pub(crate) type Members = BTreeMap<String, Box<RawValue>>;
@@ -79,7 +74,7 @@ fn every_applicable_shared_case_passes_through_the_door() {
             not_run += 1;
             writeln!(
                 std::io::stderr().lock(),
-                "{id}: not run by the C door (internal injection or repacked)"
+                "{id}: not run by the C door (internal invariant injection)"
             )
             .expect("write skipped case to stderr");
             continue;
