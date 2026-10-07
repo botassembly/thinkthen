@@ -32,7 +32,15 @@ fn start(
     let caller = cancel.map(|c| c.0.clone());
     checked(
         ruby,
-        Session::start(engine.engine.clone(), request, deadline, caller, None).map_err(Fault::from),
+        Session::start(
+            engine.engine.clone(),
+            request,
+            deadline,
+            caller,
+            None,
+            thinkthen::Surface::Ruby,
+        )
+        .map_err(Fault::from),
     )
     .map(NativeBatch)
 }

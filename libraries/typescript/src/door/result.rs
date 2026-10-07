@@ -96,7 +96,11 @@ pub(super) fn run(
     let spec = call.spec.as_deref().unwrap_or_default();
     let text = call.payload.as_str();
     if call.op == "complete" {
-        let (value, facts) = complete::execute(engine, complete::parse(text)?, options)?;
+        let (value, facts) = complete::execute(
+            engine,
+            complete::parse(text)?,
+            options.surface(thinkthen::Surface::Javascript),
+        )?;
 
         return Ok(Finished { value, facts });
     }

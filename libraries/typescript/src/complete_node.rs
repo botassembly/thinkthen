@@ -27,8 +27,15 @@ pub fn complete_batch(
     let engine = engine
         .map_or_else(thinkthen::Engine::from_env, |e| Ok(e.engine.clone()))
         .map_err(|e| napi::Error::from_reason(crate::door::Failure::from(e).envelope()))?;
-    let session = Session::start(engine, request, deadline, None, context)
-        .map_err(|e| napi::Error::from_reason(crate::door::Failure::from(e).envelope()))?;
+    let session = Session::start(
+        engine,
+        request,
+        deadline,
+        None,
+        context,
+        thinkthen::Surface::Javascript,
+    )
+    .map_err(|e| napi::Error::from_reason(crate::door::Failure::from(e).envelope()))?;
     Ok(CompleteBatch {
         session: Arc::new(session),
     })

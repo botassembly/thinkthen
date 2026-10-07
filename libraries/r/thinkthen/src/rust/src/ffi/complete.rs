@@ -15,7 +15,7 @@ fn tt_complete_native(request: Robj, deadline: Robj, completion: Robj) -> Crosse
             let result = crate::complete::execute(
                 engine,
                 crate::complete::parse(&request).map_err(|e| crate::carry(&e))?,
-                options,
+                options.surface(thinkthen::Surface::R),
             );
             match result {
                 Ok((value, facts)) => {
@@ -45,6 +45,7 @@ fn tt_complete_batch_start(request: Robj, deadline: Robj) -> Crossed<Robj> {
         deadline,
         None,
         None,
+        thinkthen::Surface::R,
     )
     .map_err(|e| crate::carry(&e))?;
     Ok(ExternalPtr::new(session).into())

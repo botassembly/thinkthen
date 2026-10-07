@@ -67,6 +67,7 @@ impl Session {
         deadline: Option<i64>,
         caller: Option<CancelToken>,
         context: Option<String>,
+        surface: thinkthen::Surface,
     ) -> Result<Self, Error> {
         let request: Request = super::parse(&text)?;
         let due = deadline
@@ -92,6 +93,7 @@ impl Session {
                     due,
                     caller: caller_for_worker,
                     context,
+                    surface,
                     token,
                 }
                 .run(input, output)
@@ -154,6 +156,7 @@ struct Work {
     due: Option<Instant>,
     caller: Option<CancelToken>,
     context: Option<String>,
+    surface: thinkthen::Surface,
     token: CancelToken,
 }
 impl Work {
@@ -174,6 +177,7 @@ impl Work {
         let interrupt =
             || self.request.cancel || self.caller.as_ref().is_some_and(CancelToken::is_cancelled);
         let mut options = CallOptions::new()
+            .surface(self.surface)
             .cancel(&self.token)
             .interrupt(&interrupt)
             .attempts(self.request.attempts);

@@ -10,7 +10,18 @@ def known(engine:c.Engine, question:c.QuestionSource, inputs:c.Records|c.Files)-
     tags=engine.tag(question,inputs).results[0].answer.probabilities
     score:float=engine.score(question,inputs).results[0].value
     accepted:bool=engine.filter(question,inputs).results[0].value
-    place:int=engine.rank(question,inputs).results[0].value
+    ranked=engine.rank(question,inputs).results[0]
+    place:int=ranked.value
+    members:tuple[c.RankMember,...]|c.Absent=ranked.members
+    if not isinstance(members,c.Absent):
+        for member in members:
+            result:c.RankMemberResult=member.result
+            member_id:c.AnswerId=result.answer_id
+            position:int=result.value
+            member_probability:float=result.answer.probability
+            member_question:c.DecideQuestion=result.question
+            usage:c.Usage|c.Absent=result.meta.usage
+            source:c.PhysicalSource|c.Absent=result.source
     found_call=engine.find(question,inputs)
     found:c.JsonValue=found_call.results[0].value
     selected:int|None|c.Absent=found_call.results[0].index

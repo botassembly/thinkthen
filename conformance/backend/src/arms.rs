@@ -99,6 +99,7 @@ fn capturing(request: &Recorded) -> bool {
     match (parts.next(), parts.next(), parts.next()) {
         (Some("arm"), Some("full"), Some("capture")) => true,
         (Some("case"), Some("files-relate"), _) => true,
+        (Some("case"), Some("rank-set-ordered-members"), Some("capture")) => true,
         (Some("case"), Some(id), Some("capture")) => id
             .split_once('-')
             .and_then(|(number, _)| number.parse::<u8>().ok())

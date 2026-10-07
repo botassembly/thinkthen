@@ -114,3 +114,19 @@ test('private inputs retain the shared valid question grammar and refuse wrong f
   ]) assert.throws(() => decode(kind, body), /invalid complete result/);
   assert.deepEqual(decode('DecideSpec', { decide: {}, on: '/body', false: null }), { decide: {}, on: '/body', false: null });
 });
+
+test('rank members retain ordered typed judgments and refuse recursive children', () => {
+  const judgment=fixture.results[0].result;
+  const child=Object.fromEntries(['schema','answer_id','question','answer','meta'].map(k=>[k,structuredClone(judgment[k])]));
+  Object.assign(child,{value:3,threshold:null});child.meta.usage={input_tokens:2};
+  const parent={...structuredClone(fixture.results[5].result),question:child.question,answer:child.answer,question_name:'saved',members:[{name:'saved',result:child}]};
+  const ranked=decode('RankResult',parent);
+  assert.equal(ranked.members[0].result.value,3);assert.equal(ranked.members[0].result.meta.usage.output_tokens,undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(ranked)),parent);
+  for(const change of [{value:0},{input:false},{members:[]},{question:{verb:'score',text:'Q',levels:['x']}}]) {
+    const invalid=structuredClone(parent);Object.assign(invalid.members[0].result,change);
+    assert.throws(()=>decode('RankResult',invalid),/invalid/);
+  }
+  for(const members of [[],null,[{name:'saved'}]]) assert.throws(()=>decode('RankResult',{...parent,members}),/invalid/);
+  assert.throws(()=>decode('Usage',{}),/invalid/);
+});

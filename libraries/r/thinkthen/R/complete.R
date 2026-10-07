@@ -1,7 +1,7 @@
 # Validated public result/2 carriers; execution stays in the native engine.
  .tt_complete_models <- list(
   "Position" = list("file?"="str","first?"="positive","last?"="positive","images?"="[str]"),
-  "Usage" = list("input_tokens"="uint","output_tokens"="uint"),
+  "Usage" = list("input_tokens?"="uint","output_tokens?"="uint"),
   "ProfileWarning" = list("tuned_for"="str","running"="str"),
   "BatchWarning" = list("tuned_for"="batch","running"="batch"),
   "Attempt" = list("ordinal"="positive","request_sha256"="Digest","wall_ms"="uint","outcome"="outcome","sdk_request_id"="SdkRequestId","status?"="uint","server_ms?"="uint","request_id?"="str"),
@@ -46,7 +46,9 @@
   "TagResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","value"="[str]","question"="TagQuestion","answer"="Tags","threshold"="threshold","input?"="json","position?"="Position","input_file?"="str","file?"="str","first_line?"="positive","last_line?"="positive","source?"="PhysicalSource","index?"="uint"),
   "ScoreResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","value"="number","question"="ScoreQuestion","answer"="Score","threshold"="null","input?"="json","position?"="Position","input_file?"="str","file?"="str","first_line?"="positive","last_line?"="positive","source?"="PhysicalSource","images?"="[NativeImage]","index?"="uint"),
   "FilterResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","value"="bool","input"="json","question"="DecideQuestion","answer"="YesNo","threshold"="threshold","position?"="Position","file?"="str","first_line?"="positive","last_line?"="positive","source?"="PhysicalSource","index?"="uint"),
-  "RankResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","value"="positive","input"="json","question"="AtomicQuestion","answer"="AtomicAnswer","threshold"="null","question_name?"="str","position?"="Position","file?"="str","first_line?"="positive","last_line?"="positive","source?"="PhysicalSource","index?"="uint"),
+  "RankMemberResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","value"="positive","question"="DecideQuestion","answer"="YesNo","threshold"="null","meta"="Meta","source?"="PhysicalSource"),
+  "RankMember" = list("name"="str","result"="RankMemberResult"),
+  "RankResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","value"="positive","input"="json","question"="AtomicQuestion","answer"="AtomicAnswer","threshold"="null","question_name?"="str","position?"="Position","file?"="str","first_line?"="positive","last_line?"="positive","source?"="PhysicalSource","index?"="uint","members?"="[RankMember]"),
   "FindResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","value"="json","question"="FindQuestion","answer"="FindAnswer","threshold"="null","position?"="Position","file?"="str","first_line?"="positive","last_line?"="positive","index?"="uint|null","candidates?"="[FindCandidate]"),
   "AnnotateResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","input"="json","value"="{AnnotatedValue}","answers"="{AnnotationEntry}","position?"="Position","file?"="str","first_line?"="positive","last_line?"="positive","index?"="uint","source?"="PhysicalSource"),
   "RecognizeResult" = list("schema"="=thinkthen.result/2","answer_id"="AnswerId","meta"="Meta","value"="Recognition","question"="RecognizeQuestion","answer"="RecognitionAnswer","input?"="json","file?"="str","first_line?"="positive","last_line?"="positive","index?"="uint","source?"="PhysicalSource"),
@@ -230,6 +232,8 @@
   }
   if (kind == "Position" && (has(v, "first") != has(v, "last") || (has(v, "first") && (!has(v, "file") || v$last < v$first)))) fail()
   if (kind %in% c("Entity", "Endpoint") && (has(v, "first_line") != has(v, "last_line") || (has(v, "first_line") && (!has(v, "file") || v$last_line < v$first_line)))) fail()
+  if (kind == "Usage" && !length(v)) fail()
+  if (kind == "RankResult" && has(v, "members") && (!length(v$members) || !has(v, "question_name") || v$question$verb != "decide" || v$answer$kind != "yes_no")) fail()
   if (kind == "RankResult" && !v$answer$kind %in% c("yes_no", "score")) fail()
   if (kind %in% c("DecideResult", "FilterResult") && is.null(v$threshold)) fail()
   if (endsWith(kind, "Result") && (kind == "AnnotateResult") != has(v$meta, "questions_sha256")) fail()

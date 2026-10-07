@@ -283,7 +283,18 @@ fn run(f: Fixture) -> Result<String, Error> {
             engine.rank_set_records_complete_with(&q, inputs, options)?,
             |r| {
                 let _: usize = r.value();
-                let _ = r.members();
+                for member in r.members() {
+                    let _: &str = member.name();
+                    let child: &thinkthen::CompleteRank = member.result();
+                    let _: usize = child.value();
+                    let _: &str = child.answer_id().as_str();
+                    let _ = child.question().name();
+                    let _ = child.question().wording_version();
+                    let _ = child.probabilities();
+                    let _ = child.meta().context_sha256();
+                    let _ = child.identity().question_sources();
+                    let _ = child.reported_usage();
+                }
             },
         ),
         ("annotate", Asked::Set(q)) => records(

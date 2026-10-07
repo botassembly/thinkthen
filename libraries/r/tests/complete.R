@@ -61,6 +61,23 @@ for (change in list(list(origin="proxy"),list(cached=FALSE),list(answered_by="in
   meta[names(change)] <- change
   refuses(.tt_complete_decode("Meta", meta))
 }
+child <- f$results[[1L]]$result[c("schema","answer_id","question","answer","meta")]
+child$value <- 3L; child["threshold"] <- list(NULL);child$meta$usage <- list(input_tokens=2L)
+parent <- f$results[[6L]]$result
+parent$question <- child$question;parent$answer <- child$answer;parent$question_name <- "saved"
+parent$members <- list(list(name="saved",result=child))
+ranked <- .tt_complete_decode("RankResult",parent)
+stopifnot(ranked$members[[1L]]$result$value==3,inherits(ranked$members[[1L]]$result$meta$usage$output_tokens,"thinkthen_absent"))
+stopifnot(same_json(jsonlite::fromJSON(.tt_complete_json_text(ranked),simplifyVector=FALSE),parent))
+for (change in list(list(value=0),list(input=FALSE),list(members=list()))) {
+  invalid <- parent;invalid$members[[1L]]$result[names(change)] <- change
+  refuses(.tt_complete_decode("RankResult",invalid))
+}
+for (members in list(list(),NULL,list(list(name="saved")))) {
+  invalid <- parent;invalid["members"] <- list(members)
+  refuses(.tt_complete_decode("RankResult",invalid))
+}
+refuses(.tt_complete_decode("Usage",list()))
 record <- .tt_complete_decode("RecordInput", list(records=list(FALSE,NULL,list(id=1),list(id=1)),context=list(context=list())))
 specs <- list(
   decide=list(type="DecideSpec",raw=list(decide=list("Q",list(active=FALSE)),false=NULL)),
