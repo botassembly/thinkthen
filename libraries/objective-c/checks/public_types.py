@@ -42,7 +42,7 @@ try:
         # Ticket 0291, before any case sends: P1 and one invalid plan run with
         # no key through the public plan selector; the zero budgets and the
         # zero cap refuse; the backend has read no request.
-        env = {"PATH": os.environ["PATH"], "HOME": cache, "XDG_CACHE_HOME": cache, "LD_LIBRARY_PATH": str(HERE / "target"),
+        env = {"PATH": os.environ["PATH"], "HOME": cache, "XDG_CONFIG_HOME": cache, "XDG_STATE_HOME": cache, "XDG_CACHE_HOME": cache, "LD_LIBRARY_PATH": str(HERE / "target"),
                "THINKTHEN_BASE_URL": f"http://127.0.0.1:{port}/generic/v1", "THINKTHEN_CACHE": str(Path(cache) / "plan")}
         p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
         given = p1["plan_input"]
@@ -61,7 +61,7 @@ try:
             route = case.get("case_id", "generic")
             if route != "generic":
                 assert route in conformance, case["name"]
-            env = os.environ.copy()
+            env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": cache, "XDG_CONFIG_HOME": cache, "XDG_CACHE_HOME": cache, "XDG_STATE_HOME": cache}
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1",
                        THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)),
                        LD_LIBRARY_PATH=str(HERE / "target"))
@@ -90,7 +90,7 @@ try:
                 shared.check_offsets(case, actual, conformance)
             count += 1
         settings_case = next(item for item in corpus["cases"] if item["name"] == "01-decide-yes-captured")
-        env = os.environ.copy()
+        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": cache, "XDG_CONFIG_HOME": cache, "XDG_CACHE_HOME": cache, "XDG_STATE_HOME": cache}
         env.update(THINKTHEN_BASE_URL="http://127.0.0.1:1/generic/v1",
                    THINKTHEN_API_KEY="sk-type-contract-loopback",
                    THINKTHEN_CACHE=str(Path(cache) / "settings"),
