@@ -59,7 +59,7 @@ def _presentation(source, library):
     return (source.index.copy() if library == 'pandas' else tuple(range(len(source)))), source.name
 
 
-def _presented(native, source, present, verb, library, presentation):
+def _presented(native, source, present, verb, library, presentation, original):
     positions = tuple(None if at is None else present[at] for at in native.ordinals)
     per_row = verb in ('decide', 'choose', 'tag', 'score', 'annotate', 'recognize')
     if source is None:
@@ -82,7 +82,7 @@ def _presented(native, source, present, verb, library, presentation):
     else:
         import polars as pl
         output = pl.Series(name, rows, dtype=pl.Object)
-    return FrameCompleted(native, output, source, positions, labels, name)
+    return FrameCompleted(native, output, original, positions, labels, name)
 
 
 class Engine:
@@ -109,7 +109,7 @@ class Engine:
             inputs, present = _records(original)
         done = getattr(self._engine, verb)(question, inputs, **controls)
         if present is None: present = tuple(range(len(done.inputs)))
-        return _presented(done, original, present, verb, library, presentation)
+        return _presented(done, original, present, verb, library, presentation, source)
 
     def decide(self, question, source, **controls): return self._call('decide', question, source, **controls)
     def choose(self, question, source, **controls): return self._call('choose', question, source, **controls)
@@ -129,8 +129,10 @@ class Engine:
         else:
             original = _series(source, on)
             inputs, present = _records(original)
+        library = 'pandas' if original is not None and type(original).__module__.partition('.')[0] == 'pandas' else 'polars'
+        presentation = (None, None) if original is None else _presentation(original, library)
         native = getattr(self._engine, verb + '_batch')(question, inputs, **controls)
-        return FrameBatch(native, original, present)
+        return FrameBatch(native, source, present, presentation)
 
     def decide_batch(self, question, source, **controls): return self._batch('decide', question, source, **controls)
     def choose_batch(self, question, source, **controls): return self._batch('choose', question, source, **controls)
@@ -142,10 +144,9 @@ class Engine:
 
 class FrameBatch:
     """The native pull iterator with original nullable frame positions."""
-    def __init__(self, native, source, present):
+    def __init__(self, native, source, present, presentation):
         self.native, self.source, self.positions = native, source, present
-        library = 'pandas' if source is not None and type(source).__module__.partition('.')[0] == 'pandas' else 'polars'
-        self.index, self.name = (None, None) if source is None else _presentation(source, library)
+        self.index, self.name = presentation
     def __repr__(self): return '<CompleteFrameBatch>'
     def __iter__(self): return self
     def __next__(self): return next(self.native)

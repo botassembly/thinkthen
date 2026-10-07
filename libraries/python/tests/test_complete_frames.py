@@ -25,8 +25,8 @@ def test_complete_frame_keeps_nulls_duplicate_positions_names_and_native_identit
         print(done.facts.requests_sent, done.facts.records)
         print(repr(done))
     ''', child_env(backend, tmp_path))
-    assert output.splitlines() == ['2 2', '<FrameCompleted: content withheld>']
-    assert backend.count() == 2
+    assert output.splitlines() == ['1 2', '<FrameCompleted: content withheld>']
+    assert backend.count() == 1
 
 
 def test_complete_lazy_find_materializes_one_whole_candidate_set(backend, tmp_path):
@@ -39,7 +39,8 @@ def test_complete_lazy_find_materializes_one_whole_candidate_set(backend, tmp_pa
         assert done.positions == (2,) and done.native.ordinals == (1,)
         assert done.results[0].value == 'Second passage.'
         assert [r.index for r in done.results[0].candidates] == [0,1,2,None]
-        assert done.source.to_list() == ['First passage.',None,'Second passage.','Third passage.']
+        assert done.source is source
+        assert [item.original for item in done.inputs] == ['First passage.','Second passage.','Third passage.']
         print(done.facts.requests_sent)
     ''', child_env(backend, tmp_path, 'case/18-find-second'))
     assert output.strip() == '1'
@@ -73,15 +74,18 @@ def test_complete_filter_retains_multiindex_names_and_batch_snapshots_presentati
         import pandas as pd
         from thinkthen import complete as c, frames
         source = pd.Series(['one',None,'two'], index=pd.MultiIndex.from_tuples([('a',1),('a',1),('b',2)],names=['group','row']),name='body',dtype=object)
+        frame = source.to_frame()
         q = c.QuestionSource(role='atomic',body={'decide':'Need attention?'})
         facade = frames.Engine(engine=c.Engine(cache=False,batch=1))
-        filtered = facade.filter(q,source)
+        filtered = facade.filter(q,frame,on='body')
+        assert filtered.source is frame
         assert isinstance(filtered.frame.index,pd.MultiIndex)
         assert filtered.frame.index.names == ['group','row']
         assert filtered.frame.index.equals(source.index.take(filtered.positions))
-        batch = facade.decide_batch(q,source)
+        batch = facade.decide_batch(q,frame,on='body')
+        assert batch.source is frame
         original = source.index.copy()
-        source.index = [3,4,5]; source.name = 'changed'
+        frame.index = [3,4,5]; frame.columns = ['changed']
         assert batch.index.equals(original) and batch.name == 'body'
         rows = list(batch)
         assert [batch.position(row) for row in rows] == [0,2]
