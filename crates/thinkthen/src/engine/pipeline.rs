@@ -69,6 +69,7 @@ pub(crate) trait Asker: Sync {
 /// One wire question's answer, live or stored.
 #[derive(Clone, Debug)]
 pub(crate) struct Answered {
+    pub(crate) api: crate::core::adapters::ApiType,
     pub(crate) observation_id: Option<crate::core::ObservationId>,
     pub(crate) batch_size: Option<std::num::NonZeroU32>,
     pub(crate) origin: crate::core::Origin,
@@ -313,7 +314,10 @@ impl Engine {
     fn store(&self, state: &super::facade::State, cancel: &Cancel) -> Result<Option<Store>, Error> {
         let storage = self.storage();
         let refresh = storage.refresh_cache
-            || crate::core::adapters::built_in::is_mutable_alias(self.backend().model());
+            || self
+                .backend()
+                .api_type()
+                .is_mutable_alias(self.backend().model());
         let (folder, mode) = match (&storage.record, &storage.replay) {
             (Some(folder), Some(_)) if refresh => (folder, Mode::Refresh),
             (Some(folder), Some(_)) => (folder, Mode::Cache),

@@ -165,14 +165,15 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<Call<Keyed>, Error> {
         options.without_context("a single-document call")?;
-        question.metadata.validate_item(input)?;
+        question.admit_input(input)?;
         if let QuestionInput::Text(text) = input {
             crate::public::engine::evidence(text)?;
         }
         let engine = self.asking(question)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let asker = Decisions::new(&engine, question, None);
-        let packing = pull::packing(core::Setting::Max, false, false);
+        let mut packing = pull::packing(core::Setting::Max, false, false);
+        packing.detailed = stop.facts().attempts().is_some();
         let input = Text {
             at: 0,
             input: input.clone(),

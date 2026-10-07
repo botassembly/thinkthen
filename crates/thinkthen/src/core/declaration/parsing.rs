@@ -32,6 +32,7 @@ impl QuestionMetadata {
             })
             .transpose()?;
         Ok(Self {
+            reading: super::AuthoredReading::of(value),
             name,
             wording_version,
             item_schema: value

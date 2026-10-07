@@ -50,3 +50,5 @@ fn Engine::choose_dynamic_records_complete_with<I, T>(&self, &RecordChooseQuesti
 ```
 
 Native execution now admits a required whole shortlist on every eager original, including later-record zero-send refusal and an empty zero-observation call. Saved choose controls use the existing resolver and batch precedence. Host adoption remains open.
+
+Native foundation update: eager and fallible complete choose routes accept required whole ordered shortlists with authored descriptions, including record-only saved choose preparation. Selected native pointers and metadata declarations validate before lookup/send and retain originals. Replacement candidates never merge with fixed options and their actual semantics determine ordinary per-question identity. Native/CLI execution is implemented; host/SQL/frame adoption and root whole review/landing remain open.

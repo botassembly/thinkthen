@@ -79,6 +79,32 @@ pub struct ResolvedQuestion<'a>(
     pub(crate) Option<&'a core::declaration::QuestionMetadata>,
 );
 impl ResolvedQuestion<'_> {
+    /// Explicit authored model; absent when the engine supplied its default.
+    #[must_use]
+    pub fn model(&self) -> Option<&str> {
+        self.1
+            .and_then(|metadata| metadata.reading.model.as_deref())
+    }
+    /// Explicit authored calibration profile.
+    #[must_use]
+    pub fn profile(&self) -> Option<&str> {
+        self.1
+            .and_then(|metadata| metadata.reading.profile.as_deref())
+    }
+    /// Explicit authored request batch setting.
+    #[must_use]
+    pub fn batch(&self) -> Option<crate::public::BatchSetting> {
+        self.1
+            .and_then(|metadata| metadata.reading.batch)
+            .map(batch_setting)
+    }
+    /// Authored evidence pointers in their original order.
+    pub fn on(&self) -> impl Iterator<Item = &str> {
+        self.1
+            .into_iter()
+            .flat_map(|metadata| metadata.reading.on.iter())
+            .map(String::as_str)
+    }
     /// Optional author name; independent of accepted observation provenance.
     #[must_use]
     pub fn name(&self) -> Option<&crate::public::QuestionName> {
@@ -161,6 +187,16 @@ pub struct FindReading<'a> {
     pub(crate) profile: Option<&'a str>,
 }
 impl FindReading<'_> {
+    /// Explicit authored model, independent of the answering model.
+    #[must_use]
+    pub fn model(&self) -> Option<&str> {
+        self.metadata.reading.model.as_deref()
+    }
+    /// Original authored evidence pointers.
+    pub fn on(&self) -> impl Iterator<Item = &str> {
+        self.metadata.reading.on.iter().map(String::as_str)
+    }
+
     /// Optional author name; independent of accepted observation provenance.
     #[must_use]
     pub fn name(&self) -> Option<&crate::public::QuestionName> {
@@ -210,3 +246,10 @@ withheld!(
     ResolvedQuestion,
     FindReading
 );
+
+fn batch_setting(value: core::Setting) -> crate::public::BatchSetting {
+    match value {
+        core::Setting::Max => crate::public::BatchSetting::Max,
+        core::Setting::Records(count) => crate::public::BatchSetting::Records(count),
+    }
+}

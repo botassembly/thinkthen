@@ -3,6 +3,24 @@ use super::{Held, Reading, Record, RecordError, Selected, found};
 use crate::core::{Json, Pointer};
 
 impl Record {
+    pub(crate) fn validate_item(
+        &self,
+        schema: Option<&crate::core::InputDeclaration>,
+    ) -> Result<(), RecordError> {
+        let Some(schema) = schema else {
+            return Ok(());
+        };
+        let valid = match &self.0 {
+            Held::Json(value) => schema.accepts(value),
+            Held::Text(text) => schema.accepts(&Json::String(text.clone())),
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err(RecordError::ItemSchema)
+        }
+    }
+
     pub(crate) fn from_json(value: Json) -> Self {
         Self(Held::Json(value))
     }
@@ -46,21 +64,29 @@ impl Reading {
         mut self,
         schema: Option<crate::core::InputDeclaration>,
     ) -> Self {
-        self.item_schema = schema;
+        self.item_schema = schema.into_iter().collect();
+        self
+    }
+    pub(crate) fn with_item_schemas(mut self, schemas: Vec<crate::core::InputDeclaration>) -> Self {
+        self.item_schema = schemas;
         self
     }
     pub(crate) const fn declares_item(&self) -> bool {
-        self.item_schema.is_some()
+        !self.item_schema.is_empty()
     }
     pub(super) fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
         let selected = self.selected_unchecked(record)?;
-        if let Some(schema) = &self.item_schema {
+        if !self.item_schema.is_empty() {
             let value = match &selected {
                 Selected::Text(text) => Json::String((*text).to_owned()),
                 Selected::Whole(value) => (*value).clone(),
                 Selected::Chosen(value) => value.clone(),
             };
-            if !schema.accepts(&value) {
+            if self
+                .item_schema
+                .iter()
+                .any(|schema| !schema.accepts(&value))
+            {
                 return Err(RecordError::ItemSchema);
             }
         }

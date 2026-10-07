@@ -13,6 +13,7 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
     Atomic {
         declarations: Default::default(),
         rank_position: None,
+        source: None,
         legacy: DecisionResult::new(
             answer.read(Some(threshold)).0,
             Question::Decide {

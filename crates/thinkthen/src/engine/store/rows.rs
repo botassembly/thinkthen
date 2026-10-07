@@ -12,7 +12,7 @@ pub(super) fn found(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stored> {
     let batch: Option<u32> = row.get(6)?;
     let version: u32 = row.get(7)?;
     let adapter: String = row.get(8)?;
-    if version != 2 || adapter != crate::core::adapters::built_in::NAME {
+    if version != 2 || crate::core::adapters::ApiType::from_name(&adapter).is_none() {
         return Ok((key, Err(versioned::invalid())));
     }
     let Some(key_id) = QuestionKey::parse(&crate::core::hex(&key)) else {
@@ -70,7 +70,7 @@ pub(super) fn insert(connection: &Connection, rows: &[Row<'_>]) -> rusqlite::Res
             signed(output)?,
             row.taken_at,
             row.origin,
-            crate::core::adapters::built_in::NAME,
+            row.state.api().name(),
             row.observation_id.as_str(),
             row.batch_size.map(std::num::NonZeroU32::get),
         ])?;

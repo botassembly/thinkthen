@@ -277,9 +277,10 @@ impl<'a> Judging<'a> {
     pub(crate) fn finish(
         &self,
         record: Record,
+        ordinal: usize,
         answered: Vec<GroupAnswer>,
     ) -> Result<Judged, Failure> {
-        aggregation::finish(self, record, answered)
+        aggregation::finish(self, record, ordinal, answered)
     }
 }
 

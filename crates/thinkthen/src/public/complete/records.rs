@@ -53,6 +53,7 @@ pub(super) struct Held<T> {
     pub(super) original: T,
     pub(super) question: Question,
     pub(super) context_sha256: Option<String>,
+    pub(super) source: Option<core::CompletePhysicalSource>,
 }
 
 impl Engine {
@@ -184,14 +185,16 @@ impl Engine {
         I: IntoIterator<Item = RecordInput<T>>,
         T: InputEvidence,
     {
+        let options = options.started()?;
+        options.admission()?;
         admitted(function, question)?;
         let setting = crate::public::bulk::selected_batch(question, &options, self.batch)?;
         let engine = self.asking(question)?;
         let Admitted { held, inputs } = prepare(
             function,
             question,
-            self.within_limit(records)?,
-            options.context_text(),
+            self.within_admission(records, &options)?,
+            &options,
         )?;
         // Plan every admitted row before the invocation starts; no later invalid
         // shortlist/context/image can cause an eager partial send.
@@ -234,7 +237,7 @@ impl Engine {
                     run.batch_setting = Some(setting.into());
                     run.context_sha256 = item.context_sha256;
                     let attempts = requested_attempts.then(|| judged.answered.attempts.clone());
-                    let result = atomic(
+                    let mut result = atomic(
                         run,
                         &judged,
                         spec(function, &item.question, judged.value.clone(), at),
@@ -243,6 +246,7 @@ impl Engine {
                         attempts,
                     )
                     .map_err(|_| Error::defect("a complete record could not be constructed"))?;
+                    result.source = item.source;
                     Ok(CompleteRecord {
                         original: item.original,
                         ordinal: at,
@@ -286,12 +290,14 @@ fn prepare<T: InputEvidence>(
     function: InputFunction,
     question: &Question,
     records: impl Iterator<Item = RecordInput<T>>,
-    fallback: Option<&str>,
+    options: &CallOptions<'_>,
 ) -> Result<Admitted<T>, Error> {
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
-        let (item, input) = prepare_record(function, question, record, fallback, at)?;
+        options.admission()?;
+        let (item, input) = prepare_record(function, question, record, options.context_text(), at)?;
+        options.admission()?;
         inputs.push(input);
         held.push(item);
     }
@@ -320,8 +326,7 @@ pub(super) fn prepare_record<T: InputEvidence>(
         .transpose()?;
     let input = record.original.question_input();
     question
-        .metadata
-        .validate_item(&input)
+        .admit_input(&input)
         .map_err(|error| error.at_record(at))?;
     crate::public::images::guard(function, &input)?;
     if let crate::public::QuestionInput::Text(text) = &input {
@@ -329,6 +334,7 @@ pub(super) fn prepare_record<T: InputEvidence>(
     }
     Ok((
         Held {
+            source: super::physical_source(&input),
             original: record.original,
             question: question.clone(),
             context_sha256,

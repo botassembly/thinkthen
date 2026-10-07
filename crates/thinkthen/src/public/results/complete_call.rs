@@ -6,6 +6,7 @@ use std::fmt;
 
 /// One concrete native result value and its actual complete invocation facts.
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct CompleteCall<'a, T> {
     value: &'a T,
     facts: CompleteFacts<'a>,
@@ -43,6 +44,7 @@ impl<T> fmt::Debug for CompleteCall<'_, T> {
 
 /// Safe failure fields; no successful result or answer identity is fabricated.
 #[derive(Clone, Copy, Debug, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct ErrorSnapshot<'a> {
     kind: ErrorKind,
     message: &'a str,
@@ -73,6 +75,7 @@ impl ErrorSnapshot<'_> {
 
 /// Failure envelope with final started-call facts, absent for admission refusal.
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct CompleteError<'a> {
     error: ErrorSnapshot<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]

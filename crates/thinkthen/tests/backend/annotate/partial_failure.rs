@@ -80,7 +80,7 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
         .ok_or_else(|| io::Error::other("the failed answer is not an object"))?;
     assert_eq!(
         failed.keys().map(String::as_str).collect::<Vec<_>>(),
-        ["failure", "question", "request"]
+        ["failure", "failure_id", "question", "request"]
     );
     assert_eq!(
         failed["question"],
@@ -108,9 +108,22 @@ fn one_bad_tag_member_fails_one_logical_question() -> io::Result<()> {
     assert_eq!(output.status.code(), Some(6));
     let row = String::from_utf8_lossy(&output.stdout);
     assert!(row.contains(r#""failed_questions":1"#), "{row}");
+    let row: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(
+        row["answers"]["topics"]["question"],
+        serde_json::json!({"verb":"tag","text":"topics?","labels":["billing","urgent"]})
+    );
+    assert_eq!(
+        row["answers"]["topics"]["failure"],
+        serde_json::json!({"kind":"backend","cause":"wrong_kind"})
+    );
     assert!(
-        row.contains(r#""topics":{"question":{"verb":"tag","text":"topics?","labels":["billing","urgent"]},"failure":{"kind":"backend","cause":"wrong_kind"},"request":"#),
-        "{row}"
+        thinkthen::FailureId::new(
+            row["answers"]["topics"]["failure_id"]
+                .as_str()
+                .expect("failure identity")
+        )
+        .is_ok()
     );
     Ok(())
 }

@@ -28,6 +28,27 @@ impl QuestionKey {
         )
     }
 
+    pub(crate) fn complete_for(
+        api: crate::core::adapters::ApiType,
+        url: &Url,
+        requested: &str,
+        answered: &str,
+        state: &str,
+        question: &str,
+    ) -> Self {
+        Self(crate::core::identity::framing::digest(
+            "thinkthen.question-key/2",
+            &[
+                api.name().as_bytes(),
+                url.as_str().as_bytes(),
+                requested.as_bytes(),
+                answered.as_bytes(),
+                state.as_bytes(),
+                question.as_bytes(),
+            ],
+        ))
+    }
+
     /// Explicit image inputs retain a distinct versioned key domain.
     pub(crate) fn complete_image(
         url: &Url,

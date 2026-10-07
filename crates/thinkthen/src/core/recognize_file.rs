@@ -1,6 +1,5 @@
 //! The closed recognize question-file shape and its canonical identity.
 
-use serde::ser::SerializeMap as _;
 use serde::{Serialize, Serializer};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
@@ -25,23 +24,47 @@ pub(crate) struct RecognizeSpec {
     pub(crate) on: Vec<Pointer>,
 }
 
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[serde(rename_all = "lowercase")]
+enum Verb {
+    Recognize,
+}
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub(crate) struct QuestionDocument<'a> {
+    verb: Verb,
+    kinds: Kinds<'a>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relations: Option<&'a [RelationRule]>,
+    threshold: Threshold,
+    relation_threshold: Threshold,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<&'a ProfileName>,
+}
+impl RecognizeSpec {
+    pub(crate) fn document(&self) -> QuestionDocument<'_> {
+        QuestionDocument {
+            verb: Verb::Recognize,
+            kinds: Kinds(&self.kinds),
+            relations: (!self.relations.is_empty()).then_some(self.relations.as_slice()),
+            threshold: self.threshold,
+            relation_threshold: self.relation_threshold,
+            profile: self.profile.as_ref(),
+        }
+    }
+}
 impl Serialize for RecognizeSpec {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("verb", "recognize")?;
-        map.serialize_entry("kinds", &Kinds(&self.kinds))?;
-        if !self.relations.is_empty() {
-            map.serialize_entry("relations", &self.relations)?;
-        }
-        map.serialize_entry("threshold", &self.threshold)?;
-        map.serialize_entry("relation_threshold", &self.relation_threshold)?;
-        if let Some(profile) = &self.profile {
-            map.serialize_entry("profile", profile)?;
-        }
-        map.end()
+        self.document().serialize(serializer)
     }
 }
 
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "std::collections::BTreeMap<String, Option<Description>>")
+)]
 struct Kinds<'a>(&'a [(String, Option<Description>)]);
 
 impl Serialize for Kinds<'_> {

@@ -14,9 +14,11 @@ macro_rules! surfaces {
     ($($variant:ident => $token:literal),+ $(,)?) => {
         /// The wrapper that explicitly owns this engine invocation.
         #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        #[cfg_attr(test, derive(schemars::JsonSchema))]
         pub enum Surface {
             $(
                 #[doc = concat!("The ", $token, " surface.")]
+                #[cfg_attr(test, schemars(rename = $token))]
                 $variant,
             )+
         }

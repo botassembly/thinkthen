@@ -66,7 +66,15 @@ fn a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader() {
     .expect("find runs");
     assert_eq!(output.status.code(), Some(3));
     let row = String::from_utf8_lossy(&output.stdout);
-    assert!(row.starts_with(concat!(r#"{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which unit answers?","none":true},"answer":{"kind":"find","pick":"u001","probabilities":{"u001":0.5,"u002":0.0,"none":0.5}},"threshold":null,"meta":{"tool":"thinkthen "#, env!("CARGO_PKG_VERSION"), r#"","question_sha256":"#)), "{row}");
+    let document: serde_json::Value = serde_json::from_str(&row).unwrap();
+    assert_eq!(document["schema"], "thinkthen.result/2");
+    assert_eq!(document["value"], serde_json::Value::Null);
+    assert_eq!(document["answer"]["pick"], "u001");
+    assert_eq!(
+        document["answer"]["probabilities"],
+        serde_json::json!({"u001":0.5,"u002":0.0,"none":0.5})
+    );
+    assert!(thinkthen::AnswerId::new(document["answer_id"].as_str().unwrap()).is_ok());
     assert!(
         row.contains(r#""requests_sent":1,"cached":false,"requests":[""#),
         "{row}"
@@ -109,8 +117,7 @@ fn cache_records_once_and_then_replays_without_a_key_or_second_request() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("find-replay");
     let folder_text = folder.to_string_lossy();
     let _removed = fs::remove_dir_all(&folder);
-    let matched = PICKED.replace("jev-1.13.0", "local-1");
-    let listener = Listener::serving(vec![Canned::ok(&matched)]).expect("listener");
+    let listener = Listener::serving(vec![Canned::ok(PICKED)]).expect("listener");
     let arguments = [
         "find",
         "Which unit answers?",
@@ -118,7 +125,7 @@ fn cache_records_once_and_then_replays_without_a_key_or_second_request() {
         "--url",
         listener.base(),
         "--model",
-        "local-1",
+        "jev-1.13.0",
         "--cache",
         &folder_text,
     ];
@@ -133,12 +140,15 @@ fn cache_records_once_and_then_replays_without_a_key_or_second_request() {
     assert_eq!(replayed.status.code(), Some(0));
     let first = String::from_utf8(recorded.stdout).expect("recorded result");
     let second = String::from_utf8(replayed.stdout).expect("replayed result");
-    assert_eq!(
-        first
-            .replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
-            .replace(r#""cached":false"#, r#""cached":true"#),
-        second
-    );
+    let mut first: serde_json::Value = serde_json::from_str(&first).unwrap();
+    let second: serde_json::Value = serde_json::from_str(&second).unwrap();
+    assert_eq!(first["answer_id"], second["answer_id"]);
+    first["meta"]["requests_sent"] = 0.into();
+    first["meta"]["cached"] = true.into();
+    first["meta"]["origin"] = "cache".into();
+    first["meta"]["question_sources"][0]["origin"] = "cache".into();
+    first["meta"]["attempts"] = serde_json::json!([]);
+    assert_eq!(first, second);
     assert_eq!(listener.requests().len(), 1);
 }
 

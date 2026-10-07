@@ -4,24 +4,30 @@ use serde::Serialize;
 
 use crate::core::{AnswerId, FailureId, ModelName, ObservationId};
 
-mod annotation;
+pub(crate) mod annotation;
 mod atomic;
-mod find;
+pub(crate) mod find;
 pub use annotation::MemberIdentity;
 pub(crate) use annotation::{Annotation, AnnotationMember};
 pub(crate) use find::Find;
-mod recognize;
+pub(crate) mod recognize;
 pub(crate) use recognize::Recognition;
-mod relate;
+pub(crate) mod relate;
 pub(crate) use relate::{Relation, RelationEntry};
 pub use relate::{RelationDirection, RelationMethod};
 mod meta;
+pub(crate) mod wire;
 pub(crate) use atomic::Atomic;
 use meta::CompleteMeta;
 
 /// The actual source of one logical question's accepted reply.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeOrigin")
+)]
 pub enum Origin {
     /// A current direct provider reply.
     Live,
@@ -38,6 +44,11 @@ pub enum Origin {
 /// The identity of exactly one logical observation or failed occurrence.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeObservation")
+)]
 pub enum Observation {
     /// A successful accepted answer, including successful null.
     Answered {
@@ -53,6 +64,11 @@ pub enum Observation {
 
 /// A logical question's retrieval origin and validated reported model.
 #[derive(Clone, Eq, PartialEq, Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeQuestionSource")
+)]
 pub struct QuestionSource {
     origin: Origin,
     answered_by: ModelName,

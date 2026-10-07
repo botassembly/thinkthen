@@ -1,14 +1,20 @@
 //! Closed author declarations; deliberately separate from semantic identity.
 use super::Json;
 use serde::Serialize;
-use serde::ser::{SerializeMap, Serializer};
+use serde::ser::Serializer;
+mod reading;
+mod wire;
+pub(crate) use reading::AuthoredReading;
 use std::fmt;
 use thiserror::Error;
 
 /// A validated author name, never a routing or cache identity.
 #[derive(Clone, Eq, PartialEq, Serialize)]
 #[serde(transparent)]
-pub struct QuestionName(String);
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub struct QuestionName(
+    #[cfg_attr(test, schemars(regex(pattern = "^[a-z][a-z0-9_-]{0,63}$")))] String,
+);
 impl QuestionName {
     pub(crate) fn validated(value: &str) -> Result<Self, DeclarationError> {
         let bytes = value.as_bytes();
@@ -32,7 +38,8 @@ impl QuestionName {
 /// An optional author wording version, with no inferred default.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(transparent)]
-pub struct WordingVersion(u32);
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub struct WordingVersion(#[cfg_attr(test, schemars(range(min = 1, max = 2147483647)))] u32);
 impl WordingVersion {
     pub(crate) fn validated(value: u32) -> Result<Self, DeclarationError> {
         if !(1..=2_147_483_647).contains(&value) {
@@ -49,6 +56,7 @@ impl WordingVersion {
 
 /// The four admitted object property shapes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "wire::Property"))]
 pub enum InputPropertyType {
     /// A JSON string, including an empty string.
     String,
@@ -74,20 +82,7 @@ impl InputPropertyType {
 }
 impl Serialize for InputPropertyType {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry(
-            "type",
-            match self {
-                Self::String => "string",
-                Self::Number => "number",
-                Self::Boolean => "boolean",
-                Self::StringList => "array",
-            },
-        )?;
-        if *self == Self::StringList {
-            map.serialize_entry("items", &InputDeclaration::String)?;
-        }
-        map.end()
+        wire::Property::from(*self).serialize(serializer)
     }
 }
 
@@ -121,6 +116,11 @@ impl InputProperty {
 
 /// A validated ordered object declaration. Extra input properties are retained.
 #[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "wire::ObjectRoot<'static>")
+)]
 pub struct ObjectDeclaration {
     properties: Vec<InputProperty>,
     required: Vec<String>,
@@ -171,24 +171,17 @@ impl ObjectDeclaration {
 }
 impl Serialize for ObjectDeclaration {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        struct Properties<'a>(&'a [InputProperty]);
-        impl Serialize for Properties<'_> {
-            fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                serializer.collect_map(self.0.iter().map(|p| (&p.name, p.kind)))
-            }
-        }
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("type", "object")?;
-        map.serialize_entry("properties", &Properties(&self.properties))?;
-        if !self.required.is_empty() {
-            map.serialize_entry("required", &self.required)?;
-        }
-        map.end()
+        wire::ObjectRoot::from(self).serialize(serializer)
     }
 }
 
 /// The complete closed subset of admitted root input declarations.
 #[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "wire::Root<'static>")
+)]
 pub enum InputDeclaration {
     /// A typed string.
     String,
@@ -205,14 +198,7 @@ impl InputDeclaration {
 }
 impl Serialize for InputDeclaration {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self {
-            Self::String => {
-                let mut map = serializer.serialize_map(Some(1))?;
-                map.serialize_entry("type", "string")?;
-                map.end()
-            }
-            Self::Object(object) => object.serialize(serializer),
-        }
+        wire::Root::from(self).serialize(serializer)
     }
 }
 
@@ -223,7 +209,10 @@ pub(crate) struct DeclarationError;
 
 /// Caller metadata, excluded from every semantic serializer and digest.
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub(crate) struct QuestionMetadata {
+    #[serde(skip)]
+    pub(crate) reading: AuthoredReading,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) name: Option<QuestionName>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -250,6 +239,7 @@ withheld!(
 
 /// Presentation only: the semantic question serializer remains unchanged.
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub(crate) struct ReadableQuestion<'a, Q: Serialize> {
     #[serde(flatten)]
     pub(crate) question: &'a Q,

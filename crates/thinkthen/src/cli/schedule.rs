@@ -49,6 +49,7 @@ impl From<Failure> for Placed {
 
 /// One record's answer, as the line it prints and what the run counts.
 pub(crate) struct Judged {
+    pub(crate) rank: Option<rank::RankRow>,
     pub(crate) model: Option<ModelName>,
     pub(crate) printed: Option<String>,
     pub(crate) position: Option<crate::cli::intake::Position>,
@@ -97,6 +98,7 @@ pub(crate) struct Output<'a> {
     model_guard: bool,
     run_model: Option<ModelName>,
     members: Vec<Vec<(usize, Judged)>>,
+    member_scores: Vec<Vec<(usize, f64)>>,
 }
 
 enum Mode<'a> {
@@ -150,6 +152,7 @@ impl Output<'_> {
             model_guard: false,
             run_model: None,
             members: Vec::new(),
+            member_scores: Vec::new(),
         }
     }
 
@@ -170,6 +173,7 @@ impl Output<'_> {
             model_guard: false,
             run_model: None,
             members: Vec::new(),
+            member_scores: Vec::new(),
         }
     }
 
@@ -264,14 +268,12 @@ impl Output<'_> {
                     .ok_or(Failure::Defect("a ranked row carries no probability"))
             })
             .collect::<Result<Vec<f64>, Failure>>()?;
-        for place in ranking(&odds, *top) {
-            let Some(judged) = held.get(place) else {
+        for (at, place) in ranking(&odds, *top).into_iter().enumerate() {
+            let Some(judged) = held.get_mut(place) else {
                 continue;
             };
-            if let Some(mismatch) = held
-                .get(place)
-                .and_then(|judged| judged.profile_mismatch.as_ref())
-            {
+            judged.finish_rank(at, None)?;
+            if let Some(mismatch) = judged.profile_mismatch.as_ref() {
                 mismatch.print_once()?;
             }
             if !self.display.emit(&mut **writer, judged)? {
@@ -394,3 +396,5 @@ mod rank_set;
 
 #[cfg(test)]
 mod rank_set_tests;
+
+pub(crate) mod rank;

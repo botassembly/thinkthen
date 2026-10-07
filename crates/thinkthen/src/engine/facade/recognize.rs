@@ -73,6 +73,7 @@ impl Engine {
 
     /// Recognize the names in one text, then relate them when rules were given.
     /// A text over `limit` bytes is refused before any request.
+    #[cfg(test)]
     pub(crate) fn recognize(
         &self,
         spec: &RecognizeSpec,

@@ -44,12 +44,22 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
         T: InputEvidence,
     {
+        let options = options.started()?;
+        options.admission()?;
         let mut bytes = 0usize;
-        let units = units.into_iter().enumerate().map(|(at, unit)| {
-            unit.and_then(|unit| prepare(unit, &mut bytes))
-                .map_err(|error| error.at_record(at))
-        });
-        let units = self.try_within_limit(units)?.collect::<Vec<_>>();
+        let maximum =
+            crate::core::Find::maximum(question.kind == crate::public::question::Kind::FindNone);
+        let units = units
+            .into_iter()
+            .take(maximum + 1)
+            .enumerate()
+            .map(|(at, unit)| {
+                unit.and_then(|unit| prepare(unit, &mut bytes))
+                    .map_err(|error| error.at_record(at))
+            });
+        let units = self
+            .try_within_admission(units, &options)?
+            .collect::<Vec<_>>();
         let inputs = units
             .iter()
             .map(|unit| std::sync::Arc::clone(&unit.input))

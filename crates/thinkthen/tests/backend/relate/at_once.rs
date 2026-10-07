@@ -83,10 +83,16 @@ fn split_relations_print_what_one_job_prints() {
         let four = reversed(&listener, "4", details);
         assert_eq!(one.status.code(), Some(0), "{}", said(&one));
         assert!(!one.stdout.is_empty());
-        assert_eq!(
-            String::from_utf8_lossy(&four.stdout),
-            String::from_utf8_lossy(&one.stdout)
-        );
+        if details {
+            let judgment = |output: &Output| {
+                crate::native_results::compatibility::judgment(
+                    serde_json::from_slice(&output.stdout).unwrap(),
+                )
+            };
+            assert_eq!(judgment(&four), judgment(&one));
+        } else {
+            assert_eq!(four.stdout, one.stdout);
+        }
         assert_eq!((four.status.code(), said(&four)), (Some(0), String::new()));
         assert_eq!(listener.requests().len(), 12);
         assert!(listener.peak() > 1, "peak {}", listener.peak());

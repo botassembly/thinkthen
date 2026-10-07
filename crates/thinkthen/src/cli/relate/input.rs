@@ -21,6 +21,7 @@ pub(super) fn read(
     };
     let mut pairs = Vec::new();
     for record in records {
+        record.validate_item(spec.metadata.item_schema.as_ref())?;
         pairs.push((
             name_of(&record, spec)?.to_owned(),
             record.entity_text(spec.kind_field())?.to_owned(),
@@ -68,7 +69,11 @@ fn lines(
     let reading = Reading::new(Framing::Lines, Vec::new())?;
     let mut pairs = Vec::new();
     for bytes in Chunks::new(source, true) {
-        pairs.push((reading.as_it_arrived(&bytes?)?.to_owned(), "*".to_owned()));
+        let bytes = bytes?;
+        reading
+            .record(&bytes)?
+            .validate_item(spec.metadata.item_schema.as_ref())?;
+        pairs.push((reading.as_it_arrived(&bytes)?.to_owned(), "*".to_owned()));
     }
     admitted(spec, &pairs)
 }

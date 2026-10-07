@@ -1,95 +1,107 @@
-//! Source coordinates for recognized spans without changing model evidence.
-
+//! Typed physical span presentation; evidence and answer identity stay unchanged.
 use crate::SourceRecord;
-use crate::cli::intake::{self, Position};
+use crate::cli::intake::{Position, SourceFields};
+use crate::core::{self, RecognizedName, RecognizedValue, RelationEdge};
 use crate::failure::Failure;
+use serde::{Serialize, Serializer};
 
-pub(super) fn locate(
-    line: &mut Option<String>,
-    position: &Position,
+#[derive(Serialize)]
+pub(super) struct Entity<'a> {
+    #[serde(flatten)]
+    entity: &'a RecognizedName,
+    #[serde(flatten)]
+    coordinates: SourceFields<'a>,
+}
+#[derive(Serialize)]
+struct Relation<'a> {
+    relation: &'a str,
+    source: Entity<'a>,
+    target: Entity<'a>,
+    probability: f64,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    either: bool,
+}
+#[derive(Serialize)]
+pub(super) struct Located<'a> {
+    entities: Vec<Entity<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relations: Option<Vec<Relation<'a>>>,
+}
+pub(super) fn located<'a>(
+    value: &'a RecognizedValue,
+    position: &'a Position,
     text: &str,
-    streams: bool,
-    details: bool,
-) -> Result<(), Failure> {
-    let Some(original) = line.as_ref() else {
-        return Ok(());
-    };
-    let mut json: serde_json::Value = serde_json::from_str(original)
-        .map_err(|_| Failure::Defect("recognize output is not JSON"))?;
-    let value = if streams || details {
-        json.get_mut("value")
-    } else {
-        Some(&mut json)
-    }
-    .ok_or(Failure::Defect("recognize output has no value"))?;
-    let record = SourceRecord {
-        record: text,
-        file: position.file.clone().unwrap_or_default(),
-        first_line: position.first.unwrap_or(1),
-        last_line: position.last.unwrap_or(1),
-    };
+) -> Result<Located<'a>, Failure> {
     let entities = value
-        .get_mut("entities")
-        .and_then(serde_json::Value::as_array_mut)
-        .ok_or(Failure::Defect("recognize output has no entities"))?;
-    for entity in entities {
-        locate_span(&record, entity)?;
-    }
-    if let Some(relations) = value
-        .get_mut("relations")
-        .and_then(serde_json::Value::as_array_mut)
-    {
-        for relation in relations {
-            locate_relation(&record, relation)?;
-        }
-    }
-    *line = Some(
-        serde_json::to_string(&json)
-            .map_err(|_| Failure::Defect("located recognition could not be written"))?,
-    );
-    if streams || details {
-        intake::source_members(line, Some(position))?;
-    } else if let Some(line) = line {
-        *line = intake::source_value(&text, line, position)?;
-    }
-    Ok(())
+        .entities
+        .iter()
+        .map(|name| entity(name, position, text))
+        .collect::<Result<_, _>>()?;
+    let relations = value
+        .relations
+        .as_ref()
+        .map(|edges| {
+            edges
+                .iter()
+                .map(|edge: &RelationEdge<_>| {
+                    Ok(Relation {
+                        relation: &edge.relation,
+                        source: entity(&edge.source, position, text)?,
+                        target: entity(&edge.target, position, text)?,
+                        probability: edge.probability,
+                        either: edge.either,
+                    })
+                })
+                .collect::<Result<_, Failure>>()
+        })
+        .transpose()?;
+    Ok(Located {
+        entities,
+        relations,
+    })
 }
-
-fn locate_span(record: &SourceRecord<&str>, entity: &mut serde_json::Value) -> Result<(), Failure> {
-    let start = entity
-        .get("start")
-        .and_then(serde_json::Value::as_u64)
-        .and_then(|n| usize::try_from(n).ok());
-    let end = entity
-        .get("end")
-        .and_then(serde_json::Value::as_u64)
-        .and_then(|n| usize::try_from(n).ok());
-    let (first, last) = record
-        .span_lines(
-            start.ok_or(Failure::Defect("recognized span has no start"))?,
-            end.ok_or(Failure::Defect("recognized span has no end"))?,
-        )
-        .map_err(|_| Failure::Defect("recognized span is outside its source"))?;
-    let entity = entity
-        .as_object_mut()
-        .ok_or(Failure::Defect("recognized entity is not an object"))?;
-    entity.insert(
-        "file".to_owned(),
-        serde_json::Value::from(record.file.clone()),
-    );
-    entity.insert("first_line".to_owned(), serde_json::Value::from(first));
-    entity.insert("last_line".to_owned(), serde_json::Value::from(last));
-    Ok(())
-}
-
-fn locate_relation(
-    record: &SourceRecord<&str>,
-    relation: &mut serde_json::Value,
-) -> Result<(), Failure> {
-    for endpoint in ["source", "target"] {
-        if let Some(entity) = relation.get_mut(endpoint) {
-            locate_span(record, entity)?;
+fn entity<'a>(
+    name: &'a RecognizedName,
+    position: &'a Position,
+    text: &str,
+) -> Result<Entity<'a>, Failure> {
+    let lines = match (position.first, position.last) {
+        (Some(first_line), Some(last_line)) => {
+            let record = SourceRecord {
+                record: text,
+                file: String::new(),
+                first_line,
+                last_line,
+            };
+            Some(
+                record
+                    .span_lines(name.start, name.end)
+                    .map_err(|_| Failure::Defect("recognized span is outside its source"))?,
+            )
         }
+        (None, None) => None,
+        _ => {
+            return Err(Failure::Defect(
+                "recognized source has incomplete coordinates",
+            ));
+        }
+    };
+    Ok(Entity {
+        entity: name,
+        coordinates: SourceFields {
+            file: position.file.as_deref(),
+            first_line: lines.map(|(first, _)| first),
+            last_line: lines.map(|(_, last)| last),
+        },
+    })
+}
+pub(super) struct Complete<'a> {
+    pub(super) canonical: &'a core::CompleteRecognition,
+    pub(super) value: Located<'a>,
+}
+impl Serialize for Complete<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.canonical
+            .serialize_with_value(self.canonical.input.as_ref(), &self.value, serializer)
     }
-    Ok(())
 }

@@ -281,3 +281,5 @@ impl Serialize for RelationDirection
 ```
 
 Saved native find preparation now uses the common ordered grammar and capped reader, retains model/profile and rejects authored cuts/candidates/batch. Actual execution retains original units and partial reported usage; CLI file selection shares the same parser and fields. Complete CLI result/2/schema adoption remains in progress.
+
+Native foundation update: all ten concrete complete functions retain full actual distributions, admitted readings, original inputs, observation/answer/failure identities, actual provenance and independently optional usage. Plain, score and saved-set rank include final numeric positions and complete member observations; find exposes raw versus synthetic-none selection. Typed physical recognition and relation views avoid host parsing of known result JSON. CLI result/2, strict generated/package schemas and actual public examples/corpus are implemented. Host/SQL adoption and root whole review/landing remain open.

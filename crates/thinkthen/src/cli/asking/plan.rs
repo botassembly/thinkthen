@@ -74,8 +74,8 @@ pub(super) fn packed(
         let mut entries = Vec::new();
         for plan in planner.plans(&held)? {
             dropped |= built_in::drops_detail(&plan);
-            let asks =
-                pack::asks(backend.url(), &plan).map_err(|error| super::encoded(&plan, error))?;
+            let asks = pack::asks_for(backend.api_type(), backend.url(), &plan)
+                .map_err(|error| super::encoded(&plan, error))?;
             entries.extend(
                 asks.into_iter()
                     .filter(|ask| seen.insert(ask.key))
@@ -140,7 +140,8 @@ fn packer(
     let packer = Packer::new(limits, model);
     if let Some(context) = planner.context.as_ref() {
         let state = pack::state(context)
-            .map_err(|_| Failure::Defect("a context could not be written as JSON"))?;
+            .map_err(|_| Failure::Defect("a context could not be written as JSON"))?
+            .with_api(backend.api_type());
         packer
             .check_state(&state)
             .map_err(|error| planner.refused(error))?;

@@ -293,7 +293,7 @@ impl RecognizeBuilder {
 /// One recognized name, its place in the text, its kind, and its strength.
 /// Offsets count Unicode scalar values.
 #[derive(Clone, PartialEq)]
-pub struct RecognizedEntity(RecognizedName);
+pub struct RecognizedEntity(pub(crate) RecognizedName);
 
 impl fmt::Debug for RecognizedEntity {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -476,6 +476,9 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<crate::public::Call<Recognized>, Error> {
+        ask.0
+            .metadata
+            .validate_item(&crate::public::QuestionInput::Text(evidence.to_owned()))?;
         let engine =
             crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);

@@ -3,11 +3,11 @@ mod annotate;
 mod find;
 mod many;
 mod rank;
+mod rank_set;
 mod recognize;
 mod records;
 mod relate;
 mod streaming;
-mod trace;
 use crate::core::{self, Value};
 use crate::public::engine::only;
 use crate::public::question::{Kind, Question};
@@ -133,7 +133,7 @@ impl Engine {
         let attempts = call.facts().attempts().map(<[_]>::to_vec);
         let engine = self.asking(question)?;
         call.try_map(|(judged, keys)| {
-            atomic(
+            let mut result = atomic(
                 run(&engine, question, self.profile.as_ref()),
                 &judged,
                 spec(function, question, judged.value.clone(), 0),
@@ -141,7 +141,9 @@ impl Engine {
                 None,
                 attempts,
             )
-            .map_err(|_| Error::defect("a complete result could not be constructed"))
+            .map_err(|_| Error::defect("a complete result could not be constructed"))?;
+            result.source = physical_source(input);
+            Ok(result)
         })
     }
 }
@@ -179,7 +181,7 @@ fn run<'a>(
 
 fn spec(function: InputFunction, question: &Question, shown: Value, record: usize) -> AtomicSpec {
     AtomicSpec {
-        declarations: question.metadata.clone(),
+        declarations: question.reading_metadata(),
         function,
         record,
         question: question.core.clone(),
@@ -241,4 +243,17 @@ pub(crate) fn contextual(
             .clone()
             .with_aggregate_context(Some(context.to_owned())),
     ))
+}
+
+fn physical_source(input: &QuestionInput) -> Option<core::CompletePhysicalSource> {
+    let source = match input {
+        QuestionInput::Text(_) => None,
+        QuestionInput::Images(images) => images.location(),
+        QuestionInput::Record(record) => record.location(),
+    }?;
+    Some(core::CompletePhysicalSource {
+        file: source.file().to_owned(),
+        first_line: source.first_line(),
+        last_line: source.last_line(),
+    })
 }
