@@ -128,7 +128,7 @@ fn complete_find_keeps_its_whole_set_question_and_all_ordered_probabilities() {
     };
     let document = json_line(&canonical).unwrap();
     assert!(document.starts_with(&format!(
-        r#"{{"schema":"thinkthen.result/2","answer_id":"{}","value":null,"question":{{"verb":"find","text":"Which one?","none":true}},"answer":{{"kind":"find","pick":"none","probabilities":{{"u001":0.3,"u002":0.2,"none":0.5}}}},"threshold":null,"meta":"#,
+        r#"{{"schema":"thinkthen.result/2","answer_id":"{}","value":null,"index":null,"question":{{"verb":"find","text":"Which one?","none":true}},"answer":{{"kind":"find","pick":"none","probabilities":{{"u001":0.3,"u002":0.2,"none":0.5}}}},"threshold":null,"meta":"#,
         "a".repeat(64),
     )));
     assert!(!document.contains("confidence"));
