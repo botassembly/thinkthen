@@ -30,3 +30,11 @@ Family checklist:
 - [x] Retained whole-family review and bounded index-fix review accept the changes.
 
 This completes the C-based family follow-up only. Other surface rows and final global/platform qualification keep 0432 open. Actual C ABI agreement remains mandatory under separate ticket 0459.
+
+## Required final checkpoint integration
+
+The existing `test-full-cases --run` checkpoint now requires complete parity through `surfaces --full-functional`. It executes the shared public suite once, retains the separate C private-safety checks and preserves package, install-smoke and artifact-staging steps. Runtime HOME/XDG directories remain owned; explicit offline package caches and one build job are retained. Rust-only hosted CI keeps its existing scope.
+
+Thirteen focused tests passed, including missing/skipped-cell and exit-77 refusals, actual checkpoint dispatch, failure stopping and the supported full-functional publication-staging combination. Policy and full lint passed on `9d0bd8a06`. Fresh read-only whole-integration review accepted that commit against `0d78347db` without findings. Prior source and installed family qualification remains retained.
+
+The combined 29-consumer execution has not run. It waits for reviewed 0460 and 0444 checkpoints and coordinator assignment. The required run admits no selectors or skipped cells; MCP requires 251 cases and other consumers require 248. Actual C ABI agreement remains mandatory under 0459. Overall 0432 stays open. During the later run, remove only the TypeScript consumer's own generated `native_case.js` after that consumer finishes; its existing check does not clean that output. Offline caches and useful logs remain available for the combined run.
