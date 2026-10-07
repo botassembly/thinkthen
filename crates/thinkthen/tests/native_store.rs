@@ -298,6 +298,7 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
 }
 
 #[path = "native_store/conversion.rs"]
+#[cfg(feature = "cli")]
 mod conversion;
 #[path = "native_store/history.rs"]
 mod history;
