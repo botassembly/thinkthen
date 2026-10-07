@@ -2,7 +2,7 @@
 // Private strict result/2 carriers; no native execution is projected here.
 const models = {
   "Position": {"file?":"str","first?":"positive","last?":"positive","images?":"[str]"},
-  "Usage": {"input_tokens":"uint","output_tokens":"uint"},
+  "Usage": {"input_tokens?":"uint","output_tokens?":"uint"},
   "ProfileWarning": {"tuned_for":"str","running":"str"},
   "BatchWarning": {"tuned_for":"batch","running":"batch"},
   "Attempt": {"ordinal":"positive","request_sha256":"Digest","wall_ms":"uint","outcome":"outcome","sdk_request_id":"SdkRequestId","status?":"uint","server_ms?":"uint","request_id?":"str"},
@@ -47,7 +47,9 @@ const models = {
   "TagResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"[str]","question":"TagQuestion","answer":"Tags","threshold":"threshold","input?":"json","position?":"Position","input_file?":"str","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint"},
   "ScoreResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"number","question":"ScoreQuestion","answer":"Score","threshold":"null","input?":"json","position?":"Position","input_file?":"str","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","images?":"[NativeImage]","index?":"uint"},
   "FilterResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"bool","input":"json","question":"DecideQuestion","answer":"YesNo","threshold":"threshold","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint"},
-  "RankResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"positive","input":"json","question":"AtomicQuestion","answer":"AtomicAnswer","threshold":"null","question_name?":"str","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint"},
+  "RankMemberResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","value":"positive","question":"DecideQuestion","answer":"YesNo","threshold":"null","meta":"Meta","source?":"PhysicalSource"},
+  "RankMember": {"name":"str","result":"RankMemberResult"},
+  "RankResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"positive","input":"json","question":"AtomicQuestion","answer":"AtomicAnswer","threshold":"null","question_name?":"str","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint","members?":"[RankMember]"},
   "FindResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"json","question":"FindQuestion","answer":"FindAnswer","threshold":"null","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","index?":"uint|null","candidates?":"[FindCandidate]"},
   "AnnotateResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","input":"json","value":"{AnnotatedValue}","answers":"{AnnotationEntry}","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","index?":"uint","source?":"PhysicalSource"},
   "RecognizeResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"Recognition","question":"RecognizeQuestion","answer":"RecognitionAnswer","input?":"json","file?":"str","first_line?":"positive","last_line?":"positive","index?":"uint","source?":"PhysicalSource"},
@@ -210,6 +212,8 @@ function check(kind, v) {
   }
   if (kind === 'Position' && (has(v, 'first') !== has(v, 'last') || (has(v, 'first') && (!has(v, 'file') || v.last < v.first)))) invalid();
   if (['Entity', 'Endpoint'].includes(kind) && (has(v, 'first_line') !== has(v, 'last_line') || (has(v, 'first_line') && (!has(v, 'file') || v.last_line < v.first_line)))) invalid();
+  if (kind === 'Usage' && Object.keys(v).length===0) invalid();
+  if (kind === 'RankResult' && 'members' in v && (!v.members.length || !('question_name' in v) || v.question.verb!=='decide' || v.answer.kind!=='yes_no')) invalid();
   if (kind === 'RankResult' && !['yes_no', 'score'].includes(v.answer.kind)) invalid();
   if (['DecideResult', 'FilterResult'].includes(kind) && v.threshold === null) invalid();
   if (kind.endsWith('Result') && (kind === 'AnnotateResult') !== has(v.meta, 'questions_sha256')) invalid();

@@ -24,7 +24,7 @@ module ThinkThen
     MODELS = JSON.parse(<<~JSON).freeze
 {
   "Position": {"file?":"str","first?":"positive","last?":"positive","images?":"[str]"},
-  "Usage": {"input_tokens":"uint","output_tokens":"uint"},
+  "Usage": {"input_tokens?":"uint","output_tokens?":"uint"},
   "ProfileWarning": {"tuned_for":"str","running":"str"},
   "BatchWarning": {"tuned_for":"batch","running":"batch"},
   "Attempt": {"ordinal":"positive","request_sha256":"Digest","wall_ms":"uint","outcome":"outcome","sdk_request_id":"SdkRequestId","status?":"uint","server_ms?":"uint","request_id?":"str"},
@@ -69,7 +69,9 @@ module ThinkThen
   "TagResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"[str]","question":"TagQuestion","answer":"Tags","threshold":"threshold","input?":"json","position?":"Position","input_file?":"str","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint"},
   "ScoreResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"number","question":"ScoreQuestion","answer":"Score","threshold":"null","input?":"json","position?":"Position","input_file?":"str","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","images?":"[NativeImage]","index?":"uint"},
   "FilterResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"bool","input":"json","question":"DecideQuestion","answer":"YesNo","threshold":"threshold","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint"},
-  "RankResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"positive","input":"json","question":"AtomicQuestion","answer":"AtomicAnswer","threshold":"null","question_name?":"str","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint"},
+  "RankMemberResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","value":"positive","question":"DecideQuestion","answer":"YesNo","threshold":"null","meta":"Meta","source?":"PhysicalSource"},
+  "RankMember": {"name":"str","result":"RankMemberResult"},
+  "RankResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"positive","input":"json","question":"AtomicQuestion","answer":"AtomicAnswer","threshold":"null","question_name?":"str","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","source?":"PhysicalSource","index?":"uint","members?":"[RankMember]"},
   "FindResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"json","question":"FindQuestion","answer":"FindAnswer","threshold":"null","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","index?":"uint|null","candidates?":"[FindCandidate]"},
   "AnnotateResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","input":"json","value":"{AnnotatedValue}","answers":"{AnnotationEntry}","position?":"Position","file?":"str","first_line?":"positive","last_line?":"positive","index?":"uint","source?":"PhysicalSource"},
   "RecognizeResult": {"schema":"=thinkthen.result/2","answer_id":"AnswerId","meta":"Meta","value":"Recognition","question":"RecognizeQuestion","answer":"RecognitionAnswer","input?":"json","file?":"str","first_line?":"positive","last_line?":"positive","index?":"uint","source?":"PhysicalSource"},
@@ -261,6 +263,8 @@ module ThinkThen
       if %w[Entity Endpoint].include?(kind)
         invalid if v.key?("first_line") != v.key?("last_line") || (v.key?("first_line") && (!v.key?("file") || v["last_line"] < v["first_line"]))
       end
+      invalid if kind == "Usage" && v.empty?
+      invalid if kind == "RankResult" && v.key?("members") && (v["members"].empty? || !v.key?("question_name") || v["question"]["verb"] != "decide" || v["answer"]["kind"] != "yes_no")
       invalid if kind == "RankResult" && !%w[yes_no score].include?(v["answer"]["kind"])
       invalid if %w[DecideResult FilterResult].include?(kind) && v["threshold"].nil?
       invalid if kind.end_with?("Result") && (kind == "AnnotateResult") != v["meta"].key?("questions_sha256")

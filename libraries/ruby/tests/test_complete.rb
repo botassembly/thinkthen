@@ -44,6 +44,22 @@ class CompleteCarrierTest < Minitest::Test
     assert_same C::ABSENT, empty.meta.answered_by
     assert_equal false, empty.meta.cached
   end
+  def test_rank_members_keep_partial_usage_and_reject_unknown_child_fields
+    child = FIXTURE["results"][0]["result"].slice("schema","answer_id","question","answer","meta")
+    child = Marshal.load(Marshal.dump(child)).merge("value"=>3,"threshold"=>nil)
+    child["meta"]["usage"]={"input_tokens"=>2}
+    parent=FIXTURE["results"][5]["result"].merge("question"=>child["question"],"answer"=>child["answer"],"question_name"=>"saved","members"=>[{"name"=>"saved","result"=>child}])
+    result=C.decode("RankResult",parent)
+    assert_equal 3,result.members.first.result.value
+    assert_same C::ABSENT,result.members.first.result.meta.usage.output_tokens
+    assert_equal parent,C.to_json_value(result)
+    [{"value"=>0},{"input"=>false},{"members"=>[]}].each do |change|
+      invalid=Marshal.load(Marshal.dump(parent));invalid["members"][0]["result"].merge!(change)
+      assert_raises(ArgumentError) { C.decode("RankResult",invalid) }
+    end
+    [[],nil,[{"name"=>"saved"}]].each { |members| assert_raises(ArgumentError) { C.decode("RankResult",parent.merge("members"=>members)) } }
+    assert_raises(ArgumentError) { C.decode("Usage",{}) }
+  end
   def test_ids_facts_and_started_failures_refuse_synthetic_metadata
     facts = C.decode("Facts", FIXTURE["facts"])
     assert_instance_of C::CallId, facts.call_id

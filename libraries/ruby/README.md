@@ -107,3 +107,5 @@ identity. Carrier inspection withholds contents. Existing bare calls retain
 their behavior.
 
 Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.
+
+Rank set results retain ordered `members`, each with its saved `name` and typed `RankMemberResult`. The child carries its own positive member position, answer ID, authored question, probability, source and metadata; the parent carries the final turns position and winner. Usage dimensions remain independently optional. Parent and member usage overlap; use the final call facts for invocation totals. Ordinary ranks retain absent members.

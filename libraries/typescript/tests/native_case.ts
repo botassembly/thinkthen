@@ -41,7 +41,15 @@ async function main() {
       case 'tag': { const v=await engine.complete.tag(q,input,control); const p:Readonly<Record<string,number>>|undefined=v.results[0]?.answer.probabilities; done=v; break; }
       case 'score': { const v=await engine.complete.score(q,input,control); const p:Readonly<Record<string,number>>|undefined=v.results[0]?.answer.probabilities; done=v; break; }
       case 'filter': done=await engine.complete.filter(q,input,control); break;
-      case 'rank': { const v=await engine.complete.rank(q,input,control); const place:number|undefined=v.results[0]?.value; done=v; break; }
+      case 'rank': { const v=await engine.complete.rank(q,input,control); const place:number|undefined=v.results[0]?.value;
+        const members:readonly C.RankMember[]|undefined=v.results[0]?.members;
+        for(const member of members??[]) {
+          const result:C.RankMemberResult=member.result;
+          const id:C.AnswerId=result.answer_id, position:number=result.value, probability:number=result.answer.probability;
+          const question:C.DecideQuestion=result.question, usage:C.Usage|undefined=result.meta.usage, source:C.PhysicalSource|undefined=result.source;
+          if(id.length!==64||position<=0||!Number.isFinite(probability)) throw new Error('native rank member');
+        }
+        done=v; break; }
       case 'find': { const v=await engine.complete.find(q,input,control); const candidates:readonly C.FindCandidate[]|undefined=v.results[0]?.candidates; const index:number|null|undefined=v.results[0]?.index; done=v; break; }
       case 'annotate': { const v=await engine.complete.annotate(q,input,control); const a:C.AnnotationEntry|undefined=v.results[0]?.answers['ready']; done=v; break; }
       case 'recognize': { const v=await engine.complete.recognize(q,input,control); const end:number|undefined=v.results[0]?.value.entities[0]?.end; done=v; break; }

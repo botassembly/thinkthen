@@ -83,24 +83,28 @@ pub(crate) struct Engine(pub(crate) thinkthen::Engine);
 
 #[pymethods]
 impl Engine {
+    #[pyo3(signature = (request, deadline, token, surface=None))]
     fn _complete_batch(
         &self,
         py: Python<'_>,
         request: String,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
+        surface: Option<&str>,
     ) -> PyResult<crate::complete_stream::CompleteStream> {
-        complete_calls::stream(&self.0, py, request, deadline, token)
+        complete_calls::stream(&self.0, py, request, deadline, token, surface)
     }
     /// Execute a typed complete request through the shared native engine.
+    #[pyo3(signature = (request, deadline, token, surface=None))]
     fn _complete(
         &self,
         py: Python<'_>,
         request: String,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
+        surface: Option<&str>,
     ) -> PyResult<Py<PyAny>> {
-        complete_calls::call(&self.0, py, request, deadline, token)
+        complete_calls::call(&self.0, py, request, deadline, token, surface)
     }
 
     /// Start from what `thinkthen` reads from the environment, then apply
