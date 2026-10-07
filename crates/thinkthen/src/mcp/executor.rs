@@ -98,7 +98,7 @@ fn atomic<'a>(
     engine: &'a Engine,
     q: &'a LoadedQuestion,
     invocation: &'a Invocation,
-    mut records: super::composition::Inputs<'a>,
+    records: super::composition::Inputs<'a>,
     controls: crate::CallOptions<'a>,
     single: bool,
 ) -> Result<NativeReply, Error> {
@@ -107,21 +107,6 @@ fn atomic<'a>(
             return Err(Error::usage("find takes no band"));
         };
         return reply(engine.try_find_records_complete_with(q, records, controls)?);
-    }
-    // Images on the atomic door remain one indivisible ordered input.
-    if single && !invocation.arguments.images.is_empty() {
-        let original = records
-            .next()
-            .ok_or_else(|| Error::defect("missing image input"))??
-            .original;
-        return match invocation.tool {
-            Tool::Decide => reply(engine.decide_input_complete_with(q, &original, controls)?),
-            Tool::Choose => reply(engine.choose_input_complete_with(q, &original, controls)?),
-            Tool::Score => {
-                reply(engine.score_input_complete_with(plain(q)?, &original, controls)?)
-            }
-            _ => Err(Error::usage("this function takes text only")),
-        };
     }
     match invocation.tool {
         Tool::Decide => rows_reply(
@@ -250,6 +235,14 @@ fn apply(prepared: &mut PreparedQuestion, invocation: &Invocation) -> Result<(),
         && let Some(model) = &options.model
     {
         ask.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
+    }
+    if let PreparedQuestion::Dynamic(q) = prepared {
+        if let Some(model) = &options.model {
+            *q = q.clone().model(model)?;
+        }
+        if let Some(threshold) = &options.threshold {
+            *q = q.clone().cut_at(threshold.native()?.bounds().0)?;
+        }
     }
     Ok(())
 }

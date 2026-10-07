@@ -385,7 +385,9 @@ struct ActiveCall {
 }
 impl ActiveCall {
     fn retire(&mut self) {
-        let Some(id) = self.id.take() else { return; };
+        let Some(id) = self.id.take() else {
+            return;
+        };
         if let Ok(mut registry) = self.registry.lock()
             && registry.as_ref().is_some_and(|call| call.id == id)
         {

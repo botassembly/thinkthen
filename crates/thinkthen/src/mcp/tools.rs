@@ -80,8 +80,8 @@ fn input_schema(tool: Tool) -> Value {
         "options":{"type":"object","additionalProperties":false,"properties":{
             "deadline_ms":{"type":"integer","minimum":-1,"maximum":4294967295000u64},
             "max_requests_total":{"type":"integer","minimum":0},
-            "batch":{"type":"integer","minimum":1},"context":{"type":"string"},
-            "field":{"type":"string"},"context_field":{"type":"string"},"options_field":{"type":"string"},
+            "batch":{"oneOf":[{"type":"integer","minimum":1},{"const":"max"}]},"context":{"type":"string"},
+            "field":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]},"context_field":{"type":"string"},"options_field":{"type":"string"},
             "model":{"type":"string"},"attempts":{"type":"boolean"},
             "threshold":{"oneOf":[{"type":"number"},{"type":"string"}]},"top":{"type":"integer","minimum":0},"files_only":{"type":"boolean"},"none":{"type":"boolean"}}}
     });

@@ -1,12 +1,14 @@
 # ThinkThen local MCP
 
-Ticket 0455 is **WIP**. The private Rust protocol/admission implementation and
-this named stdio consumer exist. `thinkthen mcp` is deliberately unexposed until
-the shared native complete execution and result/2 serializers are adopted.
-`check.sh` fails against the current command; protocol fixtures are not parity.
-There is no published additional package or running daemon.
+The development command exposes `thinkthen mcp` over local stdio with exactly
+`decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`,
+`recognize` and `relate`. It uses one environment-resolved native Engine and its
+default persistent cache. No additional package, daemon or publication is made.
+Full 0455 acceptance remains open: native located serialization and dynamic
+choose saved-model/on preparation, complete shared parity, timing and final Windows
+qualification are still required.
 
-After the completed 0.2 command is published, install the ordinary command:
+After 0.2 is published, install the ordinary command:
 
 ```sh
 cargo install thinkthen --version 0.2.0 --locked
@@ -18,123 +20,101 @@ A client launches the command directly:
 {"command":"thinkthen","args":["mcp"]}
 ```
 
-Startup will retain the admitted CLI spellings for backend/URL, model, timeout,
-retry and process admission limits, cache/no-cache, record and strict replay.
-Keys come only from the approved environment variables, never a tool argument.
-The server owns one `EngineBuilder::from_env()` engine with its default cache.
-Do not select `shared_host()`, invoke a shell or start a command per tool call.
+Startup accepts the existing backend/URL, model, profile, timeout, retry, jobs,
+request/admission limits, cache/no-cache/refresh-cache, record and strict replay settings.
+Keys come only from the approved environment variables. A tool cannot change
+the route or key. The server neither invokes a shell nor starts a process per
+call. Count-only usage follows the native engine.
 
-`client.py` is a dependency-free consumer with explicit `decide`, `choose`,
-`tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`
-methods. It initializes one subprocess, checks matching JSON-RPC IDs and
-structured/text equivalence, retains false/null and partial failures, and
-raises `ToolError` with the native error/facts object on a failed call.
-`pending_id` and `cancel(id)` let another thread cancel a held call; cancellation
-wakes the caller with `CancelledError`, and the session can continue. Closing
-cancels through EOF and waits for this owned subprocess alone.
+`client.py` is a dependency-free consumer with ten explicit methods. It owns one
+subprocess, checks matching JSON-RPC IDs and structured/text equivalence, retains
+false/null and partial failures, and raises `ToolError` with the native complete
+error/facts object. `pending_id` and `cancel(id)` let another thread cancel held
+work. Cancellation wakes the caller with `CancelledError`; the session can
+continue after the native attempt joins. Closing sends EOF and waits for the
+owned subprocess. Stdout contains only JSON-RPC.
 
-Pass inline literal text, including `@` prefixes, or the existing ordinary JSON
-question/set/plan grammar as `question`. Use `question_file` for an explicit
-ordinary file. They are exclusive. Choose/tag/score descriptions and ordering
-use the shared JSON question grammar. Evidence, original typed records and an
-explicit `source` are exclusive. Source paths use the native line/window/file
-reader; locations are separate carriers. Explicit `images` are ordered file
-attachments (duplicates survive), optionally beside text evidence. Only
-`decide`, `choose` and `score` accept images. Image folders use source media
-image and whole-file units. No method creates question files or acts on answers.
+For a reviewed development checkout, run with `PYTHONPATH=libraries/mcp` from
+the repository root. This no-key example uses the demo's exact saved answer:
+
+```python
+from client import Client
+from pathlib import Path
+with Client.launch(("thinkthen", "mcp", "--replay",
+                    "demos/01-refund-gate/recording", "--no-cache")) as client:
+    call = client.decide(question="Does the customer ask for money back?",
+                         evidence=Path("demos/01-refund-gate/message.txt").read_text())
+    print(call["value"]["value"])
+```
+
+Use inline literal text, including `@` prefixes, or the ordinary native JSON
+question/set/plan grammar as `question`. `question_file` explicitly loads an
+ordinary existing file. `question_name` loads a validated name from the native
+config questions folder. These three selectors are exclusive. The agent writes
+its own question files; the server creates none. Authored question names,
+wording versions, declarations, descriptions and ordering remain native.
+
+Evidence, original JSON `records` and an explicit `source` are exclusive. Source
+is `{paths:[...],unit:"line"|"window"|"file",window?,media?}`; it uses the native
+reader and composition, with folder order and repeated paths preserved. No path
+silently becomes evidence. Explicit `images` are ordered PNG/JPEG attachments,
+including duplicates, optionally beside text evidence. Only decide/choose/score
+admit images. Image source requires file units. Seven other functions refuse
+images before reading files or sending.
+
+Per-call `options` admits model, threshold, shared context, field or ordered
+field list, per-item context/candidate pointers, batch (integer or `max`), rank top, find none,
+filter files-only, deadline, attempt capture and send limits. The deadline starts
+before preparation and remains shared through execution. Literal evidence never
+becomes parsed JSON to satisfy an authored pointer or declaration. Structural
+selection requires explicit records or native source composition.
+
+Successes return unchanged native complete call envelopes and the packaged native
+output schema. Safe errors use `Error::complete()`, including joined started-call
+facts. Admission failures invent no call facts. No adapter rewrites schemas,
+origins, IDs, timing, models or cache hits. Native calls stamp the closed `mcp`
+surface and compiled-engine User-Agent, call ID and request ID.
 
 Run the independent client fixtures with `python3 libraries/mcp/test_client.py`.
-The existing surface consumer is `sh libraries/mcp/check.sh LOOPBACK_PORT`.
-`installed.py ABSOLUTE_BINARY` performs initialization, ping, the ten-tool
-catalog and an actual recorded decide call through an installed executable.
-`conformance.py LOOPBACK_PORT ABSOLUTE_BINARY` makes actual named calls for 25
-shared behavior cases, including false/null, ties, empty results, record ordering,
-full-set selection, annotations, spans and edges. It checks native complete
-results and emits only those executed behavior cells. Remaining required cells
-stay missing in the shared parity runner. No fixture test emits parity. The
-named client rejects duplicate/nonfinite JSON and mismatched content types or
-authored order; false cannot be accepted as zero.
+`installed.py ABSOLUTE_BINARY` initializes, pings, reads the ten-tool catalog and
+makes an actual recorded decide call. Release smoke runs it against the unpacked
+executable and checks its existing backend counter for zero sends.
+`conformance.py LOOPBACK_PORT ABSOLUTE_BINARY` executes 25 shared behavior cases
+through named public methods. `test_installed.py ABSOLUTE_BINARY ABSOLUTE_BACKEND`
+uses an owned loopback backend and scratch home for names/files, sources,
+controls, secrecy, cache/replay, cancellation and EOF. Required cells beyond the
+executed consumer remain missing in the shared parity runner; fixture success
+never qualifies parity.
 
-Unix stdio uses owned unbuffered descriptors and bounded polling. Windows now
-has private `PipeInput`/`PipeOutput` over owned pipe handles, with a joined
-cancellation watcher. Each synchronous operation registers its actual calling
-thread; the watcher retries cancellation across operation entry and holds the
-registry lock so it cannot cancel subsequent native or unrelated I/O. Output
-flush never waits for a peer to drain. Non-pipe Windows handles are refused.
-The sole new unsafe leaf is `src/mcp/input/windows/ffi.rs`, guarded by Windows,
-with a reasoned allowance and denied unsafe operations outside explicit blocks.
-The existing exact policy table admits only that added leaf and the existing
-`windows-sys` package's required `Win32_System_IO` feature; other allowances
-remain protected. See Microsoft's [synchronous cancellation contract](https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelsynchronousio).
-Windows compilation and the owned subprocess pipe regressions require the
-existing Windows runner; they have not been run in this Linux lane.
+Unix uses owned unbuffered descriptors and bounded polling. Windows uses owned
+pipe handles with a joined cancellation watcher. Each synchronous operation
+registers its actual thread; cancellation cannot target unrelated native I/O.
+Flush does not wait for a peer to drain. The exact Windows-only unsafe leaf is
+`src/mcp/input/windows/ffi.rs`; the existing `windows-sys` package adds only its
+required `Win32_System_IO` feature. Windows compilation and pipe regressions
+remain pending on the existing runner. Linux checks do not qualify Windows.
 
-## Exact integration left for native adoption
+## Native integration gaps and landing work
 
-1. Native lane0 owns the complete execution route and all result/2 serializers,
-   observations, attempt/call facts, cache/replay origin, answer IDs and shared
-   input composition. Add a concrete `runtime::Executor` over **one** resolved
-   public Engine. Return the native complete-call object in `NativeReply.object`
-   using `NativeObject::new(&native_complete_call)`, and the native failure
-   decision in `failed`. Raw native serialization preserves authored map order;
-   records likewise retain raw JSON through native composition. Its `output_schema()` must be
-   the settled complete-call schema, including safe errors. The adapter wraps
-   that object without projecting or inventing any native field. Admission
-   errors use the existing safe native error shape with no invented facts.
-2. `Invocation::question`, `source`, `attachments` and `controls` already use
-   public native loaders/readers/validation. Full dispatch must select the
-   native named methods and apply all admitted per-call model, reading, field,
-   context/options pointers, batch, top and files-only controls. Fix the
-   relative deadline once with `controls(token)?.started()` before preparation,
-   then reuse it through the complete native call. Reuse shared
-   source composition for all ten functions. Do not collect streaming sources
-   into an adapter-owned scheduler or use JSON compatibility dispatch. Native
-   helpers are still needed for saved decide/score rank preparation (including
-   rejection of authored cuts), applicable find question-file preparation,
-   record field/context/candidate composition and complete located aggregates.
-   The current private preparation handles literal rank/find and ordinary
-   atomic/set/recognize/relate loaders; it does not claim those missing paths.
-3. **Native-owned `src/core/surface.rs` integration** (the file is not yet on
-   this branch base): add `Mcp` to the closed
-   Surface enum, map only exact `"mcp"` in its parser, return `"mcp"` from its
-   spelling/serialization, and add the exact valid/unknown-token cases to the
-   existing surface tests. The contract token and parity row are supplied here.
-   Stamp MCP call/request identity through the same typed native setting as
-   other surfaces before any request. Every actual send must use
-   `User-Agent: thinkthen/<compiled-engine-semver> (mcp)` and the existing
-   `X-ThinkThen-Call-Id` / `X-ThinkThen-Request-Id` values. Reject `MCP`,
-   `mcp ` and other unlisted tokens locally; do not infer surface from URL.
-   Request bodies and cache/answer identities remain native. MCP adds no
-   identity generator or hash.
-4. Once the above is complete, add `Command::Mcp` and applicable startup options
-   in `cli/args/command.rs`, and dispatch in `cli/mod.rs` before ordinary judging
-   environment/reader/interrupt setup. The module is already `cli`-gated in
-   `lib.rs`. On Unix obtain unbuffered owned handles with `input::pipes()`;
-   use `Ok(BufReader::new(input::PollInput::new(input_file, stop)))` as the `serve`
-   reader factory and `Ok(input::PollOutput::new(output_file, stop))` as its writer
-   factory. Do not use a global buffered stdout handle. Neither protocol input nor output can block shutdown.
-   `serve` requires stoppable reads and joins both
-   reader and dispatch on EOF/output failure, including factory failure. On
-   Windows use `input::pipes()`, reader factory
-   `input::PipeInput::new(input_file, stop).map(BufReader::new)` and writer
-   factory `input::PipeOutput::new(output_file, stop)`. Both factories are
-   fallible; retain their actual I/O errors. Windows pipe execution remains
-   unverified until the existing runner executes the guarded regressions.
-   All decoding/loading belongs on dispatch, and native iteration must check
-   the token between inputs. Preserve native joined in-flight attempt behavior.
-5. Move `libraries/mcp` from planned to landed only after actual installed and
-   surface checks pass. Extend the consumer to the remaining 204-case parity
-   inventory, full output-schema/type checks, complete source/image forms,
-   secrecy, counted zero sends, error/cancellation and cache/replay cases after
-   native shapes settle. The present 25-case consumer and protocol tests do
-   not qualify those cells. Connect `installed.py` to `release-smoke`'s
-   `command_check` using the unpacked executable path; check loopback count
-   before/after strict replay with its existing backend counter.
-6. Add the bounded paired native/MCP timing case only after complete dispatch,
-   through existing `test-stress --run`. No latency has been measured or claimed.
-   Root runs policy, one fresh whole High review, full tests/lint and affected
-   spec/surface/install checks on its landing candidate. Keep the release
-   rehearsal and Ian's publication approval. Write the one record at landing.
+- Native `CompleteRecord<QuestionInput, ...>` serialization must retain physical
+  text source locations. The current carrier retains them but atomic JSON loses
+  them. Find's selected original likewise needs the settled located serializer.
+  The adapter must adopt native types/schema rather than fabricate fields.
+- Native `RecordChooseQuestion::model` rejects an already saved model. A typed
+  override must replace that saved setting for explicit caller controls.
+  Its saved-question loader also refuses authored non-root `on` pointers; native
+  preparation must expose those to `RecordReading`.
+  Existing declaration accessors supply dynamic per-record context to native
+  `RecordReading`; no host question parser is needed.
+- Root owns the fresh whole High review, full tests/lint, affected installed/spec/
+  surface checks, complete shared parity and final real Windows qualification.
+  Keep the one short ticket record at landing, release rehearsal and Ian's
+  publication approval. C/family/shared parity declarations stay with their owners.
+- The bounded paired native/installed MCP timing case is registered under the
+  existing explicit `test-stress --run` entry point. Atomic, record and whole-set
+  samples report payload bytes, counted requests, cold startup, warm median,
+  exploratory p95 and maximum. Measurement remains pending; future proxy latency
+  remains unmeasured.
 
-Ian can overturn the local MCP contract and measurement plan. This branch is
-not a main landing, release or support claim.
+Ian can overturn the local MCP contract and measurement plan. A pushed ticket
+checkpoint is not a main landing, publication or complete support claim.

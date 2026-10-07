@@ -19,6 +19,7 @@ impl Invocation {
     pub(super) fn question(&self) -> Result<PreparedQuestion, Error> {
         if let Some(name) = &self.arguments.question_name {
             let text = crate::public::named_question::named_text(name)?;
+            self.file_role(&text)?;
             return self
                 .saved(&text)
                 .map_err(|e| Error::local(e.detail().message()));
@@ -30,6 +31,7 @@ impl Invocation {
                 }
                 _ => Error::local("the question file could not be read"),
             })?;
+            self.file_role(&text)?;
             return self
                 .saved(&text)
                 .map_err(|e| Error::local(e.detail().message()));
@@ -46,6 +48,24 @@ impl Invocation {
             return self.text_question(&text);
         }
         self.saved(raw.get())
+    }
+
+    fn file_role(&self, text: &str) -> Result<(), Error> {
+        use crate::core::QuestionRole as Role;
+        let role = match self.tool {
+            Tool::Annotate => Role::Set,
+            Tool::Find => Role::Find,
+            Tool::Recognize => Role::Recognize,
+            Tool::Relate => Role::Relate,
+            Tool::Rank if !Role::Set.differs(text) => Role::Set,
+            Tool::Rank => Role::Rank,
+            Tool::Choose => Role::Choose,
+            _ => Role::Atomic,
+        };
+        if role.differs(text) {
+            return Err(Error::usage("the question file uses another function"));
+        }
+        Ok(())
     }
     fn saved(&self, text: &str) -> Result<PreparedQuestion, Error> {
         match self.tool {

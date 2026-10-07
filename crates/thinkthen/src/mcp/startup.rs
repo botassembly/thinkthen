@@ -50,6 +50,9 @@ pub(crate) struct Arguments {
     /// Disable the platform answer cache.
     #[arg(long)]
     no_cache: bool,
+    /// Refresh answers through the existing native cache policy.
+    #[arg(long)]
+    refresh_cache: bool,
 }
 impl std::fmt::Debug for Arguments {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -99,6 +102,7 @@ impl Arguments {
             builder = builder.max_estimated_input_tokens_total(Some(value));
         }
         builder
+            .refresh_cache(self.refresh_cache)
             .timeout(Duration::from_secs(self.timeout))?
             .max_retries(self.max_retries)
             .build()

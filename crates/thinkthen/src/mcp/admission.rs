@@ -71,7 +71,7 @@ pub(super) struct Options {
     #[serde(default, deserialize_with = "present")]
     pub(super) context: Option<String>,
     #[serde(default, deserialize_with = "present")]
-    pub(super) field: Option<String>,
+    pub(super) field: Option<Fields>,
     #[serde(default, deserialize_with = "present")]
     pub(super) context_field: Option<String>,
     #[serde(default, deserialize_with = "present")]
@@ -83,7 +83,7 @@ pub(super) struct Options {
     #[serde(default)]
     pub(super) attempts: bool,
     #[serde(default, deserialize_with = "present")]
-    pub(super) batch: Option<usize>,
+    pub(super) batch: Option<Batch>,
     #[serde(default, deserialize_with = "present")]
     pub(super) top: Option<usize>,
     #[serde(default)]
@@ -192,17 +192,15 @@ impl Invocation {
         if options.files_only && (params.name != Tool::Filter || arguments.source.is_none()) {
             return Err(Error::usage("files_only requires filter source input"));
         }
-        if options.batch == Some(0) {
-            return Err(Error::usage("batch requires a positive whole number"));
+        if let Some(batch) = &options.batch {
+            batch.native()?;
         }
-        for pointer in [
-            &options.field,
-            &options.context_field,
-            &options.options_field,
-        ]
-        .into_iter()
-        .flatten()
-        {
+        for pointer in options.field.iter().flat_map(Fields::values).chain(
+            [&options.context_field, &options.options_field]
+                .into_iter()
+                .flatten()
+                .map(String::as_str),
+        ) {
             crate::core::Pointer::new(pointer)
                 .map_err(|_| Error::usage("invalid field pointer"))?;
         }
@@ -230,8 +228,8 @@ impl Invocation {
         if let Some(context) = &options.context {
             controls = controls.context(context);
         }
-        if let Some(batch) = options.batch.and_then(std::num::NonZeroUsize::new) {
-            controls = controls.batch(crate::BatchSetting::Records(batch));
+        if let Some(batch) = &options.batch {
+            controls = controls.batch(batch.native()?);
         }
         Ok(controls)
     }
@@ -302,5 +300,44 @@ impl Options {
             return Err(Error::usage("options_field applies only to choose"));
         }
         Ok(())
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub(super) enum Fields {
+    One(String),
+    Many(Vec<String>),
+}
+impl Fields {
+    pub(super) fn values(&self) -> impl Iterator<Item = &str> {
+        let fields = match self {
+            Self::One(field) => std::slice::from_ref(field),
+            Self::Many(fields) => fields.as_slice(),
+        };
+        fields.iter().map(String::as_str)
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub(super) enum Batch {
+    Count(usize),
+    Named(String),
+}
+impl Batch {
+    pub(super) fn native(&self) -> Result<crate::BatchSetting, Error> {
+        let setting = match self {
+            Self::Count(count) => crate::core::Setting::parse(&count.to_string()),
+            Self::Named(name) if name == "max" => Some(crate::core::Setting::Max),
+            Self::Named(_) => None,
+        };
+        match setting {
+            Some(crate::core::Setting::Max) => Ok(crate::BatchSetting::Max),
+            Some(crate::core::Setting::Records(count)) => Ok(crate::BatchSetting::Records(count)),
+            None => Err(Error::usage(
+                "batch requires a positive whole number or max",
+            )),
+        }
     }
 }

@@ -121,6 +121,7 @@ fn native_controls_validate_deadline_batch_and_admission_without_sends() {
     for options in [
         json!({"deadline_ms":-2}),
         json!({"batch":0}),
+        json!({"batch":"2"}),
         json!({"field":"invalid-pointer"}),
         json!({"top":1}),
     ] {

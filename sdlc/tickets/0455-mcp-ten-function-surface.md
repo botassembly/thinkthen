@@ -1,9 +1,9 @@
 # 0455: Expose the ten functions through a local MCP server
 
-Status: in progress. Private protocol/admission and named consumer implementation is WIP; complete native result/2 integration and public CLI exposure remain open.
+Status: in progress. Installed ten-tool native execution and the 25-case named public consumer work; native located serialization/dynamic saved-model/on preparation, complete parity, timing, fresh review and Windows qualification remain open.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review.
 Milestone: 0.2
-Owner: builder, lane1 `ticket/0455-mcp-ten-function-surface`.
+Owner: builder, lane2 `ticket/0455-mcp-ten-function-surface`.
 Risk: High. Local protocol dispatch and cancellation must preserve secrets, spend limits and started-failure behavior; broken output and EOF must cancel and join owned work.
 
 Independent WIP now includes Windows owned pipe I/O with an operation-scoped
@@ -13,8 +13,21 @@ exact Windows-only `src/mcp/input/windows/ffi.rs` cancellation leaf and the
 existing `windows-sys` package's required `Win32_System_IO` feature. Existing
 unsafe leaves and their guards remain unchanged. Windows build/runtime proof
 is still pending on the existing runner; Linux checks do not qualify it.
-Complete native execution, composition and result/2 schema remain dependencies,
-so no public MCP CLI or native parity pass is claimed.
+Installed execution uses one native Engine and complete result/2 calls/errors.
+Native text admission correction fbee4ea7c and image fixtures b79ef2fc3 are merged.
+All 33 MCP Rust tests, nine client fixtures, installed replay and 25 public
+consumer cases pass, along with focused Clippy, policy and the source ratchet.
+Nine of twelve installed behavior groups pass, including ordered images, native
+object contexts, named/file questions, explicit controls, default cache and
+refresh, strict no-key replay, secrecy, cancellation and EOF. Three retained
+installed regressions expose native gaps: atomic
+complete record JSON drops retained physical source locations; find needs the
+settled located original serializer; dynamic choose needs a saved-model
+override and authored non-root `on` preparation exposed. Do not invent fields or add a host parser.
+The additional installed regressions remain required and unqualified until those
+preparation helpers and native located serializers are adopted. Root owns fresh whole High review and full landing gates;
+final real Windows execution and local timing remain pending. No complete parity,
+main landing or publication is claimed.
 
 ## Outcome
 

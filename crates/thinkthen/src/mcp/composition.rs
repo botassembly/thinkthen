@@ -13,7 +13,11 @@ impl Invocation {
         controls: CallOptions<'a>,
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.arguments.options;
-        let fields = options.field.as_deref().into_iter().collect::<Vec<_>>();
+        let fields = options
+            .field
+            .iter()
+            .flat_map(super::admission::Fields::values)
+            .collect::<Vec<_>>();
         let explicit = options.field.is_some()
             || options.context_field.is_some()
             || options.options_field.is_some();
@@ -29,18 +33,15 @@ impl Invocation {
                 PreparedQuestion::FindPrepared(_, reading)
                 | PreparedQuestion::RecognizePrepared(_, reading) => reading.clone(),
                 PreparedQuestion::Recognize(file) => file.reading().clone(),
+                PreparedQuestion::Atomic(q) => match q {
+                    crate::LoadedQuestion::Question(q) => authored_reading(q)?,
+                    crate::LoadedQuestion::Banded(q) => authored_reading(&q.0)?,
+                },
+                PreparedQuestion::Rank(q) => authored_reading(q)?,
                 _ => RecordReading::new(&[], None, None)?,
             }
         };
-        let reading = match prepared {
-            PreparedQuestion::Atomic(q) => match q {
-                crate::LoadedQuestion::Question(q) => q.context_schema(),
-                crate::LoadedQuestion::Banded(q) => q.context_schema(),
-            },
-            PreparedQuestion::Rank(q) => q.context_schema(),
-            _ => None,
-        }
-        .map_or(reading.clone(), |schema| {
+        let reading = declared_context(prepared).map_or(reading.clone(), |schema| {
             reading.with_context_schema(schema.clone())
         });
         if let Some(source) = self.source()? {
@@ -90,6 +91,40 @@ impl Invocation {
             options: None,
         }))))
     }
+}
+
+fn declared_context(prepared: &PreparedQuestion) -> Option<&crate::InputDeclaration> {
+    match prepared {
+        PreparedQuestion::Atomic(q) => q.context_schema(),
+        PreparedQuestion::Rank(q) => q.context_schema(),
+        PreparedQuestion::Dynamic(q) => q.context_schema(),
+        PreparedQuestion::Find(file) => file.question().context_schema(),
+        PreparedQuestion::FindPrepared(q, _) => q.context_schema(),
+        PreparedQuestion::Recognize(file) => file.question().context_schema(),
+        PreparedQuestion::RecognizePrepared(q, _) => q.context_schema(),
+        PreparedQuestion::Relate(q) => q.context_schema(),
+        PreparedQuestion::Annotate(set) => set
+            .0
+            .questions()
+            .iter()
+            .find_map(|q| q.metadata().context_schema.as_ref()),
+        PreparedQuestion::RankSet(set) => set
+            .0
+            .questions()
+            .iter()
+            .find_map(|q| q.metadata().context_schema.as_ref()),
+    }
+}
+
+fn authored_reading(question: &crate::Question) -> Result<RecordReading, Error> {
+    let fields = question
+        .metadata
+        .reading
+        .on
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    RecordReading::new(&fields, None, None)
 }
 
 fn compose_source(

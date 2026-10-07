@@ -1,9 +1,9 @@
 # Local MCP SDK
 
 Status: **Settled** target for 0.2 by Ian's 2026-10-06 ruling and accepted
-[ticket 0455](../sdlc/tickets/0455-mcp-ten-function-surface.md). Implementation
-is WIP: the current command does not expose an incomplete server. Native
-result/2 integration precedes installed support or parity claims.
+[ticket 0455](../sdlc/tickets/0455-mcp-ten-function-surface.md). Development execution now exposes the ten tools through native complete calls.
+Native located serializers and dynamic choose saved-model/on preparation still block full
+0455 acceptance; complete parity and final Windows qualification remain pending.
 
 An installed `thinkthen mcp` is a local stdio subprocess over one resolved Rust
 engine. Its default persistent cache, endpoint, effective key and provider API
@@ -42,11 +42,12 @@ Windows stdio requires pipe handles. Own duplicates without changing or closing
 the process's inherited handles; interrupt only the registered MCP read/write
 and join its cancellation watcher. Flush must not wait for a peer to drain.
 
-Tool arguments select exactly one of `question` and `question_file`. Inline
+Tool arguments select exactly one of `question`, `question_file` and `question_name`. Inline
 strings are literal text even when they start with `@`. Structured questions
 use ordinary native question/set/plan JSON grammar and preserve authored order
 and descriptions. `question_file` names an ordinary existing file, never a
-creation request. Evidence, records and source are exclusive. Source is
+creation request. `question_name` explicitly selects a native named question.
+Evidence, records and source are exclusive. Source is
 `{paths:[...],unit:"line"|"window"|"file",window?,media?}` and follows the
 [native reader](files.md). Original value types and physical locations survive.
 Image source requires file units. Ordered explicit `images` attachments may
@@ -70,9 +71,9 @@ result/1 labels into result/2 or invents origins, IDs, timing, models or cache
 hits. MCP supplies the closed `mcp` surface identity through native integration.
 
 Installed consumer checks run through the shared surface/conformance ladder.
-Missing complete execution remains failing/missing. Paired local overhead
-measurement waits for complete dispatch and runs only through the explicit
-stress entry point. Future proxy latency remains unmeasured.
+Only actual executed cells qualify support; remaining shared cells stay missing.
+Paired local overhead is registered under the explicit stress entry point;
+measurement remains pending. Future proxy latency remains unmeasured.
 
 Primary protocol contracts: [stdio](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports),
 [lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle),
