@@ -219,34 +219,10 @@ fn typed_many(
         _ => unreachable!(),
     }
 }
-#[expect(
-    clippy::panic,
-    reason = "this independent fixture expects an image input"
-)]
-fn expected_body(profile: &Value, role: &str, evidence: &QuestionInput) -> Value {
-    let QuestionInput::Images(evidence) = evidence else {
-        panic!("image evidence")
-    };
-    let urls: Vec<_> = evidence
-        .images()
-        .iter()
-        .map(|image| url(image.bytes(), image.media().mime()))
-        .collect();
-    let state = evidence.text().unwrap_or("");
-    if profile["model"] == "pplx-decider-v1-27b" {
-        let mut parts = vec![];
-        if !state.is_empty() {
-            parts.push(json!(state));
-        }
-        parts.extend(
-            urls.into_iter()
-                .map(|url| json!({"type":"image_url","image_url":{"url":url}})),
-        );
-        json!({"state":parts,"model":profile["model"],"questions":questions(role)})
-    } else {
-        json!({"state":state,"model":profile["model"],"questions":questions(role),"images":urls})
-    }
-}
+#[path = "shared_admission/wire.rs"]
+mod wire;
+use wire::expected_body;
+
 fn assert_request(
     request: &conformance_backend::Recorded,
     profile: &Value,
@@ -359,7 +335,12 @@ fn complete_image_questions_keep_distinct_states_and_coalesce_identical_question
             let target = construction["text_recipe"]["by_function"][role]["each_final_body_bytes"]
                 .as_u64()
                 .unwrap() as usize;
-            for (request, evidence) in listener.requests().iter().zip([&first, &second]) {
+            // Concurrent sends may arrive in either order; result rows retain input order.
+            let mut requests = listener.requests();
+            requests.sort_by(|left, right| left.body.cmp(&right.body));
+            let mut expected = [&first, &second];
+            expected.sort_by_key(|input| expected_body(profile, role, input).to_string());
+            for (request, evidence) in requests.iter().zip(expected) {
                 assert_eq!(request.body.len(), target);
                 assert_request(request, profile, role, construction, evidence);
             }
@@ -431,14 +412,18 @@ fn different_candidate_orders_split_complete_questions_by_bytes_with_one_image_s
             assert_eq!(request.body.len(), target);
             assert_request(request, profile, "choose", construction, &input);
         }
-        assert!(
-            String::from_utf8_lossy(&requests[0].body)
-                .contains(r#""criteria":{"red":null,"blue":null}"#)
-        );
-        assert!(
-            String::from_utf8_lossy(&requests[1].body)
-                .contains(r#""criteria":{"blue":null,"red":null}"#)
-        );
+        for criteria in [
+            r#""criteria":{"red":null,"blue":null}"#,
+            r#""criteria":{"blue":null,"red":null}"#,
+        ] {
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| { String::from_utf8_lossy(&request.body).contains(criteria) })
+                    .count(),
+                1
+            );
+        }
         assert_eq!(rows.value()[0].original(), &input);
         assert_eq!(rows.value()[1].original(), &input);
         assert_eq!(rows.value()[0].result().value(), Some("red"));
