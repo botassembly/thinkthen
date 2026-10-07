@@ -145,7 +145,10 @@ pub(super) fn canonical_parts(answer: &Answer, state: &str) -> Result<(String, S
     ModelName::new(&answer.model).map_err(|_| invalid())?;
     ModelName::reported(answer.answered_by.clone()).map_err(|_| invalid())?;
     Url::new(&answer.url).map_err(|_| invalid())?;
-    if !matches!(answer.origin.as_str(), "live" | "converted" | "quoted") {
+    if !matches!(
+        answer.origin.as_str(),
+        "live" | "converted" | "quoted" | "fixture"
+    ) {
         return Err(invalid());
     }
     canonical_state(&answer.state, state)?;

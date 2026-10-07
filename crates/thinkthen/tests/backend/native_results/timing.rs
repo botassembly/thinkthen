@@ -8,7 +8,9 @@ fn details_recording_writes_only_timing_fields_and_replay_sends_nothing() {
             .asking("x-envoy-upstream-service-time", "0")
     })
     .unwrap();
-    let root = crate::input_sources::folder("complete-command-timing").unwrap();
+    let root = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("complete-command-timing-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
     let run = |mode| {
         spawn(
             &[
@@ -68,4 +70,5 @@ fn details_recording_writes_only_timing_fields_and_replay_sends_nothing() {
     assert_eq!(listener.count(), 1);
     withheld(&live, "timing-command-private");
     withheld(&replay, "timing-command-private");
+    std::fs::remove_dir_all(&root).unwrap();
 }
