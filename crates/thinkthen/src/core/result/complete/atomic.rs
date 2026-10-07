@@ -97,6 +97,17 @@ impl Atomic {
         index: Option<usize>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_occurrence_members(input, question_name, index, None, serializer)
+    }
+
+    pub(crate) fn serialize_occurrence_members<'a, S: Serializer, T: Serialize>(
+        &'a self,
+        input: Option<&'a T>,
+        question_name: Option<&'a str>,
+        index: Option<usize>,
+        members: Option<Vec<super::wire::RankMemberDocument<'a>>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
         super::wire::AtomicDocument {
             schema: super::wire::Version::V2,
@@ -110,6 +121,7 @@ impl Atomic {
             images: self.images.as_deref(),
             source: self.source.as_ref(),
             question_name,
+            members,
             question: crate::core::declaration::ReadableQuestion {
                 question: &row.question,
                 metadata: &self.declarations,

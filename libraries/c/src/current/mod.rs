@@ -250,6 +250,7 @@ pub(crate) struct Storage(
     pub(crate) Vec<Vec<crate::ffi::carriers::RankViewV1>>,
     pub(crate) Vec<crate::ffi::carriers::SourceRecognitionV1>,
     pub(crate) Vec<crate::ffi::carriers::SourceRelationsV1>,
+    pub(crate) Vec<Vec<crate::ffi::carriers::DetailsV1>>,
 );
 impl Storage {
     pub(crate) fn array<T: 'static>(&mut self, values: Vec<T>) -> (*const T, usize) {

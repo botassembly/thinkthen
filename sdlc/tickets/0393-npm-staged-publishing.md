@@ -1,6 +1,6 @@
 # 0393: npm publishes through staged publishing
 
-Status: in progress. The workflow implementation pins npm 11.15.0 and stages the existing archive. Offline checks and fresh review precede landing; actual staging and npm approval remain release-mode checks.
+Status: in progress. Reviewed workflow slice A is landed and passed full tests, lint and specification checks. Final rehearsal, authorized registry staging and Ian’s npm approval remain.
 
 Milestone: 0.2
 
