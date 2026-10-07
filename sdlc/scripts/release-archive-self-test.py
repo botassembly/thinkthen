@@ -33,7 +33,8 @@ def expect(result, text, success=False):
 
 def resolve_outputs(commit, version):
     repository = "botassembly/thinkthen"
-    good = {"head_sha": commit, "head_branch": "main", "event": "workflow_dispatch",
+    candidate = f"rc/{version}-rc.1"
+    good = {"head_sha": commit, "head_branch": candidate, "event": "workflow_dispatch",
             "status": "completed", "conclusion": "success", "path": ".github/workflows/release.yml"}
     page = lambda runs: json.dumps({"total_count": len(runs), "workflow_runs": runs})
     rehearsal = f"v{version}-rehearsal-{commit[:7]}"
@@ -74,7 +75,7 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
             elif error != "before-query":
                 sentence = (f"release-workflow: could not read the rehearsal runs for {commit}\n"
                             if error == "read" else f"release-workflow: no successful rehearsal ran on {commit}; "
-                            "dispatch rehearse mode on that commit first\n")
+                            f"dispatch rehearse mode on an rc/{version}-rc.N tag for that commit first\n")
                 if result.returncode != 1 or result.stdout or not result.stderr.endswith(sentence):
                     raise AssertionError(("resolve refusal", result.returncode, result.stdout, result.stderr))
             else:
@@ -82,24 +83,33 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                     raise AssertionError(("early resolve refusal", result.returncode, result.stdout, result.stderr))
             return result
 
-        check("rehearse", "refs/heads/main")
-        check("rehearse", "refs/heads/release/0.1")
+        for number in (1, 2, 12):
+            check("rehearse", f"refs/tags/rc/{version}-rc.{number}")
         check("release", f"refs/tags/v{version}")
-        for branch in ("main", "release/0.1", "release/12.34"):
+        for branch in (candidate, f"rc/{version}-rc.12"):
             for prefix in ("", f"{repository}/"):
-                for suffix in ("", f"@{branch}", f"@refs/heads/{branch}"):
+                for suffix in ("", f"@{branch}", f"@refs/tags/{branch}"):
                     check("release", f"refs/tags/v{version}",
                           page([good | {"head_branch": branch, "path": prefix + good['path'] + suffix}]))
         check("release", f"refs/tags/v{version}", page([good | {"run_attempt": 2}]))
         check("release", f"refs/tags/v{version}", page([]) + "\n" + page([good]))
         for changes in ({"conclusion": "failure"}, {"conclusion": False}, {"conclusion": None},
                         {"head_sha": "0" * 40}, {"head_branch": "v0.1.2"},
+                        {"head_branch": "main"}, {"head_branch": "release/0.1"},
+                        {"head_branch": "release/12.34"},
+                        {"head_branch": "rc/9.9.9-rc.1"},
+                        {"head_branch": f"rc/{version}-rc.0"},
+                        {"head_branch": f"rc/{version}-rc.01"},
+                        {"head_branch": f"rc/{version}-rc.-1"},
+                        {"head_branch": f"rc/{version}-rc.1/fix"},
                         {"head_branch": "refs/tags/v0.2.0"}, {"head_branch": "feature"},
                         {"head_branch": "release/next"}, {"head_branch": None},
                         {"event": "push"}, {"status": "in_progress"},
                         {"path": ".github/workflows/other.yml"}, {"path": None}, {"path": 1},
                         {"path": "other/repository/" + good['path']},
                         {"path": good['path'] + "@refs/tags/v0.2.0"},
+                        {"path": good['path'] + f"@refs/heads/{candidate}"},
+                        {"path": good['path'] + f"@rc/{version}-rc.2"},
                         {"path": good['path'] + "@release/0.1"},
                         {"path": good['path'] + "@main@main"}):
             check("release", f"refs/tags/v{version}", page([good | changes]), error="absent")
@@ -113,11 +123,18 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                           json.dumps({"total_count": 1, "workflow_runs": [None]})):
             check("release", f"refs/tags/v{version}", malformed, error="read")
         check("release", f"refs/tags/v{version}", page([good]), exit_code=1, error="read")
+        candidate_error = f"rehearse must run from an rc/{version}-rc.N tag with positive N"
+        for ref in ("refs/heads/main", "refs/heads/release/0.1", "refs/heads/feature",
+                    f"refs/tags/v{version}", "refs/tags/rc/9.9.9-rc.1",
+                    f"refs/heads/{candidate}", f"refs/tags/rc/{version}-rc.0",
+                    f"refs/tags/rc/{version}-rc.01", f"refs/tags/rc/{version}-rc.-1",
+                    f"refs/tags/rc/{version}-rc.", f"refs/tags/rc/{version}-rc.one",
+                    f"refs/tags/rc/{version}-rc.1/fix", f"refs/tags/rc/{version}-rc.1\n"):
+            result = check("rehearse", ref, error="before-query")
+            if result.stderr != f"release-workflow: {candidate_error}, got {ref}\n":
+                raise AssertionError(("resolve candidate sentence", result.stderr))
         for mode, ref, wanted in (
-                ("rehearse", "refs/heads/feature", "rehearse must run from main or a release/X.Y branch"),
-                ("rehearse", "refs/heads/release/next", "rehearse must run from main or a release/X.Y branch"),
-                ("rehearse", "refs/heads/release/0.1/fix", "rehearse must run from main or a release/X.Y branch"),
-                ("rehearse", "refs/tags/v0.1.0", "rehearse must run from main or a release/X.Y branch"),
+                ("release", f"refs/tags/{candidate}", "release must run from a v* tag"),
                 ("release", "refs/heads/release/0.1", "release must run from a v* tag")):
             result = check(mode, ref, error="before-query")
             if result.stderr != f"release-workflow: {wanted}, got {ref}\n":
@@ -126,6 +143,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                        override={"GITHUB_SHA": "0" * 40})
         if result.stderr != "release-workflow: checkout differs from dispatch SHA\n":
             raise AssertionError(("resolve checkout sentence", result.stderr))
+        check("rehearse", f"refs/tags/{candidate}", error="before-query",
+              override={"GITHUB_SHA": "0" * 40})
         check("release", "refs/tags/v9.9.9", error="before-query")
         check("unknown", "refs/heads/main", error="before-query")
 
@@ -135,12 +154,13 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                          "head_branch": "release/0.1", "id": 37126990511, "workflow_id": 369147892}
     tag_run = good | {"head_sha": "08328c9c04574719b9e93900dd8fa46ad3b645b4",
                       "head_branch": "v0.1.2", "id": 37130570517, "workflow_id": 369147892}
-    if not helper['eligible'](historical, historical['head_sha'], repository) or helper['eligible'](tag_run, tag_run['head_sha'], repository):
-        raise AssertionError("historical rehearsal/tag distinction")
+    if (helper['eligible'](historical, historical['head_sha'], repository, version)
+            or helper['eligible'](tag_run, tag_run['head_sha'], repository, version)):
+        raise AssertionError("historical branch and release-tag runs cannot qualify the candidate")
     for failure in (subprocess.TimeoutExpired("gh", 60), FileNotFoundError("gh")):
         with mock.patch.dict(os.environ, {"GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository}), \
                 mock.patch("subprocess.run", side_effect=failure), mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
-            if helper['main']() != 1 or stderr.getvalue() != f"release-workflow: could not read the rehearsal runs for {commit}\n":
+            if helper['main'](version) != 1 or stderr.getvalue() != f"release-workflow: could not read the rehearsal runs for {commit}\n":
                 raise AssertionError(("helper transport error", stderr.getvalue()))
 
 

@@ -369,17 +369,20 @@ resolve)
 	[ "$#" = 3 ] || fail 'resolve MODE REF needs exactly two arguments'
 	mode=$2 ref=$3
 	case $mode in
-	# ADR 0116 item 7: a rehearsal also runs from a release branch such as release/0.1.
-	rehearse) [ "$ref" = refs/heads/main ] ||
-		expr "x$ref" : 'xrefs/heads/release/[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null ||
-		fail "rehearse must run from main or a release/X.Y branch, got $ref" ;;
+	rehearse)
+		candidate_number=
+		case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac
+		case $candidate_number in '' | 0* | *[!0-9]*)
+			fail "rehearse must run from an rc/$version-rc.N tag with positive N, got $ref" ;;
+		esac
+		;;
 	release) case $ref in refs/tags/v*) ;; *) fail "release must run from a v* tag, got $ref" ;; esac ;;
 	*) fail "unknown mode $mode" ;;
 	esac
 	[ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ] || fail 'checkout differs from dispatch SHA'
 	# The workflow appends standard output to GITHUB_OUTPUT, so only name=value lines go there.
 	if [ "$mode" = release ]; then sdlc/scripts/versions --tag "${ref#refs/tags/}" >&2; else sdlc/scripts/versions >&2; fi
-	if [ "$mode" = release ]; then python3 sdlc/scripts/release-rehearsal.py; fi
+	if [ "$mode" = release ]; then python3 sdlc/scripts/release-rehearsal.py "$version"; fi
 	printf 'sha=%s\nversion=%s\nname=%s\n' "$GITHUB_SHA" "$version" \
 		"$(if [ "$mode" = release ]; then printf 'v%s' "$version"; else printf 'v%s-rehearsal-%.7s' "$version" "$GITHUB_SHA"; fi)"
 	;;

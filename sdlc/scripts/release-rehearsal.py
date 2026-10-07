@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require a completed rehearsal of the exact release commit."""
+"""Require a completed matching candidate rehearsal of the exact release commit."""
 
 import json
 import os
@@ -30,10 +30,10 @@ def pages(text):
     return parsed
 
 
-def eligible(run, sha, repository):
+def eligible(run, sha, repository, version):
     branch = run.get("head_branch")
     if (not isinstance(branch, str)
-            or (branch != "main" and re.fullmatch(r"release/[0-9]+\.[0-9]+", branch) is None)
+            or re.fullmatch(rf"rc/{re.escape(version)}-rc\.[1-9][0-9]*", branch) is None
             or run.get("head_sha") != sha or run.get("event") != "workflow_dispatch"
             or run.get("status") != "completed" or run.get("conclusion") != "success"):
         return False
@@ -41,14 +41,15 @@ def eligible(run, sha, repository):
     if not isinstance(path, str):
         return False
     parts = path.split("@")
-    if len(parts) > 2 or (len(parts) == 2 and parts[1] not in (branch, f"refs/heads/{branch}")):
+    if len(parts) > 2 or (len(parts) == 2 and parts[1] not in (branch, f"refs/tags/{branch}")):
         return False
     return parts[0] in (WORKFLOW_PATH, f"{repository}/{WORKFLOW_PATH}")
 
 
-def check(sha, repository):
+def check(sha, repository, version):
     if (re.fullmatch(r"[0-9a-f]{40}", sha) is None
-            or re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) is None):
+            or re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) is None
+            or re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) is None):
         raise ValueError("invalid query identity")
     endpoint = (f"repos/{repository}/actions/workflows/release.yml/runs?head_sha={sha}"
                 "&status=success&event=workflow_dispatch&per_page=100")
@@ -56,23 +57,23 @@ def check(sha, repository):
                              "Accept: application/vnd.github+json", endpoint],
                             capture_output=True, text=True, timeout=60, check=True)
     # Parse every page before evaluating proof, including pages following a success.
-    return any(eligible(run, sha, repository) for page in pages(result.stdout)
+    return any(eligible(run, sha, repository, version) for page in pages(result.stdout)
                for run in page["workflow_runs"])
 
 
-def main():
+def main(version):
     sha = os.environ.get("GITHUB_SHA", "")
     try:
-        success = check(sha, os.environ.get("GITHUB_REPOSITORY", ""))
+        success = check(sha, os.environ.get("GITHUB_REPOSITORY", ""), version)
     except (OSError, ValueError, subprocess.SubprocessError):
         print(f"release-workflow: could not read the rehearsal runs for {sha}", file=sys.stderr)
         return 1
     if not success:
         print(f"release-workflow: no successful rehearsal ran on {sha}; "
-              "dispatch rehearse mode on that commit first", file=sys.stderr)
+              f"dispatch rehearse mode on an rc/{version}-rc.N tag for that commit first", file=sys.stderr)
         return 1
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1] if len(sys.argv) == 2 else ""))
