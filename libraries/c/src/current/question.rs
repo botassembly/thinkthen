@@ -107,7 +107,12 @@ pub(crate) fn named(role: u32, value: &str, reference: bool) -> Result<QuestionH
         }
         _ => return Err(Failure::usage("invalid native named question role")),
     };
-    Ok(finish(String::new(), native, reading))
+    let json = match &native {
+        Native::Atomic(q) => q.to_json()?,
+        Native::Rank(q) => q.to_json()?,
+        _ => String::new(),
+    };
+    Ok(finish(json, native, reading))
 }
 
 pub(crate) fn load(path: &str) -> Result<QuestionHandle, Failure> {

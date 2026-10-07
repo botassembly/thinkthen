@@ -71,6 +71,23 @@ int main(void) {
         assert(thinkthen_annotate_complete(e,set,s,&c,&r)==0);
         thinkthen_annotate_view_v1 a={0}; assert(thinkthen_result_annotate(r,0,&a)==0 && a.answers.len==1 && a.answers.data[0].state==1);
         assert(a.common.input.value.kind==1); thinkthen_question_free(set);
+        thinkthen_result_free(r); r=NULL;
+        thinkthen_choice_v1 levels[2]={0}; levels[0].name=STR("low"); levels[1].name=STR("high");
+        levels[0].description=(thinkthen_optional_content_v1){1,{2,STR("null")}};
+        levels[1].description=(thinkthen_optional_content_v1){1,TEXT("High quality.")};
+        spec=(thinkthen_question_spec_v1){0}; spec.kind=4; spec.text=TEXT("How good?");
+        spec.choices=(thinkthen_choices_v1){levels,2};
+        thinkthen_question *scoring=question(e,spec);
+        assert(thinkthen_score_complete(e,scoring,s,&c,&r)==0);
+        thinkthen_score_view_v1 score={0}; assert(thinkthen_result_score(r,0,&score)==0);
+        assert(score.common.question.value.choices.data[0].description.present);
+        assert(score.common.question.value.choices.data[0].description.value.kind==2);
+        assert(same(score.common.question.value.choices.data[0].description.value.data,"null"));
+        thinkthen_question_free(scoring); levels[1].description.present=0;
+        scoring=NULL;
+        assert(thinkthen_question_new(e,&spec,&scoring)==THINKTHEN_EUSAGE && !scoring);
+        assert(strcmp(thinkthen_error_message(e),"give every level a description, or none")==0);
+
     }
     thinkthen_question_free(yes); thinkthen_source_free(s); thinkthen_engine_free(e);
     thinkthen_result_free(r); return 0;

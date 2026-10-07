@@ -3,7 +3,7 @@ use crate::current::Storage;
 use crate::failures::Failure;
 use crate::ffi::carriers::{
     ChoiceV1, ChoicesV1, ContentV1, OptionalContentV1, OptionalQuestionV1, OptionalRuleV1,
-    QuestionViewV1, RelationV1, RelationsV1, RuleV1,
+    OptionalSizeV1, QuestionViewV1, RelationV1, RelationsV1, RuleV1, StringsV1,
 };
 use thinkthen::{QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold};
 pub(super) fn rule(value: Option<ResolvedThreshold>) -> RuleV1 {
@@ -72,12 +72,29 @@ impl Storage {
         let (data, len) = self.array(values);
         Ok(ChoicesV1 { data, len })
     }
+    pub(super) fn native_on<'a>(&mut self, names: impl Iterator<Item = &'a str>) -> StringsV1 {
+        let names = names.map(|name| self.string(name)).collect();
+        let (data, len) = self.array(names);
+        StringsV1 { data, len }
+    }
     pub(super) fn resolved_question(
         &mut self,
         question: ResolvedQuestion<'_>,
         cut: Option<ResolvedThreshold>,
     ) -> Result<QuestionViewV1, Failure> {
+        let batch = question.batch();
         Ok(QuestionViewV1 {
+            model: self.optional_string(question.model()),
+            profile: self.optional_string(question.profile()),
+            on: self.native_on(question.on()),
+            batch: OptionalSizeV1 {
+                present: i32::from(batch.is_some()),
+                value: match batch {
+                    Some(thinkthen::BatchSetting::Records(count)) => count.get(),
+                    _ => 0,
+                },
+            },
+            batch_max: i32::from(matches!(batch, Some(thinkthen::BatchSetting::Max))),
             kind: match question.kind() {
                 thinkthen::QuestionKind::Decide => 1,
                 thinkthen::QuestionKind::Choose => 2,

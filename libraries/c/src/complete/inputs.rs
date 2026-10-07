@@ -36,11 +36,20 @@ fn compose(
     reading: Option<&RecordReading>,
 ) -> Result<RecordInput<Original>, Failure> {
     let native = match retained.original.as_ref() {
-        Some(Content::Text(text))
-            if kind == 8 && retained.position.is_none() && retained.images.is_empty() =>
-        {
-            // Preserve native annotation admission of valid JSON text and invalid JSON literals.
-            QuestionInput::Text(text.clone())
+        Some(Content::Text(text)) if kind == 8 && retained.images.is_empty() => {
+            // Native annotation keeps structural JSON and literal text distinct at every location.
+            if let Some(position) = &retained.position {
+                QuestionInput::annotation_text(
+                    text,
+                    SourceLocation::new(
+                        position.file.clone(),
+                        position.first_line,
+                        position.last_line,
+                    )?,
+                )?
+            } else {
+                QuestionInput::Text(text.clone())
+            }
         }
         Some(Content::Text(text))
             if reading.is_some() && retained.position.is_some() && retained.images.is_empty() =>

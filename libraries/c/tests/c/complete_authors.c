@@ -125,8 +125,31 @@ static void named(void) {
         assert(code==0 && q); thinkthen_question_author_v1 a={0}; assert(thinkthen_question_author(q,&a)==0);
         assert(same(a.name.value,"catalog") && a.wording_version.value==(at==0?31u:32u));
         thinkthen_result *result=NULL; assert(thinkthen_decide_complete(e,q,s,&c,&result)==0); thinkthen_question_free(q);
-        assert(thinkthen_result_question_author(result,0,&a)==0 && a.wording_version.value==(at==0?31u:32u)); thinkthen_result_free(result);
+        assert(thinkthen_result_question_author(result,0,&a)==0 && a.wording_version.value==(at==0?31u:32u));
+        if(at==0) {
+            thinkthen_decide_view_v1 v={0}; assert(thinkthen_result_decide(result,0,&v)==0);
+            assert(v.common.question.value.model.present && same(v.common.question.value.model.value,"jev-latest"));
+            assert(v.common.question.value.batch.present && v.common.question.value.batch.value==2);
+        }
+        thinkthen_result_free(result);
     }
+    /* Compose a loaded member through native grammar and retain route fields after free. */
+    thinkthen_question *loaded=NULL,*composed=NULL;
+    assert(thinkthen_question_load_reference(e,1,STR("@catalog"),&loaded)==0);
+    thinkthen_member_spec_v1 member={STR("loaded"),loaded};
+    thinkthen_question_spec_v1 set={0}; set.kind=8; set.members=(thinkthen_member_specs_v1){&member,1};
+    assert(thinkthen_question_new(e,&set,&composed)==0);
+    thinkthen_question_free(loaded);
+    thinkthen_result *composed_result=NULL;
+    assert(thinkthen_annotate_complete(e,composed,s,&c,&composed_result)==0);
+    thinkthen_question_free(composed);
+    thinkthen_question_author_v1 retained={0};
+    assert(thinkthen_result_member_author(composed_result,0,0,&retained)==0);
+    assert(same(retained.name.value,"catalog") && retained.wording_version.value==32);
+    thinkthen_annotate_view_v1 view={0};
+    assert(thinkthen_result_annotate(composed_result,0,&view)==0 && view.answers.len==1);
+    assert(!view.answers.data[0].question.model.present);
+    thinkthen_result_free(composed_result);
     const char *names[]={"members","dynamic","recognition","relation"};
     thinkthen_record_v1 inputs[2]={r,r};
     inputs[1].original=(thinkthen_optional_content_v1){1,TEXT("Other entity.")};

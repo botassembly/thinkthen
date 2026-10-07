@@ -131,11 +131,13 @@ pub(super) fn recognize(
         present: 1,
         value: QuestionViewV1 {
             kind: 9,
+            on: s.native_on(q.on()),
             kinds: s.native_choices(q.kinds())?,
             relations: s.native_relations(q.relations()),
             threshold: questions::rule(Some(q.threshold())),
             relation_threshold: questions::rule(Some(q.relation_threshold())),
             profile: s.optional_string(q.profile()),
+            model: s.optional_string(q.model()),
             ..QuestionViewV1::default()
         },
     };
@@ -196,6 +198,7 @@ pub(super) fn relate(
             relations: s.native_relations(q.relations()),
             threshold: questions::rule(Some(q.threshold())),
             profile: s.optional_string(q.profile()),
+            model: s.optional_string(q.model()),
             name_pointer: s.optional_string(q.fields().map(|(name, _)| name)),
             kind_pointer: s.optional_string(q.fields().map(|(_, kind)| kind)),
             ..QuestionViewV1::default()

@@ -108,6 +108,11 @@ static void check(thinkthen_result *r,unsigned kind,int files) {
     for(size_t i=0;i<detail.question_sources.len;++i) assert(detail.question_sources.data[i].batch_size.present);
     if(files) for(size_t i=0;i<detail.inputs.len;++i) assert(detail.inputs.data[i].position.present);
 
+    if(kind==4) {
+        assert(row.question.value.choices.len==2);
+        assert(!row.question.value.choices.data[0].description.present);
+        assert(!row.question.value.choices.data[1].description.present);
+    }
     if(kind!=7 && kind!=10) { assert(row.input.present); if(files) assert(row.position.present && row.position.value.first_line.present && row.position.value.last_line.present); }
     assert(summary.observation_count>summary.count);
     size_t question_count=0,row_count=0;

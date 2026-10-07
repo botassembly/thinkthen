@@ -257,6 +257,8 @@ pub(super) fn find(
             text: s.native_content(r.question().text())?,
             none: i32::from(r.question().offers_none()),
             profile: s.optional_string(r.question().profile()),
+            model: s.optional_string(r.question().model()),
+            on: s.native_on(r.question().on()),
             ..QuestionViewV1::default()
         },
     };

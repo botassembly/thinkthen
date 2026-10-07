@@ -226,12 +226,12 @@ fn complete_native_readings_keep_projection_originals_authored_nulls_and_failed_
             (output.status.code(), text(&output.stderr)),
             (Some(0), String::new())
         );
-        assert_eq!(backend.count(), if partial { 1 } else { 3 });
+        assert_eq!(backend.count(), if partial { 1 } else { 4 });
         if !partial {
             let capture: serde_json::Value =
                 serde_json::from_str(&backend.capture()).expect("captured");
             let bodies = capture["bodies"].as_array().expect("bodies");
-            assert_eq!(bodies.len(), 3);
+            assert_eq!(bodies.len(), 4);
             for at in [1, 2] {
                 let body = bodies[at].as_str().expect("request body");
                 assert!(body.contains("selected evidence") && !body.contains("withheld"));
@@ -295,7 +295,7 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
     for (name, body) in [
         (
             "catalog",
-            r#"{"name":"catalog","wording_version":31,"decide":"Need attention?"}"#,
+            r#"{"name":"catalog","wording_version":31,"decide":"Need attention?","model":"jev-latest","batch":2}"#,
         ),
         (
             "mismatch",
@@ -355,7 +355,7 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
         (output.status.code(), text(&output.stderr)),
         (Some(0), String::new())
     );
-    assert_eq!(backend.count(), 10);
+    assert_eq!(backend.count(), 11);
 }
 
 #[test]

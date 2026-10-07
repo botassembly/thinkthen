@@ -33,7 +33,31 @@ impl Object {
         Ok(())
     }
 }
-unsafe fn choices(value: ChoicesV1) -> Result<Object, Failure> {
+unsafe fn choices(value: ChoicesV1, score: bool) -> Result<Box<RawValue>, Failure> {
+    // SAFETY: caller provided the live counted choice array.
+    let values = unsafe { read::slice(value.data, value.len) }?;
+    for choice in values {
+        read::flag(choice.description.present)?;
+        if read::flag(choice.weight.present)? {
+            return Err(Failure::usage(
+                "current native choices do not accept authored weights",
+            ));
+        }
+    }
+    if score && values.iter().all(|choice| choice.description.present == 0) {
+        let names = values
+            .iter()
+            .map(|choice| {
+                // SAFETY: each initialized label has its counted string extent.
+                unsafe { read::string(choice.name) }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        return serde_json::value::to_raw_value(&names)
+            .map_err(|_| Failure::defect("score levels could not be written"));
+    }
+    if score && values.iter().any(|choice| choice.description.present == 0) {
+        return Err(Failure::usage("give every level a description, or none"));
+    }
     let mut object = Object::default();
     // SAFETY: declared array and entry buffers follow the header extents.
     for choice in unsafe { read::slice(value.data, value.len) }? {
@@ -50,7 +74,8 @@ unsafe fn choices(value: ChoicesV1) -> Result<Object, Failure> {
             )?;
         }
     }
-    Ok(object)
+    serde_json::value::to_raw_value(&object)
+        .map_err(|_| Failure::defect("question choices could not be written"))
 }
 fn rule(object: &mut Object, key: &str, value: RuleV1) -> Result<(), Failure> {
     match value.kind {
@@ -122,7 +147,7 @@ pub(super) unsafe fn build(
         } else if spec.kind >= 9 {
             let mut inner = Object::default();
             if spec.kind == 9 {
-                inner.put("kinds", choices(spec.kinds)?)?;
+                inner.put("kinds", choices(spec.kinds, false)?)?;
             }
             inner.put("relations", relations(spec.relations)?)?;
             if spec.name_pointer.present != 0 || spec.kind_pointer.present != 0 {
@@ -163,7 +188,7 @@ pub(super) unsafe fn build(
                         4 | 6 => "levels",
                         _ => "options",
                     },
-                    choices(spec.choices)?,
+                    choices(spec.choices, spec.kind == 4 || spec.kind == 6)?,
                 )?;
             }
             if let Some(yes) = read::optional_content(spec.yes)? {

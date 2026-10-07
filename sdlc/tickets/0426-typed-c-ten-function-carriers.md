@@ -281,3 +281,5 @@ old layouts and symbols remain unchanged. Actual ASan consumers retain these
 views after engine, question and source handles are freed. Focused checks pass
 14 Rust checks and 11 public consumers; all-target Clippy passes. Shared 293-case
 C parity adoption remains in progress; no whole-surface parity claim is made.
+
+Native consumer adoption preserves loaded atomic/rank questions through the native file grammar for set composition. Complete C views now retain explicit model/profile/batch/pointer settings and located annotation uses native structural/literal admission. Bare score levels remain absent descriptions; fully described levels preserve authored null; mixed levels refuse with the same Usage as the public Rust ScoreBuilder. Fourteen private Rust tests and eleven actual ASan C consumers pass; a focused public regression also proves authored null versus absence and mixed refusal. Shared public parity remains open and currently reports actual gaps, without compatibility JSON substituting for typed known fields.
