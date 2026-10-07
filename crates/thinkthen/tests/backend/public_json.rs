@@ -253,8 +253,11 @@ fn versioned_values(
         .iter()
         .position(|held| held.evidence.as_deref() == Some(text))
         .ok_or("no canonical exchange")?;
-    let answers = case.expect["success"]["answers"]
-        .as_array()
+    let answers = case
+        .expect
+        .get("success")
+        .and_then(|success| success.get("answers"))
+        .and_then(serde_json::Value::as_array)
         .ok_or("no canonical answers")?;
     let answer = answers
         .iter()
