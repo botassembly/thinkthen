@@ -247,14 +247,19 @@ def execute(binary, value, settings, home, env, backend=None):
             facts = candidate
         else:
             diagnostic.append(line.removeprefix("thinkthen: "))
-    message = "\n".join(diagnostic)
-    if len(diagnostic) == 2 and diagnostic[-1].startswith("stopped at record "):
+    # Warnings are actual command diagnostics, separate from the refusal cause.
+    warnings = []
+    causes = diagnostic.copy()
+    while causes and causes[0].startswith("warning: "):
+        warnings.append(causes.pop(0))
+    message = "\n".join(causes)
+    if len(causes) == 2 and causes[-1].startswith("stopped at record "):
         assert facts and facts.get("stopped", {}).get("at") is not None, "stop diagnostic omitted stopped facts"
         at = facts["stopped"]["at"]
         count = facts["records"]
         noun = "record" if count == 1 else "records"
-        assert diagnostic[-1].startswith(f"stopped at record {at}; {count} {noun} finished"), diagnostic
-        message = diagnostic[0]
+        assert causes[-1].startswith(f"stopped at record {at}; {count} {noun} finished"), diagnostic
+        message = causes[0]
     rows = [project_row(detail, value, at) for at, detail in enumerate(details)]
     completed = process.returncode in (0, 1, 3, 6) and (bool(details) or process.returncode == 0)
     if completed:
@@ -268,7 +273,9 @@ def execute(binary, value, settings, home, env, backend=None):
         if facts:
             out.update({k: facts[k] for k in ("records", "requests_sent")})
             if facts.get("stopped", {}).get("at") is not None:
-                out["stopped_at"] = facts["stopped"]["at"] - 1
+                out["stopped_at"] = facts["stopped"]["at"]
+    out["diagnostics"] = diagnostic
+    out["warnings"] = warnings
     if value.get("held_cancel"):
         assert process.returncode == -value["cli_signal"], process
         assert len(details) == 1 and rows[0]["input"] == value["items"][0], details
