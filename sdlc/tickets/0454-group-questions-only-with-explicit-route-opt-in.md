@@ -1,6 +1,6 @@
 # 0454: Store actual batch size and preserve per-question caching
 
-Status: in progress. Corrected ticket has fresh High ACCEPT; lane0 adds actual observation batch-size metadata and preserves per-question cache identity.
+Status: in progress. Native actual observation batch size and per-question cache identity are implemented and landed. Remaining surface adoption and final cache checks remain in the family checklists and 0444.
 
 Milestone: 0.2
 Owner: builder.

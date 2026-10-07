@@ -363,15 +363,6 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     frame = pd.DataFrame({"body": texts})
     said(lambda: engine.decide(late, pd.Series([1, 2])).value)
     said(lambda: engine.decide(late, pd.Series(["a", 1], dtype=object)).value)
-    said(lambda: engine.filter(late, column).value)
-    class Mine(pd.Series):
-        pass
-    said(lambda: engine.filter(late, Mine(texts)).value)
-    said(lambda: engine.rank("Late?", column).value)
-    said(lambda: engine.find("Late?", column).value)
-    said(lambda: engine.relate(column, relations={"r": ("a", "b")}).value)
-    said(lambda: engine.annotate(form, column).value)
-    said(lambda: engine.recognize(column, kinds=["x"]).value)
     said(lambda: engine.details(late, column).value)
     said(lambda: engine.decide(late, frame).value)
     said(lambda: engine.annotate(form, frame).value)
@@ -392,7 +383,6 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
         "UsageError record 0 is not a str 0"]
     assert printed.splitlines() == route + [
         "UsageError record 1 is not a str 0",
-        *7 * [f"UsageError {LISTS} 0"],
         "UsageError details reads one str, not a column 0",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on= 0",
         f"UsageError {LISTS} 0",
@@ -461,12 +451,15 @@ def test_a_series_stops_at_the_held_request(tmp_path):
             backend.close()
 
 
-@pytest.mark.skipif(not THREE, reason="pandas 2 offers no Arrow export")
-def test_pandas_3_text_crosses_in_place(backend, tmp_path):
+def test_pandas_text_uses_the_export_its_version_offers(backend, tmp_path):
     """Proof 4: on pandas 3, ``_arrow_probe`` over a ``str`` and a
     ``string[pyarrow]`` Series reads each text where pandas' own export puts
     it. The pandas 2 lane skips it; its precondition shows no export. Regression:
     a copy before the hand-off moves every text."""
+    if not THREE:
+        assert not hasattr(pandas.Series(["a"], dtype="string[pyarrow]"), "__arrow_c_stream__")
+        assert backend.count() == 0
+        return
     printed = run(SETUP + """
     import ctypes
     from arrow_c import pull

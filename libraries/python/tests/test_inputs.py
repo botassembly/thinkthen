@@ -20,17 +20,20 @@ REFUSED = """
 """
 
 
-def test_containers_are_refused_before_any_send(backend, tmp_path):
-    """A list-only verb or ``annotate`` without ``on=`` raises the Arrow
-    sentence for a column. Nothing is sent. The pandas rows of R1-6 and
-    R2-11 are the edge table's in ``test_pandas.py``."""
+def test_invalid_columns_and_unselected_frames_are_refused_before_any_send(backend, tmp_path):
+    """Numeric columns and an unselected frame are invalid before sending.
+    The pandas counterparts live in ``test_pandas.py``."""
     printed = run(REFUSED + """
     import polars, pyarrow
-    said(lambda: tt.filter(late, pyarrow.array(["a"])).value)
-    said(lambda: tt.rank("Late?", polars.Series(["a", "b"])).value)
+    said(lambda: tt.filter(late, pyarrow.array([1])).value)
+    said(lambda: tt.rank("Late?", polars.Series([1, 2])).value)
     said(lambda: tt.annotate(form, polars.DataFrame({"body": ["a"]})).value)
     """, child_env(backend, tmp_path))
-    assert printed.splitlines() == 3 * [f"UsageError {ARROW}"]
+    assert printed.splitlines() == [
+        "UsageError the column's Arrow format is 'l', not text",
+        "UsageError the column's Arrow format is 'l', not text",
+        f"UsageError {ARROW}",
+    ]
     assert backend.count() == 0
 
 

@@ -194,6 +194,8 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame::_recognize_frame, module)?)?;
     module.add_function(wrap_pyfunction!(frame::_annotate_column, module)?)?;
     module.add_function(wrap_pyfunction!(frame::_recognize_column, module)?)?;
+    module.add_function(wrap_pyfunction!(frame::_collection_column, module)?)?;
+    module.add_function(wrap_pyfunction!(frame::_recognize_series, module)?)?;
     // A column's batches are released behind this hook at exit (change 6).
     let gate = wrap_pyfunction!(arrow::_exit_gate, module)?;
     py.import("atexit")?.call_method1("register", (&gate,))?;

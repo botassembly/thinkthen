@@ -10,9 +10,13 @@ mod common;
 use child::wait;
 
 mod cases;
+mod collections;
 mod deadline;
+mod inputs;
+mod prices;
 // A path keeps `door`'s own modules beside it rather than under `door/`.
 #[path = "door.rs"]
 mod door;
 mod lazy;
 mod throttle_equality;
+mod typed;

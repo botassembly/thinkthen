@@ -51,6 +51,7 @@ from ._thinkthen import (
 )
 from .judge import Judge, make as _make_judge
 from .stream import Stream
+from . import _frames
 from .files import FileSelection, SourceRecord, Located, read_files
 from .files import call as _source_call, spec_source as _source_spec
 
@@ -178,7 +179,8 @@ def _deadline(deadline_ms):
 def _rebuilt(value, answer):
     """A Polars input gets its answers back through its own class."""
     if isinstance(answer, _thinkthen._Arrow):
-        return type(value)(answer)
+        rebuilt = type(value)(answer)
+        return rebuilt.rename(value.name) if _frames.is_series(value) else rebuilt
     return answer
 
 
@@ -469,8 +471,12 @@ class Engine:
                 raise UsageError("rank takes a rank question")
             call = _source_call(self, "rank", asked._json(), records, batch, context, deadline_ms, token)
             return _mapped(call, lambda rows: rows[:top])
-        ranked = self._engine.order("rank", _ordering(question, "rank"), records,
-                                     batch, context, deadline_ms, token)
+        if _frames.is_series(records):
+            ranked = _frames.collection(self, "rank", _ordering(question, "rank"), records,
+                                        batch, context, deadline_ms, token)
+        else:
+            ranked = self._engine.order("rank", _ordering(question, "rank"), records,
+                                         batch, context, deadline_ms, token)
         return _mapped(ranked, lambda rows: [{"index": index, "record": record,
                                                "probability": probability}
                                               for index, record, probability in rows][:top])
@@ -491,7 +497,9 @@ class Engine:
             return _source_call(self, "find", json.dumps(body), units, None, None, deadline_ms, token)
         if none:
             asked = asked._offering_none()
-        found = self._engine.order("find", asked, units, None, None, deadline_ms, token)
+        found = (_frames.collection(self, "find", asked, units, None, None, deadline_ms, token)
+                 if _frames.is_series(units) else
+                 self._engine.order("find", asked, units, None, None, deadline_ms, token))
         def picked(rows):
             if not rows:
                 return None
@@ -519,6 +527,8 @@ class Engine:
             if on is not None:
                 raise UsageError("source annotate takes question-member on, not frame on")
             return _source_call(self, "annotate", _source_spec(questions), records, batch, None, deadline_ms, token)
+        if on is None and _frames.is_series(records):
+            return _frames.annotate(self, questions, records, batch, deadline_ms, token)
         asked = _spec(_thinkthen._QuestionSet, questions)
         if on is None:
             return self._engine.annotate(asked, records, batch, deadline_ms, token)
@@ -591,6 +601,8 @@ class Engine:
         if on is not None:
             result = _thinkthen._recognize_frame(self._engine, spec, text, on, deadline_ms, token)
             return _mapped(result, lambda value: type(text)(_Stream(value)))
+        if on is None and _frames.is_series(text):
+            return _frames.recognize(self, spec, text, deadline_ms, token)
         return self._engine.recognize(spec, text, deadline_ms, token)
 
     def relate(self, entities, ask=None, *, relations=None, either=None, threshold=None,
@@ -615,6 +627,8 @@ class Engine:
             if threshold is not None:
                 body["threshold"] = threshold
             return _source_call(self, "relate", _source_spec(ask) if ask is not None else json.dumps(body), entities, None, None, deadline_ms, token)
+        if _frames.is_series(entities):
+            entities = _frames.entities(entities)
         return self._engine.relate(spec, entities, deadline_ms, token)
 
     def usage(self):

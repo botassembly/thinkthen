@@ -1,22 +1,26 @@
 //! The Rust Polars door, behind the `polars` feature (ticket 0130).
 
-use polars::prelude::{
-    BooleanChunkedBuilder, ChunkedBuilder, Column, DataFrame, Expr, Float64Type, IntoSeries,
-    PrimitiveChunkedBuilder, Series,
-};
+use polars::prelude::{DataFrame, Expr, LazyFrame, Series};
 
 use super::{
-    Annotated, Call, CallOptions, DecisionQuestion, Details, Engine, Error, Judgment, PlanEstimate,
-    Probabilities, Question, QuestionKind, QuestionSet,
+    Call, CallOptions, DecisionQuestion, Edge, Error, PlanEstimate, Question, QuestionSet,
+    Recognize, Recognized, Relate,
 };
 
+use crate::public::{Details, InputReaderOptions, QuestionInput};
+use std::path::PathBuf;
+
 mod column;
+mod complete;
+mod eager;
+mod inputs;
 mod lazy;
 mod options;
+mod typed;
+mod typed_batches;
+mod typed_series;
 pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
-
-use column::{Answers, Failures, decided, kind_word, streamed, text};
 
 /// The one member name of the set a single-question column asks.
 const MEMBER: &str = "answer";
@@ -24,10 +28,10 @@ const MEMBER: &str = "answer";
 /// The Series and frame door, implemented for [`Engine`]. It needs the
 /// `polars` feature, and takes the Polars version [`crate::polars`] names.
 ///
-/// Each method reads a text column in place and makes one engine call over
-/// the whole column, at the throttle, with answers in input order. Each
-/// answer goes into the output column as it arrives, so a call holds its
-/// input, its output and the pipeline's window, never a list of every row.
+/// Row-wise text judgments read a column in place at the native throttle.
+/// Whole-set rank/find and explicit source helpers materialize their logical
+/// collection once; they never judge each lazy morsel as a complete set.
+/// Nullable outputs retain their input positions and names.
 ///
 /// ```no_run
 /// use thinkthen::polars::prelude::{NamedFrom, Series};
@@ -203,264 +207,132 @@ pub trait PolarsEngine {
         on: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<DataFrame>, Error>;
-}
-
-impl PolarsEngine for Engine {
-    fn decide_expr<Q: DecisionQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        input: Expr,
-        options: PolarsExprOptions,
-    ) -> Result<Expr, Error> {
-        lazy::expression(
-            self,
-            QuestionKind::Decide,
-            question.question(),
-            input,
-            options,
-        )
-    }
-
-    fn choose_expr(
+    /// Judge ordered explicit text/images, retaining null rows and selected
+    /// probabilities. Ordinary strings and bytes do not imply images.
+    /// # Errors
+    /// Returns native admission/call errors; text-only image refusals send nothing.
+    fn input_column(
         &self,
         question: &Question,
-        input: Expr,
-        options: PolarsExprOptions,
-    ) -> Result<Expr, Error> {
-        lazy::expression(self, QuestionKind::Choose, question, input, options)
-    }
-
-    fn score_expr(
-        &self,
-        question: &Question,
-        input: Expr,
-        options: PolarsExprOptions,
-    ) -> Result<Expr, Error> {
-        lazy::expression(self, QuestionKind::Score, question, input, options)
-    }
-
-    fn tag_expr(
-        &self,
-        question: &Question,
-        input: Expr,
-        options: PolarsExprOptions,
-    ) -> Result<Expr, Error> {
-        lazy::expression(self, QuestionKind::Tag, question, input, options)
-    }
-
-    fn column_with(
-        &self,
-        question: &Question,
-        texts: &Series,
+        inputs: &[Option<QuestionInput>],
         options: PolarsCallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error> {
-        let (question, call, probability) = options.apply(question)?;
-        if probability {
-            return self.probability_frame(&question, texts, call);
-        }
-        let value = match question.kind() {
-            QuestionKind::Decide => self.decide_series(&question, texts, call)?,
-            QuestionKind::Choose => self.choose_series(&question, texts, call)?,
-            QuestionKind::Score => self.score_series(&question, texts, call)?,
-            QuestionKind::Tag => self.tag_series(&question, texts, call)?,
-            _ => {
-                return Err(Error::usage(
-                    "this column door takes decide, choose, score or tag",
-                ));
-            }
-        };
-        value.try_map(|value| {
-            DataFrame::new(value.len(), vec![value.into()])
-                .map_err(|error| Error::defect(&format!("the value frame was refused: {error}")))
-        })
-    }
+    ) -> Result<Call<DataFrame>, Error>;
 
-    fn plan_series(
+    /// Complete typed native probabilities for every explicit present input.
+    /// # Errors
+    /// Returns the same validation and call errors as input_column.
+    fn input_details_column(
+        &self,
+        question: &Question,
+        inputs: &[Option<QuestionInput>],
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<Option<Details>>>, Error>;
+
+    /// Materialize selected files through the single native reader. Text lines
+    /// stay physical; whole-file images have null text line coordinates.
+    /// # Errors
+    /// Returns native reader, media admission and call errors.
+    fn source_column(
+        &self,
+        question: &Question,
+        paths: &[PathBuf],
+        reading: InputReaderOptions,
+        options: PolarsCallOptions<'_>,
+    ) -> Result<Call<DataFrame>, Error>;
+
+    /// Keep matching present cells, preserving their input name and order.
+    /// Null inputs ask no question and are omitted.
+    /// # Errors
+    /// Returns native validation, cancellation or request errors.
+    fn filter_series(
         &self,
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<PlanEstimate, Error> {
-        self.plan_with(question, text(texts)?.iter().flatten(), options)
-    }
+    ) -> Result<Call<Series>, Error>;
 
-    fn probability_frame(
+    /// Rank the complete present collection. Output has original zero-based
+    /// `index`, `record` and `probability`; ties keep duplicate input order.
+    /// # Errors
+    /// Returns native rank admission and call errors.
+    fn rank_series(
         &self,
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error> {
-        let kind = question.kind();
-        if !matches!(kind, QuestionKind::Decide | QuestionKind::Choose) {
-            return Err(Error::usage(format!(
-                "probability belongs to decide and choose, not {}",
-                kind_word(kind)
-            )));
-        }
-        let cells = text(texts)?;
-        let rows = cells.len();
-        let mut probability =
-            PrimitiveChunkedBuilder::<Float64Type>::new("probability".into(), rows);
-        let mut values = Answers::new("value", kind, rows)?;
-        let batch = self.details_many_with(question, cells.iter().flatten(), options);
-        let facts = streamed(batch, cells, |row| {
-            let Some(row) = row else {
-                probability.append_null();
-                return values.push(None);
-            };
-            probability.append_option(selected_probability(row.value())?);
-            let value = match row.value().value() {
-                Judgment::Decision(answer) => Annotated::Decision(*answer),
-                Judgment::Choice(label) => Annotated::Choice(label.clone()),
-                _ => return Err(Error::defect("a probability detail held another value")),
-            };
-            values.push(Some(&value))
-        })?;
-        let columns = vec![
-            values.finish().into(),
-            probability.finish().into_series().into(),
-        ];
-        Call::new(columns, facts).try_map(|columns| {
-            DataFrame::new(rows, columns).map_err(|error| {
-                Error::defect(&format!("the probability frame was refused: {error}"))
-            })
-        })
-    }
+    ) -> Result<Call<DataFrame>, Error>;
 
-    fn decide_series<Q: DecisionQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        texts: &Series,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error> {
-        let cells = text(texts)?;
-        let mut answers = BooleanChunkedBuilder::new(texts.name().clone(), cells.len());
-        let batch = self.decide_many_with(question, cells.iter().flatten(), options);
-        let facts = streamed(batch, cells, |row| {
-            answers.append_option(row.and_then(|row| decided(*row.value())));
-            Ok(())
-        })?;
-        Ok(Call::new(answers.finish().into_series(), facts))
-    }
-
-    fn choose_series(
+    /// Compare every present candidate in one native find call. Output keeps
+    /// every candidate's `index`, `unit`, `probability` and real-unit `selected` flag.
+    /// A synthetic none candidate has null index and unit.
+    /// # Errors
+    /// Returns native find admission and call errors.
+    fn find_series(
         &self,
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error> {
-        single(self, QuestionKind::Choose, question, texts, options)
-    }
+    ) -> Result<Call<DataFrame>, Error>;
 
-    fn score_series(
+    /// Recognize each present text, retaining complete spans and relations;
+    /// null cells remain None. All calls share one fixed deadline.
+    /// # Errors
+    /// Returns native errors with aggregate facts, or checked tally overflow.
+    fn recognize_series(
         &self,
-        question: &Question,
+        ask: &Recognize,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error> {
-        single(self, QuestionKind::Score, question, texts, options)
-    }
+    ) -> Result<Call<Vec<Option<Recognized>>>, Error>;
 
-    fn tag_series(
+    /// Relate the complete entity collection from text name/kind columns.
+    /// Paired null cells are omitted; a partly null entity is refused.
+    /// # Errors
+    /// Returns native entity validation, relation and call errors.
+    fn relate_frame(
         &self,
-        question: &Question,
-        texts: &Series,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error> {
-        single(self, QuestionKind::Tag, question, texts, options)
-    }
-
-    fn annotate_frame(
-        &self,
-        questions: &QuestionSet,
+        ask: &Relate,
         frame: &DataFrame,
+        name: &str,
+        kind: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<Edge>>, Error>;
+
+    /// Materialize a lazy frame's whole logical collection before ranking.
+    /// # Errors
+    /// Returns collection errors or native rank errors.
+    fn rank_lazy(
+        &self,
+        question: &Question,
+        frame: LazyFrame,
         on: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<DataFrame>, Error> {
-        let held = frame
+        let frame = frame
+            .collect()
+            .map_err(|_| Error::usage("the lazy frame could not be collected"))?;
+        let texts = frame
             .column(on)
-            .map_err(|_| Error::usage(format!("the frame holds no column {on}")))?;
-        if questions.members().any(|(name, _)| name == "failed") {
-            return Err(Error::usage(
-                "the question name failed is reserved for frame failures",
-            ));
-        }
-        for (name, _) in questions
-            .members()
-            .chain(std::iter::once(("failed", QuestionKind::Decide)))
-        {
-            if frame.column(name).is_ok() {
-                return Err(Error::usage(format!(
-                    "the frame already holds a column named {name}"
-                )));
-            }
-        }
-        let cells = text(held.as_materialized_series())?;
-        let names = questions
-            .members()
-            .map(|(name, _)| name)
-            .collect::<Vec<_>>();
-        let mut columns = questions
-            .members()
-            .map(|(name, kind)| Answers::new(name, kind, cells.len()))
-            .collect::<Result<Vec<_>, _>>()?;
-        let mut failures = Failures::new(&names, cells.len());
-        let batch = self.annotate_with(questions, cells.iter().flatten(), options);
-        let facts = streamed(batch, cells, |record| {
-            for (place, column) in columns.iter_mut().enumerate() {
-                column.push_record(record.as_ref(), place)?;
-            }
-            failures.push(record.as_ref())
-        })?;
-        Call::new((columns, failures), facts).try_map(|(columns, failures)| {
-            let mut columns = columns
-                .into_iter()
-                .map(|column| column.finish().into())
-                .collect::<Vec<Column>>();
-            columns.push(failures.finish()?.into());
-            frame
-                .hstack(&columns)
-                .map_err(|error| Error::defect(&format!("the frame refused a new column: {error}")))
-        })
+            .map_err(|_| Error::usage("the frame has no selected column"))?;
+        self.rank_series(question, texts.as_materialized_series(), options)
     }
-}
 
-fn selected_probability(details: &Details) -> Result<Option<f64>, Error> {
-    match (details.value(), details.probabilities()) {
-        (Judgment::Decision(_), Probabilities::YesNo { yes }) => Ok(Some(*yes)),
-        (Judgment::Choice(Some(selected)), Probabilities::Named(options)) => options
-            .iter()
-            .find(|option| option.name() == selected)
-            .map(|option| Some(option.probability()))
-            .ok_or_else(|| Error::defect("the chosen label has no probability")),
-        (Judgment::Choice(None), Probabilities::Named(_)) => Ok(None),
-        _ => Err(Error::defect("a probability detail held another shape")),
+    /// Materialize a lazy frame's whole logical collection before finding.
+    /// # Errors
+    /// Returns collection errors or native find errors.
+    fn find_lazy(
+        &self,
+        question: &Question,
+        frame: LazyFrame,
+        on: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<DataFrame>, Error> {
+        let frame = frame
+            .collect()
+            .map_err(|_| Error::usage("the lazy frame could not be collected"))?;
+        let texts = frame
+            .column(on)
+            .map_err(|_| Error::usage("the frame has no selected column"))?;
+        self.find_series(question, texts.as_materialized_series(), options)
     }
-}
-
-/// One choose, score, or tag column through a one-question set.
-fn single(
-    engine: &Engine,
-    wanted: QuestionKind,
-    question: &Question,
-    texts: &Series,
-    options: CallOptions<'_>,
-) -> Result<Call<Series>, Error> {
-    if question.kind() != wanted {
-        let word = kind_word(wanted);
-        return Err(Error::usage(format!(
-            "{word}_series needs a {word} question, and this one is a {} question",
-            kind_word(question.kind())
-        )));
-    }
-    let cells = text(texts)?;
-    let set = QuestionSet::builder()
-        .question(MEMBER, question.clone())?
-        .build()?;
-    let mut answers = Answers::new(texts.name().as_str(), wanted, cells.len())?;
-    let batch = engine.annotate_with(&set, cells.iter().flatten(), options);
-    let facts = streamed(batch, cells, |record| {
-        answers.push_record(record.as_ref(), 0)
-    })?;
-    Ok(Call::new(answers.finish(), facts))
 }

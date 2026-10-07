@@ -62,7 +62,9 @@ class Judge:
                                 (hasattr(value, "__arrow_c_stream__") or
                                  hasattr(value, "__arrow_c_array__"))):
             if verb == "filter":
-                raise UsageError("filter, rank, find, and relate read a list of str, not a column, and annotate and recognize read a column only from a Polars or pandas frame with on=. Pass column.to_list()")
+                from ._frames import filter_series
+                return filter_series(engine, asked, value, self._batch, self._context,
+                                     deadline_ms, token, tally)
             call = _column(lambda selected, question, column, due, held:
                            native.ask(selected, question, column, due, held,
                                       self._batch, self._context, tally),
