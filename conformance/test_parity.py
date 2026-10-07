@@ -220,21 +220,12 @@ class CliApplicability(unittest.TestCase):
     def setUp(self):
         self.contract = json.loads(parity.DOCUMENT.read_text())['parity']
         self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
-        self.cli['required_checks'] = ['named', 'runtime']
-        self.cli['case_rulings'] = {
-            case_id: {'boundary': boundary, 'reason': 'Actual CLI boundary'}
-            | ({} if boundary == 'sdk-only' else {'expect': {
-                'error': 'local', 'exit': 5, 'requests_sent': 0, 'no_result': True, 'secrecy': True}
-               if boundary == 'question-file' else {'signals': ['SIGINT', 'SIGTERM'], 'requests_sent': 1, 'completed_rows': 1,
-                     'completed_rows_ordered': True, 'no_suffix_output': True, 'cancelled_facts': True,
-                     'signal_exit': True, 'secrecy': True}})
-            for case_id, boundary in parity.CLI_BOUNDARIES.items()}
 
     def test_cli_resolves_actual_boundary_checks_without_changing_sdk_or_mcp(self):
         original = copy.deepcopy(self.contract['required_cases'])
         parity.validate_consumer_contracts(self.contract)
         cli = parity.required_cases(self.contract, 'cli')
-        self.assertEqual(len(cli), 238)
+        self.assertEqual(len(cli), 237)
         self.assertEqual(len(parity.required_cases(self.contract, 'rust')), 248)
         self.assertEqual(len(parity.required_cases(self.contract, 'mcp')), 251)
         self.assertTrue(all(case['checks'] == ['named', 'runtime'] for case in cli.values()))
@@ -243,6 +234,29 @@ class CliApplicability(unittest.TestCase):
         self.assertEqual(parity.required_cases(self.contract, 'rust')['typed-decide']['checks'],
                          ['named', 'compile', 'runtime'])
         self.assertEqual(original, self.contract['required_cases'])
+
+    def test_image_ruling_retains_base_assertions_and_refuses_unknown_or_weakened_scenarios(self):
+        identity = 'image-admission-packing-overflow-choose'
+        case = parity.required_cases(self.contract, 'cli')[identity]
+        original = next(row for row in self.contract['required_cases'] if row['id'] == identity)
+        self.assertEqual(case['expect'], original['expect'])
+        self.assertEqual(case['cli_scenario_rulings'], parity.CLI_IMAGE_SCENARIOS)
+        for defect in ['scenario', 'variant', 'sends', 'exit', 'message', 'result']:
+            changed = copy.deepcopy(self.contract)
+            cli = next(row for row in changed['consumers'] if row['id'] == 'cli')
+            scenarios = cli['case_rulings'][identity]['expect']['scenarios']
+            variants = scenarios['perplexity-decider-complete-question-split']
+            expect = variants['same_state_choose_candidate_orders']
+            if defect == 'scenario':
+                scenarios['unrelated'] = scenarios.pop('perplexity-decider-complete-question-split')
+            elif defect == 'variant':
+                variants['unrelated'] = variants.pop('same_state_choose_candidate_orders')
+            else:
+                field, value = {'sends': ('requests_sent', 1), 'exit': ('exit', 5),
+                                'message': ('message', ''), 'result': ('no_result', False)}[defect]
+                expect[field] = value
+            with self.subTest(defect=defect), self.assertRaisesRegex(ValueError, 'closed scenario refusal'):
+                parity.validate_consumer_contracts(changed)
 
     def test_closed_rulings_refuse_unrelated_exclusions_and_other_consumers(self):
         for defect in ['missing-all', 'missing', 'unrelated', 'wrong-boundary', 'other-consumer', 'checks', 'expect', 'signal-expect']:
@@ -278,6 +292,7 @@ class CliApplicability(unittest.TestCase):
                                       self.contract), {('cli', 'typed-decide'): 'pass'})
         for case_id, checks, cause in [
             ('named-uppercase', ['named', 'runtime'], 'sdk-only CLI case'),
+            ('finite-all-before-send', ['named', 'runtime'], 'sdk-only CLI case'),
             ('typed-decide', ['named', 'compile', 'runtime'], 'missing named/compiler/runtime'),
             ('typed-decide', ['runtime'], 'missing named/compiler/runtime'),
         ]:

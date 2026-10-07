@@ -7961,6 +7961,27 @@
           "runtime"
         ],
         "case_rulings": {
+          "finite-all-before-send": {
+            "boundary": "sdk-only",
+            "reason": "The SDK materialized collection validates every selected item before dispatch. CLI file contents use documented incremental admission; streaming prefix, staged refusals and cache-before-admission cases remain required (specification/records.md, input declarations)."
+          },
+          "image-admission-packing-overflow-choose": {
+            "boundary": "image-record-admission",
+            "reason": "Distinct captions use existing raw caption documents and prove complete-question admission with exact bytes, images and two sends, without a grouped-splitting claim. This one same-caption reversed-shortlist variant requires a JSONL envelope above the documented 16 MiB encoded record bound and refuses before transport. Liquid reversed options and SDK splitting remain unchanged.",
+            "expect": {
+              "scenarios": {
+                "perplexity-decider-complete-question-split": {
+                  "same_state_choose_candidate_orders": {
+                    "error": "usage",
+                    "exit": 2,
+                    "requests_sent": 0,
+                    "no_result": true,
+                    "message": "the record is over 16 MiB, which is far past what a backend reads in one request"
+                  }
+                }
+              }
+            }
+          },
           "23-cancelled-fault": {
             "boundary": "sdk-only",
             "reason": "The SDK case supplies a pre-fired native cancellation handle. CLI signals drain started work through cancellation-held-call."

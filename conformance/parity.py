@@ -20,7 +20,7 @@ def all_consumers(parity):
 SDK_ONLY_CLI_CASES = {
     '23-cancelled-fault', '24-deadline-fault', 'boundary-cancelled', 'boundary-deadline',
     'named-traversal', 'named-uppercase', 'named-overlong', 'lookup-explicit-name',
-    'named-malformed-no-fallback', 'proxy-reservation-refusal',
+    'named-malformed-no-fallback', 'proxy-reservation-refusal', 'finite-all-before-send',
 }
 QUESTION_FILE_CLI_CASES = {
     'declaration-shorthand', 'declaration-null', 'declaration-empty', 'declaration-nested',
@@ -33,7 +33,16 @@ QUESTION_FILE_CLI_CASES = {
 }
 CLI_BOUNDARIES = (dict.fromkeys(SDK_ONLY_CLI_CASES, 'sdk-only')
                   | dict.fromkeys(QUESTION_FILE_CLI_CASES, 'question-file')
-                  | {'cancellation-held-call': 'signal-drain'})
+                  | {'cancellation-held-call': 'signal-drain',
+                     'image-admission-packing-overflow-choose': 'image-record-admission'})
+CLI_IMAGE_SCENARIOS = {
+    'perplexity-decider-complete-question-split': {
+        'same_state_choose_candidate_orders': {
+            'error': 'usage', 'exit': 2, 'requests_sent': 0, 'no_result': True,
+            'message': 'the record is over 16 MiB, which is far past what a backend reads in one request',
+        },
+    },
+}
 
 
 def required_cases(parity, consumer):
@@ -51,7 +60,10 @@ def required_cases(parity, consumer):
         if 'required_checks' in contract:
             case['checks'] = contract['required_checks']
         if ruling:
-            case['expect'] = ruling['expect']
+            if ruling['boundary'] == 'image-record-admission':
+                case['cli_scenario_rulings'] = ruling['expect']['scenarios']
+            else:
+                case['expect'] = ruling['expect']
             case['cli_boundary'] = ruling['boundary']
             case['cli_reason'] = ruling['reason']
         resolved[case['id']] = case
@@ -83,6 +95,8 @@ def validate_consumer_contracts(parity):
             if boundary == 'question-file' and ruling['expect'] != {
                     'error': 'local', 'exit': 5, 'requests_sent': 0, 'no_result': True, 'secrecy': True}:
                 raise ValueError(f'{case_id}: CLI question-file boundary must refuse locally without sends')
+            if boundary == 'image-record-admission' and ruling['expect'] != {'scenarios': CLI_IMAGE_SCENARIOS}:
+                raise ValueError(f'{case_id}: CLI image admission differs from the closed scenario refusal')
             if boundary == 'signal-drain' and ruling['expect'] != {
                     'signals': ['SIGINT', 'SIGTERM'], 'requests_sent': 1, 'completed_rows': 1,
                     'completed_rows_ordered': True, 'no_suffix_output': True, 'cancelled_facts': True,

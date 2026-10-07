@@ -68,7 +68,8 @@ def command(binary, value, settings, home):
         args.append("--none")
     args.extend(["--details", "--facts"])
     envelope = value.get("context_present") or bool(value.get("candidate_orders"))
-    document_files = bool(value.get("paths")) and value.get("source_unit") in (3, 4)
+    caption_documents = value.get("caption_files") and len(value["items"]) > 1 and not envelope
+    document_files = caption_documents or (bool(value.get("paths")) and value.get("source_unit") in (3, 4))
     attached_images = bool(value.get("image_paths")) and not value.get("paths") and len(value["items"]) == 1 and not envelope and isinstance(value["items"][0], (str, type(None)))
     stream = envelope or (not (document_files or attached_images) and (
         bool(value.get("paths")) or verb in ("filter", "rank", "find") or not (
@@ -98,6 +99,12 @@ def command(binary, value, settings, home):
             args.extend(["--image-media", value["media"]])
         for path in value["image_paths"]:
             args.extend(["--image", str(ROOT / path)])
+    if caption_documents:
+        # Raw documents retain the caption bytes without a JSONL expansion.
+        # This route admits complete questions; it makes no grouping claim.
+        for at in range(len(value["items"])):
+            args.extend(["--input", str(home / ("caption-%d.txt" % at))])
+        return args, ""
     if value.get("paths") or injection == "recording_read_failure":
         paths = [home / "missing-input"] if injection == "recording_read_failure" else [
             (home if value.get("owned_jsonl") else ROOT) / path
@@ -360,8 +367,15 @@ def run_case(binary, row, value, home):
            "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
            "XDG_STATE_HOME": str(home / "state"), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
     c_parity.prepare(home, value)
+    steps = metadata_steps(value)
+    if row.get("cli_boundary") == "image-record-admission":
+        for at, step in enumerate(steps):
+            scenario = step.get("image_scenario", {}).get("id")
+            if scenario in row["cli_scenario_rulings"] and step.get("candidate_orders"):
+                expected = row["cli_scenario_rulings"][scenario]["same_state_choose_candidate_orders"]
+                steps[at] = {**step, "expect": expected}
     # Check admission expressibility before spawning a fixture server.
-    for step in metadata_steps(value):
+    for step in steps:
         command(binary, step, settings_for(step, home, 1, value["arm"]), home)
     backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
     env.update({name: "sk-conformance-loopback" for name in
@@ -369,7 +383,7 @@ def run_case(binary, row, value, home):
     identities = []
     unadorned = None
     try:
-        for step in metadata_steps(value):
+        for step in steps:
             if value.get("metadata") and step.get("question_form") == "file":
                 c_parity.prepare(home, step)
             if step.get("copy_store"):
