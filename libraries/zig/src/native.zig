@@ -160,6 +160,7 @@ pub const Snapshot = struct {
     observation_authors: []const c.thinkthen_question_author_v1,
     member_authors: []const []const c.thinkthen_question_author_v1,
     rank_members: []const []const c.thinkthen_rank_view_v1,
+    rank_member_details: []const []const c.thinkthen_details_v1 = &.{},
     located_recognition: []const c.thinkthen_source_recognition_v1,
     located_relations: []const c.thinkthen_source_relations_v1,
     pub fn kind(self: *const Snapshot) !tt.FailureKind {
@@ -225,6 +226,7 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
     const authors = try a.alloc(c.thinkthen_question_author_v1, s.count);
     const member_authors = try a.alloc([]const c.thinkthen_question_author_v1, s.count);
     const ranks = try a.alloc([]const c.thinkthen_rank_view_v1, s.count);
+    const rank_details = try a.alloc([]const c.thinkthen_details_v1, s.count);
     const recs = try a.alloc(c.thinkthen_source_recognition_v1, s.count);
     const rels = try a.alloc(c.thinkthen_source_relations_v1, s.count);
     const events = try a.alloc(c.thinkthen_observation_v1, s.observation_count);
@@ -253,6 +255,7 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
         authors[i] = try clone(@TypeOf(author), a, author);
         member_authors[i] = &.{};
         ranks[i] = &.{};
+        rank_details[i] = &.{};
         if (value.function == 8) {
             const members = try a.alloc(c.thinkthen_question_author_v1, value.data.annotate.answers.len);
             for (members, 0..) |*slot, j| {
@@ -266,12 +269,20 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
             try viewOK(c.thinkthen_result_rank_member_count(raw, i, &n));
             try extent(n, @sizeOf(c.thinkthen_rank_view_v1), raw);
             const members = try a.alloc(c.thinkthen_rank_view_v1, n);
+            const mas = try a.alloc(c.thinkthen_question_author_v1, n);
+            const mds = try a.alloc(c.thinkthen_details_v1, n);
             for (members, 0..) |*slot, j| {
                 var ranked = std.mem.zeroes(c.thinkthen_rank_view_v1);
                 try viewOK(c.thinkthen_result_rank_member(raw, i, j, &ranked));
                 slot.* = try clone(@TypeOf(ranked), a, ranked);
+                try viewOK(c.thinkthen_result_member_author(raw, i, j, &author));
+                mas[j] = try clone(@TypeOf(author), a, author);
+                try viewOK(c.thinkthen_result_rank_member_details(raw, i, j, &d));
+                mds[j] = try clone(@TypeOf(d), a, d);
             }
             ranks[i] = members;
+            member_authors[i] = mas;
+            rank_details[i] = mds;
         }
         var rec = std.mem.zeroes(c.thinkthen_source_recognition_v1);
         if (value.function == 9) try viewOK(c.thinkthen_result_source_recognition(raw, i, &rec));
@@ -281,7 +292,7 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
         rels[i] = try clone(@TypeOf(rel), a, rel);
     }
     const summary = try clone(@TypeOf(s), a, s);
-    return .{ .arena = arena, .summary = summary, .rows = rows, .observations = events, .details = details, .observation_details = event_details, .authors = authors, .observation_authors = event_authors, .member_authors = member_authors, .rank_members = ranks, .located_recognition = recs, .located_relations = rels };
+    return .{ .arena = arena, .summary = summary, .rows = rows, .observations = events, .details = details, .observation_details = event_details, .authors = authors, .observation_authors = event_authors, .member_authors = member_authors, .rank_members = ranks, .rank_member_details = rank_details, .located_recognition = recs, .located_relations = rels };
 }
 fn viewOK(code: c_int) !void {
     if (code != 0) return error.NativeAccessorRefused;

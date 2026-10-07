@@ -8,6 +8,7 @@ internal static partial class NativeComplete {
  [DllImport(Library)]internal static extern int thinkthen_result_member_author(IntPtr r,nuint i,nuint j,out QuestionAuthorV1 a);
  [DllImport(Library)]internal static extern int thinkthen_result_observation_author(IntPtr r,nuint i,out QuestionAuthorV1 a);
  [DllImport(Library)]internal static extern int thinkthen_result_rank_member_count(IntPtr r,nuint i,out nuint count);
+ [DllImport(Library)]internal static extern int thinkthen_result_rank_member_details(IntPtr r,nuint i,nuint j,out DetailsV1 v);
  [DllImport(Library)]internal static extern int thinkthen_result_rank_member(IntPtr r,nuint i,nuint j,out RankViewV1 v);
  [DllImport(Library)]internal static extern int thinkthen_result_source_recognition(IntPtr r,nuint i,out SourceRecognitionV1 v);
  [DllImport(Library)]internal static extern int thinkthen_result_source_relations(IntPtr r,nuint i,out SourceRelationsV1 v);

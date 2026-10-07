@@ -99,8 +99,8 @@ def native_value(kind,v):
 def native_projection(raw):
     s=raw['summary']; facts=s['facts'] or {}; error=s['error']
     out={'code':error['code'] if error else 0}
-    for field in ('requests_sent','records','cache_answers','call_id'):
-        if field in facts: out[field]=facts[field]
+    for field in ('requests_sent','records','cache_answers','call_id','input_tokens','output_tokens'):
+        if facts.get(field) is not None: out[field]=facts[field]
     if error:
         out['message']=error['message']
         if error['stopped'] and error['stopped']['at'] is not None:out['stopped_at']=error['stopped']['at']
@@ -139,6 +139,20 @@ def native_projection(raw):
         for key in ('name','wording_version'):
             if author[key] is not None:row[key]=author[key]
         if k==8:row['member_authors']=[{key:author[key] for key in ('name','wording_version') if author[key] is not None} for author in raw['member_authors'][i]]
+        if k==6 and raw['rank_members'][i]:
+            def rank_facts(target, common, details):
+                meta=common['meta']
+                target['model']=meta['model']; target['context_digest']=meta['context_sha256']
+                target['usage']={key:details['usage'][key] for key in ('input_tokens','output_tokens') if details['usage'][key] is not None}
+                target['source_batch_sizes']=[source['batch_size'] for source in details['question_sources']]
+            rank_facts(row,common,raw['details'][i]); row['question_name']=v['question_name']; row['members']=[]
+            for j,member in enumerate(raw['rank_members'][i]):
+                member=member['data']['rank'] if 'function' in member else member
+                mc=member['common']; mm=mc['meta']; author=raw['member_authors'][i][j]
+                child={'name':member['question_name'],'value':member['value'],'probability':mc['answer']['data']['probability'],
+                       'answer_id':mc['answer_id'],'author':author['name'],'observations':len(mm['observations']),'sources':len(mm['question_sources'])}
+                if author['wording_version'] is not None:child['wording_version']=author['wording_version']
+                rank_facts(child,mc,raw['rank_member_details'][i][j]); row['members'].append(child)
         # Validate copied complete fields in addition to the common value oracle.
         assert len(meta['requests']) == len(meta['question_sources']) == len(meta['observations']), meta
         assert len(common['answer_id']) == 64,common

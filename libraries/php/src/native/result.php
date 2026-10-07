@@ -9,12 +9,14 @@ final class CompleteResult
     /** @param list<T> $rows
      * @param list<ObservationView> $observations @param list<DetailsView> $details
      * @param list<QuestionAuthorView> $authors @param list<list<QuestionAuthorView>> $memberAuthors
-     * @param list<list<RankView>> $rankMembers */
+     * @param list<list<RankView>> $rankMembers
+     * @param list<list<DetailsView>> $rankMemberDetails */
     public function __construct(public readonly SummaryView $summary,public readonly array $rows,
         public readonly array $observations,public readonly array $details,public readonly array $authors,
         public readonly array $memberAuthors,public readonly array $rankMembers,
         public readonly array $observationDetails,public readonly array $observationAuthors,
-        public readonly array $sourceRecognitions,public readonly array $sourceRelations) {}
+        public readonly array $sourceRecognitions,public readonly array $sourceRelations,
+        public readonly array $rankMemberDetails=[]) {}
 }
 final class CompleteFailure extends \RuntimeException
 {
