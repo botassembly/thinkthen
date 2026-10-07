@@ -3,10 +3,7 @@
 require "digest"
 require "json"
 
-# The question keys of ADR 0111 section 2, recomputed from one request body:
-# the SHA-256 of the adapter, the URL, the model, the state and one question
-# as the body carries them, joined by line feeds. The raw member bytes are
-# read from the compact body, so no re-encoding can move a byte.
+# Independent v2 question keys retain raw member bytes and authored reported models.
 module QuestionKeys
   module_function
 
@@ -46,11 +43,18 @@ module QuestionKeys
     text.length
   end
 
-  def of(url, body)
+  def of(url, body, reported_model)
     parts = members(body).to_h
-    head = ["systemone", url, parts.fetch("model"), parts.fetch("state")].join("\n")
+    head = ["systemone", url, parts.fetch("model"), JSON.generate(reported_model), parts.fetch("state")]
     members(parts.fetch("questions"))
       .sort_by { |name, _| Integer(name[1..]) }
-      .map { |_, question| Digest::SHA256.hexdigest("#{head}\n#{question}") }
+      .map do |_, question|
+        framed = "thinkthen.question-key/2\0".b
+        [*head, question].each do |part|
+          bytes = part.encode(Encoding::UTF_8).b
+          framed << [bytes.bytesize].pack("Q>") << bytes
+        end
+        Digest::SHA256.hexdigest(framed)
+      end
   end
 end

@@ -12,7 +12,7 @@ expected <- paste0('{"state":"Each question quotes the text it asks about.",',
   '"q2":{"type":"noul","instructions":"The text is \\"beta\\". Q?"}}}')
 bodies <- capture()
 check("default Max captures one exact packed body", length(bodies) == 1L && identical(bodies[[1L]], expected))
-keys <- question_keys(url, expected)
+keys <- question_keys(url, expected, "jev-1.13.0")
 check("each row names its question key from the independent body and served URL",
       identical(vapply(packed$details, function(one) one$requests[[1L]], ""), keys))
 check("one packed send has full call facts and original R indexes",
@@ -40,7 +40,7 @@ structured_body <- paste0('{"state":"gamma","model":"jev-1.13.0","questions":{',
   '"hints":["one",{"a":null,"b":1}]}}}}')
 check("production parser and wire retain full structured meaning",
       identical(one$value, TRUE) && length(bodies) == 2L && identical(bodies[[2L]], structured_body) &&
-      identical(one$details[[1L]]$requests, as.list(question_keys(url, structured_body))))
+      identical(one$details[[1L]]$requests, as.list(question_keys(url, structured_body, "jev-1.13.0"))))
 labelled <- tt_question(choose = list(ask = "Which?", hints = I("x")),
                         options = list(blue = NULL, red = list(meaning = I("a"))))
 check("named label meanings keep null and single-element arrays",

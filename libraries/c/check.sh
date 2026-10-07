@@ -20,6 +20,7 @@ if [ "$profile" = smoke ]; then
 	command -v pkg-config >/dev/null 2>&1 || { echo 'libraries/c: no pkg-config' >&2; exit 77; }
 	. ../../sdlc/scripts/installed.sh
 	native_install "$(cd ../.. && pwd)" "$cache"
+	python3 ../../sdlc/scripts/check-c-exports.py --self-test "$cache/include/thinkthen.h"
 	# shellcheck disable=SC2046 # pkg-config prints flags to split.
 	cc -std=c11 -Wall -Wextra -Werror $(PKG_CONFIG_PATH=$cache/lib/pkgconfig pkg-config --cflags thinkthen) \
 		examples/smoke.c $(PKG_CONFIG_PATH=$cache/lib/pkgconfig pkg-config --libs thinkthen) -Wl,-rpath,"$cache/lib" -o "$cache/smoke"
@@ -31,6 +32,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# found through its own pkg-config file.
 	command -v pkg-config >/dev/null 2>&1 || { echo 'libraries/c: no pkg-config' >&2; exit 77; }
 	tar -xzf "$THINKTHEN_ARTIFACT" -C "$cache"
+	python3 ../../sdlc/scripts/check-c-exports.py --self-test "$cache/include/thinkthen.h"
 	PKG_CONFIG_PATH=$cache/lib/pkgconfig
 	export PKG_CONFIG_PATH
 	pkg-config --exists thinkthen || { echo 'libraries/c: the archive holds no pkg-config file for thinkthen' >&2; exit 1; }
@@ -66,6 +68,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	echo 'libraries/c: the token cap refused before sending, installed'
 fi
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
+	python3 ../../sdlc/scripts/check-c-exports.py --self-test include/thinkthen.h
 	# The remaps keep the builder's home out of this build. release-pack --reuse rebuilds the library it packs (ticket 0128).
 	export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 	cargo fmt --check

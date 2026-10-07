@@ -19,7 +19,7 @@ def test_shape_rule_plan_and_removed_names(backend, tmp_path):
     before = engine.usage()["requests_sent"]
     preview = tt.plan(judge, ["one", "two"])
     print(type(judge).__name__, preview["records"], preview["requests"],
-          b"changed" not in preview["first_body"], engine.usage()["requests_sent"] == before)
+          b"changed" not in preview["first_body"], engine.usage()["requests_sent"] == before, preview["upper_bound"])
     question = engine.decide("Is it late?")
     for rows in (["one"], ("one",), np.array(["one"]),
                  {"one": 1}.keys(), pd.Index(["one"])):
@@ -45,7 +45,7 @@ def test_shape_rule_plan_and_removed_names(backend, tmp_path):
                 print(str(error))
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
-        "Judge 2 1 True True", *["Call"] * 5, "usage True",
+        "Judge 2 2 True True True", *["Call"] * 5, "usage True",
         "True None [True] 1", "usage False", "True",
         *[f"thinkthen: {name} was removed; apply the judge to a list: tt.decide(q)(rows)"
           for name in ("decide_many", "choose_many", "score_many", "tag_many") for _ in range(2)],
@@ -123,7 +123,7 @@ def test_judge_pickle_spawn_and_no_key_plan(backend, tmp_path):
     import pandas as pd, polars as pl, thinkthen as tt
     judge = tt.decide("Is it late?")
     plan = tt.plan(judge, ["one", "two"])
-    print(plan["records"], plan["requests"], plan["estimated_bytes"] > 0)
+    print(plan["records"], plan["requests"], plan["estimated_bytes"] > 0, plan["upper_bound"])
     print(tt.plan(judge, pd.Series(["one", pd.NA], dtype="string"))["records"],
           tt.plan(judge, pl.Series(["one", None]))["records"],
           tt.plan(judge, pd.Index(["one", "two"]))["records"])
@@ -133,7 +133,7 @@ def test_judge_pickle_spawn_and_no_key_plan(backend, tmp_path):
         try: tt.plan(judge, unordered)
         except tt.UsageError as error: print(error.kind, str(error))
     """, no_key)
-    assert printed.splitlines() == ["2 1 True", "1 1 2", "usage"] + 2 * [
+    assert printed.splitlines() == ["2 2 True True", "1 1 2", "usage"] + 2 * [
         "usage an unordered set cannot align records with answers"]
     assert backend.count() == 1
 

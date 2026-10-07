@@ -4,6 +4,8 @@ from backend import Backend
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
 R=pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0,str(R.parents[1]/"conformance/children"))
+from portable import one_portable_request
 V=re.search(r'<Version>([^<]+)</Version>',(R/'ThinkThen.csproj').read_text())[1]
 dotnet=resolve_dotnet()
 mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
@@ -58,11 +60,12 @@ try:
  bodies=(barrier/'wire-requests.jsonl').read_bytes().splitlines()
  if mode=='portable':
   fixture=R.parents[1]/'specification/fixtures/batching'
-  expected=[(fixture/f'portable-{n}.request.json').read_bytes().removesuffix(b'\n') for n in (1,2,3)]
+  corpus=json.loads((fixture/'portable-records.json').read_text())
   assert b'PORTABLE_BATCH_CSHARP_PASS' in result.stdout,result.stdout
-  assert server.attempts==server.connections==3 and len(bodies)==3,counted
-  assert collections.Counter(bodies)==collections.Counter(expected),(bodies,expected)
-  print('C# portable bulk: five typed rows, three exact literal bodies and three sends PASS',flush=True)
+  assert server.arrivals==['packed:'+','.join(corpus['texts'])],counted
+  assert server.attempts==server.connections==1 and len(bodies)==1,counted
+  one_portable_request(bodies)
+  print('C# portable bulk: five typed rows, one exact packed body and one counted send PASS',flush=True)
  else:
   assert b'INSTALLED_JSON_ENVELOPE_PASS' in result.stdout and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,result.stdout
   assert collections.Counter(server.arrivals)==collections.Counter(['consumer-csharp','consumer-json']) and server.attempts==server.connections==2,counted

@@ -21,5 +21,5 @@ check("final facts count five records and one send", identical(answer$facts$reco
       identical(answer$facts$requests_sent, 1L) && identical(backend_count(), 1L))
 check("each row names its question key over the served address",
       identical(lapply(answer$details, function(one) unlist(one$requests)),
-                as.list(question_keys(url, actual))))
+                as.list(question_keys(url, actual, "jev-1.13.0"))))
 finish("portable batch identity", 1L)

@@ -1,6 +1,6 @@
 # 0407: Supply separate per-record context everywhere
 
-Status: in progress. Native behavior is implemented and landed. Remaining surface adoption is tracked in the existing SDK, foreign binding, SQL, dataframe and MCP family checklists; final shared-case qualification remains.
+Status: in progress. Native context behavior is landed. CLI adoption is pushed in the 0432 lane and remains under construction; final shared-case qualification across the required families remains open.
 
 Milestone: 0.2
 

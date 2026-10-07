@@ -19,7 +19,7 @@ public class InstalledJava {
                 var bulk = door.decideMany("Is it relevant?", bytes, -1, null);
                 var rows = bulk.value();
                 if (rows.length != 5) throw new AssertionError("five typed rows");
-                if (((Number)bulk.facts().get("records")).longValue()!=5 || ((Number)bulk.facts().get("requests_sent")).longValue()!=3) throw new AssertionError("portable typed facts");
+                if (((Number)bulk.facts().get("records")).longValue()!=5 || ((Number)bulk.facts().get("requests_sent")).longValue()!=1) throw new AssertionError("portable typed facts " + bulk.facts());
                 for (var row : rows) if (row.outcome() != 1 || row.probability() != 0.9) throw new AssertionError(row);
                 System.out.println("PORTABLE_BATCH_JAVA_PASS");
             }

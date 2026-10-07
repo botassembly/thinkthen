@@ -4,7 +4,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
 case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) echo 'COBOL gate unavailable on this host' >&2; exit 77 ;; esac
 case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 77 ;; *) exit 2 ;; esac
-for tool in cobc cc cargo flock nm python3; do
+for tool in cobc cc clang cargo flock nm python3; do
   command -v "$tool" >/dev/null 2>&1 || { echo "COBOL gate missing $tool" >&2; exit 77; }
 done
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
@@ -29,6 +29,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   . "$REPO/sdlc/scripts/installed.sh"
   scratch_dir smoke
   native_install "$REPO" "$smoke/native"
+  python3 "$ROOT/checks/exports.py" "$smoke/native/lib/libthinkthen.so" "$smoke/native/include/thinkthen.h" "$smoke/exports.txt" "$ROOT"
   cobc -x -free -fstatic-call -fno-gen-c-decl-static-call -I "$ROOT/copybooks" \
     -A "-include $smoke/native/include/thinkthen.h -Wno-incompatible-pointer-types -Wno-implicit-function-declaration" \
     -o "$smoke/smoke" "$ROOT/examples/smoke.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_error.cob" \
@@ -52,7 +53,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     cmp "$native/$member" "$consumer/$member"
   done
   ln -s libthinkthen.so "$consumer/lib/libthinkthen.so.0"
-  python3 "$REPO/sdlc/scripts/check-c-exports.py" "$consumer/include/thinkthen.h" "$consumer/lib/libthinkthen.so"
+  python3 "$ROOT/checks/exports.py" "$consumer/lib/libthinkthen.so" "$consumer/include/thinkthen.h" "$consumer/exports.txt" "$wrapper"
   export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
   export CARGO_TARGET_DIR="$REPO/target/0265-backend"
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2

@@ -48,15 +48,22 @@ function rawMembers(text, at) {
   return members;
 }
 
-// Every question key of one request body, in wire order, by ADR 0111 section 2:
-// the SHA-256 of the adapter, the URL, the model, the state and one question as
-// the body carries them, joined by line feeds.
-export function questionKeys(url, request) {
+// Independent v2 framing over raw compact JSON members and an authored response model.
+export function questionKeys(url, request, reportedModel) {
   const body = Object.fromEntries(rawMembers(request, 0));
-  const head = ['systemone', url, body.model, body.state].join('\n');
+  const head = ['systemone', url, body.model, JSON.stringify(reportedModel), body.state];
   return rawMembers(body.questions, 0)
     .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
-    .map(([, question]) => createHash('sha256').update(`${head}\n${question}`).digest('hex'));
+    .map(([, question]) => {
+      const digest = createHash('sha256').update('thinkthen.question-key/2\0');
+      for (const part of [...head, question]) {
+        const raw = Buffer.from(part, 'utf8');
+        const size = Buffer.alloc(8);
+        size.writeBigUInt64BE(BigInt(raw.length));
+        digest.update(size).update(raw);
+      }
+      return digest.digest('hex');
+    });
 }
 
 function same(what, actual, expected) {
@@ -115,8 +122,8 @@ async function check(tt, one, origin, folder) {
   const success = one.expect.success;
   const served = `${base}/systemone`;
   // Every row lists question keys, by ADR 0111.
-  const renamed = new Map(one.exchanges.map(({ request }) => [digest(CANONICAL, request),
-    questionKeys(served, request)]));
+  const renamed = new Map(one.exchanges.map(({ request, response }) => [digest(CANONICAL, request),
+    questionKeys(served, request, response.model)]));
   const texts = one.exchanges.map((exchange) => exchange.evidence);
   const want = (at) => success.answers.find((answer) => answer.exchange === at);
   switch (success.kind) {

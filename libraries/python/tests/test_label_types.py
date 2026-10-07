@@ -127,7 +127,7 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
                     b'{"q1":{"type":"score","instructions":"The text is \\"Alice\\". Urgency?",'
                     b'"criteria":["low","very high"]}}}')
         assert groups[15] == groups[16] == [expected]
-        digest = question_keys(url, expected)[0]
+        digest = question_keys(url, expected, "jev-latest")[0]
         assert digests[15] == digests[16] == [[digest], 1]
         assert json.loads(groups[17][0])["questions"]["q1"]["criteria"] == [{}, "very high"]
         assert digests[17][0] != [digest]

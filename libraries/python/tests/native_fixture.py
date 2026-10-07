@@ -202,14 +202,19 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                             invocation_count=int(backend.read('count'))
                             framed=request(step,root,home,given)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
-                            if framed['batch_probe']:
+                            if framed['batch_probe'] or (consumer=='r' and framed['held_cancel']):
                                 child=subprocess.Popen(command,cwd=home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                                 try:
                                     child.stdin.write(c_parity.compact(framed)+'\n');child.stdin.flush()
-                                    assert child.stdout.readline()=='ready\n'
-                                    assert int(backend.read('count'))==before,'batch sent before its first pull'
-                                    child.stdin.write('continue\n');child.stdin.close();child.stdin=None
-                                    stdout,stderr=child.communicate(timeout=120)
+                                    if framed['batch_probe']:
+                                        assert child.stdout.readline()=='ready\n'
+                                        assert int(backend.read('count'))==before,'batch sent before its first pull'
+                                        child.stdin.write('continue\n');child.stdin.close();child.stdin=None
+                                        stdout,stderr=child.communicate(timeout=120)
+                                    else:
+                                        admission=f'wait {invocation_count+1}'
+                                        assert backend.read(admission)==admission,'held cancellation requires an admitted request'
+                                        stdout,stderr=child.communicate(input='continue\n',timeout=120)
                                     child=subprocess.CompletedProcess(command,child.returncode,stdout,stderr)
                                 except BaseException:
                                     child.kill();child.wait();raise
