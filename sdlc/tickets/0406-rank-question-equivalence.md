@@ -26,3 +26,5 @@ CLI, Rust, C, every language, all SQL and dataframe variants rank over the same 
 ## Native work in progress
 
 Lane0 adds Question::rank_described, rank_from_json and load_rank through the existing parser/resolver and capped reader. Saved decide criteria reject authored cuts/bands; saved score retains ordered levels, descriptions, model and batch. Public admission tests compare independently authored saved and built criteria, score equivalence and invalid inputs. Ranking execution and complete result integration remain open.
+
+Native foundation update: saved described-decide and score rank preparation, plain/composed/fallible complete execution, full saved-set member ranking and numeric final positions are implemented on the working branch. Native and CLI share canonical readings/probabilities/identities and preserve original records, stable ties, top ordering and set turns. Host/SQL adoption and root whole review/landing remain open.

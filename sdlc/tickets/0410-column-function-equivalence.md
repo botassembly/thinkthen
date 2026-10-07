@@ -43,3 +43,5 @@ fn RecordObservation::remap_index(self, usize) -> RecordObservation<'_>
 ```
 
 Native set-rank handoff: `Engine::rank_set_records_complete_with` and plain/fallible equivalents now supply typed `CompleteSetRank` final/member results through one ordinary engine. Located `RecordInput` originals and explicit contexts use existing composition; member views retain all actual probabilities, identities and partial metadata. Frame adoption remains with its owner.
+
+Native foundation handoff: the existing checked per-call `Tally::facts_with_engine`, observation row remapping and `CompleteFound::selection` are available alongside full complete score/rank-set and composed/located aggregate execution. Typed `CompleteRecognized::source_value` and `CompleteRelated::source_edges` expose actual physical spans and ordered original endpoint occurrences without known-result JSON parsing. Partial reported input survives absent output. The dataframe owner still integrates and checks actual consumers; no column parity/main claim is made.

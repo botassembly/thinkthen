@@ -40,3 +40,5 @@ fn Question::load_rank(impl AsRef<Path>) -> Result<Question, Error>
 ```
 
 Executable saved-set rank example now pins result/2 final positions 1/2/3 beside the unchanged bare ordering; the old null expectations were a stale result/1 example. The shared result page validates all actual complete CLI function variants against the generated schema. Native/CLI behavior is implemented on the working branch; whole review, landing and host adoption remain open.
+
+Native foundation update: all plain, score and saved-set complete rank routes assign final positions after selection and before top truncation, retain full actual member distributions/identities, and preserve existing bare/scalar compatibility. Actual public and CLI cases plus the saved-set executable example pin stable ties, set turns and replay. Root whole review/landing and actual host adoption remain open.
