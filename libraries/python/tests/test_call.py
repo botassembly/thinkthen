@@ -344,7 +344,7 @@ def test_portable_questions_ride_one_request_in_public_bulk_text_shapes(backend,
                               [[row['index'], list(row['requests'])] for row in call.details]]))
         """, env)
         values, facts, details = json.loads(printed)
-        keys = one_request(url, bodies, expected)
+        keys = one_request(url, bodies, expected, "jev-latest")
         assert values == [True] * 5
         assert facts == [5, 1]
         assert details == [[i, [key]] for i, key in enumerate(keys)]
@@ -575,11 +575,11 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         assert bodies[1:] == [one, two, one]
         # A row names its own question's key, and a call asks equal keys once.
         packed_keys = dict(zip((quoted(question) for question in json.loads(bodies[0])["questions"].values()),
-                               question_keys(url, bodies[0])))
+                               question_keys(url, bodies[0], "jev-latest")))
         assert [row[:3] for row in packed["details"]] == [
             [index, index == 1, [packed_keys[text]]] for index, text in enumerate(["one", "two", "one"])]
         assert [row[:3] for row in separate["details"]] == [
-            [index, index == 1, question_keys(url, body)] for index, body in enumerate(bodies[1:])]
+            [index, index == 1, question_keys(url, body, "jev-latest")] for index, body in enumerate(bodies[1:])]
         assert separate["details"][0][2] == separate["details"][2][2]
         # A row carries its question's even share, the remainder to the
         # earliest. The repeated "one" shares the packed answer, as a cached

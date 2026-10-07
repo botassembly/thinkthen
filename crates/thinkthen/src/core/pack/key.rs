@@ -4,8 +4,8 @@ use crate::core::{Url, hex};
 use sha2::{Digest as _, Sha256};
 use std::fmt;
 
-/// The SHA-256 of the adapter, the address, the model, the state and one
-/// question, each as sent and joined by one line feed.
+/// Released LF-framed v1 and versioned v2 question identities. V2 includes
+/// both requested and reported models with length-prefixed UTF-8 parts.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(crate) struct QuestionKey([u8; 32]);
 

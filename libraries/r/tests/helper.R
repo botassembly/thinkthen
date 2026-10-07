@@ -85,9 +85,14 @@ arm <- function(path) paste0(Sys.getenv("TT_BACKEND_ORIGIN"), "/", path)
 
 # The exchange identity over the actual loopback address and a literal body.
 digest <- function(url, body) {
+  hash_bytes(charToRaw(paste0("systemone\n", url, "\n", body)))
+}
+
+# Hash bytes with the same installed host tool as the original exchange digest.
+hash_bytes <- function(bytes) {
   file <- tempfile()
   on.exit(unlink(file))
-  writeBin(charToRaw(paste0("systemone\n", url, "\n", body)), file)
+  writeBin(bytes, file)
   if (nzchar(Sys.which("sha256sum"))) {
     answer <- system2("env", c(clean_env(), shQuote(Sys.which("sha256sum")), shQuote(file)), stdout = TRUE)
   } else if (nzchar(Sys.which("shasum"))) {
@@ -131,15 +136,21 @@ raw_members <- function(text) {
   members
 }
 
-# Every question key of one request body, in wire order, by ADR 0111
-# section 2: the adapter, the URL, the model, the state and one question as
-# the body carries them, joined by line feeds.
-question_keys <- function(url, body) {
+# Independent v2 framing keeps raw JSON members and the authored response model.
+question_keys <- function(url, body, reported_model) {
   parts <- raw_members(body)
   questions <- raw_members(parts$questions)
   questions <- questions[order(as.integer(sub("^q", "", names(questions))))]
-  vapply(questions, function(one) digest(url, paste(parts$model, parts$state, one, sep = "\n")), "",
-         USE.NAMES = FALSE)
+  head <- c("systemone", url, parts$model,
+            as.character(jsonlite::toJSON(reported_model, auto_unbox = TRUE)), parts$state)
+  vapply(questions, function(one) {
+    framed <- c(charToRaw("thinkthen.question-key/2"), as.raw(0))
+    for (part in c(head, one)) {
+      bytes <- charToRaw(enc2utf8(part))
+      framed <- c(framed, as.raw((length(bytes) %/% 256^(7:0)) %% 256), bytes)
+    }
+    hash_bytes(framed)
+  }, "", USE.NAMES = FALSE)
 }
 
 # The count a call adds.

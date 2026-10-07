@@ -179,7 +179,7 @@ check("an unrelated attribute cannot change the judge's planned body or actual s
       identical(same_answer$facts$requests_sent, 1L) &&
       identical(same_answer$probability, c(0.9, 0.9)) &&
       identical(same_answer$details[[1L]]$requests[[1L]],
-                question_keys(arm("arm/full/capture/v1/systemone"), same$first_body)[[1L]]))
+                question_keys(arm("arm/full/capture/v1/systemone"), same$first_body, "jev-1.13.0")[[1L]]))
 
 lazy <- dbplyr::lazy_frame(body = "x", con = dbplyr::simulate_dbi()) |>
   dplyr::mutate(accepted = thinkthen_decide("Q?", body, '{"threshold":0.7}'))
