@@ -19,3 +19,4 @@ mod prices;
 mod door;
 mod lazy;
 mod throttle_equality;
+mod typed;

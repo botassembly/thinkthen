@@ -45,21 +45,46 @@ fn column_cost_rounds_once_and_omits_overflow_without_poisoning_the_next_call() 
 }
 
 #[test]
-fn priced_recognition_collection_refuses_before_any_send() {
-    let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
+fn priced_recognition_collection_uses_one_checked_native_token_total() {
+    let corpus: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../conformance/cases.json")).expect("corpus");
+    let case = corpus["cases"]
+        .as_array()
+        .expect("cases")
+        .iter()
+        .find(|case| case["id"] == "41-offsets-past-an-accent-and-an-emoji")
+        .expect("saved recognition");
+    let replies = case["exchanges"].as_array().expect("exchanges");
+    let listener = Listener::serving(
+        (0..2)
+            .flat_map(|_| {
+                replies.iter().map(|reply| {
+                    let mut response = reply["response"].clone();
+                    response["usage"] = serde_json::json!({"input_tokens":49,"output_tokens":0});
+                    Canned::ok(&response.to_string())
+                })
+            })
+            .collect(),
+    )
+    .expect("listener");
     let engine = common::builder(listener.base())
+        .no_cache()
         .prices_usd_per_million("0.01", "0")
         .expect("prices")
         .build()
         .expect("engine");
-    let ask = thinkthen::Recognize::builder().build().expect("recognize");
-    let error = engine
-        .recognize_series(&ask, &common::column(&["one note"]), CallOptions::new())
-        .expect_err("native aggregate pricing is required");
-    assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
-    assert_eq!(
-        error.to_string(),
-        "priced recognition collections require native aggregate pricing"
-    );
-    assert_eq!(listener.count(), 0);
+    let ask = thinkthen::Recognize::from_json(&case["question"].to_string()).expect("recognize");
+    let call = engine
+        .recognize_series(
+            &ask,
+            &common::column(&[
+                case["text"].as_str().expect("text"),
+                case["text"].as_str().expect("text"),
+            ]),
+            CallOptions::new(),
+        )
+        .expect("native priced collection");
+    assert_eq!(call.facts().input_tokens(), Some(196));
+    assert_eq!(call.facts().estimated_cost_usd(), Some("0.000002"));
+    assert_eq!(listener.count(), 4);
 }

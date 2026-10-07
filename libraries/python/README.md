@@ -141,3 +141,11 @@ reading identity. Known results are validated carriers; arbitrary caller values
 remain JSON. Existing bare, dataframe and JSON APIs retain their behavior.
 
 Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.
+
+## Complete dataframe results
+
+`from thinkthen import frames, complete` selects typed native results for pandas and Python Polars. `frames.Engine(engine=engine)` shares an ordinary or complete engine. Its ten named methods accept an actual Series of text or explicit `complete.Item` values; select a DataFrame column with `on=`. A Polars LazyFrame is collected once before the complete call. `complete.Files` uses the same native reader and returns a Series of typed located judgments. Set `library="polars"` to choose Polars results for file inputs.
+
+Each `FrameCompleted` exposes `native`, the unchanged complete native call, and `frame`, the result Series. `facts`, `results` and `inputs` are the native typed carriers. `source`, `index`, `name` and `positions` retain dataframe presentation separately. Null input cells ask no question and stay null on row-wise results. Native ordinals remain compact, while `positions` maps each result to its original row. Filter/rank retain selected original labels; find/relate aggregates may have no selected original row.
+
+After `import thinkthen.pandas`, `series.tt.complete(engine=engine).decide(question_source)` selects the same complete facade. All ten accessor methods share it. Row-wise `decide_batch`, `choose_batch`, `tag_batch`, `score_batch`, `filter_batch` and `annotate_batch` keep native pull behavior. `FrameBatch.position(row)` returns the original nullable frame position; its `facts` remains absent until the native batch ends.

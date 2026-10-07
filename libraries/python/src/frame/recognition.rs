@@ -15,15 +15,7 @@ pub(super) fn due(controls: &Controls) -> Option<Instant> {
         .and_then(|budget| Instant::now().checked_add(budget))
 }
 
-fn indexed(mut detail: serde_json::Value, index: usize) -> serde_json::Value {
-    if let Some(fields) = detail.as_object_mut() {
-        fields.insert("index".to_owned(), serde_json::json!(index));
-    }
-    detail
-}
-
-/// Each text's complete result: one `recognize_with` call per text, all under one
-/// deadline. `max_requests` caps each text's call.
+/// Recognize present rows in one native collection, sharing deadline and facts.
 pub(super) fn each_complete(
     engine: &thinkthen::Engine,
     ask: &thinkthen::Recognize,
@@ -31,57 +23,47 @@ pub(super) fn each_complete(
     options: CallOptions<'_>,
     due: Option<Instant>,
 ) -> Result<Completed<Vec<thinkthen::Recognized>>, Stop> {
-    if engine.estimate_reported_cost(0, 0).is_some() {
-        return Err(Stop::from(
-            "priced recognition collections require native aggregate pricing",
-        ));
-    }
     let options = due.map_or(options, |at| options.deadline_at(at));
-    let tally = thinkthen::Tally::new();
-    let mut counted = false;
-    let mut details = Vec::new();
-    let mut rows = Vec::with_capacity(texts.len());
-    for (index, text) in texts.iter().enumerate() {
-        let observed = Observations::default();
-        let collector = observed.clone();
-        let observer = |event: thinkthen::RecordObservation<'_>| collector.push(event);
-        let started = tally.start();
-        let result = engine.recognize_with(ask, text, options.observe(&observer));
-        let facts = match &result {
-            Ok(found) => Some(found.facts()),
-            Err(error) => error.facts(),
-        };
-        let Ok(seen) = observed.snapshot() else {
-            return Err(Stop::Unwritten(Box::new(tally.facts())));
-        };
-        details.extend(seen.into_iter().map(|detail| indexed(detail, index)));
-        if let Some(facts) = facts {
-            if let Err(error) = started.finish(facts) {
-                return Err(Stop::Accounted(Box::new(AccountedFailure {
-                    error,
-                    facts: tally.facts(),
-                    details,
-                })));
-            }
-            counted = true;
+    let observed = Observations::default();
+    let collector = observed.clone();
+    let observer = |event: thinkthen::RecordObservation<'_>| collector.push(event);
+    let records = texts.iter().map(|text| thinkthen::RecordInput {
+        original: (*text).to_owned(),
+        context: None,
+        options: None,
+    });
+    let result = engine.recognize_records_complete_with(ask, records, options.observe(&observer));
+    match result {
+        Ok(call) => {
+            let details = observed
+                .snapshot()
+                .map_err(|_| Stop::Unwritten(Box::new(call.facts().clone())))?;
+            Ok(Completed {
+                value: call
+                    .value()
+                    .iter()
+                    .map(|row| row.result().value().clone())
+                    .collect(),
+                facts: call.facts().clone(),
+                details,
+            })
         }
-        match result {
-            Ok(found) => rows.push(found.into_value()),
-            Err(error) if counted => {
-                return Err(Stop::Accounted(Box::new(AccountedFailure {
-                    error,
-                    facts: tally.facts(),
-                    details,
-                })));
-            }
-            Err(error) => return Err(Stop::Engine(error)),
+        Err(error) if error.facts().is_some() => {
+            let facts = error
+                .facts()
+                .cloned()
+                .ok_or("the started recognition lost its facts")?;
+            let details = observed
+                .snapshot()
+                .map_err(|_| Stop::Unwritten(Box::new(facts.clone())))?;
+            Err(Stop::Accounted(Box::new(AccountedFailure {
+                error,
+                facts,
+                details,
+            })))
         }
+        Err(error) => Err(Stop::Engine(error)),
     }
-    Ok(Completed {
-        value: rows,
-        facts: tally.facts(),
-        details,
-    })
 }
 
 /// The existing names-only frame view of complete native recognition.

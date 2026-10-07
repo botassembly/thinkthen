@@ -8,18 +8,19 @@ from test_named_backends import configuration, isolated
 CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/cases.json"
 
 
-def test_priced_recognition_collection_refuses_before_any_send(backend, tmp_path):
-    configuration(tmp_path, {"usd_per_million_input": "0.01", "usd_per_million_output": "0"})
+def test_priced_recognition_collection_uses_native_checked_cost(backend, tmp_path):
+    configuration(tmp_path, {"usd_per_million_input": "0", "usd_per_million_output": "0"})
     env = isolated(tmp_path)
-    env.update(child_env(backend, tmp_path))
-    printed = run("""
+    env.update(child_env(backend, tmp_path, "case/41-offsets-past-an-accent-and-an-emoji"))
+    case = next(row for row in json.loads(CORPUS.read_text())["cases"] if row["id"] == "41-offsets-past-an-accent-and-an-emoji")
+    printed = run(f"""
         import pandas as pd, thinkthen as tt, thinkthen.pandas
-        try: pd.Series(['one note']).tt.recognize(engine=tt.Engine(cache=False))
-        except tt.UsageError as error: print(error)
-        else: raise AssertionError('aggregate price must not sum rounded costs')
+        call = pd.Series([{case['text']!r}, None, {case['text']!r}]).tt.recognize({case['question']!r}, engine=tt.Engine(cache=False))
+        assert call.value.iloc[1] is None
+        print(call.facts['estimated_cost_usd'], call.facts['requests_sent'])
     """, env)
-    assert printed.strip() == 'priced recognition collections require native aggregate pricing'
-    assert backend.count() == 0
+    assert printed.strip() == '0.000000 4'
+    assert backend.count() == 4
 
 
 @pytest.mark.parametrize("shape", ["pandas", "polars"])

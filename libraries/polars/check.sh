@@ -37,3 +37,14 @@ if [ "$profile" = stress ]; then
 fi
 cargo test "$@" --test polars
 cargo test "$@" --doc PolarsEngine
+
+# Actual frame consumers reuse the same native corpus, framing and projectors.
+cargo clippy --locked --offline --manifest-path libraries/polars/consumer/Cargo.toml --all-targets -- -D warnings
+cargo build --locked --offline --manifest-path libraries/polars/consumer/Cargo.toml
+python3 - "$PWD" "$CARGO_TARGET_DIR/debug/thinkthen-polars-consumer" <<'PYFRAME'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+sys.exit(bool(run('rust-polars',[str(Path(sys.argv[2]).resolve())],root)))
+PYFRAME

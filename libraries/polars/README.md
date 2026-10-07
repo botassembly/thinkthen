@@ -50,7 +50,7 @@ Null input cells are omitted from requests and restored as nulls in their origin
 
 `rank_lazy` and `find_lazy` collect the whole logical frame before asking its selected text column. They compare the complete collection once, including duplicate candidates. They are eager calls after collection; no morsel is treated as a whole candidate set. Ranking retains stable ties. Null candidates are omitted, and result indices refer to original column positions. `find_series` returns every candidate, including synthetic none with null index/unit, rather than discarding the probability vector. `selected` marks the native selected real unit; a none/abstained selection marks no real unit. Empty find input keeps the native count refusal.
 
-This private 0.2 slice is incomplete: result/2, named/input-schema question loading, per-record and whole-set context adoption, and full located routes for the other functions await the shared native interfaces. Recognition collection pricing refuses before sending until the native checked aggregate-pricing API is available. Ordinary column prices already use one native calculation on checked raw token totals. Native observer index remapping across composed recognition calls remains an integration need. No result/1 detail is presented as result/2.
+Complete dataframe methods use the native result/2 calls and readers. Recognition collections now use one native collection call and its checked once-rounded cost. The shared native scheduler retains one deadline, cancellation scope and request budget for the whole collection.
 
 ## Lazy expressions
 
@@ -87,4 +87,12 @@ An empty row-wise or rank column returns a `Call` with an empty value of the met
 
 ## Checks
 
-This folder holds no code. The door lives in `crates/thinkthen/src/public/frame.rs` and its `frame/` modules, and its tests in `crates/thinkthen/tests/polars/`. `check.sh` is the one lane that compiles Polars. It runs from the repository root with its own target folder, a fake key, and a closed loopback address. It runs Clippy, the tests, and the rustdoc example with the feature on. It prints "not run" and exits 77 only when cargo's cache lacks the locked crates. The root `deny.toml` holds the reviewed license exceptions for the locked tree.
+The consumer under `consumer/` exercises actual frame associations through the public complete methods. The door lives in `crates/thinkthen/src/public/frame.rs` and its `frame/` modules, and its tests in `crates/thinkthen/tests/polars/`. `check.sh` is the one lane that compiles Polars. It runs from the repository root with its own target folder, a fake key, and a closed loopback address. It runs Clippy, the tests, and the rustdoc example with the feature on. It prints "not run" and exits 77 only when cargo's cache lacks the locked crates. The root `deny.toml` holds the reviewed license exceptions for the locked tree.
+
+## Complete typed results
+
+The additive `Engine` methods `decide_series_complete`, `choose_series_complete`, `tag_series_complete`, `score_series_complete`, `filter_series_complete`, `rank_series_complete`, `rank_set_series_complete`, `annotate_series_complete`, `recognize_series_complete`, `relate_series_complete` and `find_series_complete` read actual text Series. Each returns the native typed `Call` and a separate vector mapping compact native occurrence ordinals to original nullable frame rows. Null cells send nothing. Native answer IDs, original inputs, rank member details and call facts remain intact.
+
+For explicit images, selected JSON, per-record context/candidates or physical source inputs, use the matching `*_input_column_complete` method with the actual Series and a parallel `Vec<Option<RecordInput<T>>>`. The method checks that the row count and null positions match before any send. The Series supplies presentation; the typed record carries exact admitted evidence and provenance. The six row-wise `*_input_column_batch` methods keep native pull behavior and return the same position map. `choose_dynamic_input_column_complete` and its batch route accept a whole ordered candidate list per record.
+
+Use the existing native `read_inputs` and `RecordReading` for located inputs. Associate those typed inputs with the frame column; no frame method opens a second reader. Collect a whole logical lazy frame before rank or find, as the retained `rank_lazy` and `find_lazy` helpers do. A native compact ordinal is not a dataframe presentation index.

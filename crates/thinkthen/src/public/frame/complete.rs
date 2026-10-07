@@ -2,7 +2,7 @@
 use super::column::text;
 use crate::public::{
     Call, CallOptions, Edge, Engine, Entity, Error, Evidence, Question, Recognize, Recognized,
-    Relate, Tally,
+    RecordInput, Relate,
 };
 use polars::prelude::{DataFrame, IntoSeries, NamedFrom, Series};
 
@@ -116,45 +116,30 @@ pub(super) fn recognize(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<Vec<Option<Recognized>>>, Error> {
-    if engine.estimate_reported_cost(0, 0).is_some() {
-        return Err(Error::usage(
-            "priced recognition collections require native aggregate pricing",
-        ));
-    }
     let cells = text(texts)?;
-    let options = options.started()?;
-    let tally = Tally::new();
-    let mut rows = Vec::with_capacity(cells.len());
-    for cell in cells.iter() {
-        let Some(cell) = cell else {
-            rows.push(None);
-            continue;
-        };
-        let started = tally.start();
-        let result = engine.recognize_with(ask, cell, options);
-        let receipt = match &result {
-            Ok(call) => Some(call.facts()),
-            Err(error) => error.facts(),
-        };
-        if let Some(receipt) = receipt {
-            started
-                .finish(receipt)
-                .map_err(|error| error.with_facts(tally.facts()))?;
-        }
-        match result {
-            Ok(call) => rows.push(Some(call.into_value())),
-            Err(error) => {
-                let facts = tally.facts();
-                return Err(if facts.records() > 0 || error.facts().is_some() {
-                    error.with_facts(facts)
-                } else {
-                    error
-                });
-            }
-        }
-    }
-    Ok(Call::new(rows, tally.facts()))
+    let records = cells.iter().flatten().map(|text| RecordInput {
+        original: text.to_owned(),
+        context: None,
+        options: None,
+    });
+    engine
+        .recognize_records_complete_with(ask, records, options)?
+        .try_map(|rows| {
+            let mut rows = rows.into_iter();
+            cells
+                .iter()
+                .map(|cell| {
+                    if cell.is_none() {
+                        return Ok(None);
+                    }
+                    rows.next()
+                        .map(|row| Some(row.result().value().clone()))
+                        .ok_or_else(|| Error::defect("recognition lost a present cell"))
+                })
+                .collect()
+        })
 }
+
 pub(super) fn relate(
     engine: &Engine,
     ask: &Relate,

@@ -1,0 +1,43 @@
+[workspace]
+
+[package]
+name = "thinkthen-polars-consumer"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+
+[dependencies]
+thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["polars", "bundled-sqlite"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.151", features = ["raw_value"] }
+
+[profile.release]
+overflow-checks = true
+panic = "unwind"
+
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = "forbid"
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"

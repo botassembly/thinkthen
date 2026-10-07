@@ -16,6 +16,9 @@ mod eager;
 mod inputs;
 mod lazy;
 mod options;
+mod typed;
+mod typed_batches;
+mod typed_series;
 pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
 
