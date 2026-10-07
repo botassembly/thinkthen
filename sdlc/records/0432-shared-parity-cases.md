@@ -75,3 +75,10 @@ Clean-environment focused replay passed all six selected examples using the exis
 The complete site run on `9933220d2` passed all 160 CLI examples, then the existing flag check found six catalog gaps. Every function now accepts shared context and the request-byte limit. Both existing flag definitions move to `GLOBAL_FLAGS`, and the record/set shared lists remove them. Descriptions, defaults and behavior remain unchanged; each function page renders each flag once. No product, runner or test changes were needed.
 
 Clean-environment checks against the current release command passed: all ten functions match long help with 26 global flags, all samples keep their rules, and the diff has no whitespace errors. Full Rust tests, lint and specification checks remain applicable from `8e7cc4d77`. The coordinator owns complete site replay and fresh review; installed and platform qualification remain open.
+
+
+## OpenAI setup code rendering follow-up, 2026-10-07
+
+The complete site run at `5b11d7e5a` passed CLI replay, flags and Astro, then rejected the OpenAI setup command's raw code block. The page now uses the existing Code component backed by `src/lib/code.mjs`. The command text, routes and surrounding content remain unchanged.
+
+A clean-environment Astro build passed, with its log at `target/0432-openai-code-build.log`. Existing code rendering, settings, sample and whitespace checks passed. The subsequent words check found two Settings uses of “preview” and an obsolete allowance for “planned”; this separate mismatch remains with the coordinator because checker changes are outside this slice. No product or runner edits were made, and unchanged full Rust gates remain applicable.

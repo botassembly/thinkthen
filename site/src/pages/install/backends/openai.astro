@@ -1,6 +1,7 @@
 ---
 // Goal: configure the explicit Decisions text route in development 0.2.
 import SidePage from '../../../layouts/SidePage.astro';
+import Code from '../../../components/Code.astro';
 import { BACKEND_PAGES } from '../../../data/catalog.mjs';
 import { backend } from '../../../lib/backends-table.mjs';
 import FromYourLanguage from '../../../components/FromYourLanguage.astro';
@@ -12,7 +13,7 @@ const route = backend('openai');
   <p class="lede">Development 0.2 supports Decisions text through the named <code>{route.name}</code> backend. Public installation remains 0.1.2.</p>
   <h2>Development setup</h2>
   <p>Use a reviewed development checkout. Set <code>{route.keys[0]}</code> in your process environment, then select <code>--backend {route.name}</code> or <code>THINKTHEN_BACKEND={route.name}</code>. ThinkThen posts to <code>{route.base}/{route.path}</code> and defaults to <code>{route.model}</code>. An explicit model stays your literal choice.</p>
-  <pre><code>thinkthen decide 'Does the customer ask for a refund?' --backend openai &lt; message.txt</code></pre>
+  <Code code={"thinkthen decide 'Does the customer ask for a refund?' --backend openai < message.txt"} lang="bash" />
   <p>The Rust builder selects the same route with <code>Engine::builder().backend("openai")?</code>. A bare builder reads no environment; supply its explicit <code>api_key</code>, or start from <code>Engine::from_env()</code>. Existing binding and SQL named-backend settings use the shared engine.</p>
   <p>All ten text functions use the existing planners, readers and acceptance rules. Predicate answers carry probabilities, menus carry complete distributions, and refusals remain failures. Structured instructions and descriptions travel as complete compact JSON text. Confidence is reported separately from your cut.</p>
   <h2>One route and offline reuse</h2>
