@@ -46,14 +46,20 @@ impl<W: Write> Output<W> {
             .0
             .lock()
             .map_err(|_| io::Error::other("MCP output unavailable"))?;
-        serde_json::to_writer(&mut *writer, value).map_err(|error| {
-            io::Error::new(
-                error.io_error_kind().unwrap_or(io::ErrorKind::Other),
-                "MCP output closed",
-            )
-        })?;
-        writer.write_all(b"\n")?;
-        writer.flush()
+        let mut packet = io::BufWriter::with_capacity(8 * 1024, &mut *writer);
+        let result = (|| {
+            serde_json::to_writer(&mut packet, value).map_err(|error| {
+                io::Error::new(
+                    error.io_error_kind().unwrap_or(io::ErrorKind::Other),
+                    "MCP output closed",
+                )
+            })?;
+            packet.write_all(b"\n")?;
+            packet.flush()
+        })();
+        // Discard a failed packet tail without retrying output during drop.
+        let _parts = packet.into_parts();
+        result
     }
 }
 
@@ -160,7 +166,6 @@ mod tests {
     #[derive(Default)]
     struct Sink {
         bytes: Vec<u8>,
-        writes: usize,
         flushes: usize,
         interrupted: bool,
         terminal: Option<io::ErrorKind>,
@@ -170,23 +175,23 @@ mod tests {
     }
     impl Write for Sink {
         fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-            self.writes += 1;
             if self.failed {
                 self.after_failure += 1;
             } else if !self.interrupted {
                 self.interrupted = true;
                 return Err(io::ErrorKind::Interrupted.into());
-            } else if self.writes == 4 {
-                if let Some(kind) = self.terminal {
-                    self.failed = true;
-                    return if kind == io::ErrorKind::WriteZero {
-                        Ok(0)
-                    } else {
-                        Err(kind.into())
-                    };
-                }
+            } else if self.bytes.len() == 14
+                && let Some(kind) = self.terminal
+            {
+                self.failed = true;
+                let written = (kind == io::ErrorKind::WriteZero).then_some(0);
+                return written.ok_or_else(|| kind.into());
             }
-            let count = bytes.len().min(7);
+            let count = bytes.len().min(7).min(if self.terminal.is_some() {
+                14usize.saturating_sub(self.bytes.len())
+            } else {
+                usize::MAX
+            });
             self.bytes.extend_from_slice(&bytes[..count]);
             Ok(count)
         }
@@ -200,12 +205,36 @@ mod tests {
             }
         }
     }
+    fn packet_case(
+        repeats: usize,
+        terminal: Option<io::ErrorKind>,
+        flush_failure: bool,
+        error: Option<io::ErrorKind>,
+    ) {
+        let text = "\"\\\n\t".repeat(repeats);
+        let mut expected = serde_json::to_vec(&text).unwrap();
+        expected.push(b'\n');
+        let output = Output::new(Sink {
+            terminal,
+            flush_failure,
+            ..Sink::default()
+        });
+        assert_eq!(output.write(&text).err().map(|e| e.kind()), error);
+        let sink = output.0.lock().unwrap();
+        assert!(sink.interrupted);
+        assert_eq!(sink.after_failure, 0, "packet tail retried after {error:?}");
+        if terminal.is_some() {
+            assert_eq!(sink.flushes, 0);
+            assert_eq!(sink.bytes, expected[..14]);
+        } else {
+            assert_eq!(sink.bytes, expected);
+            assert_eq!(sink.bytes.iter().filter(|&&b| b == b'\n').count(), 1);
+            assert_eq!(sink.flushes, 1);
+        }
+    }
     #[test]
     fn packets_handle_short_writes_and_interrupts_without_retrying_terminal_failures() {
         for repeats in [4, 4096] {
-            let text = "\"\\\n\t".repeat(repeats);
-            let mut expected = serde_json::to_vec(&text).unwrap();
-            expected.push(b'\n');
             for (terminal, flush_failure, error) in [
                 (None, false, None),
                 (
@@ -220,24 +249,7 @@ mod tests {
                 ),
                 (None, true, Some(io::ErrorKind::PermissionDenied)),
             ] {
-                let output = Output::new(Sink {
-                    terminal,
-                    flush_failure,
-                    ..Sink::default()
-                });
-                assert_eq!(output.write(&text).err().map(|e| e.kind()), error);
-                let sink = output.0.lock().unwrap();
-                assert!(sink.interrupted);
-                assert_eq!(sink.after_failure, 0, "packet tail retried after {error:?}");
-                if terminal.is_some() {
-                    assert_eq!(sink.writes, 4);
-                    assert_eq!(sink.flushes, 0);
-                    assert_eq!(sink.bytes, expected[..14]);
-                } else {
-                    assert_eq!(sink.bytes, expected);
-                    assert_eq!(sink.bytes.iter().filter(|&&b| b == b'\n').count(), 1);
-                    assert_eq!(sink.flushes, 1);
-                }
+                packet_case(repeats, terminal, flush_failure, error);
             }
         }
     }
