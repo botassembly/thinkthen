@@ -234,19 +234,7 @@ fn explicit_composed_images_keep_bytes_duplicates_and_filename_out_of_live_and_r
     );
     assert_eq!(held.value()[0].original().images()[1].bytes(), RED);
     let doc = serde_json::to_value(&held.value()[0]).unwrap();
-    assert_eq!(doc["index"], 0);
-    assert_eq!(
-        doc["source"],
-        json!({"file":"renamed.jsonl","first_line":9,"last_line":9})
-    );
-    let base64 = base64::engine::general_purpose::STANDARD.encode(RED);
-    assert_eq!(
-        doc["images"],
-        json!([
-            {"media":"image/png","base64":base64,"width":1,"height":1},
-            {"media":"image/png","base64":base64,"width":1,"height":1}
-        ])
-    );
+    assert_located_duplicate_images(&doc, RED);
     assert_eq!(listener.count(), 1);
     let source = thinkthen::InputFileReader::new(
         "original.png",
@@ -276,4 +264,22 @@ fn explicit_composed_images_keep_bytes_duplicates_and_filename_out_of_live_and_r
     drop(replay);
     drop(engine);
     std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[cfg(test)]
+fn assert_located_duplicate_images(doc: &Value, red: &[u8]) {
+    use base64::Engine as _;
+    assert_eq!(doc["index"], 0);
+    assert_eq!(
+        doc["source"],
+        json!({"file":"renamed.jsonl","first_line":9,"last_line":9})
+    );
+    let base64 = base64::engine::general_purpose::STANDARD.encode(red);
+    assert_eq!(
+        doc["images"],
+        json!([
+            {"media":"image/png","base64":base64,"width":1,"height":1},
+            {"media":"image/png","base64":base64,"width":1,"height":1}
+        ])
+    );
 }
