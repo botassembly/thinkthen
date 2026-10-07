@@ -51,6 +51,8 @@ Already landed: version/release safety, backends/provider setups/default-eight, 
 
 Owners below include landed prerequisites and remaining work; the current plan’s remaining-work table gives the execution order.
 
+The reviewed 2026-10-07 intake adds [0457: source-size warnings](../tickets/0457-warn-on-large-handwritten-source.md), [0459: binding C-header agreement](../tickets/0459-enforce-binding-c-header-layouts.md), and [0458: bounded file-seam cleanup](../tickets/0458-audit-file-seams-after-core-freeze.md). Implement 0457 before cleanup. C-header agreement is required for 0.2. Run 0458 only after a named reviewed core-freeze commit; it is the first candidate for 0.2.1 deferral if Ian changes priorities.
+
 - [0400 slice D: Reconcile provider setup measured rows](../tickets/0400-provider-setups-and-concurrency.md), using landed 0421 runtime evidence without new paid calls.
 - [0296: Add the pandas Series accessor for all ten functions](../tickets/0296-pandas-series-accessor.md)
 - [0300: ---](../tickets/0300-caller-priced-call-cost.md)
