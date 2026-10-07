@@ -293,7 +293,8 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
         if (value.function == 10) try viewOK(c.thinkthen_result_source_relations(raw, i, &rel));
         rels[i] = try clone(@TypeOf(rel), a, rel);
     }
-    return .{ .arena = arena, .summary = try clone(@TypeOf(s), a, s), .rows = rows, .observations = events, .details = details, .observation_details = event_details, .authors = authors, .observation_authors = event_authors, .member_authors = member_authors, .rank_members = ranks, .located_recognition = recs, .located_relations = rels };
+    const summary = try clone(@TypeOf(s), a, s);
+    return .{ .arena = arena, .summary = summary, .rows = rows, .observations = events, .details = details, .observation_details = event_details, .authors = authors, .observation_authors = event_authors, .member_authors = member_authors, .rank_members = ranks, .located_recognition = recs, .located_relations = rels };
 }
 fn viewOK(code: c_int) !void {
     if (code != 0) return error.NativeAccessorRefused;
@@ -336,7 +337,8 @@ pub const Image = struct {
         errdefer arena.deinit();
         var v = std.mem.zeroes(c.thinkthen_image_view_v1);
         try viewOK(c.thinkthen_image_view(self.raw, &v));
-        return .{ .arena = arena, .value = try clone(@TypeOf(v), arena.allocator(), v) };
+        const value = try clone(@TypeOf(v), arena.allocator(), v);
+        return .{ .arena = arena, .value = value };
     }
 };
 pub fn question(e: *tt.Engine, spec: c.thinkthen_question_spec_v1, author: ?*const c.thinkthen_question_author_v1) !Outcome(Question) {

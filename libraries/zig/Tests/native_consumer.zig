@@ -103,6 +103,34 @@ fn cancelOnInput(token: *tt.CancelToken) void {
     _ = io.puts("cancel-fired");
     _ = io.fflush(io.stdout);
 }
+fn ownedFailure(allocator: std.mem.Allocator, engine: *tt.Engine) !void {
+    const original = engine.allocator;
+    engine.allocator = allocator;
+    defer engine.allocator = original;
+    switch (try n.parse(engine, .atomic, "{")) {
+        .ok => |question| {
+            question.deinit();
+            return error.ExpectedConstructorFailure;
+        },
+        .failed => |value| {
+            var failure = value;
+            defer failure.deinit();
+            try std.testing.expectEqual(tt.FailureKind.usage, try failure.kind());
+            try std.testing.expect((try n.bytes(failure.summary.@"error".value.message)).len > 0);
+            try std.testing.expectEqual(@as(usize, 0), failure.rows.len);
+        },
+    }
+}
+fn ownedImage(allocator: std.mem.Allocator, engine: *tt.Engine, data: []const u8, media: u32) !void {
+    var copied = blk: {
+        const image = try take(n.Image, try n.image(engine, data, media, "copied.png"));
+        defer image.deinit();
+        break :blk try image.view(allocator);
+    };
+    defer copied.deinit();
+    try std.testing.expectEqualSlices(u8, data, copied.value.bytes[0..copied.value.bytes_len]);
+    try std.testing.expectEqualStrings("copied.png", try n.bytes(copied.value.filename.value));
+}
 fn run() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -127,6 +155,9 @@ fn run() !void {
         },
     };
     defer engine.deinit();
+    var memory = std.heap.DebugAllocator(.{}){};
+    defer if (memory.deinit() != .ok) @panic("native owner leaked arena storage");
+    try std.testing.checkAllAllocationFailures(memory.allocator(), ownedFailure, .{&engine});
     const role = std.meta.intToEnum(n.Role, try number(get(v, "role"))) catch return error.InvalidFixtureRole;
     const verb = try string(get(v, "verb"));
     const q: n.Question = blk: {
@@ -179,6 +210,7 @@ fn run() !void {
         for (bytes, 0..) |*b, j| b.* = try std.fmt.parseInt(u8, s[j * 2 .. j * 2 + 2], 16);
         owners[i] = try take(n.Image, try n.image(&engine, bytes, try number(get(v, "media_code")), null));
         image_count += 1;
+        try std.testing.checkAllAllocationFailures(memory.allocator(), ownedImage, .{ &engine, bytes, try number(get(v, "media_code")) });
         var copied = try owners[i].view(a);
         defer copied.deinit();
         if (!std.mem.eql(u8, bytes, copied.value.bytes[0..copied.value.bytes_len])) return error.ImageCopyChanged;
