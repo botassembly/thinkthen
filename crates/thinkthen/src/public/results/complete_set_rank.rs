@@ -57,7 +57,16 @@ impl CompleteSetRank {
     pub fn members(&self) -> &[CompleteRankMember] {
         &self.members
     }
-    /// Write the canonical result/2 rank document with the selecting member.
+    fn member_documents(&self) -> Vec<crate::core::RankMemberDocument<'_>> {
+        self.members()
+            .iter()
+            .map(|member| crate::core::RankMemberDocument {
+                name: member.name(),
+                result: &member.result().canonical,
+            })
+            .collect()
+    }
+    /// Write the canonical result/2 rank document with every ordered member.
     /// # Errors
     /// Returns Defect when this concrete result cannot be serialized.
     pub fn to_json(&self) -> Result<String, Error> {
@@ -77,15 +86,22 @@ impl Serialize for CompleteSetRank {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.result
             .canonical
-            .serialize_with_named_input::<S, String>(None, Some(&self.question_name), serializer)
+            .serialize_occurrence_members::<S, String>(
+                None,
+                Some(&self.question_name),
+                None,
+                Some(self.member_documents()),
+                serializer,
+            )
     }
 }
 impl<T: Serialize> Serialize for super::CompleteRecord<T, CompleteSetRank> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.result.result.canonical.serialize_occurrence(
+        self.result.result.canonical.serialize_occurrence_members(
             Some(&self.original),
             Some(&self.result.question_name),
             Some(self.ordinal),
+            Some(self.result.member_documents()),
             serializer,
         )
     }

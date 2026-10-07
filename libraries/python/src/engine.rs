@@ -6,7 +6,7 @@
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict};
-use thinkthen::{Annotated, Answer, Batch, Error, FailureCause, Judgment};
+use thinkthen::{Answer, Batch, Error, Judgment};
 
 use crate::asked::{Edge, Question, QuestionSet, Recognize, Recognized, Relate};
 use crate::frame::ask_column;
@@ -16,6 +16,10 @@ use crate::tally::PyTally;
 use crate::worker::{Token, run_observed, run_tallied};
 use crate::{guard, raised, usage};
 
+#[path = "../../r/thinkthen/src/rust/src/complete/mod.rs"]
+pub(crate) mod complete;
+mod complete_calls;
+mod convert;
 mod operations;
 mod plan;
 mod settings;
@@ -58,37 +62,7 @@ fn detail_value(py: Python<'_>, verb: &str, found: thinkthen::Details) -> PyResu
     }
 }
 
-/// A failed annotate question's cause, as the shared cases spell it.
-pub(crate) const fn cause(cause: FailureCause) -> &'static str {
-    match cause {
-        FailureCause::MissingAnswer => "missing_answer",
-        FailureCause::WrongKind => "wrong_kind",
-        FailureCause::MissingProbability => "missing_probability",
-        FailureCause::InvalidProbability => "invalid_probability",
-        FailureCause::InvalidDistribution => "invalid_distribution",
-        FailureCause::UnexpectedProbability => "unexpected_probability",
-    }
-}
-
-pub(crate) fn annotated(py: Python<'_>, value: Annotated) -> PyResult<Py<PyAny>> {
-    judgment(
-        py,
-        match value {
-            Annotated::Decision(held) => Judgment::Decision(held),
-            Annotated::Choice(pick) => Judgment::Choice(pick),
-            Annotated::Score(position) => Judgment::Score(position),
-            Annotated::Tags(labels) => Judgment::Tags(labels),
-            Annotated::Failed(failed) => {
-                let marker = PyDict::new(py);
-                marker.set_item("kind", failed.kind().name())?;
-                marker.set_item("cause", cause(failed.cause()))?;
-                let outer = PyDict::new(py);
-                outer.set_item("failed", marker)?;
-                return Ok(outer.into_any().unbind());
-            }
-        },
-    )
-}
+pub(crate) use convert::annotated;
 
 #[expect(
     clippy::expect_used,
@@ -109,10 +83,34 @@ pub(crate) struct Engine(pub(crate) thinkthen::Engine);
 
 #[pymethods]
 impl Engine {
+    #[pyo3(signature = (request, deadline, token, surface=None))]
+    fn _complete_batch(
+        &self,
+        py: Python<'_>,
+        request: String,
+        deadline: Arg<'_, '_>,
+        token: Held<'_, '_>,
+        surface: Option<&str>,
+    ) -> PyResult<crate::complete_stream::CompleteStream> {
+        complete_calls::stream(&self.0, py, request, deadline, token, surface)
+    }
+    /// Execute a typed complete request through the shared native engine.
+    #[pyo3(signature = (request, deadline, token, surface=None))]
+    fn _complete(
+        &self,
+        py: Python<'_>,
+        request: String,
+        deadline: Arg<'_, '_>,
+        token: Held<'_, '_>,
+        surface: Option<&str>,
+    ) -> PyResult<Py<PyAny>> {
+        complete_calls::call(&self.0, py, request, deadline, token, surface)
+    }
+
     /// Start from what `thinkthen` reads from the environment, then apply
     /// each given setting.
     #[new]
-    #[pyo3(signature = (*, backend=None, base_url=None, model=None, throttle=None, batch=None, max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
+    #[pyo3(signature = (*, backend=None, base_url=None, model=None, throttle=None, batch=None, max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, refresh_cache=false, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
     #[expect(
         clippy::too_many_arguments,
         reason = "PyO3's keyword-only constructor exposes the engine settings"
@@ -127,6 +125,7 @@ impl Engine {
         max_requests_total: Arg<'_, '_>,
         max_request_bytes: Arg<'_, '_>,
         cache: Arg<'_, '_>,
+        refresh_cache: bool,
         timeout: Arg<'_, '_>,
         max_retries: Arg<'_, '_>,
         record: Arg<'_, '_>,
@@ -136,6 +135,7 @@ impl Engine {
         Python::attach(|py| {
             let read = || -> PyResult<Self> {
                 let settings = Settings {
+                    refresh_cache,
                     backend: settings::backend(backend)?,
                     base_url,
                     model,

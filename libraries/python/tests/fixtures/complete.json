@@ -1,0 +1,1110 @@
+{
+  "note": "Private contract carrier fixtures; no execution or parity claim.",
+  "results": [
+    {
+      "type": "DecideResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": [
+            "Question",
+            {
+              "active": false
+            }
+          ],
+          "true": null,
+          "false": {
+            "meaning": [
+              "no",
+              false
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.25
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "position": {
+          "file": "renamed/é.txt",
+          "first": 3,
+          "last": 5
+        },
+        "input": {
+          "original": false
+        },
+        "threshold": "0.3:0.7"
+      }
+    },
+    {
+      "type": "ChooseResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": null,
+        "question": {
+          "verb": "choose",
+          "text": "Which?",
+          "options": [
+            "b",
+            "a"
+          ]
+        },
+        "answer": {
+          "kind": "choice",
+          "pick": "b",
+          "probabilities": {
+            "b": 0.5,
+            "a": 0.5
+          },
+          "confidence": 0
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "position": {
+          "images": [
+            "red.png",
+            "blue.png",
+            "red.png"
+          ]
+        },
+        "threshold": 0.8
+      }
+    },
+    {
+      "type": "TagResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": [],
+        "question": {
+          "verb": "tag",
+          "text": "Which?",
+          "labels": [
+            "b",
+            "a"
+          ]
+        },
+        "answer": {
+          "kind": "tag",
+          "probabilities": {
+            "b": 0.1,
+            "a": 0
+          }
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "threshold": 0.8
+      }
+    },
+    {
+      "type": "ScoreResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": 1.5,
+        "question": {
+          "verb": "score",
+          "text": "How?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        },
+        "answer": {
+          "kind": "score",
+          "level": "high",
+          "probabilities": {
+            "low": 0.25,
+            "high": 0.75
+          }
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "input_file": "image.jpg",
+        "position": {
+          "file": "image.jpg"
+        },
+        "threshold": null
+      }
+    },
+    {
+      "type": "FilterResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": [
+            "Question",
+            {
+              "active": false
+            }
+          ],
+          "true": null,
+          "false": {
+            "meaning": [
+              "no",
+              false
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.25
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "input": {
+          "id": 0,
+          "payload": [
+            false,
+            null,
+            {}
+          ]
+        },
+        "position": {
+          "file": "renamed/é.txt",
+          "first": 3,
+          "last": 5
+        },
+        "threshold": 0.5
+      }
+    },
+    {
+      "type": "RankResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": 2,
+        "question": {
+          "verb": "score",
+          "text": "How?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        },
+        "answer": {
+          "kind": "score",
+          "level": "high",
+          "probabilities": {
+            "low": 0.25,
+            "high": 0.75
+          }
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "input": {
+          "id": 0
+        },
+        "question_name": "grade",
+        "position": {
+          "file": "renamed/é.txt",
+          "first": 3,
+          "last": 5
+        },
+        "threshold": null
+      }
+    },
+    {
+      "type": "FindResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": null,
+        "question": {
+          "verb": "find",
+          "text": "Which?",
+          "none": true
+        },
+        "answer": {
+          "kind": "find",
+          "pick": "u001",
+          "probabilities": {
+            "u001": 0.5,
+            "none": 0.5
+          }
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "threshold": null
+      }
+    },
+    {
+      "type": "AnnotateResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "input": {
+          "whole": [
+            false,
+            null
+          ]
+        },
+        "value": {
+          "ok": null,
+          "bad": {
+            "failed": {
+              "kind": "backend",
+              "cause": "missing_answer"
+            }
+          }
+        },
+        "answers": {
+          "ok": {
+            "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "value": null,
+            "question": {
+              "verb": "decide",
+              "text": [
+                "Question",
+                {
+                  "active": false
+                }
+              ],
+              "true": null,
+              "false": {
+                "meaning": [
+                  "no",
+                  false
+                ]
+              }
+            },
+            "answer": {
+              "kind": "yes_no",
+              "probability": 0.25
+            },
+            "threshold": "0.3:0.7",
+            "request": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          },
+          "bad": {
+            "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "question": {
+              "verb": "decide",
+              "text": [
+                "Question",
+                {
+                  "active": false
+                }
+              ],
+              "true": null,
+              "false": {
+                "meaning": [
+                  "no",
+                  false
+                ]
+              }
+            },
+            "failure": {
+              "kind": "backend",
+              "cause": "missing_answer"
+            },
+            "request": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 1,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": [],
+          "questions_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        },
+        "position": {
+          "file": "renamed/é.txt",
+          "first": 3,
+          "last": 5
+        }
+      }
+    },
+    {
+      "type": "RecognizeResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": {
+          "entities": [
+            {
+              "text": "é😀",
+              "start": 0,
+              "end": 2,
+              "length": 2,
+              "kind": "person",
+              "strength": 0.72,
+              "file": "é.txt",
+              "first_line": 3,
+              "last_line": 3
+            },
+            {
+              "text": "é😀",
+              "start": 0,
+              "end": 2,
+              "length": 2,
+              "kind": "person",
+              "strength": 0.72,
+              "file": "é.txt",
+              "first_line": 3,
+              "last_line": 3
+            }
+          ],
+          "relations": []
+        },
+        "question": {
+          "verb": "recognize",
+          "kinds": {
+            "person": [
+              "person",
+              {
+                "active": false
+              }
+            ]
+          },
+          "threshold": 0.5,
+          "relation_threshold": 0.5
+        },
+        "answer": {
+          "pieces": [
+            {
+              "start": 0,
+              "end": 1,
+              "tags": {
+                "SINGLE": 0.9,
+                "OUT": 0.1
+              }
+            }
+          ],
+          "names": [
+            {
+              "start": 0,
+              "end": 2,
+              "kinds": {
+                "person": 0.8
+              },
+              "edges": null
+            }
+          ],
+          "pairs": [
+            {
+              "relation": "knows",
+              "source": {
+                "start": 0,
+                "end": 2
+              },
+              "target": {
+                "start": 3,
+                "end": 4
+              },
+              "probability": 0.6
+            }
+          ]
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 0,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        },
+        "input": "é😀\r\nB"
+      }
+    },
+    {
+      "type": "RelateResult",
+      "result": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "value": [
+          {
+            "relation": "knows",
+            "source": {
+              "name": "é😀",
+              "kind": "person",
+              "record": {
+                "original": [
+                  false,
+                  null
+                ]
+              },
+              "file": "é.txt",
+              "first_line": 3,
+              "last_line": 3
+            },
+            "target": {
+              "name": "é😀",
+              "kind": "person",
+              "record": {
+                "original": [
+                  false,
+                  null
+                ]
+              },
+              "file": "é.txt",
+              "first_line": 3,
+              "last_line": 3
+            },
+            "probability": 0.8
+          }
+        ],
+        "question": {
+          "verb": "relate",
+          "fields": null,
+          "relations": [
+            {
+              "name": "knows",
+              "source": "person",
+              "target": "person",
+              "reads": "knows",
+              "either": false
+            }
+          ],
+          "threshold": 0.5
+        },
+        "answer": {
+          "questions": [
+            {
+              "relation": "knows",
+              "reads": "knows",
+              "method": "boolean",
+              "direction": "forward",
+              "source": {
+                "name": "é😀",
+                "kind": "person",
+                "record": {
+                  "original": [
+                    false,
+                    null
+                  ]
+                },
+                "file": "é.txt",
+                "first_line": 3,
+                "last_line": 3
+              },
+              "target": {
+                "name": "é😀",
+                "kind": "person",
+                "record": {
+                  "original": [
+                    false,
+                    null
+                  ]
+                },
+                "file": "é.txt",
+                "first_line": 3,
+                "last_line": 3
+              },
+              "request": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "probability": 0.8,
+              "accepted": true
+            },
+            {
+              "relation": "knows",
+              "reads": "knows",
+              "method": "boolean",
+              "direction": "forward",
+              "source": {
+                "name": "é😀",
+                "kind": "person",
+                "record": {
+                  "original": [
+                    false,
+                    null
+                  ]
+                },
+                "file": "é.txt",
+                "first_line": 3,
+                "last_line": 3
+              },
+              "target": null,
+              "request": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "failure": {
+                "kind": "backend",
+                "cause": "missing_answer"
+              }
+            }
+          ]
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "https://example.invalid/systemone",
+          "model": "requested",
+          "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "requests_sent": 0,
+          "cached": true,
+          "requests": [
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ],
+          "failed_questions": 1,
+          "origin": "replay",
+          "question_sources": [
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            },
+            {
+              "origin": "replay",
+              "answered_by": "reported"
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            }
+          ],
+          "answered_by": "reported",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "batch_setting": 2,
+          "batch_warning": {
+            "tuned_for": 1,
+            "running": 2
+          },
+          "profile_warning": {
+            "tuned_for": "earlier",
+            "running": "current"
+          },
+          "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "attempts": []
+        }
+      }
+    }
+  ],
+  "empty": {
+    "type": "RelateResult",
+    "result": {
+      "schema": "thinkthen.result/2",
+      "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "value": [],
+      "question": {
+        "verb": "relate",
+        "fields": null,
+        "relations": [
+          {
+            "name": "knows",
+            "source": "person",
+            "target": "person",
+            "reads": "knows",
+            "either": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "answer": {
+        "questions": []
+      },
+      "meta": {
+        "tool": "thinkthen 0.2.0",
+        "url": "https://example.invalid/systemone",
+        "model": "requested",
+        "question_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "requests_sent": 0,
+        "cached": false,
+        "requests": [],
+        "failed_questions": 0,
+        "origin": null,
+        "question_sources": [],
+        "observations": [],
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "batch_setting": 2,
+        "batch_warning": {
+          "tuned_for": 1,
+          "running": 2
+        },
+        "profile_warning": {
+          "tuned_for": "earlier",
+          "running": "current"
+        },
+        "context_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "attempts": []
+      }
+    }
+  },
+  "facts": {
+    "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "records": 2,
+    "requests_sent": 0,
+    "cache_answers": 2,
+    "seconds": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "estimated_cost_usd": "0.000000"
+  },
+  "errors": [
+    {
+      "kind": "usage",
+      "message": "withheld",
+      "retryable": false
+    },
+    {
+      "kind": "backend",
+      "message": "withheld",
+      "retryable": false
+    },
+    {
+      "kind": "local",
+      "message": "withheld",
+      "retryable": false
+    },
+    {
+      "kind": "cancelled",
+      "message": "withheld",
+      "retryable": false
+    },
+    {
+      "kind": "deadline",
+      "message": "withheld",
+      "retryable": false
+    },
+    {
+      "kind": "defect",
+      "message": "withheld",
+      "retryable": false
+    }
+  ],
+  "started_error": {
+    "kind": "backend",
+    "message": "withheld",
+    "retryable": false,
+    "facts": {
+      "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "records": 2,
+      "requests_sent": 0,
+      "cache_answers": 2,
+      "seconds": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "estimated_cost_usd": "0.000000"
+    },
+    "attempts": [
+      {
+        "ordinal": 1,
+        "request_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "wall_ms": 0,
+        "outcome": "status",
+        "sdk_request_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "status": 429,
+        "server_ms": 0,
+        "request_id": "provider-1"
+      }
+    ]
+  }
+}

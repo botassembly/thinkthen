@@ -61,3 +61,51 @@ Each release also includes a matching-version plain Ruby fallback gem. If RubyGe
 From a source checkout, `setup-ruby.sh` builds the pinned Ruby 3.4.11 once per machine, with the network, into `~/.cache/thinkthen-toolchains/ruby/3.4.11`. `toolchain.env` pins both source archives by hash. `build.sh` builds the extension and the gem offline with that Ruby. `check.sh` is this surface's entry in the surface rung. It runs the file checks, the toolchain probe, the build, Clippy, the Rust unit tests, each Ruby test file, the conformance runner, the examples, the gem check, and the slide. Each test starts its own loopback backend and runs its calls in a scrubbed child with a fake key. Without the pinned prefix, `check.sh` prints "not run" and exits 77.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Complete native calls
+
+`engine.complete` exposes all ten named functions: decide, choose, tag, score,
+filter, rank, find, annotate, recognize and relate. Each returns a
+`ThinkThen::Complete::Completed` with typed `results`, native final `facts`,
+original `inputs` and zero-based `ordinals`.
+
+```ruby
+engine = ThinkThen::Engine.new(cache: false)
+call = engine.complete.decide(
+  { role: 'atomic', body: { decide: 'Is this a complaint?' } },
+  { kind: 'records', records: [{ content: { kind: 'text', value: 'Please refund.' } }] },
+  attempts: true
+)
+probability = call.results.first.answer.probability
+requests = call.facts.requests_sent
+```
+
+Question sources select exactly one body, raw JSON, path, name or reference,
+with an explicit role: atomic, dynamic, rank, set, find, recognize or relate.
+Rank sets use set. Native loaders retain structured descriptions, author names,
+wording versions, declarations and annotation members. Caller inputs may be
+hashes or `ThinkThen::Complete` carriers.
+
+File sources use `kind: 'files'`, `paths: ['report.txt']` and
+`options: { reading: { unit: 'file' }, media: 'text' }`. Line/window readings
+retain physical coordinates; `jsonl: true` reads records and `media: 'image'`
+reads explicit image files. Records can carry ordered PNG/JPEG attachments,
+explicit context and described options. Images are admitted for decide, choose
+and score; the other seven functions refuse before sending.
+
+`decide_batch`, `choose_batch`, `tag_batch`, `score_batch`, `filter_batch` and
+`annotate_batch` return native lazy enumerable batches. Each row has typed
+`result`, `ordinal` and `input`; final `facts` is available at exhaustion or
+terminal failure. Enumeration closes on early exit; direct `next` users should
+`close` when leaving early. `cancel` and the ordinary cancellation/deadline
+controls stop native work. Source files and sends wait for the first pull.
+
+Complete failures retain the six ordinary error kinds and add typed `complete`,
+with available native final facts and stopped position. Native cache, record,
+replay and attempts apply, including zero-send replay and changed reading
+identity. Carrier inspection withholds contents. Existing bare calls retain
+their behavior.
+
+Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.
+
+Rank set results retain ordered `members`, each with its saved `name` and typed `RankMemberResult`. The child carries its own positive member position, answer ID, authored question, probability, source and metadata; the parent carries the final turns position and winner. Usage dimensions remain independently optional. Parent and member usage overlap; use the final call facts for invocation totals. Ordinary ranks retain absent members.

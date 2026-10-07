@@ -27,7 +27,7 @@ with zipfile.ZipFile(wheel) as held:
     extensions = [held.read(n) for n in names if n.endswith((".so", ".pyd"))]
     homed = [n for n in names if home in held.read(n)]
 wrong = [f"it lacks {need}" for need in ("thinkthen/__init__.pyi", "thinkthen/py.typed",
-                                      "thinkthen/judge.py", "thinkthen/stream.py")
+                                      "thinkthen/judge.py", "thinkthen/stream.py", "thinkthen/complete.py", "thinkthen/complete.pyi", "thinkthen/_complete.py")
          if need not in names]
 if b"License: MIT" not in metadata:
     wrong.append("its METADATA lacks License: MIT")

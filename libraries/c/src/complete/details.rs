@@ -108,7 +108,19 @@ impl Storage {
         inputs: impl Iterator<Item = &'a QuestionInput>,
         raw: Option<&str>,
     ) -> Result<(), Failure> {
-        let detail = DetailsV1 {
+        let detail = self.details(common, meta, inputs, raw)?;
+        self.1.push(detail);
+        self.2.push(common);
+        Ok(())
+    }
+    pub(super) fn details<'a>(
+        &mut self,
+        common: RowV1,
+        meta: ResultMetadata<'_>,
+        inputs: impl Iterator<Item = &'a QuestionInput>,
+        raw: Option<&str>,
+    ) -> Result<DetailsV1, Failure> {
+        Ok(DetailsV1 {
             question: common.question,
             threshold: common.threshold,
             raw_pick: self.optional_string(raw),
@@ -116,10 +128,7 @@ impl Storage {
             question_sources: self.source_details(meta.identity().question_sources()),
             observations: common.meta.observations,
             inputs: self.native_inputs(inputs)?,
-        };
-        self.1.push(detail);
-        self.2.push(common);
-        Ok(())
+        })
     }
     pub(super) fn question_details(&mut self, d: QuestionDetail<'_>) -> Result<DetailsV1, Failure> {
         Ok(DetailsV1 {

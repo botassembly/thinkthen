@@ -109,17 +109,7 @@ fn convenience_child() {
         assert_eq!(one.probabilities(), other.probabilities());
         assert_eq!(one.reported_usage(), other.reported_usage());
         let observations = (one.observations().to_vec(), other.observations().to_vec());
-        if let Some(previous) = previous_observations {
-            assert_eq!(
-                observations, previous,
-                "each cache retains its own observation"
-            );
-        } else {
-            assert_ne!(
-                observations.0, observations.1,
-                "separate live answers have separate observations"
-            );
-        }
+        compare_observations(previous_observations.as_ref(), &observations);
         previous_observations = Some(observations);
         assert_eq!(
             explicit
@@ -365,4 +355,18 @@ pub(crate) fn refused(backend: &Backend, case: &Value, verbatim: &Verbatim, kind
         return Err("a usage error names nothing".to_owned());
     }
     Ok(())
+}
+
+fn compare_observations<T: PartialEq + std::fmt::Debug>(
+    previous: Option<&(T, T)>,
+    current: &(T, T),
+) {
+    if let Some(previous) = previous {
+        assert_eq!(current, previous, "each cache retains its own observation");
+    } else {
+        assert_ne!(
+            current.0, current.1,
+            "separate live answers have separate observations"
+        );
+    }
 }

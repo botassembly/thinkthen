@@ -1940,6 +1940,45 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "required": [
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              },
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              },
+              "question_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "threshold": {
+                "type": "null"
+              },
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "question_name"
+            ]
+          }
         }
       ],
       "properties": {
@@ -1993,6 +2032,13 @@
           "type": [
             "integer"
           ]
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "minItems": 1,
+          "type": "array"
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -2300,6 +2346,45 @@
           }
         },
         {
+          "if": {
+            "required": [
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              },
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              },
+              "question_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "threshold": {
+                "type": "null"
+              },
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "question_name"
+            ]
+          }
+        },
+        {
           "properties": {
             "question": {
               "properties": {
@@ -2512,6 +2597,45 @@
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              },
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              },
+              "question_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "threshold": {
+                "type": "null"
+              },
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "question_name"
+            ]
           }
         },
         {
@@ -2931,6 +3055,45 @@
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              },
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              },
+              "question_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "threshold": {
+                "type": "null"
+              },
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "question_name"
+            ]
           }
         },
         {
@@ -3752,6 +3915,45 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "required": [
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              },
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              },
+              "question_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "threshold": {
+                "type": "null"
+              },
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "question_name"
+            ]
+          }
         }
       ],
       "properties": {
@@ -3806,6 +4008,13 @@
             "integer"
           ]
         },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
         "meta": {
           "$ref": "#/$defs/completeMeta"
         },
@@ -3847,6 +4056,222 @@
         "threshold",
         "meta",
         "input"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRankMember": {
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/completeRankMemberResult"
+        }
+      },
+      "required": [
+        "name",
+        "result"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRankMemberResult": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "answer": {
+              "properties": {
+                "kind": {
+                  "const": "yes_no"
+                }
+              }
+            },
+            "question": {
+              "properties": {
+                "verb": {
+                  "const": "decide"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "input_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "position": {
+          "$ref": "#/$defs/completePosition"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "type": "null"
+        },
+        "value": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -4499,6 +4924,45 @@
           }
         },
         {
+          "if": {
+            "required": [
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              },
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              },
+              "question_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "threshold": {
+                "type": "null"
+              },
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "question_name"
+            ]
+          }
+        },
+        {
           "properties": {
             "question": {
               "properties": {
@@ -5000,6 +5464,45 @@
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              },
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              },
+              "question_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "threshold": {
+                "type": "null"
+              },
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "question_name"
+            ]
           }
         },
         {

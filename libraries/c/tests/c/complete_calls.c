@@ -116,6 +116,9 @@ static void check(thinkthen_result *r,unsigned kind,int files) {
     }
     common(row,kind==5 || kind==6 ? 1:kind);
     thinkthen_details_v1 detail={0}; assert(thinkthen_result_details(r,0,&detail)==0);
+    thinkthen_details_v1 member_unchanged={0}; member_unchanged.usage.input_tokens.value=99;
+    assert(thinkthen_result_rank_member_details(r,0,0,&member_unchanged)==THINKTHEN_EUSAGE);
+    assert(member_unchanged.usage.input_tokens.value==99);
     assert(detail.inputs.len==((kind==7 || kind==10)?2:1));
     assert(detail.question_sources.len==row.meta.question_sources.len);
     for(size_t i=0;i<detail.question_sources.len;++i) assert(detail.question_sources.data[i].batch_size.present);

@@ -169,7 +169,8 @@ module ThinkThen
   # in flight at once, per loaded copy of the library.
   class Engine
     def initialize(backend: nil, base_url: nil, model: nil, throttle: nil, max_requests: nil, max_request_bytes: nil, cache: nil,
-                   timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil, batch: nil, max_requests_total: nil)
+                   timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil, batch: nil, max_requests_total: nil, refresh_cache: false, **unknown)
+      raise UsageError.new("unsupported engine setting", "usage") unless unknown.empty?
       ThinkThen.__send__(:text_setting, :backend, backend)
       ThinkThen.__send__(:text_setting, :base_url, base_url)
       ThinkThen.__send__(:text_setting, :model, model)
@@ -190,7 +191,7 @@ module ThinkThen
         max_requests: max_requests, max_request_bytes: max_request_bytes,
         cache_at: cache || nil, no_cache: cache == false,
         timeout: timeout, max_retries: max_retries, record: record, replay: replay, profile: profile, batch: batch,
-        max_requests_total: max_requests_total })
+        max_requests_total: max_requests_total, refresh_cache:refresh_cache })
     end
 
     def self.from_native(native)
@@ -732,3 +733,6 @@ module ThinkThen
     end
   end
 end
+
+require_relative "thinkthen/complete"
+require_relative "thinkthen/native_complete"
