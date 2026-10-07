@@ -66,9 +66,6 @@ def validate_consumer_contracts(parity):
             if fields:
                 raise ValueError(f"{consumer['id']}: CLI applicability fields at another public door")
             continue
-        # The original source inventory remains valid until the CLI owner adopts it.
-        if not fields:
-            continue
         if consumer.get('required_checks') != ['named', 'runtime']:
             raise ValueError('cli: required checks must be named and runtime')
         rulings = consumer.get('case_rulings')

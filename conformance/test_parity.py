@@ -218,7 +218,7 @@ class PublicAssertions(unittest.TestCase):
 
 class CliApplicability(unittest.TestCase):
     def setUp(self):
-        self.contract = copy.deepcopy(parity.inventory())
+        self.contract = json.loads(parity.DOCUMENT.read_text())['parity']
         self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
         self.cli['required_checks'] = ['named', 'runtime']
         self.cli['case_rulings'] = {
@@ -243,11 +243,14 @@ class CliApplicability(unittest.TestCase):
         self.assertEqual(original, self.contract['required_cases'])
 
     def test_closed_rulings_refuse_unrelated_exclusions_and_other_consumers(self):
-        for defect in ['missing', 'unrelated', 'wrong-boundary', 'other-consumer', 'checks', 'expect']:
+        for defect in ['missing-all', 'missing', 'unrelated', 'wrong-boundary', 'other-consumer', 'checks', 'expect']:
             with self.subTest(defect=defect):
                 changed = copy.deepcopy(self.contract)
                 cli = next(row for row in changed['consumers'] if row['id'] == 'cli')
-                if defect == 'missing':
+                if defect == 'missing-all':
+                    del cli['required_checks']
+                    del cli['case_rulings']
+                elif defect == 'missing':
                     del cli['case_rulings']['named-uppercase']
                 elif defect == 'unrelated':
                     cli['case_rulings']['typed-decide'] = {'boundary': 'sdk-only', 'reason': 'unsupported'}
