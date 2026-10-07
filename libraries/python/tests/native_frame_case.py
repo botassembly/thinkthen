@@ -5,14 +5,16 @@ from thinkthen import complete as c, frames
 import native_case
 
 LIBRARY = os.environ['THINKTHEN_FRAME_LIBRARY']
+if LIBRARY == 'pandas':
+    import pandas as pd
+else:
+    import polars as pl
 
 
 def column(source):
     if isinstance(source, c.Files): return source
     if LIBRARY == 'pandas':
-        import pandas as pd
         return pd.Series(source.items, index=[7] * len(source.items), name='original', dtype='object')
-    import polars as pl
     return pl.Series('original', list(source.items), dtype=pl.Object)
 
 
