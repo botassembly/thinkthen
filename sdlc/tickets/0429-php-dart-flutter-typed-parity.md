@@ -1,6 +1,6 @@
 # 0429: Complete PHP, Dart and Flutter typed parity
 
-Status: native-backed PHP/Dart/Flutter adoption built and pushed. Actual public consumers verify all 247 required cases per family, including 24 image-admission cells each, through full runs plus affected-case reruns; Flutter executes separately. Coordinator owns fresh whole-family review, full landing gates and shared release archive inventory fixes. The private-slice notes below are historical.
+Status: native PHP/Dart/Flutter adoption accepted at 088d7d0bc; all 247 actual cases per family retained. Published native/cache prerequisites adopted, find answer tag 5 enforced while question/result kind 7 remain, and public archive inventories fixed. Nine affected find cells and ten-function constructors per family plus actual PHP/Dart/Flutter archive consumers pass. Coordinator owns narrow review, full landing gates and landing; private-slice notes below are historical.
 
 Milestone: 0.2
 

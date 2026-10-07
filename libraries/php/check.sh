@@ -66,7 +66,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_RELEASE_PHP_DIR="$package" THINKTHEN_RELEASE_C_DIR="$native" \
         THINKTHEN_BACKEND_BIN="$repo/target/debug/conformance-backend" "$python_bin" fixtures/portable_batch.py
     "$python_bin" fixtures/release_plants.py "$package" "$native"
-    echo 'PHP installed release PASS: five typed rows and three literal requests'
+    echo 'PHP installed release PASS: legacy and complete typed rows, two requests per route, zero-send cancellation and usage'
     exit 0
 fi
 for named in "$bwrap_bin" "$git_bin"; do
