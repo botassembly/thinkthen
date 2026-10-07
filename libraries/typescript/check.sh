@@ -49,6 +49,16 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
         fail "the token cap test failed, installed"
     printf '%s\n' "$capped" | grep -qx 'ok 1 - the token cap variable refuses a call before any request' ||
         fail "the token cap test did not run, installed"
+
+    python3 - "$repo" "$project" <<'NODENATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
+for language,suffix in [('javascript','mjs'),('typescript','js')]:
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names):sys.exit(1)
+NODENATIVE
     echo 'typescript: pass, installed'
     exit 0
 fi
@@ -63,7 +73,7 @@ if [ "$profile" = smoke ]; then
     case $(uname -s) in Darwin) library=libthinkthen_typescript.dylib ;; *) library=libthinkthen_typescript.so ;; esac
     scratch_dir project
     mkdir -p "$project/node_modules/thinkthen"
-    cp package.json index.js index.mjs index.d.ts loader.js LICENSE "$project/node_modules/thinkthen/"
+    cp package.json index.js index.mjs index.d.ts loader.js complete.js complete.d.ts _complete.js _complete.d.ts LICENSE "$project/node_modules/thinkthen/"
     cp -- "${CARGO_TARGET_DIR:-target}/debug/$library" \
         "$project/node_modules/thinkthen/thinkthen-$(node -p 'process.platform + "-" + process.arch').node"
     cd "$project"
@@ -149,8 +159,20 @@ for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
 done
 
 step 'types'
-target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResolution node16 --target es2022 tests/types.test.ts tests/backend_types.test.ts
+target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResolution node16 --target es2022 tests/types.test.ts tests/backend_types.test.ts tests/complete_types.test.ts
 
+step 'native JavaScript and compiled TypeScript consumers'
+project=$PWD
+
+    python3 - "$repo" "$project" <<'NODENATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
+for language,suffix in [('javascript','mjs'),('typescript','js')]:
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names):sys.exit(1)
+NODENATIVE
 step 'the loader refuses a platform it does not ship, with the pinned sentence'
 refused=$(node -e 'Object.defineProperty(process, "platform", { value: "win32" }); try { require("./loader.js") } catch (e) { console.log(e.message) }')
 [ "$refused" = "thinkthen: no native addon for win32-$(node -p process.arch); this package ships linux-x64, linux-arm64, darwin-x64, and darwin-arm64" ] ||
@@ -162,7 +184,7 @@ addon="thinkthen-$(node -p 'process.platform + "-" + process.arch').node"
 mkdir -p target/pack
 npm pack --json --offline --pack-destination target/pack 2>/dev/null >"$plant/pack"
 packed=$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))[0].files.map((f) => f.path).sort().join(" "))' "$plant/pack")
-[ "$packed" = "LICENSE README.md index.d.ts index.js index.mjs loader.js package.json $addon" ] || fail "npm pack lists $packed"
+[ "$packed" = "LICENSE README.md _complete.d.ts _complete.js complete.d.ts complete.js index.d.ts index.js index.mjs loader.js package.json $addon" ] || fail "npm pack lists $packed"
 [ "$(node -p 'require("./package.json").license')" = MIT ] || fail 'package.json names no MIT license'
 [ "$(grep -c -- "$HOME" "$addon" || true)" = 0 ] || fail "$addon names $HOME"
 

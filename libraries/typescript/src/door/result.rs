@@ -3,6 +3,7 @@
 use std::sync::Mutex;
 #[path = "../../../r/thinkthen/src/rust/src/source/mod.rs"]
 mod source;
+use crate::complete;
 
 use serde_json::{Value, json};
 use thinkthen::{Batch, Call, Facts, Judgment, RecordObservation};
@@ -94,6 +95,11 @@ pub(super) fn run(
 ) -> Result<Finished, Failure> {
     let spec = call.spec.as_deref().unwrap_or_default();
     let text = call.payload.as_str();
+    if call.op == "complete" {
+        let (value, facts) = complete::execute(engine, complete::parse(text)?, options)?;
+
+        return Ok(Finished { value, facts });
+    }
     if call.op == "files" {
         let (value, facts) = source::dispatch(engine, spec, text, options)?;
         return Ok(Finished { value, facts });

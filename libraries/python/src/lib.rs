@@ -9,6 +9,7 @@
 
 mod arrow;
 mod asked;
+mod complete_stream;
 mod diagnostics;
 mod engine;
 mod files;
@@ -135,6 +136,9 @@ pub(crate) fn raised(py: Python<'_>, error: &Error) -> PyErr {
     {
         let _set = raised.value(py).setattr("facts", value);
     }
+    if let Ok(snapshot) = engine::complete::stream::failure(error) {
+        let _set = raised.value(py).setattr("native_complete", snapshot);
+    }
     raised
 }
 
@@ -171,6 +175,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<result::PyCall>()?;
     module.add_class::<tally::PyTally>()?;
     module.add_class::<stream::PyStream>()?;
+    module.add_class::<complete_stream::CompleteStream>()?;
     module.add_class::<worker::Token>()?;
     module.add_class::<worker::Receipt>()?;
     module.add_class::<worker::Completion>()?;

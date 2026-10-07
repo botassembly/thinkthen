@@ -9,7 +9,10 @@ pub(crate) enum State {
     Unused,
     Claimed,
     Running,
-    Terminal { kind: String, snapshot: Snapshot },
+    Terminal {
+        kind: String,
+        snapshot: Box<Snapshot>,
+    },
 }
 
 #[derive(Debug)]
@@ -48,7 +51,7 @@ impl Receipt {
         if matches!(*state, State::Claimed) {
             *state = State::Terminal {
                 kind,
-                snapshot: Snapshot::empty(),
+                snapshot: Box::new(Snapshot::empty()),
             };
         }
     }
@@ -56,7 +59,10 @@ impl Receipt {
     pub(crate) fn settle(&self, kind: String, snapshot: Snapshot) {
         let mut state = self.0.lock().unwrap_or_else(PoisonError::into_inner);
         if matches!(*state, State::Claimed | State::Running) {
-            *state = State::Terminal { kind, snapshot };
+            *state = State::Terminal {
+                kind,
+                snapshot: Box::new(snapshot),
+            };
         }
     }
 }

@@ -1,3 +1,4 @@
+from .complete import Engine as _CompleteEngine
 """The typed face of ``thinkthen``. It matches ``thinkthen/__init__.py``."""
 
 import os
@@ -231,6 +232,8 @@ class CallKeywords(JudgeKeywords, total=False):
     token: CancelToken
 
 class Engine:
+    @property
+    def complete(self) -> _CompleteEngine: ...
     def __init__(
         self,
         *,

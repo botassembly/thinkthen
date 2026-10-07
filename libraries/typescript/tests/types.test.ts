@@ -84,3 +84,16 @@ export async function sample(text: string, message: string, inbox: string[], rev
   }
   return { team, topics, first, answered, second, level, complaints, found, digests, confidence, url, many, names, edges, counters, fromEngine, sent };
 }
+
+async function literalRankFindTypes() {
+  const records = ['a', 'b'];
+  await tt.rank({ decide: 'Q?' }, records);
+  await tt.find({ decide: 'Q?' }, records, { none: true });
+  // @ts-expect-error native find does not admit a score question.
+  await tt.find({ score: 'Q?', levels: ['low', 'high'] }, records);
+  // @ts-expect-error native find reads text alone, not a threshold.
+  await tt.find({ decide: 'Q?', threshold: 0.8 }, records);
+  // @ts-expect-error rich rank execution still requires native adoption.
+  await tt.rank({ decide: 'Q?', true: 'wanted' }, records);
+}
+void literalRankFindTypes;

@@ -55,3 +55,51 @@ Facts, details, and annotate rows are the engine's JSON, so a member this packag
 `new tt.Engine({backend: "liquid"})` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `baseUrl` too, the selected key, posting path, description form and setup prices/profile apply at that address. An explicit model or profile overrides its setup value. No TypeScript key option exists. Omission preserves the environment-driven default engine.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Complete native calls
+
+`engine.complete` and the default `complete` facade expose all ten named
+functions: decide, choose, tag, score, filter, rank, find, annotate, recognize and
+relate. Each resolves to a `Completed<ResultType>` with typed `results`, native
+final `facts`, original `inputs` and zero-based `ordinals`. `CompleteTypes`
+exports the result, probability, author declaration, identity and source types.
+
+```typescript
+import { Engine } from 'thinkthen';
+
+const engine = new Engine({ cache: false });
+const call = await engine.complete.decide(
+  { role: 'atomic', body: { decide: 'Is this a complaint?' } },
+  { kind: 'records', records: [{ content: { kind: 'text', value: 'Please refund.' } }] },
+  { attempts: true },
+);
+const probability: number = call.results[0].answer.probability;
+```
+
+Question sources select exactly one of `body`, `raw`, `path`, `name` or
+`reference`, with an explicit `role`: atomic, dynamic, rank, set, find, recognize
+or relate. Rank sets use set. Native loaders retain structured descriptions,
+author names, wording versions, declarations and annotation members. Complete
+rank accepts the native rich grammar and question sets.
+
+A file source is `{ kind: 'files', paths: ['report.txt'], options: { reading:
+{ unit: 'file' }, media: 'text' } }`; line and window readings retain physical
+locations. `jsonl: true` reads records; `media: 'image'` reads explicit images.
+Records may include ordered `{ media: 'image/png', bytes: [...] }` attachments,
+explicit text/JSON context and described options. Images are admitted for
+decide, choose and score; the other seven functions refuse before sending.
+
+`decideBatch`, `chooseBatch`, `tagBatch`, `scoreBatch`, `filterBatch` and
+`annotateBatch` are native lazy async iterators. Rows have typed `result`,
+`ordinal` and `input`; `facts` is final at exhaustion or terminal failure.
+Breaking `for await` closes the batch; explicit `return()` closes it and
+`cancel()` stops native work. Source files and requests wait for the first pull.
+The ordinary `signal`, `deadlineMs`, `context` and `attempts` controls apply.
+
+Failures are ordinary `ThinkThenError` values with typed `complete`, including
+available final native facts and stopped position. Cache, record and replay
+remain native, including changed-reading identity and zero-send strict replay.
+JavaScript uses the same runtime; its tests execute separately from the compiled
+TypeScript consumer. Existing bare calls and their declarations stay compatible.
+
+Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.

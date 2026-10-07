@@ -1,5 +1,6 @@
 //! Additive concrete complete calls retain the existing transport and scalar doors.
 mod annotate;
+mod dynamic_choose;
 mod find;
 mod many;
 mod rank;

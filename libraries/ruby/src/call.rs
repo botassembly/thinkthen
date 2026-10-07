@@ -1,5 +1,7 @@
 //! The calls a worker runs: owned inputs in, plain Rust values out.
 
+#[path = "../../r/thinkthen/src/rust/src/complete/mod.rs"]
+pub(crate) mod complete;
 #[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
 mod source;
 
@@ -35,6 +37,7 @@ fn texts(records: Vec<String>) -> impl Iterator<Item = Text> {
 /// Ruby value.
 #[derive(Debug)]
 pub(crate) enum Ask {
+    Complete(String),
     Files(String, String),
     Decide(LoadedQuestion, String),
     Details(LoadedQuestion, String),
@@ -165,6 +168,11 @@ fn run_inner(
     options: CallOptions<'_>,
 ) -> Result<(Output, Facts), Fault> {
     Ok(match ask {
+        Ask::Complete(request) => {
+            let (value, facts) = complete::execute(engine, complete::parse(&request)?, options)?;
+
+            (Output::Json(value), facts)
+        }
         Ask::Files(question, selection) => {
             let (value, facts) = source::dispatch(engine, &question, &selection, options)?;
             (Output::Json(value), facts)

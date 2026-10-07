@@ -25,7 +25,7 @@ type Done = ThreadsafeFunction<String, ErrorStrategy::Fatal>;
 #[napi]
 #[derive(Debug)]
 pub struct NativeEngine {
-    engine: Engine,
+    pub(crate) engine: Engine,
 }
 
 /// Build an engine. A refused setting throws its envelope as the message.

@@ -1,3 +1,7 @@
+export type { QuestionSource as CompleteQuestionSource, Input as CompleteInput, Completed, Batch, BatchRow } from './complete.js';
+import type { Functions as CompleteFunctions } from './complete.js';
+export * as CompleteTypes from './_complete.js';
+export const complete: CompleteFunctions;
 // The typed face of `thinkthen` for Node. Every verb is async, `null` is
 // unsure, a list crosses into the engine once, an `AbortSignal` cancels a
 // call at once, and `deadlineMs` bounds a whole call.
@@ -89,6 +93,18 @@ export interface ScoreOptions extends CallOptions {
 export interface ChooseManyOptions extends ManyCallOptions { options: LabelSet; }
 export interface ScoreManyOptions extends ManyCallOptions { levels: LabelSet; }
 export interface TagManyOptions extends ManyCallOptions { labels: LabelSet; }
+
+/** Current native rank/find text form. Rich rank specifications use the private
+ * compatibility carriers; complete native calls use CompleteTypes. */
+export interface TextQuestion {
+  decide: string;
+  threshold?: never;
+  true?: never;
+  false?: never;
+  model?: never;
+  profile?: never;
+  batch?: never;
+}
 
 export interface RankOptions extends ManyCallOptions {
   /** Keep the first `top` of the ordered result. */
@@ -314,6 +330,7 @@ export interface Usage {
 
 /** The engine's failure, its kind, and whether the same call may pass later. */
 export class ThinkThenError extends Error {
+  readonly complete?: import("./_complete.js").CallError;
   kind: 'usage' | 'backend' | 'local' | 'cancelled' | 'deadline' | 'defect';
   /** The kind's code in the C door: usage 1, backend 2, deadline 3, local 4, cancelled 5, defect 6. */
   code: 1 | 2 | 3 | 4 | 5 | 6;
@@ -363,8 +380,8 @@ export interface Verbs {
   tag_many(question: string, records: readonly string[], options: TagManyOptions): Promise<Call<string[][]>>;
   tag_many(question: TagSpec | Question, records: readonly string[], options?: ManyCallOptions): Promise<Call<string[][]>>;
   filter(question: string | Question | DecideSpec, records: readonly string[], options?: ManyCallOptions): Promise<Call<string[]>>;
-  rank(question: string | Question | DecideSpec, records: readonly string[], options?: RankOptions): Promise<Call<Ranked[]>>;
-  find(question: string | Question | DecideSpec, units: readonly string[], options?: FindOptions): Promise<Call<Found | null>>;
+  rank(question: string | Question | TextQuestion, records: readonly string[], options?: RankOptions): Promise<Call<Ranked[]>>;
+  find(question: string | Question | TextQuestion, units: readonly string[], options?: FindOptions): Promise<Call<Found | null>>;
   /** A set member whose `on` names a part reads it from each record as JSON text. */
   annotate(set: QuestionSet, records: readonly string[], options?: AnnotateCallOptions): Promise<Call<AnnotatedRow[]>>;
   details(question: string | Question | QuestionSpec, text: string, options?: CallOptions): Promise<Call<Details>>;
@@ -377,6 +394,7 @@ export interface Verbs {
 
 /** An engine with its own settings, built on the environment. */
 export class Engine implements Verbs {
+  readonly complete: CompleteFunctions;
   files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: ManyCallOptions): Promise<Call<JsonValue>>;
   constructor(options?: EngineOptions);
   decide: Verbs['decide'];
