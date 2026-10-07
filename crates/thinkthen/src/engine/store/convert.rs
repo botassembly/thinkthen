@@ -192,11 +192,11 @@ fn replace(folder: &Path, path: &Path, text: &[u8]) -> Result<(), Error> {
 
 /// Make a rename in `folder` durable.
 #[cfg(unix)]
-fn sync_folder(folder: &Path) -> io::Result<()> {
+pub(super) fn sync_folder(folder: &Path) -> io::Result<()> {
     fs::File::open(folder)?.sync_all()
 }
 
 #[cfg(not(unix))]
-fn sync_folder(_folder: &Path) -> io::Result<()> {
+pub(super) fn sync_folder(_folder: &Path) -> io::Result<()> {
     Ok(())
 }

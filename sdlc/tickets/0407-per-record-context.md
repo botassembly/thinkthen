@@ -85,3 +85,5 @@ RecordInput::options: Option<RecordOptions>
 QuestionInput::Record(RecordEvidence)
 const fn ImageEvidence::location(&self) -> Option<&SourceLocation>
 ```
+
+Native foundation update: independent per-record context and whole replacement candidates execute through ordinary packing/readers/scheduling. Finite and staged selected typed inputs validate before lookup/send; declared object contexts are explicit under 0456, text remains literal and absent/empty/null semantics are preserved. Actual contexts reach primitive/tag/annotation requests without replacing original evidence or coordinates. Native/CLI execution is implemented; C/MCP/families/frames/SQL adoption and root whole review/landing remain open.

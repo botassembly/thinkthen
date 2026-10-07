@@ -54,17 +54,12 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
             Some(call_id.as_str())
         );
     }
-    let mut pinned = facts.clone();
-    pinned
-        .as_object_mut()
-        .expect("facts object")
-        .remove("seconds");
-    pinned
-        .as_object_mut()
-        .expect("facts object")
-        .remove("call_id");
+    let mut pinned = facts.as_object().expect("facts object").clone();
+    for field in ["seconds", "call_id", "command_ms"] {
+        pinned.remove(field);
+    }
     assert_eq!(
-        pinned,
+        Value::Object(pinned),
         json!({"schema":"thinkthen.run/1","records":25,"requests_sent":3,
             "retries":0,"cache_answers":0,"input_tokens":300,"output_tokens":30,
             "model":"jev-1.13.0"})

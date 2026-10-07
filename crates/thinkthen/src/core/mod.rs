@@ -52,6 +52,8 @@ pub(crate) mod record_input;
 pub(crate) mod recording;
 mod records;
 mod relate_file;
+#[cfg(test)]
+pub(crate) use relate_file::RelateQuestion;
 pub(crate) mod relation;
 mod render;
 mod reply;
@@ -91,8 +93,8 @@ pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub(crate) use crate::core::question_file::{
-    Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
-    resolve, safe_key,
+    Cutting, QuestionFile, QuestionFileError, QuestionRole, Resolved, Source, Sources, Typed, Verb,
+    pointers, resolve, safe_key,
 };
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
@@ -107,7 +109,7 @@ pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub(crate) use crate::core::relate_file::{
-    EntitySetError, RelateConfigError, RelateFields, RelateQuestion, RelateSpec, inline_rule,
+    EntitySetError, RelateConfigError, RelateFields, RelateSpec, inline_rule,
 };
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
@@ -117,7 +119,6 @@ pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{
     AnswerOutcome, BackendFailure, BackendFailureCause, FailedValue, Reply,
 };
-pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::complete::Atomic as CompleteAtomic;
 pub(crate) use crate::core::result::complete::Find as CompleteFind;
 pub(crate) use crate::core::result::complete::Recognition as CompleteRecognition;
@@ -183,3 +184,6 @@ pub use declaration::{
     InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
     WordingVersion,
 };
+
+#[cfg(test)]
+pub(crate) use result::complete as complete_documents;

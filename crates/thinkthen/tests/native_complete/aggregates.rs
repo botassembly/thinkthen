@@ -13,6 +13,7 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
             CallOptions::new().context("  context\n").attempts(true),
         )
         .unwrap();
+    schema::call(&found, "completeFind");
     assert_eq!(found.value().selected(), None);
     assert_eq!(found.value().raw_pick(), "none");
     assert!(found.value().question().offers_none());
@@ -58,6 +59,7 @@ fn native_annotation_keeps_member_null_failure_order_and_actual_batch_sources() 
             CallOptions::new().context("Separate.").attempts(true),
         )
         .unwrap();
+    schema::call(&rows, "completeAnnotation");
     assert_eq!(rows.value()[0].original(), &"Original.");
     let result = rows.value()[0].result();
     let members = result.members().collect::<Vec<_>>();
@@ -118,6 +120,7 @@ fn complete_relations_keep_full_answers_rejections_failures_and_empty_metadata()
             CallOptions::new().context("Separate.").attempts(true),
         )
         .unwrap();
+    schema::call(&result, "completeRelation");
     assert_eq!(result.value().value().len(), 1);
     let members = result.value().members().collect::<Vec<_>>();
     relation_reading(result.value());
@@ -138,6 +141,7 @@ fn complete_relations_keep_full_answers_rejections_failures_and_empty_metadata()
     let empty = engine
         .relate_complete_with(&ask, [], CallOptions::new().attempts(true))
         .unwrap();
+    schema::call(&empty, "completeRelation");
     let document: Value = serde_json::from_str(&empty.value().to_json().unwrap()).unwrap();
     assert_eq!(document["meta"]["origin"], Value::Null);
     assert_eq!(document["meta"]["cached"], false);
@@ -222,6 +226,7 @@ fn all_recognition_stages_keep_context_separate_and_original_spans_with_partial_
                 .attempts(true),
         )
         .unwrap();
+    schema::call(&found, "completeRecognition");
     recognition_reading(found.value());
     let entities = found.value().value().entities();
     assert_eq!(
@@ -262,6 +267,7 @@ fn all_recognition_stages_keep_context_separate_and_original_spans_with_partial_
     let empty = engine
         .recognize_complete_with(&ask, "", CallOptions::new().attempts(true))
         .unwrap();
+    schema::call(&empty, "completeRecognition");
     let document: Value = serde_json::from_str(&empty.value().to_json().unwrap()).unwrap();
     assert_eq!(document["meta"]["origin"], Value::Null);
     assert_eq!(document["meta"]["cached"], false);

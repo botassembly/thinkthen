@@ -139,7 +139,9 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
         assert_eq!(details.status.code(), Some(0), "{row}");
         let result: Value = serde_json::from_slice(&details.stdout).expect("details");
         assert_eq!(result["question"]["relations"][0]["single"], true, "{row}");
-        let mut entry = result["answer"]["questions"][0].clone();
+        let mut entry =
+            crate::native_results::compatibility::judgment(result)["answer"]["questions"][0]
+                .clone();
         entry.as_object_mut().expect("entry").remove("request");
         assert_eq!(
             entry,

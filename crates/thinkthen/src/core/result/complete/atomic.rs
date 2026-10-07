@@ -1,10 +1,10 @@
 //! Complete atomic judgments share the frozen legacy answer representation.
 
-use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
 use super::{CompleteMeta, ResultIdentity};
 use crate::core::{Answer, DecisionResult, Usage};
+mod set_rank;
 
 /// The complete canonical document for decide, choose, tag, score, filter or rank.
 #[derive(Clone, Debug, PartialEq)]
@@ -16,6 +16,10 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    pub(crate) fn take_input(&mut self) -> Option<crate::core::Record> {
+        self.legacy.input.take()
+    }
+
     pub(crate) const fn question(&self) -> &crate::core::Question {
         &self.legacy.question
     }
@@ -72,34 +76,34 @@ impl Atomic {
         input: Option<&T>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_with_named_input(input, None, serializer)
+    }
+
+    pub(crate) fn serialize_with_named_input<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        question_name: Option<&str>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("schema", "thinkthen.result/2")?;
-        map.serialize_entry("answer_id", self.identity.answer_id())?;
-        match self.rank_position {
-            Some(position) => map.serialize_entry("value", &position)?,
-            None => map.serialize_entry("value", &row.value)?,
-        }
-        if let Some(input) = input {
-            map.serialize_entry("input", input)?;
-        }
-        map.serialize_entry(
-            "question",
-            &crate::core::declaration::ReadableQuestion {
+        super::wire::AtomicDocument {
+            schema: super::wire::Version::V2,
+            answer_id: self.identity.answer_id(),
+            value: self.rank_position.map_or_else(
+                || super::wire::AtomicValue::Primitive(&row.value),
+                super::wire::AtomicValue::Rank,
+            ),
+            input,
+            question_name,
+            question: crate::core::declaration::ReadableQuestion {
                 question: &row.question,
                 metadata: &self.declarations,
             },
-        )?;
-        map.serialize_entry("answer", &row.answer)?;
-        map.serialize_entry("threshold", &row.threshold)?;
-        map.serialize_entry(
-            "meta",
-            &CompleteMeta {
-                legacy: &row.meta,
-                identity: &self.identity,
-            },
-        )?;
-        map.end()
+            answer: &row.answer,
+            threshold: row.threshold,
+            meta: CompleteMeta::of(&row.meta, &self.identity),
+        }
+        .serialize(serializer)
     }
 }
 

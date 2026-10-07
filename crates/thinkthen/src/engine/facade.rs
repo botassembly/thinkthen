@@ -30,7 +30,9 @@ pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::workers::scoped as scoped_workers;
 pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
-pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognition, Recognized, step_one};
+pub(crate) use recognize::{MAX_TEXT_BYTES, Recognition, step_one};
+#[cfg(test)]
+pub(crate) use recognize::{Probabilities, Recognized};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
@@ -410,9 +412,7 @@ impl Engine {
             )
         })?;
         let decoded = built_in::decode_observed(plan, &answered.body);
-        transport
-            .usage
-            .live_reply(decoded.usage.and_then(crate::core::ReportedUsage::complete));
+        transport.usage.live_reply(decoded.usage);
         cancel.live_reply(decoded.usage);
         let reply = decoded.reply.map_err(Error::from)?;
         transport.usage.answered_by(reply.model());

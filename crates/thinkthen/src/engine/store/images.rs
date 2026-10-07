@@ -5,23 +5,38 @@ use crate::engine::{Cancel, error::Error};
 use rusqlite::{Connection, params_from_iter};
 use std::collections::HashMap;
 
+pub(crate) struct Lookup {
+    pub(crate) answers: Vec<Option<Found>>,
+    pub(crate) held_model_mismatch: bool,
+}
+
+pub(super) const COLUMNS: &str = "a.key, a.answer, a.answered_by, a.input_tokens, a.output_tokens,
+    a.observation_id, a.batch_size, a.key_version, a.adapter,
+    a.url, a.model, a.question, s.sha256, s.state, a.taken_at, a.origin";
+
 impl Store {
     pub(crate) fn lookup_asks(
         &mut self,
         asks: &[Ask],
         cancel: &Cancel,
-    ) -> Result<Vec<Option<Found>>, Error> {
+        route: (&str, &str),
+    ) -> Result<Lookup, Error> {
         let keys: Vec<_> = asks.iter().map(|ask| ask.key).collect();
         let images: HashMap<_, _> = asks
             .iter()
             .filter(|ask| ask.state.body_limit().is_some())
             .map(|ask| (*ask.key.bytes(), ask))
             .collect();
-        if images.is_empty() {
-            self.lookup(&keys, cancel)
+        let found = if images.is_empty() {
+            self.lookup(&keys, cancel)?
         } else {
-            self.lookup_with(&keys, cancel, &images)
-        }
+            self.lookup_with(&keys, cancel, &images)?
+        };
+        let mismatch = self.held_model_mismatch(asks, &found, route.0, route.1, cancel)?;
+        Ok(Lookup {
+            answers: found,
+            held_model_mismatch: mismatch,
+        })
     }
 }
 
@@ -32,10 +47,7 @@ pub(super) fn select(
 ) -> rusqlite::Result<Vec<Stored>> {
     let marks = vec!["?"; chunk.len()].join(",");
     let sql = format!(
-        "SELECT a.key, a.answer, a.answered_by, a.input_tokens, a.output_tokens,
-         a.observation_id, a.batch_size, a.key_version, a.adapter,
-         a.url, a.model, a.question, s.sha256, s.state, a.taken_at, a.origin
-         FROM answers a LEFT JOIN states s ON s.id=a.state WHERE a.key IN ({marks})"
+        "SELECT {COLUMNS} FROM answers a LEFT JOIN states s ON s.id=a.state WHERE a.key IN ({marks})"
     );
     let mut statement = connection.prepare(&sql)?;
     let rows = statement.query_map(
@@ -58,7 +70,11 @@ pub(super) fn select(
     rows.collect()
 }
 
-fn valid(row: &rusqlite::Row<'_>, found: &Found, image: Option<&Ask>) -> rusqlite::Result<bool> {
+pub(super) fn valid(
+    row: &rusqlite::Row<'_>,
+    found: &Found,
+    image: Option<&Ask>,
+) -> rusqlite::Result<bool> {
     let Some(state) = row.get_ref(13)?.as_str().ok() else {
         return Ok(false);
     };

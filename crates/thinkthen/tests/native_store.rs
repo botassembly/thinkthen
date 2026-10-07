@@ -304,3 +304,6 @@ mod conversion;
 mod history;
 #[path = "native_store/request_keys.rs"]
 mod request_keys;
+
+#[path = "native_store/timing.rs"]
+mod timing;

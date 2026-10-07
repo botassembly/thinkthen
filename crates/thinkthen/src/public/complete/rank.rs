@@ -23,11 +23,13 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
         T: InputEvidence,
     {
-        let records = self.try_within_limit(
+        let options = options.started()?;
+        let records = self.try_within_admission(
             records
                 .into_iter()
                 .enumerate()
                 .map(|(at, record)| record.map_err(|error| error.at_record(at))),
+            &options,
         )?;
         self.rank_records_complete_with(question, records, options)
     }

@@ -12,6 +12,7 @@ use std::fmt;
 pub struct CompleteRelated {
     pub(crate) canonical: core::CompleteRelation,
     pub(crate) value: Vec<Edge>,
+    pub(crate) source_edges: Option<Vec<super::SourceRelationEdge>>,
 }
 
 impl CompleteRelated {
@@ -45,6 +46,25 @@ impl CompleteRelated {
         &self.value
     }
 
+    /// Expanded physical occurrence pairs, present only for explicit source input.
+    #[must_use]
+    pub fn source_edges(&self) -> Option<&[super::SourceRelationEdge]> {
+        self.source_edges.as_deref()
+    }
+
+    pub(crate) fn serialize_input<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match &self.source_edges {
+            Some(edges) => self
+                .canonical
+                .serialize_with_value(input, edges, serializer),
+            None => self.canonical.serialize_with_input(input, serializer),
+        }
+    }
+
     /// Aligned response sources and observation identities.
     #[must_use]
     pub const fn identity(&self) -> &ResultIdentity {
@@ -73,7 +93,7 @@ impl CompleteRelated {
     /// # Errors
     /// Returns a defect if the typed result cannot be serialized.
     pub fn to_json(&self) -> Result<String, Error> {
-        core::json_line(&self.canonical)
+        core::json_line(self)
             .map_err(|_| Error::defect("a complete relation result could not be written as JSON"))
     }
 }
@@ -88,7 +108,7 @@ impl fmt::Debug for CompleteRelated {
 
 impl Serialize for CompleteRelated {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical.serialize(serializer)
+        self.serialize_input::<S, ()>(None, serializer)
     }
 }
 

@@ -1,8 +1,5 @@
 //! Complete recognition delegates all stages and offsets to the existing scheduler.
-use super::{
-    contextual,
-    trace::{Totals, meta},
-};
+use super::contextual;
 use crate::core;
 use crate::public::options::Stop;
 use crate::public::{
@@ -57,43 +54,25 @@ pub(super) fn rendered(
         Option<Vec<core::AttemptObservation>>,
     ),
 ) -> Result<CompleteRecognized, Error> {
-    let identity = found
-        .meta
-        .trace
-        .identity(
-            InputFunction::Recognize,
-            &core::RecordScope { record: ordinal },
-            &ask.0,
-            &[],
-        )
-        .map_err(|_| super::wrong())?;
-    let aggregate = found.meta;
-    let meta = meta(
+    let canonical = crate::result_json::complete::recognition(
         engine,
-        core::recognize_sha256(&ask.0).map_err(|_| super::wrong())?,
-        Totals {
-            model: aggregate.model,
-            usage: aggregate.usage,
-            reported: aggregate.reported_usage,
-            cached: !aggregate.live,
-            sent: aggregate.requests_sent,
-            requests: aggregate.requests,
-            failed: 0,
-        },
-        options,
-        attempts,
-        ask.0.profile.as_ref(),
-    );
-    Ok(CompleteRecognized {
-        canonical: core::CompleteRecognition {
-            identity,
-            value: found.value,
+        &ask.0,
+        found,
+        crate::result_json::complete::RecognitionRow {
+            ordinal,
             input: None,
-            question: ask.0.clone(),
-            answer: found.details,
-            meta,
+            context_sha256: options
+                .context_text()
+                .filter(|text| !text.is_empty())
+                .map(|text| core::bytes_sha256(text.as_bytes())),
+            attempts,
         },
+    )
+    .map_err(|_| super::wrong())?;
+    Ok(CompleteRecognized {
+        canonical,
         value,
+        source_value: None,
     })
 }
 

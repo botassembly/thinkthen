@@ -88,7 +88,13 @@ impl<A: Asker> Run<'_, A> {
         };
         let rows = accepted.rows(&self.call, &done.asks, done.taken_at, &split);
         let written = match self.store.as_mut() {
-            Some(store) => store.accept(&rows, done.storable, done.original.as_ref(), cancel),
+            Some(store) => store.accept(
+                &rows,
+                done.storable,
+                done.original.as_ref(),
+                &done.attempts,
+                cancel,
+            ),
             None => Ok(()),
         };
         drop(rows);

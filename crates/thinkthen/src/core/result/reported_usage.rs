@@ -6,6 +6,7 @@ use super::{Usage, share};
 
 /// Token counts reported independently by an accepted response.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "completeUsage"))]
 pub struct ReportedUsage {
     #[serde(skip_serializing_if = "Option::is_none")]
     input_tokens: Option<u64>,

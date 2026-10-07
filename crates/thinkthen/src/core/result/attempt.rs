@@ -100,6 +100,11 @@ impl AttemptObservation {
 
 /// Borrowed complete attempt document; no raw transport headers are retained.
 #[derive(Debug, Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeAttempt")
+)]
 pub struct CompleteAttempt<'a> {
     #[serde(flatten)]
     legacy: &'a AttemptObservation,

@@ -3,6 +3,24 @@ use super::{Held, Reading, Record, RecordError, Selected, found};
 use crate::core::{Json, Pointer};
 
 impl Record {
+    pub(crate) fn validate_item(
+        &self,
+        schema: Option<&crate::core::InputDeclaration>,
+    ) -> Result<(), RecordError> {
+        let Some(schema) = schema else {
+            return Ok(());
+        };
+        let valid = match &self.0 {
+            Held::Json(value) => schema.accepts(value),
+            Held::Text(text) => schema.accepts(&Json::String(text.clone())),
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err(RecordError::ItemSchema)
+        }
+    }
+
     pub(crate) fn from_json(value: Json) -> Self {
         Self(Held::Json(value))
     }

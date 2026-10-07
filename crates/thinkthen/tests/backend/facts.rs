@@ -16,6 +16,7 @@ use crate::harness::{Canned, Listener, spawn};
 mod filtered;
 #[cfg(unix)]
 mod priced;
+mod timing;
 #[cfg(unix)]
 mod usage_lock;
 
@@ -45,6 +46,11 @@ fn line(output: &std::process::Output) -> Value {
         facts["seconds"]
             .as_f64()
             .is_some_and(|seconds| seconds >= 0.0)
+    );
+    let command = facts["command_ms"].as_u64().expect("known command time");
+    assert!(
+        (command as f64) <= facts["seconds"].as_f64().expect("total seconds") * 1000.0 + 2.0,
+        "command milliseconds must not exceed total seconds: {facts}"
     );
     facts
 }

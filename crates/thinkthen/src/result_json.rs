@@ -7,6 +7,7 @@ use crate::core::{
     question_sha256_with_profile,
 };
 use crate::engine::facade::Judgment;
+pub(crate) mod bounded;
 pub(crate) mod complete;
 
 /// What a detailed row names beside the judgment: the backend's address and the
@@ -57,34 +58,6 @@ pub(crate) fn decision(
 }
 
 /// One command row, naming its question keys and its requests' attempts.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the keys and attempts belong to the same result document"
-)]
-pub(crate) fn decision_row(
-    run: Run<'_>,
-    judged: &Judgment,
-    question: Question,
-    threshold: Option<Threshold>,
-    shown: Value,
-    input: Option<Record>,
-    requests: Vec<String>,
-    attempts: Vec<crate::public::AttemptObservation>,
-) -> Result<String, RenderError> {
-    let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
-    json_line(&decision_with_digest(
-        run,
-        judged,
-        question,
-        threshold,
-        shown,
-        input,
-        Some(requests),
-        &digest,
-        attempts,
-    )?)
-}
-
 /// One row that lists its question keys in `meta.requests`, by ADR 0111.
 #[expect(
     clippy::too_many_arguments,

@@ -37,3 +37,4 @@ On the SQL slice’s main baseline adab36bea, `Engine::rank_with` accepts Kind::
 Native owner must expose saved described decide/score rank admission and its
 weighted ordering before SQL can adopt it; no SQL-local sort/parser is added.
 Existing plain single-question rank remains unchanged.
+Native foundation update: saved described-decide and score rank preparation, plain/composed/fallible complete execution, full saved-set member ranking and numeric final positions are implemented on the working branch. Native and CLI share canonical readings/probabilities/identities and preserve original records, stable ties, top ordering and set turns. Host/SQL adoption and root whole review/landing remain open.
