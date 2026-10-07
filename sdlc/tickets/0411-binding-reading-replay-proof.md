@@ -1,6 +1,6 @@
 # 0411: Reread stored answers under changed rules on every surface
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Existing SDK adoption landed in 0431 at e2641d87c. The other family checklists retain their required changed-reading cache/replay cases; close when all required surfaces pass.
 
 Milestone: 0.2
 
@@ -30,3 +30,5 @@ All named SDK, SQL and dataframe routes reread stored answers under each free re
 Adopt the ordered image and storage contracts from 0447, 0448 and 0444. Saved multi-image decide and choose cases must reread changed cuts with unchanged request identity, expected results and zero sends on every full-result surface. Restoring a cut restores the answer ID. Image score explicitly has no reading cut; its saved ordered images and full result replay with zero sends. Image implementation stays with its existing owners.
 
 When this change is pushed to main, notify the experiments team through pm with the commit, changed behavior and affected experiment 0035 steps. They rerun only affected steps without waiting for release. Note the notification in this ticket’s single landing record.
+
+The Rust/Python/JavaScript/TypeScript/Ruby/R family checklist is complete under [0431](../records/0431-complete-existing-typed-sdks.md), including its seven installed/archive qualifications. This ticket remains open for the other SDK, SQL and dataframe surfaces; 0431 does not close their adoption.

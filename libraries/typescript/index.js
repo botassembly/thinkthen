@@ -505,7 +505,7 @@ function completeBatch(engine, request, controls) {
   catch (error) { return opened(error.message); }
 }
 const complete = new (require('./complete.js').Functions)((request, controls) => invoke(null, 'complete', null, request, controls), (request, controls) => completeBatch(null, request, controls), opened);
-const exported = { complete, ThinkThenError, Engine, question, questionFile, usage, failed, outcome, YES, NO, UNSURE };
+const exported = { complete, CompleteTypes: require('./_complete.js'), ThinkThenError, Engine, question, questionFile, usage, failed, outcome, YES, NO, UNSURE };
 for (const [name, verb] of Object.entries(verbs)) exported[name] = (...args) => verb(null, ...args);
 
 module.exports = exported;

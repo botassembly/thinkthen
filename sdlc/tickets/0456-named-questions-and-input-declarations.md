@@ -1,6 +1,6 @@
 # 0456: Add named questions and declared item inputs
 
-Status: inprogress. Native implementation is underway in lane 0; no whole-code review or landing claim. The shared design passed fresh High review after correcting annotate document admission. Slice A records the design and plan; native implementation and all surface adoption remain open.
+Status: in progress. Native named questions and input declarations are implemented and landed. Existing SDK adoption is landed through 0431; the other family checklists retain required named-file, declaration and zero-send refusal cases.
 
 Milestone: 0.2
 

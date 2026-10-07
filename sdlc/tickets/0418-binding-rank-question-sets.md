@@ -1,6 +1,6 @@
 # 0418: Rank question sets through typed language and frame APIs
 
-Status: inprogress. Native complete execution is being built; host adoption and whole review remain open.
+Status: in progress. Native ordered rank members and existing SDK adoption landed through 0431 at e2641d87c. Foreign binding and dataframe adoption remain under their family checklists.
 
 Milestone: 0.2
 
@@ -51,3 +51,5 @@ fn Engine::try_rank_set_records_complete_with<I, T>(&self, &RankSet, I, CallOpti
 Five public cases pin an independently expected six-question exchange and turns order, actual members/partial usage/owned non-Send originals, duplicate coalescing and zero-send replay across batch sizes, finite admission/reader refusal and empty work, and started member failures with actual owned observations/facts. Existing released rank-set cases are retained. Host adoption, CLI/schema adoption, fresh whole High review and full landing gates remain open.
 
 Source grows 994 nonblank Rust lines (143694 → 144688), for complete typed set-rank carriers, the reused one-call record pipeline, pure member/final identity and checked metadata aggregation, and independent public behavior tests. Existing record admission, rank observers, stable sorting and turns merging were checked and reused instead of another implementation. Focused Clippy, five native cases and eight released set-rank compatibility cases pass; all files remain below the cap.
+
+The Rust/Python/JavaScript/TypeScript/Ruby/R family checklist is complete under [0431](../records/0431-complete-existing-typed-sdks.md), including its seven installed/archive qualifications. This ticket remains open for the other SDK, SQL and dataframe surfaces; 0431 does not close their adoption.

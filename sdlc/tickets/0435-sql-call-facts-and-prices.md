@@ -1,6 +1,6 @@
 # 0435: Return isolated SQL call facts and caller-priced cost
 
-Status: in progress. Complete SQL family adoption in warm lane 1.
+Status: in progress. Reviewed SQL family adoption passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
 
 Milestone: 0.2
 
@@ -15,7 +15,7 @@ Each SQL invocation returns final facts and optional exact caller-priced cost fr
 
 - Starts from: Current main c64b71859; 0405 audit is historical and predates 0377/0420. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4, 6 and 9.
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
-- Changes: Add facts to the existing details result from its owning Rust Call, including call_id. Preserve ordinary scalar/table outputs and cumulative usage APIs. Adopt the engine-scoped price pair and shared exact arithmetic from 0300.
+- Changes: Add facts to the existing details result from its owning Rust Call, including call_id. Preserve ordinary scalar/table outputs and cumulative usage APIs. Adopt the engine-scoped price pair and shared exact arithmetic from 0300. Ownership: `databases/duckdb/**` `databases/sqlite/**` `databases/postgres/**`.
 - Proof: A details call sends/evaluates once; concurrent invocations retain isolated counts. Packed rows repeat one invocation’s facts and call_id, so deduplicating that ID counts its sends once. Never subtract cumulative usage snapshots or sum historical per-row usage shares. Test exact rounding, incomplete usage, overflow, cache/replay zero spend and started-failure facts through the reviewed native SQL error route.
 - Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 

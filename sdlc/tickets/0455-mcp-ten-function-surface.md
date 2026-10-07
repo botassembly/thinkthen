@@ -1,9 +1,9 @@
 # 0455: Expose the ten functions through a local MCP server
 
-Status: in progress. Reviewed complete MCP adoption is landed; every required shared case passed (250/250), and full tests, lint and specification checks passed. Bounded timing and final Windows qualification remain.
+Status: in progress. Reviewed complete MCP adoption is landed. The ordered rank-member reader and packet buffer pass all 251 required cases through the installed command. Final full tests, lint and specification checks run on this candidate before landing. Bounded timing and final Windows qualification remain.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review.
 Milestone: 0.2
-Owner: builder, lane2 `ticket/0455-mcp-ten-function-surface`.
+Owner: builder, lane0 `ticket/0455-rank-members-completion`.
 Risk: High. Local protocol dispatch and cancellation must preserve secrets, spend limits and started-failure behavior; broken output and EOF must cancel and join owned work.
 
 Independent WIP now includes Windows owned pipe I/O with an operation-scoped
@@ -37,7 +37,7 @@ An installed ThinkThen command starts a local MCP server. Agents call the same t
 
 - Starts from: Ian's 2026-10-06 ruling in shared message `2026-10-06-pm-add-an-mcp-server-to-0-2-with-the-ten-functions-and-question-files.md`, asks 1–5. Main `5974abe80` supplies native/CLI hosted images. 0432 supplies the shared case inventory; 0442–0445/0450 settle complete results and one-route identity/cache behavior. Existing native readers and question loaders remain authoritative.
 - Keeps: All ten function names and semantics, authored question order/descriptions, six error kinds, unsuccessful-member results, cancellation, request limits, secrecy, count-only usage, one endpoint/key/API type and per-question cache/replay. No core I/O.
-- Changes: Add `thinkthen mcp` as a local stdio transport over the existing Rust engine. Add named tools, a public consumer in the existing surface ladder, install/start documentation and the MCP parity column. Supersede the service-declining row in `ten-use-cases.md` with Ian's current ruling. Measure local adapter overhead and state that future proxy latency is unmeasured.
+- Changes: Add `thinkthen mcp` as a local stdio transport over the existing Rust engine. Add named tools, a public consumer in the existing surface ladder, install/start documentation and the MCP parity column. Supersede the service-declining row in `ten-use-cases.md` with Ian's current ruling. Measure local adapter overhead and state that future proxy latency is unmeasured. Ownership: `crates/thinkthen/src/mcp/**` `libraries/mcp/**`.
 - Proof: Installed subprocess initialization and actual tool calls exercise the shared cases through each named method. Compare independent expected results, full typed schemas, request bodies and counted sends. Cover file/folder locations and order, question-file validation, image support/refusals, cache and zero-send replay, false/null successes, errors, secrecy, cancellation and EOF cleanup. Run policy before fresh code review, full tests/lint on the landing commit and affected spec/surface/package checks.
 - Defers: HTTP serving, background installation, audit/runs/cache-administration tools, prompts/resources, question-writing tools, business routing and proxy implementation or latency claims.
 

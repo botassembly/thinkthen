@@ -18,6 +18,18 @@ node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"
 step() { printf '== %s\n' "$*"; }
 fail() { echo "typescript: $*" >&2; exit 1; }
 
+complete_public_types() {
+    # One public consumer, compiled and executed against each package module face.
+    for extension in cts mts; do
+        output=$project/target/complete-public/$extension
+        mkdir -p "$output"
+        cp "$project/tests/complete_public.test.ts" "$output/complete_public.test.$extension"
+        "$repo/libraries/typescript/target/npm/node_modules/.bin/tsc" --strict --target ES2022 \
+            --module NodeNext --moduleResolution NodeNext --rootDir "$output" --outDir "$output" "$output/complete_public.test.$extension"
+        node "$output/complete_public.test.$(printf '%s' "$extension" | sed 's/ts$/js/')"
+    done
+}
+
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
     # cases and examples from a copy of tests/, which import the package by its name.
@@ -39,6 +51,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     resolved=$(cd "$project/tests" && node --input-type=module -e 'console.log(import.meta.resolve("thinkthen"))')
     case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
+    complete_public_types
     (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/conformance.test.mjs tests/examples.test.mjs)
     # Ticket 0374: the installed addon keeps its own panic hook, and the token cap variable
     # refuses before any send, counted at the test's own backend.
@@ -163,6 +176,7 @@ target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResol
 
 step 'native JavaScript and compiled TypeScript consumers'
 project=$PWD
+complete_public_types
 
     python3 - "$repo" "$project" <<'NODENATIVE'
 import sys
