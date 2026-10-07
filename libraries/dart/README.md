@@ -60,10 +60,10 @@ final engine = Engine(absoluteLibrary, settingsJson: settingsJson);
 try {
   final question = Question.spec(QuestionSpec(FunctionKind.decide,
       text: const Content.text('Does this ask for a refund?')));
-  final result = engine.decide(question,
+  final decisionRows = engine.decide(question,
       Records([Record(const Content.text('Refund me please.'))]));
-  final answerId = result.rows.first.common.answer_id.data;
-  final probability = result.rows.first.common.answer.value!.data.probability;
+  final answerId = decisionRows.rows.first.common.answer_id.data;
+  final probability = decisionRows.rows.first.common.answer.value!.data.probability;
 } finally { engine.close(); }
 ```
 
