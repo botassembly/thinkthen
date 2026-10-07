@@ -303,7 +303,7 @@ mod conversion;
 #[path = "native_store/history.rs"]
 mod history;
 
-#[path = "native_store/timing.rs"]
-mod timing;
 #[path = "native_store/request_keys.rs"]
 mod request_keys;
+#[path = "native_store/timing.rs"]
+mod timing;

@@ -255,7 +255,8 @@ pub(crate) fn state(evidence: &Evidence) -> Result<State, EncodeError> {
     Ok(State::new(json, text.len()))
 }
 
-/// The wire questions one plan sends, in order, each with its key.
+/// The historical adapter used by the original packing contract tests.
+#[cfg(test)]
 pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
     asks_for(crate::core::adapters::ApiType::Primary, url, plan)
 }

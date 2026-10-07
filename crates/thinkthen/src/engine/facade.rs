@@ -417,9 +417,7 @@ impl Engine {
             .backend
             .api_type()
             .decode_observed(plan, &answered.body);
-        transport
-            .usage
-            .live_reply(decoded.usage);
+        transport.usage.live_reply(decoded.usage);
         cancel.live_reply(decoded.usage);
         let reply = decoded.reply.map_err(Error::from)?;
         transport.usage.answered_by(reply.model());
