@@ -107,6 +107,10 @@ impl Engine {
                 )
                 .map_err(|_| super::wrong())?,
                 found: public,
+                sources: inputs
+                    .iter()
+                    .map(|input| super::physical_source(input))
+                    .collect(),
             })
         })
     }

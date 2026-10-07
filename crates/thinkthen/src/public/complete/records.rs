@@ -54,6 +54,7 @@ pub(super) struct Held<T> {
     pub(super) question: Question,
     pub(super) context_sha256: Option<String>,
     pub(super) source: Option<core::CompletePhysicalSource>,
+    pub(super) images: Option<Vec<core::image::Image>>,
 }
 
 impl Engine {
@@ -247,6 +248,7 @@ impl Engine {
                     )
                     .map_err(|_| Error::defect("a complete record could not be constructed"))?;
                     result.source = item.source;
+                    result.images = item.images;
                     Ok(CompleteRecord {
                         original: item.original,
                         ordinal: at,
@@ -335,6 +337,7 @@ pub(super) fn prepare_record<T: InputEvidence>(
     Ok((
         Held {
             source: super::physical_source(&input),
+            images: super::ancillary_images(&input),
             original: record.original,
             question: question.clone(),
             context_sha256,

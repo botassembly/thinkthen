@@ -5,6 +5,7 @@ mod composition;
 mod dispatch;
 mod executor;
 mod input;
+mod inputs;
 mod output;
 mod protocol;
 mod runtime;

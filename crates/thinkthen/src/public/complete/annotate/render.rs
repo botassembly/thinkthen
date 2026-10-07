@@ -18,7 +18,7 @@ pub(super) fn complete<T>(
         .as_ref()
         .map(crate::public::record_context::digest)
         .transpose()?;
-    let canonical = annotation(
+    let mut canonical = annotation(
         engine,
         set,
         answered,
@@ -30,5 +30,6 @@ pub(super) fn complete<T>(
         },
     )
     .map_err(|_| Error::defect("a complete annotation could not be constructed"))?;
+    canonical.source = super::super::physical_source(&held.question_input);
     Ok(CompleteAnnotated { canonical })
 }

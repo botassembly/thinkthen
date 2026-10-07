@@ -8,6 +8,7 @@ use crate::core::{AnnotateResult, AnnotatedEntry, AnswerId, FailureId};
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Annotation {
     pub(crate) identity: ResultIdentity,
+    pub(crate) source: Option<super::wire::PhysicalSource>,
     pub(crate) legacy: AnnotateResult,
     pub(crate) members: Vec<(String, AnnotationMember)>,
     pub(crate) context_sha256: Option<String>,
@@ -150,6 +151,10 @@ pub(crate) struct Document<'a, T: Serialize> {
     schema: super::wire::Version,
     answer_id: &'a AnswerId,
     input: &'a T,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source: Option<&'a super::wire::PhysicalSource>,
     value: &'a crate::core::NamedValues,
     answers: Members<'a>,
     meta: super::CompleteMeta<'a>,
@@ -160,7 +165,17 @@ impl Annotation {
         input: &T,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_occurrence(input, None, serializer)
+    }
+    pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize>(
+        &self,
+        input: &T,
+        index: Option<usize>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         Document {
+            index,
+            source: self.source.as_ref(),
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
             input,

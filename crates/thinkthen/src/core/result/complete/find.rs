@@ -49,10 +49,26 @@ pub(crate) struct Document<'a, T: Serialize> {
     schema: super::wire::Version,
     answer_id: &'a crate::core::AnswerId,
     value: Option<&'a T>,
+    index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    candidates: Option<&'a [CandidateDocument<'a, T>]>,
     question: crate::core::declaration::ReadableQuestion<'a, crate::core::find::FindQuestionOwned>,
     answer: &'a crate::core::FindAnswer,
     threshold: Option<()>,
     meta: CompleteMeta<'a>,
+}
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeFindCandidate")
+)]
+pub(crate) struct CandidateDocument<'a, T: Serialize> {
+    pub(crate) index: Option<usize>,
+    pub(crate) input: Option<&'a T>,
+    pub(crate) probability: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) source: Option<&'a super::wire::PhysicalSource>,
 }
 impl Find {
     pub(crate) fn serialize_with_value<S: Serializer, T: Serialize>(
@@ -60,11 +76,21 @@ impl Find {
         value: Option<&T>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_candidates(value, None, serializer)
+    }
+    pub(crate) fn serialize_candidates<S: Serializer, T: Serialize>(
+        &self,
+        value: Option<&T>,
+        candidates: Option<&[CandidateDocument<'_, T>]>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
         Document {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
             value,
+            index: self.selected(),
+            candidates,
             question: crate::core::declaration::ReadableQuestion {
                 question: &row.question,
                 metadata: &self.declarations,

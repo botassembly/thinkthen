@@ -65,20 +65,7 @@ impl ImageInput {
 
 impl Serialize for ImageInput {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        #[derive(Serialize)]
-        struct Encoded {
-            media: ImageMedia,
-            base64: String,
-            width: u32,
-            height: u32,
-        }
-        Encoded {
-            media: self.media(),
-            base64: self.0.base64(),
-            width: self.width(),
-            height: self.height(),
-        }
-        .serialize(serializer)
+        self.0.serialize(serializer)
     }
 }
 

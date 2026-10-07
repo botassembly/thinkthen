@@ -10,7 +10,7 @@ import subprocess
 import threading
 
 VERSION = '2025-11-25'
-MAX_MESSAGE = 64 * 1024 * 1024
+MAX_MESSAGE = 192 * 1024 * 1024
 
 
 def _json(text):
@@ -76,9 +76,9 @@ class Client:
         self._cancelled_through = 0
 
     @classmethod
-    def launch(cls, command=('thinkthen', 'mcp'), *, env=None):
+    def launch(cls, command=('thinkthen', 'mcp'), *, env=None, cwd=None):
         process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=subprocess.DEVNULL, env=env)
+                                   stderr=subprocess.DEVNULL, env=env, cwd=cwd)
         client = cls(process.stdin, process.stdout, process)
         try:
             client.initialize()
