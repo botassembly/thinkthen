@@ -189,7 +189,11 @@ def known_fields(step, got, bodies):
         return
     for row in got['rows']:
         if step['verb'] == 'find':
-            originals = [Path(ROOT / path).read_text() for path in step['paths']] if step.get('paths') else step['items']
+            originals = step['items']
+            if step.get('paths'):
+                paths = [ROOT / path for path in step['paths']]
+                originals = [file.read_text() for path in paths
+                             for file in (sorted(p for p in path.rglob('*') if p.is_file()) if path.is_dir() else [path])]
             candidates = row['candidates']
             assert [c['index'] for c in candidates if c['index'] is not None] == list(range(len(originals))), candidates
             for candidate in candidates:
@@ -198,7 +202,10 @@ def known_fields(step, got, bodies):
                 else:
                     assert candidate['input'] == originals[candidate['index']], candidate
             wanted = expected.get('success', {}).get('operation', {}).get('probabilities')
-            if wanted is not None:
+            if step.get('paths'):
+                assert row['index'] == 0 and candidates[0]['probability'] == .9, candidates
+                assert all(abs(c['probability'] - .1 / (len(candidates) - 1)) < 1e-10 for c in candidates[1:]), candidates
+            elif wanted is not None:
                 assert [{k: c[k] for k in ('index', 'probability')} for c in candidates] == wanted, candidates
         if 'resolved_wording' in expected:
             assert row['question']['text'] == expected['resolved_wording'], row['question']
@@ -256,7 +263,7 @@ def known_fields(step, got, bodies):
                 assert row['answer']['pieces'] and row['answer']['names'], row
                 for piece in row['answer']['pieces']:
                     assert 0 <= piece['start'] < piece['end'] <= len(row['input']), piece
-                    assert sorted(piece['tags'].values()) == [.025, .025, .025, .025, .9], piece
+                    assert piece['tags'] == {'BEGIN': .9, 'INSIDE': .025, 'END': .025, 'SINGLE': .025, 'OUT': .025}, piece
                 for entity in row['value']['entities']:
                     assert entity['text'] == row['input'][entity['start']:entity['end']], entity
                     assert entity['kind'] == 'person', entity
