@@ -11,7 +11,7 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-failure-") as name:
     cache = Path(name)
     server = Backend(cache)
     try:
-        env = os.environ.copy()
+        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": name, "XDG_CONFIG_HOME": name, "XDG_CACHE_HOME": name, "XDG_STATE_HOME": name}
         env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{server.server_port}/generic/v1",
                    THINKTHEN_API_KEY="tt-canary-295", THINKTHEN_CACHE=str(cache / "cache"),
                    LD_LIBRARY_PATH=str(HERE / "target"))

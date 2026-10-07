@@ -11,7 +11,7 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-objc-negative-") as name:
     os.environ["TT_PLANT_JSON_WRONG"] = "1"
     backend = Backend(work)
     try:
-        env = os.environ.copy()
+        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": name, "XDG_CONFIG_HOME": name, "XDG_CACHE_HOME": name, "XDG_STATE_HOME": name}
         env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{backend.server_port}/generic/v1",
                    THINKTHEN_API_KEY="tt-canary-295", THINKTHEN_CACHE=str(work / "cache"),
                    TT_BARRIER_DIR=str(work), TT_PLANT_JSON_WRONG="1",
