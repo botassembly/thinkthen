@@ -68,3 +68,17 @@ int tt_carrier_request(const thinkthen_question_spec_v1 *spec,
     }
     return 0;
 }
+
+/* Measure the actual COBOL storage addresses; no C offsets are returned. */
+int tt_carrier_offset(const void *record, const void *field) {
+    uintptr_t base=(uintptr_t)record, at=(uintptr_t)field;
+    if (!record || !field || at<base || at-base>INT32_MAX) return -1;
+    return (int)(at-base);
+}
+int tt_carrier_alignment(const void *record) {
+    uintptr_t address=(uintptr_t)record;
+    if (!record) return 0;
+    int alignment=1;
+    while (alignment<64 && address%(uintptr_t)(alignment*2)==0) alignment*=2;
+    return alignment;
+}

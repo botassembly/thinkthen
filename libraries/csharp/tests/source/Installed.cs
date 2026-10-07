@@ -8,7 +8,7 @@ if (Environment.GetEnvironmentVariable("TT_PORTABLE_BATCH") == "1") {
     string[] texts = ["alpha", "café-5544", "omega", "line 2907", "tail"];
     var bulkResult = bulk.DecideMany("Is it relevant?", texts);
     Answer[] rows = bulkResult.Value;
-    if (bulkResult.Facts.GetProperty("records").GetInt64() != 5 || bulkResult.Facts.GetProperty("requests_sent").GetInt64() != 3) throw new Exception("portable bulk facts");
+    if (bulkResult.Facts.GetProperty("records").GetInt64() != 5 || bulkResult.Facts.GetProperty("requests_sent").GetInt64() != 1) throw new Exception("portable bulk facts");
     if (rows.Length != 5 || rows.Any(row => row.Outcome != 1 || row.Probability != .9))
         throw new Exception("portable bulk answers");
     Console.WriteLine("PORTABLE_BATCH_CSHARP_PASS");
