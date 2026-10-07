@@ -206,9 +206,18 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 		tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
 		case $name in
 		"$first")
-			printf '%s\n' ./ ./LICENSE ./README.md ./thinkthen.gpr ./src/ \
-				./src/thinkthen.ads ./src/thinkthen.adb ./src/thinkthen_c.ads \
-				./examples/ ./examples/consumer.adb ./THINKTHEN-PACKAGE-INPUTS \
+			printf '%s\n' ./ ./LICENSE ./README.md \
+				./thinkthen.gpr ./src/ ./src/thinkthen-buffers.adb \
+				./src/thinkthen-buffers.ads ./src/thinkthen-native-batches.adb ./src/thinkthen-native-batches.ads \
+				./src/thinkthen-native-inputs.ads ./src/thinkthen-native-results.ads ./src/thinkthen-native.adb \
+				./src/thinkthen-native.ads ./src/thinkthen-typed-complete-batches.adb ./src/thinkthen-typed-complete-batches.ads \
+				./src/thinkthen-typed-complete.adb ./src/thinkthen-typed-complete.ads ./src/thinkthen-typed.adb \
+				./src/thinkthen-typed.ads ./src/thinkthen-views.adb ./src/thinkthen-views.ads \
+				./src/thinkthen.adb ./src/thinkthen.ads ./src/thinkthen_c.ads \
+				./src/thinkthen_c_answers.ads ./src/thinkthen_c_entities.ads ./src/thinkthen_c_events.ads \
+				./src/thinkthen_c_extensions.ads ./src/thinkthen_c_inputs.ads ./src/thinkthen_c_metadata.ads \
+				./src/thinkthen_c_rows.ads ./examples/ ./examples/consumer.adb \
+				./examples/native.adb ./THINKTHEN-PACKAGE-INPUTS \
 				| LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./Sources/ \
@@ -216,12 +225,18 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 				./Sources/TTJSON.h ./Sources/TTJSON.c ./Examples/ ./Examples/consumer.m \
 				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$third")
-			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./copybooks/ \
-				./copybooks/thinkthen.cpy ./src/ ./src/TTJSON.c ./src/TTJSON.h \
-				./src/tt_shape.c ./src/tt_engine.cob ./src/tt_error.cob \
-				./src/tt_call.cob ./src/tt_files.cob ./src/tt_decide.cob ./src/tt_validate.cob ./src/tt_plan.cob \
-				./examples/ ./examples/direct.cob ./examples/settings.cob \
-				./examples/types.cob ./THINKTHEN-PACKAGE-INPUTS \
+			printf '%s\n' ./ ./LICENSE ./README.md \
+				./source-package.json ./copybooks/ ./copybooks/thinkthen-typed.cpy \
+				./copybooks/thinkthen.cpy ./copybooks/tt-answers.cpy ./copybooks/tt-constants.cpy \
+				./copybooks/tt-entities.cpy ./copybooks/tt-events.cpy ./copybooks/tt-extensions.cpy \
+				./copybooks/tt-inputs.cpy ./copybooks/tt-metadata.cpy ./copybooks/tt-rows.cpy \
+				./src/ ./src/TTJSON.c ./src/TTJSON.h \
+				./src/tt_call.cob ./src/tt_complete.c ./src/tt_native.h ./src/tt_counted.c \
+				./src/tt_decide.cob ./src/tt_engine.cob ./src/tt_error.cob \
+				./src/tt_files.cob ./src/tt_inputs.c ./src/tt_plan.cob \
+				./src/tt_shape.c ./src/tt_validate.cob ./examples/ \
+				./examples/direct.cob ./examples/settings.cob ./examples/types.cob \
+				./examples/native.cob ./THINKTHEN-PACKAGE-INPUTS \
 				| LC_ALL=C sort >"$work/expected-members" ;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
