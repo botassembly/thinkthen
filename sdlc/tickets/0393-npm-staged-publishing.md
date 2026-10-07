@@ -1,6 +1,6 @@
 # 0393: npm publishes through staged publishing
 
-Status: ready. Reserved 2026-10-03 from the 0.1.1 release run. Not started.
+Status: in progress. Reviewed workflow slice A is landed and passed full tests, lint and specification checks. Final rehearsal, authorized registry staging and Ian’s npm approval remain.
 
 Milestone: 0.2
 
@@ -43,3 +43,12 @@ Ticket review: accepted 2026-10-06; blocking findings corrected.
 ## Current planning boundary
 
 PM ask 8 keeps this existing ticket as npm’s owner. Registry setup and direct publishing already exist; the missing outcome is staged publishing. Validate the exact supported npm command/version against official documentation before changing the workflow. Plan and offline workflow tests do not change registry settings or publish a package. Integration rehearsal and actual staging are later authorized qualification steps; no such run is scheduled by 0425.
+
+
+## Implementation choice
+
+Official [staged publishing docs](https://docs.npmjs.com/staged-publishing/) require npm 11.15.0 or later and Node 22.14.0 or later. Pin npm 11.15.0 in both jobs; the existing Node 22.22.3 meets that requirement. The [stage command](https://docs.npmjs.com/cli/v11/commands/npm-stage/) accepts a package specification, dry run, provenance and public access. Keep the exact archive and existing release guards. Ian's npm approval happens after staging; the initial public install check may precede it, so its npm channel is rerun after approval. No registry settings or actual staging change in this implementation.
+
+## Landing slices
+
+Slice A lands the reviewed workflow, parser and approval instructions. Final rehearsal and actual registry staging, approval and public availability remain open under this ticket and final qualification.

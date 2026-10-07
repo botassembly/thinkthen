@@ -18,6 +18,10 @@ fn conflicting_sources_questions_credentials_and_unknown_arguments_send_nothing(
     for arguments in [
         json!({"question":"q","question_file":"file","evidence":"x"}),
         json!({"question":"q","evidence":"x","records":[]}),
+        json!({"question":"q","evidence":"x","inputs":[]}),
+        json!({"question":"q","inputs":[{"text":"x","json":null}]}),
+        json!({"question":"q","inputs":[{"text":"x","context":"c"}],"options":{"context_field":"/context"}}),
+        json!({"question":"q","inputs":[{"source":{"paths":["absent"],"unit":"line"}}]}),
         json!({"question":"q","source":{"paths":["absent"]},"records":[]}),
         json!({"question":"q","evidence":"x","options":{"api_key":"fake-secret"}}),
         json!({"question":"q","evidence":"x","unrecognized":"fake-secret"}),
@@ -45,6 +49,7 @@ fn seven_text_only_tools_refuse_images_before_open_or_send() {
     ] {
         for arguments in [
             json!({"question":{},"images":["does-not-exist.png"]}),
+            json!({"question":{},"inputs":[{"text":"x","images":["does-not-exist.png"]}]}),
             json!({"question":{},"source":{"paths":["does-not-exist"],"unit":"file","media":"image"}}),
         ] {
             let error = admit(tool, arguments).unwrap_err();

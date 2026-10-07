@@ -171,6 +171,8 @@ pub(crate) struct Document<'a, T: Serialize, V: Serialize = Vec<RelationEdge<Rel
     value: &'a V,
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<&'a T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index: Option<usize>,
     question: crate::core::declaration::ReadableQuestion<
         'a,
         crate::core::relate_file::RelateQuestion<'a>,
@@ -193,7 +195,17 @@ impl Relation {
         value: &V,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_occurrence(input, value, None, serializer)
+    }
+    pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize, V: Serialize>(
+        &self,
+        input: Option<&T>,
+        value: &V,
+        index: Option<usize>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         Document {
+            index,
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
             value,

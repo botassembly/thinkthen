@@ -40,6 +40,7 @@ pub(crate) fn recognition(
         spec.profile.as_ref(),
     );
     Ok(core::CompleteRecognition {
+        source: None,
         identity,
         value: found.value,
         input: row.input,

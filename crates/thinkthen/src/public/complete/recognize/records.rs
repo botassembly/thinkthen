@@ -88,6 +88,7 @@ impl Engine {
                     .attempts()
                     .map(|attempts| attempts.iter().skip(before).cloned().collect());
                 let mut result = rendered(&engine, ask, found, value, (at, &options, attempts))?;
+                result.canonical.source = super::super::physical_source(&unit.input);
                 result.source_value = source_value(&result.canonical.value, &unit)?;
                 rows.push(CompleteRecord {
                     original: unit.original,

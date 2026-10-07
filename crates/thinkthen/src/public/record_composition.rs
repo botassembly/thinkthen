@@ -308,6 +308,14 @@ impl RecordReading {
             options,
         })
     }
+    pub(crate) fn admit_images(&self) -> Result<(), Error> {
+        if self.reading.has_fields() || self.context.is_some() || self.options.is_some() {
+            return Err(Error::usage(
+                "image source records have no field, context or options pointers",
+            ));
+        }
+        Ok(())
+    }
     /// Compose an item from the single native explicit reader without rereading a file.
     /// # Errors
     /// Refuses incompatible image pointers or ordinary record admission failures.
@@ -335,11 +343,7 @@ impl RecordReading {
                 })
             }
             SourceItem::Image(source) => {
-                if self.reading.has_fields() || self.context.is_some() || self.options.is_some() {
-                    return Err(Error::usage(
-                        "image source records have no field, context or options pointers",
-                    ));
-                }
+                self.admit_images()?;
                 Ok(RecordInput {
                     original: source.question_input(),
                     context: None,

@@ -44,6 +44,16 @@ impl Invocation {
         let reading = declared_context(prepared).map_or(reading.clone(), |schema| {
             reading.with_context_schema(schema.clone())
         });
+        if let Some(inputs) = &self.arguments.inputs {
+            let rows = inputs
+                .iter()
+                .map(|input| {
+                    controls.admission()?;
+                    input.compose(&reading, declared_context(prepared))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            return Ok(Box::new(rows.into_iter().map(Ok)));
+        }
         if let Some(source) = self.source()? {
             let annotate = matches!(prepared, PreparedQuestion::Annotate(_)) && !explicit;
             return Ok(source_records(

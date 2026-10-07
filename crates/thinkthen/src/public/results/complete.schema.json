@@ -25,6 +25,14 @@
             "integer"
           ]
         },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "last_line": {
           "format": "uint",
@@ -42,6 +50,13 @@
         },
         "schema": {
           "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
         },
         "value": {
           "$ref": "#/$defs/completeannotatedRow"
@@ -264,6 +279,22 @@
             "integer"
           ]
         },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
           "type": [
@@ -398,6 +429,32 @@
       "type": "object",
       "unevaluatedProperties": false
     },
+    "completeBatchFailure": {
+      "properties": {
+        "completed": {
+          "items": {
+            "$ref": "#/$defs/completeDetailed"
+          },
+          "type": "array"
+        },
+        "error": {
+          "$ref": "#/$defs/completeError"
+        },
+        "facts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeFacts"
+            }
+          ]
+        }
+      },
+      "required": [
+        "completed",
+        "error"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completeCall": {
       "anyOf": [
         {
@@ -405,6 +462,9 @@
         },
         {
           "$ref": "#/$defs/completeCallError"
+        },
+        {
+          "$ref": "#/$defs/completeBatchFailure"
         }
       ]
     },
@@ -581,6 +641,22 @@
           ]
         },
         "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
           "format": "uint",
           "maximum": 18446744073709551615,
           "minimum": 0,
@@ -780,6 +856,22 @@
           ]
         },
         "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
           "format": "uint",
           "maximum": 18446744073709551615,
           "minimum": 0,
@@ -1190,6 +1282,22 @@
             "integer"
           ]
         },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
           "type": [
@@ -1264,6 +1372,14 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/completeFindCandidate"
+          },
+          "type": [
+            "array"
+          ]
+        },
         "file": {
           "type": [
             "string",
@@ -1276,6 +1392,15 @@
           "minimum": 0,
           "type": [
             "integer"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
           ]
         },
         "last_line": {
@@ -1307,6 +1432,7 @@
         "schema",
         "answer_id",
         "value",
+        "index",
         "question",
         "answer",
         "threshold",
@@ -1314,6 +1440,80 @@
       ],
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completeFindCandidate": {
+      "properties": {
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "input": true,
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        }
+      },
+      "required": [
+        "index",
+        "input",
+        "probability"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeImage": {
+      "properties": {
+        "base64": {
+          "type": "string"
+        },
+        "height": {
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "media": {
+          "$ref": "#/$defs/completeImageMedia"
+        },
+        "width": {
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "media",
+        "base64",
+        "width",
+        "height"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeImageMedia": {
+      "oneOf": [
+        {
+          "const": "image/jpeg",
+          "type": "string"
+        },
+        {
+          "const": "image/png",
+          "type": "string"
+        }
+      ]
     },
     "completeInputDeclaration": {
       "anyOf": [
@@ -1891,6 +2091,22 @@
             "integer"
           ]
         },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
           "type": [
@@ -2272,6 +2488,14 @@
             "integer"
           ]
         },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "last_line": {
           "format": "uint",
@@ -2292,6 +2516,13 @@
         },
         "schema": {
           "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
         },
         "value": {
           "$ref": "#/$defs/completerecognize"
@@ -2323,6 +2554,14 @@
           ]
         },
         "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "index": {
           "format": "uint",
           "maximum": 18446744073709551615,
           "minimum": 0,
@@ -2601,6 +2840,22 @@
           ]
         },
         "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
           "format": "uint",
           "maximum": 18446744073709551615,
           "minimum": 0,
@@ -3089,6 +3344,22 @@
           ]
         },
         "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
           "format": "uint",
           "maximum": 18446744073709551615,
           "minimum": 0,

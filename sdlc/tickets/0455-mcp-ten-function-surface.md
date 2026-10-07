@@ -1,6 +1,6 @@
 # 0455: Expose the ten functions through a local MCP server
 
-Status: in progress. The reviewed local MCP server exposes all ten native functions, located inputs, authored questions, images and complete results with cancellation. The complete parity row, bounded timing check and final Windows qualification remain.
+Status: in progress. Reviewed complete MCP adoption is landed; every required shared case passed (250/250), and full tests, lint and specification checks passed. Bounded timing and final Windows qualification remain.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review.
 Milestone: 0.2
 Owner: builder, lane2 `ticket/0455-mcp-ten-function-surface`.

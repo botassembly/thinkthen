@@ -34,7 +34,7 @@ A rehearsal checks the publish inputs for each registry (ticket 0398 slice A):
 | --- | --- | --- |
 | crates.io | `cargo publish --dry-run --locked --package thinkthen` after source packaging | Upload and trusted publisher |
 | PyPI | `twine check --strict` on all four wheels | Upload and trusted publisher |
-| npm | `npm publish --dry-run` on the exact packed file | Upload and trusted publisher |
+| npm | `npm stage publish --dry-run` on the exact packed file | Staging upload, trusted publisher and npm approval |
 | RubyGems | Four checked platform gems and one matching-version Ruby diagnostic fallback | `gem push` and trusted publisher |
 | NuGet | Packed package and offline protocol checks | Push and trusted publisher |
 | Maven Central | Packed artifacts and signatures from a throwaway rehearsal key | Upload with the release signing key |
@@ -71,8 +71,9 @@ Main's public install text names the latest published release until the next rel
 1. The real release is dispatched only on Ian's go.
 2. Before the dispatch, the coordinator runs `sdlc/scripts/workflows --remote-pins`. It asks GitHub whether each pinned action names a commit. A pin that names a tag object passes the offline gate and fails only in the release run (ticket 0391).
 3. Release mode runs from a `v*` tag. Resolve refuses before any build unless that exact commit has a completed successful `release.yml` dispatch from main or a numeric `release/X.Y` branch. A successful tag run does not count. An unreadable run history refuses. Rehearse mode reads no run history. Each publish job waits for Ian's approval in the GitHub `release` environment (ticket 0128).
-4. After publishing the GitHub release and Go module tag, `publish` dispatches `install-check.yml` from that release tag with the resolved version (ticket 0398 slice B). The separate workflow reads public channels with only `contents: read`. It has no environment approval, OIDC token or secret. The coordinator records its run and every channel result in the release's ticket.
-5. A late Go proxy, Packagist or older R-universe index gets one hand dispatch later. R-universe keeps only its current version. A superseded request reports the requested and listed versions and gets no retry advice. Its Linux check accepts only the resolute R 4.6 binary. Hosted runner proof remains pending an approved manual check.
+4. The npm job stages the packed archive using trusted publishing. Ian reviews and approves the staged version on npmjs.com with two-factor authentication before npm makes it public. The GitHub `publish` job can finish before that approval. The initial public-package install check may report the npm version unavailable until approval; rerun that channel check after approval.
+5. After publishing the GitHub release and Go module tag, `publish` dispatches `install-check.yml` from that release tag with the resolved version (ticket 0398 slice B). The separate workflow reads public channels with only `contents: read`. It has no environment approval, OIDC token or secret. The coordinator records its run and every channel result in the release's ticket.
+6. A late Go proxy, Packagist or older R-universe index gets one hand dispatch later. R-universe keeps only its current version. A superseded request reports the requested and listed versions and gets no retry advice. Its Linux check accepts only the resolute R 4.6 binary. Hosted runner proof remains pending an approved manual check.
 
 ## 7. Registries and the site
 

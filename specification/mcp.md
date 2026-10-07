@@ -29,7 +29,7 @@ bounded four-message protocol inbox and at most one active tool dispatch keep
 the reader responsive. Excess active calls receive a safe busy error; inbox
 overflow closes and cancels the session without an unbounded reply backlog.
 The reader never writes output, and stdio pipe output must be stoppable. Output is
-exclusively complete JSON-RPC lines and at most 64 MiB per message. An output
+exclusively complete JSON-RPC lines and at most 192 MiB per message, including the newline. Both equivalent result representations count toward this bound and increase peak memory. Oversized output closes without a partial JSON line; work may already have sent requests. An output
 failure cancels the session and joins only its owned reader/dispatch work.
 
 Cancellation references an active tools/call ID with the same original type.
@@ -43,12 +43,12 @@ Windows stdio requires pipe handles. Own duplicates without changing or closing
 the process's inherited handles; interrupt only the registered MCP read/write
 and join its cancellation watcher. Flush must not wait for a peer to drain.
 
-Tool arguments select exactly one of `question`, `question_file` and `question_name`. Inline
+Tool arguments select exactly one of `question`, `question_file`, `question_name` and `question_reference`. Inline
 strings are literal text even when they start with `@`. Structured questions
 use ordinary native question/set/plan JSON grammar and preserve authored order
 and descriptions. `question_file` names an ordinary existing file, never a
 creation request. `question_name` explicitly selects a native named question.
-Evidence, records and source are exclusive. Source is
+`question_reference` explicitly invokes native @ reference resolution with working-directory path precedence. Evidence, records, source and inputs are exclusive. Source is
 `{paths:[...],unit:"line"|"window"|"file",window?,media?}` and follows the
 [native reader](files.md). Original value types and physical locations survive.
 Image source requires file units. Ordered explicit `images` attachments may
@@ -56,16 +56,25 @@ accompany evidence, retain duplicates, and may not mix with records/source or
 field pointers. Only decide/choose/score admit images; others refuse before
 file content or transport. There is no network fetching or implicit discovery.
 
+`inputs` is a finite array of explicit native descriptors. Each descriptor supplies exactly one `text`, `json` (including JSON null), or `source`, or image-only `images`. Its source uses whole-file text reading and must yield exactly one item. Optional `context` and replacement choose `options` stay separate from evidence. Explicit descriptor context/options conflict with their corresponding projection pointers. Absent context uses shared fallback; empty text suppresses it; null or a mismatched declared type refuses natively. Existing arbitrary `records` objects retain their original meaning.
+
+Descriptor `images` preserves order and duplicates. An entry is either a path string with detected media or `{path,media}` declaring `image/png` or `image/jpeg`; native pixel admission checks the declaration against the actual bytes. Images may accompany selected text/JSON originals, including field projections; image-only originals have no projection pointers. Other seven functions refuse before content reads. Finite descriptor arrays admit every item before execution. Large captions whose escaped JSON exceeds the incoming frame use explicit native text files; decoded native and vendor body limits still apply.
+
 Applicable options retain native validation, readings, separate shared/record
 context, candidate pointers, model selectors, batch, deadline/admission limits,
-rank top, find none and source filter files-only semantics. Unknown application
+rank top, find none and source filter files-only semantics. Supplied `options.proxy` is reserved and always refuses through native admission. Unknown application
 arguments fail without echoing the payload. Complete input composition follows
 native semantic owners rather than introducing a second reader or scheduler.
+
+`options.cancelled` is a boolean initial native call cancellation state, default
+false. True maps to a cancelled native call token before admission; native checks
+produce the safe cancelled error and zero sends. This does not cancel the protocol
+request token or replace notification cancellation of active work.
 
 Successes return `structuredContent` holding the complete native call object
 and one text content block encoding the equivalent JSON. Declared output
 schemas come from the settled native complete serializers. False, null, empty
-answers and partial member failures retain native meanings. Whole-call failures
+answers and partial member failures retain native meanings. Incremental reader failures retain ordered native `completed` results beside their terminal safe error and final facts. Whole-call failures
 use `isError:true` with safe native error/facts, including actual started
 attempts; admission failures invent no started-call facts. No adapter changes
 result/1 labels into result/2 or invents origins, IDs, timing, models or cache

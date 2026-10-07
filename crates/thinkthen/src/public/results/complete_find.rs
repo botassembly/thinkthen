@@ -22,6 +22,7 @@ pub enum FindSelection {
 pub struct CompleteFound<T> {
     pub(crate) canonical: core::CompleteFind,
     pub(crate) found: Found<T>,
+    pub(crate) sources: Vec<Option<core::CompletePhysicalSource>>,
 }
 
 impl<T> CompleteFound<T> {
@@ -130,7 +131,18 @@ impl<T> fmt::Debug for CompleteFound<T> {
 
 impl<T: Serialize> Serialize for CompleteFound<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let candidates = self
+            .candidates()
+            .iter()
+            .enumerate()
+            .map(|(at, candidate)| core::CompleteFindCandidate {
+                index: candidate.input().map(|_| at),
+                input: candidate.input(),
+                probability: candidate.probability(),
+                source: self.sources.get(at).and_then(Option::as_ref),
+            })
+            .collect::<Vec<_>>();
         self.canonical
-            .serialize_with_value(self.found.selected(), serializer)
+            .serialize_candidates(self.found.selected(), Some(&candidates), serializer)
     }
 }

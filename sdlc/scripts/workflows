@@ -38,7 +38,7 @@ UNPINNED = [
     (re.compile(r"gem install[^\n]*\brubygems-update\b(?! -v)"), "installs gem with no version"),
 ]
 RESOLVED = "${{ needs.resolve.outputs.sha }}"
-NPM_PUBLISH = re.compile(r"\bnpm publish\b([^\n]*)")
+NPM_PUBLISH = re.compile(r"\bnpm (?:stage )?publish\b([^\n]*)")
 NPM_VALUE_FLAGS = {"--access", "--tag", "--registry", "--otp", "--workspace", "-w"}
 # Release containers build offline from the crates host-setup fetches. Every tracked
 # lock file joins that fetch list or this table, which says why no release build reads it.
@@ -75,7 +75,7 @@ def images(node, key=None):
 
 
 def npm_publish_specs(run):
-    """Each `npm publish` package argument that npm would not read as a file path."""
+    """Each direct or staged npm package argument that npm would not read as a file path."""
     for match in NPM_PUBLISH.finditer(run):
         words = re.split(r"&&|\|\||[;|]", match.group(1))[0].split()
         while words and words[0].startswith("-"):
@@ -1015,7 +1015,7 @@ def self_test():
          ["release.yml: build must select bash for the Windows target",
           "release.yml: smoke must select bash for the Windows target"]),
         ("npm-bare-path", "release.yml",
-         lambda t: t.replace('npm publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance', 'npm publish npm-dist/*.tgz --provenance'),
+         lambda t: t.replace('npm stage publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance', 'npm stage publish npm-dist/*.tgz --provenance'),
          ["release.yml: job npm publishes npm-dist/*.tgz; npm reads a bare relative path as a GitHub repository, so start it with ./"]),
     ]
     bad = 0
