@@ -126,11 +126,6 @@ def native_projection(raw):
         if error['stopped'] and error['stopped']['at'] is not None:out['stopped_at']=error['stopped']['at']
         return out
     out.update(schema=s['schema'],observations=s['observation_count'],rows=[])
-    ordinals={}
-    for event in raw['observations']:
-        if event['kind'] == 2:
-            r=event['data']['row']; v=r['data'][shared.FUNCTIONS[r['function']-1]]
-            ordinals[v['common']['answer_id']]=r['index']
     for i,r in enumerate(raw['rows']):
         k=r['function']; v=r['data'][shared.FUNCTIONS[k-1]]; common=v['common']; meta=common['meta']
         value=v.get('value')
@@ -138,7 +133,7 @@ def native_projection(raw):
             causes=['','missing_answer','wrong_kind','missing_probability','invalid_probability','invalid_distribution','unexpected_probability']
             value={m['name']:native_member(m['data']['success']['value']) if m['state']==1 else {'failed':{'kind':'backend','cause':causes[m['data']['failure']['cause']]}} for m in v['answers']}
         else:value=native_value(k,value)
-        row={'value':value,'answer_id':common['answer_id'],'index':v['index'] if k==7 else ordinals.get(common['answer_id'],0),
+        row={'value':value,'answer_id':common['answer_id'],'index':v['index'] if k==7 else r['index'],
              'origin':meta['origin'],'answered_by':meta['answered_by'], 'observations':len(meta['observations']),'sources':len(meta['question_sources']),
              'observation_ids':[entry['data']['observation_id'] or entry['data']['failure_id'] for entry in meta['observations']],
              'input':native_content(common['input']) if common['input'] is not None else None}
@@ -193,11 +188,17 @@ def native_cases(binary):
     inventory=parity.inventory(); rows=list(parity.required_cases(inventory,CONSUMER).values())
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
+    rows += [{**row,'id':'native-filter-first-excluded'} for row in rows if row['id']=='15-rank-records']
+    rows += [{**row,'id':'native-duplicate-row-indices'} for row in rows if row['id']=='complete-decide']
     failed=0
     for at,row in enumerate(rows):
         error=None
         try:
-            value=shared.document(row,cases,named)
+            original={'native-filter-first-excluded':'15-rank-records','native-duplicate-row-indices':'complete-decide'}.get(row['id'],row['id'])
+            value=shared.document({**row,'id':original},cases,named)
+            if row['id']=='native-filter-first-excluded':
+                value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
+            if row['id']=='native-duplicate-row-indices':value['items'] *= 2
             with tempfile.TemporaryDirectory(prefix='thinkthen-'+CONSUMER+'-complete-') as folder:
                 home=Path(folder); child={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':folder,'XDG_CONFIG_HOME':str(home/'config'),'XDG_CACHE_HOME':str(home/'cache'),'XDG_STATE_HOME':str(home/'state'),'ASAN_OPTIONS':'detect_leaks=1','UBSAN_OPTIONS':'halt_on_error=1'}
                 backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
@@ -246,6 +247,12 @@ def native_cases(binary):
                             from c_images import assert_images
                             assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
                         shared.assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        if row['id']=='native-filter-first-excluded':
+                            assert [r['index'] for r in got['rows']]==[0,1,2] and [r['value'] for r in got['rows']]==[False,True,True],got
+                            assert int(backend.read('count'))==3,got
+                        if row['id']=='native-duplicate-row-indices':
+                            assert [r['index'] for r in got['rows']]==[0,1] and got['rows'][0]['input']==got['rows'][1]['input'],got
+                            assert got['records']==2 and int(backend.read('count'))==1,got
                         if row['kind'] in ('images','image-location'):
                             before=int(backend.read('count'));replay={k:v for k,v in settings.items() if k!='record'};replay['replay']=str(home/'recorded')
                             repeated=subprocess.run([str(binary),str(input_file),shared.compact(replay)],env=child,cwd=home,capture_output=True,text=True,timeout=60)

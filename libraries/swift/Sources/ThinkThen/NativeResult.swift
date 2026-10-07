@@ -27,20 +27,7 @@ public struct NativeResult: Sendable {
         var mas: [[NativeQuestionAuthor]] = [], rms: [[NativeRankView]] = []
         var recs: [NativeSourceRecognition] = [], rels: [NativeSourceRelations] = []
         for i in 0..<s.count {
-            var row = thinkthen_row_observation_v1(); row.function = s.function.value
-            switch row.function {
-            case 1: try nativeViewOK(thinkthen_result_decide(raw,i,&row.data.decide))
-            case 2: try nativeViewOK(thinkthen_result_choose(raw,i,&row.data.choose))
-            case 3: try nativeViewOK(thinkthen_result_tag(raw,i,&row.data.tag))
-            case 4: try nativeViewOK(thinkthen_result_score(raw,i,&row.data.score))
-            case 5: try nativeViewOK(thinkthen_result_filter(raw,i,&row.data.filter))
-            case 6: try nativeViewOK(thinkthen_result_rank(raw,i,&row.data.rank))
-            case 7: try nativeViewOK(thinkthen_result_find(raw,i,&row.data.find))
-            case 8: try nativeViewOK(thinkthen_result_annotate(raw,i,&row.data.annotate))
-            case 9: try nativeViewOK(thinkthen_result_recognize(raw,i,&row.data.recognize))
-            case 10: try nativeViewOK(thinkthen_result_relate(raw,i,&row.data.relate))
-            default: throw NativeConversion.invalidDiscriminator
-            }
+            var row = thinkthen_row_observation_v1(); try nativeViewOK(thinkthen_result_row(raw,i,&row))
             values.append(try nativeCopy(row))
             var d = thinkthen_details_v1(); try nativeViewOK(thinkthen_result_details(raw,i,&d)); ds.append(try nativeCopy(d))
             var a = thinkthen_question_author_v1(); try nativeViewOK(thinkthen_result_question_author(raw,i,&a)); authors.append(try nativeCopy(a))

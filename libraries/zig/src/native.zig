@@ -243,20 +243,7 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
     }
     for (rows, 0..) |*row, i| {
         var value = std.mem.zeroes(c.thinkthen_row_observation_v1);
-        value.function = s.function.value;
-        switch (value.function) {
-            1 => try viewOK(c.thinkthen_result_decide(raw, i, &value.data.decide)),
-            2 => try viewOK(c.thinkthen_result_choose(raw, i, &value.data.choose)),
-            3 => try viewOK(c.thinkthen_result_tag(raw, i, &value.data.tag)),
-            4 => try viewOK(c.thinkthen_result_score(raw, i, &value.data.score)),
-            5 => try viewOK(c.thinkthen_result_filter(raw, i, &value.data.filter)),
-            6 => try viewOK(c.thinkthen_result_rank(raw, i, &value.data.rank)),
-            7 => try viewOK(c.thinkthen_result_find(raw, i, &value.data.find)),
-            8 => try viewOK(c.thinkthen_result_annotate(raw, i, &value.data.annotate)),
-            9 => try viewOK(c.thinkthen_result_recognize(raw, i, &value.data.recognize)),
-            10 => try viewOK(c.thinkthen_result_relate(raw, i, &value.data.relate)),
-            else => return error.InvalidNativeDiscriminator,
-        }
+        try viewOK(c.thinkthen_result_row(raw, i, &value));
         row.* = try clone(@TypeOf(value), a, value);
         var d = std.mem.zeroes(c.thinkthen_details_v1);
         try viewOK(c.thinkthen_result_details(raw, i, &d));

@@ -51,14 +51,7 @@ inline Result snapshot(thinkthen_result *raw) {
         out.observation_authors.push_back(copy(author));
     }
     for(size_t i=0;i<summary.count;++i) {
-        thinkthen_row_observation_v1 row{}; row.function=summary.function.value;
-        switch(row.function) {
-#define TT_ROW(name,number) case number: view_ok(thinkthen_result_##name(raw,i,&row.data.name)); break;
-            TT_ROW(decide,1) TT_ROW(choose,2) TT_ROW(tag,3) TT_ROW(score,4) TT_ROW(filter,5)
-            TT_ROW(rank,6) TT_ROW(find,7) TT_ROW(annotate,8) TT_ROW(recognize,9) TT_ROW(relate,10)
-#undef TT_ROW
-            default: throw std::runtime_error("invalid native result function");
-        }
+        thinkthen_row_observation_v1 row{}; view_ok(thinkthen_result_row(raw,i,&row));
         out.rows.push_back(copy(row));
         thinkthen_details_v1 details{}; view_ok(thinkthen_result_details(raw,i,&details)); out.details.push_back(copy(details));
         thinkthen_question_author_v1 author{}; view_ok(thinkthen_result_question_author(raw,i,&author)); out.authors.push_back(copy(author));
