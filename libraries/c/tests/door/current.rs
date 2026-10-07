@@ -444,3 +444,37 @@ fn lazy_jsonl_batches_keep_completed_prefix_refuse_whole_bad_stages_and_join_on_
         }
     }
 }
+
+#[test]
+fn final_rows_retain_input_indices_after_filtering_and_ranking_and_refuse_invalid_outputs() {
+    let backend = conformance_backend::Listener::answering(|body| {
+        let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+        let answers: serde_json::Map<String, serde_json::Value> = request["questions"]
+            .as_object()
+            .expect("questions")
+            .keys()
+            .zip([0.2, 0.9, 0.5])
+            .map(|(key, probability)| {
+                (
+                    key.clone(),
+                    serde_json::json!({"type":"noul","noul":probability}),
+                )
+            })
+            .collect();
+        conformance_backend::Canned::ok(
+            &serde_json::json!({"model":"jev-latest","answers":answers}).to_string(),
+        )
+    })
+    .expect("owned loopback");
+    let output = run_with(
+        &compile(&crate_dir().join("tests/c/complete_calls.c")),
+        backend.base(),
+        b"",
+        &[("TYPED_ROW_INDEX", std::path::Path::new("1"))],
+    );
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(backend.count(), 3);
+}

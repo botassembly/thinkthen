@@ -147,8 +147,44 @@ static void check(thinkthen_result *r,unsigned kind,int files) {
     thinkthen_decide_view_v1 v={0}; assert(thinkthen_result_decide(r,summary.count,&v)==THINKTHEN_EUSAGE);
     assert(thinkthen_result_summary(NULL,&summary)==THINKTHEN_EUSAGE);
 }
+static void indexes(thinkthen_engine *e) {
+    thinkthen_record_v1 records[3]={0};
+    const char *inputs[]={"first","second","third"};
+    for(size_t i=0;i<3;++i) records[i].original=(thinkthen_optional_content_v1){1,{1,{inputs[i],strlen(inputs[i])}}};
+    const unsigned kinds[]={1,5,6}; thinkthen_result *results[3]={0};
+    for(size_t at=0;at<3;++at) {
+        thinkthen_question_spec_v1 spec={0}; spec.kind=kinds[at]; spec.text=TEXT("Does this need attention?");
+        if(spec.kind==5) spec.threshold=(thinkthen_rule_v1){2,0.75,0};
+        thinkthen_question *q=NULL; assert(thinkthen_question_new(e,&spec,&q)==0);
+        thinkthen_source *source=NULL; assert(thinkthen_source_records(e,records,at?3:2,&source)==0);
+        assert(calls[spec.kind-1](e,q,source,NULL,&results[at])==0);
+        thinkthen_question_free(q); thinkthen_source_free(source);
+    }
+    thinkthen_engine_free(e);
+    for(size_t at=0;at<3;++at) {
+        thinkthen_result *r=results[at]; thinkthen_summary_v1 summary={0}; assert(thinkthen_result_summary(r,&summary)==0);
+        assert(summary.count==(at?3:2) && summary.facts.value.requests_sent==1);
+        thinkthen_row_observation_v1 row,unchanged; memset(&row,0xa5,sizeof(row)); memcpy(&unchanged,&row,sizeof(row));
+        assert(thinkthen_result_row(NULL,0,&row)==THINKTHEN_EUSAGE && !memcmp(&row,&unchanged,sizeof(row)));
+        assert(thinkthen_result_row(r,summary.count,&row)==THINKTHEN_EUSAGE && !memcmp(&row,&unchanged,sizeof(row)));
+        assert(thinkthen_result_row(r,SIZE_MAX,&row)==THINKTHEN_EUSAGE && !memcmp(&row,&unchanged,sizeof(row)));
+        assert(thinkthen_result_row(r,0,NULL)==THINKTHEN_EUSAGE);
+        const size_t ranked[]={1,2,0};
+        for(size_t i=0;i<summary.count;++i) {
+            assert(thinkthen_result_row(r,i,&row)==0 && row.function==kinds[at]);
+            assert(row.index==(at==2?ranked[i]:i));
+            thinkthen_row_v1 common=at==0?row.data.decide.common:at==1?row.data.filter.common:row.data.rank.common;
+            assert(same(common.input.value.data,inputs[row.index]));
+            if(at==1) assert(row.data.filter.value==(i==1));
+            if(at==2) assert(row.data.rank.value.value==i+1);
+        }
+        thinkthen_result_free(r);
+    }
+}
 int main(void) {
+    const char *base=getenv("THINKTHEN_BASE_URL"); assert(base && !strncmp(base,"http://127.0.0.1:",17));
     thinkthen_engine *e=thinkthen_engine_new_with("{\"cache\":false,\"model\":\"jev-latest\"}"); assert(e);
+    if(getenv("TYPED_ROW_INDEX")) { indexes(e); return 0; }
     thinkthen_source *source=NULL;
     const char *path=getenv("TYPED_SOURCE");
     if(path) { thinkthen_string_v1 p={path,strlen(path)}; thinkthen_source_spec_v1 spec={{&p,1},THINKTHEN_SOURCE_FILE_V1,0}; assert(thinkthen_source_files(e,&spec,&source)==0); }
