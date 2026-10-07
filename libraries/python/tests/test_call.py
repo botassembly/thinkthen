@@ -441,7 +441,7 @@ def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, 
         printed = run("""
         import os, threading, concurrent.futures, thinkthen as tt
         tally = tt.Tally()
-        engine = tt.Engine(cache=os.environ["OWNED_CACHE"])
+        engine = tt.Engine(model="jev-latest", cache=os.environ["OWNED_CACHE"])
         judge = engine.decide("Is it late?", tally=tally)
         gate = threading.Barrier(2)
         def ask(text):
