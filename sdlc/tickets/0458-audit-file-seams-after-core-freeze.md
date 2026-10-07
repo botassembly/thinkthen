@@ -1,6 +1,6 @@
 # 0458: Repair only flagged file seams after the core freezes
 
-Status: ready
+Status: in progress. The fresh bounded inventory flagged Dart ABI/views, PHP views and Go values. Behavior-preserving moves, actual package checks and full lint passed at b76da134e; fresh whole review accepted. Final integrated tests remain.
 
 Milestone: 0.2
 
@@ -21,5 +21,7 @@ One fresh read-only reviewer inventories hand-written source files over 400 nonb
 ## Dependencies and ownership
 
 Wait for 0457 and the reviewed core-freeze commit. Finish required native SDK, SQL, dataframe and MCP changes first. Do not reopen settled API decisions during this cleanup.
+
+Reviews: accept
 
 Reviews: accept

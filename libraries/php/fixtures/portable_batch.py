@@ -25,8 +25,6 @@ if RELEASE_PACKAGE:
                 'src/complete/models.php',
                 'src/native/abi.h',
                 'src/native/views.php',
-                'src/native/views_0.php',
-                'src/native/views_1.php',
                 'src/native/input.php',
                 'src/native/question.php',
                 'src/native/question_adapter.php',
