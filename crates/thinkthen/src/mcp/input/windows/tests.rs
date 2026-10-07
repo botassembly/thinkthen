@@ -1,6 +1,7 @@
 //! Real owned subprocess pipes; these tests require a Windows runner.
 use super::{PipeInput, PipeOutput};
 use crate::CancelToken;
+use crate::test_deadline::child::ChildEnvironment as _;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::os::windows::io::OwnedHandle;
@@ -15,6 +16,7 @@ impl Peer {
     fn new() -> Self {
         Self(
             Command::new(std::env::current_exe().unwrap())
+                .clear_environment()
                 .args([
                     "--exact",
                     "mcp::input::windows::tests::pipe_peer",
