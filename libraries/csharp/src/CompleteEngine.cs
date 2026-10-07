@@ -1,6 +1,6 @@
 namespace ThinkThen;
-public sealed record CompleteCall<T>(string Schema, Function Function, AnswerId AnswerId, Meta Meta, CallFacts Facts, Optional<IReadOnlyList<Attempt>> Attempts, IReadOnlyList<T> Rows, IReadOnlyList<ObservationEvent> Observations);
-/// <summary>Integration contract; Engine does not yet implement the complete C boundary.</summary>
+public sealed record CompleteCall<T>(string Schema, Optional<Function> Function, Optional<AnswerId> AnswerId, Optional<Meta> Meta, Optional<CallFacts> Facts, Optional<IReadOnlyList<Attempt>> Attempts, IReadOnlyList<T> Rows, IReadOnlyList<ObservationEvent> Observations) {public Optional<CompleteError> Error {get;init;}};
+/// <summary>Typed complete native execution.</summary>
 public interface ICompleteEngine {
 CompleteCall<DecideRow> DecideComplete(QuestionInput question, InputSource source, CallControls controls, TimeSpan? budget = null, CancellationToken cancellation = default);
 CompleteCall<ChooseRow> ChooseComplete(QuestionInput question, InputSource source, CallControls controls, TimeSpan? budget = null, CancellationToken cancellation = default);

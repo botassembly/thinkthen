@@ -34,6 +34,9 @@ func nativeIdentifier(v C.thinkthen_string_v1) identifier {
 	return id
 }
 func nativeContent(v C.thinkthen_content_v1) Content {
+	if v.kind == 0 {
+		return Content{}
+	}
 	if v.kind == 1 {
 		return Content{Kind: ContentKindText, Text: nativeString(v.data)}
 	}

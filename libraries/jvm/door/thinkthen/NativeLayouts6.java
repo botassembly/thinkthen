@@ -1,0 +1,25 @@
+package thinkthen;
+import java.lang.foreign.*;
+import java.util.Map;
+import static java.lang.foreign.ValueLayout.*;
+import static thinkthen.NativeLayouts.*;
+final class NativeLayouts6 { static void add(Map<String,MemoryLayout> L) {
+ L.put("thinkthen_observation_success_v1", structure(L.get("thinkthen_string_v1").withName("answer_id"), L.get("thinkthen_string_v1").withName("observation_id"), L.get("thinkthen_member_value_v1").withName("value"), L.get("thinkthen_observed_probabilities_v1").withName("probabilities"), L.get("thinkthen_optional_double_v1").withName("confidence")));
+ L.put("thinkthen_question_observation_v1_data", union(L.get("thinkthen_observation_success_v1").withName("success"), L.get("thinkthen_member_failure_v1").withName("failure")));
+ L.put("thinkthen_question_observation_v1", structure(JAVA_LONG.withName("index"), L.get("thinkthen_optional_string_v1").withName("member"), L.get("thinkthen_optional_discriminator_v1").withName("stage"), JAVA_LONG.withName("position"), L.get("thinkthen_string_v1").withName("question_sha256"), L.get("thinkthen_string_v1").withName("model"), L.get("thinkthen_string_v1").withName("url"), L.get("thinkthen_strings_v1").withName("requests"), JAVA_LONG.withName("requests_sent"), JAVA_INT.withName("cached"), JAVA_LONG.withName("failed_questions"), L.get("thinkthen_optional_usage_v1").withName("usage"), L.get("thinkthen_question_sources_v1").withName("question_sources"), JAVA_INT.withName("state"), L.get("thinkthen_question_observation_v1_data").withName("data")));
+ L.put("thinkthen_row_observation_v1_data", union(L.get("thinkthen_decide_view_v1").withName("decide"), L.get("thinkthen_choose_view_v1").withName("choose"), L.get("thinkthen_tag_view_v1").withName("tag"), L.get("thinkthen_score_view_v1").withName("score"), L.get("thinkthen_filter_view_v1").withName("filter"), L.get("thinkthen_rank_view_v1").withName("rank"), L.get("thinkthen_find_view_v1").withName("find"), L.get("thinkthen_annotate_view_v1").withName("annotate"), L.get("thinkthen_recognize_view_v1").withName("recognize"), L.get("thinkthen_relate_view_v1").withName("relate")));
+ L.put("thinkthen_row_observation_v1", structure(JAVA_LONG.withName("index"), JAVA_INT.withName("function"), L.get("thinkthen_row_observation_v1_data").withName("data")));
+ L.put("thinkthen_observation_v1_data", union(L.get("thinkthen_question_observation_v1").withName("question"), L.get("thinkthen_row_observation_v1").withName("row")));
+ L.put("thinkthen_observation_v1", structure(JAVA_INT.withName("kind"), L.get("thinkthen_observation_v1_data").withName("data")));
+ L.put("thinkthen_summary_v1", structure(JAVA_INT.withName("state"), L.get("thinkthen_string_v1").withName("schema"), L.get("thinkthen_optional_string_v1").withName("answer_id"), L.get("thinkthen_optional_discriminator_v1").withName("function"), JAVA_LONG.withName("count"), JAVA_LONG.withName("observation_count"), L.get("thinkthen_optional_meta_v1").withName("meta"), L.get("thinkthen_optional_facts_v1").withName("facts"), L.get("thinkthen_optional_attempts_v1").withName("attempts"), L.get("thinkthen_optional_error_v1").withName("error")));
+ L.put("thinkthen_reported_usage_v1", structure(JAVA_INT.withName("present"), L.get("thinkthen_optional_u64_v1").withName("input_tokens"), L.get("thinkthen_optional_u64_v1").withName("output_tokens")));
+ L.put("thinkthen_source_detail_v1", structure(JAVA_INT.withName("origin"), L.get("thinkthen_string_v1").withName("answered_by"), L.get("thinkthen_optional_size_v1").withName("batch_size")));
+ L.put("thinkthen_source_details_v1", structure(ADDRESS.withName("data"), JAVA_LONG.withName("len")));
+ L.put("thinkthen_input_view_v1", structure(L.get("thinkthen_optional_content_v1").withName("original"), L.get("thinkthen_optional_location_v1").withName("position"), L.get("thinkthen_optional_image_views_v1").withName("images")));
+ L.put("thinkthen_input_views_v1", structure(ADDRESS.withName("data"), JAVA_LONG.withName("len")));
+ L.put("thinkthen_details_v1", structure(L.get("thinkthen_optional_question_v1").withName("question"), L.get("thinkthen_optional_rule_v1").withName("threshold"), L.get("thinkthen_optional_string_v1").withName("raw_pick"), L.get("thinkthen_reported_usage_v1").withName("usage"), L.get("thinkthen_source_details_v1").withName("question_sources"), L.get("thinkthen_observation_identities_v1").withName("observations"), L.get("thinkthen_input_views_v1").withName("inputs")));
+ L.put("thinkthen_source_entity_v1", structure(L.get("thinkthen_entity_v1").withName("entity"), L.get("thinkthen_optional_location_v1").withName("position")));
+ L.put("thinkthen_source_entities_v1", structure(ADDRESS.withName("data"), JAVA_LONG.withName("len")));
+ L.put("thinkthen_source_entity_edge_v1", structure(L.get("thinkthen_string_v1").withName("relation"), L.get("thinkthen_source_entity_v1").withName("source"), L.get("thinkthen_source_entity_v1").withName("target"), JAVA_DOUBLE.withName("probability"), JAVA_INT.withName("either")));
+ L.put("thinkthen_source_entity_edges_v1", structure(ADDRESS.withName("data"), JAVA_LONG.withName("len")));
+}}

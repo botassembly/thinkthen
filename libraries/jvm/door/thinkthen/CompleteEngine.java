@@ -5,7 +5,7 @@ import thinkthen.Ids.AnswerId;
 import thinkthen.Requests.*;
 /** Integration contract; Door does not yet implement the complete C boundary. */
 public interface CompleteEngine {
-record CompleteCall<T>(String schema, Function function, AnswerId answerId, Meta meta, CallFacts facts, OptionalValue<List<Attempt>> attempts, List<T> rows, List<ObservationEvent> observations) {}
+record CompleteCall<T>(String schema, OptionalValue<Function> function, OptionalValue<AnswerId> answerId, OptionalValue<Meta> meta, OptionalValue<CallFacts> facts, OptionalValue<List<Attempt>> attempts, List<T> rows, List<ObservationEvent> observations, OptionalValue<CompleteError> error) {}
 CompleteCall<DecideRow> decideComplete(QuestionInput question, InputSource source, CallControls controls, long deadlineMs, Door.Token token);
 CompleteCall<ChooseRow> chooseComplete(QuestionInput question, InputSource source, CallControls controls, long deadlineMs, Door.Token token);
 CompleteCall<TagRow> tagComplete(QuestionInput question, InputSource source, CallControls controls, long deadlineMs, Door.Token token);

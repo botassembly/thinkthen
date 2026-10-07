@@ -3,7 +3,12 @@ import java.util.List;
 import thinkthen.Complete.*;
 /** Prepared host data; execution awaits the complete C constructors and calls. */
 public final class Requests { private Requests() {}
-public record QuestionInput(OptionalValue<Question> question, OptionalValue<String> file) {
+public enum QuestionRole { ATOMIC, SET, DYNAMIC_CHOOSE, RECOGNIZE, RELATE, RANK, RANK_SET, FIND }
+public record QuestionInput(OptionalValue<Question> question, OptionalValue<String> file, QuestionRole role, OptionalValue<String> saved, OptionalValue<String> named, OptionalValue<String> reference) {
+public QuestionInput(OptionalValue<Question> question,OptionalValue<String> file) { this(question,file,QuestionRole.ATOMIC,OptionalValue.absent(),OptionalValue.absent(),OptionalValue.absent()); }
+public static QuestionInput savedQuestion(QuestionRole role,String json) {return new QuestionInput(OptionalValue.absent(),OptionalValue.absent(),role,OptionalValue.of(json),OptionalValue.absent(),OptionalValue.absent());}
+public static QuestionInput namedQuestion(QuestionRole role,String name) {return new QuestionInput(OptionalValue.absent(),OptionalValue.absent(),role,OptionalValue.absent(),OptionalValue.of(name),OptionalValue.absent());}
+public static QuestionInput questionReference(QuestionRole role,String ref) {return new QuestionInput(OptionalValue.absent(),OptionalValue.absent(),role,OptionalValue.absent(),OptionalValue.absent(),OptionalValue.of(ref));}
 public static QuestionInput asked(Question question) { return new QuestionInput(OptionalValue.of(question), OptionalValue.absent()); }
 public static QuestionInput questionFile(String path) { return new QuestionInput(OptionalValue.absent(), OptionalValue.of(path)); }
 }

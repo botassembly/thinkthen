@@ -92,6 +92,19 @@ try:
             if "offsets" in case:
                 shared.check_offsets(case, actual, conformance)
             count += 1
+    with tempfile.TemporaryDirectory(prefix="thinkthen-native-complete-") as folder:
+        path=Path(folder)/"unicode.txt"
+        path.write_bytes("Maria Chen\r\nAlex Lee\r\n".encode())
+        settings=json.dumps({"base_url":f"http://127.0.0.1:{port}/arm/full/v1","model":"fixed","cache":False,"batch":"max","throttle":1,"max_retries":0})
+        env=child_env(HOME=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
+                      THINKTHEN_API_KEY="sk-native-complete-loopback",THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
+                      TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path),LD_LIBRARY_PATH=str(HERE.parent / "target/scratch/lib"))
+        for lang in ("csharp",):
+            before=sent()
+            assert type_case(["native"],env,"native complete")=={"native":"pass"}
+            assert sent()-before==22,(lang,"complete native listener count")
+            print(lang+" named native: ten functions, typed fields and physical file locations PASS",flush=True)
+
 finally:
     shared.stop_backend(backend)
 print(f"C# J1 public binding: {len(corpus['cases'])} schema cases, {count} runtime cases, plan P1, limits and annotate fields passed")

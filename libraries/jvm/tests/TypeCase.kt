@@ -1,6 +1,12 @@
 import thinkthen.Door
 
 fun main(args: Array<String>) {
+    if(args.size==1&&args[0]=="native") { KotlinComplete(System.getenv("TT_NATIVE_SETTINGS")).use { engine ->
+        val call = NativeChecks.run(engine)
+        check(call.rows()[0].common().answer().value().probability().value()==0.9)
+        check(call.facts().value().callId().value().length==64)
+        check(call.rows()[0].common().position().value().firstLine().value()==1L)
+    };println("{\"native\":\"pass\"}");return }
     if (args.size == 1 && args[0] == "carriers") { kotlinCarrierChecks(); return }
     try {
         Door().use { door -> println(KotlinFacade(door).call(args[0])) }

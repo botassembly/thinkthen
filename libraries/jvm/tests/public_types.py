@@ -35,9 +35,9 @@ classpath = ":".join(str(jars / f"thinkthen-{part}.jar") for part in ("door", "k
 compiler_env = child_env(JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"),
                          PATH=str(JDK / "bin") + ":" + os.environ.get("PATH", "/usr/bin:/bin"))
 java = [str(JDK / "bin/java"), "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(TARGET / "native/libthinkthen.so")]
-subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java"), str(HERE / "CarrierChecks.java")], env=compiler_env, check=True)
-subprocess.run([str(KOTLIN / "bin/kotlinc"), "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], env=compiler_env, check=True)
-subprocess.run([str(SCALA / "bin/scalac"), "-J-XX:ActiveProcessorCount=2", "-classpath", classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], env=compiler_env, check=True)
+subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java"), str(HERE / "CarrierChecks.java"), str(HERE / "NativeChecks.java")], env=compiler_env, check=True)
+subprocess.run([str(KOTLIN / "bin/kotlinc"), "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", str(classes) + ":" + classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], env=compiler_env, check=True)
+subprocess.run([str(SCALA / "bin/scalac"), "-J-XX:ActiveProcessorCount=2", "-classpath", str(classes) + ":" + classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], env=compiler_env, check=True)
 backend, port = shared.start_backend()
 FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
                                    "severity": "answered", "topics": "answered"}]}
@@ -116,5 +116,19 @@ try:
                     shared.check_offsets(case, actual, conformance)
                 count += 1
         print(f"{lang} J1 public binding: {len(corpus['cases'])} schema cases, {count} runtime cases passed", flush=True)
+    if selected is None:
+        with tempfile.TemporaryDirectory(prefix="thinkthen-native-complete-") as folder:
+            path=Path(folder)/"unicode.txt"
+            path.write_bytes("Maria Chen\r\nAlex Lee\r\n".encode())
+            settings=json.dumps({"base_url":f"http://127.0.0.1:{port}/arm/full/v1","model":"fixed","cache":False,"batch":"max","throttle":1,"max_retries":0})
+            env=child_env(HOME=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
+                          THINKTHEN_API_KEY="sk-native-complete-loopback",THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
+                          TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path),LD_LIBRARY_PATH=str(TARGET / "native"))
+            for lang in ("java","kotlin","scala"):
+                before=sent()
+                assert type_case(["native"],env,"native complete",lang)=={"native":"pass"}
+                assert sent()-before==22,(lang,"complete native listener count")
+                print(lang+" named native: ten functions, typed fields and physical file locations PASS",flush=True)
+
 finally:
     shared.stop_backend(backend)

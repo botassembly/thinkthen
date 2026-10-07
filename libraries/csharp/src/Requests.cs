@@ -1,5 +1,13 @@
 namespace ThinkThen;
+public enum QuestionRole:uint { Atomic=1,Set,DynamicChoose,Recognize,Relate,Rank,RankSet,Find }
 public sealed record QuestionInput(Optional<Question> Question, Optional<string> File) {
+public QuestionRole Role {get;init;}
+public Optional<string> Saved {get;init;}
+public Optional<string> Named {get;init;}
+public Optional<string> Reference {get;init;}
+public static QuestionInput SavedQuestion(QuestionRole role,string json)=>new(default,default){Role=role,Saved=Optional.Some(json)};
+public static QuestionInput NamedQuestion(QuestionRole role,string name)=>new(default,default){Role=role,Named=Optional.Some(name)};
+public static QuestionInput QuestionReference(QuestionRole role,string reference)=>new(default,default){Role=role,Reference=Optional.Some(reference)};
 public static QuestionInput Asked(Question question) => new(Optional.Some(question), default);
 public static QuestionInput QuestionFile(string path) => new(default, Optional.Some(path));
 }

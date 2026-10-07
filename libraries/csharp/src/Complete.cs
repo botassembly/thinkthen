@@ -7,10 +7,10 @@ public readonly record struct Optional<T>(bool Present, T Value);
 public static class Optional { public static Optional<T> Some<T>(T value) => new(true, value); }
 
 public enum Function { Decide, Choose, Tag, Score, Filter, Rank, Find, Annotate, Recognize, Relate }
-public enum ContentKind { Text, Json }
+public enum ContentKind { Text, Json, Absent }
 public enum RuleKind { Default, Null, Cut, Band }
 public enum Media { Jpeg, Png }
-public enum SourceUnit { Line, Window, File, ImageFile }
+public enum SourceUnit { Line, Window, File, ImageFile, Jsonl }
 public enum ValueKind { Null, Boolean, Authored }
 public enum AtomicKind { YesNo, Choice, Tag, Score, Find }
 public enum MemberState { Success, Failure }
@@ -29,7 +29,7 @@ public sealed record Rule(RuleKind Kind, double Low, double High);
 public sealed record Choice(string Name, Optional<Content> Description, Optional<double> Weight);
 public sealed record Relation(string Name, string Source, string Target, Optional<string> Reads, bool Either, bool Single);
 public sealed record QuestionMember(string Name, Question Question);
-public sealed record Question(Function Kind, Content Text, Optional<Content> Yes, Optional<Content> No, IReadOnlyList<Choice> Choices, Rule Threshold, Rule RelationThreshold, Optional<string> Model, Optional<string> Profile, Optional<ulong> Batch, bool BatchMax, bool None, IReadOnlyList<string> On, IReadOnlyList<QuestionMember> Members, IReadOnlyList<Choice> Kinds, IReadOnlyList<Relation> Relations, Optional<string> NamePointer, Optional<string> KindPointer);
+public sealed record Question(Function Kind, Content Text, Optional<Content> Yes, Optional<Content> No, IReadOnlyList<Choice> Choices, Rule Threshold, Rule RelationThreshold, Optional<string> Model, Optional<string> Profile, Optional<ulong> Batch, bool BatchMax, bool None, IReadOnlyList<string> On, IReadOnlyList<QuestionMember> Members, IReadOnlyList<Choice> Kinds, IReadOnlyList<Relation> Relations, Optional<string> NamePointer, Optional<string> KindPointer) { public Optional<QuestionAuthor> Author {get;init;} }
 public sealed record ImageInput(Media Media, byte[] Bytes, Optional<string> Filename);
 public sealed record ImageView(Media Media, byte[] Bytes, ulong Width, ulong Height, Optional<string> Filename);
 public sealed record RecordInput(Optional<Content> Original, Optional<Content> Context, IReadOnlyList<Choice> Options, IReadOnlyList<ImageInput> Images);
@@ -42,7 +42,7 @@ public sealed record Location(Optional<string> File, Optional<ulong> FirstLine, 
 public sealed record MemberValue(Function Function, Optional<DecideValue> Decide, Optional<string> Choose, Optional<IReadOnlyList<string>> Tag, Optional<double> Score);
 public sealed record MemberFailure(FailureId FailureId, MemberCause Cause);
 public sealed record MemberSuccess(AnswerId AnswerId, MemberValue Value, AtomicAnswer Answer, Rule Threshold);
-public sealed record AnnotationMember(string Name, Digest Request, Question Question, MemberState State, Optional<MemberSuccess> Success, Optional<MemberFailure> Failure);
+public sealed record AnnotationMember(string Name, Digest Request, Question Question, MemberState State, Optional<MemberSuccess> Success, Optional<MemberFailure> Failure) { public QuestionAuthor? Author {get;init;} }
 public sealed record Entity(string Text, ulong Start, ulong End, ulong Length, string Kind, double Strength);
 public sealed record EntityEdge(string Relation, Entity Source, Entity Target, double Probability, bool Either);
 public sealed record Place(ulong Start, ulong End);
@@ -66,20 +66,20 @@ public sealed record Meta(string Tool, Optional<Digest> QuestionSha256, Optional
 public sealed record CallFacts(CallId CallId, ulong CacheAnswers, Optional<string> EstimatedCostUsd, Optional<ulong> InputTokens, Optional<string> Model, Optional<ulong> OutputTokens, ulong Records, ulong RequestsSent, double Seconds, Optional<ulong> CommandMs);
 public sealed record Stopped(Optional<ulong> At, StopCause Cause, Optional<ulong> Status, bool Retryable);
 public sealed record CompleteError(ulong Code, string Message, bool Retryable, Optional<Stopped> Stopped, Optional<CallFacts> Facts, Optional<IReadOnlyList<Attempt>> Attempts);
-public sealed record CommonRow(AnswerId AnswerId, Optional<Content> Input, Optional<Question> Question, Optional<AtomicAnswer> Answer, Optional<Rule> Threshold, Optional<Location> Position, Optional<string> InputFile, Meta Meta, Optional<IReadOnlyList<ImageView>> Images);
+public sealed record CommonRow(AnswerId AnswerId, Optional<Content> Input, Optional<Question> Question, Optional<AtomicAnswer> Answer, Optional<Rule> Threshold, Optional<Location> Position, Optional<string> InputFile, Meta Meta, Optional<IReadOnlyList<ImageView>> Images) { public Details? Details {get;init;} public QuestionAuthor? Author {get;init;} }
 public sealed record DecideRow(CommonRow Common, DecideValue Value);
 public sealed record ChooseRow(CommonRow Common, Optional<string> Value);
 public sealed record TagRow(CommonRow Common, IReadOnlyList<string> Value);
 public sealed record ScoreRow(CommonRow Common, double Value);
 public sealed record FilterRow(CommonRow Common, bool Value);
-public sealed record RankRow(CommonRow Common, Optional<ulong> Value, Optional<string> QuestionName);
+public sealed record RankRow(CommonRow Common, Optional<ulong> Value, Optional<string> QuestionName) { public IReadOnlyList<RankRow> Members {get;init;}=System.Array.Empty<RankRow>(); }
 public sealed record FindRow(CommonRow Common, Optional<Content> Value, Optional<ulong> Index);
 public sealed record AnnotateRow(CommonRow Common, IReadOnlyList<AnnotationMember> Answers);
-public sealed record RecognizeRow(CommonRow Common, RecognizeValue Value, RecognizeAnswer Answer);
-public sealed record RelateRow(CommonRow Common, IReadOnlyList<Edge> Value, IReadOnlyList<RelationAnswer> Questions);
+public sealed record RecognizeRow(CommonRow Common, RecognizeValue Value, RecognizeAnswer Answer) { public SourceRecognition? Located {get;init;} }
+public sealed record RelateRow(CommonRow Common, IReadOnlyList<Edge> Value, IReadOnlyList<RelationAnswer> Questions) { public SourceRelations? Located {get;init;} }
 public sealed record RowValue(Function Function, Optional<DecideRow> Decide, Optional<ChooseRow> Choose, Optional<TagRow> Tag, Optional<ScoreRow> Score, Optional<FilterRow> Filter, Optional<RankRow> Rank, Optional<FindRow> Find, Optional<AnnotateRow> Annotate, Optional<RecognizeRow> Recognize, Optional<RelateRow> Relate);
 public sealed record ObservedProbabilities(Optional<double> Yes, Optional<IReadOnlyList<Probability>> Named);
-public sealed record ObservationSuccess(AnswerId AnswerId, ObservationId ObservationId, MemberValue Value, ObservedProbabilities Probabilities, Optional<double> Confidence);
+public sealed record ObservationSuccess(AnswerId AnswerId, Optional<ObservationId> ObservationId, MemberValue Value, ObservedProbabilities Probabilities, Optional<double> Confidence);
 public sealed record QuestionObservation(ulong Index, Optional<string> Member, Optional<Stage> Stage, ulong Position, Digest QuestionSha256, string Model, string Url, IReadOnlyList<Digest> Requests, ulong RequestsSent, bool Cached, ulong FailedQuestions, Optional<TokenUsage> Usage, IReadOnlyList<QuestionSource> QuestionSources, MemberState State, Optional<ObservationSuccess> Success, Optional<MemberFailure> Failure);
 public sealed record RowObservation(ulong Index, RowValue Value);
-public sealed record ObservationEvent(EventKind Kind, Optional<QuestionObservation> Question, Optional<RowObservation> Row);
+public sealed record ObservationEvent(EventKind Kind, Optional<QuestionObservation> Question, Optional<RowObservation> Row) { public Details? Details {get;init;} public QuestionAuthor? Author {get;init;} }

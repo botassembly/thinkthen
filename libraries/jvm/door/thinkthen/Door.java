@@ -14,7 +14,7 @@ import java.util.Map;
 import static java.lang.foreign.ValueLayout.*;
 
 /** Java 21 preview FFM binding for the immutable ThinkThen C door. */
-public final class Door implements AutoCloseable {
+public final class Door implements AutoCloseable, CompleteEngine {
     public record Answer(int outcome, double probability) {}
     /** A call's value and its facts object; the result schema describes the facts. */
     public record TypedResult<T>(T value, Map<String, Object> facts) {}
@@ -44,7 +44,9 @@ public final class Door implements AutoCloseable {
     }
     public static final class NativeFailure extends RuntimeException {
         public final Failure failure;
-        NativeFailure(Failure failure) { super(failure.message()); this.failure = failure; }
+        public final Complete.OptionalValue<Complete.CompleteError> complete;
+        NativeFailure(Failure failure) { this(failure,Complete.OptionalValue.absent()); }
+        NativeFailure(Failure failure,Complete.OptionalValue<Complete.CompleteError> complete) { super(failure.message()); this.failure = failure; this.complete=complete; }
     }
     private static final MemoryLayout ANSWER = MemoryLayout.structLayout(JAVA_INT.withName("outcome"), MemoryLayout.paddingLayout(4), JAVA_DOUBLE.withName("probability"));
     private static final Map<String, MethodHandle> CALLS = new HashMap<>();
@@ -121,8 +123,13 @@ public final class Door implements AutoCloseable {
             nullPointer(facts) ? null : copyCString(facts));
     }
     private MemorySegment engine;
+    final String surface;
     public Door() { this(null); }
-    public Door(String settingsJson) {
+    public Door(String settingsJson) { this(settingsJson,"java"); }
+    public static Door forKotlin(String settingsJson) {return new Door(settingsJson,"kotlin");}
+    public static Door forScala(String settingsJson) {return new Door(settingsJson,"scala");}
+    private Door(String settingsJson,String surface) {
+        this.surface=surface;
         // Java 21 pins a virtual thread's carrier while this monitor is held.
         synchronized (Thread.currentThread()) {
             if (settingsJson == null) engine = (MemorySegment) invoke("thinkthen_engine_new");
@@ -132,7 +139,7 @@ public final class Door implements AutoCloseable {
             if (nullPointer(engine)) throw new NativeFailure(failure(MemorySegment.NULL));
         }
     }
-    private synchronized MemorySegment live() {
+    synchronized MemorySegment live() {
         if (engine == null) throw new IllegalStateException("engine closed");
         return engine;
     }
@@ -149,7 +156,7 @@ public final class Door implements AutoCloseable {
         }
     }
     public Token token() { live(); return new Token(); }
-    private MemorySegment tokenPointer(Token token) { return token == null ? MemorySegment.NULL : token.livePointer(); }
+    MemorySegment tokenPointer(Token token) { return token == null ? MemorySegment.NULL : token.livePointer(); }
     public TypedResult<Answer> decide(String question, byte[] evidence) { return decide(question, evidence, -1, null); }
     public TypedResult<Answer> decide(String question, byte[] evidence, long deadlineMs, Token token) {
         MemorySegment e = live();
@@ -282,4 +289,56 @@ public final class Door implements AutoCloseable {
     @Override public synchronized void close() {
         if (engine!=null) { invoke("thinkthen_engine_free",engine); engine=null; }
     }
+    public synchronized CompleteEngine.CompleteCall<Complete.DecideRow> decideComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"decide",NativeDetails::decide);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.ChooseRow> chooseComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"choose",NativeDetails::choose);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.TagRow> tagComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"tag",NativeDetails::tag);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.ScoreRow> scoreComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"score",NativeDetails::score);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.FilterRow> filterComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"filter",NativeDetails::filter);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.RankRow> rankComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"rank",NativeDetails::rank);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.FindRow> findComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"find",NativeDetails::find);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.AnnotateRow> annotateComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"annotate",NativeDetails::annotate);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.RecognizeRow> recognizeComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"recognize",NativeDetails::recognize);}
+    }
+
+    public synchronized CompleteEngine.CompleteCall<Complete.RelateRow> relateComplete(Requests.QuestionInput q, Requests.InputSource source, Complete.CallControls controls, long deadlineMs, Token token) {
+        synchronized(Thread.currentThread()) {return NativeExecution.execute(live(),q,source,controls,deadlineMs,tokenPointer(token),surface,"relate",NativeDetails::relate);}
+    }
+
+    public NativeBatch<Complete.DecideRow> decideBatch(Requests.QuestionInput q,Requests.InputSource s,Complete.CallControls c,long deadline,Token token){return NativeBatch.start(this,q,s,c,deadline,token,"decide",NativeDetails::decide);}
+
+    public NativeBatch<Complete.ChooseRow> chooseBatch(Requests.QuestionInput q,Requests.InputSource s,Complete.CallControls c,long deadline,Token token){return NativeBatch.start(this,q,s,c,deadline,token,"choose",NativeDetails::choose);}
+
+    public NativeBatch<Complete.TagRow> tagBatch(Requests.QuestionInput q,Requests.InputSource s,Complete.CallControls c,long deadline,Token token){return NativeBatch.start(this,q,s,c,deadline,token,"tag",NativeDetails::tag);}
+
+    public NativeBatch<Complete.ScoreRow> scoreBatch(Requests.QuestionInput q,Requests.InputSource s,Complete.CallControls c,long deadline,Token token){return NativeBatch.start(this,q,s,c,deadline,token,"score",NativeDetails::score);}
+
+    public NativeBatch<Complete.FilterRow> filterBatch(Requests.QuestionInput q,Requests.InputSource s,Complete.CallControls c,long deadline,Token token){return NativeBatch.start(this,q,s,c,deadline,token,"filter",NativeDetails::filter);}
+
+    public NativeBatch<Complete.AnnotateRow> annotateBatch(Requests.QuestionInput q,Requests.InputSource s,Complete.CallControls c,long deadline,Token token){return NativeBatch.start(this,q,s,c,deadline,token,"annotate",NativeDetails::annotate);}
+
 }

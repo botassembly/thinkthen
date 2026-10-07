@@ -65,6 +65,11 @@ func (a *nativeInputs) optionalString(v Optional[string]) C.thinkthen_optional_s
 }
 func (a *nativeInputs) content(v Content) C.thinkthen_content_v1 {
 	switch v.Kind {
+	case "":
+		if v.Text == "" && len(v.Json) == 0 {
+			return C.thinkthen_content_v1{}
+		}
+		panic("invalid absent content")
 	case ContentKindText:
 		return C.thinkthen_content_v1{kind: 1, data: a.string(v.Text)}
 	case ContentKindJson:

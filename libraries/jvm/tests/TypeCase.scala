@@ -2,6 +2,7 @@ import thinkthen.Door
 import scala.concurrent.ExecutionContext
 
 @main def scalaTypeCase(request: String): Unit = {
+  if(request=="native") {val engine=new ScalaComplete(System.getenv("TT_NATIVE_SETTINGS"));try {val call=NativeChecks.run(engine);assert(call.rows().get(0).common().answer().value().probability().value()==.9);assert(call.facts().value().callId().value().length==64);assert(call.rows().get(0).common().position().value().firstLine().value()==1L)}finally engine.close();println("{\"native\":\"pass\"}");return}
   if (request == "carriers") { scalaCarrierChecks(); return }
   given ExecutionContext = ExecutionContext.global
   val door = new Door()

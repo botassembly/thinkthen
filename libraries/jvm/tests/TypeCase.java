@@ -14,6 +14,7 @@ import thinkthen.Json;
  */
 public final class TypeCase {
     public static void main(String[] args) {
+        if(args.length==1&&args[0].equals("native")){try(Door e=new Door(System.getenv("TT_NATIVE_SETTINGS"))){NativeChecks.run(e);}System.out.println("{\"native\":\"pass\"}");return;}
         String mode = args.length == 2 || args[0].equals("limits") ? args[0] : "";
         try (Door door = new Door()) {
             System.out.println(switch (mode) {
