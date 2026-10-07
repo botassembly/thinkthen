@@ -131,6 +131,7 @@ CONSUMER = 'objective-c'
 import sqlite3
 sys.path.insert(0, str(ROOT / 'conformance'))
 import c_parity as shared
+from children import child_env
 import parity
 
 def native_content(v):
@@ -363,5 +364,5 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-objc-complete-consumer-') as 
     package=ROOT/'libraries/objective-c'
     # ASan/UBSan inspect reads of every host-owned field after native result_free.
     subprocess.run(['gcc','-std=gnu11','-g','-no-pie','-fsanitize=address,undefined','-fno-omit-frame-pointer','-x','objective-c','-I',str(ROOT/'libraries/c/include'),'-I',str(package/'Sources'),'-I',str(package/'checks'),
-                    str(source),*[str(package/'Sources'/name) for name in ['ThinkThen.m','TTNativeAPI.m','TTNativeViews.c','TTJSON.c']],'-L',str(native),'-lthinkthen_c','-lobjc','-pthread','-lm','-Wl,-rpath,'+str(scratch),'-o',str(binary)],check=True)
+                    str(source),*[str(package/'Sources'/name) for name in ['ThinkThen.m','TTNativeAPI.m','TTNativeViews.c','TTJSON.c']],'-L',str(native),'-lthinkthen_c','-lobjc','-pthread','-lm','-Wl,-rpath,'+str(scratch),'-o',str(binary)],env=child_env(HOME=str(scratch),LANG='C.UTF-8'),check=True)
     native_cases(binary)

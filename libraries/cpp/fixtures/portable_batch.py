@@ -280,5 +280,5 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-cpp-complete-consumer-') as f
     binary=scratch/'consumer'; library=NATIVE/'lib/libthinkthen.so'
     if not library.is_file(): library=NATIVE/'lib/libthinkthen.so.0'
     subprocess.run([os.environ.get('CXX','c++'),'-std=c++17','-Wall','-Wextra','-Werror','-I',str(CPP_INCLUDE),'-I',str(scratch/'include'),
-                    str(ROOT/'libraries/cpp/fixtures/native_consumer.cpp'),'-L',str(NATIVE/'lib'),'-l:'+library.name,'-Wl,-rpath,'+str(NATIVE/'lib'),'-o',str(binary)],check=True)
+                    str(ROOT/'libraries/cpp/fixtures/native_consumer.cpp'),'-L',str(NATIVE/'lib'),'-l:'+library.name,'-Wl,-rpath,'+str(NATIVE/'lib'),'-o',str(binary)],env=child_env(HOME=str(scratch),LANG='C.UTF-8'),check=True)
     native_cases(binary)

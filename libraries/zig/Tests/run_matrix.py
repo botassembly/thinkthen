@@ -70,6 +70,7 @@ CONSUMER = 'zig'
 import sqlite3
 sys.path.insert(0, str(ROOT / 'conformance'))
 import c_parity as shared
+from children import child_env
 import parity
 
 def native_content(v):
@@ -253,8 +254,8 @@ def native_cases(binary):
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-zig-complete-consumer-') as folder:
     scratch=Path(folder); package=ROOT/'libraries/zig'; binary=scratch/'consumer'; obj=scratch/'output.o'
-    subprocess.run(['cc','-std=c11','-I',str(package/'target/native/include'),'-c',str(package/'Tests/native_output.c'),'-o',str(obj)],check=True)
+    subprocess.run(['cc','-std=c11','-I',str(package/'target/native/include'),'-c',str(package/'Tests/native_output.c'),'-o',str(obj)],env=child_env(HOME=str(scratch),LANG='C.UTF-8'),check=True)
     subprocess.run([os.environ.get('THINKTHEN_ZIG','zig'),'build-exe','-j'+os.environ.get('CARGO_BUILD_JOBS','2'),str(obj),'--dep','thinkthen',
                     '-Mroot='+str(package/'Tests/native_consumer.zig'),'-I',str(package/'target/native/include'),'-Mthinkthen='+str(package/'src/thinkthen.zig'),
-                    '-lc','-L',str(package/'target/native/lib'),'-lthinkthen','-rpath',str(package/'target/native/lib'),'-femit-bin='+str(binary)],check=True)
+                    '-lc','-L',str(package/'target/native/lib'),'-lthinkthen','-rpath',str(package/'target/native/lib'),'-femit-bin='+str(binary)],env=child_env(keep=('ZIG_GLOBAL_CACHE_DIR',),HOME=str(scratch),LANG='C.UTF-8'),check=True)
     native_cases(binary)

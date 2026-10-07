@@ -68,6 +68,7 @@ CONSUMER = 'swift'
 import sqlite3
 sys.path.insert(0, str(ROOT / 'conformance'))
 import c_parity as shared
+from children import child_env
 import parity
 
 def native_content(v):
@@ -253,5 +254,5 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-swift-complete-consumer-') as
     binary=Path(folder)/'consumer'; package=ROOT/'libraries/swift'
     subprocess.run([os.environ.get('THINKTHEN_SWIFTC','swiftc'),'-swift-version','6','-warnings-as-errors','-j',os.environ.get('CARGO_BUILD_JOBS','2'),'-I',str(package/'Sources/CThinkThen'),
                     *map(str,sorted((package/'Sources/ThinkThen').glob('*.swift'))),str(package/'Tests/fixtures/native_views.swift'),str(package/'Tests/fixtures/native_consumer.swift'),
-                    '-L',str(package/'target/native/lib'),'-lthinkthen','-Xlinker','-rpath','-Xlinker',str(package/'target/native/lib'),'-o',str(binary)],check=True)
+                    '-L',str(package/'target/native/lib'),'-lthinkthen','-Xlinker','-rpath','-Xlinker',str(package/'target/native/lib'),'-o',str(binary)],env=child_env(keep=('XDG_CACHE_HOME','SWIFTPM_MODULECACHE_OVERRIDE'),HOME=folder,LANG='C.UTF-8'),check=True)
     native_cases(binary)
