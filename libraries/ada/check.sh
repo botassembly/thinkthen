@@ -29,6 +29,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   . "$REPO/sdlc/scripts/installed.sh"
   scratch_dir smoke
   native_install "$REPO" "$smoke/native"
+  python3 "$ROOT/checks/exports.py" "$smoke/native/lib/libthinkthen.so" "$smoke/native/include/thinkthen.h" "$smoke/exports.txt" "$ROOT"
   gnatmake -q -gnat2022 -I"$ROOT/src" "$ROOT/examples/smoke.adb" -D "$smoke" -o "$smoke/smoke" \
     -largs -L"$smoke/native/lib" -lthinkthen -Wl,-rpath,"$smoke/native/lib" >&2
   "$smoke/smoke"
@@ -50,7 +51,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     cmp "$native/$member" "$consumer/$member"
   done
   ln -s libthinkthen.so "$consumer/lib/libthinkthen.so.0"
-  python3 "$REPO/sdlc/scripts/check-c-exports.py" "$consumer/include/thinkthen.h" "$consumer/lib/libthinkthen.so"
+  python3 "$ROOT/checks/exports.py" "$consumer/lib/libthinkthen.so" "$consumer/include/thinkthen.h" "$consumer/exports.txt" "$wrapper"
   export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
   export CARGO_TARGET_DIR="$REPO/target/0265-backend"
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
