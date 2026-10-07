@@ -8,7 +8,7 @@ Use one fresh review of the whole ticket or slice, then fix and land. A second r
 
 - Build simply: YAGNI, DRY, local behavior, separate concerns. Add commands and options only for demos. Land outside-in CLI/API, edge-table, contract, or prior-failing regression tests; delete scaffolding. See workspace decision `2026-09-24-tests-earn-their-place.md`.
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change. Run full tests and lint on the landing commit; run `spec` and affected surface checks when the change needs them. Load and timing run only through `test-stress --run`. Gates use no network.
-- Rust source and test files cap at 500 nonblank lines; `sdlc/ratchet.json` equals the measured source total. Explain growth; the cap and ratchet require no additional reviewer.
+- Hand-written Rust and binding source/test files warn at 500–999 nonblank lines and fail at 1,000. Explain a warning in the change’s commit; avoid mechanical splits. Generated source, vendored dependencies and build output remain excluded. `sdlc/ratchet.json` equals the measured source total; explain growth. These checks require no additional reviewer.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
 - Keep checks that protect behavior, secrecy, spend, boundaries, or ticket evidence. A check that only polices prose may go; the commit says why.
 - Linux and M5 builds may overlap when load, memory, and I/O permit. Reduce jobs under pressure; isolate outputs and lane locks. Keep the shared toolchain and cache mutation locks when builds overlap.

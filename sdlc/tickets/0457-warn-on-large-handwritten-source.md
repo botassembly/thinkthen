@@ -1,10 +1,10 @@
 # 0457: Warn on large hand-written source and retain a hard limit
 
-Status: ready
+Status: in progress. Policy thresholds and standing instructions are implemented. Existing C header and Swift native views exceed the approved hard limit; coordinated source repairs remain.
 
 Milestone: 0.2
 
-Owner: builder.
+Owner: lane 0 builder on `ticket/0457-source-size-policy`.
 
 ## Outcome
 
