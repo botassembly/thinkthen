@@ -94,7 +94,7 @@ impl Engine {
                     &find,
                     found,
                     crate::result_json::complete::FindRow {
-                        declarations: question.metadata.clone(),
+                        declarations: question.reading_metadata(),
                         question: question.core.clone(),
                         candidates: texts,
                         input: picked,

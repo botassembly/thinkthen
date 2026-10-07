@@ -165,7 +165,7 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<Call<Keyed>, Error> {
         options.without_context("a single-document call")?;
-        question.metadata.validate_item(input)?;
+        question.admit_input(input)?;
         if let QuestionInput::Text(text) = input {
             crate::public::engine::evidence(text)?;
         }

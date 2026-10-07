@@ -75,8 +75,7 @@ impl Engine {
         // is refused before the first send.
         for (at, record) in records.as_slice().iter().enumerate() {
             question
-                .metadata
-                .validate_item(&super::super::InputEvidence::question_input(record))
+                .admit_input(&super::super::InputEvidence::question_input(record))
                 .map_err(|error| error.at_record(at))?;
             evidence(record.evidence())?;
         }

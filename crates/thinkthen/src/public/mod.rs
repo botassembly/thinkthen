@@ -463,6 +463,7 @@ pub use crate::core::{
 };
 
 mod question_metadata;
+mod question_preparation;
 
 pub(crate) mod named_question;
 

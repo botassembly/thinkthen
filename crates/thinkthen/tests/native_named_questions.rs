@@ -465,3 +465,7 @@ fn check_roles(root: &Path) {
         ErrorKind::Local
     );
 }
+
+#[cfg(feature = "cli")]
+#[path = "native_named_questions/rank_set.rs"]
+mod rank_set;

@@ -420,8 +420,8 @@ impl Question {
         }
     }
 
-    /// Read one question file. A file whose `on` names a part of a record is
-    /// refused, because a library call's evidence is one whole text.
+    /// Read one question file. Authored `on` pointers select original JSON
+    /// fields through native record reading before item declaration admission.
     ///
     /// # Errors
     ///
@@ -430,15 +430,6 @@ impl Question {
         let (file, batch) = QuestionFile::parse_top(value).map_err(Error::refused)?;
         let resolved =
             resolve(file.verb(), None, Some(&file), &Typed::default()).map_err(Error::refused)?;
-        if resolved
-            .on()
-            .iter()
-            .any(|pointer| !pointer.as_str().is_empty())
-        {
-            return Err(Error::usage(
-                "a library question reads its evidence whole, so it takes no `on`",
-            ));
-        }
         let core = resolved
             .question()
             .cloned()

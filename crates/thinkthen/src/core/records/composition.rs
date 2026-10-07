@@ -64,21 +64,29 @@ impl Reading {
         mut self,
         schema: Option<crate::core::InputDeclaration>,
     ) -> Self {
-        self.item_schema = schema;
+        self.item_schema = schema.into_iter().collect();
+        self
+    }
+    pub(crate) fn with_item_schemas(mut self, schemas: Vec<crate::core::InputDeclaration>) -> Self {
+        self.item_schema = schemas;
         self
     }
     pub(crate) const fn declares_item(&self) -> bool {
-        self.item_schema.is_some()
+        !self.item_schema.is_empty()
     }
     pub(super) fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
         let selected = self.selected_unchecked(record)?;
-        if let Some(schema) = &self.item_schema {
+        if !self.item_schema.is_empty() {
             let value = match &selected {
                 Selected::Text(text) => Json::String((*text).to_owned()),
                 Selected::Whole(value) => (*value).clone(),
                 Selected::Chosen(value) => value.clone(),
             };
-            if !schema.accepts(&value) {
+            if self
+                .item_schema
+                .iter()
+                .any(|schema| !schema.accepts(&value))
+            {
                 return Err(RecordError::ItemSchema);
             }
         }

@@ -262,6 +262,15 @@ pub(crate) fn run(
     let profile = profile::read(common, environment, &backend)?;
     crate::cli::intake::window(common, !settled.on().is_empty())?;
     let reading = read_by(common, settled, keeping)?;
+    let reading = match &asks {
+        Asks::Set(set) => reading.with_item_schemas(
+            set.questions()
+                .iter()
+                .filter_map(|member| member.metadata().item_schema.clone())
+                .collect(),
+        ),
+        _ => reading,
+    };
     output.validate_display(common)?;
     let documents = !reading.streams() && (common.input.len() > 1 || common.located());
     if documents && (view.raw || view.quiet) {
