@@ -14,5 +14,5 @@
     <DebugType>none</DebugType>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <ItemGroup><Compile Include="src/ThinkThen.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README.md" Pack="true" PackagePath="/"/></ItemGroup>
+  <ItemGroup><Compile Include="src/*.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README.md" Pack="true" PackagePath="/"/></ItemGroup>
 </Project>

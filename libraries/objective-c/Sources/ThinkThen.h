@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <thinkthen.h>
 #include "TTJSON.h"
+#include "TTComplete.h"
 
 typedef enum { TTOutcomeNo=0, TTOutcomeYes=1, TTOutcomeNotSure=2 } TTOutcome;
 typedef struct { TTOutcome outcome; double probability; } TTDecision;

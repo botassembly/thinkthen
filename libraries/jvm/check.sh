@@ -20,7 +20,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     scratch_dir smoke
     native_install "$root" "$smoke/native"
     jdk=${THINKTHEN_JDK_HOME:+$THINKTHEN_JDK_HOME/bin/}
-    "${jdk}javac" --enable-preview --release 21 -d "$smoke/door" "$here/door/thinkthen/Door.java" "$here/door/thinkthen/Json.java"
+    "${jdk}javac" --enable-preview --release 21 -d "$smoke/door" "$here"/door/thinkthen/*.java
     "${jdk}jar" --create --file "$smoke/thinkthen-door.jar" -C "$smoke/door" .
     "${jdk}javac" --enable-preview --release 21 -cp "$smoke/thinkthen-door.jar" -d "$smoke/app" "$here/tests/Smoke.java"
     "${jdk}java" --enable-preview --enable-native-access=ALL-UNNAMED -XX:ActiveProcessorCount=2 \

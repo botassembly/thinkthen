@@ -9,6 +9,7 @@ keys through `question_keys`.
 
 import hashlib
 import json
+import re
 from pathlib import Path
 
 FIXTURES = Path(__file__).resolve().parents[2] / "specification/fixtures/batching"
@@ -32,13 +33,35 @@ def one_portable_request(captured):
 
 
 def question_keys(url, body):
-    """Each question's key in one request body, in wire order (ADR 0111
-    section 2): the SHA-256 of the adapter, the URL, the model, the state and
-    one question as the body carries them, joined by line feeds."""
-    request = json.loads(body)
+    """The authored portable questions' framed cache/2 keys in wire order.
+
+    The controlled full/capture backend reports the requested fixture model.
+    Keep these expectations independent of returned metadata and captured JSON.
+    Historical cache/1 fixture validation retains its separate legacy oracle.
+    """
+    one_portable_request([body])
+    state, model, questions = fixture_questions()
+
+    # Match the endpoint resolver: lowercase scheme and literal host letters,
+    # preserve host escapes and bracketed addresses, and drop trailing slashes.
+    scheme, rest = url.strip().rstrip("/").split("://", 1)
+    authority, separator, path = rest.partition("/")
+    if not authority.startswith("["):
+        host, colon, port = authority.partition(":")
+        host = re.sub(r"%[0-9A-Fa-f]{2}|[A-Z]", lambda match:
+                      match[0] if match[0].startswith("%") else match[0].lower(), host)
+        authority = host + colon + port
+    url = scheme.lower() + "://" + authority + separator + path
 
     def compact(value):
         return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
-    head = "\n".join(["systemone", url, compact(request["model"]), compact(request["state"])])
-    names = sorted(request["questions"], key=lambda name: int(name[1:]))
-    return [hashlib.sha256(f"{head}\n{compact(request['questions'][name])}".encode()).hexdigest() for name in names]
+    def key(question):
+        parts = ["systemone", url, compact(model), compact(model),
+                 compact(state), compact(question)]
+        framed = b"thinkthen.question-key/2\0"
+        for part in parts:
+            encoded = part.encode("utf-8")
+            framed += len(encoded).to_bytes(8, "big") + encoded
+        return hashlib.sha256(framed).hexdigest()
+
+    return [key(question) for question in questions]

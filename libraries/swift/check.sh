@@ -30,7 +30,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     cp "$smoke/native/include/thinkthen.h" "$smoke/CThinkThen/include/"
     cp "$here/Tests/fixtures/smoke.swift" "$smoke/main/main.swift"
     HOME="$smoke" SWIFTPM_MODULECACHE_OVERRIDE="$smoke/module-cache" "$swiftc" -j 2 -module-cache-path "$smoke/module-cache" \
-        -I "$smoke/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$smoke/main/main.swift" -L "$smoke/native/lib" \
+        -I "$smoke/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$smoke/main/main.swift" -L "$smoke/native/lib" \
         -lthinkthen -Xlinker -rpath -Xlinker "$smoke/native/lib" -o "$smoke/smoke"
     "$smoke/smoke"
     exit
@@ -78,9 +78,11 @@ export HOME="$here/target/home" XDG_CACHE_HOME="$here/target/cache" SWIFTPM_MODU
 export THINKTHEN_SWIFT_BUILD_DIR="$here/target/scratch/swift-build-product"
 "$swift" build --package-path "$here" --scratch-path "$THINKTHEN_SWIFT_BUILD_DIR" --jobs 2 -Xlinker -L -Xlinker "$here/target/native/lib" -Xlinker -rpath -Xlinker "$here/target/native/lib"
 cp "$here/Tests/fixtures/matrix.swift" "$here/target/scratch/matrix-main/main.swift"
-"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-matrix"
+"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-matrix"
 cp "$here/Tests/fixtures/settings.swift" "$here/target/scratch/matrix-main/main.swift"
-"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-settings"
+"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-settings"
+"$swiftc" -j 2 "$here/Sources/ThinkThen/Complete.swift" "$here/Tests/Carriers/main.swift" -o "$here/target/scratch/carriers"
+"$here/target/scratch/carriers"
 python3 "$here/Tests/fixtures/public_types.py"
 python3 "$here/Tests/fixtures/run_matrix.py"
 python3 "$here/Tests/fixtures/run_settings.py"

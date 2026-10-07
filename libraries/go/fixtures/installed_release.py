@@ -24,7 +24,10 @@ for name in ("libthinkthen.so", "libthinkthen.a"):
 shutil.copytree(native / "lib/pkgconfig", prefix / "lib/pkgconfig")
 module = home / "module"
 module.mkdir()
-for name in ("LICENSE", "README.md", "go.mod", "thinkthen.go", "result.go", "thinkthen_test.go", "recovery_test.go"):
+for name in ("LICENSE", "README.md", "go.mod"):
+    shutil.copy2(wrapper / name, module / name)
+for path in wrapper.glob("*.go"):
+    name = path.name
     shutil.copy2(wrapper / name, module / name)
 shutil.copytree(wrapper / "examples", module / "examples")
 consumer = home / "external"
@@ -34,7 +37,25 @@ consumer.mkdir()
     "require github.com/botassembly/thinkthen/libraries/go v0.0.1\n"
     f"replace github.com/botassembly/thinkthen/libraries/go => {module}\n"
 )
-shutil.copy2(module / "examples/decide/main.go", consumer / "main.go")
+example = (module / "examples/decide/main.go").read_text().replace('"log"', '"log"\n\t"os"')
+complete = r'''
+	typed, err := thinkthen.NewWith(fmt.Sprintf(`{"base_url":%q,"cache":false}`, os.Getenv("THINKTHEN_BASE_URL")))
+	if err != nil { log.Fatal(err) }
+	defer typed.Close()
+	text := thinkthen.Content{Kind: thinkthen.ContentKindText, Text: "café"}
+	call, err := typed.DecideComplete(context.Background(),
+		thinkthen.Asked(thinkthen.DecideQuestion(thinkthen.Content{Kind: thinkthen.ContentKindText, Text: "Is it?"})),
+		thinkthen.Records([]thinkthen.RecordInput{{Original: thinkthen.Some(text)}}), thinkthen.CallControls{})
+	if err != nil { log.Fatal(err) }
+	if len(call.Rows) != 1 || !call.Rows[0].Value.Boolean || !call.Facts.Present ||
+		call.Facts.Value.Records != 1 || call.Facts.Value.RequestsSent != 1 ||
+		!call.Rows[0].Common.Answer.Present || !call.Rows[0].Common.Answer.Value.Probability.Present ||
+		call.Rows[0].Common.Answer.Value.Probability.Value != .9 || call.Rows[0].Common.AnswerId.String() == "" {
+		log.Fatal("unexpected complete typed result")
+	}
+	fmt.Println("complete=true probability=0.9 requests=1")
+'''
+(consumer / "main.go").write_text(example.rsplit("}", 1)[0] + complete + "}\n")
 abi_env = child_env(THINKTHEN_NATIVE_PREFIX=str(prefix),
                     THINKTHEN_NATIVE_HEADER=str(native / "include/thinkthen.h"),
                     THINKTHEN_NATIVE_SHARED=str(native / "lib/libthinkthen.so"),
@@ -54,16 +75,16 @@ try:
         "THINKTHEN_CACHE": str(home / "thinkthen-cache"), "TT_BARRIER_DIR": str(barrier),
     }
     binary = home / "consumer-shared"
-    subprocess.run([os.environ.get("THINKTHEN_GO_BIN", "go"), "build", "-buildvcs=false", "-p", "2", "-o", str(binary), "."],
+    subprocess.run([os.environ.get("THINKTHEN_GO_BIN", "go"), "build", "-buildvcs=false", "-p", "1", "-o", str(binary), "."],
                    cwd=consumer, env=env, check=True)
     linked = subprocess.check_output(["ldd", str(binary)], text=True, env=env)
     assert str(prefix / "lib") in linked and "libthinkthen.so.0" in linked, linked
     print("GO_SHARED_LINK " + next(line.strip() for line in linked.splitlines() if "libthinkthen.so.0" in line))
     result = subprocess.run([str(binary)], cwd=consumer, env=env, text=True, capture_output=True, timeout=30)
-    assert (result.returncode, result.stdout.strip(), result.stderr) == (0, "outcome=1 probability=0.9", ""), result
+    assert (result.returncode, result.stdout.strip(), result.stderr) == (0, "outcome=1 probability=0.9\ncomplete=true probability=0.9 requests=1", ""), result
     expected = json.loads((Path(__file__).with_name("accepted_requests.jsonl")).read_text().splitlines()[0])
-    assert server.requests == [expected] and server.arrivals == ["café"] and server.attempts == 1, server.requests
-    print(f"GO_INSTALLED_PASS executable={binary} requests=1 body={json.dumps(expected, ensure_ascii=False, sort_keys=True)}")
+    assert server.requests == [expected, expected] and server.arrivals == ["café", "café"] and server.attempts == 2, server.requests
+    print(f"GO_INSTALLED_PASS executable={binary} requests=2 typed_complete=true body={json.dumps(expected, ensure_ascii=False, sort_keys=True)}")
     static_pc = home / "static-pc"
     static_pc.mkdir()
     archive = prefix / "lib/libthinkthen.a"
@@ -75,7 +96,7 @@ try:
     static_binary = home / "consumer-static-c"
     static_env = env | {"PKG_CONFIG_PATH": str(static_pc), "GOCACHE": str(home / "static-cache"),
                         "CGO_LDFLAGS_ALLOW": r"^" + re.escape(str(archive)) + r"$"}
-    subprocess.run([os.environ.get("THINKTHEN_GO_BIN", "go"), "build", "-buildvcs=false", "-p", "2", "-o", str(static_binary), "."],
+    subprocess.run([os.environ.get("THINKTHEN_GO_BIN", "go"), "build", "-buildvcs=false", "-p", "1", "-o", str(static_binary), "."],
                    cwd=consumer, env=static_env, check=True)
     static_linked = subprocess.check_output(["ldd", str(static_binary)], text=True, env=static_env)
     assert "libthinkthen.so" not in static_linked, static_linked
