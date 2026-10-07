@@ -48,3 +48,7 @@ PM ask 8 keeps this existing ticket as npm’s owner. Registry setup and direct 
 ## Implementation choice
 
 Official [staged publishing docs](https://docs.npmjs.com/staged-publishing/) require npm 11.15.0 or later and Node 22.14.0 or later. Pin npm 11.15.0 in both jobs; the existing Node 22.22.3 meets that requirement. The [stage command](https://docs.npmjs.com/cli/v11/commands/npm-stage/) accepts a package specification, dry run, provenance and public access. Keep the exact archive and existing release guards. Ian's npm approval happens after staging; the initial public install check may precede it, so its npm channel is rerun after approval. No registry settings or actual staging change in this implementation.
+
+## Landing slices
+
+Slice A lands the reviewed workflow, parser and approval instructions. Final rehearsal and actual registry staging, approval and public availability remain open under this ticket and final qualification.
