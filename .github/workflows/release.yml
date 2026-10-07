@@ -176,8 +176,8 @@ jobs:
       # The npm job publishes this same path with this same npm; the dry run proves npm reads it as a file.
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
         run: |
-          npm install --global npm@11.6.4
-          npm publish --dry-run "./npm-dist/thinkthen-$VERSION.tgz" --access public
+          npm install --global npm@11.15.0
+          npm stage publish --dry-run "./npm-dist/thinkthen-$VERSION.tgz" --access public
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: npm-package, path: npm-dist/, if-no-files-found: error, retention-days: 7}
 
@@ -410,8 +410,8 @@ jobs:
       # A leading ./ makes npm read a file; npm-dist/x.tgz reads as a GitHub repository.
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
         run: |
-          npm install --global npm@11.6.4
-          npm publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance --access public
+          npm install --global npm@11.15.0
+          npm stage publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance --access public
 
   rubygems:
     needs: [resolve, draft]
