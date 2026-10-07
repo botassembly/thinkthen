@@ -78,9 +78,10 @@ type RecordInput struct {
 }
 
 type FileSource struct {
-	Paths  []string
-	Unit   SourceUnit
-	Window uint64
+	ImageReader bool
+	Paths       []string
+	Unit        SourceUnit
+	Window      uint64
 }
 
 type CallControls struct {

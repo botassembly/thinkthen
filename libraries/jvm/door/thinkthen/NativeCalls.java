@@ -19,6 +19,7 @@ final class NativeCalls {
   add(linker,symbols,"thinkthen_image_clone",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,JAVA_LONG,JAVA_INT,layout("thinkthen_optional_string_v1"),ADDRESS));
   add(linker,symbols,"thinkthen_source_records",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,JAVA_LONG,ADDRESS));
   add(linker,symbols,"thinkthen_source_files",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,ADDRESS));
+  add(linker,symbols,"thinkthen_source_image_files",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,ADDRESS));
   for(String n:List.of("question","image","source","result","batch"))add(linker,symbols,"thinkthen_"+n+"_free",FunctionDescriptor.ofVoid(ADDRESS));
   add(linker,symbols,"thinkthen_result_summary",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS));
   add(linker,symbols,"thinkthen_error_complete",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS));

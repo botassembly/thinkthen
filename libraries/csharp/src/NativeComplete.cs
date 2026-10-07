@@ -12,6 +12,7 @@ internal static partial class NativeComplete {
  [DllImport(Library)]internal static extern void thinkthen_image_free(IntPtr image);
  [DllImport(Library)]internal static extern int thinkthen_source_records(IntPtr e,IntPtr data,nuint len,out IntPtr source);
  [DllImport(Library)]internal static extern int thinkthen_source_files(IntPtr e,ref SourceSpecV1 spec,out IntPtr source);
+[DllImport(Library)]internal static extern int thinkthen_source_image_files(IntPtr e,ref SourceSpecV1 spec,out IntPtr source);
  [DllImport(Library)]internal static extern void thinkthen_source_free(IntPtr source);
  [DllImport(Library)]internal static extern int thinkthen_result_summary(IntPtr r,out SummaryV1 summary);
  [DllImport(Library)]internal static extern int thinkthen_result_observation(IntPtr r,nuint i,out ObservationV1 observation);

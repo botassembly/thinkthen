@@ -18,17 +18,17 @@ class KotlinComplete(settings: String? = null): AutoCloseable, thinkthen.Complet
     fun recognize(question: QuestionInput, source: InputSource, controls: CallControls, deadlineMs: Long = -1, token: Door.Token? = null): CompleteCall<RecognizeRow> = engine.recognizeComplete(question,source,controls,deadlineMs,token)
     fun relate(question: QuestionInput, source: InputSource, controls: CallControls, deadlineMs: Long = -1, token: Door.Token? = null): CompleteCall<RelateRow> = engine.relateComplete(question,source,controls,deadlineMs,token)
     override fun close() = engine.close()
-    fun decideBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1,token:Door.Token? = null): thinkthen.NativeBatch<DecideRow> = engine.decideBatch(q,s,c,deadlineMs,token)
+    override fun decideBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door.Token?): thinkthen.NativeBatch<DecideRow> = engine.decideBatch(q,s,c,deadlineMs,token)
 
-    fun chooseBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1,token:Door.Token? = null): thinkthen.NativeBatch<ChooseRow> = engine.chooseBatch(q,s,c,deadlineMs,token)
+    override fun chooseBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door.Token?): thinkthen.NativeBatch<ChooseRow> = engine.chooseBatch(q,s,c,deadlineMs,token)
 
-    fun tagBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1,token:Door.Token? = null): thinkthen.NativeBatch<TagRow> = engine.tagBatch(q,s,c,deadlineMs,token)
+    override fun tagBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door.Token?): thinkthen.NativeBatch<TagRow> = engine.tagBatch(q,s,c,deadlineMs,token)
 
-    fun scoreBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1,token:Door.Token? = null): thinkthen.NativeBatch<ScoreRow> = engine.scoreBatch(q,s,c,deadlineMs,token)
+    override fun scoreBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door.Token?): thinkthen.NativeBatch<ScoreRow> = engine.scoreBatch(q,s,c,deadlineMs,token)
 
-    fun filterBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1,token:Door.Token? = null): thinkthen.NativeBatch<FilterRow> = engine.filterBatch(q,s,c,deadlineMs,token)
+    override fun filterBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door.Token?): thinkthen.NativeBatch<FilterRow> = engine.filterBatch(q,s,c,deadlineMs,token)
 
-    fun annotateBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1,token:Door.Token? = null): thinkthen.NativeBatch<AnnotateRow> = engine.annotateBatch(q,s,c,deadlineMs,token)
+    override fun annotateBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door.Token?): thinkthen.NativeBatch<AnnotateRow> = engine.annotateBatch(q,s,c,deadlineMs,token)
 
     override fun decideComplete(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door.Token?):CompleteCall<DecideRow> = decide(q,s,c,deadlineMs,token)
 

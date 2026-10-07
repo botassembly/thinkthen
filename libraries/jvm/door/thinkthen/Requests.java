@@ -1,7 +1,7 @@
 package thinkthen;
 import java.util.List;
 import thinkthen.Complete.*;
-/** Prepared host data; execution awaits the complete C constructors and calls. */
+/** Typed native request descriptors. */
 public final class Requests { private Requests() {}
 public enum QuestionRole { ATOMIC, SET, DYNAMIC_CHOOSE, RECOGNIZE, RELATE, RANK, RANK_SET, FIND }
 public record QuestionInput(OptionalValue<Question> question, OptionalValue<String> file, QuestionRole role, OptionalValue<String> saved, OptionalValue<String> named, OptionalValue<String> reference) {

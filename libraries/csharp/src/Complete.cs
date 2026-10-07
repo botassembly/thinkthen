@@ -33,7 +33,7 @@ public sealed record Question(Function Kind, Content Text, Optional<Content> Yes
 public sealed record ImageInput(Media Media, byte[] Bytes, Optional<string> Filename);
 public sealed record ImageView(Media Media, byte[] Bytes, ulong Width, ulong Height, Optional<string> Filename);
 public sealed record RecordInput(Optional<Content> Original, Optional<Content> Context, IReadOnlyList<Choice> Options, IReadOnlyList<ImageInput> Images);
-public sealed record FileSource(IReadOnlyList<string> Paths, SourceUnit Unit, ulong Window);
+public sealed record FileSource(IReadOnlyList<string> Paths, SourceUnit Unit, ulong Window) { public bool ImageReader {get;init;} }
 public sealed record CallControls(Optional<Content> Context, Optional<ulong> Batch, bool BatchMax, bool Attempts);
 public sealed record Probability(string Name, double Value);
 public sealed record DecideValue(ValueKind Kind, bool Boolean, Optional<Content> Authored);

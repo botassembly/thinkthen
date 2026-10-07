@@ -15,7 +15,7 @@ public sealed record InputSource(Optional<IReadOnlyList<RecordInput>> Records, O
 public static InputSource FromRecords(IReadOnlyList<RecordInput> records) => new(Optional.Some(records), default);
 public static InputSource FromFiles(FileSource files) => new(default, Optional.Some(files));
 }
-/// <summary>Prepared host data; execution awaits the complete C constructors and calls.</summary>
+/// <summary>Typed native request descriptors.</summary>
 public sealed record CompleteRequest(Function Function, QuestionInput Question, InputSource Source, CallControls Controls);
 public static class Requests {
 public static CompleteRequest Decide(QuestionInput question, InputSource source, CallControls controls) => new(Function.Decide, question, source, controls);

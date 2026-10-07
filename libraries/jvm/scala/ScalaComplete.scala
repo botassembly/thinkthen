@@ -17,17 +17,17 @@ final class ScalaComplete(settings: String = null) extends AutoCloseable, thinkt
   def recognize(question: QuestionInput, source: InputSource, controls: CallControls, deadlineMs: Long = -1L, token: Door#Token = null): CompleteCall[RecognizeRow] = engine.recognizeComplete(question,source,controls,deadlineMs,token)
   def relate(question: QuestionInput, source: InputSource, controls: CallControls, deadlineMs: Long = -1L, token: Door#Token = null): CompleteCall[RelateRow] = engine.relateComplete(question,source,controls,deadlineMs,token)
   override def close(): Unit = engine.close()
-  def decideBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[DecideRow] = engine.decideBatch(q,s,c,deadlineMs,token)
+  override def decideBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[DecideRow] = engine.decideBatch(q,s,c,deadlineMs,token)
 
-  def chooseBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[ChooseRow] = engine.chooseBatch(q,s,c,deadlineMs,token)
+  override def chooseBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[ChooseRow] = engine.chooseBatch(q,s,c,deadlineMs,token)
 
-  def tagBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[TagRow] = engine.tagBatch(q,s,c,deadlineMs,token)
+  override def tagBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[TagRow] = engine.tagBatch(q,s,c,deadlineMs,token)
 
-  def scoreBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[ScoreRow] = engine.scoreBatch(q,s,c,deadlineMs,token)
+  override def scoreBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[ScoreRow] = engine.scoreBatch(q,s,c,deadlineMs,token)
 
-  def filterBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[FilterRow] = engine.filterBatch(q,s,c,deadlineMs,token)
+  override def filterBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[FilterRow] = engine.filterBatch(q,s,c,deadlineMs,token)
 
-  def annotateBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[AnnotateRow] = engine.annotateBatch(q,s,c,deadlineMs,token)
+  override def annotateBatch(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long = -1L,token:Door#Token = null): thinkthen.NativeBatch[AnnotateRow] = engine.annotateBatch(q,s,c,deadlineMs,token)
 
   override def decideComplete(q:QuestionInput,s:InputSource,c:CallControls,deadlineMs:Long,token:Door#Token):CompleteCall[DecideRow] = decide(q,s,c,deadlineMs,token)
 

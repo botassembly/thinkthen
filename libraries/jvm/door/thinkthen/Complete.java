@@ -3,7 +3,7 @@ import java.util.List;
 import thinkthen.Ids.*;
 import thinkthen.CompleteDetails.*;
 
-/** Owned carriers for the approved complete C boundary; no native complete call is linked. */
+/** Owned typed views of the native complete C boundary. */
 public final class Complete {
     private Complete() {}
     public record OptionalValue<T>(boolean present, T value) {
@@ -40,7 +40,7 @@ public Question(Function kind, Content text, OptionalValue<Content> yes, Optiona
     public record ImageInput(Media media, byte[] bytes, OptionalValue<String> filename) {}
     public record ImageView(Media media, byte[] bytes, Long width, Long height, OptionalValue<String> filename) {}
     public record RecordInput(OptionalValue<Content> original, OptionalValue<Content> context, List<Choice> options, List<ImageInput> images) {}
-    public record FileSource(List<String> paths, SourceUnit unit, Long window) {}
+    public record FileSource(List<String> paths, SourceUnit unit, Long window, boolean imageReader) { public FileSource(List<String> paths, SourceUnit unit, Long window) {this(paths,unit,window,false);} }
     public record CallControls(OptionalValue<Content> context, OptionalValue<Long> batch, Boolean batchMax, Boolean attempts) {}
     public record Probability(String name, Double probability) {}
     public record DecideValue(ValueKind kind, Boolean booleanValue, OptionalValue<Content> authored) {}

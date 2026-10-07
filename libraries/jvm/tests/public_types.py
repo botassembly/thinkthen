@@ -35,7 +35,7 @@ classpath = ":".join(str(jars / f"thinkthen-{part}.jar") for part in ("door", "k
 compiler_env = child_env(JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"),
                          PATH=str(JDK / "bin") + ":" + os.environ.get("PATH", "/usr/bin:/bin"))
 java = [str(JDK / "bin/java"), "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(TARGET / "native/libthinkthen.so")]
-subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java"), str(HERE / "CarrierChecks.java"), str(HERE / "NativeChecks.java")], env=compiler_env, check=True)
+subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java"), str(HERE / "CarrierChecks.java"), str(HERE / "NativeChecks.java"), str(HERE / "NativeCases.java")], env=compiler_env, check=True)
 subprocess.run([str(KOTLIN / "bin/kotlinc"), "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", str(classes) + ":" + classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], env=compiler_env, check=True)
 subprocess.run([str(SCALA / "bin/scalac"), "-J-XX:ActiveProcessorCount=2", "-classpath", str(classes) + ":" + classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], env=compiler_env, check=True)
 backend, port = shared.start_backend()
@@ -56,6 +56,67 @@ def sent():
     backend.stdin.write("count\n")
     backend.stdin.flush()
     return int(backend.stdout.readline())
+
+
+def native_parity(consumer, command):
+    # Reuse the existing C projection/oracle; this adapter executes Go named calls.
+    sys.path.insert(0, str(ROOT / "conformance"))
+    import parity, c_parity
+    cases = {c["id"]: c for c in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
+    named = {c["id"]: c for c in json.loads((ROOT / "conformance/named-inputs.json").read_text())["cases"]}
+    failures = []
+    for row in parity.required_cases(parity.inventory(), consumer).values():
+        failure = None
+        try:
+            value = c_parity.document(row, cases, named)
+            with tempfile.TemporaryDirectory(prefix=f"thinkthen-{consumer}-parity-") as folder:
+                home = Path(folder)
+                env = {"PATH": "/usr/bin:/bin", "HOME": folder,
+                       "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
+                       "XDG_STATE_HOME": str(home / "state"), "LC_ALL": "C.UTF-8", "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": str(ROOT / "target/go/native/lib")}
+                backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                try:
+                    env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback")
+                    c_parity.prepare(home, value)
+                    for step in value.get("steps", [value]):
+                        step = dict(step)
+                        for key in ("paths", "image_paths"):
+                            if key in step and not step.get("owned_jsonl"):
+                                step[key] = [str(ROOT / path) for path in (step[key] or [])]
+                        if (step.get("operation") or {}).get("injection") == "recording_read_failure":
+                            step.update(paths=[str(home / "missing-input")], source_unit=1)
+
+                        settings = {"cache": False, "model": "jev-latest" if "steps" in value else "jev-1.13.0", "batch": 1, "max_retries": 0}
+                        settings.update(step.get("settings", {}))
+                        settings["base_url"] = f"http://127.0.0.1:{backend.port}/{value['arm']}"
+                        settings = {k: str(home / "saved") if v == "$FOLDER" else str(home / "profile.json") if v == "$PROFILE" else v for k, v in settings.items()}
+                        if row["kind"] in ("images", "image-location"):
+                            settings["record"] = str(home / "recorded")
+                        def invoke(given):
+                            framed = c_parity.compact({**step, "engine_settings": c_parity.compact(given)})
+                            args = ["complete:" + framed] if consumer == "scala" else ["complete", framed]
+                            output = subprocess.run(command + args, env=env, cwd=home, capture_output=True, text=True, timeout=60)
+                            assert output.returncode == 0 and not output.stderr, output.stderr
+                            return json.loads(output.stdout)
+                        before = int(backend.read("count"))
+                        got = invoke(settings)
+                        c_parity.assertions(row, step, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
+                        if row["kind"] in ("images", "image-location"):
+                            before = int(backend.read("count"))
+                            saved = invoke({**{k:v for k,v in settings.items() if k != "record"}, "replay": str(home / "recorded")})
+                            c_parity.assertions(row, step, saved, int(backend.read("count")))
+                            assert saved["requests_sent"] == 0 and int(backend.read("count")) == before, saved
+                            assert saved["rows"][0]["answer_id"] == got["rows"][0]["answer_id"], saved
+                finally:
+                    backend.close()
+        except (AssertionError, ValueError, KeyError, TypeError, AttributeError, subprocess.SubprocessError, OSError) as error:
+            failure = type(error).__name__ + ": " + str(error)
+            failures.append((row["id"], failure))
+            print(f"{consumer} fixture {row['id']} failed: {failure}", file=sys.stderr)
+        print("parity: " + json.dumps({"consumer": consumer, "case": row["id"], "checks": row.get("checks", ["named", "runtime"]), "status": "fail" if failure else "pass"}), flush=True)
+    print(f"{consumer} native fixture failures: {len(failures)}")
+    return bool(failures)
+
 
 
 try:
@@ -132,3 +193,10 @@ try:
 
 finally:
     shared.stop_backend(backend)
+
+if selected is not None:
+    raise SystemExit(0)
+failures = False
+for lang, main, runtime in (("java", "TypeCase", ""), ("kotlin", "TypeCaseKt", str(KOTLIN / "lib/kotlin-stdlib.jar")), ("scala", "scalaTypeCase", str(SCALA / "lib/scala.jar"))):
+    failures |= native_parity(lang, java + ["-cp", f"{classes}:{classpath}" + (f":{runtime}" if runtime else ""), main])
+raise SystemExit(failures)

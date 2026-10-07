@@ -256,7 +256,12 @@ func (a *nativeInputs) input(e *C.thinkthen_engine, v InputSource) error {
 		return inputFailure("invalid source unit")
 	}
 	spec := C.thinkthen_source_spec_v1{paths: a.strings(f.Paths), unit: unit, window: C.size_t(f.Window)}
-	rc := C.thinkthen_source_files(e, &spec, &a.source)
+	var rc C.int
+	if f.ImageReader {
+		rc = C.thinkthen_source_image_files(e, &spec, &a.source)
+	} else {
+		rc = C.thinkthen_source_files(e, &spec, &a.source)
+	}
 	if rc != 0 {
 		return completeFailure(e, rc)
 	}

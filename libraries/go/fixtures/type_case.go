@@ -15,6 +15,15 @@ import (
 // "plan" reads one plan input and prints Engine.Plan's object. "fields"
 // reads each annotate row member through ReadField and prints its state.
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "complete" {
+		raw, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(completeCase(raw))
+		return
+	}
+
 	e, err := thinkthen.New()
 	if err != nil {
 		panic(err)
