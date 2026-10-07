@@ -3,14 +3,17 @@ use super::{BLUE, JPEG, RED, fixture, folder, input, question, url};
 use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 use std::num::NonZeroUsize;
+#[cfg(feature = "cli")]
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use thinkthen::{
     Answer, BatchSetting, CallOptions, CancelToken, Engine, ErrorKind, ImageMedia, Question,
 };
 
+#[cfg(feature = "cli")]
 #[path = "../../src/test_deadline/child.rs"]
 mod child;
+#[cfg(feature = "cli")]
 use child::ChildEnvironment as _;
 
 #[path = "local/estimates.rs"]
@@ -395,6 +398,7 @@ fn retries_cache_replay_cancellation_and_batch_changes_keep_the_same_image_quest
     std::fs::remove_dir_all(place).unwrap();
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_profile_uses_the_existing_file_door_and_refuses_unknown_ids_without_sends() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
