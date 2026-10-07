@@ -1,4 +1,5 @@
-/* thinkthen.h: the single C header for thinkthen 0.2.0.
+/*
+ * thinkthen.h is the single C header for thinkthen, version 0.2.0.
  * Plain calls equal their _opts twin with THINKTHEN_NO_DEADLINE and a NULL token.
  * Engines serve concurrent callers and rebuild state after a fork; free them
  * only after all calls return. Free owned strings with thinkthen_free_string.
