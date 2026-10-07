@@ -10,7 +10,8 @@ use crate::current::{Content, QuestionHandle, SourceHandle};
 use crate::failures::{self, DEFECT, Failure, OK, USAGE};
 use crate::ffi::carriers::{
     AnnotateViewV1, ChooseViewV1, ControlsV1, DecideViewV1, DetailsV1, FilterViewV1, FindViewV1,
-    ObservationV1, RankViewV1, RecognizeViewV1, RelateViewV1, ScoreViewV1, SummaryV1, TagViewV1,
+    ObservationV1, RankViewV1, RecognizeViewV1, RelateViewV1, RowObservationV1, ScoreViewV1,
+    SummaryV1, TagViewV1,
 };
 use crate::ffi::current::read;
 use thinkthen::{CallOptions, Facts};
@@ -190,6 +191,18 @@ pub(crate) unsafe extern "C" fn thinkthen_result_observation(
 ) -> i32 {
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.observations.get(at).copied()) }
+}
+/// Borrow a final row at its output position, retaining its original input index.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_row(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut RowObservationV1,
+) -> i32 {
+    // SAFETY: view validates owner/output; get validates the final output position.
+    unsafe { view(owner, out, |r| r.rows.get(at).copied()) }
 }
 macro_rules! row {
     ($name:ident, $ty:ident, $kind:literal, $arm:ident) => {
