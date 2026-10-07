@@ -101,6 +101,7 @@ pub(crate) fn annotation(
     )
     .with_reported_usage(annotation.reported_usage);
     Ok(core::CompleteAnnotation {
+        source: None,
         identity,
         legacy: core::AnnotateResult::new(input, annotation.values, annotation.details, meta),
         members,

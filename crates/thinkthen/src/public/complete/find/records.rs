@@ -68,6 +68,7 @@ impl Engine {
             .try_map(|result| {
                 Ok(CompleteFound {
                     canonical: result.canonical,
+                    sources: result.sources,
                     found: result.found.map(|unit| unit.original),
                 })
             })

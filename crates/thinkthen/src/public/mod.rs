@@ -28,7 +28,7 @@ pub use find_question::FindQuestionFile;
 
 mod annotated;
 mod asking;
-mod batch;
+pub(crate) mod batch;
 mod builders;
 mod bulk;
 mod rank_question;

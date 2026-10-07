@@ -143,6 +143,7 @@ impl Engine {
             )
             .map_err(|_| Error::defect("a complete result could not be constructed"))?;
             result.source = physical_source(input);
+            result.images = ancillary_images(input);
             Ok(result)
         })
     }
@@ -256,4 +257,17 @@ fn physical_source(input: &QuestionInput) -> Option<core::CompletePhysicalSource
         first_line: source.first_line(),
         last_line: source.last_line(),
     })
+}
+
+fn ancillary_images(input: &QuestionInput) -> Option<Vec<core::image::Image>> {
+    match input {
+        QuestionInput::Record(record) if !record.images().is_empty() => Some(
+            record
+                .images()
+                .iter()
+                .map(|image| image.0.clone())
+                .collect(),
+        ),
+        _ => None,
+    }
 }

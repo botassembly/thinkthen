@@ -123,6 +123,7 @@ pub(crate) use crate::core::reply::{
 pub(crate) use crate::core::result::complete::Atomic as CompleteAtomic;
 pub(crate) use crate::core::result::complete::Find as CompleteFind;
 pub(crate) use crate::core::result::complete::Recognition as CompleteRecognition;
+pub(crate) use crate::core::result::complete::find::CandidateDocument as CompleteFindCandidate;
 pub(crate) use crate::core::result::complete::wire::PhysicalSource as CompletePhysicalSource;
 pub(crate) use crate::core::result::complete::{
     Annotation as CompleteAnnotation, AnnotationMember as CompleteAnnotationMember,

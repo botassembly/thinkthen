@@ -25,11 +25,15 @@ pub(super) struct Arguments {
     #[serde(default, deserialize_with = "present")]
     pub(super) question_name: Option<String>,
     #[serde(default, deserialize_with = "present")]
+    pub(super) question_reference: Option<String>,
+    #[serde(default, deserialize_with = "present")]
     pub(super) evidence: Option<String>,
     #[serde(default, deserialize_with = "present")]
     pub(super) records: Option<Vec<Box<RawValue>>>,
     #[serde(default, deserialize_with = "present")]
     pub(super) source: Option<Source>,
+    #[serde(default, deserialize_with = "present")]
+    pub(super) inputs: Option<Vec<super::inputs::Descriptor>>,
     #[serde(default, deserialize_with = "attachments")]
     pub(super) images: Vec<PathBuf>,
     #[serde(default)]
@@ -64,6 +68,8 @@ impl Source {
 #[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Options {
+    #[serde(default)]
+    pub(super) cancelled: bool,
     #[serde(default, deserialize_with = "present")]
     pub(super) deadline_ms: Option<i64>,
     #[serde(default, deserialize_with = "present")]
@@ -82,6 +88,8 @@ pub(super) struct Options {
     pub(super) threshold: Option<Reading>,
     #[serde(default)]
     pub(super) attempts: bool,
+    #[serde(default, deserialize_with = "present")]
+    pub(super) proxy: Option<Box<RawValue>>,
     #[serde(default, deserialize_with = "present")]
     pub(super) batch: Option<Batch>,
     #[serde(default, deserialize_with = "present")]
@@ -105,6 +113,27 @@ impl std::fmt::Debug for Invocation {
 }
 
 impl Arguments {
+    fn validate_descriptors(&self, tool: Tool) -> Result<(), Error> {
+        let inputs = usize::from(self.evidence.is_some())
+            + usize::from(self.records.is_some())
+            + usize::from(self.source.is_some())
+            + usize::from(self.inputs.is_some());
+
+        if self.inputs.is_some() && !self.images.is_empty() {
+            return Err(Error::usage("inputs cannot accompany top-level images"));
+        }
+        if let Some(descriptors) = &self.inputs {
+            for descriptor in descriptors {
+                descriptor.admit(tool, &self.options)?;
+            }
+        }
+        if inputs > 1 || (inputs == 0 && self.images.is_empty()) {
+            return Err(Error::usage(
+                "give one of evidence, records, source or inputs, or explicit images",
+            ));
+        }
+        Ok(())
+    }
     fn validate_paths(&self) -> Result<(), Error> {
         if self
             .question_file
@@ -129,20 +158,14 @@ impl Invocation {
         if usize::from(arguments.question.is_some())
             + usize::from(arguments.question_file.is_some())
             + usize::from(arguments.question_name.is_some())
+            + usize::from(arguments.question_reference.is_some())
             != 1
         {
             return Err(Error::usage(
-                "give exactly one of question, question_file or question_name",
+                "give exactly one question, file, name or explicit reference",
             ));
         }
-        let inputs = usize::from(arguments.evidence.is_some())
-            + usize::from(arguments.records.is_some())
-            + usize::from(arguments.source.is_some());
-        if inputs > 1 || (inputs == 0 && arguments.images.is_empty()) {
-            return Err(Error::usage(
-                "give one of evidence, records or source, or explicit images",
-            ));
-        }
+        arguments.validate_descriptors(params.name)?;
         if !arguments.images.is_empty()
             && (arguments.records.is_some() || arguments.source.is_some())
         {
@@ -213,7 +236,17 @@ impl Invocation {
         })
     }
 
-    /// Borrow the request token; native execution remains responsible for all
+    pub(super) fn call_token(&self, notification: &CancelToken) -> CancelToken {
+        if self.arguments.options.cancelled {
+            let initial = CancelToken::new();
+            initial.cancel();
+            initial
+        } else {
+            notification.clone()
+        }
+    }
+
+    /// Borrow the call token; native execution remains responsible for all
     /// request reservation, observed attempts, scheduling and started failures.
     pub(super) fn controls<'a>(&'a self, token: &'a CancelToken) -> Result<CallOptions<'a>, Error> {
         let options = &self.arguments.options;
@@ -222,6 +255,9 @@ impl Invocation {
             .surface(crate::Surface::Mcp)
             .attempts(options.attempts)
             .max_requests_total(options.max_requests_total);
+        if options.proxy.is_some() {
+            controls = controls.proxy(&crate::ProxyActivation::Empty);
+        }
         if let Some(ms) = options.deadline_ms {
             controls = controls.deadline_ms(ms)?;
         }
@@ -262,7 +298,7 @@ where
     D: serde::Deserializer<'de>,
 {
     let paths = Vec::<PathBuf>::deserialize(deserializer)?;
-    if paths.is_empty() || paths.len() > crate::MAX_IMAGES {
+    if paths.is_empty() {
         return Err(serde::de::Error::custom(
             "image evidence requires 1 to 8 images",
         ));

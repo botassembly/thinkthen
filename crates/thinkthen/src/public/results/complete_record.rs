@@ -48,7 +48,7 @@ macro_rules! serialize_atomic {
     ($($result:ident),+ $(,)?) => { $(
         impl<T: serde::Serialize> serde::Serialize for CompleteRecord<T, super::$result> {
             fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                self.result.canonical.serialize_with_input(Some(&self.original), serializer)
+                self.result.canonical.serialize_occurrence(Some(&self.original), None, Some(self.ordinal), serializer)
             }
         }
     )+ };
@@ -65,20 +65,20 @@ impl<T: serde::Serialize> serde::Serialize for CompleteRecord<T, super::Complete
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.result
             .canonical
-            .serialize_with_input(&self.original, serializer)
+            .serialize_occurrence(&self.original, Some(self.ordinal), serializer)
     }
 }
 
 impl<T: serde::Serialize> serde::Serialize for CompleteRecord<T, super::CompleteRelated> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.result
-            .serialize_input(Some(&self.original), serializer)
+            .serialize_occurrence(Some(&self.original), Some(self.ordinal), serializer)
     }
 }
 
 impl<T: serde::Serialize> serde::Serialize for CompleteRecord<T, super::CompleteRecognized> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.result
-            .serialize_input(Some(&self.original), serializer)
+            .serialize_occurrence(Some(&self.original), Some(self.ordinal), serializer)
     }
 }

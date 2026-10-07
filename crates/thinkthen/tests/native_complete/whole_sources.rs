@@ -62,7 +62,7 @@ fn saved_find_reads_selected_located_units_once_and_retains_every_original_candi
         json!({"state":{"context":"Guidance.","evidence":r#"[{"id":"u001","evidence":"Same."},{"id":"u002","evidence":"Same."},{"id":"u003","evidence":"Other."}]"#},"model":"saved-model","questions":{"q1":{"type":"choice","instructions":{"z":"Which?","a":["Read all."]},"criteria":{"u001":null,"u002":null,"u003":null}}}})
     );
     let doc: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
-    assert_eq!(doc["value"], json!({"z":false,"body":"Same.","a":[2,1]}));
+    assert_serialized_candidates(&doc);
     let replay = build().replay(&folder).unwrap().build().unwrap();
     let replayed = replay
         .try_find_records_complete_with(
@@ -239,4 +239,22 @@ fn assert_find_sources(detail: thinkthen::QuestionDetail<'_>) {
         assert_eq!(record.location().unwrap().first_line(), Some(at + 1));
         assert_eq!(record.location().unwrap().file(), "private.jsonl");
     }
+}
+
+#[cfg(test)]
+fn assert_serialized_candidates(doc: &Value) {
+    assert_eq!(doc["index"], 0);
+    assert_eq!(doc["candidates"].as_array().unwrap().len(), 3);
+    for (at, candidate) in doc["candidates"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(candidate["index"], at);
+        assert_eq!(
+            candidate["input"]["body"],
+            if at == 2 { "Other." } else { "Same." }
+        );
+        assert_eq!(
+            candidate["source"],
+            json!({"file":"private.jsonl","first_line":at+1,"last_line":at+1})
+        );
+    }
+    assert_eq!(doc["value"], json!({"z":false,"body":"Same.","a":[2,1]}));
 }

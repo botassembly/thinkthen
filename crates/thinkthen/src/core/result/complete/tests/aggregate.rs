@@ -12,6 +12,7 @@ use crate::core::{
 fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answer() {
     let base = super::atomic(Vec::new(), Vec::new());
     let canonical = Recognition {
+        source: None,
         identity: base.identity,
         value: RecognizedValue {
             entities: Vec::new(),
