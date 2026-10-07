@@ -16,3 +16,5 @@ Native result materialization must preserve admitted originals after a send; an 
 
 The landing lint caught a CLI admission-test child inheriting its parent environment. It now clears the environment through the existing child helper before adding its isolated folders and fixture key.
 The source total rises by one line for that child-environment isolation call; the measured ratchet is 153171.
+
+Astra identified the refused older files recordings as controlled synthetic replies with persisted origin `fixture`. The cache validator now admits that explicit fourth origin for v1 and v2 while preserving all original bytes and observation IDs. Native-store replay, conversion, migration/reopen and unknown-origin regressions passed; a fresh code review covers this bounded compatibility fix. The files example comparison retains every JSON value and row order while ignoring object field order; filenames-only output remains byte-exact.
