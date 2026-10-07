@@ -44,6 +44,7 @@ pub(crate) struct Item {
     pub(crate) at: usize,
     pub(crate) position: Option<Position>,
     pub(crate) data: Data,
+    pub(crate) images: Option<crate::public::ImageEvidence>,
 }
 
 struct TextSource {
@@ -129,7 +130,7 @@ impl Source {
         }
         match self {
             Self::Images(items) => images::next(items),
-            Self::Attached(attachment) => attachment.next(),
+            Self::Attached(_) => None,
             Self::Pending { .. } => None,
             Self::Table(rows) => rows.next().map(|row| {
                 row.map(|record| Piece {
@@ -190,6 +191,16 @@ impl Intake {
         if common.images() {
             return images::prepare(common, reading, input, has_on).map(|intake| (intake, None));
         }
+        Self::text(common, reading, input, has_on, snapshot)
+    }
+
+    fn text(
+        common: &Common,
+        reading: &Reading,
+        input: impl Read + Send + 'static,
+        has_on: bool,
+        snapshot: bool,
+    ) -> Result<(Self, Option<Snapshot>), Failure> {
         let window = window(common, has_on)?;
         let paths = crate::enumerate_files(&common.input)
             .map_err(|error| Failure::OpenInput(std::io::Error::other(error.to_string())))?;
@@ -270,6 +281,9 @@ impl Iterator for Intake {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let source = self.sources.front_mut()?;
+            if let Source::Attached(attachment) = source {
+                return attachment.next();
+            }
             let Some(piece) = source.next(self.reading.streams(), self.window) else {
                 self.sources.pop_front();
                 continue;
@@ -299,6 +313,7 @@ impl Iterator for Intake {
                 at,
                 position: piece.position,
                 data: piece.data,
+                images: None,
             }));
         }
     }

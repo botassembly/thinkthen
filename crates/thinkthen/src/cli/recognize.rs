@@ -44,6 +44,7 @@ struct Running<'a> {
     environment: &'a Environment,
     engine: Engine,
     mismatch: profile::Mismatch,
+    context: Option<String>,
 }
 
 #[expect(
@@ -57,6 +58,7 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     arguments.common.check_plan_name()?;
+    let context = asking::context::shared(arguments.context.as_deref())?;
     let mut spec = config::settle(arguments)?;
     let max_text_bytes = arguments.max_text_bytes.unwrap_or(MAX_TEXT_BYTES);
     let pointers = if arguments.common.field.is_empty() {
@@ -127,6 +129,7 @@ pub(crate) fn run(
                 limit: max_text_bytes,
                 key_env: environment.key_variable(),
                 backend_name: environment.named(),
+                context: context.as_deref(),
             },
             &mut writer,
         );
@@ -143,8 +146,10 @@ pub(crate) fn run(
             backend,
             selected_profile,
             arguments.common.jobs,
-        )?,
+        )?
+        .with_aggregate_context(context.clone()),
         mismatch,
+        context,
     };
     let streams = reading.streams();
     if !streams && !arguments.common.located() && arguments.common.input.len() <= 1 {
@@ -279,7 +284,7 @@ fn judged_record(
             crate::result_json::complete::RecognitionRow {
                 ordinal: row.ordinal,
                 input: row.streams.then_some(record),
-                context_sha256: None,
+                context_sha256: asking::context::digest(running.context.as_deref()),
                 attempts: Some(events),
             },
         )

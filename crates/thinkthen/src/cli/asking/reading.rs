@@ -1,5 +1,8 @@
 //! Resolve the command's framing before it starts reading records.
 
+use super::judged::Held;
+use crate::schedule::Placed;
+
 use super::{Common, Failure, Framing, Keeping, Reading, Resolved};
 
 /// Read the framing the command line asked for, over the settled pointers.
@@ -27,4 +30,25 @@ pub(super) fn read_by(
     Ok(Reading::new(framing, on)?
         .by_default()
         .with_item_schema(settled.metadata().item_schema.clone()))
+}
+
+/// Charge original evidence at source admission, leaving the iterator tail unread.
+pub(super) fn charge(reading: &Reading, held: &Held, remaining: &mut usize) -> Result<(), Placed> {
+    let record_error = |error| Placed::at(Failure::record(error, reading.streams()), held.at);
+    let bytes = match &held.arrived {
+        Some(bytes) => reading.as_it_arrived(bytes).map_err(record_error)?.len(),
+        None => reading
+            .evidence(&held.record)
+            .map_err(record_error)?
+            .as_text()
+            .map_err(|error| Placed::at(Failure::from(error), held.at))?
+            .len(),
+    };
+    *remaining = remaining.checked_sub(bytes).ok_or_else(|| {
+        Placed::at(
+            Failure::Usage("source rank reads at most 16 MiB across all input records"),
+            held.at,
+        )
+    })?;
+    Ok(())
 }

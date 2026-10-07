@@ -14,6 +14,7 @@ pub(crate) enum Version {
 #[serde(untagged)]
 pub(crate) enum AtomicValue<'a> {
     Primitive(&'a Value),
+    Authored(&'a crate::core::text::Meaning),
     Rank(std::num::NonZeroUsize),
 }
 #[derive(Serialize)]

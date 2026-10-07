@@ -4,6 +4,9 @@ use super::Common;
 
 #[derive(Args, Debug)]
 pub(crate) struct RelateArguments {
+    /// Share the exact UTF-8 contents of FILE separately from the complete entity set.
+    #[arg(long, value_name = "FILE", hide_short_help = true)]
+    pub(crate) context: Option<std::path::PathBuf>,
     /// Relation rules as NAME=SOURCE_KIND:TARGET_KIND, bare NAME, or one @FILE.
     #[arg(value_name = "RELATION", required = true)]
     pub(crate) relations: Vec<String>,

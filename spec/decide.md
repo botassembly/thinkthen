@@ -242,3 +242,11 @@ test -z "$refusal_stdout"
 echo "$refusal_code" | mustmatch "2"
 printf 'x' | thinkthen decide 'asks for a refund' --plan --url ftp://127.0.0.1/v1 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\`"
 ```
+
+Separate per-record context stays outside the selected evidence. `--context-field` uses the ordinary JSON Pointer reader. A shared context file also acts on a single document.
+
+```bash
+printf '{"body":"Payouts failed.","context":"Payment catalog"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --context-field /context --plan | sed -n '1p' | jq -c '.request | {state, instructions: .questions.q1.instructions}' | mustmatch '{"state":"Payment catalog","instructions":"The text is \"Payouts failed.\". reports a payment failure"}'
+printf 'Payment catalog' > cli-context.txt
+printf 'Payouts failed.' | thinkthen decide 'reports a payment failure' --context cli-context.txt --plan | sed -n '1p' | jq -r '.request.state' | mustmatch 'Payment catalog'
+```

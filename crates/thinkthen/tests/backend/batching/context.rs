@@ -282,14 +282,6 @@ fn a_context_refuses_invalid_file_and_question_shapes_before_a_send() {
     let question = format!("@{structured}");
     let cases = [
         (
-            "document",
-            super::QUESTION,
-            valid.as_str(),
-            false,
-            2,
-            "thinkthen: --context shares one text across the records of a stream, and a single text is one record\n",
-        ),
-        (
             "missing",
             super::QUESTION,
             missing.as_str(),

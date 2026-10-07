@@ -23,6 +23,7 @@
         {
           "$ref": "#/$defs/value"
         },
+        {},
         {
           "format": "uint",
           "minimum": 1,
@@ -2095,6 +2096,7 @@
         {
           "$ref": "#/$defs/completevalue"
         },
+        {},
         {
           "format": "uint",
           "maximum": 18446744073709551615,

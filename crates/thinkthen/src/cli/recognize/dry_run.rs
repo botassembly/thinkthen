@@ -79,6 +79,7 @@ pub(super) struct Question<'a> {
     /// The first key variable of the selected backend.
     pub(super) key_env: &'a str,
     pub(super) backend_name: Option<&'a str>,
+    pub(super) context: Option<&'a str>,
 }
 
 pub(super) fn run(
@@ -118,13 +119,22 @@ fn planned(
         limit,
         key_env,
         backend_name,
+        context,
     } = question;
     let mut summary = PlanSummary::new(true);
     let mut first = None;
     for record in records {
         let record = record?;
         let text = reading.evidence(&record)?.as_text()?.into_owned();
-        let (pieces, _, prepared) = facade::step_one(backend, profile, spec, &text, limit)?;
+        let (pieces, asks, prepared) = facade::step_one(backend, profile, spec, &text, limit)?;
+        let prepared = match context {
+            Some(context) => asks.with_context(backend, context)?.requests(
+                backend,
+                profile,
+                facade::Bound::WHOLE,
+            )?,
+            None => prepared,
+        };
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;

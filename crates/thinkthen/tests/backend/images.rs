@@ -3,6 +3,7 @@ use crate::harness::{Canned, Listener, spawn};
 use serde_json::{Value, json};
 use std::{fs, path::PathBuf, process::Output};
 
+mod framing;
 mod identity;
 
 const REPLY: &str =
@@ -195,7 +196,14 @@ fn unsupported_functions_contradictory_modes_and_malformed_attachments_send_noth
     let red = fixture("red.png");
     let bad = fixture("progressive-app14-one-component.jpg");
     for args in [
-        vec!["decide", "Q?", "--image", red.to_str().unwrap(), "--lines"],
+        vec![
+            "decide",
+            "Q?",
+            "--image",
+            red.to_str().unwrap(),
+            "--window",
+            "2",
+        ],
         vec![
             "decide",
             "Q?",

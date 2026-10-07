@@ -139,9 +139,10 @@ parity: {"consumer":"rust","case":"annotate-packed-groups","checks":["named","ru
 The `checks` list must equal the resolved declaration's list (default
 `named,runtime`; SDK and MCP typed cells also require `compile`). The CLI
 consumer declares `required_checks: ["named", "runtime"]` because its actual
-public boundary is a process. Its closed `case_rulings` map names ten SDK-only
+public boundary is a process. Its closed `case_rulings` map names eleven SDK-only
 cases, twenty-three question-file analogues and the held-call signal-drain
-analogue. Each ruling has a fixed `boundary` and a nonempty `reason`.
+analogue, plus one closed image-record admission variant. Each ruling has a fixed `boundary` and a nonempty `reason`.
+Materialized SDK collections validate the complete set before dispatch; CLI files retain incremental admission. Distinct large captions use raw document files with unchanged byte, image, original and exact wire assertions. They prove complete-question admission without a grouped-splitting claim. The Perplexity same-caption reversed-shortlist variant requires an over-cap JSONL envelope and has an exact Usage, exit 2, zero-send, no-result refusal. Liquid reversed shortlists and SDK splitting keep their original assertions.
 Executable analogues also declare concrete `expect` assertions. Question-file
 analogues retain the original invalid bytes, including duplicate keys and
 numeric spelling, and require Local, exit 5, no requests, no result and secrecy.
