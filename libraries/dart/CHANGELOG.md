@@ -1,5 +1,7 @@
 ## 0.2.0 (unreleased)
 
+- Correct legacy native C counts and count pointers to `Size`. High-level Dart `int` calls stay compatible. Callers using the exported low-level `Door` native getters should allocate counts with `calloc<Size>()` instead of `calloc<IntPtr>()`.
+
 Version 0.2 is in progress on main.
 
 ## 0.1.2
