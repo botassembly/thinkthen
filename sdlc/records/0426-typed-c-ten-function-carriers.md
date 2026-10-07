@@ -23,3 +23,5 @@ The landing run also exposed a private replay parser rejecting the public-runtim
 ## Remaining work
 
 The host families adopt these typed carriers. The global parity table, installed packages and final Windows/macOS qualification remain required before 0.2 is complete.
+
+A narrow follow-up exposes the existing final row wrapper with its original input index. Filtering and ranking preserve input identities instead of fabricating output positions. The existing guarded accessor retains borrowed lifetimes and unchanged outputs on invalid arguments. A three-request installed sanitizer regression and C Clippy passed; a fresh High review accepted the additive accessor.
