@@ -94,6 +94,7 @@ fn named_native_loaders_preserve_path_collisions_and_confine_symlinks_without_co
     assert!(!config(root.path()).join("config.json").exists());
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_errors() {
     let root = Folder::new().unwrap();
@@ -257,6 +258,7 @@ fn check_named(root: &Path) {
     }
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batches() {
     let root = Folder::new().unwrap();

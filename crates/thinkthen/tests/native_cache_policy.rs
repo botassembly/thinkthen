@@ -304,6 +304,7 @@ fn explicit_record_refuses_after_one_paid_send_with_started_facts_and_no_answer_
     assert!(!folder.0.join("thinkthen.jsonl").exists());
 }
 
+#[cfg(feature = "cli")]
 fn command(
     listener: &Listener,
     folder: &Folder,
@@ -338,6 +339,7 @@ fn command(
     child.wait_with_output()
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn refresh_evicts_only_after_a_valid_nonstorable_reply_and_failed_refresh_keeps_the_old_answer() {
     for failed in [false, true] {
@@ -376,6 +378,7 @@ fn refresh_evicts_only_after_a_valid_nonstorable_reply_and_failed_refresh_keeps_
     }
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn command_record_refusal_reports_local_exit_and_final_started_facts_without_repeating_headers() {
     let folder = Folder::new().unwrap();
