@@ -1,18 +1,18 @@
 # Agent instructions for thinkthen
 
-Read `README.md`, `specification/README.md`, then `sdlc/planning/rust-standards.md`. The specification is the contract. Current scope lives in `sdlc/planning/milestones.md`; current order and lane assignments live in `sdlc/planning/team-0-2-2026-10-04.md`.
+Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification; scope: `sdlc/planning/milestones.md`; order and lanes: `sdlc/planning/team-0-2-2026-10-04.md`.
 
 ## Build and review
 
 Use one fresh review of the whole ticket or slice, then fix and land. A second review is allowed only when a substantial fix touches data loss, credentials, money, memory safety or user-visible correctness. A new dependency also takes the second reviewer required by the Rust standards. Run full tests and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Write one short record per ticket at landing; name tests by behavior. Keep release rehearsal and Ian's approvals.
 
 - Build simply: YAGNI, DRY, local behavior, separate concerns. Add commands and options only for demos. Land outside-in CLI/API, edge-table, contract, or prior-failing regression tests; delete scaffolding. See workspace decision `2026-09-24-tests-earn-their-place.md`.
-- Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change. Run full tests and lint on the landing commit; run `spec` and affected surface checks when the change needs them. Load and timing run only through `test-stress --run`. Gates use no network.
+- Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change, plus `spec` and affected surfaces when needed. Load and timing run only through `test-stress --run`. Gates use no network.
 - Hand-written Rust and binding source/test files warn at 500–999 nonblank lines and fail at 1,000. Explain a warning in the change’s commit; avoid mechanical splits. Generated source, vendored dependencies and build output remain excluded. `sdlc/ratchet.json` equals the measured source total; explain growth. These checks require no additional reviewer.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
 - Keep checks that protect behavior, secrecy, spend, boundaries, or ticket evidence. A check that only polices prose may go; the commit says why.
-- Beelink is the primary build machine. M5 may run experiments and Mac-specific checks, including before a release-candidate run; do not run it after every ticket. Reduce jobs under pressure, isolate lane outputs, and retain shared toolchain and cache mutation locks.
-- Keep each lane at 40 GB total, including its `libraries/` and `databases/` builds. At landing remove that ticket’s owned scratch folders and logs under `target/`, retaining warm build folders. Fully clean an idle lane only below 50 GB free; require 50 GB free before full parity. Keep source and build copies per lane because a shared copy would mix branches.
+- Beelink is primary. M5 may run experiments and Mac-specific checks, including before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
+- Cap each lane at 40 GB total, including `libraries/` and `databases/`. At landing delete only its ticket-owned `target/` scratch/logs; keep warm builds. Fully clean idle lanes only below 50 GB free. Require 50 GB free before full parity. Keep branch-specific source/build copies; sharing mixes branches.
 - Tickets follow `sdlc/tickets/README.md`. Commit and push whole changes without agent attribution. Use a claimed lane per `sdlc/planning/worktrees.md`; the lander frees it.
 
 ## Boundaries
