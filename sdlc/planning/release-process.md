@@ -23,9 +23,9 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 
 ## 4. Rehearsals
 
-1. A rehearsal dispatches the release workflow in rehearse mode by hand, under Ian's approval: `gh workflow run release.yml --ref main -f mode=rehearse`. Rehearsals run from main until the next release branch is cut, then from that branch, such as `--ref release/0.2` (ADR 0116 item 7). `release/0.1` is frozen.
+1. Stage 1 dispatches the release workflow by hand on the reviewed candidate tag: `gh workflow run release.yml --ref rc/0.2.0-rc.N -f mode=rehearse`. Dispatch `windows.yml` on the same tag. Ian delegated these qualification runs on 2026-10-07. Hosted runs happen at this candidate checkpoint, or for a Windows-only fix that cannot be checked locally. Batch Windows fixes; do not dispatch workflows after each ticket. `release/0.1` is frozen.
 2. Rehearse mode builds, smokes and collects a draft. It publishes nothing.
-3. Rehearsals repeat until every job passes through `draft` on all four targets with zero "not run".
+3. Stage 1 passes through `draft` on all five targets: Linux x86_64 and ARM64, macOS ARM64 and Intel, and Windows. Required checks have zero "not run". A failed candidate is fixed on main and qualified under the next candidate tag. M5 is allowed for experiments and Mac-specific checks, including before the candidate; Beelink remains the primary build machine.
 4. Ticket 0128 records each attempt and its result.
 
 A rehearsal checks the publish inputs for each registry (ticket 0398 slice A):
@@ -50,7 +50,7 @@ Rehearsals hold no OIDC token, use no registry secrets, and require no environme
 
 The release branch is named for the major and minor version: `release/0.2` for 0.2. Ticket 0128 phase 4 holds the release details. The cut runs in this order:
 
-1. **The release candidate holds on main.** The rehearsal is clean, release QA's latest round is clean, and only release fixes remain (ADR 0116 item 3).
+1. **The release candidate holds on main.** Implementation, installed-package parity and local checks are complete. Only release fixes remain. Stage 1 qualifies this candidate; a previous rehearsal does not qualify a changed commit.
 2. **The release commit lands on main.** Main already carries the next version, so the release commit does not run `versions --set`. On a ticket branch from main, the agent dates the changelog headings and writes the public install text for the release, as ticket 0396 did for 0.1.2:
    - `CHANGELOG.md`: date the unreleased heading. Remove `(unreleased)` from the matching heading in `libraries/dart/CHANGELOG.md`.
    - Update `install.sh`, its site copy, and the release names in `libraries/{ada,cobol,csharp,go,jvm,objective-c}/README.md`.
@@ -59,8 +59,8 @@ The release branch is named for the major and minor version: `release/0.2` for 0
    Afterwards, `git grep -nE '(^|[^0-9.])OLD_VERSION([^0-9.]|$)'`, with the old version escaped in place of `OLD_VERSION`, outside `sdlc/records`, `sdlc/tickets`, `sdlc/issues`, `sdlc/planning`, `probes`, locks and `.jsonl` fixtures finds only retained history and fixtures. The coordinator lands the commit.
 3. **Checkpoint and QA on the cut.** The coordinator runs the checkpoint sweep of section 2 on that main commit. Release QA runs its round on it (section 3).
 4. **The cut.** The coordinator tags `rc/0.2.0-rc.1` on that commit under worktrees.md and pushes `release/0.2` from it.
-5. **The rehearsal from the release branch.** Ian dispatches `gh workflow run release.yml --ref release/0.2 -f mode=rehearse`. It passes on all four targets.
-6. **Ian's go.** Ian tags `v0.2.0` on the head of `release/0.2` and dispatches release mode from the tag. The tag must name the exact commit of a successful rehearsal. Section 6 and ticket 0128 phase 4 continue from there.
+5. **Stage 1 on the candidate tag.** Dispatch `release.yml` with `mode=rehearse` and `windows.yml` from `rc/0.2.0-rc.N`. Both qualify the exact reviewed commit. Fix failures on main and use the next candidate tag. Release QA must pass before stage 2.
+6. **Stage 2 after Ian's go.** Tag the qualified commit `v0.2.0` and dispatch `release.yml` with `mode=release` from that tag only after Ian explicitly authorizes publication. The release tag must name the exact commit that passed stage 1 and QA. Section 6 and ticket 0128 phase 4 continue from there.
 
 There are no 0.1.x releases. `release/0.1` is frozen, and nothing is cherry-picked to it. Every fix lands on main and ships in the next release. Right after a release, main moves to the next version. Ticket 0397 moves main to 0.2.0 under Ian's ruling of 2026-10-04.
 
@@ -70,7 +70,9 @@ Main's public install text names the latest published release until the next rel
 
 1. The real release is dispatched only on Ian's go.
 2. Before the dispatch, the coordinator runs `sdlc/scripts/workflows --remote-pins`. It asks GitHub whether each pinned action names a commit. A pin that names a tag object passes the offline gate and fails only in the release run (ticket 0391).
-3. Release mode runs from a `v*` tag. Resolve refuses before any build unless that exact commit has a completed successful `release.yml` dispatch from main or a numeric `release/X.Y` branch. A successful tag run does not count. An unreadable run history refuses. Rehearse mode reads no run history. Each publish job waits for Ian's approval in the GitHub `release` environment (ticket 0128).
+3. Release mode runs from a matching `v*` tag. Resolve refuses before any build unless that exact commit has a completed successful `release.yml` rehearsal dispatch from its matching candidate tag. An unreadable run history refuses. Rehearse mode reads no run history. Each publish job waits for Ian's run-specific approval in the GitHub `release` environment (ticket 0128).
+
+   Implementation note: 0425 must update the resolver and rehearsal eligibility checks to admit matching candidate tags before stage 1 runs. The existing workflows already support manual dispatch and the two modes; their current branch-only eligibility does not implement this ruling.
 4. The npm job stages the packed archive using trusted publishing. Ian reviews and approves the staged version on npmjs.com with two-factor authentication before npm makes it public. The GitHub `publish` job can finish before that approval. The initial public-package install check may report the npm version unavailable until approval; rerun that channel check after approval.
 5. After publishing the GitHub release and Go module tag, `publish` dispatches `install-check.yml` from that release tag with the resolved version (ticket 0398 slice B). The separate workflow reads public channels with only `contents: read`. It has no environment approval, OIDC token or secret. The coordinator records its run and every channel result in the release's ticket.
 6. A late Go proxy, Packagist or older R-universe index gets one hand dispatch later. R-universe keeps only its current version. A superseded request reports the requested and listed versions and gets no retry advice. Its Linux check accepts only the resolute R 4.6 binary. Hosted runner proof remains pending an approved manual check.
