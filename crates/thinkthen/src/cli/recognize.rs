@@ -3,17 +3,19 @@
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
+#[cfg(test)]
 use serde::Serialize;
 
 use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
 use crate::cli::intake::{Data, Intake, Item};
-use crate::core::{
-    Meta, ModelName, Outcome, Reading, RecognizeSpec, Record, RecordValue, RequestMeta, json_line,
-    recognize_sha256,
-};
+#[cfg(test)]
+use crate::core::Meta;
+use crate::core::{ModelName, Outcome, Reading, RecognizeSpec, Record, RecordValue, json_line};
 use crate::edge::{self, Environment};
-use crate::engine::facade::{Engine, MAX_TEXT_BYTES, Probabilities, Recognized};
+use crate::engine::facade::{Engine, MAX_TEXT_BYTES};
+#[cfg(test)]
+use crate::engine::facade::{Probabilities, Recognized};
 use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 use crate::schedule;
@@ -22,6 +24,7 @@ mod config;
 mod dry_run;
 mod source;
 
+#[cfg(test)]
 #[derive(Debug, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[cfg_attr(test, schemars(rename = "recognizeDetails"))]
@@ -151,14 +154,16 @@ pub(crate) fn run(
             .transpose()
             .map_err(|placed| placed.cause)?
             .ok_or(Failure::Defect("document recognize has no input"))?;
-        let judged = judged_item(&running, &reading, &spec, &item)?;
+        let judged = judged_item(&running, &reading, &spec, &item, 0)?;
         schedule::Output::streaming(&mut writer, environment.usage()).take(judged)?;
         return Ok(ExitCode::SUCCESS);
     }
     schedule::over_records(
         &running.engine,
-        &|item: &Item| judged_item(&running, &reading, &spec, item),
-        source.map(|item| item.map(|item| (item.at, item))),
+        &|(ordinal, item): &(usize, Item)| judged_item(&running, &reading, &spec, item, *ordinal),
+        source
+            .enumerate()
+            .map(|(ordinal, item)| item.map(|item| (item.at, (ordinal, item)))),
         environment.cancel(),
         &mut schedule::Output::streaming(&mut writer, environment.usage()),
     )
@@ -169,6 +174,7 @@ fn judged_item(
     reading: &Reading,
     spec: &RecognizeSpec,
     item: &Item,
+    ordinal: usize,
 ) -> Result<schedule::Judged, Failure> {
     let streams = reading.streams();
     let record = match &item.data {
@@ -182,27 +188,76 @@ fn judged_item(
             ));
         }
     };
-    let mut judged = judged_record(running, reading, spec, record, streams)?;
-    if let Some(position) = item
+    let location = item
         .position
         .as_ref()
         .filter(|p| p.located || running.common.input.len() > 1)
-    {
-        let mut position = position.clone();
-        position.located = true;
-        let Data::Bytes(bytes) = &item.data else {
-            return Err(Failure::Usage("located recognize needs text units"));
-        };
-        source::locate(
-            &mut judged.printed,
-            &position,
-            reading.as_it_arrived(bytes)?,
+        .map(|position| {
+            let Data::Bytes(bytes) = &item.data else {
+                return Err(Failure::Usage("located recognize needs text units"));
+            };
+            let mut position = position.clone();
+            position.located = true;
+            Ok((position, reading.as_it_arrived(bytes)?.to_owned()))
+        })
+        .transpose()?;
+    let mut judged = judged_record(
+        running,
+        reading,
+        spec,
+        record,
+        Render {
             streams,
-            running.common.details,
-        )?;
+            ordinal,
+            location: location
+                .as_ref()
+                .map(|(position, text)| (position, text.as_str())),
+        },
+    )?;
+    if let Some((position, _)) = location {
         judged.position = Some(position);
     }
     Ok(judged)
+}
+
+fn execute(
+    running: &Running<'_>,
+    spec: &RecognizeSpec,
+    text: &str,
+) -> Result<
+    (
+        crate::engine::facade::Recognition,
+        Vec<crate::core::AttemptObservation>,
+    ),
+    Failure,
+> {
+    let cancel = running
+        .environment
+        .cancel()
+        .with_captured_attempts(running.common.details);
+    let mut events = std::collections::BTreeMap::new();
+    let recognition = running
+        .engine
+        .recognize_observed(
+            spec,
+            text,
+            running.max_text_bytes,
+            &cancel,
+            |_, _, answered| {
+                for event in &answered.attempts {
+                    events.insert(event.ordinal(), event.clone());
+                }
+                Ok(())
+            },
+        )
+        .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Recognize))?;
+    Ok((recognition, events.into_values().collect()))
+}
+
+struct Render<'a> {
+    streams: bool,
+    ordinal: usize,
+    location: Option<(&'a crate::cli::intake::Position, &'a str)>,
 }
 
 fn judged_record(
@@ -210,53 +265,58 @@ fn judged_record(
     reading: &Reading,
     spec: &RecognizeSpec,
     record: Record,
-    streams: bool,
+    row: Render<'_>,
 ) -> Result<schedule::Judged, Failure> {
     let evidence = reading.evidence(&record)?;
     let text = evidence.as_text()?.into_owned();
-    let recognition = running
-        .engine
-        .recognize(
-            spec,
-            &text,
-            running.max_text_bytes,
-            running.environment.cancel(),
-        )
-        .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Recognize))?;
-    let (value, details, aggregate) = (recognition.value, recognition.details, recognition.meta);
+    let (recognition, events) = execute(running, spec, &text)?;
+    let replayed = !recognition.meta.live;
     let line = if running.common.details {
-        let model = aggregate
-            .model
-            .unwrap_or_else(|| running.engine.backend().model().clone());
-        let meta = Meta::new(
-            env!("CARGO_PKG_VERSION"),
-            recognize_sha256(spec)?,
-            running.engine.backend().url().clone(),
-            model,
-            aggregate.usage,
-            RequestMeta::new(!aggregate.live, aggregate.requests_sent, aggregate.requests)
-                .with_profile_warning(running.mismatch.warning()),
+        let canonical = crate::result_json::complete::recognition(
+            &running.engine,
+            spec,
+            recognition,
+            crate::result_json::complete::RecognitionRow {
+                ordinal: row.ordinal,
+                input: row.streams.then_some(record),
+                context_sha256: None,
+                attempts: Some(events),
+            },
         )
-        .with_reported_usage(aggregate.reported_usage);
-        json_line(&Detailed {
-            schema: crate::core::RESULT_SCHEMA,
-            value: &value,
-            input: streams.then_some(record),
-            question: spec,
-            answer: &details,
-            meta,
-        })?
-    } else if streams {
-        json_line(&RecordValue::new(record, value))?
+        .map_err(|_| Failure::Defect("a complete recognition could not be constructed"))?;
+        match row.location {
+            Some((position, text)) => json_line(&source::Complete {
+                canonical: &canonical,
+                value: source::located(&canonical.value, position, text)?,
+            })?,
+            None => json_line(&canonical)?,
+        }
     } else {
-        json_line(&value)?
+        match row.location {
+            Some((position, text)) => {
+                let value = source::located(&recognition.value, position, text)?;
+                if row.streams {
+                    json_line(&RecordValue::new(record, value))?
+                } else {
+                    crate::cli::intake::source_value(&text, &json_line(&value)?, position)?
+                }
+            }
+            None if row.streams => json_line(&RecordValue::new(record, recognition.value))?,
+            None => json_line(&recognition.value)?,
+        }
     };
+    let mut printed = Some(line);
+    if let Some((position, _)) = row.location
+        && (row.streams || running.common.details)
+    {
+        crate::cli::intake::source_members(&mut printed, Some(position))?;
+    }
     Ok(schedule::Judged {
         model: None,
-        printed: Some(line),
+        printed,
         position: None,
         outcome: Outcome::Yes,
-        replayed: !aggregate.live,
+        replayed,
         order_value: None,
         partial_failure: false,
         profile_mismatch: running.mismatch.notice(),

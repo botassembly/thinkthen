@@ -357,11 +357,11 @@ pub(crate) fn document(
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub(crate) struct SourceFields<'a> {
-    file: Option<&'a str>,
+    pub(crate) file: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    first_line: Option<usize>,
+    pub(crate) first_line: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    last_line: Option<usize>,
+    pub(crate) last_line: Option<usize>,
 }
 
 pub(crate) fn source_members(

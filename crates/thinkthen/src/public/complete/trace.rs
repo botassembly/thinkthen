@@ -1,17 +1,8 @@
-//! Actual ordered stage observations and aggregate metadata from the one engine.
-use crate::core::{self, Meta, RequestMeta};
+//! Call-option context delegates to shared aggregate metadata assembly.
+use crate::core::{self, Meta};
 use crate::engine::facade;
 use crate::public::CallOptions;
-
-pub(super) struct Totals {
-    pub(super) model: Option<core::ModelName>,
-    pub(super) usage: Option<core::Usage>,
-    pub(super) reported: Option<core::ReportedUsage>,
-    pub(super) cached: bool,
-    pub(super) sent: u64,
-    pub(super) requests: Vec<String>,
-    pub(super) failed: usize,
-}
+pub(super) use crate::result_json::complete::Totals;
 pub(super) fn meta(
     engine: &facade::Engine,
     digest: String,
@@ -20,27 +11,15 @@ pub(super) fn meta(
     attempts: Option<Vec<core::AttemptObservation>>,
     profile: Option<&core::ProfileName>,
 ) -> Meta {
-    Meta::new(
-        env!("CARGO_PKG_VERSION"),
+    crate::result_json::complete::aggregate_meta(
+        engine,
         digest,
-        engine.backend().url().clone(),
-        totals
-            .model
-            .unwrap_or_else(|| engine.backend().model().clone()),
-        totals.usage,
-        RequestMeta::new(totals.cached, totals.sent, totals.requests)
-            .with_failed_questions(totals.failed)
-            .with_profile_warning(core::ProfileWarning::between(
-                profile,
-                engine.profile().map(core::BackendProfile::name),
-            ))
-            .with_context_sha256(
-                options
-                    .context_text()
-                    .filter(|text| !text.is_empty())
-                    .map(|text| core::bytes_sha256(text.as_bytes())),
-            ),
+        totals,
+        options
+            .context_text()
+            .filter(|text| !text.is_empty())
+            .map(|text| core::bytes_sha256(text.as_bytes())),
+        attempts,
+        profile,
     )
-    .with_reported_usage(totals.reported)
-    .with_captured_attempts(attempts)
 }

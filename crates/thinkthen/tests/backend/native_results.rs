@@ -6,6 +6,7 @@ use std::process::Stdio;
 mod annotation;
 pub(crate) mod compatibility;
 mod find;
+mod recognize;
 
 #[cfg(test)]
 pub(crate) fn validate(rows: &[(String, Value)]) {

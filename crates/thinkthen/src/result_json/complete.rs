@@ -1,5 +1,9 @@
 //! Complete serialization uses typed judgments and actual traces, never JSON reconstruction.
+mod aggregate;
 mod annotate;
+mod recognize;
+pub(crate) use aggregate::{Totals, meta as aggregate_meta};
+pub(crate) use recognize::{RecognitionRow, recognition};
 mod find;
 use super::{Run, decision_with_digest};
 use crate::core::image::InputFunction;

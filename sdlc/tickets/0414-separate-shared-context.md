@@ -26,3 +26,5 @@ Annotate, find, recognize and relate accept separate shared context across CLI/R
 ## Context delivery acceptance
 
 The native semantic tests assert independently declared request bodies: shared context reaches every applicable stage and every packed/split request of annotate, find, recognize and relate, separately from evidence. A context-only cache-key change cannot pass. Preserve context-free bytes and evidence/offset invariants. Family, SQL and dataframe consumers reuse these expected exchanges through their named methods in 0432.
+
+Native mapper correction WIP, 2026-10-06: SourceRecord::span_lines uses checked physical-line addition and refuses spans outside the caller's declared physical range. The prior-failing public overflow case panicked at usize::MAX with a multiline span; it now returns the existing safe Usage refusal. Actual CLI recognition coordinates serialize through that mapper as typed presentation, preserving Unicode offsets and absence. All eight source-reader cases and focused recognition/source checks pass; whole review and landing remain root-owned.

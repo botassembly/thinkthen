@@ -130,6 +130,12 @@ fn locations(definitions: &mut Map<String, Value>) {
             .expect("properties");
         properties.extend(fields.clone());
     }
+    definitions
+        .get_mut("completeentity")
+        .expect("recognized entity")["properties"]
+        .as_object_mut()
+        .expect("entity properties")
+        .extend(fields);
     definitions.insert("completePosition".into(), definitions["Position"].clone());
     strict::graph(definitions, "completePosition");
 }

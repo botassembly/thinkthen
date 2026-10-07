@@ -4939,8 +4939,30 @@
           "minimum": 0,
           "type": "integer"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "kind": {
           "type": "string"
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "length": {
           "format": "uint",
