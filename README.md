@@ -86,7 +86,7 @@ For agents, the [official ThinkThen skill](skills/thinkthen/SKILL.md) explains f
 
 ## Files and provenance in development 0.2
 
-Pass document files as positional operands or repeat `--input FILE`; the two forms cannot mix. With several document files, decide/choose/tag/score print one JSONL row per file with `input_file` and `value`. A completed multi-document run exits 0 even for false or not sure answers. One document retains its scalar output and answer exit code.
+`decide`, `filter`, `rank` and `annotate` accept document files as positional operands. For other functions, repeat `--input FILE`; positional operands in `choose`, `tag` and `score` name options, labels and levels. The two file input forms cannot mix. With several document files, decide/choose/tag/score print one JSONL row per file with `input_file` and `value`. A completed multi-document run exits 0 even for false or not sure answers. One document retains its scalar output and answer exit code.
 
 Use `--input folder --unit line`, `--unit file` or `--window N` for located readers. Folder descendants sort by relative path; explicit operands and duplicates keep their order. Details retain physical file/line positions separately from selected evidence. Blank lines still count toward physical positions. Paths never become model evidence or cache identity. `--field` selects evidence from JSON records; the original stays in the answer. The [file guide](https://thinkthen.dev/learn/files/) shows each function's located output and limits.
 
