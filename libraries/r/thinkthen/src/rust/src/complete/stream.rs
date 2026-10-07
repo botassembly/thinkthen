@@ -36,6 +36,7 @@ macro_rules! batch {
             ("decide", Asked::Atomic(LoadedQuestion::Question(q))) => $run($engine.try_decide_records_complete_with(&q,$records,$options) $(,$arg)*),
             ("decide", Asked::Atomic(LoadedQuestion::Banded(q))) => $run($engine.try_decide_records_complete_with(&q,$records,$options) $(,$arg)*),
             ("choose", Asked::Atomic(LoadedQuestion::Question(q))) => $run($engine.try_choose_records_complete_with(&q,$records,$options) $(,$arg)*),
+            ("choose", Asked::Dynamic(q)) => $run($engine.try_choose_dynamic_records_complete_with(&q,$records,$options) $(,$arg)*),
             ("tag", Asked::Atomic(LoadedQuestion::Question(q))) => $run($engine.try_tag_records_complete_with(&q,$records,$options) $(,$arg)*),
             ("score", Asked::Atomic(LoadedQuestion::Question(q))) => $run($engine.try_score_records_complete_with(&q,$records,$options) $(,$arg)*),
             ("filter", Asked::Atomic(LoadedQuestion::Question(q))) => $run($engine.try_filter_records_complete_with(&q,$records,$options) $(,$arg)*),

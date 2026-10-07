@@ -36,7 +36,7 @@ def request(value, root, home, settings):
         source={'kind':'records','records':records}
     if value.get('candidate_orders'):
         for at,row in enumerate(source['records']):row['options']=[{'name':n} for n in value['candidate_orders'][at]]
-    return {'verb':verb,'question':q,'input':source,'settings':settings,'cancel':operation.get('injection')=='cancel_token', 'deadline_ms':0 if operation.get('injection')=='expired_deadline' else None, 'shared_context':value.get('shared_context'), 'held_cancel':bool(value.get('held_cancel')), 'incremental':bool(value.get('incremental'))}
+    return {'verb':verb,'question':q,'input':source,'settings':settings,'cancel':operation.get('injection')=='cancel_token', 'deadline_ms':0 if operation.get('injection')=='expired_deadline' else None, 'shared_context':value.get('shared_context'), 'held_cancel':bool(value.get('held_cancel')), 'incremental':bool(value.get('incremental')), 'batch_probe':bool(value.get('batch_probe'))}
 
 def project(packet,verb):
     if 'error' in packet:
@@ -51,7 +51,7 @@ def project(packet,verb):
     results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
     for at,r in enumerate(results):
         meta=r['meta'];v=r['value'];answer=r.get('answer',{})
-        row={'value':v,'index':packet['ordinals'][at],'answer_id':r['answer_id'], 'origin':{'live':1,'cache':2,'replay':3,None:None}[meta['origin']], 'answered_by':meta.get('answered_by'), 'observations':len(meta['observations']),'sources':len(meta['question_sources']), 'observation_ids':[o.get('observation_id',o.get('failure_id')) for o in meta['observations']], 'input':r.get('input')}
+        row={'value':v,'index':packet['ordinals'][at],'answer_id':r['answer_id'], 'origin':{'live':1,'cache':2,'replay':3,None:None}[meta['origin']], 'answered_by':meta.get('answered_by'), 'observations':len(meta['observations']),'sources':len(meta['question_sources']), 'observation_ids':[o.get('observation_id',o.get('failure_id')) for o in meta['observations']], 'input':r.get('input'), 'question_digest':meta.get('question_sha256'), 'cache_keys':meta['requests']}
         if verb=='decide' and isinstance(v,bool):row['value']=r['question'].get('true' if v else 'false',v)
         row.update(r.get('source',{}))
         if row['index'] is not None:row.update(packet['inputs'][row['index']].get('location',{}))
@@ -70,6 +70,35 @@ def project(packet,verb):
         out['rows'].append(row)
     return out
 
+def assert_required(packet,row,value,bodies,root):
+    """Compare required known fields and independent selected-content expectations."""
+    if 'error' in packet:return
+    results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
+    expect=value['expect']
+    for result in results:
+        assert result['schema']=='thinkthen.result/2'
+        assert len(result['answer_id'])==64 and len(packet['facts']['call_id'])==64
+        if value.get('unadorned'):assert 'name' not in result['question'] and 'wording_version' not in result['question']
+        questions=[a['question'] for a in result.get('answers',{}).values() if 'question' in a] or [result['question']]
+        for question in questions:
+            for key,want in expect.get('resolved_metadata',{}).items():assert question[key]==want,(key,question,want)
+            if 'ordered_properties' in expect:assert list(question['item_schema']['properties'])==expect['ordered_properties']
+            if 'required_properties' in expect:assert question['item_schema']['required']==expect['required_properties']
+        if 'selected_item' in expect:assert result['input']==packet['inputs'][0]['original'],(result,packet)
+    if 'per_item_context' in expect:
+        want=expect['per_item_context']
+        if want=='':want='Each question quotes the text it asks about.'
+        assert bodies and all(json.loads(body)['state']==want for body in bodies),(bodies,expect)
+    if 'selected_item' in expect:
+        selected=json.dumps(expect['selected_item'],ensure_ascii=False,separators=(',',':'))
+        # Native quoted instructions preserve the selected value, including false/null/Unicode.
+        assert bodies and any(selected in q['instructions'] for body in bodies for q in json.loads(body)['questions'].values()),(bodies,selected)
+    if row['kind']=='located':
+        for original in packet['inputs']:
+            location=original['location'];path=Path(location['file'])
+            assert original['original']==path.read_text()
+            assert location['first_line']==1 and location['last_line']==len(path.read_text().splitlines())
+
 def run(consumer, command, root, extra_env=None, settings_names=None):
     import os, subprocess, sys, tempfile, sqlite3
     sys.path.insert(0,str(root/'conformance'))
@@ -81,10 +110,30 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
     if selected:
         ids=Path(selected).read_text().splitlines() if Path(selected).is_file() else selected.split(',')
         rows=[r for r in rows if r['id'] in ids]
+    # The static consumers compile their actual public accessors before executing cells.
+    source=Path(command[-1])
+    compiler=None
+    if consumer=='python':
+        compiler=[sys.executable,'-m','mypy','--strict','--python-executable',command[0],str(source.with_name('native_types.py'))]
+    elif consumer=='typescript':
+        compiler=[command[0],str(root/'libraries/typescript/target/npm/node_modules/typescript/bin/tsc'),'--strict','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','--rootDir',str(source.parent),'--outDir',str(source.parent),str(source.with_suffix('.ts'))]
+    elif consumer=='rust':
+        compiler=['cargo','build','--locked','--offline','--manifest-path',str(root/'libraries/python/Cargo.toml'),'--example','native_case']
+    if compiler:
+        with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
+            env={k:v for k,v in os.environ.items() if k in ('PATH','CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS')}
+            env.setdefault('CARGO_HOME',str(Path.home()/'.cargo'))
+            env.setdefault('RUSTUP_HOME',str(Path.home()/'.rustup'))
+            env['CARGO_NET_OFFLINE']='true'
+            env.update(HOME=tmp,XDG_CONFIG_HOME=tmp+'/config',XDG_CACHE_HOME=tmp+'/cache',XDG_STATE_HOME=tmp+'/state',LANG='C.UTF-8',LC_ALL='C.UTF-8',**(extra_env or {}))
+            subprocess.run(compiler,cwd=source.parent,env=env,check=True)
     failures=[]
     for row in rows:
         try:
             value=c_parity.document(row,cases,named)
+            if row['kind'] in ('typed-result','result2'):
+                value['arm']='case/'+row['input']['case_ref']+'/v1'
+                value['metadata_only']=False
             with tempfile.TemporaryDirectory(prefix='thinkthen-0431-') as tmp:
                 home=Path(tmp)
                 env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':tmp,'XDG_CONFIG_HOME':tmp+'/config','XDG_CACHE_HOME':tmp+'/cache','XDG_STATE_HOME':tmp+'/state','LANG':'C.UTF-8','LC_ALL':'C.UTF-8',**(extra_env or {})}
@@ -93,7 +142,22 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                     env.update(THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')
                     c_parity.prepare(home,value)
                     identities=[]
-                    for original in value.get('steps',[value]):
+                    unadorned=None
+                    steps=value.get('steps',[value])
+                    batch_cases={'01-decide-yes-captured','06-choose-billing','09-tag-two','12-score-upper','13-filter-records','17-annotate-mixed'}
+                    if row['id'] in batch_cases:
+                        steps=[*steps,{**value,'incremental':True,'batch_probe':True,'count_delta':True}]
+                    if row['id']=='06-choose-billing':
+                        steps.append({**value,'question':{k:v for k,v in value['question'].items() if k!='options'},
+                            'record_options':dict.fromkeys(value['question']['options']),
+                            'incremental':True,'batch_probe':True,'count_delta':True})
+                    if value.get('metadata'):
+                        def bare(question):
+                            return {k:({n:bare(q) for n,q in v.items()} if k=='questions' else v) for k,v in question.items() if k not in ('name','wording_version')}
+                        baseline={**value,'question':bare(value['question']),'unadorned':True,'count_delta':True,'settings':{**value.get('settings',{}),'record':'$FOLDER'}}
+                        baseline.pop('metadata',None)
+                        steps=[baseline,*[{**step,'count_delta':True,'settings':{**step.get('settings',{}),'cache':'$FOLDER'},'expect':{**step['expect'],'count':0,'requests_sent':0}} for step in steps]]
+                    for original in steps:
                         step=dict(original)
                         if step.get('copy_store'):
                             (home/'refreshed').mkdir()
@@ -111,15 +175,34 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                         def invoke(given):
                             framed=request(step,root,home,given)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
-                            child=subprocess.run(command,input=c_parity.compact(framed),cwd=home,env=env,capture_output=True,text=True,timeout=120)
+                            if framed['batch_probe']:
+                                child=subprocess.Popen(command,cwd=home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+                                try:
+                                    child.stdin.write(c_parity.compact(framed)+'\n');child.stdin.flush()
+                                    assert child.stdout.readline()=='ready\n'
+                                    assert int(backend.read('count'))==before,'batch sent before its first pull'
+                                    child.stdin.write('continue\n');child.stdin.close();child.stdin=None
+                                    stdout,stderr=child.communicate(timeout=120)
+                                    child=subprocess.CompletedProcess(command,child.returncode,stdout,stderr)
+                                except BaseException:
+                                    child.kill();child.wait();raise
+                            else:
+                                child=subprocess.run(command,input=c_parity.compact(framed)+'\n',cwd=home,env=env,capture_output=True,text=True,timeout=120)
                             assert child.returncode==0,(child.returncode,child.stdout[-1000:],child.stderr[-1600:])
                             assert not child.stderr,child.stderr
                             assert 'sk-conformance-loopback' not in child.stdout
                             packet=json.loads(child.stdout)
+                            bodies=json.loads(backend.read('capture'))['bodies'] if 'capture' in settings['base_url'] else []
+                            assert_required(packet,row,step,bodies,root)
                             return project(packet,step['verb'])
                         got=invoke(settings)
                         count=int(backend.read('count'))
                         c_parity.assertions(row,step,got,count-before if step.get('count_delta') else count)
+                        if step.get('unadorned'):unadorned=got
+                        elif value.get('metadata'):
+                            assert unadorned is not None
+                            for before_row,after_row in zip(unadorned['rows'],got['rows'],strict=True):
+                                for key in ('question_digest','cache_keys','observation_ids','answer_id'):assert before_row[key]==after_row[key],(key,before_row,after_row)
                         if value.get('identity_steps'):identities.append(got)
                         if step.get('stored_answers')==0:
                             path=home/'saved/thinkthen.sqlite'
@@ -143,9 +226,9 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                         assert identities[4]['rows'][0]['answer_id']==identities[3]['rows'][0]['answer_id']
                         assert identities[5]['rows'][0]['answer_id']==first['answer_id']
                 finally:backend.close()
-            print('parity: '+json.dumps({'consumer':consumer,'case':row['id'],'checks':[c for c in row.get('checks',['named','runtime']) if c!='compile'],'status':'pass'}),flush=True)
+            print('parity: '+json.dumps({'consumer':consumer,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'pass'}),flush=True)
         except Exception as e:
-            failures.append(row['id']);print('parity: '+json.dumps({'consumer':consumer,'case':row['id'],'checks':[c for c in row.get('checks',['named','runtime']) if c!='compile'],'status':'fail'}),flush=True)
+            failures.append(row['id']);print('parity: '+json.dumps({'consumer':consumer,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail'}),flush=True)
             print(row['id']+': '+repr(e)[:2200],file=sys.stderr,flush=True)
     return len(failures)
 

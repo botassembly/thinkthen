@@ -1,5 +1,6 @@
 library(thinkthen)
-document <- jsonlite::fromJSON(paste(readLines(file("stdin"), warn = FALSE), collapse = "\n"), simplifyVector = FALSE)
+incoming <- file("stdin")
+document <- jsonlite::fromJSON(readLines(incoming,n=1L,warn=FALSE),simplifyVector=FALSE)
 prefix <- list()
 plain <- get(".tt_complete_plain",asNamespace("thinkthen"))
 tryCatch({
@@ -7,6 +8,7 @@ tryCatch({
   method <- get(paste0("tt_", document$verb, "_complete"), asNamespace("thinkthen"))
   if (isTRUE(document$incremental) || isTRUE(document$held_cancel)) {
     stream<-get(paste0("tt_",document$verb,"_batch"),asNamespace("thinkthen"))(document$question,document$input,attempts=TRUE,cancel=isTRUE(document$cancel),deadline_ms=document$deadline_ms)
+    if (isTRUE(document$batch_probe)) {cat("ready\n");flush(stdout());readLines(incoming,n=1L,warn=FALSE)}
     if (isTRUE(document$held_cancel)) {
       # R stays on its main thread while the native batch owns the held call.
       until <- Sys.time() + 0.15

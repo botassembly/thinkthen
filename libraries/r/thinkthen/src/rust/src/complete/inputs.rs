@@ -62,13 +62,20 @@ struct Image {
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 enum Context {
     Text(String),
-    Json(Value),
+    Json(Box<RawValue>),
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Choice {
     name: String,
-    description: Option<Value>,
+    #[serde(default, deserialize_with = "description")]
+    description: Option<Box<RawValue>>,
+}
+
+fn description<'de, D: serde::Deserializer<'de>>(
+    reader: D,
+) -> Result<Option<Box<RawValue>>, D::Error> {
+    Box::<RawValue>::deserialize(reader).map(Some)
 }
 
 pub(crate) struct Original {
@@ -140,7 +147,7 @@ fn compose(
         None => context,
         Some(Context::Text(t)) => Some(RecordContext::Text(t)),
         Some(Context::Json(v)) => Some(RecordContext::Object(thinkthen::ObjectContext::new(
-            &RawRecord::json(&v.to_string())?,
+            &RawRecord::json(v.get())?,
         )?)),
     };
     let options = if let Some(choices) = item.options {
@@ -152,7 +159,7 @@ fn compose(
                         name: c.name,
                         description: c
                             .description
-                            .map(|d| thinkthen::Description::from_json(&d.to_string()))
+                            .map(|d| thinkthen::Description::from_json(d.get()))
                             .transpose()?,
                     })
                 })

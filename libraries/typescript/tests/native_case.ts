@@ -1,13 +1,17 @@
 import * as tt from 'thinkthen';
-import type * as C from '../_complete.js';
-import type { QuestionSource, Input, Completed } from '../complete.js';
+import type { CompleteTypes as C, CompleteQuestionSource as QuestionSource, CompleteInput as Input, Completed, Batch, BatchRow } from 'thinkthen';
 // The compiler has no @types/node dependency. Read the arbitrary fixture via native Node.
-declare function require(name: string): { readFileSync(fd: number, encoding: string): string };
-const document = JSON.parse(require('node:fs').readFileSync(0, 'utf8')) as {
-  verb: string; question: QuestionSource; input: Input; settings: tt.EngineOptions; cancel?: boolean; deadline_ms?: number; incremental?: boolean; held_cancel?: boolean; shared_context?:string;
+declare function require(name: string): { readSync(fd:number,bytes:Uint8Array,offset:number,length:number,position:null):number };
+function line():string {
+  const bytes=new Uint8Array(65536),decoder=new TextDecoder();let text='';
+  for (;;) { const n=require('node:fs').readSync(0,bytes,0,bytes.length,null);if(n===0)break;text+=decoder.decode(bytes.subarray(0,n),{stream:true});if(text.includes('\n'))break; }
+  return text.trimEnd();
+}
+const document = JSON.parse(line()) as {
+  verb: string; question: QuestionSource; input: Input; settings: tt.EngineOptions; cancel?: boolean; deadline_ms?: number; incremental?: boolean; held_cancel?: boolean; batch_probe?:boolean; shared_context?:string;
 };
 async function main() {
-  const prefix:import("../complete.js").BatchRow<C.DecideResult>[]=[];
+  const prefix:BatchRow<C.Result>[]=[];
   try {
     const engine = new tt.Engine(document.settings);
     const signal = new AbortController();
@@ -17,7 +21,17 @@ async function main() {
     let done: Completed<C.Result>;
     const q=document.question, input=document.input;
     if(document.incremental) {
-      const batch=engine.complete.decideBatch(q,input,control);
+      let batch:Batch<C.Result>;
+      switch(document.verb) {
+        case 'decide': batch=engine.complete.decideBatch(q,input,control);break;
+        case 'choose': batch=engine.complete.chooseBatch(q,input,control);break;
+        case 'tag': batch=engine.complete.tagBatch(q,input,control);break;
+        case 'score': batch=engine.complete.scoreBatch(q,input,control);break;
+        case 'filter': batch=engine.complete.filterBatch(q,input,control);break;
+        case 'annotate': batch=engine.complete.annotateBatch(q,input,control);break;
+        default: throw new Error('unknown batch function');
+      }
+      if(document.batch_probe) {globalThis.console.log('ready');line();}
       for await(const row of batch) prefix.push(row);
       if(batch.facts===undefined) throw new Error('missing native facts');
       done={results:prefix.map(r=>r.result),facts:batch.facts,ordinals:prefix.map(r=>r.ordinal),inputs:prefix.map(r=>r.input)};

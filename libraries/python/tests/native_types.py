@@ -13,6 +13,8 @@ def known(engine:c.Engine, question:c.QuestionSource, inputs:c.Records|c.Files)-
     found:c.JsonValue=engine.find(question,inputs).results[0].value
     annotated=engine.annotate(question,inputs).results[0].answers
     entities=engine.recognize(question,inputs).results[0].value.entities
+    end:int=entities[0].end
+    location_end:int|c.Absent=entities[0].last_line
     edges=engine.relate(question,inputs).results[0].value
     for edge in edges:
         location:str|c.Absent=edge.source.file

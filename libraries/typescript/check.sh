@@ -49,6 +49,16 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
         fail "the token cap test failed, installed"
     printf '%s\n' "$capped" | grep -qx 'ok 1 - the token cap variable refuses a call before any request' ||
         fail "the token cap test did not run, installed"
+
+    python3 - "$repo" "$project" <<'NODENATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
+for language,suffix in [('javascript','mjs'),('typescript','js')]:
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names):sys.exit(1)
+NODENATIVE
     echo 'typescript: pass, installed'
     exit 0
 fi
@@ -151,6 +161,18 @@ done
 step 'types'
 target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResolution node16 --target es2022 tests/types.test.ts tests/backend_types.test.ts tests/complete_types.test.ts
 
+step 'native JavaScript and compiled TypeScript consumers'
+project=$PWD
+
+    python3 - "$repo" "$project" <<'NODENATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
+for language,suffix in [('javascript','mjs'),('typescript','js')]:
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names):sys.exit(1)
+NODENATIVE
 step 'the loader refuses a platform it does not ship, with the pinned sentence'
 refused=$(node -e 'Object.defineProperty(process, "platform", { value: "win32" }); try { require("./loader.js") } catch (e) { console.log(e.message) }')
 [ "$refused" = "thinkthen: no native addon for win32-$(node -p process.arch); this package ships linux-x64, linux-arm64, darwin-x64, and darwin-arm64" ] ||

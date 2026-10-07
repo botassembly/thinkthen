@@ -18,6 +18,7 @@ use crate::{guard, raised, usage};
 
 #[path = "../../r/thinkthen/src/rust/src/complete/mod.rs"]
 pub(crate) mod complete;
+mod complete_calls;
 mod convert;
 mod operations;
 mod plan;
@@ -89,16 +90,7 @@ impl Engine {
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
     ) -> PyResult<crate::complete_stream::CompleteStream> {
-        let controls = controls(py, deadline, token)?;
-        let session = complete::stream::Session::start(
-            self.0.clone(),
-            request,
-            controls.deadline,
-            controls.token,
-            None,
-        )
-        .map_err(|e| raised(py, &e))?;
-        Ok(crate::complete_stream::CompleteStream(session))
+        complete_calls::stream(&self.0, py, request, deadline, token)
     }
     /// Execute a typed complete request through the shared native engine.
     fn _complete(
@@ -108,19 +100,7 @@ impl Engine {
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
     ) -> PyResult<Py<PyAny>> {
-        guard(py, || {
-            let engine = self.0.clone();
-            let controls = controls(py, deadline, token)?;
-            let done = run_observed(py, controls, move |options| {
-                let (value, facts) =
-                    complete::execute(&engine, complete::parse(&request)?, options)?;
-                let output = value;
-                Ok::<_, Error>(Completed::new(output, &facts))
-            })?;
-            result::converted(py, done, |text| {
-                Ok(py.import("json")?.call_method1("loads", (text,))?.unbind())
-            })
-        })
+        complete_calls::call(&self.0, py, request, deadline, token)
     }
 
     /// Start from what `thinkthen` reads from the environment, then apply

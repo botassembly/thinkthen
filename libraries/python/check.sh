@@ -99,6 +99,14 @@ assert any(need.startswith("pydantic") and "2.11" in need and "<3" in need
 	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 THINKTHEN_BASE_URL="http://127.0.0.1:$port/generic/v1" \
 		THINKTHEN_CACHE="$scratch/cache" "$scratch/venv/bin/python" tests/conformance.py "$port"
 	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 "$scratch/venv/bin/python" tests/examples.py "$port"
+	"$scratch/venv/bin/python" - "$repo" "$PWD/tests/native_case.py" <<'PYNATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+sys.exit(bool(run('python',[sys.executable,sys.argv[2]],root)))
+PYNATIVE
+
 	exit 0
 fi
 
@@ -154,6 +162,9 @@ THINKTHEN_API_KEY=sk-fake-loopback-python-0105 \
 	THINKTHEN_BASE_URL="http://127.0.0.1:$port/generic/v1" THINKTHEN_CACHE="$scratch/cache" \
 	"$python" tests/conformance.py "$port"
 THINKTHEN_API_KEY=sk-fake-loopback-python-0105 "$python" tests/examples.py "$port"
+
+echo "== typed native Python consumer"
+"$python" tests/native_fixture.py
 
 echo "== the release wheel and its contents"
 sh build-wheel.sh

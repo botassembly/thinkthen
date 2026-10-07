@@ -105,3 +105,5 @@ with available native final facts and stopped position. Native cache, record,
 replay and attempts apply, including zero-send replay and changed reading
 identity. Carrier inspection withholds contents. Existing bare calls retain
 their behavior.
+
+Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.

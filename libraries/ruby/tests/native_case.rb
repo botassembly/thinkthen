@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 require 'thinkthen'
-document = JSON.parse(STDIN.read)
+document = JSON.parse(STDIN.gets)
 prefix=[]
 begin
   settings = document.fetch('settings').transform_keys(&:to_sym)
@@ -13,6 +13,9 @@ begin
   raise 'unknown function' unless method
   if document['incremental']
     batch=functions.public_send(method+'_batch',document['question'],document['input'],attempts:true,cancel:cancel,deadline_ms:document['deadline_ms'])
+    if document["batch_probe"]
+      puts "ready";STDOUT.flush;STDIN.gets
+    end
     batch.each { |row| prefix << row }
     done=ThinkThen::Complete::Completed.new(results:prefix.map(&:result),facts:batch.facts,ordinals:prefix.map(&:ordinal),inputs:prefix.map(&:input))
   else

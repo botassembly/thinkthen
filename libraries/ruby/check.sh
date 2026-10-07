@@ -190,6 +190,15 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   capped=$(sh "$LIMIT" 120 "$RUBY" -I lib tests/test_engine_settings.rb -n test_the_token_cap_variable_refuses_before_any_request) ||
     fail "the token cap test failed, installed"
   case $capped in *"1 runs, "*" 0 failures, 0 errors, "*) ;; *) fail "the token cap test did not run once, installed" ;; esac
+
+  python3 - "$repo" "$PWD/tests/native_case.rb" "$RUBY" <<'RUBYNATIVE'
+import os,sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+extra={k:os.environ[k] for k in ('GEM_PATH','RUBYLIB') if k in os.environ}
+sys.exit(bool(run('ruby',[sys.argv[3],sys.argv[2]],root,extra)))
+RUBYNATIVE
   echo "check ruby: pass, installed"
   exit 0
 fi
@@ -223,6 +232,17 @@ sh "$LIMIT" 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
   abort "ThinkThen::VERSION is #{ThinkThen::VERSION}, the engine is #{version}" unless ThinkThen::VERSION == version
   abort "the gem holds #{spec.files.sort}" unless spec.files.sort == files.sort
 ' || fail "the gem check failed"
+RUBYLIB=$PWD/lib
+export RUBYLIB
+
+  python3 - "$repo" "$PWD/tests/native_case.rb" "$RUBY" <<'RUBYNATIVE'
+import os,sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+extra={k:os.environ[k] for k in ('GEM_PATH','RUBYLIB') if k in os.environ}
+sys.exit(bool(run('ruby',[sys.argv[3],sys.argv[2]],root,extra)))
+RUBYNATIVE
 for gem in thinkthen-*.gem; do gem_platform "$gem"; done
 sh "$LIMIT" 120 "$RUBY" -I lib tests/slide_sample.rb || fail "the slide sample failed"
 echo "check ruby: pass"

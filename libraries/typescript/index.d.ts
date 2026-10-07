@@ -1,3 +1,4 @@
+export type { QuestionSource as CompleteQuestionSource, Input as CompleteInput, Completed, Batch, BatchRow } from './complete.js';
 import type { Functions as CompleteFunctions } from './complete.js';
 export * as CompleteTypes from './_complete.js';
 export const complete: CompleteFunctions;

@@ -13,7 +13,7 @@ mod native_settings;
 use complete::inputs::Original;
 use complete::questions::Asked;
 use serde::Deserialize;
-use std::io::Read;
+use std::io::Write;
 use thinkthen::{Call, CallOptions, CancelToken, CompleteRecord, Error, LoadedQuestion};
 
 #[derive(Deserialize)]
@@ -28,6 +28,8 @@ struct Fixture {
     held_cancel: bool,
     #[serde(default)]
     incremental: bool,
+    #[serde(default)]
+    batch_probe: bool,
     deadline_ms: Option<i64>,
     shared_context: Option<String>,
 }
@@ -47,10 +49,21 @@ where
 fn streamed<R>(
     mut batch: thinkthen::Batch<'_, CompleteRecord<Original, R>>,
     check: impl Fn(&R),
+    probe: bool,
 ) -> Result<String, Error>
 where
     CompleteRecord<Original, R>: serde::Serialize,
 {
+    if probe {
+        println!("ready");
+        std::io::stdout()
+            .flush()
+            .map_err(|_| complete::usage("fixture output failed"))?;
+        let mut ready = String::new();
+        std::io::stdin()
+            .read_line(&mut ready)
+            .map_err(|_| complete::usage("fixture input failed"))?;
+    }
     let mut results = Vec::new();
     let mut failure = None;
     for row in batch.by_ref() {
@@ -151,42 +164,56 @@ fn run(f: Fixture) -> Result<String, Error> {
                 |r| {
                     let _: thinkthen::Probabilities = r.probabilities();
                 },
+                f.batch_probe,
             ),
             ("decide", Asked::Atomic(LoadedQuestion::Banded(q))) => streamed(
                 engine.try_decide_records_complete_with(&q, inputs, options),
                 |r| {
                     let _ = r.value();
                 },
+                f.batch_probe,
             ),
             ("choose", Asked::Atomic(LoadedQuestion::Question(q))) => streamed(
                 engine.try_choose_records_complete_with(&q, inputs, options),
                 |r| {
                     let _ = r.value();
                 },
+                f.batch_probe,
+            ),
+            ("choose", Asked::Dynamic(q)) => streamed(
+                engine.try_choose_dynamic_records_complete_with(&q, inputs, options),
+                |r| {
+                    let _: thinkthen::Probabilities = r.probabilities();
+                },
+                f.batch_probe,
             ),
             ("tag", Asked::Atomic(LoadedQuestion::Question(q))) => streamed(
                 engine.try_tag_records_complete_with(&q, inputs, options),
                 |r| {
                     let _ = r.probabilities();
                 },
+                f.batch_probe,
             ),
             ("score", Asked::Atomic(LoadedQuestion::Question(q))) => streamed(
                 engine.try_score_records_complete_with(&q, inputs, options),
                 |r| {
                     let _: f64 = r.value();
                 },
+                f.batch_probe,
             ),
             ("filter", Asked::Atomic(LoadedQuestion::Question(q))) => streamed(
                 engine.try_filter_records_complete_with(&q, inputs, options),
                 |r| {
                     let _: bool = r.value();
                 },
+                f.batch_probe,
             ),
             ("annotate", Asked::Set(q)) => streamed(
                 engine.try_annotate_records_complete_with(&q, inputs, options),
                 |r| {
                     let _ = r.members();
                 },
+                f.batch_probe,
             ),
             _ => Err(complete::usage(
                 "batch question does not match the named function",
@@ -309,7 +336,7 @@ fn run(f: Fixture) -> Result<String, Error> {
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
-    std::io::stdin().read_to_string(&mut input)?;
+    std::io::stdin().read_line(&mut input)?;
     let fixture = serde_json::from_str(&input)?;
     match run(fixture) {
         Ok(packet) => println!("{packet}"),

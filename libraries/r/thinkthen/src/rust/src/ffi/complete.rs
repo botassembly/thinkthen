@@ -11,14 +11,24 @@ fn tt_complete_native(request: Robj, deadline: Robj, completion: Robj) -> Crosse
         completion_of(&completion)?,
         None,
         move |engine, options, account| {
-            let (value, facts) = crate::complete::execute(
+            let started = account.start();
+            let result = crate::complete::execute(
                 engine,
                 crate::complete::parse(&request).map_err(|e| crate::carry(&e))?,
                 options,
-            )
-            .map_err(|e| crate::carry(&e))?;
-            account.include(account.start(), &facts)?;
-            Ok(value)
+            );
+            match result {
+                Ok((value, facts)) => {
+                    account.include(started, &facts)?;
+                    Ok(value)
+                }
+                Err(error) => {
+                    if let Some(facts) = error.facts() {
+                        account.include(started, facts)?;
+                    }
+                    Err(crate::carry(&error))
+                }
+            }
         },
     )?;
     calls::render::envelope(done)

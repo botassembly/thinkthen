@@ -157,6 +157,16 @@ R_LIBS="$scratch/lib:$libs" Rscript -e 'stopifnot(startsWith(find.package("think
   { echo "r: the facts run would load thinkthen from outside the tarball install" >&2; exit 1; }
 R_LIBS="$scratch/lib:$libs" bash tests/with-backend.sh "$backend" tests/facts.R
 
+native_libs="$scratch/lib:$libs"
+
+python3 - "$root" "$native_libs" >"$scratch/native-vendored.log" <<'RNATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+sys.exit(bool(run('r',['Rscript','--vanilla',str(root/'libraries/r/tests/native_case.R')],root,{'R_LIBS':sys.argv[2]})))
+RNATIVE
+
 echo "== r: outside the repository, against a stand-in for crates.io with no network (tickets 0128, 0395)"
 # R-universe builds this package's folder alone. The copy has no repository
 # around it, so the published shape asks crates.io for the engine. A private
@@ -186,4 +196,13 @@ pins() { awk '/^name = /{ n = $3 } /^version = /{ print n, $3 }' "$1" | sort; }
 [ "$(pins "$scratch/tree/libraries/r/thinkthen/src/rust/Cargo.lock")" = "$(pins "$lock")" ] ||
   { echo "the outside build changed a locked package" >&2; exit 1; }
 R_LIBS="$scratch/outside-lib:$libs" bash tests/with-backend.sh "$backend" "$scratch/answer.R"
+native_libs="$scratch/outside-lib:$libs"
+
+python3 - "$root" "$native_libs" <<'RNATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+sys.exit(bool(run('r',['Rscript','--vanilla',str(root/'libraries/r/tests/native_case.R')],root,{'R_LIBS':sys.argv[2]})))
+RNATIVE
 echo "r: check passed"

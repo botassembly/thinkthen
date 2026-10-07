@@ -5,7 +5,7 @@ from thinkthen import ThinkThenError, CancelToken
 
 # Test framing is arbitrary caller data. The adapter and native engine own admission.
 def main():
-    document=json.load(sys.stdin)
+    document=json.loads(sys.stdin.readline())
     settings=document['settings']
     q=document['question']
     source=document['input']
@@ -41,6 +41,8 @@ def main():
 
         if document.get('incremental'):
             batch=getattr(engine,document['verb']+'_batch')(question,source,token=token,deadline_ms=document.get('deadline_ms'),attempts=True,context=document.get('shared_context'))
+            if document.get("batch_probe"):
+                print("ready",flush=True);sys.stdin.readline()
             for row in batch: prefix.append(row)
             done=c.Completed(tuple(row.result for row in prefix),batch.facts,tuple(row.ordinal for row in prefix),tuple(row.input for row in prefix))
         else:

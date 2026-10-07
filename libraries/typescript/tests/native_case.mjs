@@ -1,6 +1,11 @@
 import * as tt from 'thinkthen';
-import { readFileSync } from 'node:fs';
-const document = JSON.parse(readFileSync(0, 'utf8'));
+import { readSync } from 'node:fs';
+function line() {
+  const bytes=new Uint8Array(65536),decoder=new TextDecoder();let text='';
+  for (;;) {const n=readSync(0,bytes,0,bytes.length,null);if(n===0)break;text+=decoder.decode(bytes.subarray(0,n),{stream:true});if(text.includes('\n'))break;}
+  return text.trimEnd();
+}
+const document=JSON.parse(line());
 const prefix=[];
 try {
   const engine = new tt.Engine(document.settings);
@@ -17,7 +22,8 @@ try {
   let done;
   const controls={signal:controller.signal,deadlineMs:document.deadline_ms,attempts:true,...(document.shared_context==null?{}:{context:document.shared_context})};
   if(document.incremental) {
-    const batch=engine.complete.decideBatch(document.question,document.input,controls);
+    const batch=engine.complete[document.verb+'Batch'](document.question,document.input,controls);
+    if(document.batch_probe) {console.log('ready');line();}
     for await (const row of batch) prefix.push(row);
     done={results:prefix.map(r=>r.result),facts:batch.facts,ordinals:prefix.map(r=>r.ordinal),inputs:prefix.map(r=>r.input)};
   } else done=await methods[document.verb](document.question,document.input,controls);

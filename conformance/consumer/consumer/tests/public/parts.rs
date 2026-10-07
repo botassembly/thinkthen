@@ -282,7 +282,5 @@ fn annotate_groups_share_one_request_and_retain_each_probability() {
         Value::Object(probabilities.into_inner().expect("probabilities")),
         case["expect"]["probabilities"]
     );
-    use std::io::Write;
-    writeln!(std::io::stdout().lock(), "parity: {{\"consumer\":\"rust\",\"case\":\"annotate-packed-groups\",\"checks\":[\"named\",\"runtime\"],\"status\":\"pass\"}}")
-        .expect("case output");
+
 }

@@ -101,3 +101,5 @@ available final native facts and stopped position. Cache, record and replay
 remain native, including changed-reading identity and zero-send strict replay.
 JavaScript uses the same runtime; its tests execute separately from the compiled
 TypeScript consumer. Existing bare calls and their declarations stay compatible.
+
+Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.

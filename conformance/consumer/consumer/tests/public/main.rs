@@ -29,5 +29,6 @@ mod run;
 )]
 mod settings;
 mod values;
+mod native;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/wait.rs"]
 mod wait;

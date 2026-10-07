@@ -216,3 +216,5 @@ physical lines are one-based inclusive. Native rank values remain one-based
 ranks. Ordinary R rank/find `place` remains the original input index plus one;
 ordinary recognition frame starts retain R's one-based inclusive convention.
 Result and cache identity are computed before any compatibility conversion.
+
+Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.

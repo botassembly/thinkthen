@@ -135,3 +135,5 @@ Complete failures retain the six ordinary error kinds and expose typed
 settings apply to these calls, including zero-send strict replay and changed
 reading identity. Known results are validated carriers; arbitrary caller values
 remain JSON. Existing bare, dataframe and JSON APIs retain their behavior.
+
+Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.
