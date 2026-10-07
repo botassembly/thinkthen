@@ -2043,30 +2043,30 @@
             "body": "second"
           },
           {
+            "body": "third"
+          },
+          {
             "ready": false
+          },
+          {
+            "body": "unread fifth"
           }
         ],
         "batch": 2,
         "mode": "incremental",
         "prior_dispatch": 1,
-        "staged_batches": [
-          [
-            0
-          ],
-          [
-            1,
-            2
-          ]
-        ],
-        "verb_input": "explicit incremental source; release first completed batch before admitting the second"
+        "verb_input": "fallible records pulled by the ordinary native batch packer"
       },
       "expect": {
         "error": "usage",
         "requests_sent": 1,
         "completed_prefix": [
-          0
+          0,
+          1
         ],
-        "bad_batch_requests": 0
+        "bad_batch_requests": 0,
+        "message": "the item does not match item_schema",
+        "stopped_at": 4
       }
     },
     {

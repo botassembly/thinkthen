@@ -50,6 +50,12 @@ fn a_panic_behind_the_door_is_the_fixed_nonretryable_defect() {
         (DEFECT, DEFECT, 0)
     );
     assert_eq!(message_of(&engine), "defect: a panic crossed the C door");
+    let result = crate::complete::failure(super::snapshot(Some(&engine)).expect("snapshot"))
+        .expect("complete failure");
+    assert_eq!(result.summary.state, 2);
+    assert_eq!(result.summary.error.value.code, DEFECT);
+    assert_eq!(result.summary.facts.present, 0);
+    assert_eq!(result.summary.meta.present, 0);
     assert_eq!(guard(Some(&engine), DEFECT, || USAGE), USAGE);
 }
 
@@ -135,4 +141,53 @@ fn native_panic_child() {
     );
     assert_eq!(guard(Some(&engine), DEFECT, || USAGE), USAGE);
     let _ = std::thread::spawn(|| panic!("host-thread-marker")).join();
+}
+
+#[test]
+fn owned_failure_snapshots_keep_sticky_prestart_errors_after_replacement_and_engine_drop() {
+    let engine = held();
+    assert!(super::snapshot(Some(&engine)).is_none());
+    engine.fail(Failure::usage("first refusal"));
+    let saved = super::snapshot(Some(&engine)).expect("owned snapshot");
+    assert_eq!(
+        (saved.code, saved.retryable, saved.facts.is_none()),
+        (USAGE, false, true)
+    );
+    assert_eq!(saved.message, "first refusal");
+    assert_eq!(engine.settle(Ok::<_, Failure>(())), Ok(()));
+    assert_eq!(
+        super::snapshot(Some(&engine)).expect("sticky").message,
+        "first refusal"
+    );
+    engine.fail(Failure::local("later refusal"));
+    drop(engine);
+    assert_eq!(saved.message, "first refusal");
+    assert!(saved.facts.is_none());
+}
+#[test]
+fn failed_build_and_engine_snapshots_stay_in_the_calling_threads_own_error_slots() {
+    let engine = std::sync::Arc::new(held());
+    engine.fail(Failure::usage("parent refusal"));
+    let shared = engine.clone();
+    let saved = std::thread::spawn(move || {
+        assert!(super::snapshot(Some(&shared)).is_none());
+        shared.fail(Failure::local("child refusal"));
+        super::snapshot(Some(&shared)).expect("child snapshot")
+    })
+    .join()
+    .expect("thread");
+    assert_eq!(saved.message, "child refusal");
+    assert_eq!(
+        super::snapshot(Some(&engine))
+            .expect("parent snapshot")
+            .message,
+        "parent refusal"
+    );
+    assert!(built(|| Err::<thinkthen::Engine, _>(Failure::usage("failed build"))).is_none());
+    let failed_build = super::snapshot(None).expect("failed build snapshot");
+    assert_eq!(failed_build.message, "failed build");
+    assert!(failed_build.facts.is_none());
+    assert!(built(|| Ok::<_, Failure>(held().engine)).is_some());
+    assert!(super::snapshot(None).is_none());
+    assert_eq!(failed_build.message, "failed build");
 }

@@ -1,5 +1,7 @@
 """Behavior regressions for the shared consumer assertion/table interface."""
 import json
+import base64
+import copy
 from pathlib import Path
 import subprocess
 import contextlib
@@ -10,6 +12,60 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from conformance import parity
+from conformance import c_images
+
+
+class ImageRequestArrivals(unittest.TestCase):
+    def setUp(self):
+        corpus = json.loads((c_images.ROOT / 'conformance/cases.json').read_text())
+        row = next(row for row in corpus['parity']['required_cases']
+                   if row['id'] == 'image-admission-packing-overflow-choose')
+        self.steps = [step for step in c_images.project(row)['steps']
+                      if step['image_scenario']['id'] == 'liquid-d1-complete-question-split']
+
+    def evidence(self, step):
+        images = [(c_images.ROOT / path).read_bytes() for path in step['image_paths']]
+        got = {'code': 0, 'rows': [
+            {'index': at, 'input': caption, 'images': [raw.hex() for raw in images],
+             'value': 'red', 'probabilities': {'red': .8, 'blue': .2}}
+            for at, caption in enumerate(step['items'])]}
+        urls = ['data:image/png;base64,' + base64.b64encode(raw).decode() for raw in images]
+        orders = step.get('candidate_orders', [['red', 'blue']] * len(step['items']))
+        bodies = [{'state': caption, 'model': 'd1', 'questions': {'q1': {
+            'type': 'choice', 'instructions': 'Which color?',
+            'criteria': dict.fromkeys(order)}}, 'images': urls}
+            for caption, order in zip(step['items'], orders)]
+        return got, bodies
+
+    def assert_bodies(self, step, got, bodies):
+        c_images.assert_images(step, got, [json.dumps(body, separators=(',', ':')) for body in bodies])
+
+    def test_split_requests_allow_both_arrival_orders(self):
+        for step in self.steps:
+            got, bodies = self.evidence(step)
+            for arrivals in [bodies, bodies[::-1]]:
+                with self.subTest(candidate_orders=step.get('candidate_orders'), reversed=arrivals is not bodies):
+                    self.assert_bodies(step, got, arrivals)
+
+    def test_split_requests_keep_exact_contents_and_multiplicity(self):
+        for step in self.steps:
+            got, bodies = self.evidence(step)
+            changed_images = copy.deepcopy(bodies)
+            changed_images[0]['images'][0:2] = changed_images[0]['images'][1::-1]
+            dropped_duplicate = copy.deepcopy(bodies)
+            dropped_duplicate[0]['images'].pop()
+            changed_question = copy.deepcopy(bodies)
+            changed_question[0]['questions']['q1']['instructions'] = 'Changed question'
+            for changed in [[bodies[0], bodies[0]], changed_images, dropped_duplicate, changed_question, bodies[:1]]:
+                with self.subTest(candidate_orders=step.get('candidate_orders')), self.assertRaises(AssertionError):
+                    self.assert_bodies(step, got, changed)
+            with self.assertRaises(AssertionError):
+                c_images.assert_images(step, got, [json.dumps(body) for body in bodies])
+        step = self.steps[0]
+        got, bodies = self.evidence(step)
+        bodies[0]['questions']['q1']['criteria'] = dict.fromkeys(['blue', 'red'])
+        with self.assertRaisesRegex(AssertionError, 'candidate order changed'):
+            self.assert_bodies(step, got, bodies)
 
 
 class PublicAssertions(unittest.TestCase):
@@ -45,11 +101,14 @@ class PublicAssertions(unittest.TestCase):
         seen = parity.cells('conformance: not_run=0 unselected=0\n' + self.cell(), ['rust'], self.cases)
         self.assertEqual(seen, {('rust', 'typed-decide'): 'pass'})
 
-    def test_missing_cells_remain_missing_and_failed_process_invalidates_pass(self):
+    def test_failed_case_keeps_independent_pass_and_missing_cell_visible(self):
         seen = parity.cells(self.cell(), ['rust'], self.cases)
         row = parity.summarize('rust', self.cases, 0, seen, None, None)
         self.assertEqual(row['cells'], {'typed-decide': 'pass', 'files-decide': 'missing'})
-        for code in [1, 77, 127]:
+        partial = parity.summarize('rust', self.cases, 1, seen, None, None)
+        self.assertEqual(partial['cells'], {'typed-decide': 'pass', 'files-decide': 'missing'})
+        self.assertEqual(partial['named_typed_functions'], ['decide'])
+        for code in [77, 127, None]:
             with self.subTest(code=code):
                 row = parity.summarize('rust', self.cases, code, seen, None, None)
                 self.assertEqual(set(row['cells'].values()), {'fail'})

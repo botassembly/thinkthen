@@ -1764,7 +1764,36 @@
             }
           ]
         }
-      }
+      },
+      "runtime_exchanges": [
+        {
+          "provenance": {
+            "kind": "synthetic_contract"
+          },
+          "evidence": {
+            "summary": "Short note.",
+            "body": "Please refund me."
+          },
+          "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Short note.\\\". Is this concise?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Please refund me.\\\". Does this ask for a refund?\"}}}",
+          "response": {
+            "model": "jev-latest",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.9
+              },
+              "q2": {
+                "type": "noul",
+                "noul": 0.8
+              }
+            },
+            "usage": {
+              "input_tokens": 21,
+              "output_tokens": 4
+            }
+          }
+        }
+      ]
     },
     {
       "id": "18-find-second",
@@ -8519,18 +8548,6 @@
         "preconditions": []
       },
       {
-        "id": "25-defect-fault",
-        "verb": "decide",
-        "kind": "behavior",
-        "input": {
-          "case_ref": "25-defect-fault"
-        },
-        "expect": {
-          "case_ref": "25-defect-fault"
-        },
-        "preconditions": []
-      },
-      {
         "id": "26-filter-empty-list",
         "verb": "filter",
         "kind": "behavior",
@@ -9844,7 +9861,18 @@
             "specification/fixtures/files/documents"
           ],
           "unit": "file",
-          "case_ref": "51-same-kind-alerts"
+          "question": {
+            "version": 1,
+            "relate": {
+              "relations": [
+                {
+                  "name": "linked",
+                  "source": "*",
+                  "target": "*"
+                }
+              ]
+            }
+          }
         },
         "expect": {
           "locations": [
@@ -9868,6 +9896,28 @@
           "named",
           "compile",
           "runtime"
+        ],
+        "exchanges": [
+          {
+            "request": "{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Refund policy\\nCustomers may request a refund within 30 days.\\nAda approves refunds for Acme.\\nBilling disputes require a receipt.\\n\",\"kind\":\"*\"},{\"id\":\"i2\",\"name\":\"Support contract\\nAcme provides support under this contract.\\nAda reviews customer requests.\\nAn urgent billing dispute needs attention today.\\n\",\"kind\":\"*\"}]},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 linked i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 linked i1?\"}}}",
+            "response": {
+              "model": "jev-1.13.0",
+              "answers": {
+                "q1": {
+                  "type": "noul",
+                  "noul": 0.8
+                },
+                "q2": {
+                  "type": "noul",
+                  "noul": 0.2
+                }
+              },
+              "usage": {
+                "input_tokens": 25,
+                "output_tokens": 2
+              }
+            }
+          }
         ]
       },
       {
@@ -9959,27 +10009,6 @@
           "nonempty_diagnostic": true
         },
         "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "boundary-defect",
-        "verb": "decide",
-        "kind": "error",
-        "input": {
-          "case_ref": "25-defect-fault"
-        },
-        "expect": {
-          "kind": "defect",
-          "success": false,
-          "nonempty_diagnostic": true
-        },
-        "preconditions": [
-          "0426"
-        ],
         "checks": [
           "named",
           "compile",
@@ -10734,26 +10763,6 @@
         ]
       },
       {
-        "id": "type-rank-without-probability",
-        "verb": "rank",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "rank-without-probability"
-        },
-        "expect": {
-          "fixture_ref": "rank-without-probability",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
         "id": "type-18-find-second",
         "verb": "find",
         "kind": "type-fixture",
@@ -10763,26 +10772,6 @@
         },
         "expect": {
           "fixture_ref": "18-find-second",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-find-without-probability",
-        "verb": "find",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "find-without-probability"
-        },
-        "expect": {
-          "fixture_ref": "find-without-probability",
           "schema": "specification/result.schema.json",
           "schema_version": "landed result/1"
         },
@@ -10883,786 +10872,6 @@
         },
         "expect": {
           "fixture_ref": "02-decide-details",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-usage",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "usage"
-        },
-        "expect": {
-          "fixture_ref": "usage",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-two-verbs",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "two-verbs"
-        },
-        "expect": {
-          "fixture_ref": "two-verbs",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-details-number",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "details-number"
-        },
-        "expect": {
-          "fixture_ref": "details-number",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-rank-question-number",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "rank-question-number"
-        },
-        "expect": {
-          "fixture_ref": "rank-question-number",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-rank-none-envelope",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "rank-none-envelope"
-        },
-        "expect": {
-          "fixture_ref": "rank-none-envelope",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-relate-string-record",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "relate-string-record"
-        },
-        "expect": {
-          "fixture_ref": "relate-string-record",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-filter-object-record",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "filter-object-record"
-        },
-        "expect": {
-          "fixture_ref": "filter-object-record",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-score-label-is-not-value",
-        "verb": "score",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "score-label-is-not-value"
-        },
-        "expect": {
-          "fixture_ref": "score-label-is-not-value",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-failure-null-is-not-marker",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "failure-null-is-not-marker"
-        },
-        "expect": {
-          "fixture_ref": "failure-null-is-not-marker",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-relate-array-is-not-door-value",
-        "verb": "relate",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "relate-array-is-not-door-value"
-        },
-        "expect": {
-          "fixture_ref": "relate-array-is-not-door-value",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-recognize-missing-end",
-        "verb": "recognize",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "recognize-missing-end"
-        },
-        "expect": {
-          "fixture_ref": "recognize-missing-end",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-record-row-null",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "record-row-null"
-        },
-        "expect": {
-          "fixture_ref": "record-row-null",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-detailed-kind-mismatch",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "detailed-kind-mismatch"
-        },
-        "expect": {
-          "fixture_ref": "detailed-kind-mismatch",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-find-details",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "find-details"
-        },
-        "expect": {
-          "fixture_ref": "find-details",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-annotate-details",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "annotate-details"
-        },
-        "expect": {
-          "fixture_ref": "annotate-details",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-annotate-details-empty-success",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "annotate-details-empty-success"
-        },
-        "expect": {
-          "fixture_ref": "annotate-details-empty-success",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-annotate-success-missing-answer",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "annotate-success-missing-answer"
-        },
-        "expect": {
-          "fixture_ref": "annotate-success-missing-answer",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-annotate-failed-entry",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "annotate-failed-entry"
-        },
-        "expect": {
-          "fixture_ref": "annotate-failed-entry",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-annotate-failed-entry-with-value",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "annotate-failed-entry-with-value"
-        },
-        "expect": {
-          "fixture_ref": "annotate-failed-entry-with-value",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-annotate-find-not-a-member",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "annotate-find-not-a-member"
-        },
-        "expect": {
-          "fixture_ref": "annotate-find-not-a-member",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-recognize-details",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "recognize-details"
-        },
-        "expect": {
-          "fixture_ref": "recognize-details",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-relate-details",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "relate-details"
-        },
-        "expect": {
-          "fixture_ref": "relate-details",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-call-success",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-call-success"
-        },
-        "expect": {
-          "fixture_ref": "c-call-success",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-call-success-missing-facts",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-call-success-missing-facts"
-        },
-        "expect": {
-          "fixture_ref": "c-call-success-missing-facts",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-detailed-record",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-detailed-record"
-        },
-        "expect": {
-          "fixture_ref": "c-detailed-record",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-detailed-record-missing-input",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-detailed-record-missing-input"
-        },
-        "expect": {
-          "fixture_ref": "c-detailed-record-missing-input",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-record-call-options",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-record-call-options"
-        },
-        "expect": {
-          "fixture_ref": "c-record-call-options",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-call-unknown-option",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-call-unknown-option"
-        },
-        "expect": {
-          "fixture_ref": "c-call-unknown-option",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-call-on-scalar",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-call-on-scalar"
-        },
-        "expect": {
-          "fixture_ref": "c-call-on-scalar",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-empty-call-on-scalar",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-empty-call-on-scalar"
-        },
-        "expect": {
-          "fixture_ref": "c-empty-call-on-scalar",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-empty-call-on-find",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-empty-call-on-find"
-        },
-        "expect": {
-          "fixture_ref": "c-empty-call-on-find",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-empty-call-on-recognize",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-empty-call-on-recognize"
-        },
-        "expect": {
-          "fixture_ref": "c-empty-call-on-recognize",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-empty-call-on-relate",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-empty-call-on-relate"
-        },
-        "expect": {
-          "fixture_ref": "c-empty-call-on-relate",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-c-annotate-context-refused",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "c-annotate-context-refused"
-        },
-        "expect": {
-          "fixture_ref": "c-annotate-context-refused",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-call-error",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "call-error"
-        },
-        "expect": {
-          "fixture_ref": "call-error",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-record-missing-pointer",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "record-missing-pointer"
-        },
-        "expect": {
-          "fixture_ref": "record-missing-pointer",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-record-error-cannot-be-an-answer",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "record-error-cannot-be-an-answer"
-        },
-        "expect": {
-          "fixture_ref": "record-error-cannot-be-an-answer",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-plan-p1",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "plan-p1"
-        },
-        "expect": {
-          "fixture_ref": "plan-p1",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
-        "id": "type-plan-tokens-are-a-band",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "plan-tokens-are-a-band"
-        },
-        "expect": {
-          "fixture_ref": "plan-tokens-are-a-band",
           "schema": "specification/result.schema.json",
           "schema_version": "landed result/1"
         },
@@ -15223,6 +14432,943 @@
           }
         }
       ]
-    }
+    },
+    "private_cases": [
+      {
+        "id": "25-defect-fault",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "25-defect-fault"
+        },
+        "expect": {
+          "case_ref": "25-defect-fault"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "boundary-defect",
+        "verb": "decide",
+        "kind": "error",
+        "input": {
+          "case_ref": "25-defect-fault"
+        },
+        "expect": {
+          "kind": "defect",
+          "success": false,
+          "nonempty_diagnostic": true
+        },
+        "preconditions": [
+          "0426"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      }
+    ],
+    "schema_cases": [
+      {
+        "id": "type-rank-without-probability",
+        "verb": "rank",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "rank-without-probability"
+        },
+        "expect": {
+          "fixture_ref": "rank-without-probability",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-find-without-probability",
+        "verb": "find",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "find-without-probability"
+        },
+        "expect": {
+          "fixture_ref": "find-without-probability",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-usage",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "usage"
+        },
+        "expect": {
+          "fixture_ref": "usage",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-two-verbs",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "two-verbs"
+        },
+        "expect": {
+          "fixture_ref": "two-verbs",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-details-number",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "details-number"
+        },
+        "expect": {
+          "fixture_ref": "details-number",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-rank-question-number",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "rank-question-number"
+        },
+        "expect": {
+          "fixture_ref": "rank-question-number",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-rank-none-envelope",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "rank-none-envelope"
+        },
+        "expect": {
+          "fixture_ref": "rank-none-envelope",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-relate-string-record",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "relate-string-record"
+        },
+        "expect": {
+          "fixture_ref": "relate-string-record",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-filter-object-record",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "filter-object-record"
+        },
+        "expect": {
+          "fixture_ref": "filter-object-record",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-score-label-is-not-value",
+        "verb": "score",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "score-label-is-not-value"
+        },
+        "expect": {
+          "fixture_ref": "score-label-is-not-value",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-failure-null-is-not-marker",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "failure-null-is-not-marker"
+        },
+        "expect": {
+          "fixture_ref": "failure-null-is-not-marker",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-relate-array-is-not-door-value",
+        "verb": "relate",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "relate-array-is-not-door-value"
+        },
+        "expect": {
+          "fixture_ref": "relate-array-is-not-door-value",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-recognize-missing-end",
+        "verb": "recognize",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "recognize-missing-end"
+        },
+        "expect": {
+          "fixture_ref": "recognize-missing-end",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-record-row-null",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "record-row-null"
+        },
+        "expect": {
+          "fixture_ref": "record-row-null",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-detailed-kind-mismatch",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "detailed-kind-mismatch"
+        },
+        "expect": {
+          "fixture_ref": "detailed-kind-mismatch",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-find-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "find-details"
+        },
+        "expect": {
+          "fixture_ref": "find-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-details"
+        },
+        "expect": {
+          "fixture_ref": "annotate-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-details-empty-success",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-details-empty-success"
+        },
+        "expect": {
+          "fixture_ref": "annotate-details-empty-success",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-success-missing-answer",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-success-missing-answer"
+        },
+        "expect": {
+          "fixture_ref": "annotate-success-missing-answer",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-failed-entry",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-failed-entry"
+        },
+        "expect": {
+          "fixture_ref": "annotate-failed-entry",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-failed-entry-with-value",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-failed-entry-with-value"
+        },
+        "expect": {
+          "fixture_ref": "annotate-failed-entry-with-value",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-find-not-a-member",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-find-not-a-member"
+        },
+        "expect": {
+          "fixture_ref": "annotate-find-not-a-member",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-recognize-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "recognize-details"
+        },
+        "expect": {
+          "fixture_ref": "recognize-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-relate-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "relate-details"
+        },
+        "expect": {
+          "fixture_ref": "relate-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-success",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-success"
+        },
+        "expect": {
+          "fixture_ref": "c-call-success",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-success-missing-facts",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-success-missing-facts"
+        },
+        "expect": {
+          "fixture_ref": "c-call-success-missing-facts",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-detailed-record",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-detailed-record"
+        },
+        "expect": {
+          "fixture_ref": "c-detailed-record",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-detailed-record-missing-input",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-detailed-record-missing-input"
+        },
+        "expect": {
+          "fixture_ref": "c-detailed-record-missing-input",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-record-call-options",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-record-call-options"
+        },
+        "expect": {
+          "fixture_ref": "c-record-call-options",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-unknown-option",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-unknown-option"
+        },
+        "expect": {
+          "fixture_ref": "c-call-unknown-option",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-on-scalar",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-on-scalar"
+        },
+        "expect": {
+          "fixture_ref": "c-call-on-scalar",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-scalar",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-scalar"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-scalar",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-find",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-find"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-find",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-recognize",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-recognize"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-recognize",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-relate",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-relate"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-relate",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-annotate-context-refused",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-annotate-context-refused"
+        },
+        "expect": {
+          "fixture_ref": "c-annotate-context-refused",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-call-error",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "call-error"
+        },
+        "expect": {
+          "fixture_ref": "call-error",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-record-missing-pointer",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "record-missing-pointer"
+        },
+        "expect": {
+          "fixture_ref": "record-missing-pointer",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-record-error-cannot-be-an-answer",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "record-error-cannot-be-an-answer"
+        },
+        "expect": {
+          "fixture_ref": "record-error-cannot-be-an-answer",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-plan-p1",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "plan-p1"
+        },
+        "expect": {
+          "fixture_ref": "plan-p1",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-plan-tokens-are-a-band",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "plan-tokens-are-a-band"
+        },
+        "expect": {
+          "fixture_ref": "plan-tokens-are-a-band",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-text-source",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-text-source"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-text-source",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-image-source-no-lines",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-image-source-no-lines"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-image-source-no-lines",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-source-missing-last-line",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-source-missing-last-line"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-source-missing-last-line",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-source-zero-line",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-source-zero-line"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-source-zero-line",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      }
+    ]
   }
 }

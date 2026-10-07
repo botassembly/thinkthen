@@ -20,6 +20,10 @@ A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with t
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_engine_new_with("{\"cache\":false}")`. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move its folder.
 
+## Counted typed calls
+
+[The typed C contract](TYPED.md) describes the unpublished 0426 work: counted question/source/image constructors, immutable image views and canonical result/2 carrier layouts. Complete execution/accessor integration awaits the native result/2 APIs. Released calls remain compatible.
+
 ## Windows x86-64
 
 The development archive `thinkthen-c-0.2.0-x86_64-pc-windows-msvc.zip` contains exactly `include/thinkthen.h`, `bin/thinkthen.dll` and `lib/thinkthen.dll.lib`, with a separate SHA-256 sidecar. The `.lib` imports the public DLL; it is not a static implementation. From an x64 MSVC developer shell, compile a consumer after extraction:
@@ -58,6 +62,6 @@ The loopback backend's generic arm answers every question by a fixed rule: the f
 
 `check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It exits 77 when no C compiler is found. It runs the formatter, Clippy, and the tests, and then runs the slide against the rung's own loopback backend.
 
-`thinkthen_engine_new_with("{\"backend\":\"liquid\"}")` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `base_url` too, the selected key, posting path, description form and setup prices/profile apply at that address. Explicit model, profile and price settings override their setup values. The door accepts no key. Every package forwarding settings JSON to this door inherits `"backend"` without an ABI change.
+`thinkthen_engine_new_with("{\"backend\":\"liquid\"}")` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `base_url` too, the selected key, posting path, description form and setup prices/profile apply at that address. Explicit model, profile and price settings override their setup values. The `refresh_cache` boolean setting requests a fresh native exchange while retaining the same cache folder. The door accepts no key. Every package forwarding settings JSON to this door inherits `"backend"` without an ABI change.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
