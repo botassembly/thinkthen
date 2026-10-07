@@ -87,7 +87,8 @@ impl Engine {
                     .facts()
                     .attempts()
                     .map(|attempts| attempts.iter().skip(before).cloned().collect());
-                let result = rendered(&engine, ask, found, value, (at, &options, attempts))?;
+                let mut result = rendered(&engine, ask, found, value, (at, &options, attempts))?;
+                result.source_value = source_value(&result.canonical.value, &unit)?;
                 rows.push(CompleteRecord {
                     original: unit.original,
                     ordinal: at,
@@ -114,7 +115,10 @@ fn prepare<T: InputEvidence>(
     crate::public::images::guard(InputFunction::Recognize, &input)?;
     let text = match input.as_ref() {
         QuestionInput::Text(text) => text.clone(),
-        QuestionInput::Record(record) => record.plain().to_owned(),
+        QuestionInput::Record(record) => {
+            admit_source(record)?;
+            record.plain().to_owned()
+        }
         QuestionInput::Images(_) => return Err(crate::public::complete::wrong()),
     };
     engine
@@ -125,4 +129,39 @@ fn prepare<T: InputEvidence>(
         input,
         text,
     })
+}
+
+fn source_value<T>(
+    value: &crate::core::RecognizedValue,
+    unit: &Unit<T>,
+) -> Result<Option<crate::public::SourceRecognition>, Error> {
+    let QuestionInput::Record(input) = unit.input.as_ref() else {
+        return Ok(None);
+    };
+    input
+        .location()
+        .map(|location| crate::public::SourceRecognition::of(value, &unit.text, location))
+        .transpose()
+}
+
+fn admit_source(record: &crate::public::RecordEvidence) -> Result<(), Error> {
+    let Some(location) = record.location() else {
+        return Ok(());
+    };
+    if record.original().literal().is_none() {
+        return Err(Error::usage(
+            "located recognize takes literal text units, not decoded JSON fields",
+        ));
+    }
+    if let (Some(first_line), Some(last_line)) = (location.first_line(), location.last_line()) {
+        let text = record.plain();
+        crate::public::SourceRecord {
+            record: text,
+            file: String::new(),
+            first_line,
+            last_line,
+        }
+        .span_lines(0, text.chars().count())?;
+    }
+    Ok(())
 }

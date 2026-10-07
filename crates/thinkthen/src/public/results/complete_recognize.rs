@@ -10,6 +10,7 @@ use std::fmt;
 pub struct CompleteRecognized {
     pub(crate) canonical: core::CompleteRecognition,
     pub(crate) value: Recognized,
+    pub(crate) source_value: Option<super::SourceRecognition>,
 }
 
 impl CompleteRecognized {
@@ -38,6 +39,24 @@ impl CompleteRecognized {
     #[must_use]
     pub const fn value(&self) -> &Recognized {
         &self.value
+    }
+
+    /// Located names and relation endpoints, present only for explicit source text units.
+    #[must_use]
+    pub const fn source_value(&self) -> Option<&super::SourceRecognition> {
+        self.source_value.as_ref()
+    }
+    pub(crate) fn serialize_input<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match &self.source_value {
+            Some(value) => self
+                .canonical
+                .serialize_with_value(input, value, serializer),
+            None => self.canonical.serialize_with_input(input, serializer),
+        }
     }
 
     /// Sources in stage and logical question order.
@@ -69,7 +88,7 @@ impl CompleteRecognized {
     /// # Errors
     /// Returns a defect if the typed result cannot be serialized.
     pub fn to_json(&self) -> Result<String, Error> {
-        core::json_line(&self.canonical)
+        core::json_line(self)
             .map_err(|_| Error::defect("a complete recognition could not be written as JSON"))
     }
 }
@@ -84,7 +103,7 @@ impl fmt::Debug for CompleteRecognized {
 
 impl Serialize for CompleteRecognized {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical.serialize(serializer)
+        self.serialize_input::<S, ()>(None, serializer)
     }
 }
 

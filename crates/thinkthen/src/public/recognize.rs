@@ -293,7 +293,7 @@ impl RecognizeBuilder {
 /// One recognized name, its place in the text, its kind, and its strength.
 /// Offsets count Unicode scalar values.
 #[derive(Clone, PartialEq)]
-pub struct RecognizedEntity(RecognizedName);
+pub struct RecognizedEntity(pub(crate) RecognizedName);
 
 impl fmt::Debug for RecognizedEntity {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {

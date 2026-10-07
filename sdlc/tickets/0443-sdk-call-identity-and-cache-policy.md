@@ -69,6 +69,23 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+struct SourceRecognition
+const fn SourceRecognition::location(&self) -> &SourceLocation
+fn SourceRecognition::entities(&self) -> &[SourceRecognizedEntity]
+fn SourceRecognition::relations(&self) -> Option<&[SourceRecognizedRelation]>
+impl Serialize for SourceRecognition
+struct SourceRecognizedEntity
+const fn SourceRecognizedEntity::entity(&self) -> &RecognizedEntity
+const fn SourceRecognizedEntity::location(&self) -> &SourceLocation
+impl Serialize for SourceRecognizedEntity
+struct SourceRecognizedRelation
+fn SourceRecognizedRelation::relation(&self) -> &str
+const fn SourceRecognizedRelation::source(&self) -> &SourceRecognizedEntity
+const fn SourceRecognizedRelation::target(&self) -> &SourceRecognizedEntity
+const fn SourceRecognizedRelation::probability(&self) -> f64
+const fn SourceRecognizedRelation::either(&self) -> bool
+impl Serialize for SourceRecognizedRelation
+const fn CompleteRecognized::source_value(&self) -> Option<&SourceRecognition>
 struct SourceRelationEndpoint
 fn SourceRelationEndpoint::ordinal(&self) -> usize
 fn SourceRelationEndpoint::entity(&self) -> &Entity
@@ -333,3 +350,13 @@ The prior implementation refused equal source identities; the new public regress
 Source grows 439 nonblank Rust lines (148275 to 148714) for owned typed source endpoints, shared escaped-output accounting and three public behavior cases. Checked native/CLI relation rendering and removed the CLI-only duplicate byte budget; semantic question planning, canonical members and physical presentation serialization remain shared.
 
 The executable result page now validates actual replayed CLI result/2 rows against the shared strict schema and retains the separate result/1 compatibility-table checks. One real refund replay example (unknown historical batch count, zero sends, empty current attempts) is shared with the type corpus. These docs do not claim host parity or main landing.
+
+### Native located recognition views constituent
+
+`CompleteRecognized::source_value()` supplies owned typed physical names and relation endpoints beside existing semantic `value()`, with `SourceRecognition`, `SourceRecognizedEntity` and `SourceRecognizedRelation` accessors. Complete serialization presents actual flat file/span coordinates while preserving scalar offsets, original units, canonical distributions, observations and answer identity. The shared `SourceRecord::span_lines` mapper supplies inclusive physical ranges, including Unicode and CRLF; a document without supplied lines omits them. Owned views survive engine drop. Decoded JSON field locations refuse before any lookup/send under the existing files contract; ordinary unlocated field recognition still preserves arbitrary original JSON. The older location fixture incorrectly combined selected JSON fields with located text and is corrected to real literal source units; the separate saved-field regression remains.
+
+New outside-in cases cover actual partial usage, complete-schema validation, separate context at all three stages, renamed-source zero-send replay, typed source/relation getters and absent document lines. A counted admission case pins the static safe refusal for a later decoded JSON field in both live and strict replay. Whole native review, landing and host adoption remain open.
+
+The decoded-field admission regression fails on the prior implementation by accepting the bad located field and sending six requests; corrected admission refuses the complete set with zero requests in live and replay. Physical source ranges are also validated before sending, including insufficient line ranges and usize overflow. Source grows 479 nonblank Rust lines (148714 to 149193) for the owned source recognition views, shared native mapper integration and four public behavior cases. Checked CLI source presentation and native complete recognition; reused canonical serializers, stage scheduler, source location carrier and Unicode mapper rather than reparsing JSON or implementing another source map.
+
+Focused recognition validation passes: 76 complete native behavior cases, 28 affected command cases, generated schema, affected package Clippy, offline policy/format and 1555 public declarations (four plants refused). No whole test/lint, main landing or host parity is claimed.

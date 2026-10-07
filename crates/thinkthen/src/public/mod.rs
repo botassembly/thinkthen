@@ -465,3 +465,5 @@ pub use crate::core::{
 mod question_metadata;
 
 pub(crate) mod named_question;
+
+pub use results::{SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation};

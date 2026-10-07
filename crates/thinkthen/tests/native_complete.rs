@@ -105,3 +105,6 @@ mod cache_warning;
 
 #[path = "native_complete/source_relations.rs"]
 mod source_relations;
+
+#[path = "native_complete/source_recognition.rs"]
+mod source_recognition;

@@ -69,7 +69,11 @@ pub(super) fn rendered(
         },
     )
     .map_err(|_| super::wrong())?;
-    Ok(CompleteRecognized { canonical, value })
+    Ok(CompleteRecognized {
+        canonical,
+        value,
+        source_value: None,
+    })
 }
 
 pub(super) fn execute(
