@@ -42,6 +42,22 @@ def reject(label, action):
 
 
 
+def descriptor_shape(native, abi, kind):
+    """Describe C by-value carriers recursively; FFM erases nominal identity."""
+    if kind not in native['records']:
+        return {}
+    record = native['records'][kind]
+    fields = {}
+    for name, field in record['fields'].items():
+        if field['type'] == 'union':
+            raise ValueError('C ABI mismatch: unrepresented by-value anonymous union ' + kind)
+        nested = descriptor_shape(native, abi, field['type'])
+        fields[name] = {'offset': field['offset'], 'width': field['width'],
+                        'type': 'record' if nested else abi.wire_type(field['type'], field['width'], signed=False),
+                        'shape': nested}
+    return {'size': record['size'], 'alignment': record['alignment'], 'fields': fields}
+
+
 def abi_check(header, jar, library):
     spec = importlib.util.spec_from_file_location('c_abi', ROOT.parents[1] / 'sdlc/scripts/check-c-exports.py')
     abi = importlib.util.module_from_spec(spec)
@@ -70,8 +86,12 @@ def abi_check(header, jar, library):
         for field in record['fields'].values():
             if field['type'].startswith('thinkthen_'):
                 field['type'] = 'record'
-    for function in expected['functions'].values():
-        function['arguments'] = ['record' if t.startswith('thinkthen_') else t for t in function['arguments']]
+    for name, function in expected['functions'].items():
+        declaration = native['functions'][name]
+        function['return_shape'] = descriptor_shape(native, abi, declaration['return'])
+        function['argument_shapes'] = [descriptor_shape(native, abi, kind) for kind in declaration['arguments']]
+        function['return'] = 'record' if function['return_shape'] else function['return']
+        function['arguments'] = ['record' if shape else kind for kind, shape in zip(function['arguments'], function['argument_shapes'])]
     abi.compare_abi(expected, actual)
     print(f'JVM C ABI: {len(actual["records"])} actual JAR layouts, {len(actual["constants"])} represented constants, {len(actual["functions"])} linked descriptors match')
 
@@ -90,7 +110,9 @@ def abi_plants(header, library):
         env = child_env(HOME=str(scratch / 'home'))
         plants = [('field order', 'NativeLayouts0.java', 'ADDRESS.withName("data"), JAVA_LONG.withName("len")', 'JAVA_LONG.withName("len"), ADDRESS.withName("data")'),
                   ('enum', 'Complete.java', 'enum Function { DECIDE, CHOOSE,', 'enum Function { CHOOSE, DECIDE,'),
-                  ('return', 'NativeCalls.java', '"thinkthen_result_rank_member_details",FunctionDescriptor.of(JAVA_INT,', '"thinkthen_result_rank_member_details",FunctionDescriptor.of(JAVA_LONG,')]
+                  ('return', 'NativeCalls.java', '"thinkthen_result_rank_member_details",FunctionDescriptor.of(JAVA_INT,', '"thinkthen_result_rank_member_details",FunctionDescriptor.of(JAVA_LONG,'),
+                  ('equal-size aggregate', 'NativeCalls.java', 'for(String n:List.of("thinkthen_question_load"))add(linker,symbols,n,FunctionDescriptor.of(JAVA_INT,ADDRESS,layout("thinkthen_string_v1"),ADDRESS))', 'for(String n:List.of("thinkthen_question_load"))add(linker,symbols,n,FunctionDescriptor.of(JAVA_INT,ADDRESS,layout("thinkthen_optional_double_v1"),ADDRESS))'),
+                  ('nested aggregate', 'NativeCalls.java', 'layout("thinkthen_optional_string_v1"),ADDRESS)', 'structure(JAVA_INT.withName("present"),layout("thinkthen_optional_double_v1").withName("value")),ADDRESS)')]
         for name, file, before, after in plants:
             copied = source / file
             text = copied.read_text()
@@ -134,6 +156,15 @@ public class AbiProbe {
    if(f instanceof UnionLayout u)result.putAll(fields(u,prefix+name+".",offset));
   }return result;
  }
+ static Map<String,Object> shape(MemoryLayout layout) {
+  if(!(layout instanceof GroupLayout group))return Map.of();
+  Map<String,Object> fields=new TreeMap<>();
+  for(MemoryLayout field:group.memberLayouts())if(field.name().isPresent()) {
+   String name=field.name().orElseThrow();
+   fields.put(name,Map.of("offset",group.byteOffset(MemoryLayout.PathElement.groupElement(name)),"width",field.byteSize(),"type",kind(field),"shape",shape(field)));
+  }
+  return Map.of("size",group.byteSize(),"alignment",group.byteAlignment(),"fields",fields);
+ }
  static Object value(Class<?> c,String field)throws Exception{Field f=c.getDeclaredField(field);f.setAccessible(true);return f.get(null);}
  public static void main(String[] args)throws Exception {
   Map<String,MemoryLayout> layouts=new TreeMap<>(NativeLayouts.L);layouts.put("thinkthen_answer",(MemoryLayout)value(Door.class,"ANSWER"));
@@ -147,7 +178,7 @@ public class AbiProbe {
    for(var entry:calls.entrySet()) {
     Method method=entry.getValue().getClass().getDeclaredMethod("descriptor");method.setAccessible(true);
     FunctionDescriptor d=(FunctionDescriptor)method.invoke(entry.getValue());
-    Map<String,Object> fact=Map.of("return",d.returnLayout().map(AbiProbe::kind).orElse("void"),"return_width",d.returnLayout().map(MemoryLayout::byteSize).orElse(0L),"arguments",d.argumentLayouts().stream().map(AbiProbe::kind).toList(),"argument_widths",d.argumentLayouts().stream().map(MemoryLayout::byteSize).toList(),"calling_convention",System.getProperty("os.name").startsWith("Windows")?"cdecl":"C");
+    Map<String,Object> fact=Map.of("return",d.returnLayout().map(AbiProbe::kind).orElse("void"),"return_width",d.returnLayout().map(MemoryLayout::byteSize).orElse(0L),"arguments",d.argumentLayouts().stream().map(AbiProbe::kind).toList(),"argument_widths",d.argumentLayouts().stream().map(MemoryLayout::byteSize).toList(),"calling_convention",System.getProperty("os.name").startsWith("Windows")?"cdecl":"C","return_shape",d.returnLayout().map(AbiProbe::shape).orElse(Map.of()),"argument_shapes",d.argumentLayouts().stream().map(AbiProbe::shape).toList());
     if(functions.containsKey(entry.getKey())&&!functions.get(entry.getKey()).equals(fact))throw new IllegalStateException("conflicting import "+entry.getKey());
     functions.put((String)entry.getKey(),fact);
    }
