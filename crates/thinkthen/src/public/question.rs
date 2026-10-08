@@ -107,7 +107,6 @@ impl Description {
         DescriptionBuilder {
             members: Vec::new(),
             examples: None,
-            seed_spans: None,
         }
     }
 
