@@ -1,12 +1,14 @@
 # 0489: Carry each record's context through recognition
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision a770069e471a0412d37acb8e3a22c65f57d05fa9, accept
+
+Landed: ce7ad15
 
 ## Outcome
 
