@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision 4ffc11e39, accept
 
+Reviews: revision e309af8cb329e131522ed1908017ea13570e9146, accept
+
 ## Outcome
 
 The existing process-cleanup test treats an owned child that exits during its Linux process-state read as gone, while still detecting live descendants and retained handles.

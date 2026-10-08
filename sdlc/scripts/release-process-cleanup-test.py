@@ -46,7 +46,7 @@ def alive(pid):
     if status.exists():
         try:
             return status.read_text().split(') ')[1].split()[0] != 'Z'
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             return False
     try:
         os.kill(pid, 0)
@@ -56,6 +56,11 @@ def alive(pid):
 
 
 def portable(root):
+    # An owned child can disappear between the proc entry check and its read.
+    for error in (FileNotFoundError, ProcessLookupError):
+        with mock.patch.object(Path, 'exists', return_value=True):
+            with mock.patch.object(Path, 'read_text', side_effect=error):
+                assert not alive(1), 'EXITING_CHILD_STILL_ALIVE'
     environment = C.environment()
     with mock.patch.dict(os.environ, {'CL': 'planted', '_CL_': 'planted', 'LINK': 'planted',
                                       'FAKE_SERVICE_API_KEY': 'fake-only', 'THINKTHEN_BACKEND': 'planted'}):
@@ -91,6 +96,7 @@ def portable(root):
     unrelated = subprocess.Popen([sys.executable, str(sleeper)], env=environment,
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
+        assert alive(unrelated.pid), 'LIVE_OWNED_CHILD_REPORTED_GONE'
         for caller in (C, MSVC, SMOKE):
             pids = root / ('c-pids' if caller is C else 'msvc-pids' if caller is MSVC else 'consumer-pids')
             # Exercise each real release wrapper, shortening only its declared deadline.
