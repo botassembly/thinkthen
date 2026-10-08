@@ -1,6 +1,8 @@
 # 0461: Let callers define recognition entities
 
-Status: OPEN. Ticket review pending; implementation follows acceptance.
+Status: OPEN. Ticket review ACCEPT on a456d9af3; implementation in progress.
+
+Reviews: accept
 
 Priority: high
 Milestone: 0.3
