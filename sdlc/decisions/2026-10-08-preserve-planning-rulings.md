@@ -40,4 +40,4 @@ Confirmed correctness fixes precede new controls. Cache admission settles before
 
 Ian held release management on 2026-10-08. No candidate tag, manual GitHub workflow dispatch, release branch advancement or publication proceeds without his permission. Main targets 0.2; release/0.1 stays frozen. Public install copy remains 0.1.2 until 0.2 ships. No new paid run follows from this cleanup. Final platform qualification, candidate QA and publication retain their existing approvals and owners.
 
-The configured `planning/team-0-2-2026-10-04.md` lane table remains untouched until the pm layout migration. Read lanes through pm. Its duplicate status prose is retained only because the migration owns that removal.
+The configured `planning/team-0-2-2026-10-04.md` retains only its lane table until the pm layout migration. Read lanes through pm. Accepted scope and order live in [milestones.md](../planning/milestones.md) and [the 0.2 SDK rollout](../planning/0-2-sdk-rollout.md).

@@ -8,6 +8,8 @@ Checks: `pm lint` reports zero findings; its light flow skips link checks. A tar
 
 Fresh read-only review found two preparation pages that pointed to a nonexistent section in the preservation decision. A fresh developer repointed both to the historical lessons at source commit `eafcd3f26` and removed a superseded 0.3 SDK deferral from the decision. The reviewer checked final source `333d9843b9b6e2585bd067aeb0a9dcb7d154914a` and returned ACCEPT.
 
+Coordinator review found that the configured lane-table exception protected the table, while stale plan, status and superseded 0.3 prose remained around it. Removed that prose and retained the `## Lanes` heading and table bytes unchanged. Accepted scope, product boundaries, qualification requirements and build capacity remain in the preservation decision, milestones and the 0.2 SDK rollout; configuration and checks retain enforced limits. The lane table remains configured until the upstream layout migration. Targeted `pm lint` and `pm lint links` report zero findings; changed-document local links, byte comparison, count-only private-name inspection and `git diff --check` pass.
+
 ## What the build taught us
 
-Remove duplicated status without copying it into a decision. Preserve product rulings through their owning contracts and pin historical evidence to its original source. The configured lane table needs the upstream layout migration before its duplicate prose can be removed.
+Remove duplicated status without copying it into a decision. Preserve product rulings through their owning contracts and pin historical evidence to its original source. Retain only the configured lane table during the upstream layout migration; remove surrounding stale prose.
