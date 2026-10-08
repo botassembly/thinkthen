@@ -370,6 +370,7 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
         &[
             ("TYPED_AUTHOR_MODE", &mode),
             ("XDG_CONFIG_HOME", &config),
+            ("APPDATA", &config),
             ("TYPED_WORKING_DIRECTORY", &cwd),
         ],
     );

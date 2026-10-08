@@ -136,3 +136,13 @@ Linux x86 rehearsal job 113175529220 passed the JVM check of freshly compiled JA
 The release helper and its existing synthetic fixture now list those two compiled classes. The exact directory and member inventories, inner package hashes, private-byte checks, source and C receipts, negative cases and JVM ABI checks remain in place. A fresh Java 21 compile produced 148 door classes, exactly matching the corrected fixed list. The actual JAR passed the release check; a JAR missing `Door$NativeCall.class` was refused. The managed-pair self-test, offline policy, full lint, ticket lint and whitespace checks pass. Existing source-size and license-exception warnings remain unchanged. Fresh read-only Sol review accepts the correction without findings. Final hosted rehearsal and release QA remain open. The coordinator owns batching and the next candidate.
 
 What the build taught us: when the JVM ABI checker gains compiled descriptor records, update the release helper's fixed class inventory in the same change. The compiled JAR check alone does not update that list.
+
+## Candidate two Windows configuration fixture correction, 2026-10-08
+
+Windows qualification job 113175486005 ran the C door and installed Python tests. The C door passed 69 cases and failed the named loader at `complete_authors.c:125`. The Python suite passed 153 cases and failed the priced recognition assertion because `estimated_cost_usd` was absent. The complete log remains at `/tmp/thinkthen-rc2-windows-qualification.log`. Both fixtures had written their configurations to owned scratch directories, but their child environments pointed Windows at other configuration directories.
+
+The C fixture now sets `APPDATA` to the same scratch directory as `XDG_CONFIG_HOME`. The Python fixture applies its isolated configuration paths after adding the loopback child settings, retaining its owned `APPDATA` and `LOCALAPPDATA`. The named loader, exact zero cost and request counts, and secrecy assertions remain unchanged. No product code, configuration policy or fallback changed.
+
+The focused C named-loader test and Python priced-recognition test pass on Linux. Offline source policy, Python Ruff, record lint and whitespace checks pass. Existing policy size warnings remain unchanged. The C workspace format check finds pre-existing formatting in `current.rs` near line 100, unchanged by this correction. Fresh read-only Sol review accepts the whole correction without findings. These checks do not qualify Windows behavior; the next hosted Windows run remains required. The coordinator owns batching and qualification.
+
+What the build taught us: a fixture that creates platform configuration must point its child to that directory after all helper environments are combined.
