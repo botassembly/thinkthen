@@ -49,6 +49,9 @@ pub(crate) trait ChildEnvironment {
     /// Name the child's home. Windows reads its default folders from
     /// `APPDATA` and `LOCALAPPDATA`, so they go under the home there.
     fn home(&mut self, home: impl AsRef<Path>) -> &mut Self;
+    /// Name an owned home and all platform configuration, cache and usage folders.
+    /// Explicit environment behavior cases can override a folder afterward.
+    fn isolated_home(&mut self, home: impl AsRef<Path>) -> &mut Self;
 }
 
 /// A default folder the command picks when no setting names one (ticket 0379).
@@ -195,5 +198,15 @@ impl ChildEnvironment for Command {
         self.env("APPDATA", home.join("AppData").join("Roaming"))
             .env("LOCALAPPDATA", home.join("AppData").join("Local"));
         self.env("HOME", home)
+    }
+
+    fn isolated_home(&mut self, home: impl AsRef<Path>) -> &mut Self {
+        let home = home.as_ref();
+        self.home(home);
+        for folder in [Folder::Config, Folder::Cache, Folder::Usage] {
+            let (name, value) = folder.variable(home);
+            self.env(name, value);
+        }
+        self
     }
 }
