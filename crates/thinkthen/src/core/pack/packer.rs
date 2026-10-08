@@ -28,9 +28,26 @@ pub(crate) struct PackLimits {
     pub(crate) questions: Option<usize>,
     /// Whether the state is a context, which refuses at any limit.
     pub(crate) context: bool,
+    /// Refuse complete recognition questions above the effective body ceiling.
+    pub(crate) strict_singleton: bool,
 }
 
 impl PackLimits {
+    /// Check an actual encoded recognition body, including after cache packing.
+    pub(crate) fn strict_body(&self, bytes: usize) -> Option<ProfileLimit> {
+        let limit = self
+            .profile
+            .as_ref()
+            .and_then(|p| p.max_request_bytes)
+            .map_or(self.ceiling, |limit| limit.min(self.ceiling));
+        (self.strict_singleton && bytes > limit).then(|| ProfileLimit {
+            name: crate::core::backend_profile::ProfileName::recognition_request(),
+            kind: LimitKind::RequestBytes,
+            limit,
+            actual: bytes,
+        })
+    }
+
     /// The first limit these counts pass, with the limit and the count.
     pub(crate) fn over(
         &self,
@@ -224,6 +241,13 @@ impl<T> Packer<T> {
         Ok(())
     }
 
+    /// Admit a final adapter-encoded body under the recognition byte bound.
+    pub(crate) fn check_body(&self, bytes: usize) -> Result<(), PackError> {
+        self.limits
+            .strict_body(bytes)
+            .map_or(Ok(()), |limit| Err(PackError::Profile(limit)))
+    }
+
     /// Whether a request is open.
     pub(crate) const fn is_open(&self) -> bool {
         self.open.is_some()
@@ -295,6 +319,9 @@ impl<T> Packer<T> {
             return Err(PackError::Profile(built_in::images::body_limit(
                 limit, bytes,
             )));
+        }
+        if let Some(limit) = self.limits.strict_body(bytes) {
+            return Err(PackError::Profile(limit));
         }
         let profile = self.limits.profile.as_ref();
         if self.limits.context

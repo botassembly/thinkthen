@@ -68,6 +68,7 @@ fn spent_deadline_on_end_reports_unfinished_declared_input_without_queuing_a_job
             profile: None,
             inputs: 2,
             questions: None,
+            strict_singleton: false,
             context: false,
         },
         "\"fixed\"".to_owned(),

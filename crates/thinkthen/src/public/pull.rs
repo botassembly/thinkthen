@@ -359,6 +359,7 @@ pub(crate) fn packing(setting: crate::core::Setting, context: bool, continues: b
         },
         questions: None,
         sized: true,
+        strict_singleton: false,
         context,
         detailed: false,
         continues,

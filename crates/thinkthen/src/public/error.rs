@@ -351,7 +351,7 @@ fn message(error: &EngineError) -> String {
             "the replies for one call named different model versions; a cache may hold answers from the other version, so turn the cache off or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a call with the cache off returns"
         }
         EngineError::UsageOverflow => "the backend reported token counts whose total is too large",
-        EngineError::RecognizeKinds => "recognize takes 0 to 20 distinct, nonblank kinds",
+        EngineError::RecognizeKinds => "recognize takes distinct, nonblank kinds",
         EngineError::RecognitionExamples(error) => return error.to_string(),
         EngineError::RecognizeRelationNames { count, limit } => {
             return crate::engine::error::relation_names_message(*count, *limit);

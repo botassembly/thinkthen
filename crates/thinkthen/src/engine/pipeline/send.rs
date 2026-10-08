@@ -150,6 +150,13 @@ impl<'a> Sender<'a> {
 
     /// One request's attempts, from the first live key read to its split.
     fn one(&self, body: &[u8], asks: Vec<(Ask, usize)>, cancel: &Cancel) -> Done {
+        if let Some(limit) = self
+            .engine
+            .pack_limits(self.packing)
+            .strict_body(body.len())
+        {
+            return refused(asks, Error::ProfileLimit(limit));
+        }
         if let Err(error) = self.image_body(body.len(), &asks) {
             return refused(asks, error);
         }

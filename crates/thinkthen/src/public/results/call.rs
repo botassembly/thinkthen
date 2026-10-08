@@ -40,6 +40,9 @@ pub struct Facts {
     pub(super) output_tokens: Option<u64>,
     pub(super) records: u64,
     pub(super) requests_sent: u64,
+    pub(super) largest_request_bytes: usize,
+    pub(super) largest_request_estimated_input_tokens: Option<u64>,
+    pub(super) token_estimate_method: &'static str,
     pub(super) seconds: f64,
 }
 
@@ -75,6 +78,11 @@ impl Facts {
             held_model_mismatch: snapshot.held_model_mismatch,
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
+            largest_request_bytes: snapshot.largest_request_bytes,
+            largest_request_estimated_input_tokens: crate::core::PlanSummary::estimated_input_high(
+                snapshot.largest_request_bytes as u64,
+            ),
+            token_estimate_method: crate::core::PlanSummary::TOKEN_ESTIMATE_METHOD,
             cache_answers: snapshot.cache_answers,
             input_tokens: snapshot
                 .reported

@@ -387,6 +387,7 @@ pub(super) fn run(
         questions: None,
         sized: true,
         inputs,
+        strict_singleton: false,
         context: asker.planner.context.is_some() || per_record_context,
         detailed: judging.view.details,
         continues: false,

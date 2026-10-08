@@ -13,6 +13,7 @@ struct State {
     last: Option<Instant>,
     records: u64,
     requests_sent: u64,
+    largest_request_bytes: usize,
     cache_answers: u64,
     // Checked known totals; missing reports affect snapshots, not accumulation.
     input_tokens: Option<u64>,
@@ -129,6 +130,11 @@ impl State {
             call_id: None,
             records: state.records,
             requests_sent: state.requests_sent,
+            largest_request_bytes: state.largest_request_bytes,
+            largest_request_estimated_input_tokens: crate::core::PlanSummary::estimated_input_high(
+                state.largest_request_bytes as u64,
+            ),
+            token_estimate_method: crate::core::PlanSummary::TOKEN_ESTIMATE_METHOD,
             cache_answers: state.cache_answers,
             input_tokens: (!state.missing_input)
                 .then_some(state.input_tokens)
@@ -193,6 +199,7 @@ impl TallyStart<'_> {
         );
         state.last = Some(state.last.map_or(ended, |last| last.max(ended)));
         state.held_model_mismatch |= facts.held_model_mismatch;
+        state.largest_request_bytes = state.largest_request_bytes.max(facts.largest_request_bytes);
         state.records = records;
         state.requests_sent = requests;
         state.cache_answers = cached;
@@ -274,6 +281,9 @@ mod tests {
             output_tokens: None,
             records: 1,
             requests_sent,
+            largest_request_bytes: 0,
+            largest_request_estimated_input_tokens: Some(0),
+            token_estimate_method: crate::core::PlanSummary::TOKEN_ESTIMATE_METHOD,
             seconds: 0.0,
         }
     }

@@ -172,6 +172,26 @@ impl Labels {
         )
     }
 
+    /// Validate an internal complete choice menu without a public count ceiling.
+    pub(crate) fn recognition_menu(
+        values: Vec<(String, Option<Description>)>,
+    ) -> Result<Self, LabelsError> {
+        let labels = values
+            .into_iter()
+            .map(|(name, description)| Label {
+                name,
+                description: description.filter(|held| !held.blank()),
+            })
+            .collect();
+        Self::checked(
+            labels,
+            2,
+            usize::MAX,
+            LabelsError::OptionCount,
+            LabelKind::Option,
+        )
+    }
+
     /// Take 1 to 20 tag labels with their optional descriptions.
     ///
     /// # Errors

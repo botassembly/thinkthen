@@ -23,24 +23,23 @@ pub(crate) struct Bound {
     questions: Option<usize>,
     /// Whether a request closes at the backend's request size.
     sized: bool,
+    strict_singleton: bool,
 }
 
 impl Bound {
-    /// `find` and the first two `recognize` steps: one request per state,
-    /// split only by a profile.
+    /// Complete recognition questions split only between questions and refuse oversized singletons.
+    pub(crate) const RECOGNITION: Self = Self {
+        questions: None,
+        sized: true,
+        strict_singleton: true,
+    };
+
+    /// `find`: one request per state, split only by a profile.
     pub(crate) const WHOLE: Self = Self {
         questions: None,
         sized: false,
+        strict_singleton: false,
     };
-
-    /// Examples make boundary bodies subject to the configured byte ceiling.
-    /// Empty examples retain the historical whole-window packing behavior.
-    pub(crate) const fn boundary(has_examples: bool) -> Self {
-        Self {
-            questions: None,
-            sized: has_examples,
-        }
-    }
 
     /// `relate` and `recognize` step 3: at most 400 questions, or a
     /// profile's smaller question limit, within the request size.
@@ -52,6 +51,7 @@ impl Bound {
                     .map_or(MOST_PAIR_QUESTIONS, |limit| limit.min(MOST_PAIR_QUESTIONS)),
             ),
             sized: true,
+            strict_singleton: false,
         }
     }
 }
@@ -184,6 +184,9 @@ impl Asks {
             packer.add(entries, &mut closed).map_err(packed)?;
         }
         closed.extend(packer.close());
+        for request in &closed {
+            packer.check_body(request.body.len()).map_err(packed)?;
+        }
         Ok(closed
             .into_iter()
             .map(|request| Request {
@@ -213,6 +216,7 @@ fn packer(
         profile: profile.cloned(),
         inputs,
         questions: bound.questions,
+        strict_singleton: bound.strict_singleton,
         context: false,
     };
     Ok(Packer::new(limits, model))
@@ -283,6 +287,7 @@ impl Engine {
             profile: Some(profile.clone()),
             inputs: usize::MAX,
             questions: None,
+            strict_singleton: false,
             context: false,
         };
         let options = asks.iter().map(pipeline::options).max().unwrap_or(0);
@@ -326,6 +331,7 @@ impl Engine {
             inputs: Some(asks.inputs()),
             questions: bound.questions,
             sized: bound.sized,
+            strict_singleton: bound.strict_singleton,
             context: false,
             detailed: cancel.detailed(),
             continues: false,

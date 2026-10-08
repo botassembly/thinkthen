@@ -223,7 +223,7 @@ pub(crate) fn kind_question(
             "{words}\n\nText: {}",
             marked(text, pieces, name, false)
         ))?,
-        options: Labels::described(options)?,
+        options: Labels::recognition_menu(options)?,
     })
 }
 

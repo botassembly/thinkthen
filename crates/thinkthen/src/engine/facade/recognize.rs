@@ -117,7 +117,7 @@ impl Engine {
         let stages = vec!["boundary"; asks.len()];
         let answers = self.execute(
             &asks,
-            Bound::boundary(!spec.examples.is_empty()),
+            Bound::RECOGNITION,
             &stages,
             (&mut meta, &mut observe),
             cancel,
@@ -135,7 +135,7 @@ impl Engine {
         let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
         let answers = self.execute(
             &asks,
-            Bound::WHOLE,
+            Bound::RECOGNITION,
             &stages,
             (&mut meta, &mut observe),
             cancel,
@@ -351,7 +351,7 @@ pub(crate) fn step_one_context(
             backend,
             &window_plan(backend, (text, &pieces), (0, 0), vec![probe])?,
         )?;
-        contextual_requests(&alone, backend, profile, context, Bound::WHOLE)?;
+        contextual_requests(&alone, backend, profile, context, Bound::RECOGNITION)?;
     }
     let mut asks = Asks::default();
     for group in step_one_groups(pieces.len()) {
@@ -364,13 +364,7 @@ pub(crate) fn step_one_context(
         )?;
     }
     let asks = asks.with_examples(backend, &examples)?;
-    let requests = contextual_requests(
-        &asks,
-        backend,
-        profile,
-        context,
-        Bound::boundary(!examples.is_empty()),
-    )?;
+    let requests = contextual_requests(&asks, backend, profile, context, Bound::RECOGNITION)?;
     if !examples.is_empty()
         && requests
             .iter()

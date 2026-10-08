@@ -207,6 +207,7 @@ where
         questions: None,
         sized: true,
         inputs: inputs_cap,
+        strict_singleton: false,
         context: judging.context.is_some() || judging.context_field.is_some(),
         detailed: false,
         continues: false,

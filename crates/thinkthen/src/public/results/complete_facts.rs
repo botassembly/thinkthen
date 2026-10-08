@@ -64,6 +64,9 @@ struct Document<'a> {
     output_tokens: Option<u64>,
     records: u64,
     requests_sent: u64,
+    largest_request_bytes: usize,
+    largest_request_estimated_input_tokens: Option<u64>,
+    token_estimate_method: &'static str,
     seconds: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     attempts: Option<Vec<crate::public::CompleteAttempt<'a>>>,
@@ -81,6 +84,9 @@ impl Serialize for CompleteFacts<'_> {
             output_tokens: facts.output_tokens,
             records: facts.records,
             requests_sent: facts.requests_sent,
+            largest_request_bytes: facts.largest_request_bytes,
+            largest_request_estimated_input_tokens: facts.largest_request_estimated_input_tokens,
+            token_estimate_method: facts.token_estimate_method,
             seconds: facts.seconds,
             attempts: self
                 .attempts()

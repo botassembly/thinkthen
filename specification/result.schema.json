@@ -110,6 +110,19 @@
             "null"
           ]
         },
+        "largest_request_bytes": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "largest_request_estimated_input_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "model": {
           "type": [
             "string",
@@ -137,6 +150,9 @@
         "seconds": {
           "format": "double",
           "type": "number"
+        },
+        "token_estimate_method": {
+          "type": "string"
         }
       },
       "required": [
@@ -144,6 +160,9 @@
         "cache_answers",
         "records",
         "requests_sent",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
         "seconds"
       ],
       "type": "object"
@@ -2919,6 +2938,21 @@
             "integer"
           ]
         },
+        "largest_request_bytes": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "largest_request_estimated_input_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "model": {
           "type": [
             "string"
@@ -2947,6 +2981,9 @@
         "seconds": {
           "format": "double",
           "type": "number"
+        },
+        "token_estimate_method": {
+          "type": "string"
         }
       },
       "required": [
@@ -2954,6 +2991,9 @@
         "cache_answers",
         "records",
         "requests_sent",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
         "seconds"
       ],
       "type": "object",
@@ -6675,6 +6715,19 @@
           "minimum": 0,
           "type": "integer"
         },
+        "largest_request_bytes": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "largest_request_estimated_input_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "model": {
           "type": "string"
         },
@@ -6696,12 +6749,18 @@
         "seconds": {
           "format": "double",
           "type": "number"
+        },
+        "token_estimate_method": {
+          "type": "string"
         }
       },
       "required": [
         "cache_answers",
         "records",
         "requests_sent",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
         "seconds"
       ],
       "type": "object"
@@ -7132,6 +7191,16 @@
             "null"
           ]
         },
+        "largest_request_bytes": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "largest_request_estimated_input_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "records": {
           "format": "uint",
           "minimum": 0,
@@ -7142,6 +7211,9 @@
           "minimum": 0,
           "type": "integer"
         },
+        "token_estimate_method": {
+          "type": "string"
+        },
         "upper_bound": {
           "type": "boolean"
         }
@@ -7150,6 +7222,9 @@
         "records",
         "requests",
         "estimated_bytes",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
         "estimated_input_tokens",
         "upper_bound",
         "first_body_utf8"

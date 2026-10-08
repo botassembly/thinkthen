@@ -9,6 +9,7 @@ mod custom;
 mod examples;
 mod rules;
 mod seeds;
+mod sized;
 mod stores;
 mod unicode;
 
