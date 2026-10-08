@@ -3,8 +3,8 @@ from helper import Backend, child, environment, expect, main
 
 
 def test_eager_complete_refuses_late_declared_items_and_recognition_controls_without_sends():
-    with Backend() as backend:
-        got = child('''
+    backend = Backend()
+    got = child('''
 db = connect()
 cases = [
     ('decide', {'decide':'Fits?','item_schema':{'type':'object','properties':{'body':{'type':'string'}},'required':['body']}},
@@ -25,8 +25,8 @@ for verb, question, inputs in cases:
     assert 'secret' not in value
 say(results=results)
 ''', environment(backend))
-        expect(got['results'], ['usage'] * 6, 'shared complete admission')
-        expect(backend.count(), 0, 'eager invalid complete calls send nothing')
+    expect(got['results'], ['usage'] * 6, 'shared complete admission')
+    expect(backend.close(), 0, 'eager invalid complete calls send nothing')
 
 
 if __name__ == '__main__':
