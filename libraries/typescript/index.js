@@ -158,7 +158,7 @@ const QUESTION_KEYS = {
   tag_many: ['labels'],
   rank: ['top'],
   find: ['none'],
-  recognize: ['kinds', 'relations', 'threshold', 'relationThreshold', 'file'],
+  recognize: ['instructions', 'entityDefinition', 'kinds', 'relations', 'threshold', 'relationThreshold', 'file'],
   relate: ['relations', 'either', 'threshold', 'file'],
 };
 
@@ -311,6 +311,8 @@ function recognizeSpec(inputs) {
       return { name, source: ends[0], target: ends[1] };
     });
   }
+  if (has(inputs, 'instructions')) recognize.instructions = inputs.instructions;
+  if (has(inputs, 'entityDefinition')) recognize.entity_definition = inputs.entityDefinition;
   const spec = { version: 1, recognize };
   if (has(inputs, 'threshold')) spec.threshold = inputs.threshold;
   if (has(inputs, 'relationThreshold')) spec.relation_threshold = inputs.relationThreshold;

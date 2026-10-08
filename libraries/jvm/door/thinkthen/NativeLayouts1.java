@@ -4,6 +4,7 @@ import java.util.Map;
 import static java.lang.foreign.ValueLayout.*;
 import static thinkthen.NativeLayouts.*;
 final class NativeLayouts1 { static void add(Map<String,MemoryLayout> L) {
+ L.put("thinkthen_recognition_task_v1",structure(L.get("thinkthen_optional_string_v1").withName("instructions"),L.get("thinkthen_optional_string_v1").withName("entity_definition")));
  L.put("thinkthen_question_spec_v1", structure(JAVA_INT.withName("kind"), L.get("thinkthen_content_v1").withName("text"), L.get("thinkthen_optional_content_v1").withName("yes"), L.get("thinkthen_optional_content_v1").withName("no"), L.get("thinkthen_choices_v1").withName("choices"), L.get("thinkthen_rule_v1").withName("threshold"), L.get("thinkthen_rule_v1").withName("relation_threshold"), L.get("thinkthen_optional_string_v1").withName("model"), L.get("thinkthen_optional_string_v1").withName("profile"), L.get("thinkthen_optional_size_v1").withName("batch"), JAVA_INT.withName("batch_max"), JAVA_INT.withName("none"), L.get("thinkthen_strings_v1").withName("on"), L.get("thinkthen_member_specs_v1").withName("members"), L.get("thinkthen_choices_v1").withName("kinds"), L.get("thinkthen_relations_v1").withName("relations"), L.get("thinkthen_optional_string_v1").withName("name_pointer"), L.get("thinkthen_optional_string_v1").withName("kind_pointer")));
  L.put("thinkthen_question_member_v1", structure(L.get("thinkthen_string_v1").withName("name"), ADDRESS.withName("question")));
  L.put("thinkthen_question_members_v1", structure(ADDRESS.withName("data"), JAVA_LONG.withName("len")));

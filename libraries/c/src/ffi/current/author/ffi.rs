@@ -97,6 +97,11 @@ pub(super) unsafe fn new_with_task(
             |_| {
                 read::required(out)?;
                 let spec = read::reference(spec)?;
+                if task.is_some() && spec.kind != 9 {
+                    return Err(Failure::usage(
+                        "recognition task requires a recognition question",
+                    ));
+                }
                 let author = author(metadata.as_ref())?;
                 let json = question::build(spec, Some(&author), task)?;
                 let mut q = if spec.kind == 6 && spec.members.len == 0 {

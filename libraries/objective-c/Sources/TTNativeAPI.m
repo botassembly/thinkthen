@@ -49,6 +49,13 @@ static void leave(TTClient *c) { pthread_mutex_lock(&c->mutex); if(!--c->active)
     code=failure_snapshot(native,code,failure); leave(self);
     if(code) { [q dealloc]; return code; } *outputValue=q; return 0;
 }
+- (int)question:(const thinkthen_question_spec_v1 *)spec author:(const thinkthen_question_author_v1 *)author task:(const thinkthen_recognition_task_v1 *)task output:(TTQuestion **)outputValue failure:(TTNativeResult **)failure {
+    if(!outputValue) return THINKTHEN_EUSAGE;
+    TTQuestion *q=class_createInstance(objc_getClass("TTQuestion"),0); if(!q) return THINKTHEN_ELOCAL;
+    enter(self); int code=thinkthen_question_new_recognition_v1(native,spec,author,task,&q->native);
+    code=failure_snapshot(native,code,failure); leave(self);
+    if(code) { [q dealloc]; return code; } *outputValue=q; return 0;
+}
 #define LOADER(selector,call,params) \
 - (int)selector output:(TTQuestion **)outputValue failure:(TTNativeResult **)failure { \
     if(!outputValue) return THINKTHEN_EUSAGE; TTQuestion *q=class_createInstance(objc_getClass("TTQuestion"),0); if(!q) return THINKTHEN_ELOCAL; \

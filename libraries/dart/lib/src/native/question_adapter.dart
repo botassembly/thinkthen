@@ -129,8 +129,16 @@ extension _Questions on Engine {
       s.ref.name_pointer = _optionalString(v.namePointer, scope);
       s.ref.kind_pointer = _optionalString(v.kindPointer, scope);
       final out = scope.add(calloc<Pointer<Void>>());
-      _check(_api.thinkthen_question_new_authored(
-          _engine, s, _author(v.author, scope), out));
+      if (v.instructions != null || v.entityDefinition != null) {
+        final task = scope.add(calloc<CRecognitionTaskView>());
+        task.ref.instructions = _optionalString(v.instructions, scope);
+        task.ref.entity_definition = _optionalString(v.entityDefinition, scope);
+        _check(_api.thinkthen_question_new_recognition_v1(
+            _engine, s, _author(v.author, scope), task, out));
+      } else {
+        _check(_api.thinkthen_question_new_authored(
+            _engine, s, _author(v.author, scope), out));
+      }
       return out.value;
     } finally {
       for (final child in children) {

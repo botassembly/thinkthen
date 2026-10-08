@@ -50,5 +50,5 @@ final class QuestionSpec
         public readonly ?string $model=null,public readonly ?string $profile=null,public readonly ?int $batch=null,
         public readonly bool $batchMax=false,public readonly bool $none=false,public readonly array $on=[],
         public readonly array $members=[],public readonly array $kinds=[],public readonly array $relations=[],
-        public readonly ?string $namePointer=null,public readonly ?string $kindPointer=null,public readonly ?Author $author=null) {}
+        public readonly ?string $namePointer=null,public readonly ?string $kindPointer=null,public readonly ?Author $author=null,public readonly ?string $instructions=null,public readonly ?string $entityDefinition=null) {}
 }

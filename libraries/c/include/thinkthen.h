@@ -1008,13 +1008,9 @@ typedef struct thinkthen_question_author_v1 {
  */
 int thinkthen_question_new_authored(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, thinkthen_question **);
 
-/* kind must be 9. task is required; author may be NULL. Active strings are
-   nonblank counted UTF-8 and copied before return. Absent value storage is ignored.
-   Failure preserves *out. Existing V1 constructors retain their contracts. */
+/* kind=9, task required, author nullable. Copy active nonblank UTF-8; ignore absent storage. Failure preserves *out. */
 int thinkthen_question_new_recognition_v1(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, const thinkthen_recognition_task_v1 *, thinkthen_question **);
-/* Borrow task strings until the owning question/result is freed. Requires a
-   recognition question/row and writable full-sized output. Invalid owners, row
-   ordinals and NULL output return Usage without changing output. */
+/* Borrow until owner free. Require recognition owner/row and full writable output. Invalid/NULL inputs return Usage and preserve output. */
 int thinkthen_question_recognition_task_v1(const thinkthen_question *, thinkthen_recognition_task_v1 *);
 int thinkthen_result_recognition_task_v1(const thinkthen_result *, size_t row, thinkthen_recognition_task_v1 *);
 /* Borrow metadata owned by this immutable question until question_free. */

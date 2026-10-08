@@ -209,10 +209,23 @@ extension _Execution on Engine {
     final ranks = <List<RankView>>[];
     final rankDetails = <List<DetailsView>>[];
     final recognitions = <SourceRecognitionView?>[];
+    final tasks = <RecognitionTaskView?>[];
     final relations = <SourceRelationsView?>[];
     for (var i = 0; i < s.count; ++i) {
       final row = read(r, i);
       rows.add(row);
+      if (verb == 'recognize') {
+        final task = calloc<CRecognitionTaskView>();
+        try {
+          if (_api.thinkthen_result_recognition_task_v1(r, i, task) != 0)
+            throw StateError('native recognition task');
+          tasks.add(RecognitionTaskView.copy(task.ref));
+        } finally {
+          calloc.free(task);
+        }
+      } else {
+        tasks.add(null);
+      }
       details.add(_details(r, i));
       authors.add(_question_author(r, i));
       final ma = <QuestionAuthorView>[];
@@ -279,7 +292,8 @@ extension _Execution on Engine {
         List.generate(s.observation_count, (i) => _observation_author(r, i)),
         recognitions,
         relations,
-        rankDetails);
+        rankDetails,
+        tasks);
   }
 
   CompleteResult<T> _execute<T>(

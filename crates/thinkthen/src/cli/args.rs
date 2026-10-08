@@ -512,8 +512,14 @@ pub(crate) struct ScoreArguments {
     pub(crate) common: Common,
 }
 
+impl std::fmt::Debug for RecognizeArguments {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RecognizeArguments").finish_non_exhaustive()
+    }
+}
+
 /// Everything `recognize` was asked before its input is read.
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct RecognizeArguments {
     /// Supply task wording for every recognition stage.
     #[arg(long, value_name = "TEXT")]

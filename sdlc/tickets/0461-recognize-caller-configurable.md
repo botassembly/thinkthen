@@ -1,6 +1,6 @@
 # 0461: Let callers define recognition entities
 
-Status: OPEN. Ticket review ACCEPT on a456d9af3; implementation in progress.
+Status: OPEN. Ticket review ACCEPT on a456d9af3; native, C, CLI, MCP and host adoption are implemented for fresh code review. Model evaluation and complete installed qualification remain open; landing follows v0.2.0.
 
 Reviews: accept
 

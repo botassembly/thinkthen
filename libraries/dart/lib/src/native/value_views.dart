@@ -820,3 +820,11 @@ final class QuestionAuthorView {
       InputDeclarationView.copy(v.item_schema),
       InputDeclarationView.copy(v.context_schema));
 }
+
+final class RecognitionTaskView {
+  final OptionalStringView instructions, entity_definition;
+  const RecognitionTaskView(this.instructions, this.entity_definition);
+  factory RecognitionTaskView.copy(CRecognitionTaskView v) =>
+      RecognitionTaskView(OptionalStringView.copy(v.instructions),
+          OptionalStringView.copy(v.entity_definition));
+}

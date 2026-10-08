@@ -7,8 +7,8 @@
 #[cfg(unix)]
 use crate::ffi::carriers::{
     AnswerV1, DetailsV1, InputDeclarationV1, InputPropertyV1, MetaV1, ObservationV1,
-    QuestionAuthorV1, QuestionViewV1, RecordV1, SourceEndpointV1, SourceRecognitionV1,
-    SourceRelationsV1, SummaryV1,
+    QuestionAuthorV1, QuestionViewV1, RecognitionTaskV1, RecordV1, SourceEndpointV1,
+    SourceRecognitionV1, SourceRelationsV1, SummaryV1,
 };
 use crate::ffi::carriers::{DecideValueDataV1, MemberValueDataV1};
 #[cfg(unix)]
@@ -18,6 +18,11 @@ use std::mem::size_of;
 #[test]
 fn c11_and_cpp17_consumers_match_reviewed_signatures_and_rust_carrier_layouts() {
     let sizes = [
+        (
+            "RECOGNITION_TASK",
+            size_of::<RecognitionTaskV1>(),
+            align_of::<RecognitionTaskV1>(),
+        ),
         (
             "SOURCE_RECOGNITION",
             size_of::<SourceRecognitionV1>(),

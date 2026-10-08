@@ -142,3 +142,76 @@ fn recognition_task_refusals_preserve_output_and_never_read_invalid_extents() {
     assert_eq!(unsafe { view(std::ptr::null(), &mut output) }, USAGE);
     assert_eq!(output.instructions.present, 7);
 }
+
+#[test]
+fn completed_recognition_retains_task_after_question_source_and_engine_are_freed() {
+    let backend = conformance_backend::Backend::start().expect("loopback");
+    let engine = door(&format!("{}/generic/v1", backend.origin()));
+    let task = RecognitionTaskV1 {
+        instructions: OptionalStringV1 {
+            present: 1,
+            value: string("Find literal entities."),
+        },
+        entity_definition: OptionalStringV1 {
+            present: 1,
+            value: string("A complete literal span."),
+        },
+    };
+    let spec = QuestionSpecV1 {
+        kind: 9,
+        ..Default::default()
+    };
+    let mut question = std::ptr::null_mut();
+    // SAFETY: inputs have their advertised extent and constructor copies them.
+    assert_eq!(
+        unsafe { new(&engine, &spec, std::ptr::null(), &task, &mut question) },
+        0
+    );
+    let source = super::source(&engine, &[super::record("Ada met Acme.")]);
+    let mut result = std::ptr::null_mut();
+    // SAFETY: all owners remain live through complete execution.
+    assert_eq!(
+        unsafe {
+            crate::ffi::complete::thinkthen_recognize_complete(
+                &engine,
+                question,
+                &*source,
+                std::ptr::null(),
+                &mut result,
+            )
+        },
+        0
+    );
+    // SAFETY: question is uniquely owned and the result copied its declaration.
+    unsafe { crate::ffi::current::thinkthen_question_free(question) };
+    drop(source);
+    drop(engine);
+    let mut output = RecognitionTaskV1::default();
+    // SAFETY: result remains live while its task view is borrowed.
+    assert_eq!(
+        unsafe {
+            crate::ffi::complete::thinkthen_result_recognition_task_v1(result, 0, &mut output)
+        },
+        0
+    );
+    assert_eq!(text(output.instructions.value), "Find literal entities.");
+    assert_eq!(
+        text(output.entity_definition.value),
+        "A complete literal span."
+    );
+    output.instructions.present = 7;
+    // SAFETY: checked invalid index must refuse without touching the initialized output.
+    assert_eq!(
+        unsafe {
+            crate::ffi::complete::thinkthen_result_recognition_task_v1(
+                result,
+                usize::MAX,
+                &mut output,
+            )
+        },
+        USAGE
+    );
+    assert_eq!(output.instructions.present, 7);
+    // SAFETY: result is exclusively owned and all borrowed reads are finished.
+    unsafe { crate::ffi::complete::thinkthen_result_free(result) };
+}

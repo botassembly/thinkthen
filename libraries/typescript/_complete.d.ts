@@ -184,6 +184,8 @@ export interface RelateQuestion {
   readonly context_schema?: InputDeclaration;
 }
 export interface RecognizeQuestion {
+  readonly instructions?: string;
+  readonly entity_definition?: string;
   readonly verb: "recognize";
   readonly kinds: Readonly<Record<string, Description>>;
   readonly relations?: readonly (RelationRule)[];
@@ -637,6 +639,8 @@ export interface QuestionSet {
   readonly profile?: string;
 }
 export interface RecognitionPlan {
+  readonly instructions?: string;
+  readonly entity_definition?: string;
   readonly kinds?: Labels;
   readonly relations?: readonly (PlanRule)[];
 }

@@ -61,7 +61,7 @@ trait QuestionAdapter
             $rels=$this->ffi->new('thinkthen_relation_v1['.max(1,count($v->relations)).']');$keep[]=$rels;
             foreach($v->relations as $i=>$r){if(!$r instanceof Relation)throw new \InvalidArgumentException('typed relation required');foreach(['name','source','target'] as $key)$rels[$i]->$key=$this->string($r->$key,$keep);$rels[$i]->reads=$this->optionalString($r->reads,$keep);$rels[$i]->either=(int)$r->either;$rels[$i]->single=(int)$r->single;}
             $s->relations->data=\FFI::addr($rels[0]);$s->relations->len=count($v->relations);$s->name_pointer=$this->optionalString($v->namePointer,$keep);$s->kind_pointer=$this->optionalString($v->kindPointer,$keep);
-            $a=$this->author($v->author,$keep);$out=$this->ffi->new('thinkthen_question *');$this->check($this->ffi->thinkthen_question_new_authored($this->engine,\FFI::addr($s),\FFI::addr($a),\FFI::addr($out)));return $out;
+            $a=$this->author($v->author,$keep);$out=$this->ffi->new('thinkthen_question *');if($v->instructions!==null||$v->entityDefinition!==null){$task=$this->ffi->new('thinkthen_recognition_task_v1');$task->instructions=$this->optionalString($v->instructions,$keep);$task->entity_definition=$this->optionalString($v->entityDefinition,$keep);$this->check($this->ffi->thinkthen_question_new_recognition_v1($this->engine,\FFI::addr($s),\FFI::addr($a),\FFI::addr($task),\FFI::addr($out)));}else{$this->check($this->ffi->thinkthen_question_new_authored($this->engine,\FFI::addr($s),\FFI::addr($a),\FFI::addr($out)));}return $out;
         } finally { foreach($children as $child)$this->ffi->thinkthen_question_free($child); }
     }
 }

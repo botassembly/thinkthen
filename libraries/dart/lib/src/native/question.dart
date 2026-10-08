@@ -85,7 +85,12 @@ final class QuestionSpec {
   final Content? text, yes, no;
   final List<Choice> choices, kinds;
   final Rule? threshold, relationThreshold;
-  final String? model, profile, namePointer, kindPointer;
+  final String? model,
+      profile,
+      namePointer,
+      kindPointer,
+      instructions,
+      entityDefinition;
   final int? batch;
   final bool batchMax, none;
   final List<String> on;
@@ -93,7 +98,9 @@ final class QuestionSpec {
   final List<Relation> relations;
   final Author? author;
   QuestionSpec(this.kind,
-      {this.text,
+      {this.instructions,
+      this.entityDefinition,
+      this.text,
       this.yes,
       this.no,
       List<Choice> choices = const [],

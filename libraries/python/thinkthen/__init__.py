@@ -550,7 +550,7 @@ class Engine:
 
     def recognize(self, text, ask=None, *, kinds=None, relations=None, either=None,
                   threshold=None, relation_threshold=None, on=None, deadline_ms=_MISSING,
-                  token=None, descriptions=None, **legacy):
+                  token=None, descriptions=None, instructions=None, entity_definition=None, **legacy):
         """Find every name in a text and say what kind it is.
 
         ``kinds`` lists kind words, or maps each to a description.
@@ -570,6 +570,8 @@ class Engine:
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
         if ask is not None:
+            if instructions is not None or entity_definition is not None:
+                raise UsageError("recognize task keywords take an inline declaration")
             if descriptions is not None:
                 raise UsageError("descriptions= takes kinds=, not a recognize ask")
             spec = _spec(_thinkthen._Recognize, ask)
@@ -578,6 +580,10 @@ class Engine:
             if not isinstance(named, dict):
                 named = {name: None for name in named}
             body = {"version": 1, "recognize": {"kinds": named}}
+            if instructions is not None:
+                body["recognize"]["instructions"] = instructions
+            if entity_definition is not None:
+                body["recognize"]["entity_definition"] = entity_definition
             rules = _rules(relations, either)
             if rules:
                 body["recognize"]["relations"] = [
@@ -715,11 +721,12 @@ def annotate(questions, records, **keywords):
 
 def recognize(text, ask=None, *, kinds=None, relations=None, either=None, threshold=None,
               relation_threshold=None, on=None, deadline_ms=_MISSING, token=None,
-              descriptions=None, **legacy):
+              descriptions=None, instructions=None, entity_definition=None, **legacy):
     return _engine().recognize(text, ask, kinds=kinds, relations=relations, either=either,
                                threshold=threshold, relation_threshold=relation_threshold,
                                on=on, deadline_ms=deadline_ms, token=token,
-                               descriptions=descriptions, **legacy)
+                               descriptions=descriptions, instructions=instructions,
+                               entity_definition=entity_definition, **legacy)
 
 
 def relate(entities, ask=None, *, relations=None, either=None, threshold=None,

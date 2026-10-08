@@ -1,18 +1,32 @@
-# Recognize names
+# Recognize entities
 
-Status: **Settled** for the command in ticket 0147, under ADR 0056. Relations are beta.
+Status: **Settled** for default recognition under ADR 0056 and caller-defined recognition under ADR 0124. Relations are beta.
 
 `thinkthen recognize [OPTIONS] [KIND]...` finds every name in one text and gives each one a caller-named kind. `thinkthen recognize [OPTIONS] @FILE` reads the same question from a file. With no kinds, every name has the kind `ENTITY`.
 
 Recognize runs in three steps. Step 1 splits the text into pieces and asks where each piece stands in a name. Step 2 asks each found name's kind and checks its edges. Step 3 asks only the relation pairs a rule allows. The same path serves a sentence and a book.
 
+## Caller-defined entities
+
+Settled for 0.3 by [ADR 0124](../sdlc/planning/adr/0124-caller-defined-recognition.md). `--instructions TEXT`, `--entity-definition TEXT` and existing `--kind KIND=DESCRIPTION` define the recognition task. Any supplied task wording or meaningful label description selects neutral entity questions. Dates, numbers, codes, amounts, units, ordinary words and web addresses can be entities. ThinkThen applies no fixed semantic suppression in this mode. Protocol labels and structural token rules retain their roles.
+
+Every token, kind, decline and boundary question carries the complete caller declaration. Boundary questions preserve punctuation that belongs to the requested span. An instructions-only or definition-only declaration needs no kinds and produces `ENTITY`. A described kind needs no extra switch. Null and blank label descriptions retain their existing absent meaning. Instructions and entity definitions must be nonblank strings; explicit null, blank or another type refuses before sending. Multiline strings are accepted as task wording. ThinkThen executes no caller commands.
+
+Saved version-one JSON places `instructions` and `entity_definition` inside `recognize`. Explicit CLI flags replace the corresponding saved values. Inline kinds and relations remain exclusive with `@FILE`. The canonical question description retains supplied fields and omits absent ones. Changing either field or a label description changes generated question, cache and replay identity. Omitting all customization preserves default wording and existing bare-kind recordings.
+
+```json
+{"version":1,"recognize":{"instructions":"Find the numeric receipt total, not the TOTAL label.","entity_definition":"The literal decimal amount.","kinds":{"amount":"The receipt total amount."}}}
+```
+
+The native Rust builder provides `instructions` and `entity_definition`. SDK typed constructors, common question-file readers, SQL declaration inputs, pandas, Polars and MCP carry the same declaration. C exposes the additive `thinkthen_recognition_task_v1` sidecar with copied inputs and owner-borrowed readers. Existing V1 layouts remain unchanged. Offline examples establish transport and output behavior; model accuracy requires the separately authorized evaluation.
+
 ## Step 1: boundaries
 
 White space separates pieces. Each character of Unicode general category P or S is a piece of its own. A run of characters of category Mn, Me or Cf joins the piece that ends right before it. A run after white space or at the text's start begins a piece. Nothing else joins or splits. `Ada met Acme.` is four pieces: `Ada`, `met`, `Acme` and `.`.
 
-Each piece gets one pick-one question: `BEGIN`, `INSIDE`, `END`, `SINGLE` or `OUT`. The question names the caller's kinds without their descriptions. With no kinds it asks about a name of any kind. Each question shows a snippet of six pieces on each side, with the piece wrapped in `[[ ]]`.
+Each piece gets one pick-one question: `BEGIN`, `INSIDE`, `END`, `SINGLE` or `OUT`. Default questions name bare caller kinds. Caller-defined questions include the complete task declaration. With no kinds the output kind is `ENTITY`. Each question shows a snippet of six pieces on each side, with the piece wrapped in `[[ ]]`.
 
-Without kinds, fixed step-1 wording lists person, organisation, place, product, work, event or other thing; with kinds it names the caller's kinds, but descriptions reach only step 2, and accuracy outside the measured corpora is unknown. This is the current generic wording, not the earlier news-document question. The measurements below cover their named keys and public sets, not every caller kind or domain.
+When all customization is omitted, fixed step-1 wording lists person, organisation, place, product, work, event or other thing, or names the bare caller kinds. This is the current generic wording, not the earlier news-document question. The measurements below cover their named keys and public sets, not every caller kind or domain.
 
 A step-1 request holds at most 40 consecutive pieces. Its evidence runs from six pieces before its first piece to six pieces after its last. A text of 40 pieces or fewer sends its whole text once. A longer text never sends its whole text in one step-1 request.
 

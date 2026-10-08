@@ -1,4 +1,3 @@
-"""Private result/2 carriers. No execution adapter is installed yet."""
 from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Literal, Mapping, Union
@@ -231,6 +230,8 @@ class RelateQuestion(Carrier):
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RecognizeQuestion(Carrier):
+    instructions: str | Absent = ABSENT
+    entity_definition: str | Absent = ABSENT
     verb: Literal['recognize']
     kinds: Mapping[str, Description]
     relations: tuple[RelationRule, ...] | Absent = ABSENT
@@ -746,7 +747,6 @@ def to_json(value):
     if isinstance(value, Identity): return str(value)
     return value
 
-# Typed inputs retain the native question grammar and explicit source selection.
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class DecideSpec(Carrier):
@@ -830,6 +830,8 @@ class QuestionSet(Carrier):
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RecognitionPlan(Carrier):
+    instructions: str | Absent = ABSENT
+    entity_definition: str | Absent = ABSENT
     kinds: Labels | Absent = ABSENT
     relations: tuple[PlanRule, ...] | Absent = ABSENT
 
@@ -1047,7 +1049,7 @@ _MODELS = {
     'RelationRule': {'name': 'str', 'source': 'str', 'target': 'str', 'reads': 'str', 'either': 'bool', 'single?': 'bool'},
     'RelateFields': {'name': 'str', 'kind': 'str'},
     'RelateQuestion': {'verb': '=relate', 'fields': 'RelateFields|null', 'relations': '[RelationRule]', 'threshold': 'threshold', 'profile?': 'str', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
-    'RecognizeQuestion': {'verb': '=recognize', 'kinds': '{description}', 'relations?': '[RelationRule]', 'threshold': 'threshold', 'relation_threshold': 'threshold', 'on?': 'str|[str]', 'profile?': 'str', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
+    'RecognizeQuestion': {'verb': '=recognize', 'kinds': '{description}', 'instructions?': 'str', 'entity_definition?': 'str', 'relations?': '[RelationRule]', 'threshold': 'threshold', 'relation_threshold': 'threshold', 'on?': 'str|[str]', 'profile?': 'str', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'Failure': {'kind': '=backend', 'cause': 'cause'},
     'FailedField': {'failed': 'Failure'},
     'Entity': {'text': 'text', 'start': 'uint', 'end': 'uint', 'length': 'uint', 'kind': 'str', 'strength': 'number', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
@@ -1085,7 +1087,7 @@ _MODELS = {
     'FindSpec': {'find': 'text', 'none?': 'bool', 'model?': 'str', 'profile?': 'str', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'QuestionFile': {'path': 'str'},
     'QuestionSet': {'version': 'one', 'questions': '{AnnotationSpec}', 'batch?': 'batch', 'threshold?': 'threshold', 'profile?': 'str'},
-    'RecognitionPlan': {'kinds?': 'Labels', 'relations?': '[PlanRule]'},
+    'RecognitionPlan': {'kinds?': 'Labels', 'instructions?': 'str', 'entity_definition?': 'str', 'relations?': '[PlanRule]'},
     'PlanRule': {'name': 'str', 'source': 'str', 'target': 'str', 'reads?': 'str', 'either?': 'bool', 'single?': 'bool'},
     'RecognitionSpec': {'version': 'one', 'recognize': 'RecognitionPlan', 'threshold?': 'probability', 'relation_threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'RelationPlan': {'relations': '[PlanRule]', 'fields?': 'RelateFields'},

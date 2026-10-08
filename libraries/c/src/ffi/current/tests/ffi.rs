@@ -8,7 +8,7 @@
 mod layout;
 #[path = "native.rs"]
 mod native;
-#[path = "recognition.rs"]
+#[path = "recognition/ffi.rs"]
 mod recognition;
 use super::{
     carriers::{
