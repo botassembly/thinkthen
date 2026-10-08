@@ -249,6 +249,7 @@ fn declarations_refuse_coercion_and_distinguish_absent_context_from_json_looking
         .unwrap();
     let absent = RecordInput {
         examples: None,
+        seed_spans: None,
         original: "Refund me.",
         context: None,
         options: None,
@@ -262,6 +263,7 @@ fn declarations_refuse_coercion_and_distinguish_absent_context_from_json_looking
         .unwrap();
     let explicit = RecordInput {
         examples: None,
+        seed_spans: None,
         original: "Refund me.",
         context: Some("{}".into()),
         options: None,

@@ -69,6 +69,7 @@ fn item(text: &str) -> RequestItem {
         context: None,
         options: None,
         examples: None,
+        seed_spans: None,
         images: vec![],
     }
 }
@@ -201,6 +202,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
         context: None,
         options: None,
         examples: None,
+        seed_spans: None,
         images: vec![],
     })
     .to_vec();
@@ -251,6 +253,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
                 items: vec![
                     item("Alpha."),
                     RequestItem {
+                        seed_spans: None,
                         examples: Some(vec![]),
                         ..item("Beta.")
                     },
@@ -278,6 +281,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
         let rows = items
             .iter()
             .map(|item| RecordInput {
+                seed_spans: None,
                 original: match item.original.as_ref().unwrap() {
                     RequestOriginal::Text { text } => QuestionInput::Text(text.clone()),
                     RequestOriginal::Json { value } => RecordReading::new(&[], None, None)
@@ -362,6 +366,7 @@ fn native_and_canonical_replays_keep_the_original_answer_identity() {
         context: None,
         options: None,
         examples: None,
+        seed_spans: None,
     }];
     let live = direct(&engine, RequestFunction::Decide, &q.clone().into(), rows);
     let request = Request::new(RequestCall::Decide(args(
@@ -406,6 +411,7 @@ fn text_request_band_keeps_native_threshold_reading() {
                 context: None,
                 options: None,
                 examples: None,
+                seed_spans: None,
             }],
             CallOptions::new(),
         )

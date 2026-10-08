@@ -21,6 +21,7 @@ fn call(
     let records = || {
         (0..3).map(|_| RecordInput {
             examples: None,
+            seed_spans: None,
             original: Original { token, snapshots },
             context: None,
             options: None,
@@ -81,6 +82,7 @@ fn native_finite_source_cancel_stops_before_pulling_the_next_record() {
         token.cancel();
         Some(Ok(RecordInput {
             examples: None,
+            seed_spans: None,
             original: "Plain.",
             context: None,
             options: None,

@@ -175,6 +175,7 @@ fn compose(
         options
     };
     Ok(RecordInput {
+            seed_spans: None,
         examples: None,
         original: Original { value, input },
         context,
@@ -270,6 +271,7 @@ fn source(
         let location =
             thinkthen::SourceLocation::new(s.file.clone(), Some(s.first_line), Some(s.last_line))?;
         return Ok(RecordInput {
+            seed_spans: None,
             examples: None,
             original: Original {
                 value,
@@ -290,6 +292,7 @@ fn source(
             let value = serde_json::value::to_raw_value(r.original.original())
                 .map_err(|_| super::usage("invalid original"))?;
             return Ok(RecordInput {
+            seed_spans: None,
                 examples: None,
                 original: Original {
                     value,
@@ -302,6 +305,7 @@ fn source(
         source => reading.compose_source(source)?,
     };
     Ok(RecordInput {
+            seed_spans: None,
         examples: None,
         original: Original {
             value,

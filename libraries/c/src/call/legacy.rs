@@ -106,6 +106,7 @@ fn item(original: RequestOriginal) -> RequestItem {
         context: None,
         options: None,
         examples: None,
+        seed_spans: None,
         images: Vec::new(),
     }
 }

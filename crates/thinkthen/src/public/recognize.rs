@@ -167,6 +167,14 @@ impl Recognize {
         Ok(self)
     }
 
+    /// Replace seed proposals. Exact scalar piece edges and declared kinds are admitted
+    /// against each record before sending. An empty list clears the fallback.
+    #[must_use]
+    pub fn with_seed_spans(mut self, seeds: Vec<crate::RecognitionSeedSpan>) -> Self {
+        self.0.seed_spans = seeds;
+        self
+    }
+
     /// Borrow the shared examples in their caller-supplied order.
     #[must_use]
     pub fn examples(&self) -> &[crate::public::RecognitionExample] {

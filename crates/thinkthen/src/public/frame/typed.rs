@@ -44,6 +44,7 @@ pub(super) fn texts(column: &Series) -> Result<Vec<Option<RecordInput<String>>>,
         .map(|cell| {
             cell.map(|text| RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: text.to_owned(),
                 context: None,
                 options: None,

@@ -307,6 +307,7 @@ fn complete_file_image_call(
 ) -> Value {
     let record = || thinkthen::RecordInput {
         examples: None,
+        seed_spans: None,
         original: input.clone(),
         context: None,
         options: None,

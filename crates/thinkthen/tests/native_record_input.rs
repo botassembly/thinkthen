@@ -65,6 +65,7 @@ fn record_debug_requires_no_original_traits_and_withholds_caller_content() {
     struct Original;
     let input = RecordInput {
         examples: None,
+        seed_spans: None,
         original: Original,
         context: Some("private-marker".into()),
         options: Some(

@@ -17,6 +17,8 @@ pub struct RecordInput<T> {
     pub options: Option<RecordOptions>,
     /// Replacement recognition examples; an empty list suppresses shared examples.
     pub examples: Option<Vec<super::RecognitionExample>>,
+    /// Replacement recognition seed proposals; an empty list clears shared seeds.
+    pub seed_spans: Option<Vec<super::RecognitionSeedSpan>>,
 }
 
 impl<T> RecordInput<T> {
@@ -28,6 +30,7 @@ impl<T> RecordInput<T> {
             context: self.context,
             options: self.options,
             examples: self.examples,
+            seed_spans: self.seed_spans,
         }
     }
 }

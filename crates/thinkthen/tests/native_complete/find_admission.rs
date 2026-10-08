@@ -85,6 +85,7 @@ fn composed_find_admission_stops_at_one_excess_candidate_without_dropping_the_co
             pulls.fetch_add(1, Ordering::Relaxed);
             Ok(RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: "Plain.",
                 context: None,
                 options: None,

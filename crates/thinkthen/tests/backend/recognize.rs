@@ -8,6 +8,7 @@ mod context;
 mod custom;
 mod examples;
 mod rules;
+mod seeds;
 mod stores;
 mod unicode;
 

@@ -43,6 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => {}
     };
     let records = [text.as_str(), text.as_str()].map(|original| RecordInput {
+            seed_spans: None,
         original,
         context: None,
         options: None,

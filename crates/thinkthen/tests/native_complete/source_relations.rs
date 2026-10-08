@@ -102,6 +102,7 @@ fn source_relations_keep_nonserializable_nonclone_originals_and_refuse_mixed_sou
     let engine = engine(&listener);
     let make = |name, at| RecordInput {
         examples: None,
+        seed_spans: None,
         original: Original {
             value: item(name, at, "source.txt", "false").original,
             marker: std::rc::Rc::new(()),

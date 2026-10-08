@@ -136,6 +136,7 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
             options.details = false;
             options.context_field = a.context_field.clone();
             options.examples_field = a.examples_field.clone();
+            options.seed_spans_field = a.seed_spans_field.clone();
             RequestCall::Recognize(arguments(&mut a.common.clone(), question, options)?)
         }
         Command::Relate(a) => {

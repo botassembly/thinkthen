@@ -773,6 +773,33 @@
         "entities"
       ]
     },
+    "RecognitionSeedSpan": {
+      "description": "An unconfirmed proposal in zero-based Unicode scalar `[start, end)` offsets.\nBoth edges must exactly match recognition piece edges; admission never rounds.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive scalar offset into the actual recognition evidence.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "Optional proposed declared kind; it never restricts classification.",
+          "type": "string"
+        },
+        "start": {
+          "description": "Inclusive scalar offset into the actual recognition evidence.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ]
+    },
     "RequestBatch": {
       "description": "A bounded native batch setting.",
       "anyOf": [
@@ -1697,6 +1724,13 @@
         "original": {
           "description": "Absent only for image-only evidence.",
           "$ref": "#/$defs/RequestOriginal"
+        },
+        "seed_spans": {
+          "description": "Unconfirmed recognition proposals using exact Unicode scalar piece edges.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionSeedSpan"
+          }
         }
       },
       "additionalProperties": false
@@ -1772,6 +1806,17 @@
         },
         "options_field": {
           "description": "Per-item ordered choose shortlist projection.",
+          "type": "string"
+        },
+        "seed_spans": {
+          "description": "Unconfirmed recognition proposals using exact Unicode scalar piece edges.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionSeedSpan"
+          }
+        },
+        "seed_spans_field": {
+          "description": "Per-record seed selection; missing retains fallback and an empty list clears it.",
           "type": "string"
         },
         "threshold": {

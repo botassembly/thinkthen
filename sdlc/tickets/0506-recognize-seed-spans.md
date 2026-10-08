@@ -28,6 +28,8 @@ impl Serialize for RecognitionSeedSpan
 struct RecognitionSeedSpan
 ```
 
+Reviews: revision 2010023e8, accept
+
 ## Outcome
 
 Let a caller supply character spans for each record, with optional kinds. Merge these with step-1 proposals and judge them in step 2 through the existing recognition route. A supplied kind is a proposal, never a confirmed answer.

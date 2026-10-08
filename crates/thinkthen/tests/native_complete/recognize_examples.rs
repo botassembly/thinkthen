@@ -126,6 +126,7 @@ fn native_later_invalid_examples_and_nonrecognition_controls_send_nothing() {
     let engine = engine(&listener);
     let ask = Recognize::builder().build().unwrap();
     let row = |examples| RecordInput {
+        seed_spans: None,
         original: "Ada met Acme.",
         context: None,
         options: None,
