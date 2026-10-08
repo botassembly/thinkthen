@@ -1,6 +1,6 @@
 # 0473: Give old built-in backend configuration an upgrade path
 
-Status: OPEN. The demo reports that 0.1 custom entries named perplexity/openrouter now stop normal commands and --plan with a generic built-in-field error.
+Status: COMPLETE. Safe upgrade diagnostics and both repair paths pass focused checks, full tests, lint, specification checks and fresh code review.
 
 Milestone: 0.2
 
@@ -8,6 +8,10 @@ Owner: builder.
 Severity: medium upgrade correctness.
 
 Reviews: revision d42ed2365, accept
+
+Reviews: code revision a1ea0fede719fdf41e6be8b171eb15569c223ed6, accept
+
+Landed: 2e117d4f808e0f53757b6cd4cbe5351d34893980
 
 ## Outcome
 

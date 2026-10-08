@@ -455,7 +455,9 @@ fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
         assert_eq!(out.status.code(), Some(5));
         assert_eq!(
             said(&out).1,
-            "thinkthen: a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n"
+            format!(
+                "thinkthen: configuration entry for built-in backend `{name}` cannot set `url`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n"
+            )
         );
         let rated =
             json!({"schema":"thinkthen.config/1","backends":{name:{"requests_per_minute":60}}});
