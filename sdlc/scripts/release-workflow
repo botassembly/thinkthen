@@ -231,17 +231,19 @@ managed-build)
 	sh sdlc/scripts/release-workflow managed-tools "$4"
 	[ ! -e "$2/managed.json" ] && [ ! -L "$2/managed.json" ] || fail 'managed receipt already exists'
 	scratch_dir managed_stage
-	mkdir -p "$managed_stage/src" "$managed_stage/feed" "$managed_stage/csharp" "$managed_stage/jvm" \
+	mkdir -p "$managed_stage/src" "$managed_stage/feed" "$managed_stage/csharp" "$managed_stage/jvm" "$managed_stage/c" \
 		"$managed_stage/dotnet-home" "$managed_stage/nuget"
 	# The second source verification precedes this independent managed extraction.
 	python3 sdlc/scripts/release-managed-pair.py source-check "$2/source.tar" "$2/source.json" "$5"
 	tar -xf "$2/source.tar" -C "$managed_stage/src"
+	tar -xzf "$c_archive" -C "$managed_stage/c"
 	DOTNET_CLI_HOME="$managed_stage/dotnet-home" NUGET_PACKAGES="$managed_stage/nuget" \
 	DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
 	"${THINKTHEN_DOTNET:-dotnet}" pack "$managed_stage/src/libraries/csharp/ThinkThen.csproj" -c Release \
 		--source "$managed_stage/feed" -o "$managed_stage/csharp" -v quiet
 	THINKTHEN_JVM_OUT="$managed_stage/jvm" sh "$managed_stage/src/libraries/jvm/build.sh"
-	THINKTHEN_JVM_OUT="$managed_stage/jvm" python3 "$managed_stage/src/libraries/jvm/tests/package_check.py"
+	THINKTHEN_JVM_OUT="$managed_stage/jvm" THINKTHEN_RELEASE_C_DIR="$managed_stage/c" \
+		python3 "$managed_stage/src/libraries/jvm/tests/package_check.py"
 	nupkg=$managed_stage/csharp/Botassembly.ThinkThen.$version.nupkg
 	[ -f "$nupkg" ] && [ ! -L "$nupkg" ] || fail 'fresh nupkg is missing'
 	python3 - "$nupkg" "$managed_stage/jvm/jars" "$2/managed.json" <<'PY'
@@ -276,7 +278,7 @@ PYWIN
 		cargo fetch --locked --manifest-path Cargo.toml
 		cargo fetch --locked --manifest-path libraries/c/Cargo.toml
 		cargo fetch --locked --manifest-path libraries/python/Cargo.toml
-		python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
+		python3 -m pip install --disable-pip-version-check 'maturin==1.15.0' 'jsonschema==4.25.1'
 		exit 0
 	fi
 	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac
@@ -291,7 +293,7 @@ PYWIN
 		cargo install --locked --version 0.19.4 cargo-deny
 	fi
 	cargo deny fetch db
-	python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
+	python3 -m pip install --disable-pip-version-check 'maturin==1.15.0' 'jsonschema==4.25.1'
 	[ "$(maturin --version)" = 'maturin 1.15.0' ] || fail 'maturin version differs from pin'
 	# DuckDB setup creates a Python 3.13 venv with uv on Mac and native Linux smoke.
 	if [ "$(uname -s)" = Darwin ] || [ "${RELEASE_SMOKE:-0}" = 1 ]; then
@@ -342,7 +344,13 @@ PYWIN
 			sqlite_python=$(brew --prefix python@3.14)/bin/python3.14
 			"$sqlite_python" -c 'import sqlite3; sqlite3.connect(":memory:").enable_load_extension(True)' ||
 				fail "the SQLite check's Python cannot load extensions: $sqlite_python"
-			[ -z "${GITHUB_ENV:-}" ] || printf 'THINKTHEN_PYTHON=%s\n' "$sqlite_python" >>"$GITHUB_ENV"
+			# Keep Brew intact while giving that same interpreter the schema validator.
+			sqlite_venv=$HOME/.cache/thinkthen-toolchains/sqlite-python-3.14
+			uv venv --quiet --python "$sqlite_python" "$sqlite_venv"
+			uv pip install --quiet --python "$sqlite_venv/bin/python" 'jsonschema==4.25.1'
+			"$sqlite_venv/bin/python" -c 'import sqlite3, jsonschema; sqlite3.connect(":memory:").enable_load_extension(True)' ||
+				fail "the SQLite check's Python lacks its extension or schema support: $sqlite_venv/bin/python"
+			[ -z "${GITHUB_ENV:-}" ] || printf 'THINKTHEN_PYTHON=%s\n' "$sqlite_venv/bin/python" >>"$GITHUB_ENV"
 		fi
 	else
 		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
@@ -355,6 +363,10 @@ PYWIN
 		fi
 	fi
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+		# The installed TypeScript consumer compiles with this locked host-native toolchain offline.
+		scratch_dir npm_seed
+		cp libraries/typescript/package.json libraries/typescript/package-lock.json "$npm_seed/"
+		npm ci --no-audit --no-fund --silent --prefix "$npm_seed"
 		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
 		# Fill uv's cache for the Python the check will pick (ticket 0369).
 		. libraries/python/host.sh

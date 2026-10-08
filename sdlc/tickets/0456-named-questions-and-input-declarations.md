@@ -1,6 +1,6 @@
 # 0456: Add named questions and declared item inputs
 
-Status: in progress. Native named questions and input declarations are implemented and landed. Existing SDK adoption is landed through 0431; the other family checklists retain required named-file, declaration and zero-send refusal cases.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 

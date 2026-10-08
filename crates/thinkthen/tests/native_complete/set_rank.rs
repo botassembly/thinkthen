@@ -1,6 +1,5 @@
+use super::child;
 use super::*;
-#[path = "../../src/test_deadline/child.rs"]
-mod child;
 use thinkthen::{
     BatchSetting, InputEvidence, QuestionInput, RankSet, RecordInput, RecordObservation,
 };

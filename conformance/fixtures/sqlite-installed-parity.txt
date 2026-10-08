@@ -1,0 +1,4 @@
+not run  18-annotate-two-groups: one record's groups were recorded as separate requests, and ADR 0111 section 5 packs them into one
+not run  25-defect-fault: no SQL form: no outside boundary reaches an internal invariant failure
+53 pass, 0 FAIL, 2 not run, 55 of 55; total=55 selected=55 pass=53 fail=0 not_run=2 unselected=0
+parity: {"consumer":"sqlite","case":"18-annotate-two-groups","checks":["named","runtime"],"status":"pass"}

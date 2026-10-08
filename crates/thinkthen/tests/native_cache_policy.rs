@@ -1,5 +1,11 @@
 //! Response storage instructions through actual public calls and the command.
 
+#[cfg(feature = "cli")]
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+#[cfg(feature = "cli")]
+use child::ChildEnvironment as _;
+
 use conformance_backend::{Canned, Listener};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -313,7 +319,7 @@ fn command(
     use std::io::Write as _;
     use std::process::{Command, Stdio};
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_API_KEY", "fixture-storage-policy")
         .env("XDG_STATE_HOME", folder.0.join("state"))
         .env("LOCALAPPDATA", folder.0.join("state"))

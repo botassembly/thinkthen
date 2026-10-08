@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0300: Caller-priced cost in call and run facts
 
-Status: in progress. Core, CLI and C source stage landed after fresh High code ACCEPT at `a4dc0b8641b1bc0639db5c3284538d3936e3179e`, including the explicit SQLite refusal pending host adoption. Ticket0300 remains open for strict-reader and other typed-host batches. Fresh High design accepted `5bde09bb5aa1f266ae358a56df38dc293cfed724`; ADR0108 remains the approved contract. No umbrella criterion is closed by this partial stage.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 

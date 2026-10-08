@@ -1,6 +1,6 @@
 # 0450: Give each answer a stable identifier and reserve proxy policy fields
 
-Status: in progress. Native behavior is implemented and landed. Remaining surface adoption is tracked in the existing SDK, foreign binding, SQL, dataframe and MCP family checklists; final shared-case qualification remains.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Native admission WIP: reserved opaque IDs, normalized code readings,
 question/recognition reservations and typed response overrides are concrete

@@ -9,7 +9,28 @@ use std::time::Duration;
 
 mod ffi;
 
-type Registry = Arc<Mutex<Option<OwnedHandle>>>;
+struct Handles {
+    thread: OwnedHandle,
+    pipe: Arc<File>,
+}
+type Registry = Arc<Mutex<Option<Handles>>>;
+
+fn watch_cancellation(registry: Registry, token: CancelToken, completion: mpsc::Receiver<()>) {
+    while matches!(
+        completion.recv_timeout(Duration::from_millis(20)),
+        Err(mpsc::RecvTimeoutError::Timeout)
+    ) {
+        if token.is_cancelled()
+            && let Ok(operation) = registry.lock()
+            && let Some(handle) = operation.as_ref()
+        {
+            // Repeat after ERROR_NOT_FOUND: stop can race entry into
+            // the synchronous read/write. The lock also prevents a
+            // late cancellation after this operation has returned.
+            let _cancel = ffi::cancel(&handle.thread, &handle.pipe);
+        }
+    }
+}
 
 struct Watch {
     active: Registry,
@@ -25,22 +46,7 @@ impl Watch {
         let (done, completion) = mpsc::channel();
         let worker = thread::Builder::new()
             .name("thinkthen-mcp-io-stop".into())
-            .spawn(move || {
-                while matches!(
-                    completion.recv_timeout(Duration::from_millis(20)),
-                    Err(mpsc::RecvTimeoutError::Timeout)
-                ) {
-                    if token.is_cancelled()
-                        && let Ok(operation) = registry.lock()
-                        && let Some(handle) = operation.as_ref()
-                    {
-                        // Repeat after ERROR_NOT_FOUND: stop can race entry into
-                        // the synchronous read/write. The lock also prevents a
-                        // late cancellation after this operation has returned.
-                        let _cancel = ffi::cancel(handle);
-                    }
-                }
-            })?;
+            .spawn(move || watch_cancellation(registry, token, completion))?;
         Ok(Self {
             active,
             stop,
@@ -49,8 +55,11 @@ impl Watch {
         })
     }
 
-    fn enter(&self) -> io::Result<Operation<'_>> {
-        let handle = ffi::current_thread()?;
+    fn enter(&self, file: &Arc<File>) -> io::Result<Operation<'_>> {
+        let handle = Handles {
+            thread: ffi::current_thread()?,
+            pipe: Arc::clone(file),
+        };
         let mut active = self
             .active
             .lock()
@@ -80,11 +89,11 @@ impl Drop for Operation<'_> {
 }
 
 pub(in crate::mcp) struct PipeInput {
-    file: File,
+    file: Arc<File>,
     watch: Watch,
 }
 pub(in crate::mcp) struct PipeOutput {
-    file: File,
+    file: Arc<File>,
     watch: Watch,
 }
 impl std::fmt::Debug for PipeInput {
@@ -101,7 +110,7 @@ impl PipeInput {
     pub(in crate::mcp) fn new(file: File, stop: CancelToken) -> io::Result<Self> {
         ffi::pipe(&file)?;
         Ok(Self {
-            file,
+            file: Arc::new(file),
             watch: Watch::new(stop)?,
         })
     }
@@ -110,7 +119,7 @@ impl PipeOutput {
     pub(in crate::mcp) fn new(file: File, stop: CancelToken) -> io::Result<Self> {
         ffi::pipe(&file)?;
         Ok(Self {
-            file,
+            file: Arc::new(file),
             watch: Watch::new(stop)?,
         })
     }
@@ -120,12 +129,12 @@ impl Read for PipeInput {
         if bytes.is_empty() || self.watch.stop.is_cancelled() {
             return Ok(0);
         }
-        let operation = match self.watch.enter() {
+        let operation = match self.watch.enter(&self.file) {
             Ok(operation) => operation,
             Err(_) if self.watch.stop.is_cancelled() => return Ok(0),
             Err(error) => return Err(error),
         };
-        let result = self.file.read(bytes);
+        let result = self.file.as_ref().read(bytes);
         drop(operation);
         if self.watch.stop.is_cancelled() {
             Ok(0)
@@ -139,8 +148,8 @@ impl Write for PipeOutput {
         if bytes.is_empty() {
             return Ok(0);
         }
-        let operation = self.watch.enter()?;
-        let result = self.file.write(
+        let operation = self.watch.enter(&self.file)?;
+        let result = self.file.as_ref().write(
             bytes
                 .get(..bytes.len().min(65_536))
                 .ok_or_else(|| io::Error::other("invalid output buffer"))?,

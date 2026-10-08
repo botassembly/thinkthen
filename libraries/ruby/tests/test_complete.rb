@@ -44,6 +44,21 @@ class CompleteCarrierTest < Minitest::Test
     assert_same C::ABSENT, empty.meta.answered_by
     assert_equal false, empty.meta.cached
   end
+  def test_decide_values_keep_authored_meanings_and_primary_boolean
+    base = FIXTURE["results"][0]["result"]
+    [true, false, nil, "authored private reading", {"kind" => "failure", "nested" => [false, nil]}, ["reading", {"active" => false}]].each do |meaning|
+      raw = Marshal.load(Marshal.dump(base))
+      raw["value"] = meaning
+      raw["question"]["false"] = meaning unless [true, false].include?(meaning)
+      result = C.decode("DecideResult", raw)
+      assert_equal raw, C.to_json_value(result)
+      assert_equal base["answer"]["probability"], result.answer.probability
+      refute_includes result.inspect, "authored private reading"
+      assert result.value.frozen? unless result.value.nil?
+      assert_raises(ArgumentError) { C.decode("DecideResult", raw.merge("unexpected" => meaning)) }
+      assert_raises(ArgumentError) { C.decode("DecideResult", raw.merge("meta" => raw["meta"].merge("answered_by" => "invented"))) }
+    end
+  end
   def test_rank_members_keep_partial_usage_and_reject_unknown_child_fields
     child = FIXTURE["results"][0]["result"].slice("schema","answer_id","question","answer","meta")
     child = Marshal.load(Marshal.dump(child)).merge("value"=>3,"threshold"=>nil)

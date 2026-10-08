@@ -24,7 +24,7 @@ complete_public_types() {
         output=$project/target/complete-public/$extension
         mkdir -p "$output"
         cp "$project/tests/complete_public.test.ts" "$output/complete_public.test.$extension"
-        "$repo/libraries/typescript/target/npm/node_modules/.bin/tsc" --strict --target ES2022 \
+        "$tsc" --strict --target ES2022 \
             --module NodeNext --moduleResolution NodeNext --rootDir "$output" --outDir "$output" "$output/complete_public.test.$extension"
         node "$output/complete_public.test.$(printf '%s' "$extension" | sed 's/ts$/js/')"
     done
@@ -48,6 +48,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     project=$scratch/libraries/typescript
     echo '{"private": true}' >"$project/package.json"
     (cd "$project" && npm install --offline --no-audit --no-fund --silent "$THINKTHEN_ARTIFACT")
+    # Keep the pinned compiler beside the fresh consumer, separate from the shipped package.
+    mkdir -p "$project/target/compiler"
+    cp "$repo/libraries/typescript/package.json" "$repo/libraries/typescript/package-lock.json" "$project/target/compiler/"
+    npm ci --offline --no-audit --no-fund --silent --prefix "$project/target/compiler"
+    tsc=$project/target/compiler/node_modules/.bin/tsc
     resolved=$(cd "$project/tests" && node --input-type=module -e 'console.log(import.meta.resolve("thinkthen"))')
     case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
@@ -63,14 +68,14 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     printf '%s\n' "$capped" | grep -qx 'ok 1 - the token cap variable refuses a call before any request' ||
         fail "the token cap test did not run, installed"
 
-    python3 - "$repo" "$project" <<'NODENATIVE'
+    python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
 import sys
 from pathlib import Path
-root=Path(sys.argv[1]);project=Path(sys.argv[2]);sys.path.insert(0,str(root/'libraries/python/tests'))
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
 names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
-    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names):sys.exit(1)
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names,typescript_compiler=tsc):sys.exit(1)
 NODENATIVE
     echo 'typescript: pass, installed'
     exit 0
@@ -145,6 +150,7 @@ step 'package: npm ci and the addon'
 mkdir -p target/npm
 cp package.json package-lock.json target/npm/
 npm ci --offline --no-audit --no-fund --silent --prefix target/npm
+tsc=$PWD/target/npm/node_modules/.bin/tsc
 sh build-addon.sh
 
 step 'node tests'
@@ -178,14 +184,14 @@ step 'native JavaScript and compiled TypeScript consumers'
 project=$PWD
 complete_public_types
 
-    python3 - "$repo" "$project" <<'NODENATIVE'
+    python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
 import sys
 from pathlib import Path
-root=Path(sys.argv[1]);project=Path(sys.argv[2]);sys.path.insert(0,str(root/'libraries/python/tests'))
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
 names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
-    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names):sys.exit(1)
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names,typescript_compiler=tsc):sys.exit(1)
 NODENATIVE
 step 'the loader refuses a platform it does not ship, with the pinned sentence'
 refused=$(node -e 'Object.defineProperty(process, "platform", { value: "win32" }); try { require("./loader.js") } catch (e) { console.log(e.message) }')

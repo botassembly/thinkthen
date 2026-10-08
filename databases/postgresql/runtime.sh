@@ -65,8 +65,9 @@ runtime_ready() {
 	for tool in dpkg-deb psql python3; do
 		command -v "$tool" >/dev/null || not_run "$tool is missing"
 	done
-	# cargo-pgrx and the header check below guard a build. The installed-file mode loads a
-	# release archive and builds nothing (ticket 0369).
+	# cargo-pgrx and the header check below guard a source extension build. The
+	# installed-file mode loads the release archive; check.sh builds only its
+	# client reader test binary against the host's PostgreSQL 16 headers.
 	if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
 		command -v cargo-pgrx >/dev/null || not_run "cargo-pgrx is missing"
 		[ "$(cargo pgrx --version)" = "cargo-pgrx 0.17.0" ] || not_run "cargo-pgrx is not 0.17.0: $(cargo pgrx --version)"

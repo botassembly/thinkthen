@@ -4,7 +4,9 @@ use thinkthen::{Error, ErrorKind, Question, QuestionFileReference, QuestionFileR
 
 pub(super) fn check(root: &Path, config: &Path) {
     selection(root, config);
-    unread_content_and_links(root, config);
+    unread_content_and_links(config);
+    #[cfg(unix)]
+    unix_links(root, config);
     content(root, config);
 }
 
@@ -68,8 +70,7 @@ fn selection(root: &Path, config: &Path) {
     assert_eq!(std::env::current_dir().unwrap(), before);
 }
 
-fn unread_content_and_links(root: &Path, config: &Path) {
-    let named = QuestionFileReference::named("refund").unwrap();
+fn unread_content_and_links(config: &Path) {
     let relative = QuestionFileReference::reference_in("@refund", Path::new("lookup")).unwrap();
     let authorized_read = |_path: &Path| -> Result<String, Error> {
         Err(Error::new(ErrorKind::Usage, "the host refuses this file"))
@@ -95,7 +96,12 @@ fn unread_content_and_links(root: &Path, config: &Path) {
         QuestionFileReference::named("large").unwrap().path(),
         large_path
     );
-    #[cfg(unix)]
+}
+
+#[cfg(unix)]
+fn unix_links(root: &Path, config: &Path) {
+    let named = QuestionFileReference::named("refund").unwrap();
+    let large_path = config.join("questions/large.json");
     {
         use std::os::unix::fs::{PermissionsExt as _, symlink};
         fs::set_permissions(&large_path, fs::Permissions::from_mode(0o0)).unwrap();

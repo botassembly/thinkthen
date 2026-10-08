@@ -10,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 # Load the pure carrier modules without importing a native extension.
 package = types.ModuleType("complete_carriers")
-package.__path__ = [str(ROOT / "thinkthen")]
+package.__path__ = list(importlib.util.find_spec("thinkthen").submodule_search_locations)
 sys.modules[package.__name__] = package
 from complete_carriers import _complete as c, _requests as r
 FIXTURE = json.loads((ROOT / "tests/fixtures/complete.json").read_text())
@@ -51,6 +51,15 @@ def test_all_ten_results_keep_typed_answers_and_original_values():
     empty = c.decode("RelateResult", FIXTURE["empty"]["result"])
     assert empty.meta.origin is None and empty.meta.answered_by is c.ABSENT
     assert empty.value == () and empty.meta.cached is False
+
+
+@pytest.mark.parametrize("meaning", [False, True, None, "private-reading", {"meaning": ["private-reading", False]}, ["private-reading", {"nested": None}]])
+def test_decide_complete_preserves_authored_meanings_without_exposing_them(meaning):
+    row = copy.deepcopy(FIXTURE["results"][0]["result"])
+    row["value"] = meaning
+    result = c.decode("DecideResult", row)
+    assert c.to_json(result) == row
+    assert "private-reading" not in repr(result)
 
 
 def test_ids_facts_and_started_failure_have_no_synthetic_defaults():

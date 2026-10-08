@@ -21,13 +21,15 @@ static thinkthen_source *source(thinkthen_engine *e,unsigned kind) {
     thinkthen_source *s=NULL; assert(thinkthen_source_records(e,&record,1,&s)==0); return s;
 }
 static thinkthen_engine *engine(const char *mode,const char *folder) {
-    char settings[4096];
-    if(mode) assert(snprintf(settings,sizeof settings,"{\"%s\":\"%s\",\"cache\":false,\"model\":\"fixed\"}",mode,folder)>0);
-    else assert(snprintf(settings,sizeof settings,"{\"cache\":\"%s\",\"model\":\"fixed\"}",folder)>0);
+    /* The Rust caller serializes native paths as JSON string values. */
+    char settings[8192];
+    int size=mode ? snprintf(settings,sizeof settings,"{\"%s\":%s,\"cache\":false,\"model\":\"fixed\"}",mode,folder)
+        : snprintf(settings,sizeof settings,"{\"cache\":%s,\"model\":\"fixed\"}",folder);
+    assert(size>0 && (size_t)size<sizeof settings);
     thinkthen_engine *e=thinkthen_engine_new_with(settings); assert(e); return e;
 }
 int main(void) {
-    const char *folder=getenv("TYPED_RECORDING"); const char *cache=getenv("TYPED_CACHE"); assert(folder && cache);
+    const char *folder=getenv("TYPED_RECORDING_JSON"); const char *cache=getenv("TYPED_CACHE_JSON"); assert(folder && cache);
     thinkthen_controls_v1 controls={0}; controls.deadline_ms=-1; controls.attempts=1;
     controls.context=(thinkthen_optional_content_v1){1,TEXT("fallback context")};
     thinkthen_engine *recorder=engine("record",folder);

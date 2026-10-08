@@ -89,18 +89,46 @@ class PublicAssertions(unittest.TestCase):
             (self.cell(consumer='javascript'), 'unknown parity cell'),
             (self.cell() + '\n' + self.cell(), 'duplicate parity cell'),
             (self.cell(status='skip'), 'skipped or unknown status'),
-            ('conformance: not_run=1 unselected=0\n' + self.cell(), 'required cases skipped'),
-            ('conformance: not_run=0 unselected=2\n' + self.cell(), 'required cases skipped'),
-            ('typed-decide: not run by the public API\n' + self.cell(), 'required case reported not run'),
             (self.cell(checks=['named', 'runtime']), 'missing named/compiler/runtime'),
             (self.cell(checks=['compile', 'runtime', 'runtime']), 'missing named/compiler/runtime'),
         ]:
             with self.subTest(cause=cause), self.assertRaisesRegex(ValueError, cause):
                 parity.cells(output, ['rust'], self.cases)
 
-    def test_zero_skip_counters_allow_complete_asserted_cells(self):
-        seen = parity.cells('conformance: not_run=0 unselected=0\n' + self.cell(), ['rust'], self.cases)
-        self.assertEqual(seen, {('rust', 'typed-decide'): 'pass'})
+    def test_installed_sqlite_cells_override_legacy_diagnostics_without_hiding_gaps(self):
+        output = (parity.ROOT / 'conformance/fixtures/sqlite-installed-parity.txt').read_text()
+        contract = parity.inventory()
+        case_id = '18-annotate-two-groups'
+        cases = {case_id: parity.required_cases(contract, 'sqlite')[case_id]}
+        for defect in [None, 'missing', 'fail', 'skip', 'checks']:
+            with self.subTest(defect=defect):
+                lines = output.splitlines()
+                at = next(at for at, line in enumerate(lines) if line.startswith(parity.PREFIX))
+                cell = json.loads(lines[at][len(parity.PREFIX):])
+                if defect == 'missing':
+                    del lines[at]
+                elif defect in ('fail', 'skip'):
+                    cell['status'] = defect
+                    lines[at] = parity.PREFIX + json.dumps(cell)
+                elif defect == 'checks':
+                    cell['checks'] = ['runtime']
+                    lines[at] = parity.PREFIX + json.dumps(cell)
+                changed = '\n'.join(lines)
+                if defect in ('skip', 'checks'):
+                    cause = ('skipped or unknown status' if defect == 'skip'
+                             else 'missing named/compiler/runtime')
+                    with self.assertRaisesRegex(ValueError, cause):
+                        parity.cells(changed, ['sqlite'], cases, contract)
+                    continue
+                seen = parity.cells(changed, ['sqlite'], cases, contract)
+                row = parity.summarize('sqlite', cases, 0, seen, None, None)
+                if defect is None:
+                    self.assertEqual(set(row['cells'].values()), {'pass'})
+                    self.assertEqual(len(seen), len(cases))
+                else:
+                    self.assertEqual(row['cells'][cell['case']],
+                                     'missing' if defect == 'missing' else 'fail')
+                    self.assertNotEqual(set(row['cells'].values()), {'pass'})
 
     def test_failed_case_keeps_independent_pass_and_missing_cell_visible(self):
         seen = parity.cells(self.cell(), ['rust'], self.cases)

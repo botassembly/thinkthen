@@ -377,7 +377,7 @@ class DecideResult(Carrier):
     schema: Literal['thinkthen.result/2']
     answer_id: AnswerId
     meta: Meta
-    value: bool | None
+    value: bool | Description
     question: DecideQuestion
     answer: YesNo
     threshold: float | str | None
@@ -1067,7 +1067,7 @@ _MODELS = {
     'RelationSuccess': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'answer_id': 'AnswerId', 'probability': 'probability', 'accepted': 'bool', 'answer?': 'AtomicAnswer'},
     'RelationFailure': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'failure_id': 'FailureId', 'failure': 'Failure'},
     'RelationAnswer': {'questions': '[RelationEntry]'},
-    'DecideResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool|null', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},
+    'DecideResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool|description', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},
     'ChooseResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'str|null', 'question': 'ChooseQuestion', 'answer': 'Choice', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},
     'TagResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[str]', 'question': 'TagQuestion', 'answer': 'Tags', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint'},
     'ScoreResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'number', 'question': 'ScoreQuestion', 'answer': 'Score', 'threshold': 'null', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},

@@ -20,6 +20,42 @@ Fresh High review accepted the buffer change on d1718f3d1. That source passed 36
 
 The first full test run exposed an invalid ordering assumption in the existing single-signal image-input fixture. Signal termination can precede the polling thread's acknowledgment file. The fixture now observes bounded termination with the exact SIGINT or SIGTERM status after a completed write larger than the pipe buffer. It retains the open writer, empty output, secrecy and zero-send checks. Second-signal acknowledgment fixtures and production interrupt handling are unchanged. The unchanged candidate passed full lint and specification checks; the final gates run again after this test-only correction.
 
+## Local stdio timing
+
+The retained `target/0432-union-final-stress.log` records nine paired native/MCP calls for each case below. The adapter is Cargo-built via `CARGO_BIN_EXE_thinkthen` and uses local stdio against a loopback fixture backend. Cache is disabled. Startup and initialization took 6.759 ms. Atomic and whole-set pairs made 18 requests each; record pairs made 36. Each row reports nine native and nine MCP samples, in milliseconds.
+
+| Case | Input JSON bytes | Native median | Native exploratory p95 / max | MCP median | MCP exploratory p95 / max |
+| --- | --- | --- | --- | --- | --- |
+| Atomic decide | 32 | 2.531 | 2.910 / 2.910 | 3.584 | 3.741 / 3.741 |
+| Two-record decide | 59 | 2.721 | 3.050 / 3.050 | 3.840 | 4.200 / 4.200 |
+| Whole-set find | 41 | 2.573 | 2.843 / 2.843 | 3.596 | 4.077 / 4.077 |
+
+The bounded timing test passed. The wider stress log ends with `Terminated`; it does not establish a passing full stress command. These measurements cover the local Cargo-built adapter. Installed archive, remote-provider and proxy latency remain unmeasured. Nine samples give exploratory tail values only.
+
 ## Remaining
 
-The bounded timing campaign remains required. Final Windows behavior is measured on the completed 0.2 build. HTTP serving, proxy policy and unmeasured speed claims remain out.
+The full 29-consumer installed campaign remains required under 0432. Installed archive timing remains unmeasured. Final Windows behavior is measured on the completed 0.2 build. HTTP serving, proxy policy and unmeasured speed claims remain out.
+
+## RC1 Windows cancellation watcher quick fix
+
+Rehearsal 37729582968 rejected `mcp/input/windows.rs:36` for Clippy excessive nesting. The watcher now runs its existing loop in a named function outside the spawn closure. Its 20 ms timeout, completion-channel shutdown, cancellation retries and registry lock scope remain unchanged. Pipe reads, writes, buffered output, error mapping and EOF handling remain unchanged. No dependency, lint allowance, test or runner was added.
+
+Offline focused verification passed all 36 existing MCP library tests, source policy, formatting, the source ratchet, dependency advisories/bans/licenses and workspace all-target Clippy with warnings denied. The first Clippy attempt used all features and hit the existing mutually exclusive SQLite feature refusal; the corrected command uses the lint script's default feature profile. Linux checks do not compile the Windows-only module. Existing Windows pipe cancellation and EOF tests still require a Windows runner; no hosted run was dispatched for this quick fix.
+
+The Rust ceiling increases from 163238 to 163239 nonblank lines. The single added line gives the cancellation loop a named worker function. Inspection of the watcher and operation guards found no duplicate logic to remove. Qualified lane artifacts were retained.
+
+Fresh Medium read-only review: ACCEPT. Final Clippy evidence records the corrected command and its zero exit status. Windows execution remains part of final platform qualification.
+
+The integrated correction at 693bc9f66 passed full local tests and lint. The ordinary, library-only and public-consumer groups and existing supporting checks passed. Logs remain in target/0425-windows-landing-test.log and target/0425-windows-landing-lint.log. These Linux checks do not compile or execute the Windows-only module; candidate platform qualification remains open.
+
+## RC1 Windows pipe cancellation correction
+
+Windows qualification 37729585318 reached both retained blocked-pipe tests and timed out while the peers remained open. Rust 1.95 creates overlapped handles for the parent ends of subprocess pipes. Converting those handles into File and waiting for STATUS_PENDING does not make their pending operations synchronous, so CancelSynchronousIo alone cannot cancel them.
+
+The wrapper and active registry now share the exact File through Arc. Each active operation also owns its thread handle. The watcher attempts both CancelSynchronousIo on that thread and CancelIoEx on that exact pipe under the registry lock. It repeats after ERROR_NOT_FOUND to cover cancellation before kernel admission. The operation guard clears registration only after File.read or File.write returns. The file, buffer and operation remain alive until completion. Cancellation never closes the pipe to wake the worker. Read EOF, write BrokenPipe, no-op flush, ordinary-file refusal and native-execution boundaries remain unchanged.
+
+The existing blocked-input and backpressured-output assertions are unchanged. No timeout, skip, lint allowance, dependency or runner feature changed. The retained ordinary-file, peer-exit and native cancellation cases remain required. Focused Linux MCP checks pass all 36 cases, but they do not compile or execute this Windows-only correction. Actual Windows cancellation for both Rust subprocess pipes and synchronous inherited pipes remains required; source review cannot qualify it.
+
+The Rust ceiling grows from 163239 to 163270 nonblank lines across this correction and the associated 0425 native fixture repairs. The added lines retain the exact owned pipe during cancellation, reuse the existing minimal child-environment helper and validate the current installed interrupt facts. Inspection of the watcher, operation guards and existing child/fact helpers found no duplicate behavior to remove. The coordinator owns final integrated gates, batching and Windows qualification. No hosted dispatch or landing ran in this lane.
+
+Fresh High read-only whole-slice review: ACCEPT. The reviewer checked the exact handle lifetime, registry lock, completion ordering and both cancellation APIs against the Windows contract. No blocking findings or weakened assertions were found. Actual native Windows execution remains unverified.

@@ -8,18 +8,16 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 
 ## 2. Checkpoints
 
-1. The coordinator runs one surface sweep on one main commit per round of landings, and fixes any red at once.
-2. When every check passes, the sweep publishes: `sdlc/scripts/surfaces --publish checkpoint/surfaces/YYYY-MM-DD-N` with `THINKTHEN_PUBLISH_ROOT` set to the coordinator's builds folder. The [scripts README](../scripts/README.md) describes what the publish packs and checks.
-3. The publish runs on Linux x86_64 only. A macOS publish stops by design on the Linux-only Ada, COBOL and Objective-C checks.
-4. `publish-builds` keeps the newest three checkpoint folders and removes no other folder.
-5. The coordinator tags the commit under [worktrees.md](worktrees.md), "Landing commits and tags".
+1. The required local checkpoint is the complete installed-package campaign, its generated support table and the applicable test, lint, specification and documentation checks. Every required public consumer runs without missing or skipped cells. Reuse passing checks while their relevant code, inputs, environment and assumptions remain unchanged; rerun affected checks after a fix. Do not repeat a complete source matrix to prepare a QA handoff.
+2. Send release QA the reviewed commit, qualified package locations, generated table, known rulings and outstanding platform checks through the mailroom. State which source and package revisions each check covers. A current table does not qualify an untested platform, and metadata changes do not manufacture a new product test result.
+3. The existing `surfaces --publish TAG` helper can archive a separate debug-build checkpoint under `THINKTHEN_PUBLISH_ROOT`. It runs on Linux x86_64 only, keeps its newest three checkpoint folders and removes no other folder. Its debug packages do not replace the release packages tested by the required installed campaign. This archive is optional; release QA does not require another debug-build sweep or an auxiliary checkpoint tag.
+4. If a surface checkpoint is tagged, follow [worktrees.md](worktrees.md): every named check must have passed on that exact commit. Release candidate tags follow section 5 and precede hosted rehearsal.
 
 ## 3. Release QA rounds
 
-1. Each checkpoint goes to the release QA team as one round. The coordinator sends it as a message through the mailroom (`pm send`).
-2. QA findings come back as messages (`pm inbox`).
-3. Each finding becomes a ticket, and the ticket lands through a lane like any other.
-4. The next checkpoint carries the fixes into the next round.
+1. Give the release QA team one round on the final reviewed candidate through `pm send`. Supply the completed local package checkpoint and subsequent hosted qualification results. QA must pass before publication; a previous candidate's result does not qualify changed behavior.
+2. Read QA findings through `pm inbox`. Fix consequential defects within the agreed release scope through tickets and lanes. Other newly found gaps become unscheduled tickets under Ian's ticket-intake rule; they do not silently expand the release.
+3. Recheck affected behavior after a fix and complete the next candidate's required platform checks. Retain applicable checks and reviews for unchanged work. Add no receipt framework or separate per-language write-ups.
 
 ## 4. Rehearsals
 
@@ -51,16 +49,14 @@ Rehearsals hold no OIDC token, use no registry secrets, and require no environme
 The release branch is named for the major and minor version: `release/0.2` for 0.2. Ticket 0128 phase 4 holds the release details. The cut runs in this order:
 
 1. **The release candidate holds on main.** Implementation, installed-package parity and local checks are complete. Only release fixes remain. Stage 1 qualifies this candidate; a previous rehearsal does not qualify a changed commit. The existing `sdlc/scripts/test-full-cases --run --artifacts DIR` checkpoint must pass all required public variants against the release packages without missing or skipped cells before cutting the candidate. Its generated `target/parity/matrix.md` reports current functions, files, images and remaining work. Run the retained release-pack/release-smoke checkpoint separately; do not repeat a complete source matrix. A routine or Rust-only hosted gate does not replace this checkpoint.
-2. **The release commit lands on main.** Main already carries the next version, so the release commit does not run `versions --set`. On a ticket branch from main, the agent dates the changelog headings and writes the public install text for the release, as ticket 0396 did for 0.1.2:
-   - `CHANGELOG.md`: date the unreleased heading. Remove `(unreleased)` from the matching heading in `libraries/dart/CHANGELOG.md`.
-   - Update `install.sh`, its site copy, and the release names in `libraries/{ada,cobol,csharp,go,jvm,objective-c}/README.md`.
-   - Update the site's install lines and `site/examples/install/rust/files/Cargo.toml`. The smoke runner patches its scratch copy to the working tree's version. Prove every stale page again before the site deploys.
-
-   Afterwards, `git grep -nE '(^|[^0-9.])OLD_VERSION([^0-9.]|$)'`, with the old version escaped in place of `OLD_VERSION`, outside `sdlc/records`, `sdlc/tickets`, `sdlc/issues`, `sdlc/planning`, `probes`, locks and `.jsonl` fixtures finds only retained history and fixtures. The coordinator lands the commit.
-3. **Checkpoint and QA on the cut.** The coordinator runs the checkpoint sweep of section 2 on that main commit. Release QA runs its round on it (section 3).
-4. **The cut.** The coordinator tags `rc/0.2.0-rc.1` on that commit under worktrees.md and pushes `release/0.2` from it.
+2. **Candidate documentation lands on main.** Main already carries the next version, so candidate preparation does not run `versions --set`. On a ticket branch, update the changelog's implemented behavior and known limits. Keep `## Unreleased: 0.2.0` in `CHANGELOG.md` and `(unreleased)` in the matching Dart heading. The publication date remains unknown. Keep public install text and installer defaults at the latest published release, currently 0.1.2. The coordinator lands the reviewed documentation before qualification.
+3. **Checkpoint and QA on the cut.** Give QA the completed installed-package checkpoint and its actual source/package revisions under sections 2 and 3. Retain applicable local checks; do not rerun an unchanged source matrix merely to archive debug packages. Final hosted qualification must cover the reviewed candidate commit.
+4. **The cut.** The coordinator tags `rc/0.2.0-rc.N` on that reviewed commit and pushes `release/0.2` from it under worktrees.md. Candidate numbers are positive and increase after fixes. Create the candidate tag before dispatching rehearsal.
 5. **Stage 1 on the candidate tag.** Dispatch `release.yml` with `mode=rehearse` and `windows.yml` from `rc/0.2.0-rc.N`. Both qualify the exact reviewed commit. Fix failures on main and use the next candidate tag. Release QA must pass before stage 2.
-6. **Stage 2 after Ian's go.** Tag the qualified commit `v0.2.0` and dispatch `release.yml` with `mode=release` from that tag only after Ian explicitly authorizes publication. The release tag must name the exact commit that passed stage 1 and QA. Section 6 and ticket 0128 phase 4 continue from there.
+6. **Stage 2 after Ian's go.** Tag the qualified commit `v0.2.0` and dispatch `release.yml` with `mode=release` from that tag only after Ian explicitly authorizes publication. The release tag must name the exact commit that passed stage 1 and QA. Do not insert a date or public-install commit between qualification and the release tag. Section 6 and ticket 0128 phase 4 continue from there.
+7. **After actual publication.** On a reviewed ticket branch from main, record the actual publication date in `CHANGELOG.md` and remove `(unreleased)` from the matching Dart heading. Update `install.sh`, its site copy, release names in `libraries/{ada,cobol,csharp,go,jvm,objective-c}/README.md`, the site's install lines and `site/examples/install/rust/files/Cargo.toml` to the published release. Keep checkout-local build references on main's version. The smoke runner patches only its scratch copy. Check affected examples before the site deploys. This documentation commit follows publication and does not change the qualified release commit.
+
+   Afterwards, search for the escaped previous version outside `sdlc/records`, `sdlc/tickets`, `sdlc/issues`, `sdlc/planning`, `probes`, locks and `.jsonl` fixtures. Retain historical references and fixtures. The coordinator lands the documentation commit. The current release workflow uses its resolved version for the draft title and notes; it does not require a dated changelog heading before rehearsal or publication.
 
 There are no 0.1.x releases. `release/0.1` is frozen, and nothing is cherry-picked to it. Every fix lands on main and ships in the next release. Right after a release, main moves to the next version. Ticket 0397 moves main to 0.2.0 under Ian's ruling of 2026-10-04.
 

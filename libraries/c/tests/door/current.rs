@@ -100,13 +100,22 @@ fn complete_failure_snapshots_keep_actual_stops_and_final_joined_facts() {
 #[test]
 fn complete_record_controls_record_reread_and_cache_use_one_native_store() {
     let backend = Backend::start().expect("loopback");
-    let recording = super::scratch("complete-recording");
-    let cache = super::scratch("complete-cache");
+    let recording = super::scratch("complete-recording")
+        .join("with space")
+        .join("back\\slash");
+    let cache = super::scratch("complete-cache")
+        .join("with space")
+        .join("back\\slash");
+    let recording_json = std::path::PathBuf::from(serde_json::to_string(&recording).unwrap());
+    let cache_json = std::path::PathBuf::from(serde_json::to_string(&cache).unwrap());
     let output = run_with(
         &compile(&crate_dir().join("tests/c/complete_controls.c")),
         &format!("{}/arm/full/capture/v1", backend.origin()),
         b"",
-        &[("TYPED_RECORDING", &recording), ("TYPED_CACHE", &cache)],
+        &[
+            ("TYPED_RECORDING_JSON", &recording_json),
+            ("TYPED_CACHE_JSON", &cache_json),
+        ],
     );
     assert_eq!(
         (output.status.code(), text(&output.stderr)),
@@ -365,6 +374,7 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
         &[
             ("TYPED_AUTHOR_MODE", &mode),
             ("XDG_CONFIG_HOME", &config),
+            ("APPDATA", &config),
             ("TYPED_WORKING_DIRECTORY", &cwd),
         ],
     );
