@@ -24,6 +24,17 @@ for (records in list(list(), NULL)) {
   check("file conflict leaves the missing path unread and sends nothing", !file.exists(missing) && backend_count() == before)
 }
 
+for (input in list(
+  list(kind = "records", records = NULL),
+  list(kind = "files", paths = NULL, options = reader),
+  list(kind = "files", paths = list(missing), options = reader, jsonl = NULL)
+)) {
+  before <- backend_count()
+  error <- tryCatch(tt_decide_complete(question, input), error = identity)
+  check("a selected source field cannot be null", inherits(error, "thinkthen_error") && error$kind == "usage")
+  check("null source refusal reads no missing file and sends nothing", !file.exists(missing) && backend_count() == before)
+}
+
 records <- tt_decide_complete(question, list(kind = "records", records = list(record)))
 check("valid records retain the original", identical(records$inputs[[1L]]$original, "kept"))
 file <- tempfile("input-")

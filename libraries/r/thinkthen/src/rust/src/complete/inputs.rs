@@ -211,23 +211,32 @@ pub(crate) fn prepare<'a>(
         .cloned()
         .unwrap_or(RecordReading::new(&[], None, None)?);
     Ok(match input.kind {
-        InputKind::Records => Box::new(
-            input
-                .records
-                .flatten()
-                .unwrap_or_default()
-                .into_iter()
-                .enumerate()
-                .map(move |(at, item)| {
-                    if let Some(engine) = engine {
-                        engine.check_record_limit(at)?;
-                    }
-                    compose(item, &reading, annotation)
-                }),
-        ),
+        InputKind::Records => {
+            let records = match input.records {
+                None => Vec::new(),
+                Some(Some(records)) => records,
+                Some(None) => return Err(super::usage("records require a list")),
+            };
+            Box::new(records.into_iter().enumerate().map(move |(at, item)| {
+                if let Some(engine) = engine {
+                    engine.check_record_limit(at)?;
+                }
+                compose(item, &reading, annotation)
+            }))
+        }
         InputKind::Files => {
+            let paths = match input.paths {
+                None => Vec::new(),
+                Some(Some(paths)) => paths,
+                Some(None) => return Err(super::usage("files require paths")),
+            };
+            let jsonl = match input.jsonl {
+                None => false,
+                Some(Some(jsonl)) => jsonl,
+                Some(None) => return Err(super::usage("jsonl requires true or false")),
+            };
             let sources = thinkthen::read_inputs(
-                input.paths.flatten().unwrap_or_default(),
+                paths,
                 input
                     .options
                     .flatten()
@@ -237,12 +246,7 @@ pub(crate) fn prepare<'a>(
                 if let Some(engine) = engine {
                     engine.check_record_limit(at)?;
                 }
-                source(
-                    item?,
-                    &reading,
-                    input.jsonl.flatten().unwrap_or(false),
-                    annotation,
-                )
+                source(item?, &reading, jsonl, annotation)
             }))
         }
     })
