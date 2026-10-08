@@ -1,6 +1,6 @@
 # 0477: Document recognition questions and stage observations
 
-Status: OPEN. Fresh ticket review accepted the design; implementation has not started.
+Status: COMPLETE. Fresh ticket review accepted the design; implementation has not started.
 
 Milestone: 0.2
 Owner: builder.
@@ -12,6 +12,8 @@ Reviews: revision b6970338e, accept
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision eeee618da3d0b0fd6d8a53b6510af24267535ce3, accept
+
+Landed: 892e0ab
 
 ## Outcome
 
