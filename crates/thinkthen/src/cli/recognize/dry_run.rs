@@ -132,29 +132,22 @@ fn planned(
         let spec = super::examples::selected(&record, examples_field, spec)?;
         let context = super::selected_context(&record, context_field, &spec, context)?;
         let text = reading.evidence(&record)?.as_text()?.into_owned();
-        let (_, _, prepared) = facade::step_one_context(
+        let context_value = context.as_ref().map(crate::core::Evidence::as_json);
+        let (pieces, _, prepared) = facade::step_one_context(
             backend,
             profile,
             &spec,
             &text,
             limit,
-            context
-                .as_ref()
-                .map(crate::core::Evidence::as_json)
-                .as_ref(),
+            context_value.as_ref(),
         )?;
-        let pieces = crate::core::pieces(&text);
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
         // Each found name asks at most one kind and one edge question. A
         // profile may split stage two differently, but a request asks at
         // least one question and there cannot be more names than pieces.
-        let questions_per_name = if spec.kinds.is_empty() { 1 } else { 2 };
-        let name_bound = pieces
-            .len()
-            .checked_mul(questions_per_name)
-            .ok_or(Failure::Defect("a plan is too large"))?;
+        let name_bound = name_upper_bound(&spec, pieces.len())?;
         let mut requests = Vec::new();
         for request in prepared {
             summary
@@ -213,6 +206,12 @@ fn planned(
         .map_err(|_| Failure::Defect("a plan is too large"))?;
     edge::write_line(writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
+}
+
+fn name_upper_bound(spec: &RecognizeSpec, pieces: usize) -> Result<usize, Failure> {
+    pieces
+        .checked_mul(if spec.kinds.is_empty() { 1 } else { 2 })
+        .ok_or(Failure::Defect("a plan is too large"))
 }
 
 fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {

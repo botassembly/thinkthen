@@ -155,7 +155,7 @@ pub(crate) fn run(
     let source: Box<dyn Iterator<Item = Result<Item, schedule::Placed>> + Send> =
         if arguments.context_field.is_some() || arguments.examples_field.is_some() {
             let mut held = Vec::new();
-            for item in source {
+            for (ordinal, item) in source.enumerate() {
                 let item = item.map_err(|placed| placed.cause)?;
                 let record = match &item.data {
                     Data::Bytes(bytes) => reading
@@ -175,7 +175,8 @@ pub(crate) fn run(
                     context.as_deref(),
                 )?;
                 let selected =
-                    examples::selected(&record, arguments.examples_field.as_deref(), &spec)?;
+                    examples::selected(&record, arguments.examples_field.as_deref(), &spec)
+                        .map_err(|error| examples::at_record(error, ordinal))?;
                 let text = reading.evidence(&record)?.as_text()?.into_owned();
                 crate::engine::facade::step_one_context(
                     &backend,
@@ -254,7 +255,8 @@ fn judged_item(
             ));
         }
     };
-    let spec = examples::selected(&record, running.examples_field.as_deref(), spec)?;
+    let spec = examples::selected(&record, running.examples_field.as_deref(), spec)
+        .map_err(|error| examples::at_record(error, ordinal))?;
     let location = item
         .position
         .as_ref()

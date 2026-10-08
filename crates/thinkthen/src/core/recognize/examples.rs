@@ -15,7 +15,7 @@ mod tests;
 #[serde(untagged)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub enum RecognitionExample {
-    /// Inline `[[KIND|TEXT]]` tags; backslash escapes bracket syntax characters.
+    /// Inline `[TEXT|KIND]` or `[[KIND|TEXT]]` tags; backslash escapes syntax characters.
     Brackets(String),
     /// Original text, declared entity spans and an optional broader vocabulary.
     Spans(RecognitionExampleText),
@@ -92,34 +92,79 @@ pub(crate) enum ExampleError {
     Render,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ExamplesError {
+    pub(crate) example: Option<usize>,
+    pub(crate) cause: ExampleError,
+}
+impl fmt::Display for ExamplesError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(at) = self.example {
+            write!(formatter, "example {at}: ")?;
+        }
+        fmt::Display::fmt(&self.cause, formatter)
+    }
+}
+impl std::error::Error for ExamplesError {}
+impl From<ExampleError> for ExamplesError {
+    fn from(cause: ExampleError) -> Self {
+        Self {
+            example: None,
+            cause,
+        }
+    }
+}
+
 pub(crate) fn render_examples(
     spec: &RecognizeSpec,
     examples: &[RecognitionExample],
-) -> Result<Vec<String>, ExampleError> {
+) -> Result<Vec<String>, ExamplesError> {
     examples
         .iter()
-        .map(|example| render::one(spec, example))
+        .enumerate()
+        .map(|(at, example)| {
+            render::one(spec, example).map_err(|cause| ExamplesError {
+                example: Some(at + 1),
+                cause,
+            })
+        })
         .collect()
 }
 
 /// Read a selected list using the same serde contract as canonical Request.
-pub(crate) fn examples_of(value: &Json) -> Result<Vec<RecognitionExample>, ExampleError> {
-    let Json::Array(_) = value else {
-        return Err(ExampleError::Shape);
+fn examples_of(value: &Json) -> Result<Vec<RecognitionExample>, ExamplesError> {
+    let Json::Array(values) = value else {
+        return Err(ExampleError::Shape.into());
     };
-    let text = serde_json::to_string(value).map_err(|_| ExampleError::Shape)?;
-    serde_json::from_str(&text).map_err(|_| ExampleError::Shape)
+    values
+        .iter()
+        .enumerate()
+        .map(|(at, value)| {
+            let text = serde_json::to_string(value).map_err(|_| ExamplesError {
+                example: Some(at + 1),
+                cause: ExampleError::Shape,
+            })?;
+            serde_json::from_str(&text).map_err(|_| ExamplesError {
+                example: Some(at + 1),
+                cause: ExampleError::Shape,
+            })
+        })
+        .collect()
 }
 
 pub(crate) fn selected_examples(
     record: &crate::core::Record,
     pointer: &crate::core::Pointer,
-) -> Result<Option<Vec<RecognitionExample>>, ExampleError> {
+) -> Result<Option<Vec<RecognitionExample>>, ExamplesError> {
     let value = record.json().ok_or(ExampleError::Shape)?;
-    pointer.resolve(value).map(examples_of).transpose()
+    pointer
+        .select_optional(value)
+        .map_err(|_| ExampleError::Shape)?
+        .map(examples_of)
+        .transpose()
 }
 
-pub(crate) fn example_file(text: &str) -> Result<Vec<RecognitionExample>, ExampleError> {
+pub(crate) fn example_file(text: &str) -> Result<Vec<RecognitionExample>, ExamplesError> {
     let lines: Vec<_> = text
         .lines()
         .filter(|line| !line.trim().is_empty())
@@ -129,9 +174,13 @@ pub(crate) fn example_file(text: &str) -> Result<Vec<RecognitionExample>, Exampl
         .is_some_and(|line| matches!(line.trim_start().chars().next(), Some('{' | '"')));
     lines
         .into_iter()
-        .map(|line| {
+        .enumerate()
+        .map(|(at, line)| {
             if jsonl {
-                serde_json::from_str(line).map_err(|_| ExampleError::Shape)
+                serde_json::from_str(line).map_err(|_| ExamplesError {
+                    example: Some(at + 1),
+                    cause: ExampleError::Shape,
+                })
             } else {
                 Ok(RecognitionExample::Brackets(line.to_owned()))
             }

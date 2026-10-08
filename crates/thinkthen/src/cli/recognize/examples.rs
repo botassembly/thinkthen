@@ -3,8 +3,17 @@ use crate::core::{RecognizeSpec, Record};
 use crate::failure::Failure;
 use std::path::Path;
 
-pub(super) fn failure(error: crate::core::ExampleError) -> Failure {
+pub(super) fn failure(error: crate::core::ExamplesError) -> Failure {
     crate::engine::error::Error::RecognitionExamples(error).into()
+}
+
+pub(super) fn at_record(mut failure: Failure, at: usize) -> Failure {
+    if let Failure::Recognize(crate::failure::recognize::Error::Examples { record, .. }) =
+        &mut failure
+    {
+        *record = Some(at + 1);
+    }
+    failure
 }
 
 pub(super) fn shared(path: Option<&Path>, spec: &mut RecognizeSpec) -> Result<(), Failure> {

@@ -68,12 +68,7 @@ impl Invocation {
             return Ok(Box::new(records.iter().map(move |raw| {
                 controls.admission()?;
                 let row = reading.compose(RawRecord::json(raw.get())?)?;
-                Ok(RecordInput {
-                    examples: None,
-                    original: row.original.question_input(),
-                    context: row.context,
-                    options: row.options,
-                })
+                Ok(row.map_original(|original| original.question_input()))
             })));
         }
         controls.admission()?;
@@ -92,12 +87,9 @@ impl Invocation {
                 return Err(Error::usage("image input cannot accompany field pointers"));
             };
             let row = reading.compose(RawRecord::text(&text)?)?;
-            return Ok(Box::new(std::iter::once(Ok(RecordInput {
-                examples: None,
-                original: row.original.question_input(),
-                context: row.context,
-                options: row.options,
-            }))));
+            return Ok(Box::new(std::iter::once(Ok(
+                row.map_original(|original| original.question_input())
+            ))));
         }
         Ok(Box::new(std::iter::once(Ok(RecordInput {
             examples: None,

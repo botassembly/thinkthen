@@ -358,12 +358,7 @@ impl RecordReading {
                     Some(source.first_line),
                     Some(source.last_line),
                 )?);
-                Ok(RecordInput {
-                    examples: record.examples,
-                    original: record.original.question_input(),
-                    context: record.context,
-                    options: record.options,
-                })
+                Ok(record.map_original(|original| original.question_input()))
             }
             SourceItem::Image(source) => {
                 self.admit_images()?;

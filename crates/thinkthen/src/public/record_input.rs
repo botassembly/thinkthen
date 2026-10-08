@@ -19,6 +19,19 @@ pub struct RecordInput<T> {
     pub examples: Option<Vec<super::RecognitionExample>>,
 }
 
+impl<T> RecordInput<T> {
+    /// Transform the original while retaining every independent per-record control.
+    #[must_use]
+    pub fn map_original<U>(self, map: impl FnOnce(T) -> U) -> RecordInput<U> {
+        RecordInput {
+            original: map(self.original),
+            context: self.context,
+            options: self.options,
+            examples: self.examples,
+        }
+    }
+}
+
 impl<T> fmt::Debug for RecordInput<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RecordInput")

@@ -17,7 +17,20 @@ fn plan(listener: &Listener, flags: &[&str], input: &[u8]) -> Value {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    serde_json::from_str(stdout(&output).lines().next().unwrap()).unwrap()
+    let output = stdout(&output);
+    let rows: Vec<Value> = output
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    let bytes: u64 = rows[0]["requests"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|request| request["bytes"].as_u64().unwrap())
+        .sum();
+    assert_eq!(rows[1]["estimated_bytes"], bytes);
+    assert!(rows[1]["estimated_input_tokens"]["upper"].as_u64().unwrap() > 0);
+    rows[0].clone()
 }
 
 #[test]
@@ -102,6 +115,10 @@ fn both_file_forms_plan_the_exact_boundary_body_and_enforce_its_byte_limit() {
         String::from_utf8_lossy(&output.stderr)
     );
     assert_eq!(listener.count(), 1);
+    let baseline = plan(&listener, &[], b"Ada");
+    let historical = plan(&listener, &["--max-request-bytes", "1"], b"Ada");
+    assert_eq!(baseline["requests"], historical["requests"]);
+    assert!(bytes > baseline["requests"][0]["bytes"].as_u64().unwrap());
     assert_eq!(
         listener.requests()[0].body,
         first["requests"][0]["body_utf8"]
@@ -212,6 +229,7 @@ fn invalid_later_record_examples_refuse_the_collected_input_without_sends() {
         );
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("record 2"));
         assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-example"));
     }
     for flags in [

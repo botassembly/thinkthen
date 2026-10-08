@@ -1,0 +1,14 @@
+{
+  "text": "Zoë Á met Orbit.",
+  "brackets": "[Zoë Á | person] met Orbit.",
+  "spans": {
+    "text": "Zoë Á met Orbit.",
+    "entities": [
+      {"start": 0, "end": 6, "kind": "person"},
+      {"start": 11, "end": 16, "kind": "organization"}
+    ],
+    "kinds": ["person", "organization"]
+  },
+  "selected_kind": "person",
+  "answers": ["BEGIN", "END", "OUT", "OUT", "OUT"]
+}

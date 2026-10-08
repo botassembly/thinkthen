@@ -17,6 +17,13 @@ printf '%s\n' '{"body":"Ada met Acme.","policy":""}' | env -u THINKTHEN_API_KEY 
 
 Caller wording and label descriptions define literal entities. This controlled fixture proves the saved declaration and exact offsets. It measures no model accuracy.
 
+Tagged examples teach boundary questions while keeping context separate. Each rendered example answers every piece with recognition's current question wording. The structured form uses Unicode scalar offsets.
+
+```bash
+printf '%s\n' '{"body":"Ada","context":"Separate context","examples":["[Zoë | ENTITY]"]}' | env -u THINKTHEN_API_KEY thinkthen recognize --jsonl --field /body --context-field /context --examples-field /examples --plan | sed -n '1p' | jq -c '.requests[0].body_utf8 | fromjson | {context: .state.context, evidence: .state.evidence.evidence, answered: (.state.evidence.examples[0] | contains("Answer: \"SINGLE\"; kind: \"ENTITY\""))}' | mustmatch '{"context":"Separate context","evidence":"Ada","answered":true}'
+printf '%s\n' '{"body":"Ada","examples":[{"text":"Zoë","entities":[{"start":0,"end":3,"kind":"ENTITY"}]}]}' | env -u THINKTHEN_API_KEY thinkthen recognize --jsonl --field /body --examples-field /examples --plan | sed -n '1p' | jq -c '.requests[0].body_utf8 | fromjson | {evidence: .state.evidence, examples: (.state.examples | length)}' | mustmatch '{"evidence":"Ada","examples":1}'
+```
+
 ```bash
 fixture="$(git rev-parse --show-toplevel)/specification/fixtures/recognize/caller-defined"
 cat "$fixture/text.txt" | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize @"$fixture/question.json" --url "$(cat "$fixture/url.txt")" --replay "$fixture/recording" --no-cache | jq -c '.entities' | mustmatch '[{"text":"42.75","start":8,"end":13,"length":5,"kind":"amount","strength":1.0}]'

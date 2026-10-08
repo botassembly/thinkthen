@@ -17,7 +17,7 @@ mod questions;
 
 use bilou::best_of;
 pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
-pub(crate) use examples::{ExampleError, example_file, render_examples, selected_examples};
+pub(crate) use examples::{ExamplesError, example_file, render_examples, selected_examples};
 pub use examples::{RecognitionExample, RecognitionExampleEntity, RecognitionExampleText};
 pub(crate) use pieces::{Piece, pieces};
 pub(crate) use questions::{

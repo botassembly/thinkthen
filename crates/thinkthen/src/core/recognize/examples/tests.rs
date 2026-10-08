@@ -35,7 +35,10 @@ fn annotations_admit_only_whole_nonoverlapping_pieces_and_declared_kinds() {
         ),
     ] {
         let example = serde_json::from_str(json).unwrap();
-        assert_eq!(render_examples(&spec(), &[example]), Err(error));
+        assert_eq!(
+            render_examples(&spec(), &[example]).unwrap_err().cause,
+            error
+        );
     }
     for invalid in [
         r#"{"text":"Ada","entities":[],"kinds":null}"#,
@@ -52,6 +55,11 @@ fn annotations_admit_only_whole_nonoverlapping_pieces_and_declared_kinds() {
         "[[|Ada]]",
         "Ada\\x",
         "Ada]]",
+        "[Ada|person",
+        "[|person]",
+        "[Ada|]",
+        "[Ada|person|other]",
+        "[[Ada]|person]",
     ] {
         assert_eq!(
             super::brackets::parse(invalid).unwrap_err(),
@@ -65,6 +73,11 @@ fn equivalent_scalar_spans_and_brackets_render_identically_with_other_kinds_out(
     let bracket = RecognitionExample::Brackets("[[person|Zoë A\u{301}]] met Orbit.".into());
     let explicit: RecognitionExample = serde_json::from_str(r#"{"text":"Zoë Á met Orbit.","entities":[{"start":0,"end":6,"kind":"person"},{"start":11,"end":16,"kind":"organization"}],"kinds":["person","organization"]}"#).unwrap();
     let expected = render_examples(&spec(), &[bracket]).unwrap();
+    let original_form = RecognitionExample::Brackets("[Zoë A\u{301} | person] met Orbit.".into());
+    assert_eq!(
+        render_examples(&spec(), &[original_form]).unwrap(),
+        expected
+    );
     assert_eq!(render_examples(&spec(), &[explicit]).unwrap(), expected);
     assert!(expected[0].contains("Answer: \"BEGIN\"; kind: \"person\""));
     assert!(expected[0].contains("Answer: \"END\"; kind: \"person\""));

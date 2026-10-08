@@ -86,7 +86,7 @@ pub(crate) enum Error {
     UsageOverflow,
     /// Recognition asked for more kinds than one kind question can carry.
     RecognizeKinds,
-    RecognitionExamples(crate::core::ExampleError),
+    RecognitionExamples(crate::core::ExamplesError),
     /// The backend failed one question recognition requires.
     RecognizeLogical,
     /// A recognize text passed its byte limit, so no request was sent.
