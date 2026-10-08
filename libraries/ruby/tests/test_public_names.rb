@@ -18,7 +18,7 @@ class TestPublicNames < Minitest::Test
 
   def test_the_loaded_module_shows_only_the_pinned_names
     out, errors, status = Dir.mktmpdir("thinkthen-ruby-names-") do |root|
-      Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH], home: root), RbConfig.ruby, "-I", File.expand_path("../lib", __dir__),
+      Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH GEM_PATH], home: root), RbConfig.ruby, "-I", File.expand_path("../lib", __dir__),
                                          "-rjson", "-rthinkthen", "-e", <<~RUBY, unsetenv_others: true)
       T = ThinkThen
       puts JSON.generate(
