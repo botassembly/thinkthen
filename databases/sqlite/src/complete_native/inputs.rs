@@ -42,12 +42,15 @@ impl Inputs {
             serde_json::from_str(self.raw.get("records").ok_or_else(defect)?.get())
                 .map_err(|_| usage("records is an ordered array"))?;
         for record in records {
-            let record = fields(record.get())?;
+            let Ok(record) = fields(record.get()) else {
+                continue;
+            };
             let Some(images) = record.get("images") else {
                 continue;
             };
-            let images: Vec<Box<RawValue>> = serde_json::from_str(images.get())
-                .map_err(|_| usage("images is an explicit ordered array"))?;
+            let Ok(images) = serde_json::from_str::<Vec<Box<RawValue>>>(images.get()) else {
+                continue;
+            };
             if !images.is_empty() {
                 return Ok(true);
             }

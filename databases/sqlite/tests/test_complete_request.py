@@ -33,5 +33,24 @@ say(results=results)
     expect(backend.close(), 0, 'eager invalid complete calls send nothing')
 
 
+def test_incremental_complete_retains_prefix_before_malformed_image_descriptors():
+    backend = Backend()
+    got = child('''
+db = connect()
+for invalid in ({'text':'Beta.','images':None}, {'text':'Beta.','images':'invalid'}, None):
+    for incremental in (False, True):
+        inputs={'records':[{'text':'Alpha.'},invalid], 'incremental':incremental}
+        document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?,?)',
+            [json.dumps({'decide':'Fits?'}),json.dumps(inputs),json.dumps({'cache':False,'batch':1})]).fetchone()[0])
+        value=document['native']
+        assert value['error']['kind']=='usage', value
+        assert len(document.get('completed', []))==int(incremental), document
+        assert value.get('facts', {}).get('requests_sent', 0)==int(incremental), document
+say(ok=True)
+''', environment(backend))
+    expect(got['ok'], True, 'incremental malformed descriptors retain their prefix')
+    expect(backend.close(), 3, 'one send per incremental prefix and no eager sends')
+
+
 if __name__ == '__main__':
     raise SystemExit(main(globals()))
