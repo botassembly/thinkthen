@@ -115,6 +115,7 @@ unsafe fn relations(value: RelationsV1) -> Result<Vec<Object>, Failure> {
 pub(super) unsafe fn build(
     spec: &QuestionSpecV1,
     author: Option<&crate::current::author::Author>,
+    task: Option<crate::ffi::carriers::RecognitionTaskV1>,
 ) -> Result<String, Failure> {
     let mut body = Object::default();
     if !(1..=10).contains(&spec.kind) {
@@ -145,10 +146,11 @@ pub(super) unsafe fn build(
             body.put("version", 1)?;
             body.put("questions", members)?;
         } else if spec.kind >= 9 {
-            let mut inner = Object::default();
-            if spec.kind == 9 {
-                inner.put("kinds", choices(spec.kinds, false)?)?;
-            }
+            let mut inner = if spec.kind == 9 {
+                recognition(spec.kinds, task)?
+            } else {
+                Object::default()
+            };
             inner.put("relations", relations(spec.relations)?)?;
             if spec.name_pointer.present != 0 || spec.kind_pointer.present != 0 {
                 let mut fields = Object::default();
@@ -203,6 +205,26 @@ pub(super) unsafe fn build(
     append_author(&mut body, author)?;
     serde_json::to_string(&body)
         .map_err(|_| Failure::defect("question descriptor cannot be written"))
+}
+
+unsafe fn recognition(
+    kinds: ChoicesV1,
+    task: Option<crate::ffi::carriers::RecognitionTaskV1>,
+) -> Result<Object, Failure> {
+    let mut inner = Object::default();
+    // SAFETY: active kind and task buffers obey the constructor's counted-storage contract.
+    unsafe {
+        inner.put("kinds", choices(kinds, false)?)?;
+        if let Some(task) = task {
+            if let Some(text) = read::optional_string(task.instructions)? {
+                inner.put("instructions", text)?;
+            }
+            if let Some(text) = read::optional_string(task.entity_definition)? {
+                inner.put("entity_definition", text)?;
+            }
+        }
+    }
+    Ok(inner)
 }
 
 fn append_author(

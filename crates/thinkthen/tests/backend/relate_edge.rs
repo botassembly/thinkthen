@@ -16,8 +16,8 @@ fn relate_reads_the_names_recognize_found() {
     std::fs::create_dir_all(&folder).expect("folder");
     let message = std::fs::read_to_string(demo.join("message.txt")).expect("message");
     std::fs::write(folder.join("text"), message.replace('\n', "")).expect("text");
-    // The kinds match demo 44's recording byte for byte, so the replay answers.
-    let recording = demo.join("recording");
+    // Controlled answers retain historical probabilities for caller-defined wording.
+    let recording = demo.join("controlled-0461");
     let recognize = [
         "recognize",
         "--replay",
@@ -31,12 +31,14 @@ fn relate_reads_the_names_recognize_found() {
         "--kind",
         "MISC=Part of another named entity: a nationality, an event, a product, or the name of a creative work.",
     ];
+    let url =
+        std::fs::read_to_string(demo.join("controlled-0461/url.txt")).expect("controlled URL");
     let thinkthen = |arguments: &[&str], input: &str| {
         let output = run::output(
             Command::new(env!("CARGO_BIN_EXE_thinkthen"))
                 .clear_environment()
                 .args(arguments)
-                .args(["--url", "https://api.typesafe.ai/v1", "--input"])
+                .args(["--url", url.trim(), "--input"])
                 .arg(folder.join(input)),
         )
         .expect("binary runs");

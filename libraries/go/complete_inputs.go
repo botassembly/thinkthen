@@ -35,6 +35,8 @@ type QuestionMember struct {
 }
 
 type Question struct {
+	Instructions      Optional[string]
+	EntityDefinition  Optional[string]
 	Author            Optional[QuestionAuthor]
 	Kind              Function
 	Text              Content

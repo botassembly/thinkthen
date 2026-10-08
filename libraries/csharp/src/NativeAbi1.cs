@@ -135,3 +135,6 @@ internal struct NamedAnswerV1 {
  public ProbabilitiesV1 probabilities;
  public OptionalDoubleV1 confidence;
 }
+
+[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+internal struct RecognitionTaskV1 {public OptionalStringV1 instructions; public OptionalStringV1 entity_definition;}

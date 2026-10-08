@@ -44,7 +44,7 @@ impl Tool {
             Self::Rank => "Order the complete records by the declared question or set.",
             Self::Find => "Select one unit from a complete set, or none.",
             Self::Annotate => "Ask an ordered ordinary question set for each record.",
-            Self::Recognize => "Recognize names and physical text spans.",
+            Self::Recognize => "Recognize caller-defined literal entities and physical text spans.",
             Self::Relate => "Judge relationships over the complete entity set.",
         }
     }
@@ -110,6 +110,12 @@ fn input_schema(tool: Tool) -> Value {
         if tool != Tool::Find {
             options.remove("none");
         }
+    }
+    if matches!(tool, Tool::Recognize)
+        && let Some(map) = properties.as_object_mut()
+    {
+        map.insert("question".into(), json!({"type":"object","description":"Version-one recognition declaration. recognize accepts kinds with descriptions, instructions and entity_definition. Omitted customization retains proper-name defaults.",
+            "properties":{"recognize":{"type":"object","properties":{"instructions":{"type":"string","minLength":1},"entity_definition":{"type":"string","minLength":1},"kinds":{"type":"object"},"relations":{"type":"array"}},"additionalProperties":false}}}));
     }
     if tool.images()
         && let Some(map) = properties.as_object_mut()

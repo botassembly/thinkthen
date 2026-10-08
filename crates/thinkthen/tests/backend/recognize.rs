@@ -4,6 +4,7 @@ use crate::harness::{Canned, Listener, spawn};
 use serde_json::Value;
 use std::{fs, path::PathBuf, process::Output, sync::Arc};
 
+mod custom;
 mod rules;
 mod stores;
 
@@ -282,10 +283,9 @@ fn no_kinds_asks_only_edges_and_sends_no_empty_step_two_request() {
     assert_eq!(listener.requests().len(), 1);
 }
 
-/// Ticket 0147, test 6: a kind's description reaches its step-2 option and
-/// never the step-1 request.
+/// Caller descriptions reach token membership and kind choices.
 #[test]
-fn descriptions_reach_the_step_two_option_and_never_step_one() {
+fn descriptions_reach_token_membership_and_kind_choices() {
     let listener = Listener::answering(automatic).expect("listener");
     let output = run(
         &listener,
@@ -299,7 +299,8 @@ fn descriptions_reach_the_step_two_option_and_never_step_one() {
     );
     assert_eq!(stdout(&output), format!("{ADA_AND_ACME}\n"));
     let requests = listener.requests();
-    assert!(!String::from_utf8_lossy(&requests[0].body).contains("DESC-"));
+    assert!(String::from_utf8_lossy(&requests[0].body).contains("DESC-PERSON"));
+    assert!(String::from_utf8_lossy(&requests[0].body).contains("DESC-ORG"));
     let second = questions(&requests[1].body);
     assert_eq!(second[0]["criteria"]["person"], "DESC-PERSON");
     assert_eq!(second[0]["criteria"]["organization"], "DESC-ORG");
@@ -408,7 +409,7 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
 /// A valid byte profile can fit step one's short kind names but split the
 /// independent step-two questions carrying long kind descriptions.
 #[test]
-fn long_descriptions_split_the_name_stage_more_than_the_boundary_stage() {
+fn long_descriptions_split_both_membership_and_kind_requests() {
     let limit = profile("description-split", r#""max_request_bytes":2300"#);
     let description = "Meaningful person category. ".repeat(14);
     let person = format!("person={description}");
@@ -428,16 +429,16 @@ fn long_descriptions_split_the_name_stage_more_than_the_boundary_stage() {
     let counts: Value =
         serde_json::from_str(stdout(&planned).lines().nth(1).expect("whole-input counts"))
             .expect("counts JSON");
-    assert_eq!(first["request_count"], 1);
+    assert_eq!(first["request_count"], 4);
     assert_eq!(first["name_requests_upper_bound"], 8); // four pieces, at most two questions each
-    assert_eq!(counts["requests"], 9);
+    assert_eq!(counts["requests"], 12);
     assert_eq!(listener.connections(), 0);
 
     assert_eq!(
         stdout(&local(&listener, &options, Some("secret-value"), ADA)),
         format!("{ADA_AND_ACME}\n")
     );
-    assert_eq!(listener.requests().len(), 3);
+    assert_eq!(listener.requests().len(), 7);
 }
 
 #[test]

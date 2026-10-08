@@ -252,7 +252,7 @@ fn edge_options_come_from_touching_marks_alone() {
         let options = edge_options(text, &pieces, name);
         let Question::Choose {
             options: labels, ..
-        } = edge_question(text, &pieces, &options).unwrap()
+        } = edge_question(text, &pieces, &options, None).unwrap()
         else {
             panic!("the edge question is a choice");
         };
@@ -268,7 +268,7 @@ fn edge_options_come_from_touching_marks_alone() {
     for (text, name) in blank {
         let pieces = pieces(text);
         assert!(edge_options(text, &pieces, name).len() > 1, "{text:?}");
-        let asked = step_two_questions(text, &pieces, &[name], 0..1, &[]).unwrap();
+        let asked = step_two_questions(text, &pieces, &[name], 0..1, &[], None).unwrap();
         let kept = vec![Asked {
             kind: false,
             edges: vec![name],

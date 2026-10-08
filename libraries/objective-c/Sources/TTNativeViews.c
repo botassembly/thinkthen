@@ -251,6 +251,7 @@ struct TTNativeResult {
     thinkthen_observation_v1 *events;
     thinkthen_details_v1 *details, *event_details;
     thinkthen_question_author_v1 *authors, *event_authors, **member_authors;
+    thinkthen_recognition_task_v1 *recognition_tasks;
     size_t *member_counts, *rank_counts;
     thinkthen_rank_view_v1 **rank_members;
     thinkthen_details_v1 **rank_member_details;
@@ -268,7 +269,7 @@ int tt_native_snapshot(thinkthen_result *raw,TTNativeResult **out) {
     if(code) goto done;
     r->summary=clone_summary(a,s);
 #define ARRAY(field,n) r->field=allocate(a,n,sizeof(*r->field),raw); if((n) && !r->field) goto done;
-    ARRAY(rows,s.count) ARRAY(details,s.count) ARRAY(authors,s.count)
+    ARRAY(rows,s.count) ARRAY(details,s.count) ARRAY(authors,s.count) ARRAY(recognition_tasks,s.count)
     ARRAY(member_authors,s.count) ARRAY(member_counts,s.count) ARRAY(rank_members,s.count) ARRAY(rank_counts,s.count) ARRAY(rank_member_details,s.count)
     ARRAY(recognition,s.count) ARRAY(relations,s.count)
     ARRAY(events,s.observation_count) ARRAY(event_details,s.observation_count) ARRAY(event_authors,s.observation_count)
@@ -289,6 +290,7 @@ int tt_native_snapshot(thinkthen_result *raw,TTNativeResult **out) {
         }
         if(code) goto done;
         r->rows[i]=clone_row_observation(a,v);
+        if(v.function==9) {thinkthen_recognition_task_v1 task={0};code=thinkthen_result_recognition_task_v1(raw,i,&task);if(code) goto done;r->recognition_tasks[i].instructions=clone_optional_string(a,task.instructions);r->recognition_tasks[i].entity_definition=clone_optional_string(a,task.entity_definition);}
         thinkthen_details_v1 d={0}; code=thinkthen_result_details(raw,i,&d); if(code) goto done; r->details[i]=clone_details(a,d);
         thinkthen_question_author_v1 author={0}; code=thinkthen_result_question_author(raw,i,&author); if(code) goto done; r->authors[i]=clone_question_author(a,author);
         if(v.function==8) {
@@ -331,3 +333,5 @@ int tt_native_rank_member(const TTNativeResult *r,size_t i,size_t j,thinkthen_ra
 
 int tt_native_source_recognition(const TTNativeResult *r,size_t i,thinkthen_source_recognition_v1 *out) { if(!r || !out || i>=r->summary.count || r->rows[i].function!=9) return THINKTHEN_EUSAGE; *out=r->recognition[i]; return 0; }
 int tt_native_source_relations(const TTNativeResult *r,size_t i,thinkthen_source_relations_v1 *out) { if(!r || !out || i>=r->summary.count || r->rows[i].function!=10) return THINKTHEN_EUSAGE; *out=r->relations[i]; return 0; }
+
+int tt_native_recognition_task(const TTNativeResult *r,size_t i,thinkthen_recognition_task_v1 *out) {if(!r||!out||i>=r->summary.count||r->rows[i].function!=9)return THINKTHEN_EUSAGE;*out=r->recognition_tasks[i];return 0;}

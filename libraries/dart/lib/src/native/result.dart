@@ -4,6 +4,7 @@ import '../typed.dart' show ErrorKind;
 /// Known fields are native typed copies. Only caller content can contain JSON.
 final class CompleteResult<T> {
   final SummaryView summary;
+  final List<RecognitionTaskView?> recognitionTasks;
   final List<T> rows;
   final List<ObservationView> observations;
   final List<DetailsView> details, observationDetails;
@@ -25,8 +26,10 @@ final class CompleteResult<T> {
       List<QuestionAuthorView> observationAuthors,
       List<SourceRecognitionView?> sourceRecognitions,
       List<SourceRelationsView?> sourceRelations,
-      [List<List<DetailsView>> rankMemberDetails = const []])
-      : rows = List.unmodifiable(rows),
+      [List<List<DetailsView>> rankMemberDetails = const [],
+      List<RecognitionTaskView?> recognitionTasks = const []])
+      : recognitionTasks = List.unmodifiable(recognitionTasks),
+        rows = List.unmodifiable(rows),
         observations = List.unmodifiable(observations),
         details = List.unmodifiable(details),
         authors = List.unmodifiable(authors),

@@ -283,6 +283,8 @@ export const FUNCTIONS = [
     args: 'KIND... or @FILE',
     argsNote: 'The file is a question file.',
     options: [
+      flag('--instructions TEXT', 'nonblank task wording', 'none', 'Defines what the recognition questions ask. It overrides the same saved field.'),
+      flag('--entity-definition TEXT', 'a nonblank span definition', 'none', 'Defines the literal entity spans. Any supplied wording or label description selects caller-defined entities.'),
       flag('--kind KIND=DESCRIPTION', 'a kind and what it means, and it may repeat', 'none', 'One kind and what it means. With no kinds, every name has the kind `ENTITY`.'),
       flag('--threshold T', CUT_TAKES, cutOn('recognize'), 'Keeps names whose strength reaches this cut.'),
       flag('--relation NAME=SOURCE:TARGET', 'a rule, and it may repeat', 'none', 'Also links the names it finds. A bare NAME relates any two kinds.'),

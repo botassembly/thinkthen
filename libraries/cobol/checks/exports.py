@@ -89,7 +89,8 @@ def bridge(header, package, native, scratch):
     # Actual bridge prototypes intentionally pass these counted values by reference.
     expected = {('TT_' + n[len('thinkthen_'):-len('_complete')].upper() if n.endswith('_complete') else 'TT_' + n[len('thinkthen_'):].upper()): p
                 for n, p in native['functions'].items() if n in {'thinkthen_' + function + '_complete' for function in ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate')} or n.endswith('_batch_start') or n in {
-                    'thinkthen_question_new', 'thinkthen_question_new_authored', 'thinkthen_question_load', 'thinkthen_question_parse',
+                    'thinkthen_question_new', 'thinkthen_question_new_authored', 'thinkthen_question_new_recognition_v1',
+                    'thinkthen_result_recognition_task_v1', 'thinkthen_question_load', 'thinkthen_question_parse',
                     'thinkthen_question_load_named', 'thinkthen_question_load_reference', 'thinkthen_image_clone',
                     'thinkthen_source_records', 'thinkthen_source_files', 'thinkthen_source_image_files'}}
     ast = json.loads(abi.run(['clang', '-std=c11', '-I', str(header.parent), '-x', 'c', '-fsyntax-only', '-Xclang', '-ast-dump=json', str(package / 'src/tt_native.h')]))

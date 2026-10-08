@@ -111,3 +111,12 @@ STATIC_ASSERT(ALIGNOF(thinkthen_source_relations_v1)==RUST_SOURCE_RELATIONS_ALIG
 STATIC_ASSERT(sizeof(thinkthen_source_endpoint_v1)==RUST_SOURCE_ENDPOINT_SIZE);
 STATIC_ASSERT(ALIGNOF(thinkthen_source_endpoint_v1)==RUST_SOURCE_ENDPOINT_ALIGN);
 #endif
+
+STATIC_ASSERT(sizeof(thinkthen_recognition_task_v1)==RUST_RECOGNITION_TASK_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_recognition_task_v1)==RUST_RECOGNITION_TASK_ALIGN);
+typedef int (*recognition_new_fn)(const thinkthen_engine *,const thinkthen_question_spec_v1 *,const thinkthen_question_author_v1 *,const thinkthen_recognition_task_v1 *,thinkthen_question **);
+SIGNATURE(thinkthen_question_new_recognition_v1,recognition_new_fn);
+typedef int (*question_task_fn)(const thinkthen_question *,thinkthen_recognition_task_v1 *);
+SIGNATURE(thinkthen_question_recognition_task_v1,question_task_fn);
+typedef int (*result_task_fn)(const thinkthen_result *,size_t,thinkthen_recognition_task_v1 *);
+SIGNATURE(thinkthen_result_recognition_task_v1,result_task_fn);

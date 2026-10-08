@@ -62,6 +62,8 @@ struct Asked {
 
 #[derive(Deserialize)]
 struct Rules {
+    instructions: Option<String>,
+    entity_definition: Option<String>,
     #[serde(default)]
     kinds: Ordered,
     #[serde(default)]
@@ -396,6 +398,12 @@ fn recognize(question: &str) -> Checked<Recognize> {
     let asked: Asked = serde_json::from_str(question).map_err(|error| error.to_string())?;
     let rules = asked.recognize.ok_or("no recognize block")?;
     let mut builder = Recognize::builder();
+    if let Some(value) = rules.instructions {
+        builder = builder.instructions(&value).map_err(said)?;
+    }
+    if let Some(value) = rules.entity_definition {
+        builder = builder.entity_definition(&value).map_err(said)?;
+    }
     for (name, meaning) in rules.kinds.0 {
         let described = Description::text(&meaning).map_err(said)?;
         builder = builder

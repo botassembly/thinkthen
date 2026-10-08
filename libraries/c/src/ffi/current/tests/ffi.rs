@@ -8,6 +8,8 @@
 mod layout;
 #[path = "native.rs"]
 mod native;
+#[path = "recognition/ffi.rs"]
+mod recognition;
 use super::{
     carriers::{
         ChoiceV1, ChoicesV1, ContentV1, ImagesV1, MemberSpecV1, MemberSpecsV1, OptionalContentV1,

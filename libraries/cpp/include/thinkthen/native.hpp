@@ -24,6 +24,7 @@ struct Result {
     std::vector<SourceRecognition> located_recognition;
     std::vector<SourceRelations> located_relations;
     std::vector<std::vector<Details>> rank_member_details{};
+    std::vector<RecognitionTask> recognition_tasks{};
     const DecideView& decide(size_t i) const { return rows.at(i).data.decide.value(); }
     const ChooseView& choose(size_t i) const { return rows.at(i).data.choose.value(); }
     const TagView& tag(size_t i) const { return rows.at(i).data.tag.value(); }
@@ -54,6 +55,9 @@ inline Result snapshot(thinkthen_result *raw) {
     for(size_t i=0;i<summary.count;++i) {
         thinkthen_row_observation_v1 row{}; view_ok(thinkthen_result_row(raw,i,&row));
         out.rows.push_back(copy(row));
+        thinkthen_recognition_task_v1 task{};
+        if(row.function==9) view_ok(thinkthen_result_recognition_task_v1(raw,i,&task));
+        out.recognition_tasks.push_back(copy(task));
         thinkthen_details_v1 details{}; view_ok(thinkthen_result_details(raw,i,&details)); out.details.push_back(copy(details));
         thinkthen_question_author_v1 author{}; view_ok(thinkthen_result_question_author(raw,i,&author)); out.authors.push_back(copy(author));
         out.member_authors.emplace_back(); out.rank_members.emplace_back(); out.rank_member_details.emplace_back();
@@ -92,8 +96,8 @@ inline Engine create(const std::string& settings) {
     if(!engine) checked(nullptr,thinkthen_error_code(nullptr));
     return engine;
 }
-inline Question question(const Engine& engine,const thinkthen_question_spec_v1& spec,const thinkthen_question_author_v1 *author=nullptr) {
-    thinkthen_question *raw=nullptr; checked(engine.get(),thinkthen_question_new_authored(engine.get(),&spec,author,&raw)); return Question(raw);
+inline Question question(const Engine& engine,const thinkthen_question_spec_v1& spec,const thinkthen_question_author_v1 *author=nullptr,const thinkthen_recognition_task_v1 *task=nullptr) {
+    thinkthen_question *raw=nullptr; checked(engine.get(),task?thinkthen_question_new_recognition_v1(engine.get(),&spec,author,task,&raw):thinkthen_question_new_authored(engine.get(),&spec,author,&raw)); return Question(raw);
 }
 inline Question parse(const Engine& engine,Role role,const std::string& json) {
     thinkthen_question *raw=nullptr; checked(engine.get(),thinkthen_question_parse(engine.get(),static_cast<uint32_t>(role),counted(json),&raw)); return Question(raw);

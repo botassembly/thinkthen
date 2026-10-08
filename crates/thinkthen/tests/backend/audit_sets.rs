@@ -50,11 +50,10 @@ fn edge_key(id: usize) -> String {
 fn recognized(question: &[&str], records: &str) -> String {
     let mut arguments = vec!["recognize"];
     arguments.extend_from_slice(question);
-    arguments.extend(
-        "--url https://api.typesafe.ai/v1 --replay recording --details --jsonl --field /text"
-            .split(' '),
-    );
+    arguments.extend("--replay controlled-0461 --details --jsonl --field /text".split(' '));
     let demo = repository().join("demos/44-recognize-names");
+    let url = fs::read_to_string(demo.join("controlled-0461/url.txt")).expect("controlled URL");
+    arguments.extend(["--url", url.trim()]);
     replay(&demo, &arguments, records.as_bytes())
 }
 

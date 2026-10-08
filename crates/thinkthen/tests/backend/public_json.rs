@@ -68,7 +68,7 @@ fn each_json_method_prints_the_commands_bytes_on_the_shared_cases() {
         }
     }
     assert!(failures.is_empty(), "{failures:#?}");
-    assert_eq!(compared, 63);
+    assert_eq!(compared, 64);
 }
 
 /// Compare every text of one case; the count of texts compared.

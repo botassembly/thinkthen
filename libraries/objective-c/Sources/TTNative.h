@@ -11,6 +11,7 @@ int tt_native_summary(const TTNativeResult *,thinkthen_summary_v1 *);
 int tt_native_observation(const TTNativeResult *,size_t,thinkthen_observation_v1 *);
 int tt_native_details(const TTNativeResult *,size_t,thinkthen_details_v1 *);
 int tt_native_observation_details(const TTNativeResult *,size_t,thinkthen_details_v1 *);
+int tt_native_recognition_task(const TTNativeResult *,size_t,thinkthen_recognition_task_v1 *);
 int tt_native_author(const TTNativeResult *,size_t,thinkthen_question_author_v1 *);
 int tt_native_observation_author(const TTNativeResult *,size_t,thinkthen_question_author_v1 *);
 int tt_native_member_author(const TTNativeResult *,size_t,size_t,thinkthen_question_author_v1 *);

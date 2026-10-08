@@ -6,7 +6,9 @@ use thiserror::Error;
 
 use crate::core::json::Json;
 use crate::core::recognize::{ENTITY, NONE_OF_THESE};
-use crate::core::{Description, Labels, ModelName, Pointer, ProfileName, RelationRule, Threshold};
+use crate::core::{
+    Description, Labels, ModelName, Pointer, ProfileName, QuestionText, RelationRule, Threshold,
+};
 
 pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
 
@@ -16,6 +18,8 @@ pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
 pub(crate) struct RecognizeSpec {
     pub(crate) metadata: crate::core::declaration::QuestionMetadata,
     pub(crate) kinds: RecognizeKinds,
+    pub(crate) instructions: Option<QuestionText>,
+    pub(crate) entity_definition: Option<QuestionText>,
     pub(crate) relations: Vec<RelationRule>,
     pub(crate) threshold: Threshold,
     pub(crate) relation_threshold: Threshold,
@@ -36,6 +40,10 @@ pub(crate) struct QuestionDocument<'a> {
     verb: Verb,
     kinds: Kinds<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    instructions: Option<&'a QuestionText>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    entity_definition: Option<&'a QuestionText>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     relations: Option<&'a [RelationRule]>,
     threshold: Threshold,
     relation_threshold: Threshold,
@@ -47,6 +55,8 @@ impl RecognizeSpec {
         QuestionDocument {
             verb: Verb::Recognize,
             kinds: Kinds(&self.kinds),
+            instructions: self.instructions.as_ref(),
+            entity_definition: self.entity_definition.as_ref(),
             relations: (!self.relations.is_empty()).then_some(self.relations.as_slice()),
             threshold: self.threshold,
             relation_threshold: self.relation_threshold,
@@ -105,6 +115,8 @@ impl RecognizeSpec {
         Ok(Self {
             metadata: crate::core::declaration::QuestionMetadata::default(),
             kinds,
+            instructions: None,
+            entity_definition: None,
             relations,
             threshold: parse_typed_cut(threshold)?,
             relation_threshold: parse_typed_cut(relation_threshold)?,
@@ -140,10 +152,9 @@ impl RecognizeSpec {
         let Some(Json::Object(recognize)) = value.member("recognize") else {
             return Err(RecognizeConfigError::Shape);
         };
-        if recognize
-            .iter()
-            .any(|(name, _)| !["kinds", "relations"].contains(&name.as_str()))
-        {
+        if recognize.iter().any(|(name, _)| {
+            !["kinds", "relations", "instructions", "entity_definition"].contains(&name.as_str())
+        }) {
             return Err(RecognizeConfigError::Shape);
         }
         let kinds = parse_kinds(
@@ -160,6 +171,16 @@ impl RecognizeSpec {
         Ok(Self {
             metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
             kinds,
+            instructions: task_text(
+                value
+                    .member("recognize")
+                    .and_then(|v| v.member("instructions")),
+            )?,
+            entity_definition: task_text(
+                value
+                    .member("recognize")
+                    .and_then(|v| v.member("entity_definition")),
+            )?,
             relations,
             threshold: parse_json_cut(value.member("threshold"))?,
             relation_threshold: parse_json_cut(value.member("relation_threshold"))?,
@@ -174,6 +195,19 @@ impl RecognizeSpec {
                 .map_err(|_| RecognizeConfigError::Shape)?,
             on: parse_on(value.member("on"))?,
         })
+    }
+}
+
+/// Admit supplied task wording without treating explicit emptiness as omission.
+pub(crate) fn task_text(
+    value: Option<&Json>,
+) -> Result<Option<QuestionText>, RecognizeConfigError> {
+    match value {
+        None => Ok(None),
+        Some(Json::String(text)) => QuestionText::new(text.clone())
+            .map(Some)
+            .map_err(|_| RecognizeConfigError::Shape),
+        Some(_) => Err(RecognizeConfigError::Shape),
     }
 }
 

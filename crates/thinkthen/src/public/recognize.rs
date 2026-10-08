@@ -155,11 +155,19 @@ pub(super) use crate::public::question::model_of as model;
 pub struct Recognize(pub(crate) RecognizeSpec);
 
 impl Recognize {
+    /// Borrow the admitted authored declaration and resolved reading rules.
+    #[must_use]
+    pub fn reading(&self) -> crate::public::RecognitionReading<'_> {
+        crate::public::RecognitionReading(&self.0)
+    }
+
     /// Start one; with no kind every name takes the kind `ENTITY`.
     #[must_use]
     pub fn builder() -> RecognizeBuilder {
         RecognizeBuilder {
             kinds: Vec::new(),
+            instructions: None,
+            entity_definition: None,
             relations: Vec::new(),
             threshold: None,
             relation_threshold: None,
@@ -199,6 +207,8 @@ impl Recognize {
 /// A recognition request under construction.
 pub struct RecognizeBuilder {
     kinds: Vec<Kind>,
+    instructions: Option<core::QuestionText>,
+    entity_definition: Option<core::QuestionText>,
     relations: Vec<core::RelationRule>,
     threshold: Option<f64>,
     relation_threshold: Option<f64>,
@@ -206,6 +216,21 @@ pub struct RecognizeBuilder {
 }
 
 impl RecognizeBuilder {
+    /// Supply the recognition task wording for every entity stage.
+    /// # Errors
+    /// Refuses blank wording before any request.
+    pub fn instructions(mut self, value: &str) -> Result<Self, Error> {
+        self.instructions = Some(core::QuestionText::new(value).map_err(Error::refused)?);
+        Ok(self)
+    }
+    /// Define the literal spans to recognize.
+    /// # Errors
+    /// Refuses a blank definition before any request.
+    pub fn entity_definition(mut self, value: &str) -> Result<Self, Error> {
+        self.entity_definition = Some(core::QuestionText::new(value).map_err(Error::refused)?);
+        Ok(self)
+    }
+
     /// Look for this kind, after the kinds already added.
     ///
     /// # Errors
@@ -286,6 +311,8 @@ impl RecognizeBuilder {
         )
         .map_err(Error::refused)?;
         spec.model = self.model;
+        spec.instructions = self.instructions;
+        spec.entity_definition = self.entity_definition;
         Ok(Recognize(spec))
     }
 }

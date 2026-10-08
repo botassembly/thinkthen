@@ -8,6 +8,8 @@
 #include <limits>
 #include <stdexcept>
 namespace tt::native {
+struct RecognitionTask {std::optional<std::string> instructions,entity_definition;};
+
 // Complete native views copied into host values; no returned pointer borrows C ownership.
 struct RelationAnswer;
 struct QuestionAuthor;
@@ -389,4 +391,5 @@ inline std::vector<std::string> copy(thinkthen_strings_v1 v) { std::vector<std::
 inline Summary copy(thinkthen_summary_v1 v) { Summary out{}; out.state=copy(v.state); out.schema=copy(v.schema); out.answer_id=copy(v.answer_id); out.function=copy(v.function); out.count=copy(v.count); out.observation_count=copy(v.observation_count); out.meta=copy(v.meta); out.facts=copy(v.facts); out.attempts=copy(v.attempts); out.error=copy(v.error); return out; }
 inline TagView copy(thinkthen_tag_view_v1 v) { TagView out{}; out.common=copy(v.common); out.value=copy(v.value); return out; }
 inline Usage copy(thinkthen_usage_v1 v) { Usage out{}; out.input_tokens=copy(v.input_tokens); out.output_tokens=copy(v.output_tokens); return out; }
+inline RecognitionTask copy(thinkthen_recognition_task_v1 v) {return {copy(v.instructions),copy(v.entity_definition)};}
 } // namespace tt::native

@@ -9,6 +9,8 @@ with Thinkthen_C_Rows; use Thinkthen_C_Rows;
 with Thinkthen_C_Events; use Thinkthen_C_Events;
 with Thinkthen_C_Extensions; use Thinkthen_C_Extensions;
 package Thinkthen.Native.Results is
+   function Result_Recognition_Task_V1 (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Recognition_Task_V1) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "thinkthen_result_recognition_task_v1";
    function Result_Source_Recognition (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Source_Recognition_V1) return Interfaces.C.int
      with Import, Convention => C, External_Name => "thinkthen_result_source_recognition";
    function Result_Source_Relations (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Source_Relations_V1) return Interfaces.C.int

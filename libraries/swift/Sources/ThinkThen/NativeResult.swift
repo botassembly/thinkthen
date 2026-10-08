@@ -1,5 +1,7 @@
 import CThinkThen
+public struct NativeRecognitionTask: Sendable { public let instructions: String?; public let entityDefinition: String? }
 public struct NativeResult: Sendable {
+    public let recognitionTasks: [NativeRecognitionTask]
     public let summary: NativeSummary
     public let rows: [NativeRowObservation]
     public let observations: [NativeObservation]
@@ -26,10 +28,13 @@ public struct NativeResult: Sendable {
         observations = events; observationDetails = eventDetails; observationAuthors = eventAuthors
         var values: [NativeRowObservation] = [], ds: [NativeDetails] = [], authors: [NativeQuestionAuthor] = []
         var mas: [[NativeQuestionAuthor]] = [], rms: [[NativeRankView]] = [], rmds: [[NativeDetails]] = []
-        var recs: [NativeSourceRecognition] = [], rels: [NativeSourceRelations] = []
+        var recs: [NativeSourceRecognition] = [], rels: [NativeSourceRelations] = [], tasks: [NativeRecognitionTask] = []
         for i in 0..<s.count {
             var row = thinkthen_row_observation_v1(); try nativeViewOK(thinkthen_result_row(raw,i,&row))
             values.append(try nativeCopy(row))
+            var task = thinkthen_recognition_task_v1()
+            if row.function == 9 {try nativeViewOK(thinkthen_result_recognition_task_v1(raw,i,&task))}
+            tasks.append(NativeRecognitionTask(instructions:try nativeCopy(task.instructions),entityDefinition:try nativeCopy(task.entity_definition)))
             var d = thinkthen_details_v1(); try nativeViewOK(thinkthen_result_details(raw,i,&d)); ds.append(try nativeCopy(d))
             var a = thinkthen_question_author_v1(); try nativeViewOK(thinkthen_result_question_author(raw,i,&a)); authors.append(try nativeCopy(a))
             var members: [NativeQuestionAuthor] = []
@@ -51,7 +56,7 @@ public struct NativeResult: Sendable {
             if row.function == 10 { try nativeViewOK(thinkthen_result_source_relations(raw,i,&rel)) }; rels.append(try nativeCopy(rel))
         }
         rows = values; details = ds; self.authors = authors; memberAuthors = mas; rankMembers = rms; rankMemberDetails = rmds
-        locatedRecognition = recs; locatedRelations = rels
+        locatedRecognition = recs; locatedRelations = rels; recognitionTasks = tasks
     }
     public func decide(_ index: Int) throws -> NativeDecideView {
         guard rows.indices.contains(index), let value = rows[index].data.decide else { throw NativeConversion.invalidDiscriminator }; return value

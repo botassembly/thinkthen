@@ -9,14 +9,20 @@ final class RecognitionPlan extends Carrier
         public readonly Optional $kinds = new Optional(),
         /** @var Optional<list<PlanRule>> */
         public readonly Optional $relations = new Optional(),
+        /** @var Optional<string> */
+        public readonly Optional $instructions = new Optional(),
+        /** @var Optional<string> */
+        public readonly Optional $entity_definition = new Optional(),
     ) {}
     public static function fromJson(mixed $value): self
     {
         $v = Read::object($value);
-        Read::shape("RecognitionPlan", $v, ["kinds", "relations"], []);
+        Read::shape("RecognitionPlan", $v, ["kinds", "relations", "instructions", "entity_definition"], []);
         return new self(
             Read::optional($v, "kinds", "Labels"),
             Read::optional($v, "relations", "[PlanRule]"),
+            Read::optional($v, "instructions", "str"),
+            Read::optional($v, "entity_definition", "str"),
         );
     }
 }

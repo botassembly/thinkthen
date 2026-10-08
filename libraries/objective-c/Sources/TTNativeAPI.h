@@ -23,6 +23,7 @@ TTErrorKind tt_native_failure_kind(const TTNativeResult *);
 @end
 @interface TTClient (Complete)
 - (int)question:(const thinkthen_question_spec_v1 *)spec author:(const thinkthen_question_author_v1 *)author output:(TTQuestion **)outputValue failure:(TTNativeResult **)failure;
+- (int)question:(const thinkthen_question_spec_v1 *)spec author:(const thinkthen_question_author_v1 *)author task:(const thinkthen_recognition_task_v1 *)task output:(TTQuestion **)outputValue failure:(TTNativeResult **)failure;
 - (int)parseQuestion:(thinkthen_string_v1)json role:(uint32_t)role output:(TTQuestion **)outputValue failure:(TTNativeResult **)failure;
 - (int)loadQuestion:(thinkthen_string_v1)path output:(TTQuestion **)outputValue failure:(TTNativeResult **)failure;
 - (int)namedQuestion:(thinkthen_string_v1)name role:(uint32_t)role output:(TTQuestion **)outputValue failure:(TTNativeResult **)failure;

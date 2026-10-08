@@ -269,6 +269,8 @@ export interface Recognized {
 }
 
 export interface RecognizeOptions extends CallOptions {
+  instructions?: string;
+  entityDefinition?: string;
   /** A named version-one recognition plan; exclusive with inline plan options. */
   file?: string;
   /** Kind words, or kind words with their descriptions. */

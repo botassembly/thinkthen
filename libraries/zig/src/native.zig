@@ -157,6 +157,7 @@ pub const Snapshot = struct {
     details: []const c.thinkthen_details_v1,
     observation_details: []const c.thinkthen_details_v1,
     authors: []const c.thinkthen_question_author_v1,
+    recognition_tasks: []const c.thinkthen_recognition_task_v1 = &.{},
     observation_authors: []const c.thinkthen_question_author_v1,
     member_authors: []const []const c.thinkthen_question_author_v1,
     rank_members: []const []const c.thinkthen_rank_view_v1,
@@ -224,6 +225,7 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
     const rows = try a.alloc(c.thinkthen_row_observation_v1, s.count);
     const details = try a.alloc(c.thinkthen_details_v1, s.count);
     const authors = try a.alloc(c.thinkthen_question_author_v1, s.count);
+    const tasks = try a.alloc(c.thinkthen_recognition_task_v1,s.count);
     const member_authors = try a.alloc([]const c.thinkthen_question_author_v1, s.count);
     const ranks = try a.alloc([]const c.thinkthen_rank_view_v1, s.count);
     const rank_details = try a.alloc([]const c.thinkthen_details_v1, s.count);
@@ -253,6 +255,9 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
         var author = std.mem.zeroes(c.thinkthen_question_author_v1);
         try viewOK(c.thinkthen_result_question_author(raw, i, &author));
         authors[i] = try clone(@TypeOf(author), a, author);
+        var task = std.mem.zeroes(c.thinkthen_recognition_task_v1);
+        if(value.function==9) try viewOK(c.thinkthen_result_recognition_task_v1(raw,i,&task));
+        tasks[i] = try clone(@TypeOf(task),a,task);
         member_authors[i] = &.{};
         ranks[i] = &.{};
         rank_details[i] = &.{};
@@ -292,7 +297,7 @@ pub fn snapshot(allocator: std.mem.Allocator, raw: *c.thinkthen_result) !Snapsho
         rels[i] = try clone(@TypeOf(rel), a, rel);
     }
     const summary = try clone(@TypeOf(s), a, s);
-    return .{ .arena = arena, .summary = summary, .rows = rows, .observations = events, .details = details, .observation_details = event_details, .authors = authors, .observation_authors = event_authors, .member_authors = member_authors, .rank_members = ranks, .rank_member_details = rank_details, .located_recognition = recs, .located_relations = rels };
+    return .{ .arena = arena, .summary = summary, .rows = rows, .observations = events, .details = details, .observation_details = event_details, .authors = authors, .recognition_tasks = tasks, .observation_authors = event_authors, .member_authors = member_authors, .rank_members = ranks, .rank_member_details = rank_details, .located_recognition = recs, .located_relations = rels };
 }
 fn viewOK(code: c_int) !void {
     if (code != 0) return error.NativeAccessorRefused;
@@ -343,6 +348,11 @@ pub fn question(e: *tt.Engine, spec: c.thinkthen_question_spec_v1, author: ?*con
     var out: ?*c.thinkthen_question = null;
     var s = spec;
     if (c.thinkthen_question_new_authored(e.raw, &s, author, &out) != 0) return .{ .failed = try failure(e.allocator, e.raw) };
+    return .{ .ok = .{ .raw = out orelse return error.MissingNativeResult } };
+}
+pub fn recognitionQuestion(e: *tt.Engine, spec: c.thinkthen_question_spec_v1, author: ?*const c.thinkthen_question_author_v1, task: c.thinkthen_recognition_task_v1) !Outcome(Question) {
+    var out: ?*c.thinkthen_question = null; var s = spec; var t = task;
+    if (c.thinkthen_question_new_recognition_v1(e.raw,&s,author,&t,&out) != 0) return .{ .failed = try failure(e.allocator,e.raw) };
     return .{ .ok = .{ .raw = out orelse return error.MissingNativeResult } };
 }
 pub fn parse(e: *tt.Engine, role: Role, grammar: []const u8) !Outcome(Question) {

@@ -329,13 +329,13 @@ module ThinkThen
     #   found = ThinkThen.recognize(text, kinds: %w[person organization place],
     #                               relations: { works_for: %w[person organization] })
     #   found.entities.first.kind  # "person"
-    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, file: nil, cancel: nil, deadline_ms: nil,
+    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, instructions: nil, entity_definition: nil, file: nil, cancel: nil, deadline_ms: nil,
                   batch: nil, context: nil)
       unless file.nil?
-        ThinkThen.__send__(:refuse, "recognize file takes no inline plan options") unless [kinds, relations, threshold, relation_threshold].all?(&:nil?)
+        ThinkThen.__send__(:refuse, "recognize file takes no inline plan options") unless [kinds, relations, threshold, relation_threshold, instructions, entity_definition].all?(&:nil?)
         spec = Native.plan_file(ThinkThen.__send__(:file_path, file, "plan"), "recognize")
       else
-        spec = JSON.generate(ThinkThen.__send__(:recognize_spec, kinds, relations, threshold, relation_threshold))
+        spec = JSON.generate(ThinkThen.__send__(:recognize_spec, kinds, relations, threshold, relation_threshold, instructions, entity_definition))
       end
       crossing("recognize", spec, ThinkThen.__send__(:text_of, text), cancel, deadline_ms,
                batch: batch, context: context).map { |json| ThinkThen.__send__(:recognized, JSON.parse(json)) }
@@ -637,11 +637,13 @@ module ThinkThen
       refuse("annotate cannot add a question named '#{clash}': the input already has a key by that name; rename one")
     end
 
-    def recognize_spec(kinds, relations, threshold, relation_threshold)
+    def recognize_spec(kinds, relations, threshold, relation_threshold, instructions = nil, entity_definition = nil)
       kinds = [] if kinds.nil?
       kinds = kinds.to_h { |name| [name.to_s, nil] } if kinds.is_a?(Array)
       body = { "kinds" => kinds.to_h { |name, description| [name.to_s, description] } }
       body["relations"] = relation_rules(relations) if relations
+      body["instructions"] = instructions unless instructions.nil?
+      body["entity_definition"] = entity_definition unless entity_definition.nil?
       spec = { "version" => 1, "recognize" => body }
       spec["threshold"] = threshold unless threshold.nil?
       spec["relation_threshold"] = relation_threshold unless relation_threshold.nil?

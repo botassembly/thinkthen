@@ -250,6 +250,8 @@ final class RelateQuestion extends Carrier {
 }
 
 final class RecognizeQuestion extends Carrier {
+  final Optional<String> instructions;
+  final Optional<String> entity_definition;
   final String verb;
   final Map<String, Authored> kinds;
   final Threshold threshold;
@@ -258,6 +260,8 @@ final class RecognizeQuestion extends Carrier {
   final Optional<Pointers> on;
   final Optional<String> profile;
   const RecognizeQuestion({
+    this.instructions = const Optional.absent(),
+    this.entity_definition = const Optional.absent(),
     required this.verb,
     required this.kinds,
     required this.threshold,
@@ -275,7 +279,9 @@ final class RecognizeQuestion extends Carrier {
       "threshold",
       "relation_threshold",
       "on",
-      "profile"
+      "profile",
+      "instructions",
+      "entity_definition"
     ], [
       "verb",
       "kinds",
@@ -283,6 +289,12 @@ final class RecognizeQuestion extends Carrier {
       "relation_threshold"
     ]);
     return RecognizeQuestion(
+      instructions: v.containsKey("instructions")
+          ? Optional.present(readString(v["instructions"]))
+          : const Optional.absent(),
+      entity_definition: v.containsKey("entity_definition")
+          ? Optional.present(readString(v["entity_definition"]))
+          : const Optional.absent(),
       verb: readLiteral(v["verb"], "recognize"),
       kinds: readMap(v["kinds"], (v) => Authored.fromJson(v)),
       threshold: Threshold.fromJson(v["threshold"]),
@@ -301,6 +313,9 @@ final class RecognizeQuestion extends Carrier {
   }
   @override
   Map<String, Object?> toJson() => {
+        if (instructions.present) "instructions": project(instructions.value),
+        if (entity_definition.present)
+          "entity_definition": project(entity_definition.value),
         "verb": project(verb),
         "kinds": project(kinds),
         if (relations.present) "relations": project(relations.value),

@@ -108,8 +108,9 @@ final class Engine
     }
     public function copyResult(\FFI\CData $r,string $verb): CompleteResult
     {
-        $summary=$this->view($r,'summary','thinkthen_result_summary');$rows=[];$details=[];$authors=[];$memberAuthors=[];$rankMembers=[];$rankMemberDetails=[];$recognitions=[];$relations=[];
+        $summary=$this->view($r,'summary','thinkthen_result_summary');$rows=[];$details=[];$authors=[];$memberAuthors=[];$rankMembers=[];$rankMemberDetails=[];$recognitions=[];$relations=[];$tasks=[];
         for($i=0;$i<$summary->count;++$i) {
+            if($verb==='recognize'){$t=$this->ffi->new('thinkthen_recognition_task_v1');if($this->ffi->thinkthen_result_recognition_task_v1($r,$i,\FFI::addr($t)))throw new \LogicException('native recognition task');$tasks[]=RecognitionTaskView::copy($t);}else{$tasks[]=null;}
             $rows[]=$this->view($r,$verb.'_view','thinkthen_result_'.$verb,$i);
             $details[]=$this->view($r,'details','thinkthen_result_details',$i);$authors[]=$this->view($r,'question_author','thinkthen_result_question_author',$i);
             $ma=[];if($verb==='annotate')foreach($rows[$i]->answers->data as $j=>$_){$v=$this->ffi->new('thinkthen_question_author_v1');if($this->ffi->thinkthen_result_member_author($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native member author');$ma[]=QuestionAuthorView::copy($v);}
@@ -118,7 +119,7 @@ final class Engine
             $relations[]=$verb==='relate'?$this->view($r,'source_relations','thinkthen_result_source_relations',$i):null;
         }
         $obs=[];$od=[];$oa=[];for($i=0;$i<$summary->observation_count;++$i){$obs[]=$this->view($r,'observation','thinkthen_result_observation',$i);$od[]=$this->view($r,'details','thinkthen_result_observation_details',$i);$oa[]=$this->view($r,'question_author','thinkthen_result_observation_author',$i);}
-        return new CompleteResult($summary,$rows,$obs,$details,$authors,$memberAuthors,$rankMembers,$od,$oa,$recognitions,$relations,$rankMemberDetails);
+        return new CompleteResult($summary,$rows,$obs,$details,$authors,$memberAuthors,$rankMembers,$od,$oa,$recognitions,$relations,$rankMemberDetails,$tasks);
     }
     private function execute(string $verb,Question $question,Source $input,?Controls $controls,bool $lazy=false): CompleteResult|Batch
     {
