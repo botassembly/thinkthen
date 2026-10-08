@@ -121,6 +121,60 @@ fn source_reader_retains_original_locations_order_and_duplicate_occurrences() {
 }
 
 #[test]
+fn native_source_defaults_and_explicit_units_refuse_conflicts_before_sending() {
+    let backend = Backend::start().unwrap();
+    for source in [
+        json!({"paths":["absent"],"media":"image"}),
+        json!({"paths":["absent"],"unit":"line","media":"image"}),
+        json!({"paths":["absent"],"unit":"window","window":2,"media":"image"}),
+        json!({"paths":["absent"],"unit":"window"}),
+        json!({"paths":["absent"],"window":2}),
+        json!({"paths":["absent"],"unit":"file","window":2}),
+    ] {
+        let error = admit("decide", json!({"question":"q","source":source})).unwrap_err();
+        assert_eq!(error.kind(), crate::ErrorKind::Usage);
+    }
+    let folder = std::env::temp_dir().join(format!("thinkthen-mcp-units-{}", std::process::id()));
+    fs::create_dir(&folder).unwrap();
+    let text = folder.join("text.txt");
+    fs::write(&text, "one\ntwo\n").unwrap();
+    for (controls, expected) in [
+        (json!({}), 2),
+        (json!({"unit":"line"}), 2),
+        (json!({"unit":"window","window":2}), 1),
+    ] {
+        let mut source = controls.as_object().unwrap().clone();
+        source.insert("paths".into(), json!([text]));
+        let call = admit("decide", json!({"question":"q","source":source})).unwrap();
+        let rows: Vec<_> = call
+            .source()
+            .unwrap()
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(rows.len(), expected);
+    }
+    let image = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../specification/fixtures/images/red.png"
+    );
+    let call = admit(
+        "decide",
+        json!({"question":"q","source":{"paths":[image],"unit":"file","media":"image"}}),
+    )
+    .unwrap();
+    let rows: Vec<_> = call
+        .source()
+        .unwrap()
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert!(matches!(rows.as_slice(), [crate::SourceItem::Image(_)]));
+    assert_eq!(backend.count(), 0);
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
 fn native_controls_validate_deadline_batch_and_admission_without_sends() {
     let backend = Backend::start().expect("loopback");
     for options in [

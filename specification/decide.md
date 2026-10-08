@@ -20,7 +20,7 @@ By default a stream of records shares requests, filling each to the smaller of t
 
 ## What it prints
 
-On one document, `true`, `false`, or `null`. `null` is a not sure answer, and it arises only under a band. `unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms. In record mode each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`.
+On one document, the bare output is `true`, `false`, or `null`. `null` is a not sure answer, and it arises only under a band. `unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms. In record mode each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`. For yes or no, details `value` holds the authored `--true` or `--false` meaning when supplied; otherwise it is a boolean. The typed `answer.probability` and `threshold` determine the yes/no reading. An unsure answer has a null `value`.
 
 ## Options
 

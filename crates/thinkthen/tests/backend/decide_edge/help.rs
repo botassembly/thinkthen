@@ -17,7 +17,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     }
 
     let long = String::from_utf8_lossy(&long.stdout);
-    let stop = long.find("The answer is a bare").expect("answer");
+    let stop = long.find("The bare answer is").expect("answer");
     let first = "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?'";
     let second = "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9";
     let printed = long[..stop].lines().filter(|s| s.starts_with("printf "));
@@ -72,6 +72,20 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     ] {
         assert!(long.contains(cache_rule), "{cache_rule}: {long}");
     }
+}
+
+#[test]
+fn long_help_distinguishes_bare_answers_from_authored_details() {
+    let output = run(&["decide", "--help"], &[], b"").expect("compiled help");
+    let help = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        help.contains("authored `--true` or `--false` meaning"),
+        "{help}"
+    );
+    assert!(
+        help.contains("`answer.probability` against `threshold`"),
+        "{help}"
+    );
 }
 
 #[test]

@@ -62,6 +62,57 @@ fn complete_sources(row: &Value, count: usize) {
     assert!(row["meta"]["attempts"][0]["sdk_request_id"].is_string());
 }
 #[test]
+fn authored_decide_meanings_change_details_value_but_keep_bare_boolean_and_exit_code() {
+    for (probability, bare, meaning, code) in [
+        (0.9, "true\n", "Approved meaning", 0),
+        (0.1, "false\n", "Denied meaning", 1),
+    ] {
+        let response = format!(
+            r#"{{"model":"fixed","answers":{{"q1":{{"type":"noul","noul":{probability}}}}}}}"#
+        );
+        let listener = Listener::answering(move |_| Canned::ok(&response)).unwrap();
+        for details in [false, true] {
+            let mut arguments = vec![
+                "decide",
+                "Allowed?",
+                "--true",
+                "Approved meaning",
+                "--false",
+                "Denied meaning",
+                "--threshold",
+                "0.5",
+                "--url",
+                listener.base(),
+                "--model",
+                "fixed",
+                "--no-cache",
+                "--max-retries",
+                "0",
+            ];
+            if details {
+                arguments.push("--details");
+            }
+            let output = spawn(
+                &arguments,
+                &[("THINKTHEN_API_KEY", "native-cli-private")],
+                b"Text.",
+            )
+            .unwrap();
+            assert_eq!(output.status.code(), Some(code));
+            if details {
+                let row: Value = serde_json::from_slice(&output.stdout).unwrap();
+                assert_eq!(row["value"], meaning);
+                assert_eq!(row["answer"]["kind"], "yes_no");
+                assert_eq!(row["answer"]["probability"], probability);
+                assert_eq!(row["threshold"], 0.5);
+            } else {
+                assert_eq!(String::from_utf8_lossy(&output.stdout), bare);
+            }
+        }
+        assert_eq!(listener.count(), 2);
+    }
+}
+#[test]
 fn atomic_command_details_keep_actual_partial_usage_probabilities_and_independent_wire_questions() {
     let fixtures = [
         (

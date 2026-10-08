@@ -230,8 +230,75 @@ fn a_configuration_another_user_can_write_is_warned_about() {
             &[(moved.0, moved.1.as_str())],
         )
         .expect("dry run");
-        assert_eq!(output.status.code(), Some(0), "{mode:o}");
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{mode:o}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         assert!(!output.stdout.is_empty(), "{mode:o}");
         assert_eq!(String::from_utf8_lossy(&output.stderr), says, "{mode:o}");
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() {
+    use std::os::unix::fs::PermissionsExt as _;
+    const WARNING: &str = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go\n";
+    const PING: &[u8] = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}\n";
+    for (mode, warning) in [(0o666, WARNING), (0o600, "")] {
+        let root = folder(&format!("mcp-configuration-mode-{mode:o}"));
+        let path = configure(&root, r#"{"schema":"thinkthen.config/1"}"#);
+        fs::set_permissions(&path, fs::Permissions::from_mode(mode)).unwrap();
+        let moved = Folder::Config.variable(&root);
+        let mut child =
+            crate::harness::command(&["mcp", "--no-cache"], &[(moved.0, moved.1.as_str())])
+                .stdin(std::process::Stdio::piped())
+                .spawn()
+                .unwrap();
+        use std::io::{BufRead as _, Read as _, Write as _};
+        child.stdin.as_mut().unwrap().write_all(PING).unwrap();
+        let (ready, observed) = std::sync::mpsc::channel();
+        let stdout = child.stdout.take().unwrap();
+        let reader = std::thread::spawn(move || {
+            let mut reader = std::io::BufReader::new(stdout);
+            let mut bytes = Vec::new();
+            reader.read_until(b'\n', &mut bytes).unwrap();
+            ready.send(()).unwrap();
+            reader.read_to_end(&mut bytes).unwrap();
+            bytes
+        });
+        if observed.recv_timeout(crate::wait::CHILD_DEADLINE).is_err() {
+            let _ = child.kill();
+            let _ = child.wait();
+            reader.join().unwrap();
+            panic!("MCP sent no ping response before the child deadline");
+        }
+        let output = crate::wait::finish(child, "mcp configuration");
+        let stdout = reader.join().unwrap();
+        let output = output.unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{mode:o}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(String::from_utf8_lossy(&output.stderr), warning, "{mode:o}");
+        assert_eq!(
+            stdout, b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n",
+            "{mode:o}"
+        );
+    }
+    let root = folder("mcp-configuration-shared-backends");
+    let path = configure(
+        &root,
+        r#"{"schema":"thinkthen.config/1","backends":{"x":{"url":"http://127.0.0.1/v1","key_env":"AWS_SECRET_ACCESS_KEY","model":"m"}}}"#,
+    );
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o666)).unwrap();
+    let moved = Folder::Config.variable(&root);
+    let refused = spawn(&["mcp", "--no-cache"], &[(moved.0, moved.1.as_str())], PING).unwrap();
+    assert_eq!(refused.status.code(), Some(2));
+    assert!(refused.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("its `backends` are refused"));
 }

@@ -63,10 +63,10 @@ pub(crate) struct FindCommon {
     /// Read the lines or records from FILE instead of standard input.
     #[arg(long, value_name = "FILE")]
     pub(crate) input: Vec<PathBuf>,
-    /// Attach an original JPEG or PNG; repeat to preserve image order.
-    #[arg(long, value_name = "FILE")]
+    /// Reserved image attachment; find accepts text only.
+    #[arg(long, value_name = "FILE", hide = true)]
     pub(crate) image: Vec<PathBuf>,
-    /// Read whole files as explicitly selected text or image media.
+    /// Read whole files as text. Image media is unsupported by find.
     #[arg(long, value_parser = ["text", "image"], value_name = "MEDIA")]
     pub(crate) media: Option<String>,
     /// Select physical line records or whole files.

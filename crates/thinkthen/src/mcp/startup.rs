@@ -61,7 +61,8 @@ impl std::fmt::Debug for Arguments {
 }
 impl Arguments {
     fn engine(&self) -> Result<crate::Engine, Error> {
-        let mut builder = EngineBuilder::from_env()?;
+        let (mut builder, config_shared) = EngineBuilder::from_env_with_config_status()?;
+        crate::cli::warn_configuration_shared(config_shared, std::io::stderr().lock());
         if let Some(value) = &self.backend {
             builder = builder.backend(value)?;
         }

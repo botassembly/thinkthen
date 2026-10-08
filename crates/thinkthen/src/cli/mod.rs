@@ -147,7 +147,11 @@ fn mcp_entry(arguments: &crate::mcp::startup::Arguments) -> ExitCode {
 }
 
 fn warn_configuration(environment: &Environment, mut writer: impl Write) {
-    if environment.config().shared() {
+    warn_configuration_shared(environment.config().shared(), &mut writer);
+}
+
+pub(crate) fn warn_configuration_shared(shared: bool, mut writer: impl Write) {
+    if shared {
         #[cfg(not(windows))]
         let warning = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go";
         #[cfg(windows)]
