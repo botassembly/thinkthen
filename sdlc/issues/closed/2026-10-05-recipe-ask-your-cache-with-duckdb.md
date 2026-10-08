@@ -1,6 +1,7 @@
 # Recipe: Ask your cache with DuckDB
 
-Status: closed. Ticket 0402 publishes the approved recipe with scoped measurements and runnable examples.
+Status: closed.
+Resolution: 94c06a551
 Kind: recipe
 Milestone: 0.2
 Owner: the queue owner

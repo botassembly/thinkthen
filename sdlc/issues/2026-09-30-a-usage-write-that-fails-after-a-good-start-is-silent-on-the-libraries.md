@@ -1,18 +1,18 @@
 # A usage write that fails after a good start is silent on the libraries
 
-Status: open. Filed by ticket 0360.
+Status: open. Ticket [0468](../tickets/0468-usage-write-failure-reporting.md) owns the confirmed SDK/SQL persistence failure in 0.2.
 
-Owner: the ticket that gives the bindings a warning channel, or the first monthly spend limit.
+Owner: ticket 0468.
 
 Kind: debt
 
 Debt: 032
 
-Severity: low
+Severity: medium
 
-Pay when: a binding gains a warning channel, or a monthly spend limit reads the usage totals.
+Pay when: 0468 implements explicit persistence reporting before 0.2.
 
-Milestone: later
+Milestone: 0.2
 
 Keeping it risks a usage count that stops partway through a long library or SQL session without a word. A status read afterwards then shows less spend than was sent.
 
@@ -36,3 +36,7 @@ Several `site/` pages and example outputs still show the old `thinkthen-usage` f
 - `site/examples/install/configuration/2-xdg.out`
 
 The usage totals now live at `$XDG_STATE_HOME/thinkthen` (`~/.local/state/thinkthen`) on Linux and `~/Library/Application Support/thinkthen/usage` on macOS (`specification/recording.md`).
+
+## Reconciliation, 2026-10-08
+
+The earlier warning-channel trigger is superseded by 0468. Successful answers must retain explicit pending/written/failed/disabled persistence facts. This remains a runtime defect, not later debt. The old site paths below describe historical observations; current configuration uses platform state paths.

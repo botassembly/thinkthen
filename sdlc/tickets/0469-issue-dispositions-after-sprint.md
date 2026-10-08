@@ -8,6 +8,8 @@ Owner: builder.
 
 Reviews: revision fa00d9a4e, accept
 
+Reviews: revision 1b36ccab50434e84809165afa5b09218c5bae2ef, accept
+
 ## Outcome
 
 The issue list separates fixed defects, remaining obligations and later features using verified landing references. This changes records only and does not claim new runtime qualification.

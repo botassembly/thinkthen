@@ -13,12 +13,12 @@ Link none measurements are being rerun. The previous wording comparison returned
 
 ## Original draft history
 
-# Draft function: link
+### Draft function: link
 
-Status: open. Draft. Filed 2026-10-03 from the docs message "Proxy, terms and function drafts decided" and its addenda, on Ian's product decisions of 2026-10-02. No build work until the experiment reports. Owner: the queue owner.
-Kind: idea
-When: experiment 0006 reports
-Milestone: later
+Historical disposition: open draft. Filed 2026-10-03 from the docs message "Proxy, terms and function drafts decided" and its addenda, on Ian's product decisions of 2026-10-02. No build work until the experiment reports. Owner: the queue owner.
+Historical kind: idea
+Historical trigger: experiment 0006 reports
+Historical milestone: later
 
 `link` would decide whether two records name the same thing. Matching one record against one candidate is `link` with one candidate. The name "match" is not used, because it means something else in Ian's domain.
 

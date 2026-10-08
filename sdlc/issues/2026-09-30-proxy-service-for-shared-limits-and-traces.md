@@ -3,7 +3,7 @@
 Status: open. Filed 2026-09-30 on Ian's request. Rewritten 2026-10-03 from Ian's product decisions of 2026-10-02, sent in the docs message "Proxy, terms and function drafts decided" and its addenda. Not a ticket. Owner: the queue owner.
 Kind: idea
 When: after the 0.1 release, once the decision store experiment reports
-Milestone: later
+Milestone: 0.3
 
 ## Ian's decisions of 2026-10-02
 

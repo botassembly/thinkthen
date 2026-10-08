@@ -1,6 +1,7 @@
 # Revisit alternate adapters and generated question-file schemas from the retired planning intake
 
 Status: open.
+Milestone: later
 
 Kind: idea
 When: When an admitted backend or parser change requires them

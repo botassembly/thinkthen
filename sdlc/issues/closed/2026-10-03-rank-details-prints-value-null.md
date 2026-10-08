@@ -1,6 +1,7 @@
 # `rank --details` prints `"value": null` on every row
 
-Status: open. Filed 2026-10-03 from the docs message "Draft issue for 0.2: rank --details prints value null", on Ian's request of 2026-10-02. Draft: investigate, then decide. Owner: the queue owner.
+Status: closed.
+Resolution: ffb1b253d
 Milestone: 0.2
 
 On 0.1.0, `thinkthen rank 'QUESTION' --top 2 --details < passages.txt` prints one result object per record. Each has `"value": null` beside an `answer` with `kind: yes_no` and a probability such as 0.81. The input was 292 lines of plain text from the docs team's transcript experiment 420. The site's transcript how-to saw the same, and the six-features experiment 422 read `.answer.probability` instead on every row.

@@ -1,6 +1,7 @@
 # Revisit spreadsheet clients, linking, coreference and decomposition from the retired 2026-09-21 handoffs
 
 Status: open.
+Milestone: later
 
 Kind: idea
 When: When a caller demonstrates a need after the current SDK work
