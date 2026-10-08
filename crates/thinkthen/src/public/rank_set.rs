@@ -152,20 +152,7 @@ impl Engine {
         let context = options.context_text().map(evidence).transpose()?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let engine = Arc::clone(&self.inner);
-        let questions: Vec<_> = set
-            .questions()
-            .iter()
-            .map(|member| Question {
-                metadata: member.metadata().clone(),
-                core: member.question().clone(),
-                threshold: None,
-                authored_threshold: false,
-                model: None,
-                profile: set.profile().cloned(),
-                batch: None,
-                kind: Kind::Rank,
-            })
-            .collect();
+        let questions = member_questions(&set);
         let asker = SetDecisions {
             members: questions
                 .iter()
@@ -229,6 +216,22 @@ impl Engine {
         }
         Ok(Call::new(ranked, facts))
     }
+}
+
+pub(crate) fn member_questions(set: &core::QuestionSet) -> Vec<Question> {
+    set.questions()
+        .iter()
+        .map(|member| Question {
+            metadata: member.metadata().clone(),
+            core: member.question().clone(),
+            threshold: None,
+            authored_threshold: false,
+            model: None,
+            profile: set.profile().cloned(),
+            batch: None,
+            kind: Kind::Rank,
+        })
+        .collect()
 }
 
 fn observed(
