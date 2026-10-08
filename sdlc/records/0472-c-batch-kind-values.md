@@ -1,6 +1,6 @@
 # 0472: Match C batch metadata to the public constants
 
-Status: checked and ready for the queue owner to land. No release action ran.
+Status: COMPLETE. The corrected metadata and warning behavior pass public C/Go checks, full tests, lint and fresh review. No release action ran.
 
 The C carrier now emits Records=1 and Max=2 as the public header declares. Complete native results now carry the saved versus running batch warning when a saved question has an authored threshold. A private authored-threshold marker distinguishes a saved threshold from the default rule. C public getter checks cover both kind/count pairs, both warning sides, and warning absence without an authored threshold. Go checks the decoded meaning through its installed native binding. The header, ABI layout, and binding conversion tables are unchanged.
 
