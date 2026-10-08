@@ -1,6 +1,6 @@
 # 0491: Define one typed request contract for all functions
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -215,6 +215,8 @@ struct RequestSource
 ```
 
 Reviews: revision f32a0211d, accept
+
+Landed: c242d97
 
 ## Outcome
 
