@@ -1,6 +1,6 @@
 # 0469: Reconcile stale issue statuses with landed fixes
 
-Status: OPEN. The sweep found obsolete open statuses, duplicate headers and closed issues in the open folder.
+Status: COMPLETE. The sweep found obsolete open statuses, duplicate headers and closed issues in the open folder.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Owner: builder.
 Reviews: revision fa00d9a4e, accept
 
 Reviews: revision 1b36ccab50434e84809165afa5b09218c5bae2ef, accept
+
+Landed: 6b5886e
 
 ## Outcome
 
