@@ -103,3 +103,4 @@ The later before-and-after model evaluation uses identical frozen generic texts,
 ## Progress
 
 - 2026-10-08 started
+- 2026-10-08 landed 09a07f102a636bd7407a674544f9e2a7c36b7895; next: Partial slice B admits complete recognition menus under strict encoded-byte limits and reports prepared/sent request maxima. Workspace, consumer, binding, lint, specification and affected integration checks pass; R accepts current facts and older snapshots. Guaranteed local model-window refusal remains unresolved under the recorded assumption. Keep the ticket open for the PM ruling; continue independent approved controls before binding migration.
