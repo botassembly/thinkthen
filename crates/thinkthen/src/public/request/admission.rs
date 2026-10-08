@@ -173,12 +173,14 @@ fn admit_options(
         crate::core::ModelName::new(model).map_err(|_| Error::usage("invalid model name"))?;
     }
     if let Some(rule) = &options.threshold {
-        let rule = rule.native()?;
         if !matches!(
             function,
             Function::Decide | Function::Choose | Function::Tag | Function::Filter
-        ) || (function != Function::Decide && !rule.is_cut())
-        {
+        ) {
+            return Err(Error::usage("this function does not accept this threshold"));
+        }
+        let rule = rule.native()?;
+        if function != Function::Decide && !rule.is_cut() {
             return Err(Error::usage("this function does not accept this threshold"));
         }
     }
@@ -250,26 +252,7 @@ fn admit_input(
                 return Err(Error::usage("entities applies only to relate"));
             }
             for item in items {
-                if item.original.is_none() && item.images.is_empty() {
-                    return Err(Error::usage("an item requires original evidence or images"));
-                }
-                image_headers(function, &item.images, options)?;
-                if (item.context.is_some() && options.context_field.is_some())
-                    || (item.options.is_some() && options.options_field.is_some())
-                {
-                    return Err(Error::usage(
-                        "explicit item context/options conflict with projection pointers",
-                    ));
-                }
-                if item.examples.is_some() && function != Function::Recognize {
-                    return Err(Error::usage("item examples apply only to recognize"));
-                }
-                if item.examples.is_some() && options.examples_field.is_some() {
-                    return Err(Error::usage("item examples conflict with examples_field"));
-                }
-                if item.options.is_some() && function != Function::Choose {
-                    return Err(Error::usage("item options apply only to choose"));
-                }
+                admit_item(function, item, options)?;
             }
         }
         RequestInput::Source { source } => {
@@ -296,23 +279,16 @@ fn admit_input(
         }
         RequestInput::Feed {
             name,
-            framing,
             reading,
             images,
+            ..
         } => {
             if name.is_empty() {
                 return Err(Error::usage("a feed requires a name"));
             }
             reading.validate()?;
             if !images.is_empty()
-                && (reading.window.is_some()
-                    || reading.unit != crate::SourceUnit::Line
-                    || !matches!(
-                        framing,
-                        super::RequestFraming::Document
-                            | super::RequestFraming::Lines
-                            | super::RequestFraming::Jsonl
-                    ))
+                && (reading.window.is_some() || reading.unit != crate::SourceUnit::Line)
             {
                 return Err(Error::usage(
                     "image attachments cannot accompany located unit controls",
@@ -324,7 +300,12 @@ fn admit_input(
     Ok(())
 }
 fn admit_image_projection(options: &RequestOptions) -> Result<(), Error> {
-    if options.field.is_some() || options.context_field.is_some() || options.options_field.is_some()
+    if options
+        .field
+        .as_ref()
+        .is_some_and(|fields| !fields.is_empty())
+        || options.context_field.is_some()
+        || options.options_field.is_some()
     {
         return Err(Error::usage("image input cannot accompany field pointers"));
     }
@@ -333,7 +314,7 @@ fn admit_image_projection(options: &RequestOptions) -> Result<(), Error> {
 fn image_headers(
     function: Function,
     images: &[RequestImage],
-    options: &RequestOptions,
+    _options: &RequestOptions,
 ) -> Result<(), Error> {
     if images.is_empty() {
         return Ok(());
@@ -347,14 +328,15 @@ fn image_headers(
     if images.len() > crate::MAX_IMAGES {
         return Err(Error::usage("image evidence requires 1 to 8 images"));
     }
-    admit_image_projection(options)?;
     for image in images {
         match image {
             RequestImage::File { path, .. } => path_header(path)?,
             RequestImage::Bytes { bytes, .. } if bytes.len() > crate::MAX_IMAGE_BYTES => {
                 return Err(Error::usage("image exceeds the compressed byte SDK limit"));
             }
-            RequestImage::Bytes { .. } => {}
+            RequestImage::Bytes { media, bytes } => {
+                crate::ImageInput::new(*media, bytes.clone())?;
+            }
         }
     }
     Ok(())
@@ -365,4 +347,35 @@ fn path_header(path: &std::path::Path) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+
+pub(super) fn admit_item(
+    function: Function,
+    item: &super::RequestItem,
+    options: &RequestOptions,
+) -> Result<(), Error> {
+    if item.original.is_none() && item.images.is_empty() {
+        return Err(Error::usage("an item requires original evidence or images"));
+    }
+    image_headers(function, &item.images, options)?;
+    if item.original.is_none() {
+        admit_image_projection(options)?;
+    }
+    if (item.context.is_some() && options.context_field.is_some())
+        || (item.options.is_some() && options.options_field.is_some())
+    {
+        return Err(Error::usage(
+            "explicit item context/options conflict with projection pointers",
+        ));
+    }
+    if item.examples.is_some() && function != Function::Recognize {
+        return Err(Error::usage("item examples apply only to recognize"));
+    }
+    if item.examples.is_some() && options.examples_field.is_some() {
+        return Err(Error::usage("item examples conflict with examples_field"));
+    }
+    if item.options.is_some() && function != Function::Choose {
+        return Err(Error::usage("item options apply only to choose"));
+    }
+    Ok(())
 }

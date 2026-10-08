@@ -70,7 +70,15 @@ impl Engine {
                 &crate::core::ModelName::new(model).map_err(Error::refused)?,
             ))?;
         }
-        let rows = request.records(&reading_definition, environment, controls)?;
+        let image_refusal = image_route(&engine, &definition)
+            .err()
+            .map(|error| error.detail().message().to_owned());
+        if image_descriptors(&request.request.call.arguments().input)
+            && let Some(message) = &image_refusal
+        {
+            return Err(Error::usage(message.clone()));
+        }
+        let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
         let eager = !matches!(
             request.request.call.arguments().input,
             RequestInput::Feed { .. } | RequestInput::Source { .. }
@@ -291,7 +299,6 @@ fn select_filter(outcome: RequestOutcome, files_only: bool) -> RequestOutcome {
 }
 
 #[expect(
-    clippy::too_many_lines,
     clippy::too_many_arguments,
     reason = "one typed dispatch preserves all ten existing native scheduler contracts"
 )]
@@ -387,4 +394,29 @@ fn dispatch<'a>(
         }
     }?;
     Ok(outcome)
+}
+
+fn image_descriptors(input: &RequestInput) -> bool {
+    match input {
+        RequestInput::Text { images, .. }
+        | RequestInput::Json { images, .. }
+        | RequestInput::Feed { images, .. } => !images.is_empty(),
+        RequestInput::Records { items }
+        | RequestInput::Units { items }
+        | RequestInput::Entities { items } => items.iter().any(|item| !item.images.is_empty()),
+        RequestInput::Source { source } => source.media == crate::ReaderMedia::Image,
+    }
+}
+fn image_route(engine: &Engine, definition: &RequestDefinition) -> Result<(), Error> {
+    let configured = match definition {
+        RequestDefinition::Atomic(LoadedQuestion::Question(q)) => engine.asking(q)?,
+        RequestDefinition::Atomic(LoadedQuestion::Banded(q)) => engine.asking(&q.0)?,
+        RequestDefinition::DynamicChoose(q) => engine.for_model(q.model.as_ref())?,
+        _ => return Err(Error::usage("this function takes text only")),
+    };
+    let backend = configured.backend();
+    backend
+        .image_route()
+        .admit_header(backend.asked().0.as_str(), configured.profile())
+        .map_err(Error::refused)
 }

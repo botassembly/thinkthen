@@ -65,22 +65,10 @@ pub fn entry() -> ExitCode {
     if let Some(Command::Mcp(arguments)) = &cli.command {
         return mcp_entry(arguments);
     }
-    let offline = match &cli.command {
-        Some(Command::Transform(arguments)) => {
-            Some(transform::run(&arguments.command, stdout.lock()))
-        }
-        Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) => {
-            Some(audit::run(arguments, stdout.lock()))
-        }
-        Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) => {
-            Some(diff::run(arguments, stdout.lock()))
-        }
-        _ => None,
-    };
-    if let Some(result) = offline {
-        return report_offline(result, stderr.lock());
+    if let Some(code) = offline_entry(&cli) {
+        return code;
     }
-    if let Some(code) = request_admission(&cli, wants_facts, (started, accepted), stderr.lock()) {
+    if let Some(code) = request_admission(&cli, wants_facts, started, accepted, stderr.lock()) {
         return code;
     }
     // Every command that reads input may write a recording or a cache entry.
@@ -347,11 +335,30 @@ fn report_offline(result: Result<(), Failure>, writer: impl Write) -> ExitCode {
 fn request_admission(
     cli: &Cli,
     wants_facts: bool,
-    clocks: (std::time::Instant, std::time::Instant),
+    started: std::time::Instant,
+    accepted: std::time::Instant,
     writer: impl std::io::Write,
 ) -> Option<ExitCode> {
     let command = cli.command.as_ref()?;
     request::admit(command)
         .err()
-        .map(|failure| report_early(&failure, wants_facts, clocks, writer))
+        .map(|failure| report_early(&failure, wants_facts, (started, accepted), writer))
+}
+
+fn offline_entry(cli: &Cli) -> Option<ExitCode> {
+    let stdout = io::stdout();
+    let stderr = io::stderr();
+    let offline = match &cli.command {
+        Some(Command::Transform(arguments)) => {
+            Some(transform::run(&arguments.command, stdout.lock()))
+        }
+        Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) => {
+            Some(audit::run(arguments, stdout.lock()))
+        }
+        Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) => {
+            Some(diff::run(arguments, stdout.lock()))
+        }
+        _ => None,
+    };
+    offline.map(|result| report_offline(result, stderr.lock()))
 }

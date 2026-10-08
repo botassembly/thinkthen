@@ -14,10 +14,10 @@ use std::path::Path;
 pub struct RecordChooseQuestion {
     pub(super) metadata: core::declaration::QuestionMetadata,
     text: core::QuestionText,
-    threshold: Option<core::Threshold>,
-    authored_threshold: bool,
+    pub(super) threshold: Option<core::Threshold>,
+    pub(super) authored_threshold: bool,
     pub(super) model: Option<core::ModelName>,
-    profile: Option<core::ProfileName>,
+    pub(super) profile: Option<core::ProfileName>,
     pub(super) batch: Option<core::Json>,
 }
 impl Question {

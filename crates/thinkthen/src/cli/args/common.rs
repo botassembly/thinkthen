@@ -68,9 +68,6 @@ impl Common {
                 "--image-media requires explicit --image attachments",
             ));
         }
-        if self.image.len() > crate::public::MAX_IMAGES {
-            return Err(Failure::Usage("image evidence requires 1 to 8 images"));
-        }
         let framed = self.lines
             || self.jsonl
             || self.csv

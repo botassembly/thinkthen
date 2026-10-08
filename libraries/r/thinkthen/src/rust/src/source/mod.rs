@@ -67,6 +67,10 @@ fn located(source: &SourceRecord<String>, answer: Value) -> Result<Value, Error>
     Ok(row)
 }
 
+#[allow(
+    dead_code,
+    reason = "R and Python use the authored entry while C enters with typed preparation"
+)]
 pub(crate) fn execute(
     engine: &Engine,
     verb: &str,
@@ -75,16 +79,38 @@ pub(crate) fn execute(
     options: CallOptions<'_>,
     detailed: bool,
 ) -> Result<(String, Facts), Error> {
-    execute_with_definition(engine,verb,question,selection,options,detailed,None)
+    execute_with_definition(engine, verb, (question, None), selection, options, detailed)
 }
 
-pub(crate) fn execute_prepared(engine: &Engine, verb: &str, definition: &thinkthen::RequestDefinition, selection: &Selection, options: CallOptions<'_>, detailed: bool) -> Result<(String,Facts),Error> {
-    execute_with_definition(engine,verb,"",selection,options,detailed,Some(definition))
+pub(crate) fn execute_prepared(
+    engine: &Engine,
+    verb: &str,
+    definition: &thinkthen::RequestDefinition,
+    selection: &Selection,
+    options: CallOptions<'_>,
+    detailed: bool,
+) -> Result<(String, Facts), Error> {
+    execute_with_definition(
+        engine,
+        verb,
+        ("", Some(definition)),
+        selection,
+        options,
+        detailed,
+    )
 }
-fn execute_with_definition(engine: &Engine, verb: &str, question: &str, selection: &Selection, options: CallOptions<'_>, detailed: bool, definition: Option<&thinkthen::RequestDefinition>) -> Result<(String,Facts),Error> {
+fn execute_with_definition(
+    engine: &Engine,
+    verb: &str,
+    question: (&str, Option<&thinkthen::RequestDefinition>),
+    selection: &Selection,
+    options: CallOptions<'_>,
+    detailed: bool,
+) -> Result<(String, Facts), Error> {
+    let (question, definition) = question;
     // Prepared definitions enter directly; other shared callers retain their edge grammar.
     let result = match verb {
-        "decide" | "choose" | "score" | "tag" => match loaded(definition,question)? {
+        "decide" | "choose" | "score" | "tag" => match loaded(definition, question)? {
             LoadedQuestion::Question(asked) => {
                 judgments(engine, &asked, selection, options, detailed)?
             }
@@ -93,7 +119,7 @@ fn execute_with_definition(engine: &Engine, verb: &str, question: &str, selectio
             }
         },
         "filter" => {
-            let LoadedQuestion::Question(asked) = loaded(definition,question)? else {
+            let LoadedQuestion::Question(asked) = loaded(definition, question)? else {
                 return Err(usage("filter keeps a record at a cut, not a band"));
             };
             let mut batch = engine.try_filter_with(&asked, selection.read()?, options);
@@ -108,16 +134,17 @@ fn execute_with_definition(engine: &Engine, verb: &str, question: &str, selectio
             (Value::Array(rows), facts)
         }
         "rank" => {
-            let asked = if let Some(thinkthen::RequestDefinition::Rank(q)) = definition { q.clone() } else {
-            let body: std::collections::BTreeMap<String, String> =
-                serde_json::from_str(question)
-                    .map_err(|_| usage("rank takes its question text alone"))?;
-            let text = body
-                .get("rank")
-                .filter(|_| body.len() == 1)
-                .ok_or_else(|| usage("rank takes its question text alone"))?;
-            let asked = Question::rank(text)?;
-                asked
+            let asked = if let Some(thinkthen::RequestDefinition::Rank(q)) = definition {
+                q.clone()
+            } else {
+                let body: std::collections::BTreeMap<String, String> =
+                    serde_json::from_str(question)
+                        .map_err(|_| usage("rank takes its question text alone"))?;
+                let text = body
+                    .get("rank")
+                    .filter(|_| body.len() == 1)
+                    .ok_or_else(|| usage("rank takes its question text alone"))?;
+                Question::rank(text)?
             };
             let mut bytes = 0usize;
             let records = selection.read()?.map(|record| {
@@ -143,7 +170,11 @@ fn execute_with_definition(engine: &Engine, verb: &str, question: &str, selectio
         }
         "find" => find(engine, question, selection, options, definition)?,
         "annotate" => {
-            let set = if let Some(thinkthen::RequestDefinition::Annotate(set)) = definition { set.clone() } else { QuestionSet::from_json(question)? };
+            let set = if let Some(thinkthen::RequestDefinition::Annotate(set)) = definition {
+                set.clone()
+            } else {
+                QuestionSet::from_json(question)?
+            };
             let mut batch = engine.try_annotate_with(&set, selection.read()?, options);
             let rows = batch
                 .by_ref()
@@ -211,25 +242,29 @@ fn find(
     options: CallOptions<'_>,
     definition: Option<&thinkthen::RequestDefinition>,
 ) -> Result<(Value, Facts), Error> {
-    let asked = if let Some(thinkthen::RequestDefinition::Atomic(LoadedQuestion::Question(q))) = definition { q.clone() } else {
-    let body: Value =
-        serde_json::from_str(question).map_err(|_| usage("find requires a question"))?;
-    let text = body
-        .get("find")
-        .and_then(Value::as_str)
-        .ok_or_else(|| usage("find requires question text"))?;
-    if body
-        .as_object()
-        .is_none_or(|o| o.keys().any(|k| k != "find" && k != "none"))
+    let asked = if let Some(thinkthen::RequestDefinition::Atomic(LoadedQuestion::Question(q))) =
+        definition
     {
-        return Err(usage("find takes its question text and none alone"));
-    }
-    let mut asked = Question::find(text)?;
-    match body.get("none") {
-        Some(Value::Bool(true)) => asked = asked.offering_none()?,
-        Some(Value::Bool(false)) | None => (),
-        _ => return Err(usage("find takes none as true or false")),
-    }
+        q.clone()
+    } else {
+        let body: Value =
+            serde_json::from_str(question).map_err(|_| usage("find requires a question"))?;
+        let text = body
+            .get("find")
+            .and_then(Value::as_str)
+            .ok_or_else(|| usage("find requires question text"))?;
+        if body
+            .as_object()
+            .is_none_or(|o| o.keys().any(|k| k != "find" && k != "none"))
+        {
+            return Err(usage("find takes its question text and none alone"));
+        }
+        let mut asked = Question::find(text)?;
+        match body.get("none") {
+            Some(Value::Bool(true)) => asked = asked.offering_none()?,
+            Some(Value::Bool(false)) | None => (),
+            _ => return Err(usage("find takes none as true or false")),
+        }
         asked
     };
     let call = engine.try_find_with(&asked, selection.read()?, options)?;
@@ -254,7 +289,11 @@ fn recognize(
     definition: Option<&thinkthen::RequestDefinition>,
 ) -> Result<(Value, Facts), Error> {
     let options = options.started()?;
-    let asked = if let Some(thinkthen::RequestDefinition::Recognition(q)) = definition { q.clone() } else { Recognize::from_json(question)? };
+    let asked = if let Some(thinkthen::RequestDefinition::Recognition(q)) = definition {
+        q.clone()
+    } else {
+        Recognize::from_json(question)?
+    };
     let tally = Tally::new();
     let mut rows = Vec::new();
     let records = selection.read()?;
@@ -280,7 +319,11 @@ fn relate(
     options: CallOptions<'_>,
     definition: Option<&thinkthen::RequestDefinition>,
 ) -> Result<(Value, Facts), Error> {
-    let asked = if let Some(thinkthen::RequestDefinition::Relate(q)) = definition { q.clone() } else { Relate::from_json(question)? };
+    let asked = if let Some(thinkthen::RequestDefinition::Relate(q)) = definition {
+        q.clone()
+    } else {
+        Relate::from_json(question)?
+    };
     let mut sources = Vec::new();
     let mut entities = Vec::new();
     let mut occurrences = Vec::new();
@@ -352,6 +395,10 @@ fn put(row: &mut Value, key: &str, value: Value) -> Result<(), Error> {
 }
 
 /// Select one of the ten existing question grammars, with no evidence members.
+#[allow(
+    dead_code,
+    reason = "R and Python use the authored entry while C enters with typed preparation"
+)]
 pub(crate) fn dispatch(
     engine: &Engine,
     question: &str,
@@ -459,6 +506,13 @@ fn locate_relation(source: &SourceRecord<String>, relation: &mut Value) -> Resul
     Ok(())
 }
 
-fn loaded(definition: Option<&thinkthen::RequestDefinition>, question: &str) -> Result<LoadedQuestion,Error> {
-    if let Some(thinkthen::RequestDefinition::Atomic(q)) = definition { Ok(q.clone()) } else { Question::from_json(question) }
+fn loaded(
+    definition: Option<&thinkthen::RequestDefinition>,
+    question: &str,
+) -> Result<LoadedQuestion, Error> {
+    if let Some(thinkthen::RequestDefinition::Atomic(q)) = definition {
+        Ok(q.clone())
+    } else {
+        Question::from_json(question)
+    }
 }

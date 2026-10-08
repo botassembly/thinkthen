@@ -16,6 +16,7 @@ impl AdmittedRequest {
         definition: &RequestDefinition,
         environment: RequestEnvironment<'a>,
         controls: CallOptions<'a>,
+        image_refusal: Option<String>,
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.request.call.arguments().options;
         let explicit = options.field.is_some()
@@ -74,9 +75,12 @@ impl AdmittedRequest {
                     },
                 )?;
                 let annotate = matches!(definition, RequestDefinition::Annotate(_)) && !explicit;
+                let rank = self.request.call.function() == super::RequestFunction::Rank;
+                let mut remaining = crate::core::MAX_RECORD_BYTES;
                 Ok(Box::new(items.map(move |item| {
                     controls.admission()?;
                     let item = item?;
+                    charge_source(rank, &item, &mut remaining)?;
                     source_row(item, annotate, &reading)
                 })))
             }
@@ -92,6 +96,8 @@ impl AdmittedRequest {
                 Ok(Box::new(feed.items.map(move |item| {
                     controls.admission()?;
                     let item = attach_shared(item?, images)?;
+                    super::admission::admit_item(self.request.call.function(), &item, options)?;
+                    admit_image_route(&item, image_refusal.as_deref())?;
                     compose_item(&item, &reading, context.as_ref())
                 })))
             }
@@ -103,29 +109,28 @@ fn compose_item(
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
 ) -> Result<RecordInput<QuestionInput>, Error> {
-    let images = item
-        .images
-        .iter()
-        .map(read_image)
-        .collect::<Result<Vec<_>, _>>()?;
     let mut row = match &item.original {
+        Some(RequestOriginal::Text { text }) if text.trim().is_empty() => {
+            reading.admit_images()?;
+            RecordInput {
+                original: QuestionInput::Text(text.clone()),
+                context: None,
+                options: None,
+                examples: None,
+            }
+        }
         Some(RequestOriginal::Text { text }) => compose_original(reading, RawRecord::text(text)?)?,
         Some(RequestOriginal::Json { value }) => compose_original(reading, value.clone())?,
         None => {
             reading.admit_images()?;
             RecordInput {
-                original: QuestionInput::Images(crate::ImageEvidence::new(None, images.clone())?),
+                original: QuestionInput::Text(String::new()),
                 context: None,
                 options: None,
                 examples: None,
             }
         }
     };
-    if !images.is_empty()
-        && let QuestionInput::Record(record) = row.original
-    {
-        row.original = QuestionInput::Record(record.with_images(images)?);
-    }
     if let Some(context) = &item.context {
         context.validate(schema)?;
         row.context = Some(context.clone());
@@ -135,6 +140,23 @@ fn compose_item(
     }
     if let Some(examples) = &item.examples {
         row.examples = Some(examples.clone());
+    }
+    let images = item
+        .images
+        .iter()
+        .map(read_image)
+        .collect::<Result<Vec<_>, _>>()?;
+    if !images.is_empty() {
+        row.original = match row.original {
+            QuestionInput::Record(record) => QuestionInput::Record(record.with_images(images)?),
+            QuestionInput::Text(text) => QuestionInput::Images(crate::ImageEvidence::new(
+                item.original.as_ref().map(|_| text),
+                images,
+            )?),
+            QuestionInput::Images(_) => {
+                return Err(Error::defect("images entered before attachment resolution"));
+            }
+        };
     }
     Ok(row)
 }
@@ -282,4 +304,22 @@ fn attach_shared(mut item: RequestItem, images: &[RequestImage]) -> Result<Reque
     }
     item.images = images.to_vec();
     Ok(item)
+}
+
+fn charge_source(rank: bool, item: &crate::SourceItem, remaining: &mut usize) -> Result<(), Error> {
+    if rank && let crate::SourceItem::Text(text) = item {
+        *remaining = remaining.checked_sub(text.record.len()).ok_or_else(|| {
+            Error::usage("source rank reads at most 16 MiB across all input records")
+        })?;
+    }
+    Ok(())
+}
+
+fn admit_image_route(item: &RequestItem, refusal: Option<&str>) -> Result<(), Error> {
+    if !item.images.is_empty()
+        && let Some(message) = refusal
+    {
+        return Err(Error::usage(message));
+    }
+    Ok(())
 }

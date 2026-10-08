@@ -77,7 +77,7 @@
       "description": "A tagged recognition example, as bracket text or literal text with scalar spans.",
       "anyOf": [
         {
-          "description": "Inline `[[KIND|TEXT]]` tags; backslash escapes bracket syntax characters.",
+          "description": "Inline `[TEXT|KIND]` or `[[KIND|TEXT]]` tags; backslash escapes syntax characters.",
           "type": "string"
         },
         {
@@ -524,6 +524,16 @@
           "description": "One original JSON value per line.",
           "type": "string",
           "const": "jsonl"
+        },
+        {
+          "description": "One record per CSV row.",
+          "type": "string",
+          "const": "csv"
+        },
+        {
+          "description": "One record per TSV row.",
+          "type": "string",
+          "const": "tsv"
         }
       ]
     },

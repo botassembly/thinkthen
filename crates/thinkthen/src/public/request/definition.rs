@@ -130,19 +130,7 @@ impl RequestDefinition {
             Self::Annotate(q) => return set_json(&q.0),
             Self::DecodedSet { annotation: q, .. } => return set_json(&q.0),
             Self::RankSet(q) => return set_json(&q.0),
-            Self::DynamicChoose(q) => {
-                let mut fields = vec![("choose".to_owned(), q.text().0.clone())];
-                if let Some(model) = &q.model {
-                    fields.push((
-                        "model".to_owned(),
-                        crate::core::Json::String(model.as_str().to_owned()),
-                    ));
-                }
-                if let Some(batch) = &q.batch {
-                    fields.push(("batch".to_owned(), batch.clone()));
-                }
-                return Ok(crate::core::Json::Object(fields));
-            }
+            Self::DynamicChoose(q) => return dynamic_json(q),
         };
         let mut value = crate::core::Json::parse(&text).map_err(Error::refused)?;
         // `none` is a call control rather than authored find grammar.
@@ -276,4 +264,30 @@ fn relate_json(q: &Relate) -> Result<crate::core::Json, Error> {
         result.extend(metadata);
     }
     Ok(Json::Object(result))
+}
+
+fn dynamic_json(q: &RecordChooseQuestion) -> Result<crate::core::Json, Error> {
+    use crate::core::Json;
+    let mut fields = vec![("choose".to_owned(), q.text().0.clone())];
+    if q.authored_threshold
+        && let Some(rule) = q.threshold
+    {
+        fields.push(("threshold".into(), encoded(&rule)?));
+    }
+    if let Some(model) = &q.model {
+        fields.push(("model".into(), Json::String(model.as_str().to_owned())));
+    }
+    if let Some(profile) = &q.profile {
+        fields.push(("profile".into(), Json::String(profile.as_str().to_owned())));
+    }
+    if let Some(batch) = &q.batch {
+        fields.push(("batch".into(), batch.clone()));
+    }
+    if !q.metadata.reading.on.is_empty() {
+        fields.push(("on".into(), encoded(&q.metadata.reading.on)?));
+    }
+    if let Json::Object(metadata) = encoded(&q.metadata)? {
+        fields.extend(metadata);
+    }
+    Ok(Json::Object(fields))
 }

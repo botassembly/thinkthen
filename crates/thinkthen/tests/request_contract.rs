@@ -3,6 +3,12 @@ use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 use thinkthen::*;
 
+#[allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::panic,
+    reason = "a malformed isolated loopback fixture stops the proof"
+)]
 fn engine(listener: &Listener) -> Engine {
     Engine::builder()
         .base_url(listener.base())
@@ -16,6 +22,12 @@ fn engine(listener: &Listener) -> Engine {
         .build()
         .unwrap()
 }
+#[allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::panic,
+    reason = "a malformed isolated loopback fixture stops the proof"
+)]
 fn response(body: &[u8]) -> Canned {
     let request: Value = serde_json::from_slice(body).unwrap();
     let answers = request["questions"]
@@ -67,6 +79,12 @@ fn args(definition: RequestDefinition, input: RequestInput) -> RequestArguments 
         options: RequestOptions::default(),
     }
 }
+#[allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::panic,
+    reason = "a malformed isolated loopback fixture stops the proof"
+)]
 fn direct(
     engine: &Engine,
     function: RequestFunction,
@@ -136,6 +154,10 @@ fn semantic(mut value: Value) -> Value {
     value
 }
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "the ten fixtures and their common comparison stay together"
+)]
 fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
     let listener = Listener::answering(response).unwrap();
     let primitive = |q: Question| {
@@ -217,9 +239,22 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
             },
         )),
         RequestCall::Recognize(args(
-            Recognize::builder().build().unwrap().into(),
+            Recognize::builder()
+                .build()
+                .unwrap()
+                .with_examples(vec![RecognitionExample::Brackets(
+                    "[Zoë | ENTITY] met Orbit.".into(),
+                )])
+                .unwrap()
+                .into(),
             RequestInput::Records {
-                items: vec![item("Alpha.")],
+                items: vec![
+                    item("Alpha."),
+                    RequestItem {
+                        examples: Some(vec![]),
+                        ..item("Beta.")
+                    },
+                ],
             },
         )),
         RequestCall::Relate(args(
@@ -231,7 +266,6 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
     ];
     for call in cases {
         let function = call.function();
-        eprintln!("request equivalence: {function:?}");
         let request = Request::new(call);
         let typed = request.clone().admit().unwrap();
         let definition = typed.resolve_question().unwrap();
@@ -255,7 +289,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
                 },
                 context: None,
                 options: None,
-                examples: None,
+                examples: item.examples.clone(),
             })
             .collect();
         let before = listener.count();

@@ -277,6 +277,14 @@ fn native_controls(arguments: &mut RequestArguments) {
     {
         arguments.options.examples = Some(q.examples().to_vec());
     }
+    if let RequestDefinition::DynamicChoose(q) = value
+        && !q.authored_threshold
+        && arguments.options.threshold.is_none()
+    {
+        arguments.options.threshold = q
+            .threshold
+            .map(|rule| RequestThreshold::Cut(rule.bounds().0));
+    }
     let RequestDefinition::Atomic(LoadedQuestion::Question(q)) = value else {
         return;
     };

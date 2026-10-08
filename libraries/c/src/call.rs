@@ -239,16 +239,16 @@ fn answer(
     if let Some(selection) = request.envelope.get("source") {
         return source_answer(engine, request, definition, selection.get(), options);
     }
-    match verb {
-        "decide" | "choose" | "score" | "tag" => {
+    match (verb, definition) {
+        ("decide" | "choose" | "score" | "tag", thinkthen::RequestDefinition::Atomic(asked)) => {
             let detailed = flag(&request.envelope, "details")?;
             if request.envelope.contains_key("records") {
-                return records::judgments(engine, request, atomic_definition(definition)?, options, detailed);
+                return records::judgments(engine, request, asked, options, detailed);
             }
             let evidence = member(request, "evidence", |raw| {
                 serde_json::from_str::<String>(raw)
             })?;
-            let call = match atomic_definition(definition)? {
+            let call = match asked {
                 LoadedQuestion::Question(asked) => engine.details_with(asked, &evidence, options),
                 LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options),
             }?;
@@ -257,10 +257,7 @@ fn answer(
             }
             Ok((bare(call.value().value())?, call.facts().clone()))
         }
-        "filter" => {
-            let LoadedQuestion::Question(asked) = atomic_definition(definition)? else {
-                return Err(Failure::defect("admitted filter lost its cut"));
-            };
+        ("filter", thinkthen::RequestDefinition::Atomic(LoadedQuestion::Question(asked))) => {
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
@@ -272,8 +269,7 @@ fn answer(
                 .ok_or_else(|| Failure::defect("completed filter has no facts"))?;
             Ok((written(serde_json::to_string(&kept))?, facts))
         }
-        "rank" => {
-            let thinkthen::RequestDefinition::Rank(asked) = definition else { return Err(Failure::defect("admitted rank lost its definition")); };
+        ("rank", thinkthen::RequestDefinition::Rank(asked)) => {
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
@@ -285,8 +281,7 @@ fn answer(
                 ranked.facts().clone(),
             ))
         }
-        "find" => {
-            let LoadedQuestion::Question(asked) = atomic_definition(definition)? else { return Err(Failure::defect("admitted find lost its definition")); };
+        ("find", thinkthen::RequestDefinition::Atomic(LoadedQuestion::Question(asked))) => {
             let units = member(request, "units", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
@@ -296,26 +291,36 @@ fn answer(
                 found.facts().clone(),
             ))
         }
-        "annotate" => annotate(engine, request, definition, options),
-        "recognize" => {
+        ("annotate", thinkthen::RequestDefinition::Annotate(_)) => {
+            annotate(engine, request, definition, options)
+        }
+        ("recognize", thinkthen::RequestDefinition::Recognition(asked)) => {
             let evidence = member(request, "evidence", |raw| {
                 serde_json::from_str::<String>(raw)
             })?;
-            let thinkthen::RequestDefinition::Recognition(asked) = definition else { return Err(Failure::defect("admitted recognition lost its definition")); };
             let call = engine.recognize_with(asked, &evidence, options)?;
             Ok((call.value().to_json(), call.facts().clone()))
         }
-        _ => {
+        ("relate", thinkthen::RequestDefinition::Relate(asked)) => {
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<Box<RawValue>>>(raw)
             })?;
             let records: Vec<&str> = records.iter().map(|record| record.get()).collect();
             let entities = door::entities(&records)?;
-            let thinkthen::RequestDefinition::Relate(asked) = definition else { return Err(Failure::defect("admitted relation lost its definition")); };
             let call = engine.relate_with(asked, entities, options)?;
-            let edges = call.value().iter().map(|edge| raw(edge.to_json())).collect::<Result<Vec<_>, _>>()?;
-            Ok((written(serde_json::to_string(&door::Edges { edges }))?, call.facts().clone()))
+            let edges = call
+                .value()
+                .iter()
+                .map(|edge| raw(edge.to_json()))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok((
+                written(serde_json::to_string(&door::Edges { edges }))?,
+                call.facts().clone(),
+            ))
         }
+        _ => Err(Failure::defect(
+            "admitted request lost its typed definition",
+        )),
     }
 }
 
@@ -325,7 +330,9 @@ fn annotate(
     definition: &thinkthen::RequestDefinition,
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
-    let thinkthen::RequestDefinition::Annotate(set) = definition else { return Err(Failure::defect("admitted annotation lost its definition")); };
+    let thinkthen::RequestDefinition::Annotate(set) = definition else {
+        return Err(Failure::defect("admitted annotation lost its definition"));
+    };
     let records = member(request, "records", |raw| {
         serde_json::from_str::<Vec<String>>(raw)
     })?;
@@ -427,9 +434,12 @@ fn source_answer(
     selection: &str,
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
-    Ok(source::execute_prepared(engine, &request.verb, definition, &source::parse(selection)?, options, flag(&request.envelope,"details")?)?)
-}
-
-fn atomic_definition(definition: &thinkthen::RequestDefinition) -> Result<&LoadedQuestion, Failure> {
-    if let thinkthen::RequestDefinition::Atomic(q) = definition { Ok(q) } else { Err(Failure::defect("admitted atomic definition changed kind")) }
+    Ok(source::execute_prepared(
+        engine,
+        &request.verb,
+        definition,
+        &source::parse(selection)?,
+        options,
+        flag(&request.envelope, "details")?,
+    )?)
 }

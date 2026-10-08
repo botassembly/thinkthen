@@ -8,34 +8,7 @@ use thinkthen::{
 };
 
 pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Failure> {
-    let mut question = request.question.clone();
-    if let Some(text) = question.remove("filter") {
-        question.insert("decide".to_owned(), text);
-    }
-    let definition = match request.verb.as_str() {
-        "rank" => Question::rank(&alone(&request.verb, &question)?)?.into(),
-        "find" => {
-            let none = question.remove("none").map_or(Ok(false), |raw| {
-                serde_json::from_str::<bool>(raw.get())
-                    .map_err(|_| Failure::usage("find takes `none` as true or false"))
-            })?;
-            let asked = Question::find(&alone(&request.verb, &question)?)?;
-            RequestDefinition::Atomic(LoadedQuestion::Question(if none {
-                asked.offering_none()?
-            } else {
-                asked
-            }))
-        }
-        "annotate" => match question.get("annotate") {
-            Some(set) if question.len() == 1 => QuestionSet::from_json(set.get())?.into(),
-            _ => return Err(Failure::usage("annotate takes its question set alone")),
-        },
-        "recognize" => {
-            RequestDefinition::Recognition(thinkthen::Recognize::from_json(&object(&question)?)?)
-        }
-        "relate" => RequestDefinition::Relate(thinkthen::Relate::from_json(&object(&question)?)?),
-        _ => Question::from_json(&object(&question)?)?.into(),
-    };
+    let definition = definition(request)?;
     let input = if let Some(source) = request.envelope.get("source") {
         RequestInput::Source {
             source: super::source::parse(source.get())?.request_source(),
@@ -127,4 +100,36 @@ fn item(original: RequestOriginal) -> RequestItem {
         examples: None,
         images: Vec::new(),
     }
+}
+
+fn definition(request: &LegacyRequest) -> Result<RequestDefinition, Failure> {
+    let mut question = request.question.clone();
+    if let Some(text) = question.remove("filter") {
+        question.insert("decide".to_owned(), text);
+    }
+    let definition = match request.verb.as_str() {
+        "rank" => Question::rank(&alone(&request.verb, &question)?)?.into(),
+        "find" => {
+            let none = question.remove("none").map_or(Ok(false), |raw| {
+                serde_json::from_str::<bool>(raw.get())
+                    .map_err(|_| Failure::usage("find takes `none` as true or false"))
+            })?;
+            let asked = Question::find(&alone(&request.verb, &question)?)?;
+            RequestDefinition::Atomic(LoadedQuestion::Question(if none {
+                asked.offering_none()?
+            } else {
+                asked
+            }))
+        }
+        "annotate" => match question.get("annotate") {
+            Some(set) if question.len() == 1 => QuestionSet::from_json(set.get())?.into(),
+            _ => return Err(Failure::usage("annotate takes its question set alone")),
+        },
+        "recognize" => {
+            RequestDefinition::Recognition(thinkthen::Recognize::from_json(&object(&question)?)?)
+        }
+        "relate" => RequestDefinition::Relate(thinkthen::Relate::from_json(&object(&question)?)?),
+        _ => Question::from_json(&object(&question)?)?.into(),
+    };
+    Ok(definition)
 }

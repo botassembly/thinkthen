@@ -55,12 +55,37 @@ pub(crate) struct ImageWire {
 }
 
 impl ImageRoute {
+    /// Admit route/model authority before an edge opens compressed image files.
+    pub(crate) fn admit_header(
+        self,
+        model: &str,
+        profile: Option<&BackendProfile>,
+    ) -> Result<(), ImageLimit> {
+        let supported = profile
+            .and_then(|profile| profile.image_profile.as_ref())
+            .map_or_else(
+                || {
+                    matches!(
+                        (self, model),
+                        (Self::Liquid, "d1") | (Self::Perplexity, "pplx-decider-v1-27b")
+                    )
+                },
+                |declaration| self == Self::Local && declaration.matches(model),
+            );
+        if supported {
+            Ok(())
+        } else {
+            Err(ImageLimit::Unsupported)
+        }
+    }
+
     pub(crate) fn admit_profiled(
         self,
         model: &str,
         input: &ImageState,
         profile: Option<&BackendProfile>,
     ) -> Result<ImageWire, ImageLimit> {
+        self.admit_header(model, profile)?;
         if let Some(declaration) = profile.and_then(|profile| profile.image_profile.as_ref()) {
             return if self == Self::Local && declaration.matches(model) {
                 local::admit(declaration.id, input)
@@ -72,12 +97,7 @@ impl ImageRoute {
     }
 
     pub(crate) fn admit(self, model: &str, input: &ImageState) -> Result<ImageWire, ImageLimit> {
-        if !matches!(
-            (self, model),
-            (Self::Liquid, "d1") | (Self::Perplexity, "pplx-decider-v1-27b")
-        ) {
-            return Err(ImageLimit::Unsupported);
-        }
+        self.admit_header(model, None)?;
         let mut patches = 0u64;
         let mut tokens = 0u64;
         for (at, image) in input.images.iter().enumerate() {

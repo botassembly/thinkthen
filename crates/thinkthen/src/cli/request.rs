@@ -146,16 +146,15 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
                 }
             } else {
                 let mut spec = crate::core::RelateSpec::inline(&a.relations, a.either)
-                    .map_err(|_| Failure::Usage("invalid inline relation rules"))?;
+                    .map_err(relate_config)?;
                 if let Some(threshold) = &a.threshold {
-                    spec.override_threshold(threshold)
-                        .map_err(|_| Failure::Usage("invalid relate threshold"))?;
+                    spec.override_threshold(threshold).map_err(relate_config)?;
                 }
                 spec.override_fields(
                     a.common.field.first().map(String::as_str),
                     a.kind_field.as_deref(),
                 )
-                .map_err(|_| Failure::Usage("invalid entity field pointer"))?;
+                .map_err(relate_config)?;
                 RequestQuestion::Definition {
                     value: crate::Relate(spec).into(),
                 }
@@ -167,7 +166,11 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
         }
         _ => return Ok(()),
     };
-    Request::new(call).admit().map_err(native)?;
+    let request = Request::new(call);
+    request
+        .clone()
+        .admit()
+        .map_err(|error| diagnostic(error, &request))?;
     Ok(())
 }
 fn selector(
@@ -263,7 +266,9 @@ fn arguments(
         })
         .collect();
     let reading = crate::ReaderOptions {
-        unit: if common.unit.as_deref() == Some("file")
+        unit: if common.window.is_some() {
+            crate::SourceUnit::Window
+        } else if common.unit.as_deref() == Some("file")
             || (common.unit.is_none()
                 && common.window.is_none()
                 && !common.input.is_empty()
@@ -328,4 +333,48 @@ fn arguments(
 }
 fn native(error: crate::Error) -> Failure {
     Failure::Image(error.detail().message().to_owned())
+}
+
+// Reuse the established CLI formatter only after shared admission has refused.
+fn diagnostic(error: crate::Error, request: &Request) -> Failure {
+    let options = &request.call.arguments().options;
+    match error.detail().message() {
+        "invalid model name" => {
+            if let Some(model) = &options.model
+                && let Err(failure) = super::edge::model_flag(model)
+            {
+                return failure;
+            }
+        }
+        "invalid field pointer" => {
+            let pointers = options
+                .field
+                .iter()
+                .flatten()
+                .map(|p| ("--field", p))
+                .chain(options.options_field.iter().map(|p| ("--options", p)))
+                .chain(options.context_field.iter().map(|p| ("--context-field", p)));
+            for (option, pointer) in pointers {
+                if let Err(cause) = crate::core::Pointer::new(pointer) {
+                    return Failure::Pointer(option, crate::core::safe_key(pointer), cause);
+                }
+            }
+        }
+        "batch requires a positive whole number or max" => {
+            return Failure::Usage("--batch takes max or a whole number of at least 1");
+        }
+        "this function does not accept this threshold"
+            if request.call.function() == crate::RequestFunction::Annotate =>
+        {
+            return Failure::Usage(
+                "--threshold belongs to each question in the question set; `annotate` takes no command-level threshold",
+            );
+        }
+        _ => {}
+    }
+    native(error)
+}
+
+fn relate_config(error: crate::core::RelateConfigError) -> Failure {
+    Failure::Relate(crate::failure::relate::Error::Config { file: false, error })
 }
