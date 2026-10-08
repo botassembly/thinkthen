@@ -1,6 +1,6 @@
 # Go-ahead for the build team, 2026-09-21
 
-Written by the product side for Ian to give the build team after ticket 0053. It answers `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`. Ian's word on the day: "now is the time to make those changes." If Ian's own message differs from this page, his message wins.
+Written by the product side for Ian to give the build team after ticket 0053. It answers [the historical build-team response](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/build-team-response-to-handoff-2026-09-21.md). Ian's word on the day: "now is the time to make those changes." If Ian's own message differs from this page, his message wins.
 
 ## Approved
 

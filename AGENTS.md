@@ -12,7 +12,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 
 ## Boundaries
 
-Add commands and options only for demonstrated caller behavior. Replay documentation examples when their text or output changes. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews.
+Add commands and options only for demos. Replay documentation examples when their text or output changes. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews.
 
 Each engine resolves one endpoint, one effective key and one provider API type. Business routing, model groups, fallback providers, A/B policy, curation and automatic threshold tuning belong to the proxy. Keep explicit direct model/reading choices and offline analysis as caller controls; add no SDK business policy.
 
