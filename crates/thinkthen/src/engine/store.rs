@@ -27,6 +27,7 @@ mod rows;
 use rows::{found, insert, signed};
 mod migration;
 mod mismatch;
+mod opening;
 mod original;
 mod policy;
 mod timing;
@@ -348,8 +349,7 @@ impl Store {
             read_fixture()?
         };
         make_folder(&self.folder)?;
-        create_private(&sqlite)?;
-        let connection = Connection::open(&sqlite).map_err(storage)?;
+        let connection = opening::create(&sqlite)?;
         connection.busy_timeout(Duration::ZERO).map_err(storage)?;
         self.waiting(cancel, || {
             connection.execute_batch(
@@ -433,11 +433,10 @@ pub(crate) fn now() -> i64 {
 }
 
 fn read_only(path: &Path) -> Result<Connection, Error> {
-    let connection = Connection::open_with_flags(
+    let connection = opening::open(
         path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-    )
-    .map_err(storage)?;
+    )?;
     connection.busy_timeout(Duration::ZERO).map_err(storage)?;
     Ok(connection)
 }
@@ -446,23 +445,6 @@ fn exists(path: &Path) -> Result<bool, Error> {
     match fs::symlink_metadata(path) {
         Ok(_) => Ok(true),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(_) => Err(Error::RecordingStorage),
-    }
-}
-
-/// Create the file with mode `0600` before SQLite opens it, and say whether
-/// this call made it.
-fn create_private(path: &Path) -> Result<bool, Error> {
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt as _;
-        options.mode(0o600);
-    }
-    match options.open(path) {
-        Ok(_) => Ok(true),
-        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => Ok(false),
         Err(_) => Err(Error::RecordingStorage),
     }
 }
