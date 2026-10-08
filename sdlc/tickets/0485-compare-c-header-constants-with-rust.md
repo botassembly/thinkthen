@@ -1,6 +1,6 @@
 # 0485: Keep C header values consistent with Rust definitions
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
