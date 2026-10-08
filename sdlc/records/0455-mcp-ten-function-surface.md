@@ -35,3 +35,15 @@ The bounded timing test passed. The wider stress log ends with `Terminated`; it 
 ## Remaining
 
 The full 29-consumer installed campaign remains required under 0432. Installed archive timing remains unmeasured. Final Windows behavior is measured on the completed 0.2 build. HTTP serving, proxy policy and unmeasured speed claims remain out.
+
+## RC1 Windows cancellation watcher quick fix
+
+Rehearsal 37729582968 rejected `mcp/input/windows.rs:36` for Clippy excessive nesting. The watcher now runs its existing loop in a named function outside the spawn closure. Its 20 ms timeout, completion-channel shutdown, cancellation retries and registry lock scope remain unchanged. Pipe reads, writes, buffered output, error mapping and EOF handling remain unchanged. No dependency, lint allowance, test or runner was added.
+
+Offline focused verification passed all 36 existing MCP library tests, source policy, formatting, the source ratchet, dependency advisories/bans/licenses and workspace all-target Clippy with warnings denied. The first Clippy attempt used all features and hit the existing mutually exclusive SQLite feature refusal; the corrected command uses the lint script's default feature profile. Linux checks do not compile the Windows-only module. Existing Windows pipe cancellation and EOF tests still require a Windows runner; no hosted run was dispatched for this quick fix.
+
+The Rust ceiling increases from 163238 to 163239 nonblank lines. The single added line gives the cancellation loop a named worker function. Inspection of the watcher and operation guards found no duplicate logic to remove. Qualified lane artifacts were retained.
+
+Fresh Medium read-only review: ACCEPT. Final Clippy evidence records the corrected command and its zero exit status. Windows execution remains part of final platform qualification.
+
+The integrated correction at 693bc9f66 passed full local tests and lint. The ordinary, library-only and public-consumer groups and existing supporting checks passed. Logs remain in target/0425-windows-landing-test.log and target/0425-windows-landing-lint.log. These Linux checks do not compile or execute the Windows-only module; candidate platform qualification remains open.
