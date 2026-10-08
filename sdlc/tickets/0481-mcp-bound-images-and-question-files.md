@@ -8,6 +8,8 @@ Reviews: revision b9027d08b, reject
 
 Reviews: revision b9027d08b, accept
 
+Reviews: revision 20ca32e0532fc829a028120f8f7b77b4ff092d02, accept
+
 ## Outcome
 
 MCP refuses over-budget attachment calls before retaining unbounded file contents, and question selectors cannot block the worker on a nonregular file or consume its protocol input.
