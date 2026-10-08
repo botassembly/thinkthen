@@ -450,7 +450,7 @@ def prepare(home, value):
     if value.get('question_form') == 'file':
         (home / 'fixture-question.json').write_text(compact(value['question']))
     setup = value.get('setup') or {}
-    questions = home / 'config/thinkthen/questions'
+    questions = home / ('Library/Application Support/thinkthen/questions' if sys.platform == 'darwin' else 'config/thinkthen/questions')
     questions.mkdir(parents=True, exist_ok=True)
     if setup.get('questions_symlink_outside'):
         questions.rmdir()

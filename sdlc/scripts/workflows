@@ -554,7 +554,15 @@ python3.13) [ "$1" != --version ] || {
 uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 ;; esac
   [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
   [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo "$FAKE_UV_LINE"; }
-  [ "$1" != venv ] || echo "seed $4" >> "$FAKE_LOG" ;;
+  if [ "$1" = venv ]; then
+    case $4 in */python3.14)
+      echo sqlite-venv >> "$FAKE_LOG"
+      mkdir -p "$5/bin"
+      ln -s "$FAKE_ROOT/openssl3/bin/python3.14" "$5/bin/python" ;;
+    *) echo "seed $4" >> "$FAKE_LOG" ;; esac
+  fi
+  case $* in "pip install --quiet --python $FAKE_ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python jsonschema==4.25.1")
+    echo sqlite-jsonschema >> "$FAKE_LOG" ;; esac ;;
 uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
   -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
 xcrun) echo "$FAKE_ROOT/sdk" ;;
@@ -1078,9 +1086,9 @@ def self_test():
             wanted = ["py313-ready", "uv-install", "uv-check", *(["bash-check"] if smoke else []),
                       "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
-                      *(["sqlite-python-check", "npm-seed"] if smoke else []), *seed,
+                      *(["sqlite-python-check", "sqlite-venv", "sqlite-jsonschema", "sqlite-python-check", "npm-seed"] if smoke else []), *seed,
                       'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned",
-                      *(["env THINKTHEN_PYTHON=$ROOT/openssl3/bin/python3.14"] if smoke else [])]
+                      *(["env THINKTHEN_PYTHON=$ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python"] if smoke else [])]
         elif smoke:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
                       "databases/duckdb/tools/setup.sh --fetch", "databases/sqlite/setup.sh ",
