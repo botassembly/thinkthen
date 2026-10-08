@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Severity: medium accounting correctness.
 
+Reviews: revision 19abe6542, accept
+
 ## Outcome
 
 SDK and SQL callers can discover failed persistence of usage counts without exposing evidence, credentials or private filesystem paths. In-memory call facts remain correct; persistence failure never silently claims durable totals are complete.

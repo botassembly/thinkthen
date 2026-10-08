@@ -45,7 +45,7 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Ian held release work on 2026-10-08. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM will rule on 0461 after the TCGA recognize results. No new candidate tags or GitHub workflow runs without Ian's permission.
+Ian held release work on 2026-10-08. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM will rule on 0461 after the TCGA recognize results. No new candidate tags or GitHub workflow runs without Ian's permission. [0462’s findings](../records/0462-after-sprint-review.md) have fix owners 0463–0472; these remain 0.2 work.
 
 Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score, the local MCP surface and additive named question/input declarations. The SDK uses one configured route; business policy belongs to the proxy. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns the retained seventeen asks and accepted 0456 intake, dependencies, lane ownership and acceptance.
 

@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Severity: medium fixture correctness.
 
+Reviews: revision caddaecbc, accept
+
 ## Outcome
 
 Executable specification and demo checks use owned empty ThinkThen configuration, independent of a caller’s conflicting or malformed settings. They preserve explicit toolchain/cache paths and isolated count-only usage.

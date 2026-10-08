@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Severity: medium result correctness.
 
+Reviews: revision caddaecbc, accept
+
 ## Outcome
 
 C batch_setting and batch_warning identify records as THINKTHEN_BATCH_RECORDS_V1 and max as THINKTHEN_BATCH_MAX_V1. Existing bindings read the correct batch meaning without an ABI layout change.

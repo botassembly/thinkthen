@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Severity: medium resource correctness.
 
+Reviews: revision caddaecbc, accept
+
 ## Outcome
 
 DuckDB complete-file calls cannot accumulate unlimited decoded content before engine limits and cancellation apply. Valid record-stream behavior and native whole-set limits remain consistent with other surfaces.
