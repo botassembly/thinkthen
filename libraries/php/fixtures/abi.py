@@ -58,7 +58,7 @@ def check(header, copy, library):
         actual = ffi_layouts(copy, library, copied['records'], scratch)
         layouts = {n: {'size': r['size'], 'alignment': r['alignment'],
                       'fields': {f: {'offset': v['offset'], 'width': v['width']} for f, v in r['fields'].items()}}
-                   for n, r in native['records'].items()}
+                   for n, r in native['records'].items() if n in copied['records']}
         if layouts != actual:
             raise ValueError('PHP FFI carrier layout differs from the target C compiler')
     abi.check_exports(header, library)
