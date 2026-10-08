@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 namespace ThinkThen;
 internal static partial class NativeComplete {
  [DllImport(Library)]internal static extern int thinkthen_question_new_recognition_v1(IntPtr e,ref QuestionSpecV1 spec,ref QuestionAuthorV1 author,ref RecognitionTaskV1 task,out IntPtr q);
+ [DllImport(Library)]internal static extern int thinkthen_question_recognition_task_v1(IntPtr q,out RecognitionTaskV1 task);
  [DllImport(Library)]internal static extern int thinkthen_result_recognition_task_v1(IntPtr r,nuint i,out RecognitionTaskV1 task);
  const string Library="libthinkthen.so.0";
  [DllImport(Library)]internal static extern int thinkthen_question_new(IntPtr e,ref QuestionSpecV1 spec,out IntPtr q);

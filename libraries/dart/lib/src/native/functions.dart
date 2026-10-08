@@ -351,6 +351,11 @@ final class NativeApi {
               Pointer<CQuestionAuthorView>,
               Pointer<CRecognitionTaskView>,
               Pointer<Pointer<Void>>)>("thinkthen_question_new_recognition_v1");
+  late final int Function(Pointer<Void>, Pointer<CRecognitionTaskView>)
+      thinkthen_question_recognition_task_v1 = lib.lookupFunction<
+          Int32 Function(Pointer<Void>, Pointer<CRecognitionTaskView>),
+          int Function(Pointer<Void>, Pointer<CRecognitionTaskView>)>(
+              "thinkthen_question_recognition_task_v1");
   late final int Function(Pointer<Void>, int, Pointer<CRecognitionTaskView>)
       thinkthen_result_recognition_task_v1 = lib
           .lookupFunction<
