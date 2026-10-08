@@ -160,3 +160,12 @@ Release host setup now acquires the existing pinned jsonschema 4.25.1 in both Wi
 Whole lint passed at f241d51bd, with target/0425-rc4-landing-lint.log retained. Full local tests at aae11e738 and the installed checkpoint remain applicable to unchanged product source; the changed setup checks and package gate were rerun. This is release dependency acquisition, not a new source test result. The coordinator lands the reviewed setup correction and qualifies the next candidate. Nothing is published. The older candidate-two Intel build finished passed; that rehearsal finished failed overall.
 
 What the build taught us: declare the schema validator wherever its existing assertions run. A separate workflow's successful acquisition does not install it on another runner.
+
+
+## Candidate four Windows schema child correction, 2026-10-08
+
+Candidate rc/0.2.0-rc.4 at 4083be547 failed Windows release build job 113207557164: 21 native complete schema assertions could not initialize Python's random source after the fixture cleared its environment. The raw log is /tmp/thinkthen-rc4-windows-build.log. The schema child now reuses the existing ChildEnvironment allowlist for SystemRoot, SystemDrive, TEMP and TMP; PATH remains explicit. All schema assertions and secret isolation remain. Sharing the existing child module with the rank fixture adds two nonblank Rust lines, explained in the code commit and measured at 163277. No product behavior changes.
+
+Fresh read-only review accepts f1fde4853. Full local tests and lint pass on that commit; logs remain in target/0425-rc5-landing-test.log and target/0425-rc5-landing-lint.log. The coordinator pushed the clean branch after the builder sandbox denied network and loopback access. The retained installed campaign remains applicable. Candidate three completed failed overall, with all four Unix target builds and the crate job passing individually; its separate Windows qualification passed. Candidate four passed crate and Linux x86/ARM and Mac ARM builds; Intel Mac and separate Windows packed-core checks remain active. The next candidate must pass the whole rehearsal and Windows qualification on its exact commit, followed by final QA and Ian's publication go.
+
+What the build taught us: schema validators need the same platform startup environment as other isolated test children. Reuse the existing allowlist rather than inherit the parent environment.
