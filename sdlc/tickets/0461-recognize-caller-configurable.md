@@ -27,6 +27,16 @@ Slice A contains the implemented caller declaration, corrected help, shared case
 
 ## Proposed contract for review
 
+### Added public declarations
+
+```text
+fn RecognitionReading::entity_definition(&self) -> Option<&str>
+fn RecognitionReading::instructions(&self) -> Option<&str>
+fn Recognize::reading(&self) -> RecognitionReading<'_>
+fn RecognizeBuilder::entity_definition(self, &str) -> Result<RecognizeBuilder, Error>
+fn RecognizeBuilder::instructions(self, &str) -> Result<RecognizeBuilder, Error>
+```
+
 Use the existing `recognize.kinds` map for caller labels and descriptions. Add optional string members `recognize.instructions` and `recognize.entity_definition` to the closed version-one saved grammar. Rust adds `RecognizeBuilder::instructions` and `RecognizeBuilder::entity_definition`; native question descriptors preserve both authored values. The CLI adds `--instructions TEXT` and `--entity-definition TEXT`. Existing `--kind KIND=DESCRIPTION` remains the per-label input. Explicit CLI values override the corresponding saved members; omission preserves the saved value. Retain the existing refusal for mixing inline kinds or relations with `@FILE`.
 
 Reject an explicitly blank string, null or another JSON type for either new member before sending. Absence means omitted; it never means an explicitly empty override. Accept ordinary multiline instructions through the existing validated content boundary. Treat instructions as model task wording; ThinkThen executes no caller commands. Keep error and Debug output free of authored text and credentials.

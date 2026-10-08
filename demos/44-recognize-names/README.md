@@ -8,7 +8,7 @@ A caller can define a receipt amount as an entity. This controlled offline fixtu
 
 ```bash
 fixture="$(git rev-parse --show-toplevel)/specification/fixtures/recognize/caller-defined"
-cat "$fixture/text.txt" | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize @"$fixture/question.json" --url "$(cat "$fixture/url.txt")" --replay "$fixture/recording" --no-cache | jq -c '.entities' | mustmatch '[{"text":"42.75","start":8,"end":13,"length":5,"kind":"amount","strength":1.0}]'
+cat "$fixture/text.txt" | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize @"$fixture/question.json" --url "$(cat "$fixture/url.txt")" --replay ../../specification/fixtures/recognize/caller-defined/recording --no-cache | jq -c '.entities' | mustmatch '[{"text":"42.75","start":8,"end":13,"length":5,"kind":"amount","strength":1.0}]'
 ```
 
 The saved question supplies instructions, an entity definition and the `amount` label description. Each recognition stage receives that declaration. Offsets count Unicode scalar values, so the prefix `é` occupies one position. The span retains its decimal point and excludes the trailing sentence period.
