@@ -1,6 +1,6 @@
 # 0466: Refuse contradictory R complete inputs
 
-Status: OPEN. The review traced mixed record/file inputs to a branch that silently discards the other source.
+Status: COMPLETE. The review traced mixed record/file inputs to a branch that silently discards the other source.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Owner: builder.
 Reviews: revision e71fa0b01, accept
 
 Reviews: revision ce732929a, accept
+
+Landed: 2c71b81
 
 ## Outcome
 
