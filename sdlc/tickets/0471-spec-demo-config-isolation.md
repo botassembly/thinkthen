@@ -9,6 +9,8 @@ Severity: medium fixture correctness.
 
 Reviews: revision caddaecbc, accept
 
+Reviews: revision 58546daf828038fd318d3d0fe362bd0e03a40b0e, accept
+
 ## Outcome
 
 Executable specification and demo checks use owned empty ThinkThen configuration, independent of a caller’s conflicting or malformed settings. They preserve explicit toolchain/cache paths and isolated count-only usage.
