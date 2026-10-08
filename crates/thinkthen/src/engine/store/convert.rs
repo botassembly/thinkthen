@@ -6,23 +6,30 @@
 //! one normalized key refuse the whole conversion. Every
 //! converted answer takes `taken_at` 0, so the same folder always writes the
 //! same bytes. The live file is removed once its entries are in the fixture,
-//! because a replay refuses a folder holding both. The live file's write lock
-//! is held from its read to its removal, so no answer written meanwhile is
-//! lost. Old files stay.
+//! because a replay refuses a folder holding both. Unix holds the live file's
+//! write lock through removal. Windows denies writers with a file handle
+//! through its read-only snapshot and removal. Old files stay.
 
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::Path;
 
+#[cfg(not(windows))]
 use std::time::Duration;
 
 use rusqlite::Connection;
 
-use super::{Answer, Entries, JSONL, SQLITE, exists, fixture, storage, waiting};
+use super::{Answer, Entries, JSONL, SQLITE, exists, fixture};
+#[cfg(not(windows))]
+use super::{storage, waiting};
 use crate::core::bytes_sha256;
 use crate::core::recording::{Converting, convert as entry};
+#[cfg(not(windows))]
 use crate::engine::Cancel;
 use crate::engine::error::Error;
+
+#[cfg(windows)]
+mod windows;
 
 /// What one conversion did.
 #[derive(Debug, Default)]
@@ -48,12 +55,23 @@ pub(crate) struct Summary {
 /// conversion before anything is written.
 pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
     let (jsonl, sqlite) = (folder.join(JSONL), folder.join(SQLITE));
+    let has_sqlite = exists(&sqlite)?;
+    // Windows keeps this handle across the read-only SQLite snapshot and
+    // removal. It refuses competing writers before publishing a fixture.
+    #[cfg(windows)]
+    let _guard = has_sqlite.then(|| windows::guard(&sqlite)).transpose()?;
+    #[cfg(windows)]
+    let previous = if exists(&jsonl)? {
+        Some(fs::read(&jsonl).map_err(|_| Error::RecordingStorage)?)
+    } else {
+        None
+    };
     let mut held = if exists(&jsonl)? {
         fixture::read(&jsonl)?
     } else {
         Entries::default()
     };
-    let live = if exists(&sqlite)? {
+    let live = if has_sqlite {
         Some(locked(&sqlite)?)
     } else {
         None
@@ -76,7 +94,11 @@ pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
         // Unix removes it while the lock is held (ticket 0373).
         #[cfg(windows)]
         drop(connection);
-        fs::remove_file(&sqlite).map_err(|_| Error::RecordingStorage)?;
+        if fs::remove_file(&sqlite).is_err() {
+            #[cfg(windows)]
+            windows::restore(folder, &jsonl, previous.as_deref())?;
+            return Err(Error::RecordingStorage);
+        }
         sync_folder(folder).map_err(|_| Error::RecordingStorage)?;
         #[cfg(not(windows))]
         drop(connection);
@@ -86,6 +108,7 @@ pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
 
 /// Open the live file and take its write lock, waiting up to 30 seconds
 /// for another writer. The lock ends when the connection drops.
+#[cfg(not(windows))]
 fn locked(sqlite: &Path) -> Result<Connection, Error> {
     let connection = Connection::open(sqlite).map_err(storage)?;
     connection.busy_timeout(Duration::ZERO).map_err(storage)?;
@@ -93,6 +116,11 @@ fn locked(sqlite: &Path) -> Result<Connection, Error> {
         connection.execute_batch("BEGIN IMMEDIATE")
     })?;
     Ok(connection)
+}
+
+#[cfg(windows)]
+fn locked(sqlite: &Path) -> Result<Connection, Error> {
+    super::read_only(sqlite)
 }
 
 /// Every good answer of the folder's old entries, refusing conflicting history.
