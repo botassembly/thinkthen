@@ -29,6 +29,7 @@ Already-composed feeds must preserve selector, context, attachment, function and
 ```text
 fn RequestFeed::from_records(impl Into<String>, impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a) -> RequestFeed<'a>
 fn RequestFeed::eager(self) -> RequestFeed<'a>
+fn RequestFeed::with_image_inputs(self) -> RequestFeed<'a>
 ```
 
 ## Progress
