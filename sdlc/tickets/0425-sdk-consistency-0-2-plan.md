@@ -15,7 +15,8 @@ Every PM ask has a ticket owner, dependencies, retained behavior and an acceptan
 
 - Starts from: Current main c64b71859; 0405 audit is historical and predates 0377/0420. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 1–12.
 - Keeps: Landed product behavior and existing qualified-run history. Specific publication approval remains required.
-- Changes: Create 0426–0445; promote and amend 0296, 0300, 0406–0414, 0417 and 0418; retain 0393 as the npm owner. Update the milestone, team note and run-facts issue. Answer all twelve mail asks with ticket numbers after fresh ticket reviews.
+- Changes: Create 0426–0445; promote and amend 0296, 0300, 0406–0414, 0417 and 0418; retain 0393 as the npm owner. Update the milestone and run-facts issue. Answer all twelve mail asks with ticket numbers after fresh ticket reviews.
+  Claim `sdlc/planning/**`, `sdlc/records/0425*`, `sdlc/scripts/surfaces*` and `.github/workflows/**`. The final installed run follows the new shared contract and migrations; release management remains held.
 - Proof: Review each new or materially amended ticket with a fresh read-only reviewer. Check the twelve-ask map, nonduplicated ownership, dependencies, milestone lines and links. Run the ticket/documentation checks; no runtime or release experiment is needed for this planning-only change.
 - Defers: Implementation, migrations, paid calls, registry/settings changes and further release runs. A later final-commit qualification remains an acceptance criterion, not current work.
 

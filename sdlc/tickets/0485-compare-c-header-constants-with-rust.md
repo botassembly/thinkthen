@@ -1,4 +1,4 @@
-# 0485 — compare-c-header-constants-with-rust
+# 0485: Keep C header values consistent with Rust definitions
 
 Status: OPEN.
 
@@ -14,6 +14,6 @@ The existing C export check fails when real header constants disagree with produ
 
 - Starts from: architecture/test-sediment PM message of 2026-10-08, ask 2; check-c-exports.py compares a changed temporary header with the real header but reads no independent Rust discriminant table.
 - Keeps: Existing header layout/prototype checks and planted comparator case. No public ABI or semantic enum change.
-- Changes: Emit the C-visible values from actual production Rust definitions through the existing check/test route. Compare that table with compiler-read header values in check-c-exports.py. Do not create a second hand-written expected-value table or a public introspection API.
+- Changes: Generated header ticket 0492 absorbs this outcome and its comparison checks. Claim `libraries/c/include/thinkthen.h`, `libraries/c/src/**` and `scripts/check-c-exports.py`. Do not run a separate hand-maintained values project. Once 0492 lands, retain its acceptance evidence in the normal 0485 record and close 0485 through pm ticket land --record-only.
 - Proof: A planted Rust value change with a fixed header fails; a real-header value change with fixed Rust fails. Normal table and existing comparator/layout cases pass. Use one small check addition, no receipt framework.
 - Defers: Whole-header/binding generation and wider architecture work to the PM's later backlog.

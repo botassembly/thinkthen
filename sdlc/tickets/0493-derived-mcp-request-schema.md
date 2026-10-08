@@ -1,4 +1,4 @@
-# 0493 — derived-mcp-request-schema
+# 0493: Derive MCP schemas from the shared request contract
 
 Status: OPEN.
 

@@ -1,4 +1,4 @@
-# 0500 — adopt-request-postgresql
+# 0500: Move PostgreSQL onto the shared request contract
 
 Status: OPEN.
 

@@ -1,4 +1,4 @@
-# 0497 — adopt-request-ruby
+# 0497: Move Ruby onto the shared request contract
 
 Status: OPEN.
 

@@ -1,4 +1,4 @@
-# 0489 — recognize-per-record-context
+# 0489: Carry each record's context through recognition
 
 Status: OPEN.
 

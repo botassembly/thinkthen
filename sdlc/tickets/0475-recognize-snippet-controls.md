@@ -1,8 +1,10 @@
-# 0475 — recognize-snippet-controls
+# 0475: Let callers set recognition snippet and batch sizes
 
 Status: OPEN. Fresh ticket review accepted the design; implementation has not started.
 
 Milestone: 0.2
+
+Depends on: 0490, 0461
 Owner: builder.
 Signed: queue owner, 2026-10-08.
 Review: accept. Fresh read-only Sol review accepted the design after the signoff correction.

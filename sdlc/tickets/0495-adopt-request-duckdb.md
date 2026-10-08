@@ -1,4 +1,4 @@
-# 0495 — adopt-request-duckdb
+# 0495: Move DuckDB onto the shared request contract
 
 Status: OPEN.
 

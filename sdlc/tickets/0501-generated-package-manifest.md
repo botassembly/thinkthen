@@ -1,4 +1,4 @@
-# 0501 — generated-package-manifest
+# 0501: Generate package manifests from the binding outputs
 
 Status: OPEN.
 

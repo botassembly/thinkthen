@@ -1,4 +1,4 @@
-# 0488 — mcp-stdio-errors-and-shutdown
+# 0488: Preserve MCP errors and shutdown behavior
 
 Status: OPEN.
 

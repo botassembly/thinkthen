@@ -1,4 +1,4 @@
-# 0496 — adopt-request-python
+# 0496: Move Python and its dataframes onto the shared contract
 
 Status: OPEN.
 

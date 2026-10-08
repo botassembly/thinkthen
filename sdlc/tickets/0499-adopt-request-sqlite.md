@@ -1,4 +1,4 @@
-# 0499 — adopt-request-sqlite
+# 0499: Move SQLite onto the shared request contract
 
 Status: OPEN.
 

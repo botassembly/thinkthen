@@ -1,4 +1,4 @@
-# 0505 — generated-c-zig-ada-cobol-access
+# 0505: Generate binding access for C, Zig, Ada and COBOL
 
 Status: OPEN.
 

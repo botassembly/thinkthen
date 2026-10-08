@@ -1,4 +1,4 @@
-# 0479 — recognize-boundary-only
+# 0479: Let callers request recognition boundaries without classification
 
 Status: OPEN. Fresh ticket review accepted the design; implementation has not started.
 
@@ -22,5 +22,6 @@ Design and implement a caller-requested step-1-only recognition mode with caller
 - Starts from: PM inbox `2026-10-08-pm-thinkthen-pm-scope-rulings-on-the-tcga-recognize-asks.md`, narrowed ask 3. Existing recognition always decodes step 1 then may classify and adjust names in step 2. Existing caller instructions, entity definitions, and described kinds already reach step-1 questions. A kind-only span filter was dropped and needs no ticket.
 - Keeps: Whole recognition as the default, its existing result and identity, and the proxy boundary for business routing. The new mode is explicit caller control.
 - Changes: Settle mode spelling, output shape for unclassified proposals, probability and threshold meanings, interaction with relations and saved declarations, admission/errors, and mode-specific cache identity in the 0.2 specification before implementation. Use the existing BILOU decode and caller wording; do not invent a kind from skipped step 2. Adopt the shared request contract and generated bindings under Ian's 2026-10-08 ruling.
+  Claim `crates/thinkthen/src/core/recognize/**`, `crates/thinkthen/src/public/**`, `crates/thinkthen/src/engine/facade/recognize/**`, `crates/thinkthen/src/cli/recognize/**`, `specification/recognize.md`, `specification/request.schema.json` and `conformance/**`.
 - Proof: Exact-request tests prove step 1 alone sends, step-2/relation requests do not, caller kinds and wording reach each token question, and default output remains identical. Identical boundary questions intentionally reuse saved question answers across modes; resolved mode separates complete answer identity and typed value, including when whole recognition sends no later questions. Boundary proposals cannot stand in for a complete whole result. Add no identity-only model wording or cache-key mechanism.
 - Defers: Stage-specific model policy, automatic routing, and the dropped kind-only filter.

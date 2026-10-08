@@ -1,4 +1,4 @@
-# 0494 — adopt-request-r
+# 0494: Move R onto the shared request contract
 
 Status: OPEN.
 

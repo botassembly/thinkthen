@@ -1,4 +1,4 @@
-# 0498 — adopt-request-typescript
+# 0498: Move TypeScript onto the shared request contract
 
 Status: OPEN.
 
