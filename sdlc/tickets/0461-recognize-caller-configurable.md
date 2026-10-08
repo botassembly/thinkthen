@@ -15,7 +15,7 @@ Callers supply recognition instructions, an entity definition and descriptions f
 
 Build started on lane 2 after fresh ticket acceptance. Ian promoted 0461 into 0.2 on 2026-10-08 and directed landing now alongside the after-sprint review. The shared custom-wording case and tested example accompany the change. The separate 20-kind-cap proposal remains held until TCGA round one.
 
-Slice A contains the implemented caller declaration, corrected help, shared case, prior installed qualification and model comparison. Slice B will propose a size-based replacement for the 20-kind cap after TCGA round one. It changes no cap now and requires a separate review before implementation.
+Slice A contains the implemented caller declaration, corrected help, shared case, prior installed qualification and model comparison. Slice B will propose a recognition-only menu with no count cap, subject to hard encoded-byte admission that preserves each entire menu. Both live and stored adapters would validate that boundary. TCGA round one and the PM decision precede implementation; slice A changes no cap.
 
 ## Evidence
 
