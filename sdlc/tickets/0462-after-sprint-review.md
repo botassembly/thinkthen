@@ -1,6 +1,6 @@
 # 0462: Review all 0.2 changes and sweep known bugs
 
-Status: OPEN. Fresh read-only area reviews and the historical bug sweep are running. Confirmed findings will receive fixes or owned tickets before the review closes.
+Status: COMPLETE. Fresh area reviews and the historical sweep produced owned fixes in 0463–0472. Their implementation and Ian’s release hold remain open; see the consolidated record for scope and limitations.
 
 Milestone: 0.2
 

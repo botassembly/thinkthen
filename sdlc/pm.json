@@ -30,7 +30,7 @@
     "libraries/dart/flutter/example/linux/flutter/**"
   ],
   "mailroom": {
-    "repo": "sdlc",
+    "repo": "agents",
     "name": "thinkthen"
   },
   "flow": "light",

@@ -656,7 +656,10 @@ npm-assemble)
 	output=$(CDPATH='' cd -- "$output" && pwd)
 	scratch_dir work
 	cp libraries/typescript/package.json libraries/typescript/loader.js libraries/typescript/index.js \
-		libraries/typescript/index.mjs libraries/typescript/index.d.ts libraries/typescript/LICENSE "$work/"
+		libraries/typescript/index.mjs libraries/typescript/index.d.ts \
+		libraries/typescript/complete.js libraries/typescript/complete.d.ts \
+		libraries/typescript/_complete.js libraries/typescript/_complete.d.ts \
+		libraries/typescript/LICENSE "$work/"
 	count=0
 	for file in "$input"/*/thinkthen-"$version".tgz; do
 		[ -f "$file" ] || continue
