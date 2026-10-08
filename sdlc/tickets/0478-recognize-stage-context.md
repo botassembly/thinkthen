@@ -7,6 +7,8 @@ Owner: builder.
 Signed: queue owner, 2026-10-08.
 Review: accept. Fresh read-only Sol review accepted the design after the signoff correction.
 
+Reviews: revision b6970338e, accept
+
 ## Outcome
 
 Design caller-supplied context separately for recognize stages so a caller can guide boundary, kind/edge, or relation questions without repeating one shared summary everywhere.

@@ -7,6 +7,8 @@ Owner: builder.
 Signed: queue owner, 2026-10-08.
 Review: accept. Fresh read-only Sol review accepted the design after the signoff correction.
 
+Reviews: revision b6970338e, accept
+
 ## Outcome
 
 Design and implement a caller-requested step-1-only recognition mode with caller kinds and wording. Return boundary proposals without running kind, edge, or relation stages.

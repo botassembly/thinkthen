@@ -7,6 +7,8 @@ Owner: builder.
 Signed: queue owner, 2026-10-08.
 Review: accept. Fresh read-only Sol review accepted the design after the signoff correction.
 
+Reviews: revision b6970338e, accept
+
 ## Outcome
 
 Add every step-1 decoded name stretch to CLI recognize `--details`, with its span probability, computed strength when available, and whether that proposal survives. Keep the bare value and default reading unchanged.

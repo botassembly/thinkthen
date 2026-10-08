@@ -7,6 +7,8 @@ Owner: builder.
 Signed: queue owner, 2026-10-08.
 Review: accept. Fresh read-only Sol review accepted the design after the signoff correction.
 
+Reviews: revision b6970338e, accept
+
 ## Outcome
 
 Let each recognize question choose the number of context pieces shown on either side of a token or name. Keep six when omitted. Add a bounded step-1 batch-piece control if it remains a small extension of the same planner; keep 40 when omitted.
