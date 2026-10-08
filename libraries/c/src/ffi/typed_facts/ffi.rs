@@ -11,26 +11,7 @@ use thinkthen::{CancelToken, Facts};
 use crate::failures::{self, DEFECT, Failure, Held, OK, USAGE};
 use crate::{Door, Judgment, door};
 
-use super::{held, string, text};
-
-fn extent(count: usize, element: usize) -> Result<(), Failure> {
-    if count
-        .checked_mul(element)
-        .is_none_or(|size| size > isize::MAX as usize)
-    {
-        Err(Failure::usage("an array is too large"))
-    } else {
-        Ok(())
-    }
-}
-
-fn text_extent(len: usize) -> Result<(), Failure> {
-    if len > isize::MAX as usize {
-        Err(Failure::usage("a text is too large"))
-    } else {
-        Ok(())
-    }
-}
+use super::{extent, held, string, text, text_extent};
 
 fn slots(slots: &[*mut ()]) -> Result<(), Failure> {
     if slots.iter().any(|slot| slot.is_null()) {

@@ -3,7 +3,8 @@
  * Plain calls equal their _opts twin with THINKTHEN_NO_DEADLINE and a NULL token.
  * Engines serve concurrent callers and rebuild state after a fork; free them
  * only after all calls return. Free owned strings with thinkthen_free_string.
- * Errors and failure facts borrow the calling thread's last-failure slot.
+ * Error messages and failure facts are borrowed; never free their pointers.
+ * See thinkthen_error_message for engine and NULL-engine pointer lifetimes.
  * Nonzero returns leave all outputs unchanged. Eager calls have no partial
  * rows; lazy batches retain completed prefixes. Prefer *_with_facts forms.
  * Version 0.1.0 names, layouts, argument types and return codes stay frozen.
@@ -87,12 +88,14 @@ thinkthen_engine *thinkthen_engine_new_with(const char *settings_json);
 void thinkthen_engine_free(thinkthen_engine *engine);
 
 /* The message for the last failure the calling thread recorded on this
- * engine, valid until that thread records its next failure; another
- * thread's calls never replace it. A deadline's message names the limit
- * and its value. Never NULL: before any failure it names that nothing
- * failed yet. With a null engine it is the calling thread's last failed
- * build's message, valid until that thread's next `thinkthen_engine_new`,
- * or else it names that no engine came. */
+ * engine. Its borrowed pointer stays valid until that thread records its
+ * next failure on this engine, the engine is freed, or the thread exits.
+ * Another thread's calls never replace it. Never free the pointer.
+ * A deadline's message names the limit and its value. Never NULL: before
+ * any failure it names that nothing failed yet. With a null engine it is
+ * the calling thread's last failed build's message in a distinct slot, valid
+ * until that thread's next thinkthen_engine_new or thinkthen_engine_new_with
+ * call, or its exit. Otherwise it names that no engine came. */
 const char *thinkthen_error_message(const thinkthen_engine *engine);
 
 /* Whether the same call could pass later: 1 for a backend status the

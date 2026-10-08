@@ -28,6 +28,9 @@ int main(void) {
     const char *bad = "\xff\xfe";
     const char *texts[1] = {"a text"};
     size_t lengths[1] = {6};
+    char byte = 'x';
+    const char *one[1] = {&byte};
+    size_t huge[1] = {SIZE_MAX};
     thinkthen_answer kept = {7, 7.0};
     char *out = (char *)q;
     size_t out_len = 7;
@@ -94,6 +97,17 @@ int main(void) {
     row(tt, "relate null texts", thinkthen_relate(tt, "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"r\",\"source\":\"*\",\"target\":\"*\"}]}}", NULL, lengths, 1, &out, &out_len), 1, "a null texts array with a nonzero count");
     row(tt, "relate past 255", thinkthen_relate(tt, NULL, NULL, NULL, 256, NULL, NULL), 1, "relate takes at most 255 records");
     row(tt, "relate null out", thinkthen_relate(tt, "{}", texts, lengths, 1, NULL, &out_len), 1, "a null out pointer");
+
+    /* Owned one-byte storage must not be read at an impossible extent. */
+    row(tt, "decide huge text", thinkthen_decide(tt, q, &byte, SIZE_MAX, &kept), 1, "a text is too large");
+    row(tt, "recognize huge text", thinkthen_recognize(tt, "{}", &byte, SIZE_MAX, &out, &out_len), 1, "a text is too large");
+    row(tt, "many huge text", thinkthen_decide_many(tt, q, one, huge, 1, &kept), 1, "a text is too large");
+    for (size_t i = 0; i < 2; ++i) {
+        size_t count = i == 0 ? SIZE_MAX : (size_t)PTRDIFF_MAX / sizeof(*one) + 1;
+        row(tt, "many huge arrays", thinkthen_decide_many(tt, q, one, huge, count, &kept), 1, "an array is too large");
+    }
+    row(tt, "relate huge arrays", thinkthen_relate(tt, "{}", one, huge, SIZE_MAX, &out, &out_len), 1, "relate takes at most 255 records");
+    row(tt, "relate huge text", thinkthen_relate(tt, "{}", one, huge, 1, &out, &out_len), 1, "a text is too large");
 
     if (kept.outcome != 7 || kept.probability != 7.0 || out != q || out_len != 7) {
         fprintf(stderr, "FAIL a refusal wrote an out parameter\n");

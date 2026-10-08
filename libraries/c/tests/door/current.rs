@@ -10,7 +10,10 @@ fn public_batch_metadata_uses_header_kinds_for_setting_and_both_warning_sides() 
         b"",
         &[],
     );
-    assert_eq!((output.status.code(), text(&output.stderr)), (Some(0), String::new()));
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
     assert_eq!(backend.count(), 5);
 }
 #[test]
