@@ -31,6 +31,11 @@ impl EngineBuilder {
     /// field, and [`Error::Local`] when the configuration file exists but
     /// cannot be read.
     pub fn from_env() -> Result<Self, Error> {
+        Self::from_env_with_config_status().map(|(builder, _)| builder)
+    }
+
+    /// Return the permission status of the configuration captured by this builder.
+    pub(crate) fn from_env_with_config_status() -> Result<(Self, bool), Error> {
         let config = Config::read(config::path().as_deref()).map_err(|refused| {
             if refused.unreadable {
                 Error::local(refused.message.into_owned())
@@ -38,6 +43,7 @@ impl EngineBuilder {
                 Error::usage(refused.message.into_owned())
             }
         })?;
+        let config_shared = config.shared();
         let named = variable("THINKTHEN_CACHE")?.map(PathBuf::from);
         let mut builder = Self::new();
         builder.seeded = Some(Seeded {
@@ -85,7 +91,7 @@ impl EngineBuilder {
                 })?;
             builder = builder.max_request_bytes(value)?;
         }
-        Ok(builder)
+        Ok((builder, config_shared))
     }
 }
 

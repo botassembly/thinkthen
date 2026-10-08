@@ -53,14 +53,6 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     }
     assert!(long.contains("set -e"), "the help warns about set -e");
     assert!(
-        long.contains("authored `--true` or `--false` meaning"),
-        "{long}"
-    );
-    assert!(
-        long.contains("`answer.probability` against `threshold`"),
-        "{long}"
-    );
-    assert!(
         long.contains("no or not sure"),
         "the help names both nonzero answers"
     );
@@ -80,6 +72,20 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     ] {
         assert!(long.contains(cache_rule), "{cache_rule}: {long}");
     }
+}
+
+#[test]
+fn long_help_distinguishes_bare_answers_from_authored_details() {
+    let output = run(&["decide", "--help"], &[], b"").expect("compiled help");
+    let help = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        help.contains("authored `--true` or `--false` meaning"),
+        "{help}"
+    );
+    assert!(
+        help.contains("`answer.probability` against `threshold`"),
+        "{help}"
+    );
 }
 
 #[test]
