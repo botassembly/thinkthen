@@ -235,6 +235,7 @@ pub struct Question {
     pub(crate) metadata: core::declaration::QuestionMetadata,
     pub(crate) core: core::Question,
     pub(crate) threshold: Option<Threshold>,
+    pub(crate) authored_threshold: bool,
     pub(crate) model: Option<ModelName>,
     pub(crate) profile: Option<ProfileName>,
     pub(crate) batch: Option<Json>,
@@ -245,6 +246,7 @@ impl PartialEq for Question {
     fn eq(&self, other: &Self) -> bool {
         self.core == other.core
             && self.threshold == other.threshold
+            && self.authored_threshold == other.authored_threshold
             && self.model == other.model
             && self.profile == other.profile
             && self.batch == other.batch
@@ -460,6 +462,7 @@ impl Question {
             metadata: file.metadata.clone(),
             core,
             threshold,
+            authored_threshold: file.has_threshold(),
             model,
             profile,
             batch,
@@ -538,6 +541,7 @@ impl Question {
             metadata: core::declaration::QuestionMetadata::default(),
             core: core::Question::Decide { text, yes, no },
             threshold,
+            authored_threshold: false,
             model: None,
             profile: None,
             batch: None,

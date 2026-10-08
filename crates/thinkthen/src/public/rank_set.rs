@@ -159,6 +159,7 @@ impl Engine {
                 metadata: member.metadata().clone(),
                 core: member.question().clone(),
                 threshold: None,
+                authored_threshold: false,
                 model: None,
                 profile: set.profile().cloned(),
                 batch: None,

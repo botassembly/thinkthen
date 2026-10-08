@@ -46,6 +46,7 @@ impl Question {
                 .cloned()
                 .ok_or_else(|| Error::defect("a rank question file resolved no question"))?,
             threshold: None,
+            authored_threshold: false,
             model: (!resolved.sources().model_is_default()).then(|| resolved.model().clone()),
             profile: resolved.profile().cloned(),
             batch,

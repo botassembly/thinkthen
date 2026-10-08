@@ -110,6 +110,7 @@ impl RecordChooseQuestion {
                 options: options.labels()?,
             },
             threshold: self.threshold,
+            authored_threshold: false,
             model: self.model.clone(),
             profile: self.profile.clone(),
             batch: self.batch.clone(),
