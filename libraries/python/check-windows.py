@@ -43,6 +43,7 @@ def main():
                         ignore=shutil.ignore_patterns('target', '__pycache__'))
         shutil.copytree(REPO / 'specification/fixtures/batching', scratch / 'specification/fixtures/batching')
         shutil.copytree(REPO / 'specification/fixtures/files', scratch / 'specification/fixtures/files')
+        shutil.copytree(REPO / 'specification/fixtures/question-file', scratch / 'specification/fixtures/question-file')
         for relative in ('site/examples/learn/python/files.py', 'site/examples/learn/python/files.py.out',
                          'site/recordings/thinkthen.jsonl'):
             destination = scratch / relative

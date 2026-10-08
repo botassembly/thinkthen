@@ -1,5 +1,11 @@
 //! Actual transport correlation through the public Rust call boundary.
 
+#[cfg(feature = "cli")]
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+#[cfg(feature = "cli")]
+use child::ChildEnvironment as _;
+
 use conformance_backend::{Canned, Listener};
 use thinkthen::{BatchSetting, CallId, CallOptions, Engine, Question, SdkRequestId, Surface};
 
@@ -253,7 +259,7 @@ fn cli_headers_and_final_facts_share_the_admitted_invocation_id() {
             "--no-cache",
             "--facts",
         ])
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_API_KEY", "fixture-native-identity")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -307,7 +313,7 @@ fn cli_typed_admission_refusal_emits_no_invocation_id_and_sends_nothing() {
             "--no-cache",
             "--facts",
         ])
-        .env_clear()
+        .clear_environment()
         .stdin(Stdio::null())
         .output()
         .unwrap();

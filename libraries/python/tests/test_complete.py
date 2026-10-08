@@ -10,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 # Load the pure carrier modules without importing a native extension.
 package = types.ModuleType("complete_carriers")
-package.__path__ = [str(ROOT / "thinkthen")]
+package.__path__ = list(importlib.util.find_spec("thinkthen").submodule_search_locations)
 sys.modules[package.__name__] = package
 from complete_carriers import _complete as c, _requests as r
 FIXTURE = json.loads((ROOT / "tests/fixtures/complete.json").read_text())
