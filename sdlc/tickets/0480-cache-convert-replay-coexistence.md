@@ -20,3 +20,7 @@ Preserve acknowledged answers across cache conversion and concurrent use. Replay
   Claim `crates/thinkthen/src/engine/store/**`, `crates/thinkthen/src/engine/fixture.rs`, `crates/thinkthen/tests/backend/cache_convert/**` and `.github/workflows/windows.yml`. Native Windows checks are owed to the first authorized candidate; keep the ticket open until they pass.
 - Proof: Owned two-process writer/converter order in both directions; every successful answer remains replayable or the writer clearly fails. Successful conversion durably completes live-file removal through the existing platform-aware directory-sync route; a fresh-process restart replays the retained answers. Do not call a process restart a power-loss simulation or add a crash-proof framework. Replay waiting for an EXCLUSIVE writer succeeds after commit, refuses at the existing deadline and stops on cancellation, with zero sends. Retain corruption refusal and old conversion cases. Fresh durability review before implementation and code review afterward.
 - Defers: Broad cache redesign, fairness policy changes and new lock machinery without a demonstrated need. If SQLite already prevents the alleged loss, report the rejected finding and retain the regression rather than invent a fix.
+
+## Progress
+
+- 2026-10-08 landed daa565792; next: Slice A adds bounded replay snapshot waiting and durable conversion removal. Linux writer/converter checks preserve successful answers or refuse competing writes. Native Windows coexistence checks remain owed to the first authorized candidate; keep the ticket open.
