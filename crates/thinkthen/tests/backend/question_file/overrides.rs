@@ -19,7 +19,7 @@ fn a_file_holds_the_whole_question_and_the_plan_says_so_setting_by_setting() {
             r#""criteria":{"true":"The writer asks for money back.","#,
             r#""false":"The writer asks for anything else."}}}}}"#,
             "\n",
-            r#"{"records":1,"requests":1,"estimated_bytes":299,"estimated_input_tokens":{"lower":154,"upper":272},"upper_bound":false}"#,
+            r#"{"records":1,"requests":1,"estimated_bytes":299,"largest_request_bytes":299,"largest_request_estimated_input_tokens":272,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":154,"upper":272},"upper_bound":false}"#,
             "\n",
         )
     );

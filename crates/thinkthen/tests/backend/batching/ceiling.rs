@@ -221,7 +221,7 @@ fn a_plan_counts_a_closed_batch_and_the_later_singleton_without_sending() {
     assert_eq!(
         lines.next(),
         Some(
-            r#"{"records":3,"requests":3,"estimated_bytes":418,"estimated_input_tokens":{"lower":215,"upper":380},"upper_bound":true}"#
+            r#"{"records":3,"requests":3,"estimated_bytes":418,"largest_request_bytes":248,"largest_request_estimated_input_tokens":226,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":215,"upper":380},"upper_bound":true}"#
         )
     );
     assert_eq!(lines.next(), None);

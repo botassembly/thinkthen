@@ -413,7 +413,7 @@ fn the_record_mode_plan_shows_the_first_record_and_names_the_framing() {
             r#""questions":{"q1":{"type":"noul","#,
             r#""instructions":"The text is \"The payout failed again.\". Does this report a payment failure?"}}}}"#,
             "\n",
-            r#"{"records":3,"requests":3,"estimated_bytes":631,"estimated_input_tokens":{"lower":325,"upper":573},"upper_bound":false}"#,
+            r#"{"records":3,"requests":3,"estimated_bytes":631,"largest_request_bytes":216,"largest_request_estimated_input_tokens":197,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":325,"upper":573},"upper_bound":false}"#,
             "\n",
         )
     );

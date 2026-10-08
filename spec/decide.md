@@ -24,7 +24,7 @@ thinkthen decide --help | sed -n '/^Examples:/,/^The answer is/p' | grep -Fxc "p
 
 ```bash
 printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n '1p' | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund"}}}}'
-printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n '2p' | mustmatch '{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false}'
+printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n '2p' | mustmatch '{"records":1,"requests":1,"estimated_bytes":182,"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false}'
 ```
 
 The plan needs no key. It names the variable a key would be read from and never a value.
