@@ -1,0 +1,264 @@
+record=0 stage=boundary position=0
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: [[é]] TOTAL 42.75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("OUT"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 1.0 }]))
+requests=["f752957fe6252f198393ba229381d7dc6e64cff6b8a272c8bad7b18093184e02"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=0 stage=boundary position=1
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é [[TOTAL]] 42.75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("OUT"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 1.0 }]))
+requests=["c2cf0d87e008b959bed6d2700028d11a60a3ef8fd06bcd75df195b25b804c173"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=0 stage=boundary position=2
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL [[42]].75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("BEGIN"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 1.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 0.0 }]))
+requests=["ae9c26095a1452ac2ecb4253c4ea29899bf2b82f6f0bdc937c57f24167ad54de"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=0 stage=boundary position=3
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL 42[[.]]75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("INSIDE"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 1.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 0.0 }]))
+requests=["17aac01fc261b0728d47ebad62f16d67e672fe7ffe906b04ac6d29c99673f55b"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=0 stage=boundary position=4
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL 42.[[75]].
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("END"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 1.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 0.0 }]))
+requests=["9f2efe0c96abb95699c08a302459c38a9096f27f940d91e3233313acd79b6bf5"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=0 stage=boundary position=5
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL 42.75[[.]]
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("OUT"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 1.0 }]))
+requests=["140d4188fa17f9861dd06046338b9720cdf6094d447dd3f97432eb41230fb1f5"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=0 stage=edge position=0
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Pick the option that wraps exactly the whole requested entity. Retain literal punctuation that belongs to the entity, including decimal points, slashes and web-address punctuation. Leave surrounding sentence punctuation outside.
+
+Text: é TOTAL [[42.75]].
+option=42.75 description=Some("\"é TOTAL [[42.75]].\"")
+option=42.75. description=Some("\"é TOTAL [[42.75.]]\"")
+answer=Some(Choice(Some("42.75"))) failure=None probabilities=Some(Named([NamedProbability { name: "42.75", probability: 1.0 }, NamedProbability { name: "42.75.", probability: 0.0 }]))
+requests=["89d778b23085095ee141d8173cc959bb2ee89e82adb739c9956bd11022a181b5"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(2) }]
+record=0 stage=kind position=0
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Which listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.
+
+Text: é TOTAL [[42.75]].
+option=amount description=Some("\"Receipt total amount, not its label.\"")
+option=none of these description=Some("\"The span fails the caller declaration or no listed kind applies.\"")
+answer=Some(Choice(Some("amount"))) failure=None probabilities=Some(Named([NamedProbability { name: "amount", probability: 1.0 }, NamedProbability { name: "none of these", probability: 0.0 }]))
+requests=["f0272ae27c5cc5c563e0072c45e01bdd9534d42af95a677b5ee67121f240d6e0"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(2) }]
+record=1 stage=boundary position=0
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: [[é]] TOTAL 42.75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("OUT"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 1.0 }]))
+requests=["f752957fe6252f198393ba229381d7dc6e64cff6b8a272c8bad7b18093184e02"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=1 stage=boundary position=1
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é [[TOTAL]] 42.75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("OUT"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 1.0 }]))
+requests=["c2cf0d87e008b959bed6d2700028d11a60a3ef8fd06bcd75df195b25b804c173"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=1 stage=boundary position=2
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL [[42]].75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("BEGIN"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 1.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 0.0 }]))
+requests=["ae9c26095a1452ac2ecb4253c4ea29899bf2b82f6f0bdc937c57f24167ad54de"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=1 stage=boundary position=3
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL 42[[.]]75.
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("INSIDE"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 1.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 0.0 }]))
+requests=["17aac01fc261b0728d47ebad62f16d67e672fe7ffe906b04ac6d29c99673f55b"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=1 stage=boundary position=4
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL 42.[[75]].
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("END"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 1.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 0.0 }]))
+requests=["9f2efe0c96abb95699c08a302459c38a9096f27f940d91e3233313acd79b6bf5"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=1 stage=boundary position=5
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?
+
+Snippet: é TOTAL 42.75[[.]]
+option=BEGIN description=Some("\"first token of an entity of two or more tokens\"")
+option=INSIDE description=Some("\"a middle token of an entity\"")
+option=END description=Some("\"last token of an entity of two or more tokens\"")
+option=SINGLE description=Some("\"a one-token entity\"")
+option=OUT description=Some("\"not part of an entity\"")
+answer=Some(Choice(Some("OUT"))) failure=None probabilities=Some(Named([NamedProbability { name: "BEGIN", probability: 0.0 }, NamedProbability { name: "INSIDE", probability: 0.0 }, NamedProbability { name: "END", probability: 0.0 }, NamedProbability { name: "SINGLE", probability: 0.0 }, NamedProbability { name: "OUT", probability: 1.0 }]))
+requests=["140d4188fa17f9861dd06046338b9720cdf6094d447dd3f97432eb41230fb1f5"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(6) }]
+record=1 stage=edge position=0
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Pick the option that wraps exactly the whole requested entity. Retain literal punctuation that belongs to the entity, including decimal points, slashes and web-address punctuation. Leave surrounding sentence punctuation outside.
+
+Text: é TOTAL [[42.75]].
+option=42.75 description=Some("\"é TOTAL [[42.75]].\"")
+option=42.75. description=Some("\"é TOTAL [[42.75.]]\"")
+answer=Some(Choice(Some("42.75"))) failure=None probabilities=Some(Named([NamedProbability { name: "42.75", probability: 1.0 }, NamedProbability { name: "42.75.", probability: 0.0 }]))
+requests=["89d778b23085095ee141d8173cc959bb2ee89e82adb739c9956bd11022a181b5"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(2) }]
+record=1 stage=kind position=0
+question=Recognize literal entity spans in the text according to this caller declaration.
+Instructions: Return literal receipt amounts.
+Exclude the TOTAL label.
+Entity definition: The complete numeric amount, including its decimal point.
+Kinds and descriptions: 
+amount: "Receipt total amount, not its label."
+Which listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.
+
+Text: é TOTAL [[42.75]].
+option=amount description=Some("\"Receipt total amount, not its label.\"")
+option=none of these description=Some("\"The span fails the caller declaration or no listed kind applies.\"")
+answer=Some(Choice(Some("amount"))) failure=None probabilities=Some(Named([NamedProbability { name: "amount", probability: 1.0 }, NamedProbability { name: "none of these", probability: 0.0 }]))
+requests=["f0272ae27c5cc5c563e0072c45e01bdd9534d42af95a677b5ee67121f240d6e0"] cached=true sources=[QuestionSource { origin: Replay, answered_by: "<withheld>", batch_size: Some(2) }]
+completed=[0, 1]
+original[0]=é TOTAL 42.75.
+original[1]=é TOTAL 42.75.
+requests_sent=0

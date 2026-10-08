@@ -62,6 +62,21 @@ A step-1 request holds at most 40 consecutive pieces. Its evidence runs from six
 
 After every step-1 request returns, a Viterbi decode picks the most likely valid tag sequence over the whole text. `BEGIN` and `INSIDE` must be followed by `INSIDE` or `END`. Each probability is floored at one in a million. On a tie the earlier tag in the order above wins. A `SINGLE` piece is a name, and so is a `BEGIN` through its `END`.
 
+### Inspect the current question rendering
+
+Generated question wording is subject to change. It is not a stable interchange format or an authored template to copy into context. The tagged-example inputs above are the stable interface for teaching recognition; the engine renders them with the current boundary wording.
+
+Run this from a development checkout with its command on PATH:
+
+```sh
+printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize person organization --plan \
+  | sed -n '1p' | jq '.requests[0].body_utf8 | fromjson | .questions'
+```
+
+The plan exposes the first record's actual step-1 request bodies. In the current default rendering, each question asks where the `[[ ]]` token stands in a name of the requested kinds and appends a marked `Snippet:`. Its declared options are BEGIN, INSIDE, END, SINGLE and OUT, with descriptions. Caller task wording or described kinds selects the neutral entity rendering, which prefixes the complete caller declaration and asks where the token stands in an entity. Tagged examples appear in the boundary evidence; they do not replace the question text.
+
+The plan cannot know which names the boundary answers will produce. It reports an upper bound for later name requests and does not show actual step-2 kind or edge questions. Read those questions from the native observer after replay or execution, as described below.
+
 ## Step 2: kinds and edges
 
 Step 2 sends one request for each step-1 request that holds a found name's first piece. Its evidence runs from six pieces before its first name to six pieces after its last. A request with no questions is not sent.
@@ -72,6 +87,8 @@ Step 2 sends one request for each step-1 request that holds a found name's first
 An exact tie for a kind or edge option takes the first option asked. Kinds follow caller order, with `none of these` last. Edge options follow the order above.
 
 With no kinds, only edge questions go out. When the edge pick leaves two names with the same start, end and kind, the one with the higher strength prints, and on equal strength the first.
+
+The current default kind question asks which listed kind applies to the words wrapped in `[[ ]]`, appends a marked `Text:`, and offers caller kinds followed by `none of these`. The custom rendering prefixes the complete caller declaration and asks which kind applies to the marked entity. The edge question asks which option wraps the whole name, with punctuation belonging to the name kept inside. Its option labels are candidate span text; their descriptions carry the corresponding marked snippets. Custom edge wording also carries the caller declaration. These are descriptions of current generated shapes, not stable question wording.
 
 ## Names
 
@@ -158,3 +175,24 @@ With relations, numeric `relation_pairs_upper_bound` and `relation_requests_uppe
 `specification/fixtures/recognize/README.md` replays ticket 0147's recorded runs on the repository's own keys. At the five core kinds the run scored F1 0.865. With no kinds it scored 0.884, at `person` alone 0.847, and on a 1,018-word text 0.960. It found 20 of 27 stated relation edges. Local experiment 288 measured 80.1 F1 on a full public split and 59.1 on WNUT-17 with the same wording and window. Each figure comes from one run.
 
 This specification makes no public price claim.
+
+## Read native stage observations
+
+Native Rust callers can inspect each logical question through `CallOptions::new().observe(&callback)` on `Engine::recognize_records_complete_with`. The [runnable recipe](../libraries/rust/examples/recognize_observe.rs) replays the repository's saved generic receipt fixture twice, retains each original record, and copies each borrowed `QuestionDetail` with `to_owned()` inside the callback. It groups snapshots by `(index, stage, position)` in a map. `index` is the zero-based original record occurrence; `position` is the zero-based question position within that record's stage. Stage names are `boundary`, `kind`, `edge` and `relation`. The map's lexical stage order is for lookup; it does not describe execution order.
+
+Run the recipe from the repository root without a key:
+
+```sh
+env -u THINKTHEN_API_KEY cargo run --locked --offline \
+  --manifest-path libraries/rust/Cargo.toml --example recognize_observe
+```
+
+For each snapshot, `owned.detail().question()` exposes the actual normalized logical question. `text().text()` reads its literal wording, and `options()` iterates declared options and their descriptions in order. The recipe prints those values, `value()`, `failure()`, `probabilities()` and `requests()`. Its pinned output maps record 0, boundary position 2 to the marked piece `42` and the answer `BEGIN`; record 1 retains the same logical mapping as a distinct original occurrence. The observer answer is the individual question's typed reading, not the later whole-text boundary decode or the final entity strength.
+
+`RecordObservation::Row` marks a completed record and follows that record's questions. A failed request yields no complete result for that record; earlier completed rows and available question failure observations do not imply the whole call succeeded. Kind questions need caller kinds, edge questions need alternative spans, and relation questions need eligible pairs under a supplied rule. Every stage need not occur on every input.
+
+Cache and strict replay can supply the same logical question observations without sending. `cached()` covers both; inspect `question_sources()` for actual cache/replay source metadata and retain absent historical counts as unknown. The recipe explicitly disables the cache, uses strict replay and reports zero sends. Its example gate runs with no key, pins the actual text/options/answers and record mapping, and counts zero connections at the saved loopback endpoint. These controlled fixture answers demonstrate the interface and replay behavior; they measure no model accuracy.
+
+Serialized `RecordObservation` events omit actual question text. CLI `--details` provides question digests and stage distributions, but does not provide this indexed question transcript. Recordings retain request and response bodies, but do not themselves present the record/stage/position join. This recipe covers the native Rust observer route. It establishes no equivalent trace feature in other SDKs or the CLI.
+
+The callback exposes supplied question and evidence text to the caller. Copy or own it before the callback returns, and protect any caller-created transcript under the same privacy rules as the originals and recordings. The recipe retains its snapshots only in memory and prints them to standard output; it introduces no trace store.

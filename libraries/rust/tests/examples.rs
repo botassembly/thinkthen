@@ -4,8 +4,11 @@
 //! `Engine::from_env`, with nothing in its environment but a loopback
 //! address, a fake key, and a fresh cache folder. The loopback backend's
 //! generic arm answers every question, so each pinned text follows that
-//! arm's rule. A model would answer differently.
+//! arm's rule. A model would answer differently. The recognition observer
+//! recipe uses strict saved-fixture replay with no key; its endpoint counter
+//! must remain at zero.
 
+use std::net::TcpListener;
 use std::path::Path;
 use std::process::Command;
 
@@ -38,14 +41,34 @@ fn every_example_prints_its_pinned_answer() {
         let program = built
             .join("examples")
             .join(format!("{name}{}", std::env::consts::EXE_SUFFIX));
-        let output = Command::new(&program)
+        let replay = name == "recognize_observe";
+        let listener = replay.then(|| {
+            let fixture = sources.join("../../../specification/fixtures/recognize/caller-defined");
+            let url = std::fs::read_to_string(fixture.join("url.txt")).expect("saved URL");
+            let address = url
+                .trim()
+                .strip_prefix("http://")
+                .expect("loopback URL")
+                .strip_suffix("/v1")
+                .expect("fixture route");
+            let listener = TcpListener::bind(address).expect("fixture endpoint available");
+            listener
+                .set_nonblocking(true)
+                .expect("nonblocking listener");
+            listener
+        });
+        let mut command = Command::new(&program);
+        command
             .env_clear()
             .env(
                 "THINKTHEN_BASE_URL",
                 format!("{}/generic/v1", backend.origin()),
             )
-            .env("THINKTHEN_API_KEY", "sk-examples-loopback")
-            .env("THINKTHEN_CACHE", &cache)
+            .env("THINKTHEN_CACHE", &cache);
+        if !replay {
+            command.env("THINKTHEN_API_KEY", "sk-examples-loopback");
+        }
+        let output = command
             .output()
             .unwrap_or_else(|error| panic!("{name} ran from {}: {error}", program.display()));
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -54,7 +77,12 @@ fn every_example_prints_its_pinned_answer() {
             "{name}: {stderr}"
         );
         assert_eq!(String::from_utf8_lossy(&output.stdout), expected, "{name}");
-        assert!(backend.count() > 0, "{name} answered without the backend");
+        if let Some(listener) = listener {
+            let sends = listener.incoming().take_while(Result::is_ok).count();
+            assert_eq!(sends, 0, "replay sent to its saved endpoint");
+        } else {
+            assert!(backend.count() > 0, "{name} answered without the backend");
+        }
         ran += 1;
     }
     assert!(ran > 0, "the examples folder holds no program");
