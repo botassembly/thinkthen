@@ -1,6 +1,6 @@
 # 0425: Put the complete SDK outcome into the 0.2 plan
 
-Status: OPEN. The complete reviewed 0.2 plan is landed and assigns every PM ask, dependencies and acceptance checks. Installed parity, MCP timing, docs and final candidate qualification remain open.
+Status: OPEN. The reviewed plan, implemented-behavior notes, documentation trials and local MCP timing are complete. The combined installed-package table, final platform qualification, release QA and publication-dependent checks remain.
 
 Milestone: 0.2
 
