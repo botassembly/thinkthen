@@ -41,7 +41,7 @@ impl std::fmt::Debug for Message {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize)]
 pub(super) struct Fault {
     pub(super) code: i32,
     pub(super) message: &'static str,
@@ -78,14 +78,29 @@ impl Fault {
     };
 }
 
-pub(super) fn parse(bytes: &[u8]) -> Result<Message, Fault> {
+pub(super) fn parse(bytes: &[u8]) -> Result<Message, (Option<Id>, Fault)> {
     // The first parse distinguishes bad JSON from an invalid envelope. A null
     // id is never a notification; MCP request IDs are strings or integers.
-    let value: serde_json::Value = serde_json::from_slice(bytes).map_err(|_| Fault::PARSE)?;
-    if value.get("id").is_some_and(serde_json::Value::is_null) {
-        return Err(Fault::REQUEST);
+    let value: serde_json::Value =
+        serde_json::from_slice(bytes).map_err(|_| (None, Fault::PARSE))?;
+    if !value.is_object() {
+        return Err((None, Fault::REQUEST));
     }
-    let message: Message = serde_json::from_slice(bytes).map_err(|_| Fault::REQUEST)?;
+    // Deserialize the ID independently so envelope faults retain correlation.
+    // Unlike a Value lookup, this refuses duplicate IDs instead of picking one.
+    #[derive(Deserialize)]
+    struct Identity {
+        #[serde(default)]
+        id: Option<Id>,
+    }
+    let id = serde_json::from_slice::<Identity>(bytes)
+        .ok()
+        .and_then(|identity| identity.id);
+    if value.get("id").is_some_and(serde_json::Value::is_null) {
+        return Err((id, Fault::REQUEST));
+    }
+    let message: Message =
+        serde_json::from_slice(bytes).map_err(|_| (id.clone(), Fault::REQUEST))?;
     if message.jsonrpc != "2.0"
         || message.method.len() > 128
         || message
@@ -93,7 +108,7 @@ pub(super) fn parse(bytes: &[u8]) -> Result<Message, Fault> {
             .as_ref()
             .is_some_and(|id| matches!(id, Id::Text(s) if s.len() > 256))
     {
-        return Err(Fault::REQUEST);
+        return Err((id, Fault::REQUEST));
     }
     Ok(message)
 }

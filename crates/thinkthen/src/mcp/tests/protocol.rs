@@ -19,12 +19,13 @@ fn malformed_envelopes_do_not_echo_payloads_or_admit_null_ids() {
         r#"[{"jsonrpc":"2.0","id":1,"method":"ping"}]"#,
     ] {
         let fault = protocol::parse(text.as_bytes()).expect_err(text);
-        assert_eq!(fault.code, Fault::REQUEST.code);
-        assert!(!fault.message.contains("private-payload"));
+        assert_eq!(fault.1.code, Fault::REQUEST.code);
+        assert!(!fault.1.message.contains("private-payload"));
     }
     assert_eq!(
         protocol::parse(b"not JSON private-payload")
             .unwrap_err()
+            .1
             .code,
         -32700
     );
@@ -74,7 +75,7 @@ fn framing_bounds_oversize_and_rejects_unterminated_utf8() {
             .code,
         -32700
     );
-    assert_eq!(protocol::parse(&[0xff, b'\n']).unwrap_err().code, -32700);
+    assert_eq!(protocol::parse(&[0xff, b'\n']).unwrap_err().1.code, -32700);
 }
 
 #[test]

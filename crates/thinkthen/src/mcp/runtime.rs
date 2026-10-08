@@ -296,8 +296,8 @@ fn read_messages(
         };
         let message = match protocol::parse(&bytes) {
             Ok(message) => message,
-            Err(fault) => {
-                enqueue(sender, Event::Fault { id: None, fault })?;
+            Err((id, fault)) => {
+                enqueue(sender, Event::Fault { id, fault })?;
                 continue;
             }
         };

@@ -46,6 +46,37 @@ class Installed(unittest.TestCase):
         return Client.launch((BINARY, 'mcp', '--url', f'http://127.0.0.1:{self.port}/{route}/v1',
                               '--max-retries', '0', *options), env=self.env)
 
+    def test_protocol_errors_preserve_readable_ids_and_omit_unreadable_ids(self):
+        cases = [
+            ('{"jsonrpc":"1.0","id":"readable","method":"PRIVATE"}\n', 'readable', -32600),
+            ('{"jsonrpc":"2.0","id":-7,"method":false}\n', -7, -32600),
+            ('{"jsonrpc":"2.0","id":18446744073709551615,"method":"ping","extra":"PRIVATE"}\n',
+             18446744073709551615, -32600),
+            ('["2.0",1,"ping",{}]\n', None, -32600),
+            ('["readable"]\n', None, -32600),
+            ('{"jsonrpc":"2.0","id":null,"method":"ping"}\n', None, -32600),
+            ('{"jsonrpc":"2.0","id":true,"method":"ping"}\n', None, -32600),
+            ('{"jsonrpc":"2.0","id":1.5,"method":"ping"}\n', None, -32600),
+            ('{"jsonrpc":"2.0","id":1,"id":2,"method":"ping"}\n', None, -32600),
+            ('{"jsonrpc":"2.0","id":3,"method":\n', None, -32700),
+        ]
+        with self.launch() as client:
+            for wire, ident, code in cases:
+                with self.subTest(wire=wire):
+                    client.writer.write(wire.encode())
+                    client.writer.flush()
+                    reply = client._responses.get(timeout=3)
+                    self.assertIsInstance(reply, dict)
+                    self.assertEqual(reply['error']['code'], code)
+                    if ident is None:
+                        self.assertNotIn('id', reply)
+                    else:
+                        self.assertIs(type(reply['id']), type(ident))
+                        self.assertEqual(reply['id'], ident)
+                    self.assertNotIn('PRIVATE', json.dumps(reply))
+            self.assertEqual(client.ping(), {})
+        self.assertEqual(self.count(), 0)
+
     def test_dynamic_explicit_field_overrides_saved_on_without_disclosing_private_evidence(self):
         from http.server import BaseHTTPRequestHandler, HTTPServer
         captured = []
@@ -446,18 +477,33 @@ class Installed(unittest.TestCase):
             self.assertIs(reply['value']['value'], True)
             self.assertEqual(self.count(), 2)
 
-    def test_eof_joins_the_owned_started_attempt(self):
-        client = self.launch('arm/held', '--no-cache')
-        process = client.process
-        client._send({'jsonrpc': '2.0', 'id': 100, 'method': 'tools/call',
-                      'params': {'name': 'decide', 'arguments': {'question': 'Q?', 'evidence': 'x'}}})
-        self.backend_line('wait 1')
-        self.assertEqual(self.backend.stdout.readline().strip(), 'wait 1')
-        process.stdin.close()
-        self.backend_line('release')
-        self.assertEqual(process.wait(timeout=3), 0)
-        client.close()
-        self.assertEqual(self.count(), 1)
+    def test_eof_refuses_another_call_and_joins_the_owned_started_attempt(self):
+        for final in (b'\n', b''):
+            with self.subTest(final=final):
+                before = self.count()
+                client = self.launch('arm/held', '--no-cache')
+                try:
+                    process = client.process
+                    client._send({'jsonrpc': '2.0', 'id': 100, 'method': 'tools/call',
+                                  'params': {'name': 'decide', 'arguments': {'question': 'Q?', 'evidence': 'x'}}})
+                    self.backend_line(f'wait {before + 1}')
+                    self.assertEqual(self.backend.stdout.readline().strip(), f'wait {before + 1}')
+                    # A complete call is refused while the first attempt is held.
+                    # Without LF, even complete JSON is an incomplete transport frame.
+                    pending = {'jsonrpc': '2.0', 'id': 101, 'method': 'tools/call',
+                               'params': {'name': 'decide', 'arguments': {'question': 'Next?', 'evidence': 'x'}}}
+                    process.stdin.write(json.dumps(pending).encode() + final)
+                    process.stdin.flush()
+                    if final:
+                        reply = client._responses.get(timeout=3)
+                        self.assertEqual(reply['id'], 101)
+                        self.assertEqual(reply['error']['code'], -32001)
+                    process.stdin.close()
+                    self.backend_line('release')
+                    self.assertEqual(process.wait(timeout=3), 0 if final else 5)
+                    self.assertEqual(self.count(), before + 1)
+                finally:
+                    client.close()
 
 
 if __name__ == '__main__':

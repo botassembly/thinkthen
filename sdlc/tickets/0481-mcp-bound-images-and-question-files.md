@@ -20,3 +20,7 @@ MCP refuses over-budget attachment calls before retaining unbounded file content
   Claim `crates/thinkthen/src/mcp/**`, `crates/thinkthen/src/public/input/**`, `specification/mcp.md` and `sdlc/planning/adr/**`.
 - Proof: Many individually valid rows repeating one image under default unlimited records hit the shared byte ceiling with bounded retained buffers, before later file reads and before sends. Cover explicit, inline and source-backed images; do not prove only a single descriptor or only a configured record cap. Owned FIFO and stdin selectors fail promptly; the next framed MCP request remains usable. Normal files, named references and duplicate ordering below the ceiling still work. Preserve cancel/shutdown and installed MCP cases. Fresh memory/liveness review.
 - Defers: New MCP tools, endpoints, tracing and general filesystem architecture. No private files, report text or paid calls in reproduction.
+
+## Progress
+
+- 2026-10-08 started

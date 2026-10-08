@@ -2,7 +2,7 @@
 
 use super::protocol::{Fault, Id};
 use serde::Serialize;
-use serde_json::{json, value::RawValue};
+use serde_json::value::RawValue;
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 
@@ -36,9 +36,20 @@ impl<W: Write> Output<W> {
         })
     }
     pub(super) fn fault(&self, id: Option<&Id>, fault: Fault) -> io::Result<()> {
-        self.write(&json!({"jsonrpc":"2.0", "id":id,
-            "error":{"code":fault.code,"message":fault.message}}))
+        #[derive(Serialize)]
+        struct Response<'a> {
+            jsonrpc: &'static str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            id: Option<&'a Id>,
+            error: Fault,
+        }
+        self.write(&Response {
+            jsonrpc: "2.0",
+            id,
+            error: fault,
+        })
     }
+
     fn write(&self, value: &impl Serialize) -> io::Result<()> {
         serde_json::to_writer(Counter(1), value)
             .map_err(|_| io::Error::other("MCP output exceeds 192 MiB"))?;
