@@ -1,6 +1,6 @@
 # 0490: Render caller-supplied tagged examples for recognition
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -11,6 +11,8 @@ Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 Reviews: revision c477a9ac099cfcb43307e8e79c414215eb39bc97, accept
 
 Reviews: revision 2e72414068757e9b3c21ae42b558693f0e44166a, accept
+
+Landed: ffbab8d
 
 ## Outcome
 
