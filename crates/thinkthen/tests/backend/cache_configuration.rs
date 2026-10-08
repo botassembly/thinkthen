@@ -257,12 +257,14 @@ fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() 
                 .stdin(std::process::Stdio::piped())
                 .spawn()
                 .unwrap();
-        use std::io::{BufRead as _, Write as _};
+        use std::io::{BufRead as _, Read as _, Write as _};
         child.stdin.as_mut().unwrap().write_all(PING).unwrap();
         let mut line = String::new();
-        std::io::BufReader::new(child.stdout.take().unwrap())
-            .read_line(&mut line)
-            .unwrap();
+        let mut reader = std::io::BufReader::new(child.stdout.take().unwrap());
+        reader.read_line(&mut line).unwrap();
+        drop(child.stdin.take());
+        let mut stdout = line.into_bytes();
+        reader.read_to_end(&mut stdout).unwrap();
         let output = crate::wait::finish(child, "mcp configuration").unwrap();
         assert_eq!(
             output.status.code(),
@@ -272,8 +274,8 @@ fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() 
         );
         assert_eq!(String::from_utf8_lossy(&output.stderr), warning, "{mode:o}");
         assert_eq!(
-            serde_json::from_str::<serde_json::Value>(&line).unwrap(),
-            serde_json::json!({"jsonrpc":"2.0","id":1,"result":{}})
+            stdout, b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n",
+            "{mode:o}"
         );
     }
     let root = folder("mcp-configuration-shared-backends");
