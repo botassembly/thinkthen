@@ -260,12 +260,10 @@ impl RecognizeBuilder {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Usage`] for a repeated kind or a twenty-first.
+    /// Returns [`Error::Usage`] for a repeated kind.
     pub fn kind(mut self, value: Kind) -> Result<Self, Error> {
-        if self.kinds.len() == 20 || self.kinds.iter().any(|held| held.name == value.name) {
-            return Err(Error::usage(
-                "recognize takes 0 to 20 distinct, nonblank kinds",
-            ));
+        if self.kinds.iter().any(|held| held.name == value.name) {
+            return Err(Error::usage("recognize takes distinct, nonblank kinds"));
         }
         self.kinds.push(value);
         Ok(self)

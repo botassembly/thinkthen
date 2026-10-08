@@ -190,6 +190,7 @@ fn bulk(
         inputs: Some(1),
         questions: None,
         sized: true,
+        strict_singleton: false,
         context: false,
         detailed: false,
         continues: false,

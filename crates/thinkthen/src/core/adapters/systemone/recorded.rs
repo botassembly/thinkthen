@@ -40,10 +40,13 @@ pub(crate) fn decoder(question: &Json) -> Option<Question> {
             let Json::Object(criteria) = field(question, "criteria")? else {
                 return None;
             };
-            let options = criteria.iter().map(|(option, _)| option.clone()).collect();
+            let options = criteria
+                .iter()
+                .map(|(option, _)| (option.clone(), None))
+                .collect();
             Some(Question::Choose {
                 text,
-                options: Labels::options(options).ok()?,
+                options: Labels::recognition_menu(options).ok()?,
             })
         }
         Json::String(kind) if kind == "score" => {

@@ -268,6 +268,8 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
     assert_eq!(
         counts,
         json!({"records":5,"requests":10,"estimated_bytes":1402,
+            "largest_request_bytes":1402,"largest_request_estimated_input_tokens":1274,
+            "token_estimate_method":"encoded-body-bytes-908-v1",
             "estimated_input_tokens":{"lower":723,"upper":1274},"upper_bound":true})
     );
     let full = serde_json::to_vec(&plan["request"]).expect("body size");

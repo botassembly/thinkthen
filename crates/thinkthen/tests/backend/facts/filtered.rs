@@ -48,6 +48,9 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
         .expect("validated call identity");
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
+    let largest = requests
+        .iter()
+        .fold(0, |most, request| most.max(request.body.len()));
     for request in requests {
         assert_eq!(
             request.header("X-ThinkThen-Call-Id"),
@@ -62,6 +65,8 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
         Value::Object(pinned),
         json!({"schema":"thinkthen.run/1","records":25,"requests_sent":3,
             "retries":0,"cache_answers":0,"input_tokens":300,"output_tokens":30,
+            "largest_request_bytes":largest,"largest_request_estimated_input_tokens":(largest * 908).div_ceil(1000),
+            "token_estimate_method":"encoded-body-bytes-908-v1",
             "model":"jev-1.13.0"})
     );
     assert_eq!(String::from_utf8_lossy(&output.stderr).lines().count(), 1);

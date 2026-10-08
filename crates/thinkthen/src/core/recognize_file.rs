@@ -91,7 +91,7 @@ pub(crate) enum RecognizeConfigError {
     Declaration(#[from] crate::core::declaration::DeclarationError),
     #[error("a recognize question file is one closed version-one object")]
     Shape,
-    #[error("recognize takes 0 to 20 distinct, nonblank kinds")]
+    #[error("recognize takes distinct, nonblank kinds")]
     Kinds,
     #[error("recognize reserves the kind names none of these, ENTITY and ANY in any ASCII case")]
     Reserved,
@@ -250,7 +250,7 @@ fn validate_kinds(kinds: &[(String, Option<Description>)]) -> Result<(), Recogni
     if kinds.is_empty() {
         return Ok(());
     }
-    Labels::tags(kinds.to_vec()).map_err(|_| RecognizeConfigError::Kinds)?;
+    Labels::recognition_kinds(kinds.to_vec()).map_err(|_| RecognizeConfigError::Kinds)?;
     if kinds.iter().any(|(kind, _)| {
         RESERVED
             .iter()

@@ -1232,6 +1232,21 @@
             "integer"
           ]
         },
+        "largest_request_bytes": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "largest_request_estimated_input_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "model": {
           "type": [
             "string"
@@ -1260,6 +1275,9 @@
         "seconds": {
           "format": "double",
           "type": "number"
+        },
+        "token_estimate_method": {
+          "type": "string"
         }
       },
       "required": [
@@ -1267,6 +1285,9 @@
         "cache_answers",
         "records",
         "requests_sent",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
         "seconds"
       ],
       "type": "object",

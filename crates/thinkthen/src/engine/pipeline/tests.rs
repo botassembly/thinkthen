@@ -79,6 +79,7 @@ const ONE_EACH: Packing = Packing {
     questions: None,
     sized: true,
     inputs: Some(1),
+    strict_singleton: false,
     context: false,
     detailed: false,
     continues: false,

@@ -20,6 +20,10 @@ impl Serialize for ProfileName {
 }
 
 impl ProfileName {
+    pub(crate) fn recognition_request() -> Self {
+        Self("recognition-request".to_owned())
+    }
+
     pub(crate) fn image_route() -> Self {
         Self("image-route".to_owned())
     }

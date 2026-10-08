@@ -65,7 +65,7 @@ fn a_url_alone_names_the_base_and_the_key_variable_does_not_change() {
             r#""request":{"state":"Each question quotes the text it asks about.","model":"local-1","#,
             r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund"}}}}"#,
             "\n",
-            r#"{"records":1,"requests":1,"estimated_bytes":179,"estimated_input_tokens":{"lower":92,"upper":163},"upper_bound":false}"#,
+            r#"{"records":1,"requests":1,"estimated_bytes":179,"largest_request_bytes":179,"largest_request_estimated_input_tokens":163,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":92,"upper":163},"upper_bound":false}"#,
             "\n",
         )
     );
@@ -86,7 +86,7 @@ fn the_plan_holds_four_fields_and_names_the_key_variable_without_reading_it() {
             r#""request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","#,
             r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund"}}}}"#,
             "\n",
-            r#"{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false}"#,
+            r#"{"records":1,"requests":1,"estimated_bytes":182,"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false}"#,
             "\n",
         )
     );

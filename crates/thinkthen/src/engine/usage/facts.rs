@@ -9,6 +9,7 @@ use super::{Counters, Counts};
 #[derive(Debug)]
 pub(super) struct State {
     records: u64,
+    largest_request_bytes: usize,
     live_replies: u64,
     reported: ReportedSum,
     model: Option<ModelName>,
@@ -21,6 +22,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             records: 0,
+            largest_request_bytes: 0,
             live_replies: 0,
             reported: ReportedSum::default(),
             model: None,
@@ -35,6 +37,7 @@ impl Default for State {
 pub(crate) struct Snapshot {
     pub(crate) counts: Counts,
     pub(crate) records: u64,
+    pub(crate) largest_request_bytes: usize,
     pub(crate) reported: Option<ReportedUsage>,
     pub(crate) estimated_cost_usd: Option<String>,
     pub(crate) model: Option<String>,
@@ -42,6 +45,16 @@ pub(crate) struct Snapshot {
 }
 
 impl Counters {
+    /// Measure bodies only after their live attempt is marked.
+    pub(crate) fn request_body_sent(&self, bytes: usize) {
+        let mut queue = self
+            .shared
+            .queue
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        queue.facts.largest_request_bytes = queue.facts.largest_request_bytes.max(bytes);
+    }
+
     pub(crate) fn held_model_mismatch(&self) {
         self.held_model_mismatch
             .store(true, std::sync::atomic::Ordering::Release);
@@ -120,6 +133,7 @@ impl Counters {
             http_time: self.shared.http.total(),
             counts: queue.totals,
             records: queue.facts.records,
+            largest_request_bytes: queue.facts.largest_request_bytes,
             reported,
             estimated_cost_usd: queue.facts.prices.and_then(|prices| {
                 cost_complete.then(|| {

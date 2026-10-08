@@ -15,11 +15,13 @@ pub(crate) struct PlanSummary {
     records: usize,
     requests: usize,
     estimated_bytes: usize,
+    largest_request_bytes: usize,
     first_body: Option<Vec<u8>>,
     upper_bound: bool,
 }
 
 impl PlanSummary {
+    pub(crate) const TOKEN_ESTIMATE_METHOD: &str = "encoded-body-bytes-908-v1";
     /// Version-one measured high rate, shared by preview and per-attempt admission.
     /// Callers choose whether to round a whole planned sum or each final body.
     pub(crate) fn estimated_input_high(bytes: u64) -> Option<u64> {
@@ -55,6 +57,7 @@ impl PlanSummary {
         if self.first_body.is_none() {
             self.first_body = Some(body.to_vec());
         }
+        self.largest_request_bytes = self.largest_request_bytes.max(body.len());
         self.requests = requests;
         self.estimated_bytes = bytes;
         Ok(())
@@ -96,6 +99,12 @@ impl PlanSummary {
             records: self.records,
             requests: self.requests,
             estimated_bytes: self.estimated_bytes,
+            largest_request_bytes: self.largest_request_bytes,
+            largest_request_estimated_input_tokens: Self::estimated_input_high(
+                self.largest_request_bytes as u64,
+            )
+            .ok_or(PlanTooLarge)?,
+            token_estimate_method: Self::TOKEN_ESTIMATE_METHOD,
             estimated_input_tokens: TokenBand { lower, upper },
             upper_bound: self.upper_bound,
         })
@@ -107,6 +116,9 @@ pub(crate) struct PlanCounts {
     pub(crate) records: usize,
     pub(crate) requests: usize,
     pub(crate) estimated_bytes: usize,
+    pub(crate) largest_request_bytes: usize,
+    pub(crate) largest_request_estimated_input_tokens: u64,
+    pub(crate) token_estimate_method: &'static str,
     pub(crate) estimated_input_tokens: TokenBand,
     pub(crate) upper_bound: bool,
 }

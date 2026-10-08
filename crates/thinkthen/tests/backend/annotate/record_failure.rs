@@ -397,7 +397,8 @@ fn skipped_row_counts_as_finished_with_only_known_token_usage() -> io::Result<()
         facts,
         json!({"schema":"thinkthen.run/1","records":3,
         "requests_sent":2,"retries":0,"cache_answers":0,
-        "model":"local-1"})
+        "largest_request_bytes":165,"largest_request_estimated_input_tokens":150,
+        "token_estimate_method":"encoded-body-bytes-908-v1","model":"local-1"})
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);

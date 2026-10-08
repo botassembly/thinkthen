@@ -140,8 +140,8 @@ pub(crate) fn canonical_question(text: &str) -> Option<(String, Question)> {
         },
         Encoded::Choice { choices, .. } => Question::Choose {
             text: wording,
-            options: crate::core::Labels::options(
-                choices.iter().map(|v| v.value.clone()).collect(),
+            options: crate::core::Labels::recognition_menu(
+                choices.iter().map(|v| (v.value.clone(), None)).collect(),
             )
             .ok()?,
         },

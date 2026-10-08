@@ -64,6 +64,8 @@ fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
     assert_eq!(
         packed_counts,
         serde_json::json!({"records":1,"requests":2,"estimated_bytes":212,
+            "largest_request_bytes":212,"largest_request_estimated_input_tokens":193,
+            "token_estimate_method":"encoded-body-bytes-908-v1",
             "estimated_input_tokens":{"lower":109,"upper":193},"upper_bound":true})
     );
     let (split, split_counts) = preview(&under);
@@ -76,6 +78,8 @@ fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
     assert_eq!(
         split_counts,
         serde_json::json!({"records":1,"requests":2,"estimated_bytes":273,
+            "largest_request_bytes":137,"largest_request_estimated_input_tokens":125,
+            "token_estimate_method":"encoded-body-bytes-908-v1",
             "estimated_input_tokens":{"lower":140,"upper":248},"upper_bound":false})
     );
 }

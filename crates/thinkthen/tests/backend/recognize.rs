@@ -9,6 +9,7 @@ mod custom;
 mod examples;
 mod rules;
 mod seeds;
+mod sized;
 mod stores;
 mod unicode;
 
@@ -330,7 +331,11 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
     let listener = Listener::answering(automatic).expect("listener");
     let at_limit = format!("{} ", "w".repeat(9_999)).repeat(60);
     assert_eq!(at_limit.len(), 600_000);
-    let plan = plan_json(&run(&listener, &["person", "--plan"], at_limit.as_bytes()));
+    let plan = plan_json(&run(
+        &listener,
+        &["person", "--plan", "--max-request-bytes", "10000000"],
+        at_limit.as_bytes(),
+    ));
     assert_eq!(
         (&plan["pieces"], &plan["request_count"]),
         (&Value::from(60), &Value::from(2))
@@ -344,7 +349,14 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
     );
     let raised = plan_json(&run(
         &listener,
-        &["person", "--plan", "--max-text-bytes", "700000"],
+        &[
+            "person",
+            "--plan",
+            "--max-text-bytes",
+            "700000",
+            "--max-request-bytes",
+            "10000000",
+        ],
         over.as_bytes(),
     ));
     assert_eq!(raised["pieces"], 61);

@@ -5,7 +5,7 @@
   "ProfileWarning" = list("tuned_for"="str","running"="str"),
   "BatchWarning" = list("tuned_for"="batch","running"="batch"),
   "Attempt" = list("ordinal"="positive","request_sha256"="Digest","wall_ms"="uint","outcome"="outcome","sdk_request_id"="SdkRequestId","status?"="uint","server_ms?"="uint","request_id?"="str"),
-  "Facts" = list("call_id"="CallId","records"="uint","requests_sent"="uint","cache_answers"="uint","seconds"="number","input_tokens?"="uint","output_tokens?"="uint","model?"="str","estimated_cost_usd?"="cost","command_ms?"="uint","attempts?"="[Attempt]","held_model_mismatch?"="bool"),
+  "Facts" = list("largest_request_bytes?"="uint","largest_request_estimated_input_tokens?"="uint","token_estimate_method?"="str","call_id"="CallId","records"="uint","requests_sent"="uint","cache_answers"="uint","seconds"="number","input_tokens?"="uint","output_tokens?"="uint","model?"="str","estimated_cost_usd?"="cost","command_ms?"="uint","attempts?"="[Attempt]","held_model_mismatch?"="bool"),
   "QuestionSource" = list("origin"="origin","answered_by"="str","batch_size?"="positive"),
   "Observed" = list("observation_id"="ObservationId"),
   "FailedObservation" = list("failure_id"="FailureId"),

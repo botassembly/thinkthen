@@ -433,11 +433,18 @@ fn preview_matches_counted_requests(
     assert_eq!(facts["records"], 3);
     assert_eq!(facts["requests_sent"], 3 * per_record);
     let bytes: usize = requests.iter().map(|request| request.body.len()).sum();
+    let largest = requests
+        .iter()
+        .map(|request| request.body.len())
+        .max()
+        .unwrap_or(0);
     let summary: Value = serde_json::from_str(&lines[1])?;
     assert_eq!(
         summary,
         serde_json::json!({
             "records":3,"requests":6,"estimated_bytes":bytes,
+            "largest_request_bytes":largest,"largest_request_estimated_input_tokens":(largest * 908).div_ceil(1000),
+            "token_estimate_method":"encoded-body-bytes-908-v1",
             "estimated_input_tokens":{"lower":bytes * 516 / 1000,"upper":(bytes * 908).div_ceil(1000)},
             "upper_bound":!mixed
         })

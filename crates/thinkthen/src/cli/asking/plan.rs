@@ -56,6 +56,7 @@ pub(super) fn packed(
         questions: None,
         sized: true,
         inputs,
+        strict_singleton: false,
         context: planner.context.is_some() || configuration.context_field.is_some(),
         detailed: false,
         continues: false,
@@ -136,6 +137,7 @@ fn packer(
         profile: planner.profile.cloned(),
         inputs: packing.inputs.unwrap_or(MOST_INPUTS).max(1),
         questions: None,
+        strict_singleton: false,
         context: packing.context,
     };
     let model = pack::model_json(backend.model().as_str())

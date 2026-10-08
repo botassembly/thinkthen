@@ -122,7 +122,7 @@ fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
             LINES,
             plan(
                 r#"{"framing":"lines","field":[],"from":"default"}"#,
-                r#"{"records":3,"requests":3,"estimated_bytes":622,"estimated_input_tokens":{"lower":320,"upper":565},"upper_bound":false}"#,
+                r#"{"records":3,"requests":3,"estimated_bytes":622,"largest_request_bytes":213,"largest_request_estimated_input_tokens":194,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":320,"upper":565},"upper_bound":false}"#,
             ),
         ),
         (
@@ -130,7 +130,7 @@ fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
             RECORDS,
             plan(
                 r#"{"framing":"jsonl","field":["/body"],"from":"default"}"#,
-                r#"{"records":4,"requests":4,"estimated_bytes":827,"estimated_input_tokens":{"lower":426,"upper":751},"upper_bound":false}"#,
+                r#"{"records":4,"requests":4,"estimated_bytes":827,"largest_request_bytes":213,"largest_request_estimated_input_tokens":194,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":426,"upper":751},"upper_bound":false}"#,
             ),
         ),
     ];

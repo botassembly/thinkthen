@@ -295,7 +295,8 @@ impl Client {
             if let Some(reservation) = reservation {
                 reservation.commit();
             }
-            cancel.sent();
+            cancel.sent(exchange.body.len());
+            usage.request_body_sent(exchange.body.len());
             let ordinal = cancel.attempt_started();
             marked();
             let sending = cancel.sending();

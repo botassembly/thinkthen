@@ -26,6 +26,7 @@ fn limits(inputs: usize) -> PackLimits {
         profile: None,
         inputs,
         questions: None,
+        strict_singleton: false,
         context: false,
     }
 }

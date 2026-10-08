@@ -172,6 +172,40 @@ impl Labels {
         )
     }
 
+    /// Validate an internal complete choice menu without a public count ceiling.
+    pub(crate) fn recognition_menu(
+        values: Vec<(String, Option<Description>)>,
+    ) -> Result<Self, LabelsError> {
+        Self::uncapped(values, 2)
+    }
+
+    /// Validate caller recognition kinds before adding the internal declining choice.
+    pub(crate) fn recognition_kinds(
+        values: Vec<(String, Option<Description>)>,
+    ) -> Result<Self, LabelsError> {
+        Self::uncapped(values, 1)
+    }
+
+    fn uncapped(
+        values: Vec<(String, Option<Description>)>,
+        least: usize,
+    ) -> Result<Self, LabelsError> {
+        let labels = values
+            .into_iter()
+            .map(|(name, description)| Label {
+                name,
+                description: description.filter(|held| !held.blank()),
+            })
+            .collect();
+        Self::checked(
+            labels,
+            least,
+            usize::MAX,
+            LabelsError::OptionCount,
+            LabelKind::Option,
+        )
+    }
+
     /// Take 1 to 20 tag labels with their optional descriptions.
     ///
     /// # Errors

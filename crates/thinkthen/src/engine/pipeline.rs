@@ -123,11 +123,12 @@ pub(crate) struct Packing {
     pub(crate) inputs: Option<usize>,
     /// A further cap on questions per request, as relate's 400.
     pub(crate) questions: Option<usize>,
-    /// Whether a request closes at the backend's request size. The first two
-    /// `recognize` steps keep each window whole and obey only a profile.
+    /// Whether a request closes at the backend's request size.
     pub(crate) sized: bool,
     /// Whether the state is a context.
     pub(crate) context: bool,
+    /// Enforce recognition singleton byte admission after cache lookup too.
+    pub(crate) strict_singleton: bool,
     /// Whether rows show each request's attempts.
     pub(crate) detailed: bool,
     /// Whether the host takes rows past a failure, as the SQL hosts do. A
@@ -310,6 +311,7 @@ impl Engine {
             profile: self.profile().cloned(),
             inputs: packing.inputs.unwrap_or(MOST_INPUTS).max(1),
             questions: packing.questions,
+            strict_singleton: packing.strict_singleton,
             context: packing.context,
         }
     }

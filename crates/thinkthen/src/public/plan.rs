@@ -26,6 +26,9 @@ pub struct PlanEstimate {
     records: usize,
     requests: usize,
     estimated_bytes: usize,
+    largest_request_bytes: usize,
+    largest_request_estimated_input_tokens: u64,
+    token_estimate_method: &'static str,
     estimated_input_tokens: TokenBand,
     upper_bound: bool,
     #[serde(rename = "first_body_utf8")]
@@ -217,6 +220,9 @@ impl Engine {
             records: counts.records,
             requests: counts.requests,
             estimated_bytes: counts.estimated_bytes,
+            largest_request_bytes: counts.largest_request_bytes,
+            largest_request_estimated_input_tokens: counts.largest_request_estimated_input_tokens,
+            token_estimate_method: counts.token_estimate_method,
             estimated_input_tokens: TokenBand {
                 lower: counts.estimated_input_tokens.lower,
                 upper: counts.estimated_input_tokens.upper,

@@ -79,7 +79,7 @@ The plan cannot know which names the boundary answers will produce. It reports a
 
 ## Step 2: kinds and edges
 
-Step 2 sends one request for each step-1 request that holds a found name's first piece. Its evidence runs from six pieces before its first name to six pieces after its last. A request with no questions is not sent.
+Step 2 starts with one request for each step-1 request that holds a found name's first piece. Both stages split between complete questions to fit the effective encoded request-byte limit. A label menu always stays whole. Its evidence runs from six pieces before its first name to six pieces after its last. A request with no questions is not sent.
 
 - **The kind question.** One per found name when the run has kinds. The options are the caller's kinds in order, each with its description when given, then `none of these`. A name whose answer is `none of these` is dropped.
 - **The edge question.** One per found name that has two or more stretches to choose from. The options are the name as found, the name plus a touching mark at either end, and the name less a mark at either end. A one-piece name gets no removal option. A name with no edge question keeps its span.
@@ -126,7 +126,7 @@ Lowering the cut can keep a weaker name that step 1 found and step 2 classified.
 
 ## Kinds
 
-Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives a description, which reaches every recognition step. Bare and described kinds do not mix. A run takes 0 to 20 distinct nonblank kinds: `thinkthen: recognize takes 0 to 20 distinct, nonblank kinds`. A `--kind` with no `=` is refused at exit 2: ``--kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind``.
+Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives a description, which reaches every recognition step. Bare and described kinds do not mix. A run accepts distinct nonblank kinds without a built-in kind-count maximum: `thinkthen: recognize takes distinct, nonblank kinds`. A selected profile may still limit `max_options`, including the internal `none of these` choice. A `--kind` with no `=` is refused at exit 2: ``--kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind``.
 
 `none of these`, `ENTITY` and `ANY` are reserved in any ASCII case. The refusal echoes no text: `thinkthen: recognize reserves the kind names none of these, ENTITY and ANY in any ASCII case`. It exits 2 on the command line and 5 from a question file.
 
@@ -156,11 +156,13 @@ A text over 600,000 UTF-8 bytes exits 2 before any request, at every address: `t
 
 Record modes print `{"input":INPUT,"value":OBJECT}` in input order. `--details` prints the complete `thinkthen.result/2` carrier, keeps the same object under `value`, lists every question key in question order, and sums send counts and independently available usage dimensions. Its answer ID uses the logical occurrence and actual accepted observations; source coordinates remain presentation fields. `answer.pieces` lists each piece's offsets and its five tag probabilities. `answer.names` lists each found name's span as found, its kind probabilities, and its edge option probabilities or null. `answer.pairs` lists each pair's probability.
 
+Each stage admits all final adapter-encoded bodies before sending any request in that stage, including selected context and a preliminary kind-menu feasibility probe. A complete question that exceeds the effective request-byte limit refuses locally. Cache lookup cannot relax that limit. A later derived span can exceed it after step 1 has sent; that refusal sends no step-2 requests and retains the earlier sends, usage and recordings.
+
 A failed step-1, step-2 or relation request fails that input. It prints no partial name or edge object for that input. Earlier completed record rows remain printed.
 
 ## Plan
 
-`--plan` needs no key and sends nothing. It validates every record, then prints one compact `thinkthen.recognize-plan/2` object for the first record and a second count line for the whole input. This line marks `upper_bound:true`; its request count includes exact prepared step-1 requests plus possible name-stage and relation-stage requests for every input record. Future name and relation bodies cannot be known before earlier answers, so its byte sum and token band cover only exact prepared step-1 bodies. Keys appear in this order: `schema`, `url`, `model`, `key_env`, optional `from`, `pieces`, `request_count`, `name_requests_upper_bound`, the optional relation bounds, and `requests`.
+`--plan` needs no key and sends nothing. It validates every record, then prints one compact `thinkthen.recognize-plan/2` object for the first record and a second count line for the whole input. This line marks `upper_bound:true`; its request count includes exact prepared step-1 requests plus possible name-stage and relation-stage requests for every input record. Future name and relation bodies cannot be known before earlier answers, so its byte sum and token band cover only exact prepared step-1 bodies. Keys appear in this order: `schema`, `url`, `model`, `key_env`, optional `from`, `pieces`, `request_count`, `name_requests_upper_bound`, the optional relation bounds, and `requests`. The count line also reports `largest_request_bytes`, `largest_request_estimated_input_tokens` and `token_estimate_method`. Plan maxima cover prepared execution bodies and exclude admission probes; they cannot promise the largest eventual derived span body. `--facts` and native call facts report the maxima of actual sent bodies, including earlier sends when a later stage refuses. An unsent refused body's size appears only in its safe limit diagnostic. The estimate method is `encoded-body-bytes-908-v1`; it estimates input tokens and does not guarantee model-window fit.
 
 `pieces` counts pieces as step 1 splits them. `request_count` counts the prepared step-1 requests. `name_requests_upper_bound` is at most one edge question per possible name, plus one kind question when kinds are supplied: at most `pieces` without kinds or twice `pieces` with kinds. Each step-2 request holds at least one question, even when a profile splits that stage more finely than step 1. `requests` lists each step-1 request in send order, with its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. An empty or blank text prints no plan. It exits 2 with `thinkthen: the evidence is empty or blank`, as a live run does.
 

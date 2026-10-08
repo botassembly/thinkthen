@@ -177,7 +177,7 @@ fn dry_run_prints_the_complete_expansion_without_a_key_or_connection() {
                 r#"{{"url":"{}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","request":{{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"The text is \"evidence\". Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{{"true":"Charges."}}}},"#,
                 r#""q2":{{"type":"noul","instructions":"The text is \"evidence\". Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{{"true":"Prompt."}}}}}}}}}}"#,
                 "\n",
-                r#"{{"records":1,"requests":2,"estimated_bytes":434,"estimated_input_tokens":{{"lower":223,"upper":395}},"upper_bound":true}}"#,
+                r#"{{"records":1,"requests":2,"estimated_bytes":434,"largest_request_bytes":434,"largest_request_estimated_input_tokens":395,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{{"lower":223,"upper":395}},"upper_bound":true}}"#,
                 "\n",
             ),
             listener.base()
