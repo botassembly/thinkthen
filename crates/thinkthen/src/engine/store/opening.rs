@@ -40,10 +40,21 @@ mod tests {
     use std::sync::mpsc;
     use std::time::Duration;
 
-    use super::{OPENING, OpenFlags, open};
+    use super::{OPENING, OpenFlags, create, open};
 
     #[test]
     fn a_connection_waits_until_the_raw_creation_descriptor_closes() {
+        for flags in [
+            None,
+            Some(OpenFlags::default()),
+            Some(OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX),
+            Some(OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX),
+        ] {
+            waits_for_creation(flags);
+        }
+    }
+
+    fn waits_for_creation(flags: Option<OpenFlags>) {
         let folder = super::super::tests::scratch();
         std::fs::create_dir_all(folder.path()).expect("folder");
         let path = folder.path().join(super::super::SQLITE);
@@ -57,7 +68,7 @@ mod tests {
         let (opened, completed) = mpsc::channel();
         let worker = std::thread::spawn(move || {
             started.send(()).expect("starting");
-            let connection = open(&path, OpenFlags::default());
+            let connection = flags.map_or_else(|| create(&path), |flags| open(&path, flags));
             opened.send(connection.is_ok()).expect("opened");
         });
         starting.recv().expect("worker started");
