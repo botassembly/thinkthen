@@ -160,7 +160,10 @@ func (a *nativeInputs) question(e *C.thinkthen_engine, v Question) (*C.thinkthen
 	var out *C.thinkthen_question
 	author := a.author(v.Author.Value)
 	var rc C.int
-	if v.Author.Present {
+	if v.Instructions.Present || v.EntityDefinition.Present {
+		task := C.thinkthen_recognition_task_v1{instructions: a.optionalString(v.Instructions), entity_definition: a.optionalString(v.EntityDefinition)}
+		rc = C.thinkthen_question_new_recognition_v1(e, &spec, &author, &task, &out)
+	} else if v.Author.Present {
 		rc = C.thinkthen_question_new_authored(e, &spec, &author, &out)
 	} else {
 		rc = C.thinkthen_question_new(e, &spec, &out)

@@ -185,11 +185,15 @@ final class RecognizeQuestion extends Carrier
         public readonly Optional $on = new Optional(),
         /** @var Optional<string> */
         public readonly Optional $profile = new Optional(),
+        /** @var Optional<string> */
+        public readonly Optional $instructions = new Optional(),
+        /** @var Optional<string> */
+        public readonly Optional $entity_definition = new Optional(),
     ) {}
     public static function fromJson(mixed $value): self
     {
         $v = Read::object($value);
-        Read::shape("RecognizeQuestion", $v, ["verb", "kinds", "relations", "threshold", "relation_threshold", "on", "profile"], ["verb", "kinds", "threshold", "relation_threshold"]);
+        Read::shape("RecognizeQuestion", $v, ["verb", "kinds", "relations", "threshold", "relation_threshold", "on", "profile", "instructions", "entity_definition"], ["verb", "kinds", "threshold", "relation_threshold"]);
         return new self(
             Read::field($v, "verb", "=recognize"),
             Read::field($v, "kinds", "{description}"),
@@ -198,6 +202,8 @@ final class RecognizeQuestion extends Carrier
             Read::optional($v, "relations", "[RelationRule]"),
             Read::optional($v, "on", "str|[str]"),
             Read::optional($v, "profile", "str"),
+            Read::optional($v, "instructions", "str"),
+            Read::optional($v, "entity_definition", "str"),
         );
     }
 }

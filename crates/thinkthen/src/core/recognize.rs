@@ -76,6 +76,7 @@ pub(crate) fn step_two_questions(
     found: &[(usize, usize)],
     group: Range<usize>,
     kinds: &[(String, Option<Description>)],
+    spec: Option<&crate::core::RecognizeSpec>,
 ) -> Result<StepTwo, LabelsError> {
     let mut questions = Vec::new();
     let mut asked = Vec::new();
@@ -93,10 +94,10 @@ pub(crate) fn step_two_questions(
             edges,
         };
         if held.kind {
-            questions.push(kind_question(text, pieces, stretch, kinds)?);
+            questions.push(kind_question(text, pieces, stretch, kinds, spec)?);
         }
         if held.edge_question() {
-            questions.push(edge_question(text, pieces, &held.edges)?);
+            questions.push(edge_question(text, pieces, &held.edges, spec)?);
         }
         asked.push(held);
     }

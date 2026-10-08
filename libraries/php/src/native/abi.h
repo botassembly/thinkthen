@@ -229,6 +229,7 @@ typedef struct thinkthen_member_spec_v1 {
     const thinkthen_question *question;
 } thinkthen_member_spec_v1;
 typedef struct thinkthen_member_specs_v1 { const thinkthen_member_spec_v1 *data; size_t len; } thinkthen_member_specs_v1;
+typedef struct thinkthen_recognition_task_v1 {thinkthen_optional_string_v1 instructions; thinkthen_optional_string_v1 entity_definition;} thinkthen_recognition_task_v1;
 typedef struct thinkthen_question_spec_v1 {
     uint32_t kind;
     thinkthen_content_v1 text;
@@ -852,3 +853,7 @@ int thinkthen_source_files(const thinkthen_engine *, const thinkthen_source_spec
 
 int thinkthen_source_image_files(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
 void thinkthen_source_free(thinkthen_source *);
+
+int thinkthen_question_new_recognition_v1(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, const thinkthen_recognition_task_v1 *, thinkthen_question **);
+int thinkthen_question_recognition_task_v1(const thinkthen_question *,thinkthen_recognition_task_v1 *);
+int thinkthen_result_recognition_task_v1(const thinkthen_result *,size_t,thinkthen_recognition_task_v1 *);

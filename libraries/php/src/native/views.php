@@ -786,3 +786,8 @@ final class QuestionAuthorView
     public function __construct(public readonly OptionalStringView $name, public readonly OptionalU64View $wording_version, public readonly InputDeclarationView $item_schema, public readonly InputDeclarationView $context_schema) {}
     public static function copy(\FFI\CData $v): self { return new self(OptionalStringView::copy($v->name), OptionalU64View::copy($v->wording_version), InputDeclarationView::copy($v->item_schema), InputDeclarationView::copy($v->context_schema)); }
 }
+
+final class RecognitionTaskView {
+    public function __construct(public readonly OptionalStringView $instructions,public readonly OptionalStringView $entity_definition) {}
+    public static function copy(\FFI\CData $v): self {return new self(OptionalStringView::copy($v->instructions),OptionalStringView::copy($v->entity_definition));}
+}

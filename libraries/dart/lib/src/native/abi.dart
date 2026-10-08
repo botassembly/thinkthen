@@ -1025,3 +1025,8 @@ final class CQuestionAuthorView extends Struct {
   external CInputDeclarationView item_schema;
   external CInputDeclarationView context_schema;
 }
+
+final class CRecognitionTaskView extends Struct {
+  external COptionalStringView instructions;
+  external COptionalStringView entity_definition;
+}

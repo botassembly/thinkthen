@@ -1,0 +1,21 @@
+{
+  "source": "thinkthen-exp experiment 0031 at 787ada336c88023ac080b60f84f77355293e2162",
+  "case_id": "cord:test-002:total",
+  "text": "1 JASMINE MT ( L ) 24,000\nCOCONUT JELLY ( L ) 4,000\nSUB TOTAL 28,000\nTOTAL SAI S 28,000\nTOTAL ITEMS 1\nCASH 100,000\nCHANGE 72,000",
+  "prior_gold": {
+    "case_id": "cord:test-002:total",
+    "expected": "28,000",
+    "kind": "total",
+    "present": true,
+    "set": "receipt"
+  },
+  "entities": [
+    {
+      "text": "28,000",
+      "start": 81,
+      "end": 87,
+      "length": 6,
+      "kind": "amount"
+    }
+  ]
+}

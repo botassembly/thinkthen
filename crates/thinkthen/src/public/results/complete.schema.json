@@ -2768,6 +2768,8 @@
             }
           ]
         },
+        "entity_definition": {},
+        "instructions": {},
         "item_schema": {
           "anyOf": [
             {

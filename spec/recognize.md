@@ -8,10 +8,11 @@ printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | s
 printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | sed -n '2p' | jq -c '{records, requests, upper_bound}' | mustmatch '{"records":1,"requests":5,"upper_bound":true}'
 ```
 
-Demo 44's recording holds one live run of this sentence. The replay needs no key or network, and caller kinds come back unchanged.
+Caller wording and label descriptions define literal entities. This controlled fixture proves the saved declaration and exact offsets. It measures no model accuracy.
 
 ```bash
-printf 'Maria Chen joined Northwind Freight in Chicago last spring.' | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize --url https://api.typesafe.ai/v1 --replay "$(git rev-parse --show-toplevel)/demos/44-recognize-names/recording" --kind "PER=Part of a person's name." --kind 'ORG=Part of the name of an organization: a company, band, team, agency, government body, or media outlet.' --kind 'LOC=Part of the name of a place: a country, region, city, or geographic feature.' --kind 'MISC=Part of another named entity: a nationality, an event, a product, or the name of a creative work.' | jq -c '[.entities[] | {text,kind}]' | mustmatch '[{"text":"Maria Chen","kind":"PER"},{"text":"Northwind Freight","kind":"ORG"},{"text":"Chicago","kind":"LOC"}]'
+fixture="$(git rev-parse --show-toplevel)/specification/fixtures/recognize/caller-defined"
+cat "$fixture/text.txt" | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize @"$fixture/question.json" --url "$(cat "$fixture/url.txt")" --replay "$fixture/recording" --no-cache | jq -c '.entities' | mustmatch '[{"text":"42.75","start":8,"end":13,"length":5,"kind":"amount","strength":1.0}]'
 ```
 
 An empty or blank text refuses the plan as it refuses a live run. It prints no plan.

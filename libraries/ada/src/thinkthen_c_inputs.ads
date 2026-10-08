@@ -221,6 +221,16 @@ package Thinkthen_C_Inputs is
    end record;
    for Member_Specs_V1'Size use 128;
    for Member_Specs_V1'Alignment use 8;
+   type Recognition_Task_V1 is record
+      Instructions : Optional_String_V1 := (others => <>);
+      Entity_Definition : Optional_String_V1 := (others => <>);
+   end record with Convention => C;
+   for Recognition_Task_V1 use record
+      Instructions at 0 range 0 .. 191;
+      Entity_Definition at 24 range 0 .. 191;
+   end record;
+   for Recognition_Task_V1'Size use 384;
+   for Recognition_Task_V1'Alignment use 8;
    type Question_Spec_V1 is record
       Kind : Interfaces.Unsigned_32 := 0;
       Text : Content_V1 := (others => <>);

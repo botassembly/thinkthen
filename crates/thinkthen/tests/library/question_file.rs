@@ -115,3 +115,20 @@ fn the_reader_names_each_reason() {
         Err(QuestionFileError::Unreadable(_))
     ));
 }
+
+#[test]
+fn recognition_admits_caller_defined_values_and_refuses_blank_customization() {
+    let declaration = r#"{"version":1,"recognize":{"instructions":"Find literal values only.","entity_definition":"An amount with its currency.","kinds":{"amount":"The receipt total, not the TOTAL label."}}}"#;
+    assert!(Recognize::from_json(declaration).is_ok());
+    for field in ["instructions", "entity_definition"] {
+        for value in [r#""""#, r#"" \n ""#, "null", "42", "[]", "{}", "true"] {
+            let declaration = format!(r#"{{"version":1,"recognize":{{"{field}":{value}}}}}"#);
+            assert_eq!(
+                Recognize::from_json(&declaration)
+                    .expect_err("refusal")
+                    .kind(),
+                ErrorKind::Usage
+            );
+        }
+    }
+}

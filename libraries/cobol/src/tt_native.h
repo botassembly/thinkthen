@@ -53,4 +53,6 @@ int TT_QUESTION_LOAD_NAMED(const thinkthen_engine *e, uint32_t role, const think
 int TT_QUESTION_LOAD_REFERENCE(const thinkthen_engine *e, uint32_t role, const thinkthen_string_v1 *value, thinkthen_question **out);
 int TT_QUESTION_NEW_AUTHORED(const thinkthen_engine *e,const thinkthen_question_spec_v1 *s,const thinkthen_question_author_v1 *a,thinkthen_question **out);
 int TT_SOURCE_IMAGE_FILES(const thinkthen_engine *e,const thinkthen_source_spec_v1 *s,thinkthen_source **out);
+int TT_QUESTION_NEW_RECOGNITION_V1(const thinkthen_engine *,const thinkthen_question_spec_v1 *,const thinkthen_question_author_v1 *,const thinkthen_recognition_task_v1 *,thinkthen_question **);
+int TT_RESULT_RECOGNITION_TASK_V1(const thinkthen_result *,uint64_t,thinkthen_recognition_task_v1 *);
 #endif

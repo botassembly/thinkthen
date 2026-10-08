@@ -1,16 +1,27 @@
 part of 'models.dart';
 
 final class RecognitionPlan extends Carrier {
+  final Optional<String> instructions;
+  final Optional<String> entity_definition;
   final Optional<Labels> kinds;
   final Optional<List<PlanRule>> relations;
   const RecognitionPlan({
+    this.instructions = const Optional.absent(),
+    this.entity_definition = const Optional.absent(),
     this.kinds = const Optional.absent(),
     this.relations = const Optional.absent(),
   });
   factory RecognitionPlan.fromJson(Object? value) {
     final v = readObject(value);
-    verify("RecognitionPlan", v, ["kinds", "relations"], []);
+    verify("RecognitionPlan", v,
+        ["kinds", "relations", "instructions", "entity_definition"], []);
     return RecognitionPlan(
+      instructions: v.containsKey("instructions")
+          ? Optional.present(readString(v["instructions"]))
+          : const Optional.absent(),
+      entity_definition: v.containsKey("entity_definition")
+          ? Optional.present(readString(v["entity_definition"]))
+          : const Optional.absent(),
       kinds: v.containsKey("kinds")
           ? Optional.present(Labels.fromJson(v["kinds"]))
           : const Optional.absent(),
@@ -22,6 +33,9 @@ final class RecognitionPlan extends Carrier {
   }
   @override
   Map<String, Object?> toJson() => {
+        if (instructions.present) "instructions": project(instructions.value),
+        if (entity_definition.present)
+          "entity_definition": project(entity_definition.value),
         if (kinds.present) "kinds": project(kinds.value),
         if (relations.present) "relations": project(relations.value),
       };

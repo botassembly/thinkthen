@@ -95,6 +95,7 @@ public struct QuestionMember: Codable, Sendable {
     public init(name: String, question: Question) { self.name = name; self.question = question }
 }
 public struct Question: Codable, Sendable {
+    public var instructions: String? = nil; public var entityDefinition: String? = nil
     public var kind: Function; public var text: Content; public var yes: Content?; public var no: Content?; public var choices: [Choice]; public var threshold: Rule; public var relationThreshold: Rule; public var model: String?; public var profile: String?; public var batch: UInt64?; public var batchMax: Bool; public var none: Bool; public var on: [String]; public var members: [QuestionMember]; public var kinds: [Choice]; public var relations: [Relation]; public var namePointer: String?; public var kindPointer: String?
     public init(kind: Function, text: Content, yes: Content?, no: Content?, choices: [Choice], threshold: Rule, relationThreshold: Rule, model: String?, profile: String?, batch: UInt64?, batchMax: Bool, none: Bool, on: [String], members: [QuestionMember], kinds: [Choice], relations: [Relation], namePointer: String?, kindPointer: String?) { self.kind = kind; self.text = text; self.yes = yes; self.no = no; self.choices = choices; self.threshold = threshold; self.relationThreshold = relationThreshold; self.model = model; self.profile = profile; self.batch = batch; self.batchMax = batchMax; self.none = none; self.on = on; self.members = members; self.kinds = kinds; self.relations = relations; self.namePointer = namePointer; self.kindPointer = kindPointer }
 }

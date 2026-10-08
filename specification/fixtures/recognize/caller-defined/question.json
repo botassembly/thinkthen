@@ -1,0 +1,1 @@
+{"version": 1, "recognize": {"kinds": {"amount": "Receipt total amount, not its label."}, "instructions": "Return literal receipt amounts.\nExclude the TOTAL label.", "entity_definition": "The complete numeric amount, including its decimal point."}}

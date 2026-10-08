@@ -50,7 +50,7 @@ pub const Rule = struct { kind: RuleKind, low: f64, high: f64 };
 pub const Choice = struct { name: []const u8, description: ?Content, weight: ?f64 };
 pub const Relation = struct { name: []const u8, source: []const u8, target: []const u8, reads: ?[]const u8, either: bool, single: bool };
 pub const QuestionMember = struct { name: []const u8, question: Question };
-pub const Question = struct { kind: Function, text: Content, yes: ?Content, no: ?Content, choices: []const Choice, threshold: Rule, relation_threshold: Rule, model: ?[]const u8, profile: ?[]const u8, batch: ?u64, batch_max: bool, none: bool, on: []const []const u8, members: []const QuestionMember, kinds: []const Choice, relations: []const Relation, name_pointer: ?[]const u8, kind_pointer: ?[]const u8 };
+pub const Question = struct { kind: Function, text: Content, yes: ?Content, no: ?Content, choices: []const Choice, threshold: Rule, relation_threshold: Rule, model: ?[]const u8, profile: ?[]const u8, batch: ?u64, batch_max: bool, none: bool, on: []const []const u8, members: []const QuestionMember, kinds: []const Choice, relations: []const Relation, name_pointer: ?[]const u8, kind_pointer: ?[]const u8, instructions: ?[]const u8 = null, entity_definition: ?[]const u8 = null };
 pub const ImageInput = struct { media: Media, bytes: []const u8, filename: ?[]const u8 };
 pub const ImageView = struct { media: Media, bytes: []const u8, width: u32, height: u32, filename: ?[]const u8 };
 pub const RecordInput = struct { original: ?Content, context: ?Content, options: []const Choice, images: []const ImageInput };

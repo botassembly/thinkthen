@@ -13,6 +13,10 @@ package Thinkthen.Native.Inputs is
      with Import, Convention => C, External_Name => "thinkthen_question_new";
    function Question_Load (P1 : System.Address; P2 : Byte_String_V1; P3 : access System.Address) return Interfaces.C.int
      with Import, Convention => C, External_Name => "thinkthen_question_load";
+   function Question_New_Recognition_V1 (P1 : System.Address; P2 : access constant Question_Spec_V1; P3 : access constant Question_Author_V1; P4 : access constant Recognition_Task_V1; P5 : access System.Address) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "thinkthen_question_new_recognition_v1";
+   function Question_Recognition_Task_V1 (P1 : System.Address; P2 : access Recognition_Task_V1) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "thinkthen_question_recognition_task_v1";
    function Question_New_Authored (P1 : System.Address; P2 : access constant Question_Spec_V1; P3 : access constant Question_Author_V1; P4 : access System.Address) return Interfaces.C.int
      with Import, Convention => C, External_Name => "thinkthen_question_new_authored";
    function Question_Author (P1 : System.Address; P2 : access Question_Author_V1) return Interfaces.C.int

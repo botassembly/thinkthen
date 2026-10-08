@@ -327,8 +327,8 @@ fn step_one_context(
     }
     let kinds: Vec<&str> = spec.kinds.iter().map(|(kind, _)| kind.as_str()).collect();
     if !kinds.is_empty() {
-        let probe =
-            kind_question(text, &pieces, (0, 0), &spec.kinds).map_err(|_| Error::RecognizeKinds)?;
+        let probe = kind_question(text, &pieces, (0, 0), &spec.kinds, Some(spec))
+            .map_err(|_| Error::RecognizeKinds)?;
         let mut alone = Asks::default();
         alone.add(
             backend,
@@ -339,7 +339,7 @@ fn step_one_context(
     let mut asks = Asks::default();
     for group in step_one_groups(pieces.len()) {
         let last = group.end.saturating_sub(1);
-        let questions = step_one_questions(text, &pieces, group.clone(), &kinds)
+        let questions = step_one_questions(text, &pieces, group.clone(), &kinds, Some(spec))
             .map_err(|_| Error::Defect("fixed boundary questions are invalid"))?;
         asks.add(
             backend,
@@ -366,9 +366,15 @@ fn step_two(
     let mut asked: Vec<Asked> = Vec::new();
     let mut stages = Vec::new();
     for group in name_groups(stretches) {
-        let (questions, held) =
-            step_two_questions(text, pieces, stretches, group.clone(), &spec.kinds)
-                .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
+        let (questions, held) = step_two_questions(
+            text,
+            pieces,
+            stretches,
+            group.clone(),
+            &spec.kinds,
+            Some(spec),
+        )
+        .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
         stages.extend(asked_stages(&held));
         asked.extend(held);
         let first = stretches.get(group.start).map_or(0, |name| name.0);

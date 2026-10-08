@@ -156,3 +156,6 @@
           02 v-batch-max usage binary-long signed.
           02 v-attempts usage binary-long signed.
           02 v-surface pic x(16).
+       01 tt-recognition-task-v1 based.
+          02 v-instructions pic x(24).
+          02 v-entity-definition pic x(24).

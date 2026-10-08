@@ -676,12 +676,15 @@ tt_annotate <- function(file, data, on, ..., deadline_ms = NULL, batch = NULL, c
 # With no kinds, every name has the kind ENTITY.
 tt_recognize <- function(input, kinds = NULL,
                          relations = NULL, threshold = NULL,
-                         relation_threshold = NULL, ..., deadline_ms = NULL, completion = NULL) {
+                         relation_threshold = NULL, ..., instructions = NULL, entity_definition = NULL, deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
   if (length(list(...))) .tt_unknown(...)
   path <- .tt_path(kinds)
+  if (!is.null(path) && (!is.null(instructions) || !is.null(entity_definition))) stop("recognize task keywords take an inline declaration")
   spec <- path %||% {
-    section <- list(kinds = stats::setNames(as.list(rep(NA, length(kinds))), as.character(kinds)))
+    section <- list(kinds = if (is.list(kinds) && !is.null(names(kinds))) kinds else stats::setNames(as.list(rep(NA, length(kinds))), as.character(kinds)))
+    if (!is.null(instructions)) section$instructions <- instructions
+    if (!is.null(entity_definition)) section$entity_definition <- entity_definition
     if (length(relations)) section$relations <- .tt_rules(relations)
     .tt_spec("recognize", section, threshold, relation_threshold)
   }

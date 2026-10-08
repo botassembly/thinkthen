@@ -16,7 +16,7 @@ final class CompleteResult
         public readonly array $memberAuthors,public readonly array $rankMembers,
         public readonly array $observationDetails,public readonly array $observationAuthors,
         public readonly array $sourceRecognitions,public readonly array $sourceRelations,
-        public readonly array $rankMemberDetails=[]) {}
+        public readonly array $rankMemberDetails=[],public readonly array $recognitionTasks=[]) {}
 }
 final class CompleteFailure extends \RuntimeException
 {

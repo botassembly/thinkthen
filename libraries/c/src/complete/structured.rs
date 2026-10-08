@@ -126,6 +126,11 @@ pub(super) fn recognize(
     s.6.push(located);
     let mut common = s.original_row(Some(row.original()), r.meta());
     let q = r.question();
+    let task = crate::ffi::carriers::RecognitionTaskV1 {
+        instructions: s.optional_string(q.instructions()),
+        entity_definition: s.optional_string(q.entity_definition()),
+    };
+    s.9.push(task);
     s.row_author(&native_author!(q), Vec::new());
     common.question = OptionalQuestionV1 {
         present: 1,

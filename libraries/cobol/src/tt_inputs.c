@@ -39,3 +39,6 @@ int TT_QUESTION_LOAD_REFERENCE(const thinkthen_engine *e, uint32_t role, const t
 }
 int TT_QUESTION_NEW_AUTHORED(const thinkthen_engine *e,const thinkthen_question_spec_v1 *s,const thinkthen_question_author_v1 *a,thinkthen_question **out) { return thinkthen_question_new_authored(e,s,a,out); }
 int TT_SOURCE_IMAGE_FILES(const thinkthen_engine *e,const thinkthen_source_spec_v1 *s,thinkthen_source **out) { return thinkthen_source_image_files(e,s,out); }
+
+int TT_QUESTION_NEW_RECOGNITION_V1(const thinkthen_engine *e,const thinkthen_question_spec_v1 *s,const thinkthen_question_author_v1 *a,const thinkthen_recognition_task_v1 *task,thinkthen_question **out) {return thinkthen_question_new_recognition_v1(e,s,a,task,out);}
+int TT_RESULT_RECOGNITION_TASK_V1(const thinkthen_result *r,uint64_t row,thinkthen_recognition_task_v1 *out) {if(row>SIZE_MAX)return THINKTHEN_EUSAGE;return thinkthen_result_recognition_task_v1(r,(size_t)row,out);}

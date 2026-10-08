@@ -125,7 +125,22 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let tail = ["--details", "--url", base.as_str(), "--no-cache"].map(str::to_owned);
     let rows = rows(&[arguments.as_slice(), &tail].concat(), &input, success)?;
     match text(&case["verb"]) {
-        "recognize" | "relate" => whole(&rows, &answers),
+        "recognize" | "relate" => {
+            let keys = list(&case["exchanges"])
+                .iter()
+                .map(|exchange| {
+                    shared_keys::keys(
+                        &served,
+                        text(&exchange["request"]).as_bytes(),
+                        text(&exchange["response"]["model"]),
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>();
+            whole(&rows, &answers, &keys)
+        }
         "annotate" => annotated(&rows, &answers, success),
         "find" => found(&rows, &answers, case),
         "filter" => {
@@ -321,7 +336,7 @@ fn ordered(
 }
 
 /// A recognize or relate case prints one whole result.
-fn whole(rows: &[Value], answers: &[Value]) -> Checked {
+fn whole(rows: &[Value], answers: &[Value], keys: &[String]) -> Checked {
     let [row] = rows else {
         return Err(format!("{} rows", rows.len()));
     };
@@ -332,7 +347,7 @@ fn whole(rows: &[Value], answers: &[Value]) -> Checked {
         &row["meta"]["question_sha256"],
         &want["details"]["question_sha256"],
     )?;
-    every_key(row, want)
+    whole_keys(row, want, keys)
 }
 
 /// One annotated row per record, each answer under its name.
@@ -387,8 +402,12 @@ fn found(rows: &[Value], answers: &[Value], case: &Value) -> Checked {
     every_key(row, want)
 }
 
-/// The model of a whole-call row, and every question key of every request
-/// the case recorded, in order.
+/// The model and question keys of a whole-call row, in recorded order.
+fn whole_keys(row: &Value, want: &Value, keys: &[String]) -> Checked {
+    same("model", &row["meta"]["model"], &want["details"]["model"])?;
+    same("requests", &row["meta"]["requests"], &Value::from(keys))
+}
+
 fn every_key(row: &Value, want: &Value) -> Checked {
     same("model", &row["meta"]["model"], &want["details"]["model"])?;
     let keys: Vec<Value> = list(&want["details"]["requests"])

@@ -105,10 +105,14 @@ func nativeChecked(_ engine: OpaquePointer?, _ code: Int32) throws {
 }
 
 extension Engine {
-    public func question(_ spec: thinkthen_question_spec_v1, author: thinkthen_question_author_v1? = nil) throws -> NativeQuestion {
+    public func question(_ spec: thinkthen_question_spec_v1, author: thinkthen_question_author_v1? = nil, task: thinkthen_recognition_task_v1? = nil) throws -> NativeQuestion {
         let h = try open(); var spec = spec; let author = author; var out: OpaquePointer? = nil
         let code = withUnsafePointer(to:&spec) { s in
-            author.map { value in var value = value; return withUnsafePointer(to:&value) { thinkthen_question_new_authored(h,s,$0,&out) } } ?? thinkthen_question_new_authored(h,s,nil,&out)
+            let construct: (UnsafePointer<thinkthen_question_author_v1>?) -> Int32 = { a in
+                if var task = task { return withUnsafePointer(to:&task) { thinkthen_question_new_recognition_v1(h,s,a,$0,&out) } }
+                return thinkthen_question_new_authored(h,s,a,&out)
+            }
+            return author.map { value in var value = value; return withUnsafePointer(to:&value) { construct($0) } } ?? construct(nil)
         }
         try nativeChecked(h,code); guard let out else { throw NativeConversion.missingResult }; return NativeQuestion(out)
     }

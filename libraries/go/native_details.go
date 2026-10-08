@@ -47,6 +47,19 @@ func rowDetails(r *C.thinkthen_result, i C.size_t, common *CommonRow) error {
 	}
 	common.Details = nativeDetails(d)
 	common.Author = nativeQuestionAuthor(a)
+	if common.Question.Present && common.Question.Value.Kind == FunctionRecognize {
+		var task C.thinkthen_recognition_task_v1
+		if rc := C.thinkthen_result_recognition_task_v1(r, i, &task); rc != 0 {
+			return fmt.Errorf("native recognition task failed: %d", rc)
+		}
+		q := common.Question.Value
+		q.Instructions = nativeOptional(task.instructions.present, func() string { return nativeString(task.instructions.value) })
+		q.EntityDefinition = nativeOptional(task.entity_definition.present, func() string { return nativeString(task.entity_definition.value) })
+		common.Question = Optional[Question]{Present: true, Value: q}
+		if common.Details.Question.Present {
+			common.Details.Question = common.Question
+		}
+	}
 	return nil
 }
 func nativeSourceEntity(v C.thinkthen_source_entity_v1) SourceEntity {

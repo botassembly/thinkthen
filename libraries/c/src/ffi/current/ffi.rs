@@ -7,13 +7,15 @@
 /// Canonical reviewed C input descriptors and target borrowed views.
 pub use crate::ffi::carriers;
 #[path = "author/ffi.rs"]
-mod author;
+pub(super) mod author;
 #[path = "images/ffi.rs"]
 pub mod images;
 #[path = "question/ffi.rs"]
 mod question;
 #[path = "read/ffi.rs"]
 pub(crate) mod read;
+#[path = "recognition/ffi.rs"]
+mod recognition;
 use crate::Door;
 use crate::current::{self, QuestionHandle, Source, SourceHandle};
 use crate::failures::{Failure, OK, guard};
