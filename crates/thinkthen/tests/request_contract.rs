@@ -2,6 +2,8 @@
 use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 use thinkthen::*;
+#[path = "request_contract/native_feed.rs"]
+mod native_feed;
 
 #[allow(
     clippy::unwrap_used,

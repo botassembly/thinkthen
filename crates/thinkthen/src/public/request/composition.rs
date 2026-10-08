@@ -42,32 +42,20 @@ impl AdmittedRequest {
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Box::new(rows.into_iter().map(Ok)))
             }
-            RequestInput::Text { text, images } => {
-                let item = RequestItem {
-                    original: Some(RequestOriginal::Text { text: text.clone() }),
-                    context: None,
-                    options: None,
-                    examples: None,
-                    seed_spans: None,
-                    images: images.clone(),
-                };
-                let row = compose_item(&item, &reading, context.as_ref())?;
-                Ok(Box::new(std::iter::once(Ok(row))))
-            }
-            RequestInput::Json { value, images } => {
-                let item = RequestItem {
-                    original: Some(RequestOriginal::Json {
-                        value: value.clone(),
-                    }),
-                    context: None,
-                    options: None,
-                    examples: None,
-                    seed_spans: None,
-                    images: images.clone(),
-                };
-                let row = compose_item(&item, &reading, context.as_ref())?;
-                Ok(Box::new(std::iter::once(Ok(row))))
-            }
+            RequestInput::Text { text, images } => singleton(
+                RequestOriginal::Text { text: text.clone() },
+                images,
+                &reading,
+                context.as_ref(),
+            ),
+            RequestInput::Json { value, images } => singleton(
+                RequestOriginal::Json {
+                    value: value.clone(),
+                },
+                images,
+                &reading,
+                context.as_ref(),
+            ),
             RequestInput::Source { source } => {
                 controls.admission()?;
                 let items = crate::read_inputs(
@@ -96,7 +84,15 @@ impl AdmittedRequest {
                         "the supplied feed does not match the requested name",
                     ));
                 }
-                Ok(Box::new(feed.items.map(move |item| {
+                let super::execution::FeedContents::Items(items) = feed.contents else {
+                    return super::native_feed::records(
+                        self,
+                        feed.contents,
+                        controls,
+                        image_refusal,
+                    );
+                };
+                Ok(Box::new(items.map(move |item| {
                     controls.admission()?;
                     let item = attach_shared(item?, images)?;
                     super::admission::admit_item(self.request.call.function(), &item, options)?;
@@ -106,6 +102,23 @@ impl AdmittedRequest {
             }
         }
     }
+}
+fn singleton(
+    original: RequestOriginal,
+    images: &[RequestImage],
+    reading: &RecordReading,
+    schema: Option<&crate::InputDeclaration>,
+) -> Result<Inputs<'static>, Error> {
+    let item = RequestItem {
+        original: Some(original),
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans: None,
+        images: images.to_vec(),
+    };
+    let row = compose_item(&item, reading, schema)?;
+    Ok(Box::new(std::iter::once(Ok(row))))
 }
 fn compose_item(
     item: &RequestItem,

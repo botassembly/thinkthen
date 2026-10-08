@@ -206,7 +206,10 @@ A source carries `file` and paired `first_line`/`last_line`; locations stay outs
 model evidence and answer-cache identity.
 
 `reading` contains native `fields`, `context`/`options` pointers and optional
-`context_schema`. Per-record context and options retain false, empty and missing
+`context_schema`. SQLite also admits per-record `seed_spans` and `examples`, with
+matching projection pointers under `reading`. Null lists refuse; an explicit empty
+list clears the question fallback. Other database adapters retain their own admitted grammar.
+Per-record context and options retain false, empty and missing
 distinctions. `incremental: true` selects native fallible admission; row-producing
 calls retain their completed prefix on failure. Aggregate calls use native whole
 set admission. `cancelled: true` pre-cancels a native token. NULL question or inputs
@@ -244,6 +247,13 @@ paired decimal strings `usd_per_million_input`/`usd_per_million_output`. Costs
 use exact native combined rounding and are estimates, never provider bills.
 Missing/overflowed usage omits cost; cache and replay have zero sends and cost.
 The existing cache/record/replay and backend/key selection remain native.
+
+SQLite translates these named complete calls directly into Rust `Request` values.
+The native feed preserves composed originals and locations. Eager input validates
+every row before sending; incremental input retains its actual completed prefix.
+Caller-known image descriptors require route and function admission before reader
+access. An omitted image declaration never waives validation of actual image rows.
+PostgreSQL retains the compatibility dispatcher until its Request migration.
 
 The existing surface checks execute all applicable shared cases through these
 named calls against counted owned loopback, check known JSON fields using SQL

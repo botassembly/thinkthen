@@ -5,6 +5,7 @@ use rusqlite::{
     functions::{Context, FunctionFlags},
 };
 use thinkthen::{Error, ErrorKind, Surface};
+mod request;
 
 fn prepare(
     verb: &str,
@@ -40,7 +41,7 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
         };
         let result = (|| {
             let prepared = prepare(verb, &question, &settings)?;
-            let inputs = crate::complete_native::Inputs::parse(&inputs, true)?;
+            let inputs = crate::complete_native::Inputs::parse_request(&inputs)?;
             Ok::<_, thinkthen::Error>((prepared, inputs))
         })();
         let value = match result {
@@ -51,7 +52,7 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
                     let options = shared
                         .as_deref()
                         .map_or(options, |context| options.context(context));
-                    Ok(crate::complete_native::run(
+                    Ok(request::run(
                         engine,
                         &prepared,
                         inputs,
