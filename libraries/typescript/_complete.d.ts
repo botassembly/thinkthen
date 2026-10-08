@@ -311,7 +311,7 @@ export interface DecideResult {
   readonly schema: "thinkthen.result/2";
   readonly answer_id: AnswerId;
   readonly meta: Meta;
-  readonly value: boolean | null;
+  readonly value: boolean | Description;
   readonly question: DecideQuestion;
   readonly answer: YesNo;
   readonly threshold: number | string | null;
