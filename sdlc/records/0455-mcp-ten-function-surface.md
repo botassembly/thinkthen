@@ -45,3 +45,5 @@ Offline focused verification passed all 36 existing MCP library tests, source po
 The Rust ceiling increases from 163238 to 163239 nonblank lines. The single added line gives the cancellation loop a named worker function. Inspection of the watcher and operation guards found no duplicate logic to remove. Qualified lane artifacts were retained.
 
 Fresh Medium read-only review: ACCEPT. Final Clippy evidence records the corrected command and its zero exit status. Windows execution remains part of final platform qualification.
+
+The integrated correction at 693bc9f66 passed full local tests and lint. The ordinary, library-only and public-consumer groups and existing supporting checks passed. Logs remain in target/0425-windows-landing-test.log and target/0425-windows-landing-lint.log. These Linux checks do not compile or execute the Windows-only module; candidate platform qualification remains open.
