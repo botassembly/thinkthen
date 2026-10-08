@@ -41,6 +41,7 @@ cd -- "$REPO"
 # ADR 0113: a test that bypasses its scratch usage folder writes this decoy and fails the run.
 . sdlc/scripts/scratch.sh
 usage_guard
+config_home
 
 # One replay smoke per binding, four at a time beside the Rust tests (ticket 0335).
 # It runs in its own process group, so a failed step here stops every smoke before the lock frees.
