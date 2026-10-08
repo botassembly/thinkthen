@@ -112,3 +112,19 @@ Rehearsal crate job 113175528987 failed every native-source cell with `FileNotFo
 The existing `sdlc/scripts/package` gate passes locally, including the unpacked consumer's shared native cases, archive catalog, doctest and panic checks. Offline policy, ticket lint, shell syntax and whitespace checks pass. The first local run exposed the scratch-directory toolchain selection; the corrected rerun passed. Logs are `/tmp/thinkthen-0425-crate-backend-package.log`, `/tmp/thinkthen-0425-crate-backend-package-retry.log`, `/tmp/thinkthen-0425-crate-backend-policy.log` and `/tmp/thinkthen-0425-crate-backend-pm-lint.log`. Fresh read-only Sol review accepts the complete correction, including the pinned toolchain handoff. No full gates, hosted dispatch, paid call, source-library fallback or landing ran in this lane. The coordinator owns batching and candidate qualification.
 
 What the build taught us: a scratch-built consumer does not place its test backend at the fixture's root target path. Build the existing fixture dependency explicitly and pin Cargo when the fixture changes working directory.
+
+## Candidate two Windows named-question fixture correction, 2026-10-08
+
+The candidate two Windows build failed Clippy because `root` and `named` in the native named-question fixture were used only inside a Unix-only symlink block. The complete build log remains at `/tmp/thinkthen-rc2-windows-build.log`. The fixture now runs its common unread-content assertions on every platform and its unchanged symlink assertions through a Unix-only helper. No assertion or product code changed.
+
+The five native named-question tests, their focused offline Clippy target, offline source policy, formatting and whitespace checks pass on Linux. The fixture helper adds five measured nonblank Rust lines, so the source ratchet ceiling rises from 163270 to 163275. The ratchet check passes at the new measured total. Existing policy size warnings remain unchanged. This host has no Windows Rust target, so actual Windows Clippy and runtime qualification remain open. The coordinator owns the next hosted build, full gates and landing.
+
+Fresh read-only review accepts the correction at 912a75e8d with no remaining findings.
+
+## Candidate two qualification, 2026-10-08
+
+Candidate rc/0.2.0-rc.2 names reviewed main 76711d832a25ee60429bcad350b4c3bb3c472df1. Rehearsal 37735980917 and Windows qualification 37735983648 run on that exact tag and commit. The Windows root tests passed, including the retained pipe cancellation regressions. Root Clippy failed the Unix-only named-question fixture bindings and the C tests failed; the remaining steps are active. The crate package job also failed because its shared fixture could not start the local backend in a fresh checkout. These are failures, not candidate acceptance. Reviewed fixes are batched before the next candidate.
+
+Fresh read-only installed-package QA accepts the applicable Linux checkpoint with no consequential package or parity gap. It verified all 24 artifact checksums, the retained 29-consumer table and actual source/package revisions. This does not qualify final Windows or hosted candidate behavior. Its stale changelog parity claim is corrected here. Final candidate QA remains open.
+
+The installed QA review also confirmed reviewed compatibility evidence: 0456 retains unchanged 0.1 question grammar and paths, and 0443/0444 retain read-only v1 replay, transactional upgrade and original v1 fixtures. The installed campaign does not separately qualify historical migration through every package and platform; no such claim is made.

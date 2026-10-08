@@ -4,11 +4,11 @@ Every release of every surface shares one version number.
 
 ## Unreleased: 0.2.0
 
-Version 0.2 is implemented on main and remains unreleased. The publication date is unknown. Public installation still names 0.1.2. Final combined installed-package parity, platform qualification, release QA and rehearsal remain required. Publication requires Ian's explicit go.
+Version 0.2 is implemented on main and remains unreleased. The publication date is unknown. Public installation still names 0.1.2. The complete installed-package parity campaign passed. Final platform qualification, candidate release QA and rehearsal remain required. Publication requires Ian's explicit go.
 
 ### Functions, files and saved questions
 
-Every SDK exposes the same ten functions: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. CLI, typed C, language SDKs, SQL and dataframe adapters use the native engine's admitted inputs, complete results, errors and cache/record/replay behavior. Existing family checks establish their reviewed implementations; the final combined installed campaign remains pending.
+Every SDK exposes the same ten functions: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. CLI, typed C, language SDKs, SQL and dataframe adapters use the native engine's admitted inputs, complete results, errors and cache/record/replay behavior. Existing family checks and the complete installed campaign passed across all 29 public consumers.
 
 File readers retain physical source locations separately from selected evidence and original records. Folder descendants sort by relative path; explicit operands and duplicates keep their order. Paths never become model evidence or cache identity. PostgreSQL retains its client-reader/keyed-table workaround and privileged bounded question-file loader.
 
