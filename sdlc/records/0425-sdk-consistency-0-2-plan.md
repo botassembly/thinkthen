@@ -128,3 +128,11 @@ Candidate rc/0.2.0-rc.2 names reviewed main 76711d832a25ee60429bcad350b4c3bb3c47
 Fresh read-only installed-package QA accepts the applicable Linux checkpoint with no consequential package or parity gap. It verified all 24 artifact checksums, the retained 29-consumer table and actual source/package revisions. This does not qualify final Windows or hosted candidate behavior. Its stale changelog parity claim is corrected here. Final candidate QA remains open.
 
 The installed QA review also confirmed reviewed compatibility evidence: 0456 retains unchanged 0.1 question grammar and paths, and 0443/0444 retain read-only v1 replay, transactional upgrade and original v1 fixtures. The installed campaign does not separately qualify historical migration through every package and platform; no such claim is made.
+
+## Candidate two managed JAR inventory correction, 2026-10-08
+
+Linux x86 rehearsal job 113175529220 passed the JVM check of freshly compiled JAR members, the actual native ABI comparison and all five ABI drift plants. Its later release-managed-pair assembly refused the door JAR because the fixed class inventory omitted `Door$NativeCall` and `NativeCalls$NativeCall`. Both private descriptor records entered with the JVM ABI check at 52b7df8a6c. The failure log remains at `/tmp/thinkthen-rc2-linux-x86.log`.
+
+The release helper and its existing synthetic fixture now list those two compiled classes. The exact directory and member inventories, inner package hashes, private-byte checks, source and C receipts, negative cases and JVM ABI checks remain in place. A fresh Java 21 compile produced 148 door classes, exactly matching the corrected fixed list. The actual JAR passed the release check; a JAR missing `Door$NativeCall.class` was refused. The managed-pair self-test, offline policy, full lint, ticket lint and whitespace checks pass. Existing source-size and license-exception warnings remain unchanged. Fresh read-only Sol review accepts the correction without findings. Final hosted rehearsal and release QA remain open. The coordinator owns batching and the next candidate.
+
+What the build taught us: when the JVM ABI checker gains compiled descriptor records, update the release helper's fixed class inventory in the same change. The compiled JAR check alone does not update that list.
