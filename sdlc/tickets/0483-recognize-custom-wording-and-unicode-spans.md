@@ -8,6 +8,8 @@ Reviews: revision b9027d08b, reject
 
 Reviews: revision b9027d08b, accept
 
+Reviews: revision 872b8426330352368f7aca940cb1fa211f4e2f63, accept
+
 ## Outcome
 
 Custom recognition descriptions use grammatical entity wording. A leading BOM or the specified zero-width prefixes do not become part of a recognized name, while offsets remain positions in the original Unicode scalars. Internal formatting joiners retain their current behavior.
