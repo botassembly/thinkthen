@@ -25,3 +25,7 @@ Let a caller supply character spans for each record, with optional kinds. Merge 
 - Planning: Include supplied seeds and their overlaps in name, classification-question and relation bounds. Do not assume one proposal per piece or one question per untyped seed. Preserve existing bounds without seeds. A no-send plan fixture checks overlapping seeds without declared kinds and bounds the later requests without claiming their answers are known.
 - Proof: An outside-in generic fixture shows a seed missed by step 1 being classified in step 2, an incorrect supplied kind being corrected or refused, and native Request and CLI agreeing. Check details independently of the final strength cut. Cover single-piece seeds without kinds, nested overlaps and maximum evidence extent, duplicates, emoji, combining characters, leading excluded scalars, projected text, absent/empty/null, invalid pointer and kind, exact zero sends on invalid input, and cache/replay identity. Preserve unchanged default request bytes.
 - Defers: A revise mode, a new function, business policy and independent per-language validation. Surfaces adopt these settled fields once through the existing migration tickets.
+
+## Progress
+
+- 2026-10-08 started
