@@ -26,6 +26,13 @@ const TAG_WORDS: [&str; 5] = [
     "a one-token name",
     "not part of a name",
 ];
+const ENTITY_TAG_WORDS: [&str; 5] = [
+    "first token of an entity of two or more tokens",
+    "a middle token of an entity",
+    "last token of an entity of two or more tokens",
+    "a one-token entity",
+    "not part of an entity",
+];
 const KIND_WORDS: &str = "In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.";
 const DECLINE_WORDS: &str = "They are not a proper name, or no listed kind covers what they name.";
 const EDGE_WORDS: &str = "In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.";
@@ -170,17 +177,12 @@ pub(crate) fn step_one_questions(
     );
     let options = Labels::described(
         TAGS.iter()
-            .zip(TAG_WORDS)
-            .map(|(tag, meaning)| {
-                (
-                    (*tag).to_owned(),
-                    Some(Description::text(if custom.is_some() {
-                        meaning.replace("name", "entity")
-                    } else {
-                        meaning.to_owned()
-                    })),
-                )
+            .zip(if custom.is_some() {
+                ENTITY_TAG_WORDS
+            } else {
+                TAG_WORDS
             })
+            .map(|(tag, meaning)| ((*tag).to_owned(), Some(Description::text(meaning))))
             .collect(),
     )?;
     group

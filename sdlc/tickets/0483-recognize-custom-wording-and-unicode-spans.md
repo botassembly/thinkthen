@@ -1,12 +1,16 @@
 # 0483 — recognize-custom-wording-and-unicode-spans
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision b9027d08b, reject
 
 Reviews: revision b9027d08b, accept
+
+Reviews: revision 872b8426330352368f7aca940cb1fa211f4e2f63, accept
+
+Landed: e70dc1e
 
 ## Outcome
 

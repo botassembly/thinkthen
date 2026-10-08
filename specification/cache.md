@@ -4,7 +4,7 @@ Status: **Settled** for the 0.2 target by [ADR 0120](../sdlc/planning/adr/0120-s
 
 ## Version 2 identity
 
-`F(tag,parts)` is the ASCII tag followed by one NUL byte, then each part prefixed with its unsigned 64-bit big-endian byte length. Text parts are UTF-8. The v2 question key is lowercase SHA-256 of:
+`F(tag,parts)` is the ASCII tag followed by one NUL byte, then each part prefixed with its unsigned 64-bit big-endian byte length. Text parts are UTF-8. The v2 text question key is lowercase SHA-256 of:
 
 ```text
 F("thinkthen.question-key/2",
@@ -12,6 +12,17 @@ F("thinkthen.question-key/2",
   compact_JSON(requested_model), compact_JSON(answered_model),
   canonical_state_JSON, canonical_wire_question_JSON)
 ```
+
+The v2 key for explicit image inputs is lowercase SHA-256 of the same length-prefixed parts in the same order, with a separate tag:
+
+```text
+F("thinkthen.image-question-key/2",
+  adapter, canonical_final_URL,
+  compact_JSON(requested_model), compact_JSON(answered_model),
+  canonical_state_JSON, canonical_wire_question_JSON)
+```
+
+For images, `canonical_state_JSON` is the typed compact image envelope defined in [ADR 0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md), retaining ancillary text, original image bytes, canonical media, order and duplicates. The validated image state digest selects the image key domain; an ordinary JSON value with an image-looking shape remains text evidence. These formulas describe the existing v2 keys and preserve existing v1/v2 rows and native validation.
 
 Models are typed compact JSON strings. State/question JSON uses the adapter's typed compact serializers and their field/option order, not arbitrary caller JSON formatting. Adapter is the admitted provider API type/dialect, today `systemone`. Canonicalize the final posting URL with the existing endpoint resolver's scheme/host normalization and base trailing-slash treatment, consistently for all inputs and migration. Preserve distinct paths, ports and escapes otherwise. A resolved suffix such as `decisions` is part of that address. Retain credential/control/userinfo/query/fragment refusals; no key is hashed, logged or persisted.
 

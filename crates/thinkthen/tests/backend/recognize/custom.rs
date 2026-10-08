@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 const INPUT: &str = "é TOTAL 42.75.";
 const INSTRUCTIONS: &str = "Return literal receipt amounts.\nExclude the TOTAL label.";
 const DEFINITION: &str = "The complete numeric amount, including its decimal point.";
-const DESCRIPTION: &str = "Receipt total amount, not its label.";
+const DESCRIPTION: &str = "Receipt total amount, not its name or label.";
 
 fn literal(body: &[u8]) -> Canned {
     let request: Value = serde_json::from_slice(body).expect("request");
@@ -109,6 +109,21 @@ fn caller_semantics_reach_all_stages_and_keep_literal_offsets() {
                 2
             };
             stages[at] = true;
+            if at == 0 {
+                assert_eq!(
+                    criteria,
+                    &json!({
+                        "BEGIN":"first token of an entity of two or more tokens",
+                        "INSIDE":"a middle token of an entity",
+                        "END":"last token of an entity of two or more tokens",
+                        "SINGLE":"a one-token entity",
+                        "OUT":"not part of an entity"
+                    })
+                    .as_object()
+                    .expect("criteria")
+                    .clone()
+                );
+            }
             if at == 1 {
                 assert_eq!(criteria["amount"], DESCRIPTION);
                 assert_eq!(
