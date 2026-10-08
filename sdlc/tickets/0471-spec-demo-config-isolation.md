@@ -1,6 +1,6 @@
 # 0471: Isolate spec and demo configuration
 
-Status: OPEN. The historical fixture failure remains possible because Linux spec/demo children inherit the caller’s configuration home.
+Status: COMPLETE. The historical fixture failure remains possible because Linux spec/demo children inherit the caller’s configuration home.
 
 Milestone: 0.2
 
@@ -8,6 +8,10 @@ Owner: builder.
 Severity: medium fixture correctness.
 
 Reviews: revision caddaecbc, accept
+
+Reviews: revision 58546daf828038fd318d3d0fe362bd0e03a40b0e, accept
+
+Landed: ed7f5d9
 
 ## Outcome
 

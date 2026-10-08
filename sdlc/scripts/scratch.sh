@@ -65,6 +65,14 @@ usage_home() {
 	fi
 }
 
+# config_home: give a fixture runner an owned empty configuration base. Call it
+# after usage_home so the child environment cannot inherit a caller's setting.
+# On macOS usage_home also moves HOME, where ThinkThen finds its configuration.
+config_home() {
+	scratch_dir config_scratch
+	export XDG_CONFIG_HOME="$config_scratch"
+}
+
 # usage_guard: take usage_home as a decoy. Each check takes its own usage_home, so only a run
 # that bypassed one writes the decoy, and scratch_clean then fails the run.
 usage_guard() {

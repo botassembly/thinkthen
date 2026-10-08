@@ -65,6 +65,7 @@ impl Engine {
         )?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(0, |cancel| {
+            let cancel = cancel.with_storage_scope();
             let mut rows = Vec::new();
             for (at, unit) in units.enumerate() {
                 cancel.stop_or_remaining().map_err(Error::from)?;
@@ -73,7 +74,7 @@ impl Engine {
                     &engine,
                     ask,
                     &unit.text,
-                    cancel,
+                    &cancel,
                     &stop,
                     (at, Some(&unit.input)),
                 )

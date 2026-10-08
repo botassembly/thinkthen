@@ -69,6 +69,19 @@ expect ok 0 'demos: 1 green, 0 red'
 } | fixture other-language
 expect other-language 0 'demos: 1 green, 0 red'
 
+# A caller's valid or malformed configuration must not change a demo's plan.
+# The page uses the real binary and pins both the address and model.
+{
+	head_of_a_page 'ignore caller configuration'
+	block "printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n 1p | jq -c '{url,model}' | mustmatch '{\"url\":\"https://api.typesafe.ai/v1/systemone\",\"model\":\"jev-1.13.0\"}'"
+} | fixture isolated-config
+ambient="$REPO/$ROOT/ambient-config"
+mkdir -p "$ambient/thinkthen"
+printf '%s\n' '{"schema":"thinkthen.config/1","backend":"ollama"}' >"$ambient/thinkthen/config.json"
+XDG_CONFIG_HOME="$ambient" expect isolated-config 0 'demos: 1 green, 0 red'
+printf '%s\n' '{malformed' >"$ambient/thinkthen/config.json"
+XDG_CONFIG_HOME="$ambient" expect isolated-config 0 'demos: 1 green, 0 red'
+
 # A green page proves something.
 {
 	head_of_a_page 'assert nothing'

@@ -12,7 +12,7 @@ use crate::engine::Cancel;
 use crate::engine::error::Error;
 use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender};
 use crate::engine::pipeline::Input;
-use crate::engine::store::{Found, Store};
+use crate::engine::store::{Found, Shared};
 use crate::engine::usage::Counters;
 
 mod replies;
@@ -53,7 +53,7 @@ pub(super) struct Bounds {
 pub(super) struct Run<'a, A: Asker> {
     asker: &'a A,
     call: Call,
-    store: Option<Store>,
+    store: Option<Shared>,
     packer: Packer<(Ask, usize)>,
     staging: Option<staging::Staging<A>>,
     counts: Counts<'a>,
@@ -82,7 +82,7 @@ impl<'a, A: Asker> Run<'a, A> {
     pub(super) fn new(
         asker: &'a A,
         call: Call,
-        store: Option<Store>,
+        store: Option<Shared>,
         packer: Packer<(Ask, usize)>,
         bounds: Bounds,
         counts: Counts<'a>,
@@ -337,7 +337,12 @@ impl<'a, A: Asker> Run<'a, A> {
                 slot.answer(position, answered);
                 continue;
             }
-            if self.store.as_ref().is_some_and(Store::replays) {
+            if self.store.as_ref().is_some_and(|shared| {
+                shared
+                    .lock()
+                    .ok()
+                    .is_some_and(|held| held.as_ref().is_some_and(|store| store.replays()))
+            }) {
                 return engine(Error::QuestionMiss(ask.key.hex()));
             }
             if self.waiting.contains_key(&ask.key) || !added.insert(ask.key) {
@@ -399,8 +404,16 @@ impl<'a, A: Asker> Run<'a, A> {
     }
 
     fn lookup(&mut self, asks: &[Ask], cancel: &Cancel) -> Result<Vec<Option<Found>>, Error> {
-        match self.store.as_mut().filter(|store| store.looks_up()) {
-            Some(store) => {
+        match self.store.as_ref() {
+            Some(shared) => {
+                let mut held = shared.lock().map_err(|_| Error::RecordingStorage)?;
+                let Some(store) = held.as_mut() else {
+                    return Err(Error::RecordingStorage);
+                };
+                store.revalidate(cancel)?;
+                if !store.looks_up() {
+                    return Ok(vec![None; asks.len()]);
+                }
                 let found = store.lookup_asks(asks, cancel, (&self.call.url, &self.call.model))?;
                 if found.held_model_mismatch {
                     self.counts.usage.held_model_mismatch();

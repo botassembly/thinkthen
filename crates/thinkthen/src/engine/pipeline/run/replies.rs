@@ -49,7 +49,12 @@ impl<A: Asker> Run<'_, A> {
             key: found.key,
             observation_id: Some(found.observation_id),
             batch_size: found.batch_size,
-            origin: if self.store.as_ref().is_some_and(|store| store.replays()) {
+            origin: if self.store.as_ref().is_some_and(|shared| {
+                shared
+                    .lock()
+                    .ok()
+                    .is_some_and(|held| held.as_ref().is_some_and(|store| store.replays()))
+            }) {
                 crate::core::Origin::Replay
             } else {
                 crate::core::Origin::Cache
@@ -89,14 +94,21 @@ impl<A: Asker> Run<'_, A> {
             Err(error) => return self.fail_all(&done.asks, &error, span),
         };
         let rows = accepted.rows(&self.call, &done.asks, done.taken_at, &split);
-        let written = match self.store.as_mut() {
-            Some(store) => store.accept(
-                &rows,
-                done.storable,
-                done.original.as_ref(),
-                &done.attempts,
-                cancel,
-            ),
+        let written = match self.store.as_ref() {
+            Some(shared) => {
+                shared
+                    .lock()
+                    .map_err(|_| Error::RecordingStorage)
+                    .and_then(|mut held| {
+                        held.as_mut().ok_or(Error::RecordingStorage)?.accept(
+                            &rows,
+                            done.storable,
+                            done.original.as_ref(),
+                            &done.attempts,
+                            cancel,
+                        )
+                    })
+            }
             None => Ok(()),
         };
         drop(rows);

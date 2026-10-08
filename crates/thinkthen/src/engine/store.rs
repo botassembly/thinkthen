@@ -119,7 +119,12 @@ pub(crate) struct Store {
     connection: Option<Connection>,
     replayed: Option<Arc<Replayed>>,
     busy_limit: Duration,
+    validated_version: Option<i64>,
+    #[cfg(test)]
+    validation_scans: usize,
 }
+
+pub(crate) type Shared = Arc<std::sync::Mutex<Option<Store>>>;
 
 impl std::fmt::Debug for Store {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -157,6 +162,9 @@ impl Store {
             connection: None,
             replayed: None,
             busy_limit: Duration::from_secs(30),
+            validated_version: None,
+            #[cfg(test)]
+            validation_scans: 0,
         };
         let (sqlite, jsonl) = (folder.join(SQLITE), folder.join(JSONL));
         let (has_sqlite, has_jsonl) = (exists(&sqlite)?, exists(&jsonl)?);
@@ -190,6 +198,31 @@ impl Store {
             self.connect(cancel)?;
         }
         Ok(self)
+    }
+
+    /// Recheck a shared operation's connection when another connection committed.
+    pub(crate) fn revalidate(&mut self, cancel: &Cancel) -> Result<(), Error> {
+        if !self.writes() {
+            return Ok(());
+        }
+        let Some(connection) = self.connection.as_ref() else {
+            if exists(&self.folder.join(SQLITE))? || exists(&self.folder.join(JSONL))? {
+                self.connect(cancel)?;
+            }
+            return Ok(());
+        };
+        if !exists(&self.folder.join(SQLITE))? {
+            return Err(Error::RecordingStorage);
+        }
+        if Some(self.data_version(connection, cancel)?) != self.validated_version {
+            #[cfg(test)]
+            {
+                self.validation_scans += 1;
+            }
+            self.validated_version = Some(self.migrate(connection, cancel)?);
+            self.ensure_index(connection, cancel)?;
+        }
+        Ok(())
     }
 
     /// Whether this mode answers from the store.
@@ -326,25 +359,15 @@ impl Store {
                 Some(entries) => Some(entries),
                 None => read_fixture()?,
             };
-            self.waiting(cancel, || {
-                connection.execute_batch("PRAGMA auto_vacuum = INCREMENTAL")
-            })?;
-            let import =
-                |entries: &Entries| self.waiting(cancel, || entries.insert_all(&connection));
-            self.transaction(cancel, &connection, || {
-                self.waiting(cancel, || connection.execute_batch(SCHEMA))?;
-                fixture.as_ref().map_or(Ok(()), import)
-            })?;
-        } else {
-            self.migrate(&connection, cancel)?;
+            self.initialize(&connection, fixture.as_ref(), cancel)?;
         }
-        self.transaction(cancel, &connection, || {
-            self.waiting(cancel, || {
-                connection.execute_batch(
-                    "CREATE INDEX IF NOT EXISTS answers_route_question_state ON answers(url,model,question,state)",
-                )
-            })
-        })?;
+        #[cfg(test)]
+        {
+            self.validation_scans += 1;
+        }
+        let validated = self.migrate(&connection, cancel)?;
+        self.ensure_index(&connection, cancel)?;
+        self.validated_version = Some(validated);
         self.connection = Some(connection);
         Ok(())
     }

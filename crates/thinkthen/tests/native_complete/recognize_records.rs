@@ -4,6 +4,50 @@ use thinkthen::{
     RawRecord, Recognize, RecordInput, RecordObservation, RecordReading, SourceLocation,
 };
 
+#[test]
+fn an_external_cache_change_between_records_refuses_before_the_next_send() {
+    let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
+    let folder = folder();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .model("fixed")
+        .unwrap()
+        .api_key("complete-private")
+        .unwrap()
+        .cache_at(&folder)
+        .unwrap()
+        .max_retries(0)
+        .build()
+        .unwrap();
+    let ask = Recognize::builder().build().unwrap();
+    let changed = std::sync::atomic::AtomicBool::new(false);
+    let observer = |event: RecordObservation<'_>| {
+        if let RecordObservation::Row { index: 0, .. } = event {
+            let outside = rusqlite::Connection::open(folder.join("thinkthen.sqlite")).unwrap();
+            assert!(
+                outside
+                    .execute("UPDATE answers SET answer='broken'", [])
+                    .unwrap()
+                    > 0
+            );
+            changed.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+    };
+    let rows = ["Ada met Acme.", "Bob met Corp."].map(|original| RecordInput {
+        original,
+        context: None,
+        options: None,
+    });
+    let failure = engine
+        .recognize_records_complete_with(&ask, rows, CallOptions::new().observe(&observer))
+        .unwrap_err();
+    assert!(changed.load(std::sync::atomic::Ordering::SeqCst));
+    assert_eq!(failure.kind(), ErrorKind::Local);
+    assert_eq!(failure.facts().unwrap().records(), 1);
+    assert_eq!(listener.count(), 2);
+}
+
 #[cfg(test)]
 fn record(_id: usize, line: usize) -> RecordInput<thinkthen::RecordEvidence> {
     let raw = RawRecord::text("Ada met Acme.").unwrap();

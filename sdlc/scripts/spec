@@ -11,6 +11,7 @@ cd -- "$REPO"
 # ADR 0113: the binary and every demo write a scratch usage folder, which the exit removes.
 . sdlc/scripts/scratch.sh
 usage_home
+config_home
 
 # The pages name the address they expect and the demos replay recordings, so a
 # rung that read either variable would answer to the shell that called it.
