@@ -6,7 +6,7 @@ Choose the approved generated C-header and per-language struct fallback. Keep Py
 
 ## What the experiment tested
 
-The owned folder is `/home/ian/workspace/experiments/473-thinkthen-generated-bindings/`. Its OWNER names `thinkthen/0502`. It retains the plan, tool lock, generated classes, input schema and cases, probes, source line inventory, raw logs and report. Outputs remain outside Git.
+The owned folder is `experiments/473-thinkthen-generated-bindings/`. Its OWNER names `thinkthen/0502`. It retains the plan, tool lock, generated classes, input schema and cases, probes, source line inventory, raw logs and report. Outputs remain outside Git.
 
 Inputs came from this MIT repository: [result schema](../../specification/result.schema.json), [complete host fixture](../../libraries/php/fixtures/complete.json), [C header](../../libraries/c/include/thinkthen.h), current readers and accepted [ADR 0125](../planning/adr/0125-one-request-contract-and-native-admission.md). The fixture uses synthetic records and outcomes. The probe adds a schema-valid backend failure with retained facts. A wrapper selects the existing completeDecide, completeAnnotation, completeRank and CompleteError definitions; it changes no definition.
 
