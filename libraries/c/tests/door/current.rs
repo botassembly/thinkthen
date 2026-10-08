@@ -100,8 +100,12 @@ fn complete_failure_snapshots_keep_actual_stops_and_final_joined_facts() {
 #[test]
 fn complete_record_controls_record_reread_and_cache_use_one_native_store() {
     let backend = Backend::start().expect("loopback");
-    let recording = super::scratch("complete-recording").join("with space").join("back\\slash");
-    let cache = super::scratch("complete-cache").join("with space").join("back\\slash");
+    let recording = super::scratch("complete-recording")
+        .join("with space")
+        .join("back\\slash");
+    let cache = super::scratch("complete-cache")
+        .join("with space")
+        .join("back\\slash");
     let recording_json = std::path::PathBuf::from(serde_json::to_string(&recording).unwrap());
     let cache_json = std::path::PathBuf::from(serde_json::to_string(&cache).unwrap());
     let output = run_with(

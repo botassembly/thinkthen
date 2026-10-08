@@ -146,3 +146,5 @@ The C fixture now sets `APPDATA` to the same scratch directory as `XDG_CONFIG_HO
 The focused C named-loader test and Python priced-recognition test pass on Linux. Offline source policy, Python Ruff, record lint and whitespace checks pass. Existing policy size warnings remain unchanged. The C workspace format check finds pre-existing formatting in `current.rs` near line 100, unchanged by this correction. Fresh read-only Sol review accepts the whole correction without findings. These checks do not qualify Windows behavior; the next hosted Windows run remains required. The coordinator owns batching and qualification.
 
 What the build taught us: a fixture that creates platform configuration must point its child to that directory after all helper environments are combined.
+
+The coordinator formatted the two existing fixture path chains under Rust 1.95 before the combined landing checks. The C Rust total grows from 15088 to 15093: one line selects the owned Windows configuration folder, and four format those chains. No assertion or product behavior changes.
