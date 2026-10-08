@@ -36,7 +36,7 @@ The default throttle is 8 simultaneous requests on every surface. Explicit throt
 
 Named backends add `perplexity` and `openrouter`. Configuration entries may set a relative posting `path`. OpenRouter preserves descriptions and fills a missing yes-or-no side with `{}`. Existing configured entries named `perplexity` or `openrouter` must be renamed or removed because those names now select built-ins; a built-in configuration entry accepts only `requests_per_minute`. OpenAI Decisions text support is implemented through the native adapter. Each engine resolves one endpoint, key and provider API type; business routing belongs to the proxy.
 
-The release workflow covers the Windows x86-64 command, Rust crate, C DLL and Python wheel. Native qualification remains required. Windows Node, C# and JVM bindings are deferred to 0.3. Development command builds are unsigned. Final candidate documentation trials and clean public-package checks remain pending; public-package checks follow actual publication.
+The release workflow covers the Windows x86-64 command, Rust crate, C DLL and Python wheel. Native qualification remains required. Windows Node, C# and JVM bindings are deferred to 0.3. Development command builds are unsigned. The fresh Linux installed-candidate documentation trial passed for text, images and MCP. Clean public-package checks follow actual publication.
 
 ## 0.1.2 (2026-10-03)
 
