@@ -91,6 +91,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   scratch_dir smoke
   native_install "$(cd "$ROOT/../.." && pwd)" "$smoke/native"
   "$TT_DART" pub get --offline --directory "$ROOT" >&2
+  export TT_DART
   python3 "$CHECKS/exports.py" "$smoke/native/lib/libthinkthen.so" "$smoke/native/include/thinkthen.h" "$smoke/exports.txt" "$ROOT"
   mkdir "$smoke/app" "$smoke/app/bin"
   cp "$CHECKS/consumers/smoke.dart" "$smoke/app/bin/smoke.dart"
