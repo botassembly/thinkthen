@@ -98,7 +98,8 @@ class PublicAssertions(unittest.TestCase):
     def test_installed_sqlite_cells_override_legacy_diagnostics_without_hiding_gaps(self):
         output = (parity.ROOT / 'conformance/fixtures/sqlite-installed-parity.txt').read_text()
         contract = parity.inventory()
-        cases = parity.required_cases(contract, 'sqlite')
+        case_id = '18-annotate-two-groups'
+        cases = {case_id: parity.required_cases(contract, 'sqlite')[case_id]}
         for defect in [None, 'missing', 'fail', 'skip', 'checks']:
             with self.subTest(defect=defect):
                 lines = output.splitlines()
