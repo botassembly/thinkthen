@@ -11,6 +11,8 @@ struct Unit<T> {
     original: T,
     input: Arc<QuestionInput>,
     text: String,
+    engine: facade::Engine,
+    context: Option<String>,
 }
 impl Engine {
     /// Recognize selected native record text while retaining each original and location.
@@ -58,7 +60,7 @@ impl Engine {
         let units = self.try_within_admission(
             records.into_iter().enumerate().map(|(at, record)| {
                 record
-                    .and_then(|record| prepare(&engine, ask, record))
+                    .and_then(|record| prepare(&engine, ask, record, options.context_text()))
                     .map_err(|error| error.at_record(at))
             }),
             &options,
@@ -71,7 +73,7 @@ impl Engine {
                 cancel.stop_or_remaining().map_err(Error::from)?;
                 let before = stop.facts().attempts().map_or(0, <[_]>::len);
                 let found = super::execute(
-                    &engine,
+                    &unit.engine,
                     ask,
                     &unit.text,
                     &cancel,
@@ -88,7 +90,13 @@ impl Engine {
                     .facts()
                     .attempts()
                     .map(|attempts| attempts.iter().skip(before).cloned().collect());
-                let mut result = rendered(&engine, ask, found, value, (at, &options, attempts))?;
+                let mut result = rendered(
+                    &unit.engine,
+                    ask,
+                    found,
+                    value,
+                    (at, unit.context.as_deref(), attempts),
+                )?;
                 result.canonical.source = super::super::physical_source(&unit.input);
                 result.source_value = source_value(&result.canonical.value, &unit)?;
                 rows.push(CompleteRecord {
@@ -106,12 +114,23 @@ fn prepare<T: InputEvidence>(
     engine: &facade::Engine,
     ask: &Recognize,
     record: RecordInput<T>,
+    fallback: Option<&str>,
 ) -> Result<Unit<T>, Error> {
-    if record.context.is_some() || record.options.is_some() {
-        return Err(Error::usage(
-            "recognize takes one call context and no per-record controls",
-        ));
+    if record.options.is_some() {
+        return Err(Error::usage("recognize takes no per-record options"));
     }
+    ask.0.metadata.validate_context(record.context.as_ref())?;
+    let resolved = crate::public::RecordContext::resolved(record.context.as_ref(), fallback)?;
+    let context = resolved
+        .as_ref()
+        .map(|evidence| {
+            evidence
+                .as_text()
+                .map(|text| text.into_owned())
+                .map_err(Error::refused)
+        })
+        .transpose()?;
+    let engine = engine.clone().with_aggregate_context_value(resolved);
     let input = Arc::new(record.original.question_input());
     ask.0.metadata.validate_item(&input)?;
     crate::public::images::guard(InputFunction::Recognize, &input)?;
@@ -130,6 +149,8 @@ fn prepare<T: InputEvidence>(
         original: record.original,
         input,
         text,
+        engine,
+        context,
     })
 }
 

@@ -10,10 +10,6 @@ struct Context<'a> {
 }
 
 impl State {
-    pub(crate) fn with_context(&self, context: &str) -> Result<Self, EncodeError> {
-        self.with_context_value(&crate::core::Json::String(context.to_owned()))
-    }
-
     pub(crate) fn with_context_value(
         &self,
         context: &crate::core::Json,

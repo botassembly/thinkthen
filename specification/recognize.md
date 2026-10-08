@@ -6,6 +6,16 @@ Status: **Settled** for default recognition under ADR 0056 and caller-defined re
 
 Recognize runs in three steps. Step 1 splits the text into pieces and asks where each piece stands in a name. Step 2 asks each found name's kind and checks its edges. Step 3 asks only the relation pairs a rule allows. The same path serves a sentence and a book.
 
+## Per-record context
+
+`--context-field POINTER` selects each JSON record's separate context through the same record reader as decide and rank. The pointer must exist. Missing, null and nontext values refuse before sending; a declared object `context_schema` admits an ordered object. An explicitly empty string clears shared `--context FILE` context. Without the selector, every record keeps shared context. Context remains separate from selected evidence and original record positions.
+
+The CLI admits every selected record context before dispatch. Native `recognize_records_complete_with` and its fallible reader admit the existing `RecordInput.context` through the same declaration rules before any send. MCP and the named C complete call compose that carrier. Context reaches boundary, kind, edge and relation requests, changes their cache keys, and appears as `context_sha256` in complete row metadata when effective context exists. Unchanged context can replay saved exchanges; changed context must obtain its own answers.
+
+One call shares the engine's endpoint, pool, concurrency limit and storage scope. CLI `--jobs` schedules independent records through that pool. Native record recognition retains its existing ordered execution. Each record batches questions within a stage according to existing backend limits; recognition does not pack questions from different records into one request.
+
+Request adoption uses the existing per-record `context` field and reader projection `context_field`. Families adopting the versioned request in ADR 0125 must convert those values to `RecordInput` and `RecordReading`; they must not introduce another recognition context carrier. The legacy unversioned C JSON interface retains its recognition-record refusal.
+
 ## Caller-defined entities
 
 Settled for 0.2 by [ADR 0124](../sdlc/planning/adr/0124-caller-defined-recognition.md). `--instructions TEXT`, `--entity-definition TEXT` and existing `--kind KIND=DESCRIPTION` define the recognition task. Any supplied task wording or meaningful label description selects neutral entity questions. Dates, numbers, codes, amounts, units, ordinary words and web addresses can be entities. ThinkThen applies no fixed semantic suppression in this mode. Protocol labels and structural token rules retain their roles.

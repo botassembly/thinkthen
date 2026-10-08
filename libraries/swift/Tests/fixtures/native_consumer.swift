@@ -74,7 +74,8 @@ import CThinkThen
                     var original: NativeInput? = v["image_only"] as? Bool == true ? nil : try input(item,text:v["text"] as? Bool == true)
                     if v["caption_files"] as? Bool == true { original = .text(try String(contentsOfFile:"caption-\(i).txt",encoding:.utf8)) }
                     var context: NativeInput? = nil
-                    if v["context_present"] as? Bool == true { let c = v["context"]!; context = try input(c,text:c is String) }
+                    if let contexts = v["contexts"] as? [Any] { let c = contexts[i]; context = try input(c,text:c is String) }
+                    else if v["context_present"] as? Bool == true { let c = v["context"]!; context = try input(c,text:c is String) }
                     var options: [thinkthen_choice_v1] = []
                     if let orders = v["candidate_orders"] as? [[String]] { for name in orders[i] { var option = thinkthen_choice_v1(); option.name = buffers.string(name); options.append(option) } }
                     records.append(NativeRecord(original:original,context:context,options:options,images:images))

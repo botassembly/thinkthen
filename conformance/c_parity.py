@@ -117,6 +117,12 @@ def document(row, cases, named):
             else:
                 base['question'] = {**base['question'], **given['metadata']}
             base['metadata'] = given['metadata']
+            if 'records' in given:
+                base.update(items=given['records'], contexts=given.get('contexts'),
+                            shared_context=given.get('shared_context'), expect=case['expect'],
+                            arm='case/'+row['id']+'/v1' if row.get('exchanges') else 'arm/full/capture/v1')
+            if given.get('steps'):
+                return {'arm':base['arm'], 'steps':[{**base, **step} for step in given['steps']]}
             return base
         if given.get('mode') == 'incremental':
             return {'verb': row['verb'], 'question': given['question'], 'items': given['records'],
@@ -270,8 +276,8 @@ def generated(at, value):
                 lines.append('records[%d].options=(thinkthen_choices_v1){options_%d,%d};' % (index,index,len(order)))
             if image_paths:
                 lines.append('records[%d].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % (index, len(image_paths)))
-            if value.get('context_present'):
-                context = value['context']
+            if value.get('context_present') or value.get('contexts') is not None:
+                context = value['contexts'][index] if value.get('contexts') is not None else value['context']
                 lines.append('records[%d].context=(thinkthen_optional_content_v1){1,%s};' % (index, content(context, isinstance(context, str))))
         if value.get('image_only'):
             lines.append('records[0].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % len(image_paths))
@@ -398,6 +404,8 @@ def assertions(row, value, got, count):
         return
     if 'edges' in expect:
         assert len(got['rows'][0]['value']) == expect['edges'], got
+    if 'values' in expect:
+        assert equivalent([r['value'] for r in got['rows']], expect['values']), (got, expect)
     if 'success' not in expect:
         for key in ('value', 'probability'):
             if key in expect:

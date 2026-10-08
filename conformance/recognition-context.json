@@ -1,0 +1,672 @@
+{
+  "question": {
+    "version": 1,
+    "recognize": {
+      "kinds": {
+        "person": "A person's name.",
+        "organization": "An organization name."
+      },
+      "relations": [
+        {
+          "name": "works_for",
+          "source": "person",
+          "target": "organization"
+        },
+        {
+          "name": "founded",
+          "source": "person",
+          "target": "organization"
+        }
+      ]
+    },
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+  },
+  "text": "Amara works at Kestrel Labs.",
+  "shared_context": "Shared context",
+  "value": {
+    "entities": [
+      {
+        "text": "Amara",
+        "start": 0,
+        "end": 5,
+        "length": 5,
+        "kind": "person",
+        "strength": 1.0
+      },
+      {
+        "text": "Kestrel Labs",
+        "start": 15,
+        "end": 27,
+        "length": 12,
+        "kind": "organization",
+        "strength": 0.9972
+      }
+    ],
+    "relations": [
+      {
+        "relation": "works_for",
+        "source": {
+          "text": "Amara",
+          "start": 0,
+          "end": 5,
+          "length": 5,
+          "kind": "person",
+          "strength": 1.0
+        },
+        "target": {
+          "text": "Kestrel Labs",
+          "start": 15,
+          "end": 27,
+          "length": 12,
+          "kind": "organization",
+          "strength": 0.9972
+        },
+        "probability": 0.97
+      }
+    ]
+  },
+  "rows": [
+    {
+      "context": "First context",
+      "exchanges": [
+        {
+          "request": "{\"state\":{\"context\":\"First context\",\"evidence\":\"Amara works at Kestrel Labs.\"},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara [[works]] at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works [[at]] Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q4\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at [[Kestrel]] Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q5\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel [[Labs]].\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q6\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel Labs[[.]]\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "SINGLE",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "OUT": 1.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 1.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q4": {
+                "type": "choice",
+                "choice": "BEGIN",
+                "confidence": 0.9,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.03,
+                  "END": 0.0,
+                  "BEGIN": 0.93,
+                  "SINGLE": 0.04
+                }
+              },
+              "q5": {
+                "type": "choice",
+                "choice": "END",
+                "confidence": 0.91,
+                "probabilities": {
+                  "OUT": 0.02,
+                  "INSIDE": 0.0,
+                  "END": 0.93,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.04
+                }
+              },
+              "q6": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.6,
+                "probabilities": {
+                  "OUT": 0.68,
+                  "INSIDE": 0.04,
+                  "END": 0.25,
+                  "BEGIN": 0.01,
+                  "SINGLE": 0.02
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 1347,
+              "output_tokens": 323
+            }
+          }
+        },
+        {
+          "request": "{\"state\":{\"context\":\"First context\",\"evidence\":\"Amara works at Kestrel Labs.\"},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nPick the option that wraps exactly the whole requested entity. Retain literal punctuation that belongs to the entity, including decimal points, slashes and web-address punctuation. Leave surrounding sentence punctuation outside.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"Kestrel Labs\":\"Amara works at [[Kestrel Labs]].\",\"Kestrel Labs.\":\"Amara works at [[Kestrel Labs.]]\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "person",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 0.0,
+                  "none of these": 0.0,
+                  "person": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "organization",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 1.0,
+                  "none of these": 0.0,
+                  "person": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "Kestrel Labs",
+                "confidence": 0.99,
+                "probabilities": {
+                  "Kestrel Labs.": 0.0,
+                  "Kestrel Labs": 1.0
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 704,
+              "output_tokens": 118
+            }
+          }
+        },
+        {
+          "request": "{\"state\":{\"context\":\"First context\",\"evidence\":{\"evidence\":\"Amara works at Kestrel Labs.\",\"entities\":[{\"id\":\"i1\",\"name\":\"Amara\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Kestrel Labs\",\"kind\":\"organization\"}]}},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 works for i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 founded i2?\"}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.97
+              },
+              "q2": {
+                "type": "noul",
+                "noul": 0.01
+              }
+            },
+            "usage": {
+              "input_tokens": 379,
+              "output_tokens": 38
+            }
+          }
+        }
+      ]
+    },
+    {
+      "context": "Second context",
+      "exchanges": [
+        {
+          "request": "{\"state\":{\"context\":\"Second context\",\"evidence\":\"Amara works at Kestrel Labs.\"},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara [[works]] at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works [[at]] Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q4\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at [[Kestrel]] Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q5\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel [[Labs]].\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q6\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel Labs[[.]]\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "SINGLE",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "OUT": 1.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 1.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q4": {
+                "type": "choice",
+                "choice": "BEGIN",
+                "confidence": 0.9,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.03,
+                  "END": 0.0,
+                  "BEGIN": 0.93,
+                  "SINGLE": 0.04
+                }
+              },
+              "q5": {
+                "type": "choice",
+                "choice": "END",
+                "confidence": 0.91,
+                "probabilities": {
+                  "OUT": 0.02,
+                  "INSIDE": 0.0,
+                  "END": 0.93,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.04
+                }
+              },
+              "q6": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.6,
+                "probabilities": {
+                  "OUT": 0.68,
+                  "INSIDE": 0.04,
+                  "END": 0.25,
+                  "BEGIN": 0.01,
+                  "SINGLE": 0.02
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 1347,
+              "output_tokens": 323
+            }
+          }
+        },
+        {
+          "request": "{\"state\":{\"context\":\"Second context\",\"evidence\":\"Amara works at Kestrel Labs.\"},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nPick the option that wraps exactly the whole requested entity. Retain literal punctuation that belongs to the entity, including decimal points, slashes and web-address punctuation. Leave surrounding sentence punctuation outside.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"Kestrel Labs\":\"Amara works at [[Kestrel Labs]].\",\"Kestrel Labs.\":\"Amara works at [[Kestrel Labs.]]\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "person",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 0.0,
+                  "none of these": 0.0,
+                  "person": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "organization",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 1.0,
+                  "none of these": 0.0,
+                  "person": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "Kestrel Labs",
+                "confidence": 0.99,
+                "probabilities": {
+                  "Kestrel Labs.": 0.0,
+                  "Kestrel Labs": 1.0
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 704,
+              "output_tokens": 118
+            }
+          }
+        },
+        {
+          "request": "{\"state\":{\"context\":\"Second context\",\"evidence\":{\"evidence\":\"Amara works at Kestrel Labs.\",\"entities\":[{\"id\":\"i1\",\"name\":\"Amara\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Kestrel Labs\",\"kind\":\"organization\"}]}},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 works for i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 founded i2?\"}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.97
+              },
+              "q2": {
+                "type": "noul",
+                "noul": 0.01
+              }
+            },
+            "usage": {
+              "input_tokens": 379,
+              "output_tokens": 38
+            }
+          }
+        }
+      ]
+    },
+    {
+      "context": "",
+      "exchanges": [
+        {
+          "request": "{\"state\":\"Amara works at Kestrel Labs.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara [[works]] at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works [[at]] Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q4\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at [[Kestrel]] Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q5\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel [[Labs]].\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q6\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel Labs[[.]]\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "SINGLE",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "OUT": 1.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 1.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q4": {
+                "type": "choice",
+                "choice": "BEGIN",
+                "confidence": 0.9,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.03,
+                  "END": 0.0,
+                  "BEGIN": 0.93,
+                  "SINGLE": 0.04
+                }
+              },
+              "q5": {
+                "type": "choice",
+                "choice": "END",
+                "confidence": 0.91,
+                "probabilities": {
+                  "OUT": 0.02,
+                  "INSIDE": 0.0,
+                  "END": 0.93,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.04
+                }
+              },
+              "q6": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.6,
+                "probabilities": {
+                  "OUT": 0.68,
+                  "INSIDE": 0.04,
+                  "END": 0.25,
+                  "BEGIN": 0.01,
+                  "SINGLE": 0.02
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 1347,
+              "output_tokens": 323
+            }
+          }
+        },
+        {
+          "request": "{\"state\":\"Amara works at Kestrel Labs.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nPick the option that wraps exactly the whole requested entity. Retain literal punctuation that belongs to the entity, including decimal points, slashes and web-address punctuation. Leave surrounding sentence punctuation outside.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"Kestrel Labs\":\"Amara works at [[Kestrel Labs]].\",\"Kestrel Labs.\":\"Amara works at [[Kestrel Labs.]]\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "person",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 0.0,
+                  "none of these": 0.0,
+                  "person": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "organization",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 1.0,
+                  "none of these": 0.0,
+                  "person": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "Kestrel Labs",
+                "confidence": 0.99,
+                "probabilities": {
+                  "Kestrel Labs.": 0.0,
+                  "Kestrel Labs": 1.0
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 704,
+              "output_tokens": 118
+            }
+          }
+        },
+        {
+          "request": "{\"state\":{\"evidence\":\"Amara works at Kestrel Labs.\",\"entities\":[{\"id\":\"i1\",\"name\":\"Amara\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Kestrel Labs\",\"kind\":\"organization\"}]},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 works for i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 founded i2?\"}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.97
+              },
+              "q2": {
+                "type": "noul",
+                "noul": 0.01
+              }
+            },
+            "usage": {
+              "input_tokens": 379,
+              "output_tokens": 38
+            }
+          }
+        }
+      ]
+    },
+    {
+      "context": null,
+      "exchanges": [
+        {
+          "request": "{\"state\":{\"context\":\"Shared context\",\"evidence\":\"Amara works at Kestrel Labs.\"},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara [[works]] at Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works [[at]] Kestrel Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q4\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at [[Kestrel]] Labs.\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q5\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel [[Labs]].\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}},\"q6\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\\n\\nSnippet: Amara works at Kestrel Labs[[.]]\",\"criteria\":{\"BEGIN\":\"first token of an entity of two or more tokens\",\"INSIDE\":\"a middle token of an entity\",\"END\":\"last token of an entity of two or more tokens\",\"SINGLE\":\"a one-token entity\",\"OUT\":\"not part of an entity\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "SINGLE",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "OUT": 1.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 1.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q4": {
+                "type": "choice",
+                "choice": "BEGIN",
+                "confidence": 0.9,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "INSIDE": 0.03,
+                  "END": 0.0,
+                  "BEGIN": 0.93,
+                  "SINGLE": 0.04
+                }
+              },
+              "q5": {
+                "type": "choice",
+                "choice": "END",
+                "confidence": 0.91,
+                "probabilities": {
+                  "OUT": 0.02,
+                  "INSIDE": 0.0,
+                  "END": 0.93,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.04
+                }
+              },
+              "q6": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.6,
+                "probabilities": {
+                  "OUT": 0.68,
+                  "INSIDE": 0.04,
+                  "END": 0.25,
+                  "BEGIN": 0.01,
+                  "SINGLE": 0.02
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 1347,
+              "output_tokens": 323
+            }
+          }
+        },
+        {
+          "request": "{\"state\":{\"context\":\"Shared context\",\"evidence\":\"Amara works at Kestrel Labs.\"},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: [[Amara]] works at Kestrel Labs.\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"none of these\":\"The span fails the caller declaration or no listed kind applies.\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Recognize literal entity spans in the text according to this caller declaration.\\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\\nKinds and descriptions: \\nperson: \\\"A person's name.\\\"\\norganization: \\\"An organization name.\\\"\\nPick the option that wraps exactly the whole requested entity. Retain literal punctuation that belongs to the entity, including decimal points, slashes and web-address punctuation. Leave surrounding sentence punctuation outside.\\n\\nText: Amara works at [[Kestrel Labs]].\",\"criteria\":{\"Kestrel Labs\":\"Amara works at [[Kestrel Labs]].\",\"Kestrel Labs.\":\"Amara works at [[Kestrel Labs.]]\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "person",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 0.0,
+                  "none of these": 0.0,
+                  "person": 1.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "organization",
+                "confidence": 1.0,
+                "probabilities": {
+                  "organization": 1.0,
+                  "none of these": 0.0,
+                  "person": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "Kestrel Labs",
+                "confidence": 0.99,
+                "probabilities": {
+                  "Kestrel Labs.": 0.0,
+                  "Kestrel Labs": 1.0
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 704,
+              "output_tokens": 118
+            }
+          }
+        },
+        {
+          "request": "{\"state\":{\"context\":\"Shared context\",\"evidence\":{\"evidence\":\"Amara works at Kestrel Labs.\",\"entities\":[{\"id\":\"i1\",\"name\":\"Amara\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Kestrel Labs\",\"kind\":\"organization\"}]}},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 works for i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 founded i2?\"}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.97
+              },
+              "q2": {
+                "type": "noul",
+                "noul": 0.01
+              }
+            },
+            "usage": {
+              "input_tokens": 379,
+              "output_tokens": 38
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "question_json": "{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\"},\"relations\":[{\"name\":\"works_for\",\"source\":\"person\",\"target\":\"organization\"},{\"name\":\"founded\",\"source\":\"person\",\"target\":\"organization\"}]},\"threshold\":0.5,\"relation_threshold\":0.5}"
+}

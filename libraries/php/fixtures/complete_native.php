@@ -21,7 +21,8 @@ function consume(array $v,string $library,string $settings): array
             $items=[];foreach($v['items'] as $i=>$item) {
                 $original=($v['image_only']??false)?null:(($v['text']??false)&&is_string($item)?Content::text($item):Content::json($item));
                 if($v['caption_files']??false)$original=Content::text(file_get_contents('caption-'.$i.'.txt'));
-                $context=($v['context_present']??false)?(is_string($v['context'])?Content::text($v['context']):Content::json($v['context'])):null;
+                $selected=isset($v['contexts'])?$v['contexts'][$i]:($v['context']??null);
+                $context=(isset($v['contexts'])||($v['context_present']??false))?(is_string($selected)?Content::text($selected):Content::json($selected)):null;
                 $options=array_map(fn($name)=>new Choice($name),$v['candidate_orders'][$i]??[]);
                 $items[]=new Record($original,$context,$options,$images);
             }

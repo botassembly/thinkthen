@@ -174,7 +174,9 @@ fn recognition_admits_all_records_before_sends_and_empty_records_have_no_observa
     assert_eq!(failed.stopped().at(), Some(2));
     assert!(failed.facts().is_none());
     let mut unsupported = record(2, 2);
-    unsupported.context = Some(String::new().into());
+    unsupported.options = Some(
+        thinkthen::RecordOptions::project(r#"{"options":["one","two"]}"#, "/options").unwrap(),
+    );
     assert_eq!(
         engine
             .recognize_records_complete_with(&ask, [record(1, 1), unsupported], CallOptions::new())

@@ -31,7 +31,8 @@ def fixture(row, cases, named):
             if step.get('incremental'):
                 # Reuse the canonical owned JSONL recipe and the native lazy reader.
                 step.update(owned_jsonl=True, paths=['records.jsonl'], source_unit=5, jsonl_root=True)
-    if row['kind'] == 'named-input' and named[row['input']['case_ref']]['input'].get('source_case'):
+    if (row['kind'] == 'named-input' and named[row['input']['case_ref']]['input'].get('source_case')
+            and not any(key in named[row['input']['case_ref']]['input'] for key in ('records', 'steps'))):
         value['author_expect'] = named[row['input']['case_ref']]['expect']
     if row['kind'] == 'refusal':
         value['image_only'] = True
@@ -96,15 +97,15 @@ def arguments(step, home, settings):
         args['evidence'] = step['items'][0]
     else:
         args['records'] = step['items']
-    if step.get('context_present'):
+    if step.get('context_present') or step.get('contexts') is not None:
         entries = args.get('inputs')
         if entries is None:
             args.pop('evidence', None)
             args.pop('records', None)
             entries = [{'text' if step.get('text') else 'json': item} for item in step['items']]
             args['inputs'] = entries
-        for entry in entries:
-            entry['context'] = step['context']
+        for at, entry in enumerate(entries):
+            entry['context'] = step['contexts'][at] if step.get('contexts') is not None else step['context']
     return args
 
 
@@ -264,7 +265,7 @@ def known_fields(step, got, bodies):
             context = expected['per_item_context']
             assert body['state'] == (context if context != '' else 'Each question quotes the text it asks about.'), body
             assert 'context' not in body, body
-        elif step.get('shared_context') is not None:
+        elif step.get('shared_context') is not None and step['verb'] != 'recognize':
             assert body['state'] == step['shared_context'], body
     if step.get('paths') and step.get('source_unit') == 3 and step.get('arm') == 'arm/full/capture/v1':
         for row in got['rows']:

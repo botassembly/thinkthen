@@ -38,7 +38,11 @@ impl Engine {
                 ask,
                 found,
                 value,
-                (0, &options, stop.facts().attempts().map(<[_]>::to_vec)),
+                (
+                    0,
+                    options.context_text(),
+                    stop.facts().attempts().map(<[_]>::to_vec),
+                ),
             )
         })
     }
@@ -49,11 +53,7 @@ pub(super) fn rendered(
     ask: &Recognize,
     found: crate::engine::facade::Recognition,
     value: Recognized,
-    (ordinal, options, attempts): (
-        usize,
-        &CallOptions<'_>,
-        Option<Vec<core::AttemptObservation>>,
-    ),
+    (ordinal, context, attempts): (usize, Option<&str>, Option<Vec<core::AttemptObservation>>),
 ) -> Result<CompleteRecognized, Error> {
     let canonical = crate::result_json::complete::recognition(
         engine,
@@ -62,8 +62,7 @@ pub(super) fn rendered(
         crate::result_json::complete::RecognitionRow {
             ordinal,
             input: None,
-            context_sha256: options
-                .context_text()
+            context_sha256: context
                 .filter(|text| !text.is_empty())
                 .map(|text| core::bytes_sha256(text.as_bytes())),
             attempts,

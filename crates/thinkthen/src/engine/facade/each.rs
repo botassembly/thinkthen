@@ -67,13 +67,21 @@ pub(crate) struct Request {
 }
 
 impl Asks {
-    pub(crate) fn with_context(mut self, backend: &Backend, context: &str) -> Result<Self, Error> {
+    pub(crate) fn with_context(self, backend: &Backend, context: &str) -> Result<Self, Error> {
+        self.with_context_value(backend, &crate::core::Json::String(context.to_owned()))
+    }
+
+    pub(crate) fn with_context_value(
+        mut self,
+        backend: &Backend,
+        context: &crate::core::Json,
+    ) -> Result<Self, Error> {
         let model = pack::model_json(backend.model().as_str())
             .map_err(|_| Error::Defect("an aggregate model could not be rendered"))?;
         for ask in &mut self.asks {
             ask.state = ask
                 .state
-                .with_context(context)
+                .with_context_value(context)
                 .map_err(|_| Error::Defect("an aggregate context could not be rendered"))?;
             ask.key = ask.state.key(backend.url(), &model, &ask.question);
         }
@@ -279,7 +287,7 @@ impl Engine {
         }
         let contextual;
         let asks = if let Some(context) = &self.aggregate_context {
-            contextual = asks.clone().with_context(&self.backend, context)?;
+            contextual = asks.clone().with_context_value(&self.backend, context)?;
             &contextual
         } else {
             asks

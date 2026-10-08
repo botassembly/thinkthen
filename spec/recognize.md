@@ -8,6 +8,13 @@ printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | s
 printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | sed -n '2p' | jq -c '{records, requests, upper_bound}' | mustmatch '{"records":1,"requests":5,"upper_bound":true}'
 ```
 
+A JSON record can supply context separately from its selected text. Recognition sends that context to each stage and retains the original record in its row.
+
+```bash
+printf '%s\n' '{"body":"Ada met Acme.","policy":"First context"}' '{"body":"Bob met Corp.","policy":"Second context"}' | env -u THINKTHEN_API_KEY thinkthen recognize --jsonl --field /body --context-field /policy --plan | sed -n '1p' | jq -c '.requests[0].body_utf8 | fromjson | .state' | mustmatch '{"context":"First context","evidence":"Ada met Acme."}'
+printf '%s\n' '{"body":"Ada met Acme.","policy":""}' | env -u THINKTHEN_API_KEY thinkthen recognize --jsonl --field /body --context-field /policy --plan | sed -n '1p' | jq -c '.requests[0].body_utf8 | fromjson | .state' | mustmatch '"Ada met Acme."'
+```
+
 Caller wording and label descriptions define literal entities. This controlled fixture proves the saved declaration and exact offsets. It measures no model accuracy.
 
 ```bash

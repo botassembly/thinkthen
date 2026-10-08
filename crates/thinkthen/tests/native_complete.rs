@@ -118,3 +118,5 @@ mod source_recognition;
 
 #[path = "native_complete/find_admission.rs"]
 mod find_admission;
+#[path = "native_complete/recognize_context.rs"]
+mod recognize_context;

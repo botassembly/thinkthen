@@ -87,7 +87,7 @@ Future<Map<String, Object?>> consume(
                           ? Content.text(items[i])
                           : Content.json(items[i]),
               context:
-                  v['context_present'] == true ? _content(v['context']) : null,
+                  v['contexts'] is List ? _content(v['contexts'][i]) : v['context_present'] == true ? _content(v['context']) : null,
               options: [
                 for (final name in v['candidate_orders']?[i] ?? []) Choice(name)
               ],

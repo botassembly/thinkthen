@@ -248,7 +248,9 @@ fn run() !void {
                 if (flag(v, "caption_files")) bytes = try std.fs.cwd().readFileAlloc(a, try std.fmt.allocPrint(a, "caption-{d}.txt", .{i}), std.math.maxInt(usize));
                 row.original = .{ .present = 1, .value = .{ .kind = try number(kinds[i]), .data = n.counted(bytes) } };
             }
-            if (flag(v, "context_present")) row.context = .{ .present = 1, .value = .{ .kind = try number(get(v, "context_kind")), .data = n.counted(try string(get(v, "context_bytes"))) } };
+            if (get(v, "contexts_bytes") == .array) {
+                row.context = .{ .present = 1, .value = .{ .kind = try number(get(v, "contexts_kind").array.items[i]), .data = n.counted(try string(get(v, "contexts_bytes").array.items[i])) } };
+            } else if (flag(v, "context_present")) row.context = .{ .present = 1, .value = .{ .kind = try number(get(v, "context_kind")), .data = n.counted(try string(get(v, "context_bytes"))) } };
             const orders = get(v, "candidate_orders");
             if (orders == .array) {
                 const order = orders.array.items[i].array.items;

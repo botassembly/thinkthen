@@ -29,7 +29,9 @@ def request(value, root, home, settings):
         for at,item in enumerate(value['items']):
             if isinstance(value.get('caption_files'),list): item=(home/value['caption_files'][at]).read_text()
             row={'content':{'kind':'images'} if value.get('image_only') else {'kind':'text' if value.get('text') and isinstance(item,str) else 'json','value':item},'images':images}
-            if value.get('context_present'):row['context']={'kind':'text' if isinstance(value['context'],str) else 'json','value':value['context']}
+            if value.get('context_present') or value.get('contexts') is not None:
+                context=value['contexts'][at] if value.get('contexts') is not None else value['context']
+                row['context']={'kind':'text' if isinstance(context,str) else 'json','value':context}
             if value.get('record_options') is not None:
                 row['options']=[{'name':name,'description':description} for name,description in value['record_options'].items()]
             records.append(row)
@@ -251,7 +253,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                         if value.get('image_variants'):c_images.assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
                         elif step.get('shared_context') is not None or 'request_items' in step['expect']:
                             bodies=json.loads(backend.read('capture'))['bodies']
-                            if step.get('shared_context') is not None:
+                            if step.get('shared_context') is not None and step['verb']!='recognize':
                                 want=step['context'] if step.get('context_present') else step['shared_context']
                                 if want=='':want='Each question quotes the text it asks about.'
                                 assert all(json.loads(b).get('state')==want for b in bodies),bodies

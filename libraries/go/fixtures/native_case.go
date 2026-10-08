@@ -26,6 +26,7 @@ type nativeDocument struct {
 	HeldCancel      bool              `json:"held_cancel"`
 	ImageReader     bool              `json:"image_reader"`
 	Context         json.RawMessage   `json:"context"`
+	Contexts        []json.RawMessage `json:"contexts"`
 	ContextPresent  bool              `json:"context_present"`
 	SharedContext   json.RawMessage   `json:"shared_context"`
 	Loader          string            `json:"loader"`
@@ -126,7 +127,9 @@ func completeCase(raw []byte) string {
 					r.Original = thinkthen.Some(caseContent(item, d.Text))
 				}
 			}
-			if d.ContextPresent {
+			if d.Contexts != nil {
+				r.Context = thinkthen.Some(caseContent(d.Contexts[at], true))
+			} else if d.ContextPresent {
 				r.Context = thinkthen.Some(caseContent(d.Context, true))
 			}
 			for _, path := range d.ImagePaths {

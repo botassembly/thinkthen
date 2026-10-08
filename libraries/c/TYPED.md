@@ -114,3 +114,5 @@ int thinkthen_result_observation_author(const thinkthen_result *, size_t observa
 ```
 
 Shared public parity runs actual typed calls and known result accessors against the canonical fixture inputs. Internal fault injection remains native/C safety coverage; schema-only envelopes run at their decoder boundary. Runtime gaps fail visibly. Root owns the final whole-change review and landing gates.
+
+Named `thinkthen_recognize_complete` accepts each source record's existing context carrier, including an explicit empty text that clears call context. The existing native admission checks every record before dispatch. See [the recognition contract](../../specification/recognize.md#per-record-context) for stage batching and context identity.
