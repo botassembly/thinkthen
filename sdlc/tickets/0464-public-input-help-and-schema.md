@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Severity: low public contract inconsistency.
 
+Reviews: revision e71fa0b01, accept
+
 ## Outcome
 
 CLI help and MCP tool schemas describe the native reader combinations callers can use. Invalid inputs still refuse locally before file reads or calls.

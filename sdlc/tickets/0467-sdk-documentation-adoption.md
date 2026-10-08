@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Owner: builder.
 
+Reviews: revision e71fa0b01, accept
+
 ## Outcome
 
 Objective-C, Swift, Zig and Python documentation consistently describes the implemented complete API while preserving genuine platform and publication limitations.

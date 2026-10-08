@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Severity: medium documentation inconsistency.
 
+Reviews: revision e71fa0b01, accept
+
 ## Outcome
 
 The public v2 key formula reproduces both text and image keys offline. Existing image rows and native key validation remain unchanged.

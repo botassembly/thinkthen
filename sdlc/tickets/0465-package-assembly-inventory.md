@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Owner: builder.
 
+Reviews: revision e71fa0b01, accept
+
 ## Outcome
 
 A fresh install of the locally assembled npm archive imports and exposes the complete API. Optional source-package smoke has an explicit inventory consistent with Flutter’s private pilot status.

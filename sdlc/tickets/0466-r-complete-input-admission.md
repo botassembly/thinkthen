@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Owner: builder.
 
+Reviews: revision e71fa0b01, accept
+
 ## Outcome
 
 R complete calls refuse contradictory fields before reading files or sending requests; accepted input still selects exactly the caller’s evidence.

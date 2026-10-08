@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Owner: builder.
 
+Reviews: revision fa00d9a4e, accept
+
 ## Outcome
 
 The issue list separates fixed defects, remaining obligations and later features using verified landing references. This changes records only and does not claim new runtime qualification.
