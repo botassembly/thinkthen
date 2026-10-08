@@ -17,3 +17,7 @@ Generate the committed C header from Rust-owned exports, layouts, values and own
 - Changes: Adopt cbindgen with required dependency review. Generate header deterministically and fail on committed drift; remove independent value tables. Absorb 0485's value-consistency outcome; close its separate record through pm only after this ticket lands. Depends on0491 and0482. Claim `libraries/c/include/thinkthen.h`, `libraries/c/src/**`, `libraries/c/cbindgen.toml` and `scripts/check-c-exports.py`.
 - Proof: Regenerated header matches; compiler-visible layout, exported symbol and Rust/C value checks pass. A changed Rust discriminant changes or fails header generation.
 - Defers: Premature retirement of carriers before typed consumers migrate. Size: medium shared contract change.
+
+## Progress
+
+- 2026-10-08 started
