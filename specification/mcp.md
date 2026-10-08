@@ -23,7 +23,10 @@ find, annotate, recognize and relate, in that order.
 
 Input consists of UTF-8 newline-delimited JSON-RPC objects, without batch arrays.
 IDs are strings or integers and are preserved without coercion. Null IDs are
-invalid. Each incoming line including its ending is at most 16 MiB; an oversized
+invalid. Envelope errors preserve a readable, unambiguous string or integer ID;
+syntax errors, invalid IDs and duplicate IDs omit the response ID, as specified
+by the [MCP 2025-11-25 message contract](https://modelcontextprotocol.io/specification/2025-11-25/basic/index#messages).
+This version narrows the older [JSON-RPC response contract](https://www.jsonrpc.org/specification#response_object), which uses null for an unreadable ID. Each incoming line including its ending is at most 16 MiB; an oversized
 or unterminated frame closes the session without unbounded draining. One
 bounded four-message protocol inbox and at most one active tool dispatch keep
 the reader responsive. Excess active calls receive a safe busy error; inbox
@@ -37,7 +40,14 @@ Malformed, unknown and already completed cancellations are ignored, and their
 reason is never echoed or logged. Client cancellation suppresses the tool
 response and fires the existing native cancel token; already-sent native
 attempts finish and join under the native contract. EOF likewise cancels active
-work. Stoppable input reads are required, including a partial frame when stdout
+work and abandons pending protocol messages. Closing stdin signals session
+termination under the [MCP 2025-11-25 stdio lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle#shutdown);
+callers must await required responses before closing it. A complete JSON object
+without its LF is an incomplete frame under the [stdio framing contract](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#stdio)
+and closes with a local I/O failure. A complete frame may receive its response
+before EOF, but shutdown does not promise to drain the inbox. An interrupted
+response write also reports a local I/O failure. Already-sent native attempts
+finish and join; closing stdin cannot retract them. Stoppable input reads are required, including a partial frame when stdout
 breaks; a permanently blocked reader is not a completed implementation.
 Windows stdio requires pipe handles. Own duplicates without changing or closing
 the process's inherited handles; interrupt only the registered MCP read/write

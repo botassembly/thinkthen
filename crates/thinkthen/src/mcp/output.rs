@@ -36,8 +36,12 @@ impl<W: Write> Output<W> {
         })
     }
     pub(super) fn fault(&self, id: Option<&Id>, fault: Fault) -> io::Result<()> {
-        self.write(&json!({"jsonrpc":"2.0", "id":id,
-            "error":{"code":fault.code,"message":fault.message}}))
+        let mut response = json!({"jsonrpc":"2.0",
+            "error":{"code":fault.code,"message":fault.message}});
+        if let Some(id) = id {
+            response["id"] = serde_json::to_value(id).map_err(io::Error::other)?;
+        }
+        self.write(&response)
     }
     fn write(&self, value: &impl Serialize) -> io::Result<()> {
         serde_json::to_writer(Counter(1), value)
