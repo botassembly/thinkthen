@@ -47,3 +47,15 @@ The Rust ceiling increases from 163238 to 163239 nonblank lines. The single adde
 Fresh Medium read-only review: ACCEPT. Final Clippy evidence records the corrected command and its zero exit status. Windows execution remains part of final platform qualification.
 
 The integrated correction at 693bc9f66 passed full local tests and lint. The ordinary, library-only and public-consumer groups and existing supporting checks passed. Logs remain in target/0425-windows-landing-test.log and target/0425-windows-landing-lint.log. These Linux checks do not compile or execute the Windows-only module; candidate platform qualification remains open.
+
+## RC1 Windows pipe cancellation correction
+
+Windows qualification 37729585318 reached both retained blocked-pipe tests and timed out while the peers remained open. Rust 1.95 creates overlapped handles for the parent ends of subprocess pipes. Converting those handles into File and waiting for STATUS_PENDING does not make their pending operations synchronous, so CancelSynchronousIo alone cannot cancel them.
+
+The wrapper and active registry now share the exact File through Arc. Each active operation also owns its thread handle. The watcher attempts both CancelSynchronousIo on that thread and CancelIoEx on that exact pipe under the registry lock. It repeats after ERROR_NOT_FOUND to cover cancellation before kernel admission. The operation guard clears registration only after File.read or File.write returns. The file, buffer and operation remain alive until completion. Cancellation never closes the pipe to wake the worker. Read EOF, write BrokenPipe, no-op flush, ordinary-file refusal and native-execution boundaries remain unchanged.
+
+The existing blocked-input and backpressured-output assertions are unchanged. No timeout, skip, lint allowance, dependency or runner feature changed. The retained ordinary-file, peer-exit and native cancellation cases remain required. Focused Linux MCP checks pass all 36 cases, but they do not compile or execute this Windows-only correction. Actual Windows cancellation for both Rust subprocess pipes and synchronous inherited pipes remains required; source review cannot qualify it.
+
+The Rust ceiling grows from 163239 to 163270 nonblank lines across this correction and the associated 0425 native fixture repairs. The added lines retain the exact owned pipe during cancellation, reuse the existing minimal child-environment helper and validate the current installed interrupt facts. Inspection of the watcher, operation guards and existing child/fact helpers found no duplicate behavior to remove. The coordinator owns final integrated gates, batching and Windows qualification. No hosted dispatch or landing ran in this lane.
+
+Fresh High read-only whole-slice review: ACCEPT. The reviewer checked the exact handle lifetime, registry lock, completion ordering and both cancellation APIs against the Windows contract. No blocking findings or weakened assertions were found. Actual native Windows execution remains unverified.

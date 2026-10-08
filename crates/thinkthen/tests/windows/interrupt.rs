@@ -201,6 +201,15 @@ fn release_binary_console_interrupt() {
             .as_f64()
             .expect("seconds number");
         assert!((0.0..45.0).contains(&elapsed));
+        let object = facts.as_object_mut().expect("facts object");
+        let call_id = object.remove("call_id").expect("admitted call identity");
+        let _identity = call_id
+            .as_str()
+            .expect("call identity string")
+            .parse::<thinkthen::CallId>()
+            .expect("valid call identity");
+        let command_ms = object.remove("command_ms").expect("command time");
+        assert!(command_ms.as_u64().expect("command milliseconds") < 45_000);
         assert_eq!(
             facts,
             serde_json::json!({

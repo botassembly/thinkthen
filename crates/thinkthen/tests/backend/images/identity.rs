@@ -84,6 +84,7 @@ fn images_and_structured_evidence_have_distinct_keys_and_replay_their_own_answer
         )
         .unwrap();
     assert_eq!(counts, (2, 2));
+    drop(connection);
     fs::remove_dir_all(parent).unwrap();
 }
 

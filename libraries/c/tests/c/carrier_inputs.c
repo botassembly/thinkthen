@@ -31,7 +31,7 @@ static void refusal(thinkthen_engine *e) {
     assert(thinkthen_question_new(e,&spec,NULL)==THINKTHEN_EUSAGE);
     spec.text.data=(thinkthen_string_v1){NULL,1}; assert(thinkthen_question_new(e,&spec,&out)==THINKTHEN_EUSAGE);
     spec.text.data=(thinkthen_string_v1){"x",SIZE_MAX}; assert(thinkthen_question_new(e,&spec,&out)==THINKTHEN_EUSAGE);
-    const char invalid[]={(char)0xff}; spec.text.data=(thinkthen_string_v1){invalid,1}; assert(thinkthen_question_new(e,&spec,&out)==THINKTHEN_EUSAGE);
+    const unsigned char invalid[]={0xff}; spec.text.data=(thinkthen_string_v1){(const char *)invalid,1}; assert(thinkthen_question_new(e,&spec,&out)==THINKTHEN_EUSAGE);
     assert(out==(thinkthen_question *)(uintptr_t)17);
     spec=(thinkthen_question_spec_v1){0}; spec.kind=9; spec.relation_threshold.kind=THINKTHEN_RULE_NULL_V1;
     assert(thinkthen_question_new(e,&spec,&out)==THINKTHEN_EUSAGE && out==(thinkthen_question *)(uintptr_t)17);

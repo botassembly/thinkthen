@@ -40,7 +40,7 @@ int main(void) {
     else {
         assert(summary.facts.present && summary.facts.value.call_id.len==64 && summary.attempts.present);
         assert(summary.error.value.stopped.present);
-        assert(summary.error.value.stopped.value.cause==(expected==2 ? 5 : expected==3 ? 11 : 9));
+        assert(summary.error.value.stopped.value.cause==(expected==2 ? 5u : expected==3 ? 11u : 9u));
         assert(summary.facts.value.requests_sent==(expected==2 ? 1:0));
         assert(summary.attempts.value.len==summary.facts.value.requests_sent);
         if(expected==2) assert(summary.error.value.stopped.value.status.present && summary.error.value.stopped.value.status.value==401);
