@@ -1,0 +1,11 @@
+# 0464: Align public input help, MCP schema and configuration warning
+
+Starting source: `3813263dfe7d379967621844e5c2a08b0701f9c7`. The reviewed ticket amendment was present at `ee9fe53b6efcd68e8fda63dfe3cbe0d801b37b5f`. Product commits: `60a6416cefe67e56c05e3a0f436db49dbf5225dc` and `a4e6e0e03`.
+
+The `find` help hides its unsupported image attachment and states its image-media refusal. Its repeated command prose is removed. The MCP source schema now requires a positive window size exactly with window units and requires an explicit file unit for image media. Omitted unit remains the native line default. Decide help and the specification distinguish bare booleans from authored meanings in details `value`; `answer.probability` and `threshold` retain the yes/no reading. MCP startup prints the existing configuration permission warning once on standard error from the configuration read used to build its engine. Its protocol standard output stays JSON only, and shared custom backends remain refused.
+
+Focused tests passed for schema combinations, native default/explicit source units and zero-send refusals, valid text windows and image files, find and decide help, authored true/false bare and details output, the ordinary CLI configuration warning, and MCP owner-private/shared configuration with clean ping output and unsafe backend refusal. `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`, `cargo fmt --all -- --check`, `cargo clippy --locked --offline --package thinkthen --all-targets -- -D warnings`, `sdlc/scripts/lint`, `sdlc/scripts/spec`, the Rust ratchet, and `git diff --check` exited zero. Lint reported existing size and license-exception warnings; its surface registry printed `Killed` for one child but reported the registry valid and the lint rung exited zero. The full MCP parity run belongs to the separate lane; no paid call or hosted workflow ran.
+
+## What the build taught us
+
+The native reader treats an omitted unit as line, so image media needs an explicit file unit in the advertised schema. MCP's early command path needs the permission bit from its existing configuration read to issue the same warning as the ordinary CLI without reading the file again.
