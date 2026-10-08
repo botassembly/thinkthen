@@ -34,6 +34,41 @@ static void check(thinkthen_engine *engine, thinkthen_source *source,
     thinkthen_question_free(parsed);
 }
 
+static void check_dynamic(thinkthen_engine *engine, int tuned) {
+    const char *with = "{\"choose\":\"Which?\",\"threshold\":0.5,\"batch\":1}";
+    const char *without = "{\"choose\":\"Which?\",\"batch\":1}";
+    const char *body = tuned ? with : without;
+    thinkthen_question *question = NULL;
+    assert(thinkthen_question_parse(engine, 3, (thinkthen_string_v1){body, strlen(body)}, &question) == 0);
+    thinkthen_choice_v1 choices[2] = {0};
+    choices[0].name = STR("first");
+    choices[1].name = STR("second");
+    thinkthen_record_v1 record = {0};
+    record.original = (thinkthen_optional_content_v1){1, TEXT("Refund me.")};
+    record.options = (thinkthen_choices_v1){choices, 2};
+    thinkthen_source *source = NULL;
+    assert(thinkthen_source_records(engine, &record, 1, &source) == 0);
+    thinkthen_controls_v1 controls = {0};
+    controls.deadline_ms = -1;
+    controls.batch = (thinkthen_optional_size_v1){1, 2};
+    thinkthen_result *result = NULL;
+    assert(thinkthen_choose_complete(engine, question, source, &controls, &result) == 0);
+    thinkthen_choose_view_v1 row = {0};
+    assert(thinkthen_result_choose(result, 0, &row) == 0);
+    assert(row.common.meta.batch_setting.value.kind == THINKTHEN_BATCH_RECORDS_V1);
+    assert(row.common.meta.batch_setting.value.records == 2);
+    assert(row.common.meta.batch_warning.present == tuned);
+    if (tuned) {
+        assert(row.common.meta.batch_warning.value.tuned_for.kind == THINKTHEN_BATCH_RECORDS_V1);
+        assert(row.common.meta.batch_warning.value.tuned_for.records == 1);
+        assert(row.common.meta.batch_warning.value.running.kind == THINKTHEN_BATCH_RECORDS_V1);
+        assert(row.common.meta.batch_warning.value.running.records == 2);
+    }
+    thinkthen_result_free(result);
+    thinkthen_source_free(source);
+    thinkthen_question_free(question);
+}
+
 int main(void) {
     thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"model\":\"fixed\"}");
     assert(engine);
@@ -47,6 +82,8 @@ int main(void) {
           THINKTHEN_BATCH_MAX_V1, 0, THINKTHEN_BATCH_RECORDS_V1, 2);
     check(engine, source, "{\"decide\":\"Refund?\",\"batch\":1}", 2,
           THINKTHEN_BATCH_RECORDS_V1, 2, 0, 0);
+    check_dynamic(engine, 1);
+    check_dynamic(engine, 0);
     thinkthen_source_free(source);
     thinkthen_engine_free(engine);
     return 0;

@@ -11,7 +11,7 @@ fn public_batch_metadata_uses_header_kinds_for_setting_and_both_warning_sides() 
         &[],
     );
     assert_eq!((output.status.code(), text(&output.stderr)), (Some(0), String::new()));
-    assert_eq!(backend.count(), 3);
+    assert_eq!(backend.count(), 5);
 }
 #[test]
 fn immutable_image_bytes_dimensions_and_filename_outlive_the_engine() {
