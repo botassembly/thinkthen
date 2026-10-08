@@ -35,22 +35,10 @@ impl Drop for Folder {
 }
 
 fn config(root: &Path) -> PathBuf {
-    if cfg!(target_os = "macos") {
-        root.join("Library/Application Support/thinkthen")
-    } else {
-        root.join("thinkthen")
-    }
+    child::Folder::Config.under(root)
 }
 fn child_environment(command: &mut Command, root: &Path) {
-    command
-        .home(root)
-        .env("XDG_CONFIG_HOME", root)
-        .env("APPDATA", root)
-        .current_dir(root);
-    for folder in [child::Folder::Cache, child::Folder::Usage] {
-        let (name, value) = folder.variable(root);
-        command.env(name, value);
-    }
+    command.isolated_home(root).current_dir(root);
 }
 
 #[test]
