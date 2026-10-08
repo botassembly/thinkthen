@@ -9,6 +9,8 @@ Severity: low public contract inconsistency.
 
 Reviews: revision e71fa0b01, accept
 
+Reviews: revision 16eb57be4beea685e5d1b3f7f0f392b13d27de6a, accept
+
 ## Outcome
 
 CLI help, decide output documentation and MCP tool schemas describe the behavior callers can use. Invalid inputs still refuse locally before file reads or calls.
