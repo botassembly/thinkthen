@@ -1,6 +1,6 @@
 # 0491: Share one typed request contract
 
-Source revision: `8f34b14964b40b9e128325ad78e256d66c63b7a6`. The implementation starts from `684ebca753f9bbff0be5a167a3408908bf79a01f` and incorporates the accepted recognition carrier source from ticket 0490 at `2e72414068757e9b3c21ae42b558693f0e44166a`. This record describes source and observed checks. Ticket and lane status remain in pm.
+Source revision: `f32a0211d`. The corrected implementation uses landed main `df04059e101432a65739c35dfad06d6a45cc337d`, including the independently landed recognition carrier. Development carrier commits were removed during the rebase. This record describes source and observed checks. Ticket and lane status remain in pm.
 
 `crates/thinkthen/src/public/request.rs` and its modules define the closed `thinkthen.request/1` contract for ten functions, typed selectors, records, sources, feeds, attachments and controls. Pure header admission precedes question resolution and evidence reads. Loaded definitions receive separate native admission after their necessary read. Inline content and context declarations receive native validation before attachment reads. Engine execution retains existing typed complete methods, scheduling, controls, completed prefixes and errors. Prepared native definitions enter directly without JSON conversion.
 
@@ -19,9 +19,17 @@ All checks below use offline locked dependencies and isolated loopback fixtures.
 - `target/0491-final-backend.log`: 930 CLI backend tests pass; three entries remain ignored in the top-level run. `exchange::a_server_retry_floor_is_waited_once` requires the separate wall-clock stress runner. `named_backends::backend_setups::backend_setup_builder_child` is executed by its parent with an isolated captured environment; `named_backends::builder::builder_child` is the child half that its parent runs with `--ignored`. This run follows the window, projection and diagnostic compatibility corrections. The later shared threshold helper receives the focused native band test and all-target Clippy check.
 - `target/0491-final-c.log`: 74 C tests pass, including frozen replies, bare output bytes, canonical routing and sanitizer checks. The shared C fixture runner passes 55 cases and explicitly does not run its one internal defect-injection case.
 - `target/0491-final2-clippy.log`: package all-target Clippy passes with warnings denied. `target/0491-final-cclippy.log`: C all-target Clippy passes with warnings denied. The C check precedes the small shared threshold helper; the final C regression rebuild includes that helper.
-- `target/0491-final2-policy.log`: policy checks pass for 268 resolved packages. Existing package-size, license-exception and CLI measure warnings remain visible. Formatting and whitespace checks pass; `target/0491-final-children.log` reports zero child-environment findings. Source ceilings equal the measured source totals and their commit explains the added edge code and removed duplication.
+- `target/0491-integrated-policy.log`: policy exits 0 for 268 resolved packages and confirms every accepted table, ban list and dependency matches. Existing package-size and license-exception warnings remain visible. Formatting and whitespace checks pass; `target/0491-final-children.log` reports zero child-environment findings. Source ceilings equal the measured source totals and their commit explains the added edge code and removed duplication.
 
 Full workspace and consumer gates, fresh code review and main landing belong to the coordinator. This record does not claim a full surface run, a release or live backend validation. Other language migrations and generated binding access remain separate tickets.
+
+## Review corrections
+
+The fresh review at `2edd8049c` found three defects. The first policy result in this record was incorrect: a multi-command shell returned the later formatting command's success and hid the policy command's nonzero exit.
+
+- Extracting offline dispatch moved the Audit/Diff markers after `Environment::read` in the standing policy's router check. Restore direct early dispatch without changing the checker; extract the existing held-model warning to keep the entry function within its limit. `target/0491-integrated-policy.log` records the separate passing policy exit. The first correction Clippy run refused 94 lines; `target/0491-correction2-clippy.log` records exit 0 after the warning extraction.
+- The recognition CLI adapter omitted its context selector. Carry `arguments.context_field` into RequestOptions. Extend the existing watched-authority case with invalid `--context-field`, exact established stderr, and zero question/source access or sends. `target/0491-correction-authority.log` records exit 0.
+- Shared admission replaced the frozen legacy filter-band diagnostic with a generic kind mismatch. Refuse the translated band at the legacy edge before shared admission and extend the existing C canonical-routing fixture. `target/0491-correction-c.log` records exit 0 with the exact message and no extra sends.
 
 ## What the build taught us
 
