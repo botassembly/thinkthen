@@ -12,13 +12,19 @@ use thinkthen::{
 #[serde(deny_unknown_fields)]
 pub(crate) struct Input {
     kind: InputKind,
-    #[serde(default)]
-    records: Vec<Item>,
-    #[serde(default)]
-    paths: Vec<String>,
-    options: Option<InputReaderOptions>,
-    #[serde(default)]
-    jsonl: bool,
+    #[serde(default, deserialize_with = "present")]
+    records: Option<Option<Vec<Item>>>,
+    #[serde(default, deserialize_with = "present")]
+    paths: Option<Option<Vec<String>>>,
+    #[serde(default, deserialize_with = "present")]
+    options: Option<Option<InputReaderOptions>>,
+    #[serde(default, deserialize_with = "present")]
+    jsonl: Option<Option<bool>>,
+}
+fn present<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(
+    reader: D,
+) -> Result<Option<Option<T>>, D::Error> {
+    Option::<T>::deserialize(reader).map(Some)
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -190,30 +196,57 @@ pub(crate) fn prepare<'a>(
     reading: Option<&RecordReading>,
     annotation: bool,
 ) -> Result<Rows<'a>, Error> {
+    match input.kind {
+        InputKind::Records
+            if input.paths.is_some() || input.options.is_some() || input.jsonl.is_some() =>
+        {
+            return Err(super::usage("records cannot include file source fields"));
+        }
+        InputKind::Files if input.records.is_some() => {
+            return Err(super::usage("files cannot include records"));
+        }
+        _ => {}
+    }
     let reading = reading
         .cloned()
         .unwrap_or(RecordReading::new(&[], None, None)?);
     Ok(match input.kind {
-        InputKind::Records => Box::new(input.records.into_iter().enumerate().map(
-            move |(at, item)| {
+        InputKind::Records => {
+            let records = match input.records {
+                None => Vec::new(),
+                Some(Some(records)) => records,
+                Some(None) => return Err(super::usage("records require a list")),
+            };
+            Box::new(records.into_iter().enumerate().map(move |(at, item)| {
                 if let Some(engine) = engine {
                     engine.check_record_limit(at)?;
                 }
                 compose(item, &reading, annotation)
-            },
-        )),
+            }))
+        }
         InputKind::Files => {
+            let paths = match input.paths {
+                None => Vec::new(),
+                Some(Some(paths)) => paths,
+                Some(None) => return Err(super::usage("files require paths")),
+            };
+            let jsonl = match input.jsonl {
+                None => false,
+                Some(Some(jsonl)) => jsonl,
+                Some(None) => return Err(super::usage("jsonl requires true or false")),
+            };
             let sources = thinkthen::read_inputs(
-                input.paths,
+                paths,
                 input
                     .options
+                    .flatten()
                     .ok_or_else(|| super::usage("files require reader options"))?,
             )?;
             Box::new(sources.enumerate().map(move |(at, item)| {
                 if let Some(engine) = engine {
                     engine.check_record_limit(at)?;
                 }
-                source(item?, &reading, input.jsonl, annotation)
+                source(item?, &reading, jsonl, annotation)
             }))
         }
     })

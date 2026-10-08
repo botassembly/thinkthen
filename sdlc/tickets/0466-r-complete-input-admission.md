@@ -8,6 +8,8 @@ Owner: builder.
 
 Reviews: revision e71fa0b01, accept
 
+Reviews: revision ce732929a, accept
+
 ## Outcome
 
 R complete calls refuse contradictory fields before reading files or sending requests; accepted input still selects exactly the caller’s evidence.
