@@ -357,6 +357,10 @@ PYWIN
 		fi
 	fi
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+		# The installed TypeScript consumer compiles with this locked host-native toolchain offline.
+		scratch_dir npm_seed
+		cp libraries/typescript/package.json libraries/typescript/package-lock.json "$npm_seed/"
+		npm ci --no-audit --no-fund --silent --prefix "$npm_seed"
 		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
 		# Fill uv's cache for the Python the check will pick (ticket 0369).
 		. libraries/python/host.sh

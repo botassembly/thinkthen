@@ -24,7 +24,7 @@ complete_public_types() {
         output=$project/target/complete-public/$extension
         mkdir -p "$output"
         cp "$project/tests/complete_public.test.ts" "$output/complete_public.test.$extension"
-        "$repo/libraries/typescript/target/npm/node_modules/.bin/tsc" --strict --target ES2022 \
+        "$tsc" --strict --target ES2022 \
             --module NodeNext --moduleResolution NodeNext --rootDir "$output" --outDir "$output" "$output/complete_public.test.$extension"
         node "$output/complete_public.test.$(printf '%s' "$extension" | sed 's/ts$/js/')"
     done
@@ -48,6 +48,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     project=$scratch/libraries/typescript
     echo '{"private": true}' >"$project/package.json"
     (cd "$project" && npm install --offline --no-audit --no-fund --silent "$THINKTHEN_ARTIFACT")
+    # Keep the pinned compiler beside the fresh consumer, separate from the shipped package.
+    mkdir -p "$project/target/compiler"
+    cp "$repo/libraries/typescript/package.json" "$repo/libraries/typescript/package-lock.json" "$project/target/compiler/"
+    npm ci --offline --no-audit --no-fund --silent --prefix "$project/target/compiler"
+    tsc=$project/target/compiler/node_modules/.bin/tsc
     resolved=$(cd "$project/tests" && node --input-type=module -e 'console.log(import.meta.resolve("thinkthen"))')
     case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
@@ -145,6 +150,7 @@ step 'package: npm ci and the addon'
 mkdir -p target/npm
 cp package.json package-lock.json target/npm/
 npm ci --offline --no-audit --no-fund --silent --prefix target/npm
+tsc=$PWD/target/npm/node_modules/.bin/tsc
 sh build-addon.sh
 
 step 'node tests'
