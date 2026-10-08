@@ -146,8 +146,8 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
         (vec!["--backend", "nowhere"], vec![], String::new(), unknown.clone(), 2),
         (vec![], vec![("THINKTHEN_BACKEND", "nowhere")], String::new(), unknown, 2),
         (vec!["--backend", "liquid"], vec![("LIQUIDAI_API_KEY", ""), ("LIQUID_API_KEY", " ")], String::new(), "thinkthen: the environment variable `LIQUIDAI_API_KEY` is unset or blank, so no key is sent\nthinkthen: stopped at record 1; 0 records finished\n".to_owned(), 4),
-        (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}"#).replace("local-d1", "liquid"), built_in.clone(), 5),
-        (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#), built_in.clone(), 5),
+        (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}"#).replace("local-d1", "liquid"), "thinkthen: configuration entry for built-in backend `liquid` cannot set `url`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing\n".to_owned(), 5),
+        (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#), "thinkthen: configuration entry for built-in backend `ollama` cannot set `model`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing\n".to_owned(), 5),
         (vec![], vec![], r#"{"schema":"thinkthen.config/1","backends":{"typesafe":{}}}"#.to_owned(), built_in, 5),
         (vec![], vec![], r#"{"schema":"thinkthen.config/1","backends":{"ollama":{"requests_per_minute":0}}}"#.to_owned(), rate.clone(), 5),
         (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","backends":{{"liquid":{{"requests_per_minute":"{marker}"}}}}}}"#), rate.clone(), 5),
@@ -310,4 +310,86 @@ fn status_names_the_backend_its_key_variable_and_each_source() {
     assert_eq!(value["backend"]["url_source"], "configuration");
     assert_eq!(value["backend"]["url"], "http://127.0.0.1:8/v1/systemone");
     home.assert_no_marker_in_files();
+}
+
+#[test]
+fn legacy_builtin_entries_offer_safe_repairs_before_commands_and_plans_send() {
+    let target = listener();
+    let home = Home::new("legacy-builtin");
+    let marker = "sk-legacy-config-marker";
+    for name in ["perplexity", "openrouter"] {
+        let (base, key, model, path) = if name == "perplexity" {
+            (
+                "https://api.perplexity.ai/v1",
+                "PERPLEXITY_API_KEY",
+                "pplx-decider-v1-27b",
+                "decisions",
+            )
+        } else {
+            (
+                "https://openrouter.ai/api/v1",
+                "OPENROUTER_API_KEY",
+                "typesafe/jev-1.13",
+                "systemone",
+            )
+        };
+        for (field, fields) in [
+            (
+                "url",
+                serde_json::json!({"url":target.base(),"key_env":marker,"model":marker,marker:marker}),
+            ),
+            ("url", serde_json::json!({"url":base})),
+            ("path", serde_json::json!({"path":path})),
+            ("key_env", serde_json::json!({"key_env":key})),
+            ("model", serde_json::json!({"model":model})),
+            ("both_sides", serde_json::json!({"both_sides":false})),
+        ] {
+            let expected = format!(
+                "thinkthen: configuration entry for built-in backend `{name}` cannot set `{field}`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing\n"
+            );
+            home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":name,"backends":{name:fields}}).to_string());
+            for plan in [false, true] {
+                let mut flags = vec!["--url", target.base(), "--no-cache"];
+                if plan {
+                    flags.push("--plan");
+                }
+                let output = decide(&home, &flags, &[]);
+                let (stdout, stderr) = said(&output);
+                assert_eq!(output.status.code(), Some(5));
+                assert_eq!(stdout, "");
+                assert_eq!(stderr, expected);
+                assert!(!stderr.contains(marker));
+                assert!(!stderr.contains(target.base()));
+                assert_eq!(target.count(), 0);
+            }
+        }
+        home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":name,"backends":{name:{marker:marker}}}).to_string());
+        let output = decide(&home, &["--url", target.base(), "--plan"], &[]);
+        assert_eq!(output.status.code(), Some(5));
+        assert_eq!(said(&output), (String::new(), "thinkthen: a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n".to_owned()));
+        let help = home.run(&["decide", "--help"], &[]);
+        assert_eq!(help.status.code(), Some(0));
+        assert!(said(&help).0.contains("Usage:"));
+        assert_eq!(target.count(), 0);
+    }
+    // Removing legacy fields keeps compatible settings and the built-in route.
+    for name in ["perplexity", "openrouter"] {
+        home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":name,"backends":{name:{"requests_per_minute":600,"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_questions":2}}}}).to_string());
+        let output = decide(&home, &["--plan"], &[]);
+        let (stdout, stderr) = said(&output);
+        assert_eq!(output.status.code(), Some(0), "{stderr}");
+        assert!(stdout.contains("\"key_env\":\""));
+        assert_eq!(target.count(), 0);
+    }
+    // Renaming the entry and selection keeps explicit custom routing.
+    home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":"custom-route","backends":{"custom-route":{"url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m"}}}).to_string());
+    let output = decide(&home, &["--no-cache"], &[]);
+    let (stdout, stderr) = said(&output);
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert_eq!(stdout.lines().count(), 2);
+    assert_eq!(
+        target.count(),
+        2,
+        "the same listener counts the repaired route"
+    );
 }

@@ -54,6 +54,19 @@ fn entry(name: &str, raw: &RawValue) -> Result<Named, ConfigError> {
         let Value::Object(fields) = &value else {
             return Err(refused(BUILT_IN));
         };
+        if let Some(field) = ["url", "path", "key_env", "model", "both_sides"]
+            .into_iter()
+            .find(|field| fields.contains_key(*field))
+        {
+            return Err(ConfigError {
+                message: format!(
+                    "configuration entry for built-in backend `{}` cannot set `{field}`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing",
+                    built_in.name()
+                ).into(),
+                unreadable: false,
+                price: None,
+            });
+        }
         if fields.is_empty()
             || fields.keys().any(|field| {
                 !matches!(
@@ -214,11 +227,11 @@ mod tests {
         for (text, sentence) in [
             (
                 r#"{"schema":"thinkthen.config/1","backends":{"liquid":{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}}"#.to_owned(),
-                built_in,
+                "configuration entry for built-in backend `liquid` cannot set `url`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing",
             ),
             (
                 format!(r#"{{"schema":"thinkthen.config/1","backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#),
-                built_in,
+                "configuration entry for built-in backend `ollama` cannot set `model`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing",
             ),
             (
                 r#"{"schema":"thinkthen.config/1","backends":{"typesafe":{}}}"#.to_owned(),
@@ -226,7 +239,7 @@ mod tests {
             ),
             (
                 format!(r#"{{"schema":"thinkthen.config/1","backends":{{"typesafe":{{"url":"{marker}"}}}}}}"#),
-                built_in,
+                "configuration entry for built-in backend `typesafe` cannot set `url`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing",
             ),
             (
                 r#"{"schema":"thinkthen.config/1","backends":{"liquid":600}}"#.to_owned(),
