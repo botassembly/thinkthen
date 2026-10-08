@@ -37,11 +37,12 @@ def test_incremental_complete_retains_prefix_before_malformed_image_descriptors(
     backend = Backend()
     got = child('''
 db = connect()
+db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1})])
 for invalid in ({'text':'Beta.','images':None}, {'text':'Beta.','images':'invalid'}, None):
     for incremental in (False, True):
         inputs={'records':[{'text':'Alpha.'},invalid], 'incremental':incremental}
-        document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?,?)',
-            [json.dumps({'decide':'Fits?'}),json.dumps(inputs),json.dumps({'cache':False,'batch':1})]).fetchone()[0])
+        document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',
+            [json.dumps({'decide':'Fits?'}),json.dumps(inputs)]).fetchone()[0])
         value=document['native']
         assert value['error']['kind']=='usage', value
         assert len(document.get('completed', []))==int(incremental), document
