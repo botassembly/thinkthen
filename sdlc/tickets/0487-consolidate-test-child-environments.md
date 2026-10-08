@@ -29,3 +29,4 @@ Tests use one child-environment entry point per language, preserving intentional
 
 - 2026-10-08 started
 - 2026-10-08 landed 98a876029; next: Slice B unifies Python child homes. Full routine Python tests, malformed ambient configuration cases, examples and the existing child check pass after rebuilding the matching extension. Remaining Ruby, JavaScript, R, native and shared fixture families stay open; migrate them without colliding with the contract rollout.
+- 2026-10-08 landed 3f64dbca49b46c80585e13b2406f56834bd42283; next: Slice C unifies Ruby child homes and preserves installed GEM_PATH. Scoped environment, package, settings, public-name, token-cap and example checks pass. Two recognition failures reproduce with the original helper and remain assigned to 0497. JavaScript, R, native and shared-fixture migrations remain open.
