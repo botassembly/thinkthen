@@ -25,12 +25,12 @@ from children import child_env as shared_clean_env  # noqa: E402  the shared hel
 from keys import question_keys  # noqa: E402,F401  re-exported for the tests
 
 
-def clean_env(keep=(), **values):
+def clean_env(keep=(), *, home=None, **values):
     # Windows needs its system directory to load host DLLs. These defaults
     # point at the gate's owned scratch directories, never the user's folders.
     if os.name == "nt":
         keep = (*keep, "SystemRoot", "TEMP", "TMP", "APPDATA", "LOCALAPPDATA")
-    return shared_clean_env(keep=keep, **values)
+    return shared_clean_env(keep=keep, home=home, **values)
 
 
 def private_windows_configuration(path):
@@ -102,9 +102,9 @@ def backend():
 
 
 def child_env(backend, folder, arm="generic", **extra):
-    """Only PATH and the names set here: the fake key beside this test's
-    loopback backend, its own cache folder, and the caller's extras."""
-    return clean_env(THINKTHEN_API_KEY=FAKE, THINKTHEN_BASE_URL=backend.base(arm),
+    """An owned home, a fake key beside this test's loopback backend,
+    its own cache folder, and the caller's extras."""
+    return clean_env(home=folder, THINKTHEN_API_KEY=FAKE, THINKTHEN_BASE_URL=backend.base(arm),
                      THINKTHEN_CACHE=str(pathlib.Path(folder) / "cache"), **extra)
 
 

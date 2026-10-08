@@ -6,9 +6,6 @@ from conftest import child_env, private_windows_configuration, run
 
 def test_captured_setup_profile_refuses_and_explicit_profile_wins(backend, tmp_path):
     env = child_env(backend, tmp_path, THINKTHEN_BACKEND="small", LOCAL_SETUP_KEY="fake-0400")
-    env["HOME"] = str(tmp_path)
-    env["XDG_CONFIG_HOME"] = str(tmp_path / "config")
-    env["APPDATA"] = str(tmp_path / "config")
     folder = tmp_path / ("Library/Application Support/thinkthen" if sys.platform == "darwin" else "config/thinkthen")
     folder.mkdir(parents=True)
     (folder / "config.json").write_text(json.dumps({

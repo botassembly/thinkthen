@@ -8,6 +8,8 @@ Reviews: revision b9027d08b, accept
 
 Reviews: revision f1a49f8bc78b16bd499e1f22e052226a4e88ca0c, accept
 
+Reviews: revision 8a695108fae973bb675f1c4bcc72d2609e5ec860, accept
+
 ## Outcome
 
 Tests use one child-environment entry point per language, preserving intentional environment cases while preventing accidental inherited configuration.
@@ -20,3 +22,8 @@ Tests use one child-environment entry point per language, preserving intentional
   Claim `sdlc/scripts/**`, `crates/thinkthen/tests/**`, `crates/thinkthen/src/mcp/tests/**`, `libraries/**/tests/**` and `databases/**/tests/**`.
 - Proof: Representative named-question, cache and installed children preserve expected behavior without ambient configuration. One planted direct write in the ordinary scope fails lint; legitimate environment behavior cases still run. Report actual migration scope and retain shared cases.
 - Defers: Broader architecture redesign. This is approved 0.2 work; do not silently defer it based on lane availability. Coordinate source claims and keep must-fix product defects first.
+
+## Progress
+
+- 2026-10-08 started
+- 2026-10-08 landed 98a876029; next: Slice B unifies Python child homes. Full routine Python tests, malformed ambient configuration cases, examples and the existing child check pass after rebuilding the matching extension. Remaining Ruby, JavaScript, R, native and shared fixture families stay open; migrate them without colliding with the contract rollout.
