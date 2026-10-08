@@ -48,3 +48,48 @@ fn canonical_objects_refuse_duplicate_unknown_and_null_controls() {
         assert!(Request::from_json(&text).is_err(), "{text}");
     }
 }
+
+#[test]
+fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
+    use crate::test_deadline::child::ChildEnvironment as _;
+    use std::io::Write as _;
+    use std::process::{Command, Stdio};
+    let valid = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Alpha."}}}"#;
+    let texts = [
+        valid.to_owned(),
+        valid.replace("\"input\":", "\"options\":{\"context\":\"\"},\"input\":"),
+        valid.replace("thinkthen.request/1", "thinkthen.request/2"),
+        valid.replace("\"input\":", "\"options\":{\"context\":null},\"input\":"),
+        valid.replace("\"input\":", "\"options\":{\"examples\":null},\"input\":"),
+        valid.replace("\"input\":", "\"options\":{\"unexpected\":true},\"input\":"),
+        valid.replace(
+            "\"kind\":\"text\",\"text\":\"Alpha.\"",
+            "\"kind\":\"text\",\"text\":\"Alpha.\",\"extra\":true",
+        ),
+    ];
+    let cases = texts
+        .iter()
+        .map(|text| {
+            (
+                serde_json::from_str::<serde_json::Value>(text).unwrap(),
+                Request::from_json(text).is_ok(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let mut child = Command::new("python3").clear_environment()
+        .arg("-c").arg("import json,sys; from jsonschema import Draft202012Validator; schema=json.load(open(sys.argv[1])); Draft202012Validator.check_schema(schema); validator=Draft202012Validator(schema); cases=json.load(sys.stdin); assert all(validator.is_valid(value)==expected for value,expected in cases)")
+        .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/../../specification/request.schema.json"))
+        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(&serde_json::to_vec(&cases).unwrap())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

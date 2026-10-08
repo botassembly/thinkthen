@@ -211,8 +211,8 @@ pub(crate) fn relate(
 
 /// The door's relate value: each edge as the crate writes it.
 #[derive(serde::Serialize)]
-struct Edges {
-    edges: Vec<Box<serde_json::value::RawValue>>,
+pub(crate) struct Edges {
+    pub(crate) edges: Vec<Box<serde_json::value::RawValue>>,
 }
 
 pub(crate) fn relate_with_facts(

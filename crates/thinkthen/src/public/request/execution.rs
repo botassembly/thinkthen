@@ -46,21 +46,21 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        if let RequestInput::Feed { name, .. } = &request.request.call.arguments().input {
-            if !environment
+        if let RequestInput::Feed { name, .. } = &request.request.call.arguments().input
+            && environment
                 .feed
                 .as_ref()
-                .is_some_and(|feed| &feed.name == name)
-            {
-                return Err(Error::usage(
-                    "the request requires its named caller-supplied feed",
-                ));
-            }
+                .is_none_or(|feed| &feed.name != name)
+        {
+            return Err(Error::usage(
+                "the request requires its named caller-supplied feed",
+            ));
         }
         let options = &request.request.call.arguments().options;
         let controls = controls(options, environment.controls)?.started()?;
         controls.admission()?;
         let mut definition = request.resolve_question()?;
+        request.admit_inline(&definition)?;
         let reading_definition = definition.clone();
         apply(&mut definition, options)?;
         controls.admission()?;
@@ -75,95 +75,15 @@ impl Engine {
             request.request.call.arguments().input,
             RequestInput::Feed { .. } | RequestInput::Source { .. }
         );
-        let outcome = match &definition {
-            RequestDefinition::Atomic(q) => atomic(
-                &engine,
-                request.request.call.function(),
-                q,
-                rows,
-                controls,
-                eager,
-            ),
-            RequestDefinition::Rank(q) => Ok(complete(
-                engine
-                    .try_rank_records_complete_with(q, rows, controls)?
-                    .map(|mut rows| {
-                        if let Some(n) = options.top {
-                            rows.truncate(n);
-                        }
-                        RequestValue::Ranked(rows)
-                    }),
-            )),
-            RequestDefinition::RankSet(q) => Ok(complete(
-                engine
-                    .try_rank_set_records_complete_with(q, rows, controls)?
-                    .map(|mut rows| {
-                        if let Some(n) = options.top {
-                            rows.truncate(n);
-                        }
-                        RequestValue::SetRanked(rows)
-                    }),
-            )),
-            RequestDefinition::Find(file) => Ok(complete(
-                engine
-                    .try_find_records_complete_with(file.question(), rows, controls)?
-                    .map(RequestValue::Found),
-            )),
-            RequestDefinition::Annotate(set) => {
-                if eager {
-                    Ok(complete(
-                        engine
-                            .annotate_records_complete_with(
-                                set,
-                                rows.collect::<Result<Vec<_>, _>>()?,
-                                controls,
-                            )?
-                            .map(RequestValue::Annotations),
-                    ))
-                } else {
-                    Ok(stream(
-                        engine.try_annotate_records_complete_with(set, rows, controls),
-                        RequestValue::Annotations,
-                    ))
-                }
-            }
-            RequestDefinition::Recognize(file) => Ok(complete(
-                engine
-                    .try_recognize_records_complete_with(file.question(), rows, controls)?
-                    .map(RequestValue::Recognized),
-            )),
-            RequestDefinition::Recognition(ask) => Ok(complete(
-                engine
-                    .try_recognize_records_complete_with(ask, rows, controls)?
-                    .map(RequestValue::Recognized),
-            )),
-            RequestDefinition::Relate(ask) => Ok(complete(
-                engine
-                    .try_relate_records_complete_with(ask, rows, controls)?
-                    .map(RequestValue::Related),
-            )),
-            RequestDefinition::DynamicChoose(q) => {
-                if eager {
-                    Ok(complete(
-                        engine
-                            .choose_dynamic_records_complete_with(
-                                q,
-                                rows.collect::<Result<Vec<_>, _>>()?,
-                                controls,
-                            )?
-                            .map(RequestValue::Choices),
-                    ))
-                } else {
-                    Ok(stream(
-                        engine.try_choose_dynamic_records_complete_with(q, rows, controls),
-                        RequestValue::Choices,
-                    ))
-                }
-            }
-            RequestDefinition::DecodedSet { .. } => {
-                Err(Error::defect("unresolved authored set entered execution"))
-            }
-        }?;
+        let outcome = dispatch(
+            &engine,
+            request.request.call.function(),
+            &definition,
+            rows,
+            controls,
+            eager,
+            options,
+        )?;
         Ok(select_filter(outcome, options.files_only))
     }
 }
@@ -171,9 +91,12 @@ fn controls<'a>(
     options: &'a RequestOptions,
     mut controls: CallOptions<'a>,
 ) -> Result<CallOptions<'a>, Error> {
-    controls = controls
-        .attempts(options.attempts)
-        .max_requests_total(options.max_requests_total);
+    if options.attempts {
+        controls = controls.attempts(true);
+    }
+    if options.max_requests_total.is_some() {
+        controls = controls.max_requests_total(options.max_requests_total);
+    }
     if let Some(ms) = options.deadline_ms {
         controls = controls.deadline_ms(ms)?;
     }
@@ -284,9 +207,15 @@ fn apply(definition: &mut RequestDefinition, options: &RequestOptions) -> Result
             if let Some(model) = &options.model {
                 ask.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
             }
+            if let Some(examples) = &options.examples {
+                ask = ask.with_examples(examples.clone())?;
+            }
             *definition = RequestDefinition::Recognition(ask);
         }
         RequestDefinition::Recognition(q) => {
+            if let Some(examples) = &options.examples {
+                *q = q.clone().with_examples(examples.clone())?;
+            }
             if let Some(model) = &options.model {
                 q.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
             }
@@ -359,4 +288,103 @@ fn select_filter(outcome: RequestOutcome, files_only: bool) -> RequestOutcome {
             error,
         },
     }
+}
+
+#[expect(
+    clippy::too_many_lines,
+    clippy::too_many_arguments,
+    reason = "one typed dispatch preserves all ten existing native scheduler contracts"
+)]
+fn dispatch<'a>(
+    engine: &'a Engine,
+    function: Function,
+    definition: &'a RequestDefinition,
+    rows: super::composition::Inputs<'a>,
+    controls: CallOptions<'a>,
+    eager: bool,
+    options: &RequestOptions,
+) -> Result<RequestOutcome, Error> {
+    let outcome = match definition {
+        RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager),
+        RequestDefinition::Rank(q) => Ok(complete(
+            engine
+                .try_rank_records_complete_with(q, rows, controls)?
+                .map(|mut rows| {
+                    if let Some(n) = options.top {
+                        rows.truncate(n);
+                    }
+                    RequestValue::Ranked(rows)
+                }),
+        )),
+        RequestDefinition::RankSet(q) => Ok(complete(
+            engine
+                .try_rank_set_records_complete_with(q, rows, controls)?
+                .map(|mut rows| {
+                    if let Some(n) = options.top {
+                        rows.truncate(n);
+                    }
+                    RequestValue::SetRanked(rows)
+                }),
+        )),
+        RequestDefinition::Find(file) => Ok(complete(
+            engine
+                .try_find_records_complete_with(file.question(), rows, controls)?
+                .map(RequestValue::Found),
+        )),
+        RequestDefinition::Annotate(set) => {
+            if eager {
+                Ok(complete(
+                    engine
+                        .annotate_records_complete_with(
+                            set,
+                            rows.collect::<Result<Vec<_>, _>>()?,
+                            controls,
+                        )?
+                        .map(RequestValue::Annotations),
+                ))
+            } else {
+                Ok(stream(
+                    engine.try_annotate_records_complete_with(set, rows, controls),
+                    RequestValue::Annotations,
+                ))
+            }
+        }
+        RequestDefinition::Recognize(file) => Ok(complete(
+            engine
+                .try_recognize_records_complete_with(file.question(), rows, controls)?
+                .map(RequestValue::Recognized),
+        )),
+        RequestDefinition::Recognition(ask) => Ok(complete(
+            engine
+                .try_recognize_records_complete_with(ask, rows, controls)?
+                .map(RequestValue::Recognized),
+        )),
+        RequestDefinition::Relate(ask) => Ok(complete(
+            engine
+                .try_relate_records_complete_with(ask, rows, controls)?
+                .map(RequestValue::Related),
+        )),
+        RequestDefinition::DynamicChoose(q) => {
+            if eager {
+                Ok(complete(
+                    engine
+                        .choose_dynamic_records_complete_with(
+                            q,
+                            rows.collect::<Result<Vec<_>, _>>()?,
+                            controls,
+                        )?
+                        .map(RequestValue::Choices),
+                ))
+            } else {
+                Ok(stream(
+                    engine.try_choose_dynamic_records_complete_with(q, rows, controls),
+                    RequestValue::Choices,
+                ))
+            }
+        }
+        RequestDefinition::DecodedSet { .. } => {
+            Err(Error::defect("unresolved authored set entered execution"))
+        }
+    }?;
+    Ok(outcome)
 }

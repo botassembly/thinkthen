@@ -10,6 +10,10 @@ use crate::{
 };
 use std::path::PathBuf;
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one ten-function adapter makes CLI transport choices reviewable together"
+)]
 pub(super) fn admit(command: &Command) -> Result<(), Failure> {
     let call = match command {
         Command::Decide(a) => {
@@ -130,6 +134,7 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
                 };
             let mut options = options(&a.common, None, None);
             options.details = false;
+            options.examples_field = a.examples_field.clone();
             RequestCall::Recognize(arguments(&mut a.common.clone(), question, options)?)
         }
         Command::Relate(a) => {
@@ -288,7 +293,11 @@ fn arguments(
     {
         RequestInput::Feed {
             name: "cli-input".to_owned(),
-            framing: if common.jsonl {
+            framing: if common.csv {
+                RequestFraming::Csv
+            } else if common.tsv {
+                RequestFraming::Tsv
+            } else if common.jsonl {
                 RequestFraming::Jsonl
             } else if common.lines {
                 RequestFraming::Lines

@@ -4,12 +4,13 @@ mod admission;
 mod composition;
 mod definition;
 mod execution;
+mod inline;
 mod input;
 mod options;
 mod result;
 #[cfg(test)]
 mod tests;
-use super::Error;
+use super::{Error, LoadedQuestion};
 pub use admission::AdmittedRequest;
 pub use definition::RequestDefinition;
 pub use execution::{RequestEnvironment, RequestFeed};
@@ -50,7 +51,20 @@ impl std::fmt::Debug for Request {
 impl Request {
     /// Construct the current request from typed arguments.
     #[must_use]
-    pub const fn new(call: RequestCall) -> Self {
+    pub fn new(mut call: RequestCall) -> Self {
+        let arguments = match &mut call {
+            RequestCall::Decide(a)
+            | RequestCall::Choose(a)
+            | RequestCall::Tag(a)
+            | RequestCall::Score(a)
+            | RequestCall::Filter(a)
+            | RequestCall::Rank(a)
+            | RequestCall::Find(a)
+            | RequestCall::Annotate(a)
+            | RequestCall::Recognize(a)
+            | RequestCall::Relate(a) => a,
+        };
+        native_controls(arguments);
         Self {
             schema: RequestVersion::V1,
             call,
@@ -97,6 +111,20 @@ pub enum RequestFunction {
     Relate,
 }
 impl RequestFunction {
+    pub(super) const fn name(self) -> &'static str {
+        match self {
+            Self::Decide => "decide",
+            Self::Choose => "choose",
+            Self::Tag => "tag",
+            Self::Score => "score",
+            Self::Filter => "filter",
+            Self::Rank => "rank",
+            Self::Find => "find",
+            Self::Annotate => "annotate",
+            Self::Recognize => "recognize",
+            Self::Relate => "relate",
+        }
+    }
     pub(super) const fn images(self) -> bool {
         matches!(self, Self::Decide | Self::Choose | Self::Score)
     }
@@ -181,6 +209,10 @@ pub struct RequestArguments {
 #[derive(Clone, Deserialize, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(tag = "kind", rename_all = "lowercase", deny_unknown_fields)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "native preparations enter directly through the public typed definition variant"
+)]
 pub enum RequestQuestion {
     /// Literal question wording.
     Text {
@@ -232,5 +264,32 @@ impl std::fmt::Debug for RequestCall {
 impl std::fmt::Debug for RequestArguments {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("RequestArguments(<withheld>)")
+    }
+}
+
+fn native_controls(arguments: &mut RequestArguments) {
+    let RequestQuestion::Definition { value } = &arguments.question else {
+        return;
+    };
+    if let RequestDefinition::Recognition(q) = value
+        && arguments.options.examples.is_none()
+        && !q.examples().is_empty()
+    {
+        arguments.options.examples = Some(q.examples().to_vec());
+    }
+    let RequestDefinition::Atomic(LoadedQuestion::Question(q)) = value else {
+        return;
+    };
+    if q.kind == crate::public::NativeQuestionKind::FindNone {
+        arguments.options.none = true;
+    }
+    if !q.authored_threshold && arguments.options.threshold.is_none() {
+        arguments.options.threshold = q.threshold.map(|rule| {
+            if rule.is_cut() {
+                RequestThreshold::Cut(rule.bounds().0)
+            } else {
+                RequestThreshold::Rule(rule.to_string())
+            }
+        });
     }
 }

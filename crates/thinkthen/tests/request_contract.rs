@@ -26,7 +26,15 @@ fn response(body: &[u8]) -> Canned {
             let answer = if q["type"] == "noul" || q.get("criteria").is_none() {
                 json!({"type":"noul","noul":0.9})
             } else {
-                let criteria = q["criteria"].as_object().unwrap();
+                let labels = match &q["criteria"] {
+                    Value::Object(fields) => fields.keys().cloned().collect::<Vec<_>>(),
+                    Value::Array(values) => (0..values.len()).map(|n| n.to_string()).collect(),
+                    _ => panic!("fixture criteria shape: {q}"),
+                };
+                let criteria = labels
+                    .iter()
+                    .map(|label| (label.clone(), Value::Null))
+                    .collect::<serde_json::Map<_, _>>();
                 let winner = if criteria.contains_key("OUT") {
                     "OUT"
                 } else {
@@ -48,6 +56,7 @@ fn item(text: &str) -> RequestItem {
         original: Some(RequestOriginal::Text { text: text.into() }),
         context: None,
         options: None,
+        examples: None,
         images: vec![],
     }
 }
@@ -111,9 +120,15 @@ fn semantic(mut value: Value) -> Value {
             Value::Object(fields) => {
                 fields.remove("answer_id");
                 fields.remove("observations");
-                for value in fields.values_mut() { clean(value); }
+                for value in fields.values_mut() {
+                    clean(value);
+                }
             }
-            Value::Array(items) => for value in items { clean(value); },
+            Value::Array(items) => {
+                for value in items {
+                    clean(value);
+                }
+            }
             _ => {}
         }
     }
@@ -123,7 +138,14 @@ fn semantic(mut value: Value) -> Value {
 #[test]
 fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
     let listener = Listener::answering(response).unwrap();
-        let primitive = |q: Question| args(q.into(), RequestInput::Records { items: vec![item("Alpha.")] });
+    let primitive = |q: Question| {
+        args(
+            q.into(),
+            RequestInput::Records {
+                items: vec![item("Alpha.")],
+            },
+        )
+    };
     let choice = Question::choose_labels("Which?")
         .unwrap()
         .label("a", None)
@@ -156,6 +178,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
         }),
         context: None,
         options: None,
+        examples: None,
         images: vec![],
     })
     .to_vec();
@@ -179,7 +202,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
         RequestCall::Find(args(
             RequestDefinition::Atomic(LoadedQuestion::Question(Question::find("Which?").unwrap())),
             RequestInput::Units {
-                items: vec![item("Alpha.")],
+                items: vec![item("Alpha."), item("Beta.")],
             },
         )),
         RequestCall::Annotate(args(
@@ -232,6 +255,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
                 },
                 context: None,
                 options: None,
+                examples: None,
             })
             .collect();
         let before = listener.count();
@@ -266,11 +290,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
         let count = (listener.count() - before) / 3;
         assert!(count > 0, "{function:?}");
         for at in 0..count {
-            assert_eq!(
-                requests[at].body,
-                requests[count + at].body,
-                "{function:?}"
-            );
+            assert_eq!(requests[at].body, requests[count + at].body, "{function:?}");
             assert_eq!(
                 requests[at].body,
                 requests[2 * count + at].body,
@@ -282,4 +302,59 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
             decoded.facts().requests_sent()
         );
     }
+}
+
+#[test]
+fn native_and_canonical_replays_keep_the_original_answer_identity() {
+    let listener = Listener::answering(response).unwrap();
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("request-identity-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .model("fixed")
+        .unwrap()
+        .api_key("request-fixture")
+        .unwrap()
+        .cache_at(&folder)
+        .unwrap()
+        .max_retries(0)
+        .build()
+        .unwrap();
+    let q = Question::decide("Fits?").unwrap().cut();
+    let rows = vec![RecordInput {
+        original: QuestionInput::Text("Alpha.".into()),
+        context: None,
+        options: None,
+        examples: None,
+    }];
+    let live = direct(&engine, RequestFunction::Decide, &q.clone().into(), rows);
+    let request = Request::new(RequestCall::Decide(args(
+        q.into(),
+        RequestInput::Records {
+            items: vec![item("Alpha.")],
+        },
+    )));
+    for request in [
+        request.clone(),
+        Request::from_json(&serde_json::to_string(&request).unwrap()).unwrap(),
+    ] {
+        let admitted = request.admit().unwrap();
+        let RequestOutcome::Complete(call) = engine
+            .execute_request(&admitted, RequestEnvironment::default())
+            .unwrap()
+        else {
+            panic!("replay completes")
+        };
+        let value = serde_json::to_value(call.value()).unwrap();
+        assert_eq!(value[0]["answer_id"], live[0]["answer_id"]);
+        assert_eq!(
+            value[0]["meta"]["observations"],
+            live[0]["meta"]["observations"]
+        );
+        assert_eq!(call.facts().requests_sent(), 0);
+        assert_eq!(call.facts().cache_answers(), 1);
+    }
+    assert_eq!(listener.count(), 1);
 }

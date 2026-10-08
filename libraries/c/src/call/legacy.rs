@@ -124,6 +124,7 @@ fn item(original: RequestOriginal) -> RequestItem {
         original: Some(original),
         context: None,
         options: None,
+        examples: None,
         images: Vec::new(),
     }
 }

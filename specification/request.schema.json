@@ -73,6 +73,76 @@
         }
       ]
     },
+    "RecognitionExample": {
+      "description": "A tagged recognition example, as bracket text or literal text with scalar spans.",
+      "anyOf": [
+        {
+          "description": "Inline `[[KIND|TEXT]]` tags; backslash escapes bracket syntax characters.",
+          "type": "string"
+        },
+        {
+          "description": "Original text, declared entity spans and an optional broader vocabulary.",
+          "$ref": "#/$defs/RecognitionExampleText"
+        }
+      ]
+    },
+    "RecognitionExampleEntity": {
+      "description": "One entity's inclusive start, exclusive end and declared kind.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive Unicode-scalar position in the original text.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "A label in this example's effective vocabulary.",
+          "type": "string"
+        },
+        "start": {
+          "description": "Inclusive Unicode-scalar position in the original text.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "kind"
+      ]
+    },
+    "RecognitionExampleText": {
+      "description": "Literal example text and its entity annotations.",
+      "type": "object",
+      "properties": {
+        "entities": {
+          "description": "Nonoverlapping entity spans, using Unicode-scalar offsets.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionExampleEntity"
+          }
+        },
+        "kinds": {
+          "description": "Allowed kinds; omission uses the recognition's kinds, or generic ENTITY.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "description": "Exact decoded original text.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "entities"
+      ]
+    },
     "RequestBatch": {
       "description": "A bounded native batch setting.",
       "anyOf": [
@@ -699,6 +769,13 @@
           "description": "Explicit per-item context; null refuses.",
           "$ref": "#/$defs/ContextSchema"
         },
+        "examples": {
+          "description": "Optional recognition boundary examples; an empty list clears the fallback.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionExample"
+          }
+        },
         "images": {
           "description": "Ordered attachments, retaining duplicates.",
           "type": "array",
@@ -751,6 +828,17 @@
           "description": "Compatibility details output for scalar calls.",
           "type": "boolean",
           "default": false
+        },
+        "examples": {
+          "description": "Optional recognition boundary examples; an empty list clears the fallback.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionExample"
+          }
+        },
+        "examples_field": {
+          "description": "Optional per-record recognition example projection.",
+          "type": "string"
         },
         "field": {
           "description": "Evidence projection pointers in their caller order.",

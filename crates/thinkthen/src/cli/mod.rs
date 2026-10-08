@@ -80,10 +80,8 @@ pub fn entry() -> ExitCode {
     if let Some(result) = offline {
         return report_offline(result, stderr.lock());
     }
-    if let Some(command) = &cli.command {
-        if let Err(failure) = request::admit(command) {
-            return report_early(&failure, wants_facts, (started, accepted), stderr.lock());
-        }
+    if let Some(code) = request_admission(&cli, wants_facts, (started, accepted), stderr.lock()) {
+        return code;
     }
     // Every command that reads input may write a recording or a cache entry.
     if cli.command.as_ref().is_some_and(Command::reads_input)
@@ -238,9 +236,6 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
     if let Some(command) = cli.command.as_ref().filter(|command| command.reads_input()) {
         edge::waiting(command.input(), io::stderr().lock());
     }
-    if let Some(command) = &cli.command {
-        command.check_images()?;
-    }
     let input = io::stdin();
     match &cli.command {
         Some(Command::Mcp(_)) => Err(Failure::Defect("MCP command bypassed startup")),
@@ -347,4 +342,16 @@ fn report_offline(result: Result<(), Failure>, writer: impl Write) -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(failure) => failure::report(&failure, writer),
     }
+}
+
+fn request_admission(
+    cli: &Cli,
+    wants_facts: bool,
+    clocks: (std::time::Instant, std::time::Instant),
+    writer: impl std::io::Write,
+) -> Option<ExitCode> {
+    let command = cli.command.as_ref()?;
+    request::admit(command)
+        .err()
+        .map(|failure| report_early(&failure, wants_facts, clocks, writer))
 }

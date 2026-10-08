@@ -4,11 +4,12 @@ use thinkthen::{CallOptions, DetailQuestion, Engine, Facts};
 
 use crate::failures::Failure;
 
-use super::{Request, bare, member, object, raw, written};
+use super::{Request, bare, member, raw, written};
 
 pub(super) fn judgments(
     engine: &Engine,
     request: &Request,
+    definition: &thinkthen::LoadedQuestion,
     options: CallOptions<'_>,
     detailed: bool,
 ) -> Result<(String, Facts), Failure> {
@@ -20,12 +21,12 @@ pub(super) fn judgments(
     let records = member(request, "records", |raw| {
         serde_json::from_str::<Vec<String>>(raw)
     })?;
-    match thinkthen::Question::from_json(&object(&request.question)?)? {
+    match definition {
         thinkthen::LoadedQuestion::Question(asked) => {
-            collect(engine, &asked, records, options, detailed)
+            collect(engine, asked, records, options, detailed)
         }
         thinkthen::LoadedQuestion::Banded(asked) => {
-            collect(engine, &asked, records, options, detailed)
+            collect(engine, asked, records, options, detailed)
         }
     }
 }

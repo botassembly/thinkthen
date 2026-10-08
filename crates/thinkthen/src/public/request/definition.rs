@@ -147,7 +147,7 @@ impl RequestDefinition {
         let mut value = crate::core::Json::parse(&text).map_err(Error::refused)?;
         // `none` is a call control rather than authored find grammar.
         if let crate::core::Json::Object(fields) = &mut value {
-            if matches!(self, Self::Atomic(LoadedQuestion::Question(q)) if !q.authored_threshold && q.threshold.is_some_and(|rule| rule.is_cut() && rule.bounds().0 == 0.5)) {
+            if matches!(self, Self::Atomic(LoadedQuestion::Question(q)) if !q.authored_threshold) {
                 fields.retain(|(key, _)| key != "threshold");
             }
             if fields.iter().any(|(key, _)| key == "find") {

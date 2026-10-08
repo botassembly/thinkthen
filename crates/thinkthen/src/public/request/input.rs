@@ -31,6 +31,10 @@ pub enum RequestFraming {
     Lines,
     /// One original JSON value per line.
     Jsonl,
+    /// One record per CSV row.
+    Csv,
+    /// One record per TSV row.
+    Tsv,
 }
 /// Closed evidence selectors; feed contains no runtime reader.
 #[derive(Clone, Deserialize, Serialize)]
@@ -139,6 +143,14 @@ pub struct RequestItem {
     )]
     #[cfg_attr(test, schemars(with = "Vec<OptionSchema>"))]
     pub options: Option<RecordOptions>,
+    /// Optional recognition boundary examples; an empty list clears the fallback.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "Vec<crate::RecognitionExample>"))]
+    pub examples: Option<Vec<crate::RecognitionExample>>,
     /// Ordered attachments, retaining duplicates.
     #[serde(default)]
     pub images: Vec<RequestImage>,
@@ -182,7 +194,7 @@ impl std::fmt::Debug for RequestImage {
     }
 }
 pub(super) mod original_json {
-    use super::*;
+    use super::{Deserialize, RawRecord, Serialize};
     pub(super) fn deserialize<'de, D: serde::Deserializer<'de>>(
         de: D,
     ) -> Result<RawRecord, D::Error> {
@@ -263,7 +275,7 @@ struct RequestReader {
     window: Option<usize>,
 }
 mod reader {
-    use super::*;
+    use super::{Deserialize, ReaderOptions, RequestReader, Serialize};
     pub(super) fn deserialize<'de, D: serde::Deserializer<'de>>(
         de: D,
     ) -> Result<ReaderOptions, D::Error> {

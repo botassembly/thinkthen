@@ -18,24 +18,11 @@ impl AdmittedRequest {
         controls: CallOptions<'a>,
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.request.call.arguments().options;
-        let fields = options
-            .field
-            .iter()
-            .flatten()
-            .map(String::as_str)
-            .collect::<Vec<_>>();
         let explicit = options.field.is_some()
             || options.context_field.is_some()
-            || options.options_field.is_some();
-        let reading = if explicit {
-            RecordReading::new(
-                &fields,
-                options.context_field.as_deref(),
-                options.options_field.as_deref(),
-            )?
-        } else {
-            authored_reading(definition)?
-        };
+            || options.options_field.is_some()
+            || options.examples_field.is_some();
+        let reading = reading(definition, options)?;
         let context = context_schema(definition).cloned();
         let reading = context.clone().map_or(reading.clone(), |schema| {
             reading.with_context_schema(schema)
@@ -58,6 +45,7 @@ impl AdmittedRequest {
                     original: Some(RequestOriginal::Text { text: text.clone() }),
                     context: None,
                     options: None,
+                    examples: None,
                     images: images.clone(),
                 };
                 let row = compose_item(&item, &reading, context.as_ref())?;
@@ -70,6 +58,7 @@ impl AdmittedRequest {
                     }),
                     context: None,
                     options: None,
+                    examples: None,
                     images: images.clone(),
                 };
                 let row = compose_item(&item, &reading, context.as_ref())?;
@@ -88,21 +77,7 @@ impl AdmittedRequest {
                 Ok(Box::new(items.map(move |item| {
                     controls.admission()?;
                     let item = item?;
-                    if annotate && let crate::SourceItem::Text(text) = item {
-                        return Ok(RecordInput {
-                            original: QuestionInput::annotation_text(
-                                &text.record,
-                                crate::SourceLocation::new(
-                                    text.file,
-                                    Some(text.first_line),
-                                    Some(text.last_line),
-                                )?,
-                            )?,
-                            context: None,
-                            options: None,
-                        });
-                    }
-                    reading.compose_source(item)
+                    source_row(item, annotate, &reading)
                 })))
             }
             RequestInput::Feed { name, images, .. } => {
@@ -116,15 +91,7 @@ impl AdmittedRequest {
                 }
                 Ok(Box::new(feed.items.map(move |item| {
                     controls.admission()?;
-                    let mut item = item?;
-                    if !images.is_empty() {
-                        if !item.images.is_empty() {
-                            return Err(Error::usage(
-                                "feed item images conflict with shared attachments",
-                            ));
-                        }
-                        item.images = images.clone();
-                    }
+                    let item = attach_shared(item?, images)?;
                     compose_item(&item, &reading, context.as_ref())
                 })))
             }
@@ -150,6 +117,7 @@ fn compose_item(
                 original: QuestionInput::Images(crate::ImageEvidence::new(None, images.clone())?),
                 context: None,
                 options: None,
+                examples: None,
             }
         }
     };
@@ -165,9 +133,12 @@ fn compose_item(
     if let Some(options) = &item.options {
         row.options = Some(options.clone());
     }
+    if let Some(examples) = &item.examples {
+        row.examples = Some(examples.clone());
+    }
     Ok(row)
 }
-fn compose_original(
+pub(super) fn compose_original(
     reading: &RecordReading,
     original: RawRecord,
 ) -> Result<RecordInput<QuestionInput>, Error> {
@@ -176,6 +147,7 @@ fn compose_original(
         original: row.original.question_input(),
         context: row.context,
         options: row.options,
+        examples: row.examples,
     })
 }
 fn read_image(image: &RequestImage) -> Result<ImageInput, Error> {
@@ -248,4 +220,66 @@ pub(super) fn context_schema(definition: &RequestDefinition) -> Option<&crate::I
             .find_map(|q| q.metadata().context_schema.as_ref()),
         RequestDefinition::DecodedSet { .. } => None,
     }
+}
+
+pub(super) fn reading(
+    definition: &RequestDefinition,
+    options: &super::RequestOptions,
+) -> Result<RecordReading, Error> {
+    let fields = options
+        .field
+        .iter()
+        .flatten()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    let explicit = options.field.is_some()
+        || options.context_field.is_some()
+        || options.options_field.is_some()
+        || options.examples_field.is_some();
+    let reading = if explicit {
+        RecordReading::new(
+            &fields,
+            options.context_field.as_deref(),
+            options.options_field.as_deref(),
+        )?
+    } else {
+        authored_reading(definition)?
+    };
+    let reading = if let Some(pointer) = &options.examples_field {
+        reading.with_examples_field(pointer)?
+    } else {
+        reading
+    };
+    Ok(reading)
+}
+
+fn source_row(
+    item: crate::SourceItem,
+    annotate: bool,
+    reading: &RecordReading,
+) -> Result<RecordInput<QuestionInput>, Error> {
+    if annotate && let crate::SourceItem::Text(text) = item {
+        return Ok(RecordInput {
+            original: QuestionInput::annotation_text(
+                &text.record,
+                crate::SourceLocation::new(text.file, Some(text.first_line), Some(text.last_line))?,
+            )?,
+            context: None,
+            options: None,
+            examples: None,
+        });
+    }
+    reading.compose_source(item)
+}
+fn attach_shared(mut item: RequestItem, images: &[RequestImage]) -> Result<RequestItem, Error> {
+    if images.is_empty() {
+        return Ok(item);
+    }
+    if !item.images.is_empty() {
+        return Err(Error::usage(
+            "feed item images conflict with shared attachments",
+        ));
+    }
+    item.images = images.to_vec();
+    Ok(item)
 }

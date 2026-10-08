@@ -104,6 +104,22 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "String"))]
     pub options_field: Option<String>,
+    /// Optional recognition boundary examples; an empty list clears the fallback.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "Vec<crate::RecognitionExample>"))]
+    pub examples: Option<Vec<crate::RecognitionExample>>,
+    /// Optional per-record recognition example projection.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "String"))]
+    pub examples_field: Option<String>,
     /// Native batch scheduling.
     #[serde(
         default,

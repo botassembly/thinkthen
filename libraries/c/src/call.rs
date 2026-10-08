@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use serde_json::value::RawValue;
 use thinkthen::{
     AttemptObservation, BatchSetting, CallOptions, CancelToken, DoorReply, Engine, Facts, Judgment,
-    LoadedQuestion, Question, QuestionSet, Ranked,
+    LoadedQuestion, Ranked,
 };
 
 use crate::door;
@@ -100,7 +100,7 @@ pub(crate) fn call(
     let request = split(members)?;
     let admitted = legacy::translate(&request)?;
     // Resolve inline definitions before the compatibility writer enumerates sources.
-    admitted.resolve_question()?;
+    let definition = admitted.resolve_question()?;
     let options = controls(&request, door::options(deadline_ms, token)?)?;
     let attempts = Mutex::new(Vec::<AttemptObservation>::new());
     let collect = |event| {
@@ -113,7 +113,7 @@ pub(crate) fn call(
     } else {
         options
     };
-    let (value, facts) = answer(engine, &request, options)?;
+    let (value, facts) = answer(engine, &request, &definition, options)?;
     let attempts = if request.attempts {
         let mut events = attempts
             .into_inner()
@@ -232,24 +232,25 @@ fn split(members: Members) -> Result<Request, Failure> {
 fn answer(
     engine: &Engine,
     request: &Request,
+    definition: &thinkthen::RequestDefinition,
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
     let verb = request.verb.as_str();
     if let Some(selection) = request.envelope.get("source") {
-        return source_answer(engine, request, selection.get(), options);
+        return source_answer(engine, request, definition, selection.get(), options);
     }
     match verb {
         "decide" | "choose" | "score" | "tag" => {
             let detailed = flag(&request.envelope, "details")?;
             if request.envelope.contains_key("records") {
-                return records::judgments(engine, request, options, detailed);
+                return records::judgments(engine, request, atomic_definition(definition)?, options, detailed);
             }
             let evidence = member(request, "evidence", |raw| {
                 serde_json::from_str::<String>(raw)
             })?;
-            let call = match Question::from_json(&object(&request.question)?)? {
-                LoadedQuestion::Question(asked) => engine.details_with(&asked, &evidence, options),
-                LoadedQuestion::Banded(asked) => engine.details_with(&asked, &evidence, options),
+            let call = match atomic_definition(definition)? {
+                LoadedQuestion::Question(asked) => engine.details_with(asked, &evidence, options),
+                LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options),
             }?;
             if detailed {
                 return Ok((call.value().to_json(), call.facts().clone()));
@@ -257,17 +258,13 @@ fn answer(
             Ok((bare(call.value().value())?, call.facts().clone()))
         }
         "filter" => {
-            let mut question = request.question.clone();
-            if let Some(text) = question.remove("filter") {
-                question.insert("decide".to_owned(), text);
-            }
-            let LoadedQuestion::Question(asked) = Question::from_json(&object(&question)?)? else {
-                return Err(Failure::usage("filter keeps a record at a cut, not a band"));
+            let LoadedQuestion::Question(asked) = atomic_definition(definition)? else {
+                return Err(Failure::defect("admitted filter lost its cut"));
             };
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
-            let mut batch = engine.filter_with(&asked, records.iter().map(String::as_str), options);
+            let mut batch = engine.filter_with(asked, records.iter().map(String::as_str), options);
             let kept = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
             let facts = batch
                 .facts()
@@ -276,11 +273,11 @@ fn answer(
             Ok((written(serde_json::to_string(&kept))?, facts))
         }
         "rank" => {
-            let asked = Question::rank(&alone(&request.verb, &request.question)?)?;
+            let thinkthen::RequestDefinition::Rank(asked) = definition else { return Err(Failure::defect("admitted rank lost its definition")); };
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
-            let ranked = engine.rank_with(&asked, records.iter().map(String::as_str), options)?;
+            let ranked = engine.rank_with(asked, records.iter().map(String::as_str), options)?;
             Ok((
                 written(serde_json::to_string(
                     &ranked.value().iter().map(Ranked::row).collect::<Vec<_>>(),
@@ -289,28 +286,24 @@ fn answer(
             ))
         }
         "find" => {
-            let mut question = request.question.clone();
-            let none = question.remove("none").map_or(Ok(false), |raw| {
-                serde_json::from_str::<bool>(raw.get())
-                    .map_err(|_| Failure::usage("find takes `none` as true or false"))
-            })?;
-            let asked = Question::find(&alone(&request.verb, &question)?)?;
-            let asked = if none { asked.offering_none()? } else { asked };
+            let LoadedQuestion::Question(asked) = atomic_definition(definition)? else { return Err(Failure::defect("admitted find lost its definition")); };
             let units = member(request, "units", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
-            let found = engine.find_with(&asked, units.iter().map(String::as_str), options)?;
+            let found = engine.find_with(asked, units.iter().map(String::as_str), options)?;
             Ok((
                 written(serde_json::to_string(&found.value().picked()))?,
                 found.facts().clone(),
             ))
         }
-        "annotate" => annotate(engine, request, options),
+        "annotate" => annotate(engine, request, definition, options),
         "recognize" => {
             let evidence = member(request, "evidence", |raw| {
                 serde_json::from_str::<String>(raw)
             })?;
-            door::recognize(engine, &object(&request.question)?, &evidence, options)
+            let thinkthen::RequestDefinition::Recognition(asked) = definition else { return Err(Failure::defect("admitted recognition lost its definition")); };
+            let call = engine.recognize_with(asked, &evidence, options)?;
+            Ok((call.value().to_json(), call.facts().clone()))
         }
         _ => {
             let records = member(request, "records", |raw| {
@@ -318,7 +311,10 @@ fn answer(
             })?;
             let records: Vec<&str> = records.iter().map(|record| record.get()).collect();
             let entities = door::entities(&records)?;
-            door::relate(engine, &object(&request.question)?, entities, options)
+            let thinkthen::RequestDefinition::Relate(asked) = definition else { return Err(Failure::defect("admitted relation lost its definition")); };
+            let call = engine.relate_with(asked, entities, options)?;
+            let edges = call.value().iter().map(|edge| raw(edge.to_json())).collect::<Result<Vec<_>, _>>()?;
+            Ok((written(serde_json::to_string(&door::Edges { edges }))?, call.facts().clone()))
         }
     }
 }
@@ -326,16 +322,14 @@ fn answer(
 fn annotate(
     engine: &Engine,
     request: &Request,
+    definition: &thinkthen::RequestDefinition,
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
-    let set = match request.question.get("annotate") {
-        Some(set) if request.question.len() == 1 => QuestionSet::from_json(set.get())?,
-        _ => return Err(Failure::usage("annotate takes its question set alone")),
-    };
+    let thinkthen::RequestDefinition::Annotate(set) = definition else { return Err(Failure::defect("admitted annotation lost its definition")); };
     let records = member(request, "records", |raw| {
         serde_json::from_str::<Vec<String>>(raw)
     })?;
-    let mut batch = engine.annotate_with(&set, records.iter().map(String::as_str), options);
+    let mut batch = engine.annotate_with(set, records.iter().map(String::as_str), options);
     let rows = batch
         .by_ref()
         .map(|row| raw(row?.value_json()))
@@ -429,17 +423,13 @@ fn check_source(envelope: &Members) -> Result<(), Failure> {
 fn source_answer(
     engine: &Engine,
     request: &Request,
+    definition: &thinkthen::RequestDefinition,
     selection: &str,
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
-    let mut question = request.question.clone();
-    if let Some(details) = request.envelope.get("details") {
-        question.insert("details".into(), details.clone());
-    }
-    Ok(source::dispatch(
-        engine,
-        &object(&question)?,
-        selection,
-        options,
-    )?)
+    Ok(source::execute_prepared(engine, &request.verb, definition, &source::parse(selection)?, options, flag(&request.envelope,"details")?)?)
+}
+
+fn atomic_definition(definition: &thinkthen::RequestDefinition) -> Result<&LoadedQuestion, Failure> {
+    if let thinkthen::RequestDefinition::Atomic(q) = definition { Ok(q) } else { Err(Failure::defect("admitted atomic definition changed kind")) }
 }

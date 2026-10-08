@@ -77,10 +77,14 @@ pub(super) fn admit(request: Request) -> Result<AdmittedRequest, Error> {
             None
         }
     };
-    Ok(AdmittedRequest {
+    let admitted = AdmittedRequest {
         request,
         definition,
-    })
+    };
+    if let Some(definition) = &admitted.definition {
+        admitted.admit_inline(definition)?;
+    }
+    Ok(admitted)
 }
 fn text_question(function: Function, text: &str) -> Result<RequestDefinition, Error> {
     match function {
@@ -178,6 +182,11 @@ fn admit_options(
             return Err(Error::usage("this function does not accept this threshold"));
         }
     }
+    if (options.examples.is_some() || options.examples_field.is_some())
+        && function != Function::Recognize
+    {
+        return Err(Error::usage("examples apply only to recognize"));
+    }
     if options.options_field.is_some() && function != Function::Choose {
         return Err(Error::usage("options_field applies only to choose"));
     }
@@ -207,9 +216,13 @@ fn admit_options(
         crate::CallOptions::new().deadline_ms(ms)?;
     }
     for pointer in options.field.iter().flatten().chain(
-        [&options.context_field, &options.options_field]
-            .into_iter()
-            .flatten(),
+        [
+            &options.context_field,
+            &options.options_field,
+            &options.examples_field,
+        ]
+        .into_iter()
+        .flatten(),
     ) {
         crate::core::Pointer::new(pointer).map_err(|_| Error::usage("invalid field pointer"))?;
     }
@@ -248,6 +261,12 @@ fn admit_input(
                         "explicit item context/options conflict with projection pointers",
                     ));
                 }
+                if item.examples.is_some() && function != Function::Recognize {
+                    return Err(Error::usage("item examples apply only to recognize"));
+                }
+                if item.examples.is_some() && options.examples_field.is_some() {
+                    return Err(Error::usage("item examples conflict with examples_field"));
+                }
                 if item.options.is_some() && function != Function::Choose {
                     return Err(Error::usage("item options apply only to choose"));
                 }
@@ -267,7 +286,10 @@ fn admit_input(
             .validate()?;
             if source.media == crate::ReaderMedia::Image {
                 if !function.images() {
-                    return Err(Error::usage("this function takes text only"));
+                    return Err(Error::usage(format!(
+                        "{} accepts text only; images are unsupported",
+                        function.name()
+                    )));
                 }
                 admit_image_projection(options)?;
             }
@@ -317,7 +339,10 @@ fn image_headers(
         return Ok(());
     }
     if !function.images() {
-        return Err(Error::usage("this function takes text only"));
+        return Err(Error::usage(format!(
+            "{} accepts text only; images are unsupported",
+            function.name()
+        )));
     }
     if images.len() > crate::MAX_IMAGES {
         return Err(Error::usage("image evidence requires 1 to 8 images"));

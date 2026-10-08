@@ -75,9 +75,16 @@ pub(crate) fn execute(
     options: CallOptions<'_>,
     detailed: bool,
 ) -> Result<(String, Facts), Error> {
-    // Validate the question before admitting any file content.
+    execute_with_definition(engine,verb,question,selection,options,detailed,None)
+}
+
+pub(crate) fn execute_prepared(engine: &Engine, verb: &str, definition: &thinkthen::RequestDefinition, selection: &Selection, options: CallOptions<'_>, detailed: bool) -> Result<(String,Facts),Error> {
+    execute_with_definition(engine,verb,"",selection,options,detailed,Some(definition))
+}
+fn execute_with_definition(engine: &Engine, verb: &str, question: &str, selection: &Selection, options: CallOptions<'_>, detailed: bool, definition: Option<&thinkthen::RequestDefinition>) -> Result<(String,Facts),Error> {
+    // Prepared definitions enter directly; other shared callers retain their edge grammar.
     let result = match verb {
-        "decide" | "choose" | "score" | "tag" => match Question::from_json(question)? {
+        "decide" | "choose" | "score" | "tag" => match loaded(definition,question)? {
             LoadedQuestion::Question(asked) => {
                 judgments(engine, &asked, selection, options, detailed)?
             }
@@ -86,7 +93,7 @@ pub(crate) fn execute(
             }
         },
         "filter" => {
-            let LoadedQuestion::Question(asked) = Question::from_json(question)? else {
+            let LoadedQuestion::Question(asked) = loaded(definition,question)? else {
                 return Err(usage("filter keeps a record at a cut, not a band"));
             };
             let mut batch = engine.try_filter_with(&asked, selection.read()?, options);
@@ -101,6 +108,7 @@ pub(crate) fn execute(
             (Value::Array(rows), facts)
         }
         "rank" => {
+            let asked = if let Some(thinkthen::RequestDefinition::Rank(q)) = definition { q.clone() } else {
             let body: std::collections::BTreeMap<String, String> =
                 serde_json::from_str(question)
                     .map_err(|_| usage("rank takes its question text alone"))?;
@@ -109,6 +117,8 @@ pub(crate) fn execute(
                 .filter(|_| body.len() == 1)
                 .ok_or_else(|| usage("rank takes its question text alone"))?;
             let asked = Question::rank(text)?;
+                asked
+            };
             let mut bytes = 0usize;
             let records = selection.read()?.map(|record| {
                 let record = record?;
@@ -131,9 +141,9 @@ pub(crate) fn execute(
                 .collect::<Result<Vec<_>, Error>>()?;
             (Value::Array(rows), call.facts().clone())
         }
-        "find" => find(engine, question, selection, options)?,
+        "find" => find(engine, question, selection, options, definition)?,
         "annotate" => {
-            let set = QuestionSet::from_json(question)?;
+            let set = if let Some(thinkthen::RequestDefinition::Annotate(set)) = definition { set.clone() } else { QuestionSet::from_json(question)? };
             let mut batch = engine.try_annotate_with(&set, selection.read()?, options);
             let rows = batch
                 .by_ref()
@@ -148,8 +158,8 @@ pub(crate) fn execute(
                 .ok_or_else(|| defect("completed annotate has no facts"))?;
             (Value::Array(rows), facts)
         }
-        "recognize" => recognize(engine, question, selection, options)?,
-        "relate" => relate(engine, question, selection, options)?,
+        "recognize" => recognize(engine, question, selection, options, definition)?,
+        "relate" => relate(engine, question, selection, options, definition)?,
         _ => return Err(usage("source requires a judging verb")),
     };
     let text = serde_json::to_string(&result.0)
@@ -199,7 +209,9 @@ fn find(
     question: &str,
     selection: &Selection,
     options: CallOptions<'_>,
+    definition: Option<&thinkthen::RequestDefinition>,
 ) -> Result<(Value, Facts), Error> {
+    let asked = if let Some(thinkthen::RequestDefinition::Atomic(LoadedQuestion::Question(q))) = definition { q.clone() } else {
     let body: Value =
         serde_json::from_str(question).map_err(|_| usage("find requires a question"))?;
     let text = body
@@ -218,6 +230,8 @@ fn find(
         Some(Value::Bool(false)) | None => (),
         _ => return Err(usage("find takes none as true or false")),
     }
+        asked
+    };
     let call = engine.try_find_with(&asked, selection.read()?, options)?;
     let answer =
         if let (Some(source), Some(picked)) = (call.value().selected(), call.value().picked()) {
@@ -237,9 +251,10 @@ fn recognize(
     question: &str,
     selection: &Selection,
     options: CallOptions<'_>,
+    definition: Option<&thinkthen::RequestDefinition>,
 ) -> Result<(Value, Facts), Error> {
     let options = options.started()?;
-    let asked = Recognize::from_json(question)?;
+    let asked = if let Some(thinkthen::RequestDefinition::Recognition(q)) = definition { q.clone() } else { Recognize::from_json(question)? };
     let tally = Tally::new();
     let mut rows = Vec::new();
     let records = selection.read()?;
@@ -263,8 +278,9 @@ fn relate(
     question: &str,
     selection: &Selection,
     options: CallOptions<'_>,
+    definition: Option<&thinkthen::RequestDefinition>,
 ) -> Result<(Value, Facts), Error> {
-    let asked = Relate::from_json(question)?;
+    let asked = if let Some(thinkthen::RequestDefinition::Relate(q)) = definition { q.clone() } else { Relate::from_json(question)? };
     let mut sources = Vec::new();
     let mut entities = Vec::new();
     let mut occurrences = Vec::new();
@@ -441,4 +457,8 @@ fn locate_relation(source: &SourceRecord<String>, relation: &mut Value) -> Resul
         }
     }
     Ok(())
+}
+
+fn loaded(definition: Option<&thinkthen::RequestDefinition>, question: &str) -> Result<LoadedQuestion,Error> {
+    if let Some(thinkthen::RequestDefinition::Atomic(q)) = definition { Ok(q.clone()) } else { Question::from_json(question) }
 }

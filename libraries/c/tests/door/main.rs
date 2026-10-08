@@ -28,6 +28,7 @@ fn declared(input: &str) -> Vec<String> {
 
 mod backends;
 mod bytes;
+mod canonical;
 mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
