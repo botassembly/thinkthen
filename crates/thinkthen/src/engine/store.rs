@@ -359,21 +359,7 @@ impl Store {
                 Some(entries) => Some(entries),
                 None => read_fixture()?,
             };
-            self.waiting(cancel, || {
-                connection.execute_batch("PRAGMA auto_vacuum = INCREMENTAL")
-            })?;
-            let import =
-                |entries: &Entries| self.waiting(cancel, || entries.insert_all(&connection));
-            self.transaction(cancel, &connection, || {
-                let current: i64 = self.waiting(cancel, || {
-                    connection.query_row("PRAGMA user_version", [], |row| row.get(0))
-                })?;
-                if current == 0 {
-                    self.waiting(cancel, || connection.execute_batch(SCHEMA))?;
-                    fixture.as_ref().map_or(Ok(()), import)?;
-                }
-                Ok(())
-            })?;
+            self.initialize(&connection, fixture.as_ref(), cancel)?;
         }
         #[cfg(test)]
         {
