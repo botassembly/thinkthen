@@ -41,10 +41,10 @@ pub(crate) struct Detailed<'a> {
 struct Running<'a> {
     common: &'a Common,
     max_text_bytes: usize,
-    environment: &'a Environment,
     engine: Engine,
     mismatch: profile::Mismatch,
     context: Option<String>,
+    cancel: crate::engine::Cancel<'static>,
 }
 
 #[expect(
@@ -138,7 +138,6 @@ pub(crate) fn run(
     let running = Running {
         common: &arguments.common,
         max_text_bytes,
-        environment,
         engine: asking::engine(
             &arguments.common,
             environment,
@@ -150,6 +149,7 @@ pub(crate) fn run(
         .with_aggregate_context(context.clone()),
         mismatch,
         context,
+        cancel: environment.cancel().with_storage_scope(),
     };
     let streams = reading.streams();
     if !streams && !arguments.common.located() && arguments.common.input.len() <= 1 {
@@ -169,7 +169,7 @@ pub(crate) fn run(
         source
             .enumerate()
             .map(|(ordinal, item)| item.map(|item| (item.at, (ordinal, item)))),
-        environment.cancel(),
+        &running.cancel,
         &mut schedule::Output::streaming(&mut writer, environment.usage()),
     )
 }
@@ -237,8 +237,7 @@ fn execute(
     Failure,
 > {
     let cancel = running
-        .environment
-        .cancel()
+        .cancel
         .with_captured_attempts(running.common.details);
     let mut events = std::collections::BTreeMap::new();
     let recognition = running
