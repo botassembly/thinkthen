@@ -11,3 +11,5 @@ Focused tests passed for schema combinations, native default/explicit source uni
 The native reader treats an omitted unit as line, so image media needs an explicit file unit in the advertised schema. MCP's early command path needs the permission bit from its existing configuration read to issue the same warning as the ordinary CLI without reading the file again.
 
 Fresh code review accepted `c308dd78736b63b87d9b5197016022444904d2b9` after the MCP startup test bounded its first reply and process exit and checked the complete protocol output.
+
+After main gained ticket 0487 slice A, the branch merged `800a0dbf1d1f7a8532a197751fe8f99b038ea33c`. Only `sdlc/ratchet.json` conflicted; the combined source measured 165391 nonblank Rust lines. The reviewed product diff did not overlap main's changed paths. On the combined branch, focused MCP source schema, native default-unit refusal, shared-config startup, authored decide reading, decide help and find help tests passed. Policy, `pm lint`, the ratchet and diff checks passed. The separate lane owns full MCP parity.
