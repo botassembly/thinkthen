@@ -68,3 +68,5 @@ printf '%s\n' 'é TOTAL 42.75.' | thinkthen recognize --entity-definition 'The c
 ```
 
 With the ticket's saved loopback response, the command returns `42.75` as kind `amount` at Unicode scalar span `[8,13)`. The example requests literal text only. A live model may return a different answer; this offline proof establishes request construction, decoding and offsets.
+
+The first integrated full test run found two stale shared-case expectations. The Rust JSON parity count still expected 63 comparisons after case 56 made 64. The command wire test compared whole-call question keys against obsolete canonical key values; it now derives the served endpoint's keys from the case's saved request bytes and reported model, then compares the exact ordered list. The complete command wire case passed with 48 applicable cases, zero failures and eight explicit in-process exclusions; the Rust JSON parity test passed all 64 comparisons. The existing shared corpus and consumer qualification remain unchanged.
