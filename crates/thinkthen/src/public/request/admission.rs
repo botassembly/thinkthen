@@ -99,6 +99,25 @@ fn admit_definition(
     definition: RequestDefinition,
 ) -> Result<RequestDefinition, Error> {
     let definition = match definition {
+        RequestDefinition::Atomic(LoadedQuestion::Question(mut q))
+            if function == Function::Rank =>
+        {
+            if q.authored_threshold
+                || !matches!(
+                    q.kind(),
+                    QuestionKind::Decide | QuestionKind::Score | QuestionKind::Rank
+                )
+            {
+                return Err(Error::usage(
+                    "rank takes a decide or score question without an authored threshold",
+                ));
+            }
+            q.threshold = None;
+            if q.kind() == QuestionKind::Decide {
+                q.kind = crate::public::NativeQuestionKind::Rank;
+            }
+            RequestDefinition::Rank(q)
+        }
         RequestDefinition::DecodedSet { annotation, rank } => match function {
             Function::Annotate => RequestDefinition::Annotate(annotation),
             Function::Rank => RequestDefinition::RankSet(rank.ok_or_else(|| {

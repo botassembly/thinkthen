@@ -49,6 +49,7 @@ mod plan;
 mod proxy;
 mod pull;
 mod question;
+pub(crate) use question::Kind as NativeQuestionKind;
 mod question_file;
 mod record_choose;
 mod record_composition;

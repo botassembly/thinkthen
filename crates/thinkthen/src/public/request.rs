@@ -1,18 +1,23 @@
 //! One versioned edge contract for native and serialized requests.
 
 mod admission;
+mod composition;
 mod definition;
+mod execution;
 mod input;
 mod options;
+mod result;
 #[cfg(test)]
 mod tests;
 use super::Error;
 pub use admission::AdmittedRequest;
 pub use definition::RequestDefinition;
+pub use execution::{RequestEnvironment, RequestFeed};
 pub use input::{
     RequestFraming, RequestImage, RequestInput, RequestItem, RequestOriginal, RequestSource,
 };
 pub use options::{RequestBatch, RequestOptions, RequestThreshold};
+pub use result::{RequestOutcome, RequestValue};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

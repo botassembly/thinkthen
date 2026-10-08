@@ -54,6 +54,13 @@ struct Running<'a> {
     clippy::too_many_lines,
     reason = "the command edge keeps validation and mode selection in their observable order"
 )]
+/// Prepare inline recognition declarations for shared admission without evidence reads.
+pub(crate) fn request_definition(
+    arguments: &crate::args::RecognizeArguments,
+) -> Result<crate::Recognize, Failure> {
+    config::settle(arguments).map(crate::Recognize)
+}
+
 pub(crate) fn run(
     arguments: &RecognizeArguments,
     environment: &Environment,

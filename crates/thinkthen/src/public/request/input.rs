@@ -12,7 +12,8 @@ pub struct RequestSource {
     /// Caller paths, retaining order and duplicates.
     pub paths: Vec<PathBuf>,
     /// Native physical-unit settings.
-    #[serde(default)]
+    #[serde(default, with = "reader")]
+    #[cfg_attr(test, schemars(with = "RequestReader"))]
     pub reading: ReaderOptions,
     /// Whole-file media; text is the default.
     #[serde(default)]
@@ -82,7 +83,8 @@ pub enum RequestInput {
         #[serde(default)]
         framing: RequestFraming,
         /// Physical reading controls for located feeds.
-        #[serde(default)]
+        #[serde(default, with = "reader")]
+        #[cfg_attr(test, schemars(with = "RequestReader"))]
         reading: ReaderOptions,
         /// Optional ordered attachments to each item.
         #[serde(default)]
@@ -248,6 +250,35 @@ struct OptionSchema {
     )]
     #[cfg_attr(test, schemars(with = "serde_json::Value"))]
     description: Option<crate::Description>,
+}
+
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+struct RequestReader {
+    #[serde(default)]
+    unit: crate::SourceUnit,
+    #[serde(default, deserialize_with = "present")]
+    #[cfg_attr(test, schemars(with = "usize"))]
+    window: Option<usize>,
+}
+mod reader {
+    use super::*;
+    pub(super) fn deserialize<'de, D: serde::Deserializer<'de>>(
+        de: D,
+    ) -> Result<ReaderOptions, D::Error> {
+        let value = RequestReader::deserialize(de)?;
+        Ok(ReaderOptions {
+            unit: value.unit,
+            window: value.window,
+        })
+    }
+    pub(super) fn serialize<S: serde::Serializer>(
+        value: &ReaderOptions,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        value.serialize(s)
+    }
 }
 #[cfg(test)]
 #[derive(schemars::JsonSchema)]

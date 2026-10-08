@@ -24,6 +24,7 @@ pub(crate) mod profile;
 mod question_text;
 pub(crate) mod recognize;
 pub(crate) mod relate;
+mod request;
 pub(crate) mod schedule;
 pub(crate) mod status;
 pub(crate) mod table;
@@ -78,6 +79,11 @@ pub fn entry() -> ExitCode {
     };
     if let Some(result) = offline {
         return report_offline(result, stderr.lock());
+    }
+    if let Some(command) = &cli.command {
+        if let Err(failure) = request::admit(command) {
+            return report_early(&failure, wants_facts, (started, accepted), stderr.lock());
+        }
     }
     // Every command that reads input may write a recording or a cache entry.
     if cli.command.as_ref().is_some_and(Command::reads_input)

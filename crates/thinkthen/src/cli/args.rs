@@ -48,7 +48,7 @@ pub(crate) struct Cli {
 }
 
 /// The options every judging verb takes.
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub(crate) struct Common {
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]

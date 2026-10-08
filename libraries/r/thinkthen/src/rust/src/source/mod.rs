@@ -29,6 +29,13 @@ pub(crate) struct Selection {
 }
 
 impl Selection {
+    pub(crate) fn request_source(&self) -> thinkthen::RequestSource {
+        thinkthen::RequestSource {
+            paths: self.paths.iter().map(std::path::PathBuf::from).collect(),
+            reading: self.options,
+            media: thinkthen::ReaderMedia::Text,
+        }
+    }
     pub(crate) fn read(&self) -> Result<thinkthen::SourceRecords, Error> {
         thinkthen::read_files(&self.paths, self.options)
     }

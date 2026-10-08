@@ -17,6 +17,8 @@ use thinkthen::{
 use crate::door;
 use crate::failures::Failure;
 
+mod canonical;
+mod legacy;
 mod records;
 #[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
 pub(crate) mod source;
@@ -77,8 +79,18 @@ pub(crate) fn call(
     deadline_ms: i64,
     token: Option<&CancelToken>,
 ) -> Result<String, Failure> {
-    let members: Members = serde_json::from_str(text)
+    let mut members: Members = serde_json::from_str(text)
         .map_err(|_| Failure::usage("the request is not one JSON object"))?;
+    // The frozen map grammar routes by the effective last top-level value.
+    // Canonical decoding must receive the original bytes, including duplicates.
+    if members
+        .get("schema")
+        .and_then(|raw| serde_json::from_str::<String>(raw.get()).ok())
+        .is_some_and(|schema| schema.starts_with("thinkthen.request/"))
+    {
+        return canonical::call(engine, text, door::options(deadline_ms, token)?);
+    }
+    members.remove("schema");
     if flag(&members, "usage")? {
         if members.len() > 1 {
             return Err(Failure::usage("a usage request holds no other key"));
@@ -86,6 +98,9 @@ pub(crate) fn call(
         return written(serde_json::to_string(&engine.usage()));
     }
     let request = split(members)?;
+    let admitted = legacy::translate(&request)?;
+    // Resolve inline definitions before the compatibility writer enumerates sources.
+    admitted.resolve_question()?;
     let options = controls(&request, door::options(deadline_ms, token)?)?;
     let attempts = Mutex::new(Vec::<AttemptObservation>::new());
     let collect = |event| {

@@ -144,7 +144,14 @@ impl RequestDefinition {
                 return Ok(crate::core::Json::Object(fields));
             }
         };
-        crate::core::Json::parse(&text).map_err(Error::refused)
+        let mut value = crate::core::Json::parse(&text).map_err(Error::refused)?;
+        // `none` is a call control rather than authored find grammar.
+        if let crate::core::Json::Object(fields) = &mut value {
+            if fields.iter().any(|(key, _)| key == "find") {
+                fields.retain(|(key, _)| key != "none");
+            }
+        }
+        Ok(value)
     }
 }
 impl Serialize for RequestDefinition {
