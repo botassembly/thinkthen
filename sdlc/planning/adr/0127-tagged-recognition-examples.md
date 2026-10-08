@@ -13,14 +13,14 @@ The inspected baseline is `26da5f08d300b8d400924b7c44136dd94a875dc0`. `core/reco
 Define one typed `RecognitionExample` input enum with two JSON forms. A string holds one inline bracket example. An object holds `text`, `entities` and optional `kinds`. Each entity is a closed object containing `start`, `end` and `kind`. Offsets are nonnegative Unicode-scalar positions in the decoded original text, with inclusive start and exclusive end. No byte or UTF-16 interpretation is accepted at this interchange boundary. The typed native constructor receives the same fields directly.
 
 ```json
-"[[PERSON|Ada]] works at [[ORG|Orbit]]."
+"[Ada | PERSON] works at [Orbit | ORG]."
 ```
 
 ```json
 {"text":"Ada works at Orbit.","entities":[{"start":0,"end":3,"kind":"PERSON"},{"start":13,"end":18,"kind":"ORG"}]}
 ```
 
-Bracket notation accepts the caller's proposed `[TEXT | KIND]` form and the reviewed `[[KIND|TEXT]]` spelling. Both remove delimiters and labels to obtain original text and spans. The single-bracket form trims syntax whitespace around text and kind; the double-bracket form preserves it. Single brackets without an unescaped separator remain literal. Backslash escapes backslash, square brackets and the vertical bar. Other escapes, unclosed tagged delimiters, nested entities, empty kind labels and empty entities refuse. Strings outside entities retain their exact decoded text. Users who need arbitrary multiline text, edge spaces or complex punctuation may use the structured form. The coordinator requested this compatibility spelling after inspecting the original PM example; no new carrier is required.
+Bracket notation accepts the caller's proposed `[TEXT | KIND]` form. Delimiters and labels are removed to obtain original text and spans. Syntax whitespace around text and kind is trimmed. Brackets without an unescaped separator remain literal. Backslash escapes backslash, square brackets and the vertical bar. Other escapes, unclosed tagged delimiters, nested entities, empty kind labels and empty entities refuse. Strings outside entities retain their exact decoded text. Structured spans support arbitrary multiline text and edge spaces. The double-bracket alias was removed during review: it was not required by the caller and created avoidable delimiter ambiguity. Recognition question snippets keep their established double-bracket piece markers.
 
 `--examples FILE` reads UTF-8 once at the edge. Ignore empty lines. If the first nonempty line starts with `{` or a JSON string quote, read JSON Lines of the two forms above; otherwise each nonempty physical line is one bracket example. Do not infer forms from a filename extension. A JSON Lines file may mix the string and object forms. Malformed rows refuse the whole file; do not fall back to a second parser after choosing the form. An empty file means an empty example list. Files contain no mandatory bundle wrapper, saved question definition or executable instruction.
 

@@ -15,7 +15,7 @@ mod tests;
 #[serde(untagged)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub enum RecognitionExample {
-    /// Inline `[TEXT|KIND]` or `[[KIND|TEXT]]` tags; backslash escapes syntax characters.
+    /// Inline `[TEXT | KIND]` tags; backslash escapes syntax characters.
     Brackets(String),
     /// Original text, declared entity spans and an optional broader vocabulary.
     Spans(RecognitionExampleText),

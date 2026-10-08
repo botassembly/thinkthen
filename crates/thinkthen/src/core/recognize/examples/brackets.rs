@@ -14,22 +14,6 @@ pub(super) fn parse(source: &str) -> Result<RecognitionExampleText, ExampleError
                 text.push(escaped(&mut chars)?);
                 scalar += 1;
             }
-            '[' if chars.peek() == Some(&'[') => {
-                chars.next();
-                let kind = label(&mut chars)?;
-                let start = scalar;
-                let body = body(&mut chars)?;
-                scalar += body.chars().count();
-                if start == scalar {
-                    return Err(ExampleError::Brackets);
-                }
-                text.push_str(&body);
-                entities.push(RecognitionExampleEntity {
-                    start,
-                    end: scalar,
-                    kind,
-                });
-            }
             '[' => match single(&mut chars)? {
                 Some((body, kind)) => {
                     let start = scalar;
@@ -46,7 +30,6 @@ pub(super) fn parse(source: &str) -> Result<RecognitionExampleText, ExampleError
                     scalar += 1;
                 }
             },
-            ']' if chars.peek() == Some(&']') => return Err(ExampleError::Brackets),
             other => {
                 text.push(other);
                 scalar += 1;
@@ -65,25 +48,43 @@ fn single(chars: &mut Peekable<Chars<'_>>) -> Result<Option<(String, String)>, E
     let mut before = String::new();
     let mut after = String::new();
     let mut separated = false;
-    let mut nested = false;
+    let mut literal_brackets = Vec::new();
     while let Some(character) = scanned.next() {
         let character = match character {
-            '\\' => escaped(&mut scanned)?,
+            '\\' => {
+                let decoded = escaped(&mut scanned)?;
+                match decoded {
+                    '[' => literal_brackets.push(true),
+                    ']' => {
+                        literal_brackets.pop();
+                    }
+                    _ => {}
+                }
+                decoded
+            }
             '|' if !separated => {
+                if literal_brackets.contains(&false) {
+                    return Err(ExampleError::Brackets);
+                }
+                literal_brackets.clear();
                 separated = true;
                 continue;
             }
             '|' => return Err(ExampleError::Brackets),
             '[' => {
-                nested = true;
+                literal_brackets.push(false);
                 '['
+            }
+            ']' if !literal_brackets.is_empty() => {
+                literal_brackets.pop();
+                ']'
             }
             ']' => {
                 if !separated {
                     return Ok(None);
                 }
                 let (text, kind) = (before.trim(), after.trim());
-                if nested || text.is_empty() || kind.is_empty() {
+                if text.is_empty() || kind.is_empty() {
                     return Err(ExampleError::Brackets);
                 }
                 *chars = scanned;
@@ -109,44 +110,4 @@ fn escaped(chars: &mut Peekable<Chars<'_>>) -> Result<char, ExampleError> {
         Some(character @ ('\\' | '[' | ']' | '|')) => Ok(character),
         _ => Err(ExampleError::Brackets),
     }
-}
-
-fn label(chars: &mut Peekable<Chars<'_>>) -> Result<String, ExampleError> {
-    let mut label = String::new();
-    while let Some(character) = chars.next() {
-        match character {
-            '|' if !label.trim().is_empty() => return Ok(label),
-            '\\' => label.push(escaped(chars)?),
-            '[' | ']' | '|' => return Err(ExampleError::Brackets),
-            other => label.push(other),
-        }
-    }
-    Err(ExampleError::Brackets)
-}
-
-fn body(chars: &mut Peekable<Chars<'_>>) -> Result<String, ExampleError> {
-    let mut text = String::new();
-    let mut literal_brackets = 0;
-    while let Some(character) = chars.next() {
-        match character {
-            '\\' => text.push(escaped(chars)?),
-            '[' => {
-                if chars.peek() == Some(&'[') || single(chars)?.is_some() {
-                    return Err(ExampleError::Brackets);
-                }
-                literal_brackets += 1;
-                text.push('[');
-            }
-            ']' if literal_brackets > 0 => {
-                literal_brackets -= 1;
-                text.push(']');
-            }
-            ']' if chars.peek() == Some(&']') => {
-                chars.next();
-                return Ok(text);
-            }
-            other => text.push(other),
-        }
-    }
-    Err(ExampleError::Brackets)
 }

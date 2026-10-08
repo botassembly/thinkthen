@@ -3,7 +3,7 @@ use super::*;
 use thinkthen::{Kind, RawRecord, RecognitionExample, Recognize, RecordInput, RecordReading};
 
 fn example(text: &str) -> RecognitionExample {
-    RecognitionExample::Brackets(format!("[[ENTITY|{text}]]"))
+    RecognitionExample::Brackets(format!("[{text} | ENTITY]"))
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn native_projection_and_explicit_empty_examples_keep_independent_record_identit
             .unwrap()
     };
     let rows = [
-        make(Some(json!(["[[ENTITY|first]]"]))),
+        make(Some(json!(["[first | ENTITY]"]))),
         make(Some(json!([]))),
         make(None),
     ];
@@ -137,7 +137,7 @@ fn native_later_invalid_examples_and_nonrecognition_controls_send_nothing() {
             [
                 row(Some(vec![example("Ada")])),
                 row(Some(vec![RecognitionExample::Brackets(
-                    "[[unknown|secret]]".into(),
+                    "[secret | unknown]".into(),
                 )])),
             ],
             CallOptions::new(),
@@ -195,7 +195,7 @@ fn empty_examples_preserve_defaults_and_a_later_stage_failure_retains_actual_fac
         .unwrap()
         .build()
         .unwrap()
-        .with_examples(vec![RecognitionExample::Brackets("[[person|Ada]]".into())])
+        .with_examples(vec![RecognitionExample::Brackets("[Ada | person]".into())])
         .unwrap();
     let failure = super::engine(&failing)
         .recognize_complete_with(&ask, "Ada met Acme.", CallOptions::new().attempts(true))

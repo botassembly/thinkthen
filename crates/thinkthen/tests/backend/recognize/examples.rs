@@ -38,7 +38,7 @@ fn tagged_examples_preserve_context_and_only_teach_boundaries() {
     let listener = Listener::answering(automatic).unwrap();
     let input = format!(
         "{}\n",
-        json!({"body":"Ada met Acme.","context":"exact context","examples":["[[person|Zoë]] met [[organization|Orbit]]."]})
+        json!({"body":"Ada met Acme.","context":"exact context","examples":["[Zoë | person] met [Orbit | organization]."]})
     );
     let output = run(
         &listener,
@@ -85,7 +85,7 @@ fn both_file_forms_plan_the_exact_boundary_body_and_enforce_its_byte_limit() {
     let root = root("forms-limit");
     let brackets = root.join("brackets.txt");
     let spans = root.join("spans.jsonl");
-    fs::write(&brackets, "[[ENTITY|Zoë]]\n").unwrap();
+    fs::write(&brackets, "[Zoë | ENTITY]\n").unwrap();
     fs::write(
         &spans,
         "{\"text\":\"Zoë\",\"entities\":[{\"start\":0,\"end\":3,\"kind\":\"ENTITY\"}]}\n",
@@ -147,11 +147,11 @@ fn record_examples_replace_clear_or_retain_shared_examples_at_jobs_eight() {
     let listener = Listener::answering(automatic).unwrap();
     let root = root("records");
     let shared = root.join("shared.txt");
-    fs::write(&shared, "[[ENTITY|shared]]\n").unwrap();
+    fs::write(&shared, "[shared | ENTITY]\n").unwrap();
     let shared = shared.to_string_lossy();
     let records = [
-        json!({"body":"Ada","context":"first","examples":["[[ENTITY|first]]"]}),
-        json!({"body":"Bob","context":"second","examples":["[[ENTITY|second]]"]}),
+        json!({"body":"Ada","context":"first","examples":["[first | ENTITY]"]}),
+        json!({"body":"Bob","context":"second","examples":["[second | ENTITY]"]}),
         json!({"body":"Cara","context":"","examples":[]}),
         json!({"body":"Dan","context":"fallback"}),
     ];
@@ -205,15 +205,15 @@ fn record_examples_replace_clear_or_retain_shared_examples_at_jobs_eight() {
 fn invalid_later_record_examples_refuse_the_collected_input_without_sends() {
     let listener = Listener::answering(automatic).unwrap();
     for bad in [
-        json!(["[[unknown|secret-example]]"]),
+        json!(["[secret-example | unknown]"]),
         json!([{"text":"secret-example","entities":[{"start":1,"end":6,"kind":"ENTITY"}]}]),
         json!([{"text":"Ada","entities":[{"start":0,"end":3,"kind":"ENTITY"},{"start":0,"end":3,"kind":"ENTITY"}]}]),
         Value::Null,
-        json!("[[ENTITY|Ada]]"),
+        json!("[Ada | ENTITY]"),
     ] {
         let input = format!(
             "{}\n{}\n",
-            json!({"body":"Ada","examples":["[[ENTITY|Ada]]"]}),
+            json!({"body":"Ada","examples":["[Ada | ENTITY]"]}),
             json!({"body":"Bob","examples":bad})
         );
         let output = run(
@@ -262,7 +262,7 @@ fn example_changes_miss_only_boundary_cache_and_matching_recordings_replay() {
         &listener,
         &[&flags[..], &["--cache", &cache]].concat(),
         Some("secret-key"),
-        input("[[person|Ada]]").as_bytes(),
+        input("[Ada | person]").as_bytes(),
     );
     assert_eq!(first.status.code(), Some(0));
     assert_eq!(listener.count(), 2);
@@ -270,7 +270,7 @@ fn example_changes_miss_only_boundary_cache_and_matching_recordings_replay() {
         &listener,
         &[&flags[..], &["--cache", &cache]].concat(),
         Some("secret-key"),
-        input("[[person|Bob]]").as_bytes(),
+        input("[Bob | person]").as_bytes(),
     );
     assert_eq!(second.status.code(), Some(0));
     assert_eq!(listener.count(), 3);
@@ -285,7 +285,7 @@ fn example_changes_miss_only_boundary_cache_and_matching_recordings_replay() {
         &listener,
         &[&flags[..], &["--no-cache", "--replay", &cache]].concat(),
         None,
-        input("[[person|Ada]]").as_bytes(),
+        input("[Ada | person]").as_bytes(),
     );
     assert_eq!(replay.status.code(), Some(0));
     assert_eq!(stdout(&replay), stdout(&first));

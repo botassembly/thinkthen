@@ -56,12 +56,11 @@ fn annotations_admit_only_whole_nonoverlapping_pieces_and_declared_kinds() {
         "[[person|Ada] | person]",
         "[[|Ada]]",
         "Ada\\x",
-        "Ada]]",
         "[Ada|person",
         "[|person]",
         "[Ada|]",
         "[Ada|person|other]",
-        "[[Ada]|person]",
+        "[Ada [Bob | person] | person]",
     ] {
         assert_eq!(
             super::brackets::parse(invalid).unwrap_err(),
@@ -72,26 +71,34 @@ fn annotations_admit_only_whole_nonoverlapping_pieces_and_declared_kinds() {
 
 #[test]
 fn ordinary_bracket_literals_remain_text() {
-    for source in ["Ada [note]", "[[person|Ada [note] here]]"] {
+    let expected = vec![super::RecognitionExampleEntity {
+        start: 0,
+        end: 10,
+        kind: "person".into(),
+    }];
+    for source in [
+        "[Ada [note] | person]",
+        r"[Ada [note\] | person]",
+        r"[Ada \[note] | person]",
+        r"[Ada \[note\] | person]",
+    ] {
         let parsed = super::brackets::parse(source).unwrap();
-        assert!(parsed.text.contains("[note]"));
+        assert_eq!(parsed.text, "Ada [note]");
+        assert_eq!(parsed.entities, expected);
+        assert_eq!(parsed.entities[0].start, 0);
+        assert_eq!(parsed.entities[0].end, 10);
     }
-    let parsed = super::brackets::parse("[[person|Ada [note]]]").unwrap();
-    assert_eq!(parsed.text, "Ada [note]");
-    assert_eq!(parsed.entities[0].start, 0);
-    assert_eq!(parsed.entities[0].end, 10);
+    assert_eq!(
+        super::brackets::parse("Ada [note]").unwrap().text,
+        "Ada [note]"
+    );
 }
 
 #[test]
 fn equivalent_scalar_spans_and_brackets_render_identically_with_other_kinds_out() {
-    let bracket = RecognitionExample::Brackets("[[person|Zoë A\u{301}]] met Orbit.".into());
+    let bracket = RecognitionExample::Brackets("[Zoë A\u{301} | person] met Orbit.".into());
     let explicit: RecognitionExample = serde_json::from_str(r#"{"text":"Zoë Á met Orbit.","entities":[{"start":0,"end":6,"kind":"person"},{"start":11,"end":16,"kind":"organization"}],"kinds":["person","organization"]}"#).unwrap();
     let expected = render_examples(&spec(), &[bracket]).unwrap();
-    let original_form = RecognitionExample::Brackets("[Zoë A\u{301} | person] met Orbit.".into());
-    assert_eq!(
-        render_examples(&spec(), &[original_form]).unwrap(),
-        expected
-    );
     assert_eq!(render_examples(&spec(), &[explicit]).unwrap(), expected);
     assert!(expected[0].contains("Answer: \"BEGIN\"; kind: \"person\""));
     assert!(expected[0].contains("Answer: \"END\"; kind: \"person\""));
@@ -105,7 +112,7 @@ proptest! {
         let escaped: String = text.chars().flat_map(|c| {
             if matches!(c, '\\' | '[' | ']' | '|') { vec!['\\', c] } else { vec![c] }
         }).collect();
-        let parsed = super::brackets::parse(&format!("[[person|{escaped}]]")).unwrap();
+        let parsed = super::brackets::parse(&format!("[{escaped} | person]")).unwrap();
         prop_assert_eq!(&parsed.text, &text);
         prop_assert_eq!(parsed.entities[0].start, 0);
         prop_assert_eq!(parsed.entities[0].end, text.chars().count());
