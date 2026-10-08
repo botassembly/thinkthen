@@ -2,7 +2,7 @@
 
 Status: preparation for builders, 2026-09-30. Read against `origin/main` at `4e2ec93e6`, after slice 3a landed and while 3b, 3c and 3d build. This page changes no ticket. Line numbers are from that commit. Ian can overturn each recommendation.
 
-Read first: `sdlc/planning/cleanup-2026-09-30.md` "Lessons for builders", ADR 0111 build steps 4 and 5 (`sdlc/planning/adr/0111-question-cache-and-one-batching-path.md:241-242`), and `sdlc/planning/0304-slices-3b-3d-prep.md`.
+Read first: `sdlc/decisions/2026-10-08-preserve-planning-rulings.md` "Lessons for builders", ADR 0111 build steps 4 and 5 (`sdlc/planning/adr/0111-question-cache-and-one-batching-path.md:241-242`), and `sdlc/planning/0304-slices-3b-3d-prep.md`.
 
 "3d part 2" below means 3d's SQL-host follow-up: PostgreSQL `call.rs` and `call/settings.rs`, and DuckDB `engines.rs` (`0304-slices-3b-3d-prep.md:148,153`).
 

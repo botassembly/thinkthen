@@ -4,7 +4,7 @@
 - Date: 2026-09-30
 - Amended by ticket 0360 (2026-09-30): a usage folder that exists and cannot be read now refuses each surface's first send with a local error, so persistence can change an error on that one path. The folder moved to the platform state folder.
 
-This ADR answers option 1 of `sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`. It follows ruling 8 of `sdlc/planning/cleanup-2026-09-30.md`. It amends ADR 0034, which kept persistence to the command.
+This ADR answers option 1 of `sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`. It follows ruling 8 of `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`. It amends ADR 0034, which kept persistence to the command.
 
 ## Context
 

@@ -1,21 +1,18 @@
 # Agent instructions for thinkthen
 
-Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification; scope: `sdlc/planning/milestones.md`; order and lanes: `sdlc/planning/team-0-2-2026-10-04.md`.
+Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification and `sdlc/planning/milestones.md`. Read status, order and lanes through pm. The workspace instructions load the shared role skills from `repos/agents/skills/`; this file adds repository boundaries and checks.
 
 ## Build and review
 
-Use one fresh review of the whole ticket or slice, then fix and land. A second review is allowed only when a substantial fix touches data loss, credentials, money, memory safety or user-visible correctness. A new dependency also takes the second reviewer required by the Rust standards. Run full tests and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Write one short record per ticket at landing; name tests by behavior. Keep release rehearsal and Ian's approvals.
-
-- Build simply: YAGNI, DRY, local behavior, separate concerns. Add commands and options only for demos. Land outside-in CLI/API, edge-table, contract, or prior-failing regression tests; delete scaffolding. See workspace decision `2026-09-24-tests-earn-their-place.md`.
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change, plus `spec` and affected surfaces when needed. Load and timing run only through `test-stress --run`. Gates use no network.
-- Hand-written Rust and binding source/test files warn at 500–999 nonblank lines and fail at 1,000. Explain a warning in the change’s commit; avoid mechanical splits. Generated source, vendored dependencies and build output remain excluded. `sdlc/ratchet.json` equals the measured source total; explain growth. These checks require no additional reviewer.
+- `policy.py` enforces source file limits; `sdlc/ratchet.json` holds the measured source ceiling. Explain warnings and growth in the commit; avoid mechanical splits.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
-- Keep checks that protect behavior, secrecy, spend, boundaries, or ticket evidence. A check that only polices prose may go; the commit says why.
 - Beelink is primary. M5 may run experiments and Mac-specific checks, including before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
 - Cap each lane at 40 GB total, including `libraries/` and `databases/`. At landing delete only its ticket-owned `target/` scratch/logs; keep warm builds. Fully clean idle lanes only below 50 GB free. Require 50 GB free before full parity. Keep branch-specific source/build copies; sharing mixes branches.
-- Tickets follow `sdlc/tickets/README.md`. Commit and push whole changes without agent attribution. Use a claimed lane per `sdlc/planning/worktrees.md`; the lander frees it.
 
 ## Boundaries
+
+Add commands and options only for demonstrated caller behavior. Replay documentation examples when their text or output changes. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews.
 
 Each engine resolves one endpoint, one effective key and one provider API type. Business routing, model groups, fallback providers, A/B policy, curation and automatic threshold tuning belong to the proxy. Keep explicit direct model/reading choices and offline analysis as caller controls; add no SDK business policy.
 
@@ -35,6 +32,6 @@ Read the key from `THINKTHEN_API_KEY`, or from a named backend's own key variabl
 
 ## Where decisions live
 
-`CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. The queue owner owns the whole repo, `site/` included, per `sdlc/planning/ownership.md`. A product manager agent sends tickets and edits nothing here. Decisions live in `sdlc/`: ADRs, issues, tickets. An unfindable decision was not made. Name what Ian can overturn.
+`CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. The queue owner owns the whole repo, `site/` included, per `sdlc/planning/ownership.md`. Lasting rulings live in `sdlc/decisions/`; accepted ADRs and specifications retain product contracts. Preserve source links and name what Ian can overturn.
 
-The release process lives in `sdlc/planning/release-process.md`.
+The release process lives in `sdlc/planning/release-process.md`. Ian held release management on 2026-10-08: candidate tags, manual workflow dispatches, release branch advancement and publication require his permission. See `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`.

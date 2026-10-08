@@ -1,6 +1,6 @@
 # planning/
 
-[cleanup-2026-09-30.md](cleanup-2026-09-30.md) is the current status authority: Ian's rulings, the order of work, the lanes, and progress.
+Read status, order and lanes through `pm daily`, `pm next` and `pm lanes`. [milestones.md](milestones.md) defines release outcomes; [preserved planning rulings](../decisions/2026-10-08-preserve-planning-rulings.md) names the lasting decisions from removed status and handoff files.
 
 - `design-study.md`: what thinkthen is, what version one holds, how it fits, and what waits on Ian. A study until he rules.
 - `rust-standards.md`: how the code is judged, rule by rule, with the enforcing tool.
@@ -11,7 +11,7 @@
 - [milestones.md](milestones.md): the 0.1, 0.2 and later milestones, their exit criteria, blockers and open items.
 - [issue-priorities-2026-09-30.md](issue-priorities-2026-09-30.md): the ranked open issues, their 0.1 blockers, owners, and the tickets ready now.
 - [test-split-2026-09-30.md](test-split-2026-09-30.md): the test inventory for ticket 0335, with times, groups, and the replay smoke per binding.
-- [bench-handoff.md](bench-handoff.md): answers for the public Beatles Bench team: the three places for tests, the `status --json` fields, the tags, and how to send a hard case as a recording.
+- [Preserved bench rulings](../decisions/2026-10-08-preserve-planning-rulings.md#bench-evidence-and-fixtures): test ownership, recording provenance and historical measurement sources.
 - [mainline-readiness-2026-09-23.md](mainline-readiness-2026-09-23.md): the checked main/worktree snapshot, quality and release assessment, and completion checklist for ticket 0074. Budget: 12,000 characters.
 - [prospective-bash-rust-python-plan.md](prospective-bash-rust-python-plan.md): the short completion overview for the command, engine, and libraries. Tickets are written as work begins. Budget: 4,000 characters.
 - `flat-verbs-review.md`: a review of Ian's flat-verb redesign of 2026-09-19, with one recommended surface. Ian accepted it, and ADR 0007 records the decision.
@@ -30,5 +30,4 @@ These pages record earlier phases. They no longer set the order of work.
 - `plan.md`: the first build order, by slice.
 - `build-queue-2026-09-21.md`: the build queue of 2026-09-21.
 - `one-line-plan-2026-09-24.md` and `one-line-plan-2026-09-25.md`: one-line plans of those days.
-- `work-plan-2026-09-27.md`: the batches before the cleanup phase.
 - `remaining-batches-2026-09-28.md`: the batches left on 2026-09-28.

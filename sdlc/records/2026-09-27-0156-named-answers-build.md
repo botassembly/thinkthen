@@ -14,7 +14,7 @@ The lint rung now calls a Node check that imports the marketing-owned `site/scri
 - A warm command from codex-4 at `bbf9d6ce` passed the two executable documentation pages before this lane built. It did not prove changed help. This lane then ran `flock -o "$THINKTHEN_HEAVY_LOCK" cargo build --locked --offline -p thinkthen`; the built command's `decide --help` showed `refund_code`, and `choose --help` showed `team_code` and `team`. With that command, `mustmatch test spec/decide.md` passed 24 blocks and demo 01 passed 3 blocks with 1 skipped.
 - `flock -o "$THINKTHEN_HEAVY_LOCK" cargo clippy --locked --offline -p thinkthen --all-targets --all-features -- -D warnings` passed. `flock -o "$THINKTHEN_HEAVY_LOCK" env STEPS=slide_sample bash databases/postgresql/check.sh` passed its focused SQL step: 1 passed, 0 failed. That check also completed its prerequisite formatting, clippy and library tests.
 
-The current focused-batch ruling in [the work plan](../planning/work-plan-2026-09-27.md) puts the full integration ladder at the coordinator's next coherent batch checkpoint. The independent code review accepted the scanner, samples, scope, focused proof and lessons without a required correction.
+The current focused-batch ruling in [the work plan](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md) puts the full integration ladder at the coordinator's next coherent batch checkpoint. The independent code review accepted the scanner, samples, scope, focused proof and lessons without a required correction.
 
 ## Lessons and routing
 

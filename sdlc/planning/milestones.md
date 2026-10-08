@@ -6,7 +6,7 @@ Every open ticket and open issue carries a `Milestone:` line with `0.1`, `0.2` o
 
 ## 0.1
 
-Outcome: the first public release, on every registry, with every surface and binding (ruling 10 of [cleanup-2026-09-30.md](cleanup-2026-09-30.md)).
+Outcome: the first public release, on every registry, with every surface and binding ([preserved release ruling](../decisions/2026-10-08-preserve-planning-rulings.md#cache-types-and-release-rulings)).
 
 Exit criteria, all met on 2026-10-03. 0.1.1 is published on every registry, and GitHub release v0.1.1 is public. The record is [0128-release-0-1.md](../records/0128-release-0-1.md).
 
@@ -47,11 +47,11 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 Ian held release work on 2026-10-08. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM’s later addendum promotes 0461 into 0.2; its help/shared-case correction precedes landing. No new candidate tags or GitHub workflow runs without Ian's permission. [0462’s findings](../records/0462-after-sprint-review.md) have fix owners 0463–0472; these remain 0.2 work. 0473 fixes the reported old configuration upgrade refusal.
 
-Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score, the local MCP surface and additive named question/input declarations. The SDK uses one configured route; business policy belongs to the proxy. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns the retained seventeen asks and accepted 0456 intake, dependencies, lane ownership and acceptance.
+Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score, the local MCP surface and additive named question/input declarations. The SDK uses one configured route; business policy belongs to the proxy. [Preserved scope and order](../decisions/2026-10-08-preserve-planning-rulings.md#retained-02-scope-and-order) carries the lasting 0.2 plan rulings; read work status and dispatch order through pm. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. The preserved scope retains the seventeen asks, accepted 0456 intake and dependencies. Read acceptance from the owning tickets through pm.
 
 Already landed: version/release safety, backends/provider setups/default-eight, rank search, audit/docs/recipes, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, agent skill, native files and local runtimes. These are retained behavior. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
 
-Owners below include landed prerequisites and remaining work; the current plan’s remaining-work table gives the execution order.
+The contract owners below retain their distinct outcomes. Read execution order through `pm next`.
 
 The reviewed 2026-10-07 intake adds [0457: source-size warnings](../tickets/0457-warn-on-large-handwritten-source.md), [0459: binding C-header agreement](../tickets/0459-enforce-binding-c-header-layouts.md), and [0458: bounded file-seam cleanup](../tickets/0458-audit-file-seams-after-core-freeze.md). Implement 0457 before cleanup. C-header agreement is required for 0.2. Run 0458 only after a named reviewed core-freeze commit; it is the first candidate for 0.2.1 deferral if Ian changes priorities.
 
