@@ -67,7 +67,7 @@ def command(binary, value, settings, home):
     if verb == "find" and question.get("none"):
         args.append("--none")
     args.extend(["--details", "--facts"])
-    envelope = value.get("context_present") or bool(value.get("candidate_orders"))
+    envelope = (value.get("context_present") or value.get("contexts") is not None) or bool(value.get("candidate_orders"))
     caption_documents = value.get("caption_files") and len(value["items"]) > 1 and not envelope
     document_files = caption_documents or (bool(value.get("paths")) and value.get("source_unit") in (3, 4))
     attached_images = bool(value.get("image_paths")) and not value.get("paths") and len(value["items"]) == 1 and not envelope and isinstance(value["items"][0], (str, type(None)))
@@ -127,8 +127,8 @@ def command(binary, value, settings, home):
         projected = []
         for at, original in enumerate(items):
             record = {"original": original}
-            if value.get("context_present"):
-                record["context"] = value["context"]
+            if (value.get("context_present") or value.get("contexts") is not None):
+                record["context"] = value["contexts"][at] if value.get("contexts") is not None else value["context"]
             if value.get("candidate_orders"):
                 record["options"] = value["candidate_orders"][at]
             projected.append(record)
@@ -138,7 +138,7 @@ def command(binary, value, settings, home):
             fields = [fields]
         for field in fields or [""]:
             args.extend(["--field", "/original" + field])
-        if value.get("context_present"):
+        if (value.get("context_present") or value.get("contexts") is not None):
             args.extend(["--context-field", "/context"])
         if value.get("candidate_orders"):
             args.extend(["--options", "/options"])
@@ -162,7 +162,7 @@ def project_row(result, value, at):
            "observation_ids": [o.get("observation_id", o.get("failure_id")) for o in meta["observations"]],
            "question_digest": meta.get("question_sha256"), "cache_keys": meta["requests"]}
     row.update({k: result[k] for k in ("input", "file", "first_line", "last_line", "index") if k in result})
-    if value.get("context_present") or value.get("candidate_orders"):
+    if (value.get("context_present") or value.get("contexts") is not None) or value.get("candidate_orders"):
         if "input" in row:
             row["input"] = row["input"]["original"]
     if "index" not in row:

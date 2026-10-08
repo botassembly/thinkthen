@@ -131,3 +131,5 @@ native schema and need no host question parser or result-field fabrication.
 
 Ian can overturn the local MCP contract and measurement plan. A pushed ticket
 checkpoint is not a main landing, publication or complete support claim.
+
+Recognition accepts `options.context_field` and explicit descriptor context through the native record reader. Empty text clears shared context. Every selected record context is admitted before recognition sends; each stage retains that record's context. See [the recognition contract](../../specification/recognize.md#per-record-context).

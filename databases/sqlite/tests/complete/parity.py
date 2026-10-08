@@ -23,11 +23,11 @@ def framing(step):
     elif step.get('question_form')=='file':question='@fixture-question.json'
     records=[]
     images=[{'media':step.get('media','image/png' if path.endswith('.png') else 'image/jpeg'),'bytes':list((ROOT/path).read_bytes())} for path in step.get('image_paths',[])]
-    for item in step.get('items',[]):
+    for at,item in enumerate(step.get('items',[])):
         record={} if step.get('image_only') else {'document' if step['verb']=='annotate' and step.get('text') and isinstance(item,str) else 'text' if step.get('text') and isinstance(item,str) else 'json':item}
         if images:record['images']=images
         if step.get('candidate_orders'):record['options']=step['candidate_orders'][len(records)]
-        if step.get('context_present'):record['context']=step['context']
+        if step.get('context_present') or step.get('contexts') is not None:record['context']=step['contexts'][at] if step.get('contexts') is not None else step['context']
         records.append(record)
     controls={key:step['settings'][key] for key in ('context','deadline_ms','batch','threshold','options','levels','labels','none','proxy') if key in step.get('settings',{})}
     if step.get('shared_context') is not None:controls['context']=step['shared_context']
