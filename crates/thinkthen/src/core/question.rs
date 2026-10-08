@@ -176,6 +176,20 @@ impl Labels {
     pub(crate) fn recognition_menu(
         values: Vec<(String, Option<Description>)>,
     ) -> Result<Self, LabelsError> {
+        Self::uncapped(values, 2)
+    }
+
+    /// Validate caller recognition kinds before adding the internal declining choice.
+    pub(crate) fn recognition_kinds(
+        values: Vec<(String, Option<Description>)>,
+    ) -> Result<Self, LabelsError> {
+        Self::uncapped(values, 1)
+    }
+
+    fn uncapped(
+        values: Vec<(String, Option<Description>)>,
+        least: usize,
+    ) -> Result<Self, LabelsError> {
         let labels = values
             .into_iter()
             .map(|(name, description)| Label {
@@ -185,7 +199,7 @@ impl Labels {
             .collect();
         Self::checked(
             labels,
-            2,
+            least,
             usize::MAX,
             LabelsError::OptionCount,
             LabelKind::Option,

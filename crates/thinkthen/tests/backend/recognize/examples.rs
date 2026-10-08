@@ -116,8 +116,10 @@ fn both_file_forms_plan_the_exact_boundary_body_and_enforce_its_byte_limit() {
     );
     assert_eq!(listener.count(), 1);
     let baseline = plan(&listener, &[], b"Ada");
-    let historical = plan(&listener, &["--max-request-bytes", "1"], b"Ada");
-    assert_eq!(baseline["requests"], historical["requests"]);
+    let refused = run(&listener, &["--max-request-bytes", "1", "--plan"], b"Ada");
+    assert_eq!(refused.status.code(), Some(2));
+    assert!(refused.stdout.is_empty());
+    assert_eq!(listener.count(), 1);
     assert!(bytes > baseline["requests"][0]["bytes"].as_u64().unwrap());
     assert_eq!(
         listener.requests()[0].body,

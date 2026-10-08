@@ -250,9 +250,7 @@ fn validate_kinds(kinds: &[(String, Option<Description>)]) -> Result<(), Recogni
     if kinds.is_empty() {
         return Ok(());
     }
-    let mut menu = kinds.to_vec();
-    menu.push((NONE_OF_THESE.to_owned(), None));
-    Labels::recognition_menu(menu).map_err(|_| RecognizeConfigError::Kinds)?;
+    Labels::recognition_kinds(kinds.to_vec()).map_err(|_| RecognizeConfigError::Kinds)?;
     if kinds.iter().any(|(kind, _)| {
         RESERVED
             .iter()
