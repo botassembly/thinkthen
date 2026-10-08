@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import tempfile
 
 from children import child_env
 
@@ -18,5 +19,13 @@ for name in REFUSED:
         bad.append(name)
     except ValueError as error:
         bad += [] if str(error) == SENTENCE.format(name) else [str(error)]
+# The owned-home contract permits an intentional folder override and still
+# excludes ambient keys. Reversing the helper's default/override order fails.
+with tempfile.TemporaryDirectory(prefix="thinkthen-child-home-") as home:
+    env = child_env(home=home, XDG_CONFIG_HOME=home + "/explicit", KEPT_0127="kept", SET_0127="set")
+    probe = PROBE + ' && printf "%s\\n" "$HOME" "$XDG_CONFIG_HOME" "$APPDATA"'
+    result = subprocess.run(["sh", "-c", probe], env=env, text=True, capture_output=True, check=False)
+    if result.returncode != 0 or result.stdout.splitlines() != [home, home + "/explicit", home + "/config"]:
+        bad.append("owned home and explicit override")
 print(f"children python: {'ok' if not bad else 'FAIL ' + ', '.join(bad)}")
 sys.exit(1 if bad else 0)

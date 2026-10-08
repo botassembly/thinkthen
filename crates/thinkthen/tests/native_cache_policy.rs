@@ -320,9 +320,8 @@ fn command(
     use std::process::{Command, Stdio};
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .clear_environment()
+        .isolated_home(&folder.0)
         .env("THINKTHEN_API_KEY", "fixture-storage-policy")
-        .env("XDG_STATE_HOME", folder.0.join("state"))
-        .env("LOCALAPPDATA", folder.0.join("state"))
         .args([
             "decide",
             "Refund?",

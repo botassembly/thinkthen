@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
+Reviews: revision f1a49f8bc78b16bd499e1f22e052226a4e88ca0c, accept
+
 ## Outcome
 
 Tests use one child-environment entry point per language, preserving intentional environment cases while preventing accidental inherited configuration.
