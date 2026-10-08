@@ -11,6 +11,23 @@ mod ffi;
 
 type Registry = Arc<Mutex<Option<OwnedHandle>>>;
 
+fn watch_cancellation(registry: Registry, token: CancelToken, completion: mpsc::Receiver<()>) {
+    while matches!(
+        completion.recv_timeout(Duration::from_millis(20)),
+        Err(mpsc::RecvTimeoutError::Timeout)
+    ) {
+        if token.is_cancelled()
+            && let Ok(operation) = registry.lock()
+            && let Some(handle) = operation.as_ref()
+        {
+            // Repeat after ERROR_NOT_FOUND: stop can race entry into
+            // the synchronous read/write. The lock also prevents a
+            // late cancellation after this operation has returned.
+            let _cancel = ffi::cancel(handle);
+        }
+    }
+}
+
 struct Watch {
     active: Registry,
     stop: CancelToken,
@@ -25,22 +42,7 @@ impl Watch {
         let (done, completion) = mpsc::channel();
         let worker = thread::Builder::new()
             .name("thinkthen-mcp-io-stop".into())
-            .spawn(move || {
-                while matches!(
-                    completion.recv_timeout(Duration::from_millis(20)),
-                    Err(mpsc::RecvTimeoutError::Timeout)
-                ) {
-                    if token.is_cancelled()
-                        && let Ok(operation) = registry.lock()
-                        && let Some(handle) = operation.as_ref()
-                    {
-                        // Repeat after ERROR_NOT_FOUND: stop can race entry into
-                        // the synchronous read/write. The lock also prevents a
-                        // late cancellation after this operation has returned.
-                        let _cancel = ffi::cancel(handle);
-                    }
-                }
-            })?;
+            .spawn(move || watch_cancellation(registry, token, completion))?;
         Ok(Self {
             active,
             stop,
