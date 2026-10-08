@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
+Reviews: revision 443b593f47216b3e88351beb7f5135b4245212aa, accept
+
 ## Outcome
 
 The existing C export check fails when real header constants disagree with production Rust values.
