@@ -80,6 +80,16 @@ pub(super) unsafe fn new(
     metadata: *const QuestionAuthorV1,
     out: *mut *mut QuestionHandle,
 ) -> i32 {
+    // SAFETY: existing constructor omits the additive recognition task.
+    unsafe { new_with_task(engine, spec, metadata, None, out) }
+}
+pub(super) unsafe fn new_with_task(
+    engine: *const Door,
+    spec: *const QuestionSpecV1,
+    metadata: *const QuestionAuthorV1,
+    task: Option<crate::ffi::carriers::RecognitionTaskV1>,
+    out: *mut *mut QuestionHandle,
+) -> i32 {
     // SAFETY: descriptors are live counted storage; publication occurs only on success.
     unsafe {
         crate::ffi::typed(
@@ -88,7 +98,7 @@ pub(super) unsafe fn new(
                 read::required(out)?;
                 let spec = read::reference(spec)?;
                 let author = author(metadata.as_ref())?;
-                let json = question::build(spec, Some(&author))?;
+                let json = question::build(spec, Some(&author), task)?;
                 let mut q = if spec.kind == 6 && spec.members.len == 0 {
                     current::question::rank(json)
                 } else if spec.kind == 2 && spec.choices.len == 0 {

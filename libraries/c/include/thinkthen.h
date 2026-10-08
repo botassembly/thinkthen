@@ -333,6 +333,11 @@ typedef struct thinkthen_member_spec_v1 {
     const thinkthen_question *question;
 } thinkthen_member_spec_v1;
 typedef struct thinkthen_member_specs_v1 { const thinkthen_member_spec_v1 *data; size_t len; } thinkthen_member_specs_v1;
+/* Additive 0.3 recognition task; existing V1 question layouts remain unchanged. */
+typedef struct thinkthen_recognition_task_v1 {
+    thinkthen_optional_string_v1 instructions;
+    thinkthen_optional_string_v1 entity_definition;
+} thinkthen_recognition_task_v1;
 typedef struct thinkthen_question_spec_v1 {
     uint32_t kind;
     thinkthen_content_v1 text;
@@ -1002,6 +1007,16 @@ typedef struct thinkthen_question_author_v1 {
  * metadata. author=NULL means no author metadata. All inputs are cloned.
  */
 int thinkthen_question_new_authored(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, thinkthen_question **);
+
+/* kind must be 9. task is required; author may be NULL. Active strings are
+   nonblank counted UTF-8 and copied before return. Absent value storage is ignored.
+   Failure preserves *out. Existing V1 constructors retain their contracts. */
+int thinkthen_question_new_recognition_v1(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, const thinkthen_recognition_task_v1 *, thinkthen_question **);
+/* Borrow task strings until the owning question/result is freed. Requires a
+   recognition question/row and writable full-sized output. Invalid owners, row
+   ordinals and NULL output return Usage without changing output. */
+int thinkthen_question_recognition_task_v1(const thinkthen_question *, thinkthen_recognition_task_v1 *);
+int thinkthen_result_recognition_task_v1(const thinkthen_result *, size_t row, thinkthen_recognition_task_v1 *);
 /* Borrow metadata owned by this immutable question until question_free. */
 int thinkthen_question_author(const thinkthen_question *, thinkthen_question_author_v1 *);
 /* Explicit native loader role: ATOMIC=1, SET=2, DYNAMIC_CHOOSE=3,

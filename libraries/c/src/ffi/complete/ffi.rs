@@ -424,3 +424,22 @@ pub(crate) unsafe extern "C" fn thinkthen_result_source_relations(
         })
     }
 }
+
+/// Borrow one recognition row's copied authored task wording.
+/// # Safety
+/// Owner and output obey the header's lifetime and full-sized storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_recognition_task_v1(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut crate::ffi::carriers::RecognitionTaskV1,
+) -> i32 {
+    // SAFETY: view validates owner/output; checked row and sidecar access precede publication.
+    unsafe {
+        view(owner, out, |r| {
+            (r.rows.get(at)?.function == 9)
+                .then(|| r.recognition_tasks.get(at).copied())
+                .flatten()
+        })
+    }
+}

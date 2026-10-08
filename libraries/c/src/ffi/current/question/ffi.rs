@@ -115,8 +115,14 @@ unsafe fn relations(value: RelationsV1) -> Result<Vec<Object>, Failure> {
 pub(super) unsafe fn build(
     spec: &QuestionSpecV1,
     author: Option<&crate::current::author::Author>,
+    task: Option<crate::ffi::carriers::RecognitionTaskV1>,
 ) -> Result<String, Failure> {
     let mut body = Object::default();
+    if task.is_some() && spec.kind != 9 {
+        return Err(Failure::usage(
+            "recognition task requires a recognition question",
+        ));
+    }
     if !(1..=10).contains(&spec.kind) {
         return Err(Failure::usage("invalid question kind"));
     }
@@ -148,6 +154,14 @@ pub(super) unsafe fn build(
             let mut inner = Object::default();
             if spec.kind == 9 {
                 inner.put("kinds", choices(spec.kinds, false)?)?;
+                if let Some(task) = task {
+                    if let Some(text) = read::optional_string(task.instructions)? {
+                        inner.put("instructions", text)?;
+                    }
+                    if let Some(text) = read::optional_string(task.entity_definition)? {
+                        inner.put("entity_definition", text)?;
+                    }
+                }
             }
             inner.put("relations", relations(spec.relations)?)?;
             if spec.name_pointer.present != 0 || spec.kind_pointer.present != 0 {

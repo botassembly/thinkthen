@@ -77,6 +77,10 @@ layout!(MemberSpecsV1 {
     data: *const MemberSpecV1,
     len: usize,
 });
+layout!(RecognitionTaskV1 {
+    instructions: OptionalStringV1,
+    entity_definition: OptionalStringV1,
+});
 layout!(QuestionSpecV1 {
     kind: u32,
     text: ContentV1,

@@ -55,6 +55,7 @@ pub(super) fn result(
     facts_native: Option<&Facts>,
 ) -> Result<ResultHandle, Failure> {
     let authors = std::mem::take(&mut storage.3);
+    let recognition_tasks = std::mem::take(&mut storage.9);
     let member_authors = std::mem::take(&mut storage.4);
     let observation_authors = observations::authors(&mut storage, events, &rows, &authors)?;
     let row_details = std::mem::take(&mut storage.1);
@@ -105,6 +106,7 @@ pub(super) fn result(
         rows,
         observations,
         authors,
+        recognition_tasks,
         member_authors,
         observation_authors,
         rank_members,

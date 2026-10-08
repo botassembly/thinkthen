@@ -155,6 +155,12 @@ pub(super) use crate::public::question::model_of as model;
 pub struct Recognize(pub(crate) RecognizeSpec);
 
 impl Recognize {
+    /// Borrow the admitted authored declaration and resolved reading rules.
+    #[must_use]
+    pub fn reading(&self) -> crate::public::RecognitionReading<'_> {
+        crate::public::RecognitionReading(&self.0)
+    }
+
     /// Start one; with no kind every name takes the kind `ENTITY`.
     #[must_use]
     pub fn builder() -> RecognizeBuilder {
