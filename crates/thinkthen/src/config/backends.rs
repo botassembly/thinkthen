@@ -51,36 +51,7 @@ fn entry(name: &str, raw: &RawValue) -> Result<Named, ConfigError> {
         serde_json::from_str(raw.get()).unwrap_or_default();
     let profile = profile.get("profile").map(|raw| raw.get());
     if let Some(built_in) = Named::built_in(name) {
-        let Value::Object(fields) = &value else {
-            return Err(refused(BUILT_IN));
-        };
-        if let Some(field) = ["url", "path", "key_env", "model", "both_sides"]
-            .into_iter()
-            .find(|field| fields.contains_key(*field))
-        {
-            return Err(ConfigError {
-                message: format!(
-                    "configuration entry for built-in backend `{}` cannot set `{field}`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`",
-                    built_in.name()
-                ).into(),
-                unreadable: false,
-                price: None,
-            });
-        }
-        if fields.is_empty()
-            || fields.keys().any(|field| {
-                !matches!(
-                    field.as_str(),
-                    "requests_per_minute"
-                        | "usd_per_million_input"
-                        | "usd_per_million_output"
-                        | "profile"
-                )
-            })
-        {
-            return Err(refused(BUILT_IN));
-        }
-        return setup(built_in, fields, profile);
+        return built_in_entry(built_in, &value, profile);
     }
 
     if !named::valid_name(name) {
@@ -139,6 +110,44 @@ fn entry(name: &str, raw: &RawValue) -> Result<Named, ConfigError> {
         fields,
         profile,
     )
+}
+
+/// Validate built-in settings without accepting transport or model overrides.
+fn built_in_entry(
+    entry: Named,
+    value: &Value,
+    profile: Option<&str>,
+) -> Result<Named, ConfigError> {
+    let Value::Object(fields) = value else {
+        return Err(refused(BUILT_IN));
+    };
+    if let Some(field) = ["url", "path", "key_env", "model", "both_sides"]
+        .into_iter()
+        .find(|field| fields.contains_key(*field))
+    {
+        return Err(ConfigError {
+            message: format!(
+                "configuration entry for built-in backend `{}` cannot set `{field}`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`",
+                entry.name()
+            ).into(),
+            unreadable: false,
+            price: None,
+        });
+    }
+    if fields.is_empty()
+        || fields.keys().any(|field| {
+            !matches!(
+                field.as_str(),
+                "requests_per_minute"
+                    | "usd_per_million_input"
+                    | "usd_per_million_output"
+                    | "profile"
+            )
+        })
+    {
+        return Err(refused(BUILT_IN));
+    }
+    setup(entry, fields, profile)
 }
 
 /// Parse the shared settings once; built-in transport overrides were already refused.

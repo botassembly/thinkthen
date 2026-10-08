@@ -348,11 +348,8 @@ fn legacy_builtin_entries_offer_safe_repairs_before_commands_and_plans_send() {
                 "thinkthen: configuration entry for built-in backend `{name}` cannot set `{field}`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n"
             );
             home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":name,"backends":{name:fields}}).to_string());
-            for plan in [false, true] {
-                let mut flags = vec!["--url", target.base(), "--no-cache"];
-                if plan {
-                    flags.push("--plan");
-                }
+            for plan in [&[][..], &["--plan"][..]] {
+                let flags = [&["--url", target.base(), "--no-cache"][..], plan].concat();
                 let output = decide(&home, &flags, &[]);
                 let (stdout, stderr) = said(&output);
                 assert_eq!(output.status.code(), Some(5));
@@ -372,6 +369,12 @@ fn legacy_builtin_entries_offer_safe_repairs_before_commands_and_plans_send() {
         assert!(said(&help).0.contains("Usage:"));
         assert_eq!(target.count(), 0);
     }
+}
+
+#[test]
+fn legacy_builtin_repairs_preserve_builtin_settings_and_custom_routing() {
+    let target = listener();
+    let home = Home::new("legacy-builtin-repairs");
     // Removing legacy fields retains supported settings or deletes the empty entry.
     for (name, url, key, model) in [
         (
