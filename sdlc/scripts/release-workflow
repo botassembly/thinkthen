@@ -278,7 +278,7 @@ PYWIN
 		cargo fetch --locked --manifest-path Cargo.toml
 		cargo fetch --locked --manifest-path libraries/c/Cargo.toml
 		cargo fetch --locked --manifest-path libraries/python/Cargo.toml
-		python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
+		python3 -m pip install --disable-pip-version-check 'maturin==1.15.0' 'jsonschema==4.25.1'
 		exit 0
 	fi
 	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac
@@ -293,7 +293,7 @@ PYWIN
 		cargo install --locked --version 0.19.4 cargo-deny
 	fi
 	cargo deny fetch db
-	python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
+	python3 -m pip install --disable-pip-version-check 'maturin==1.15.0' 'jsonschema==4.25.1'
 	[ "$(maturin --version)" = 'maturin 1.15.0' ] || fail 'maturin version differs from pin'
 	# DuckDB setup creates a Python 3.13 venv with uv on Mac and native Linux smoke.
 	if [ "$(uname -s)" = Darwin ] || [ "${RELEASE_SMOKE:-0}" = 1 ]; then
