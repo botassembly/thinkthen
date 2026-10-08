@@ -1,12 +1,14 @@
 # 0507 — process-cleanup-exit-race
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 4ffc11e39, accept
 
 Reviews: revision e309af8cb329e131522ed1908017ea13570e9146, accept
+
+Landed: 75b55b0
 
 ## Outcome
 
