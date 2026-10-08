@@ -143,13 +143,10 @@ module TestBackend
     %w[cache home xdg-cache xdg-config].each { |name| Dir.mkdir(File.join(root, name)) unless Dir.exist?(File.join(root, name)) }
     Children.env(
       keep: %w[LD_LIBRARY_PATH LANG GEM_PATH],
+      home: root,
       "THINKTHEN_BASE_URL" => base_url,
       "THINKTHEN_API_KEY" => FAKE_KEY,
       "THINKTHEN_CACHE" => File.join(root, "cache"),
-      "HOME" => File.join(root, "home"),
-      "XDG_CACHE_HOME" => File.join(root, "xdg-cache"),
-      "XDG_STATE_HOME" => File.join(root, "xdg-state"),
-      "XDG_CONFIG_HOME" => File.join(root, "xdg-config"),
       **extra
     )
   end
