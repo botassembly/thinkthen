@@ -106,3 +106,39 @@ fn source_rank_charges_original_utf8_bytes_before_projection_and_never_reads_the
     assert!(records.next().is_none());
     assert_eq!(pulled.get(), 2);
 }
+
+#[test]
+fn recognition_context_selectors_refuse_missing_null_and_nontext_before_dispatch() {
+    let listener =
+        Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{}}"#)).unwrap();
+    let executor = NativeExecutor {
+        engine: Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .api_key("fake")
+            .unwrap()
+            .no_cache()
+            .build()
+            .unwrap(),
+        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
+    };
+    for invalid in [
+        json!({"body":"Bob."}),
+        json!({"body":"Bob.","context":null}),
+        json!({"body":"Bob.","context":4}),
+    ] {
+        let params: CallParams = serde_json::from_value(json!({"name":"recognize","arguments":{
+            "question":{"version":1,"recognize":{}},
+            "records":[{"body":"Ada.","context":"First context"},invalid],
+            "options":{"field":"/body","context_field":"/context"}
+        }}))
+        .unwrap();
+        let failure = executor
+            .execute(Invocation::admit(params).unwrap(), &CancelToken::new())
+            .err()
+            .expect("context selector refusal");
+        assert_eq!(failure.kind(), crate::ErrorKind::Usage);
+        assert_eq!(failure.stopped().at(), Some(2));
+    }
+    assert_eq!(listener.count(), 0);
+}

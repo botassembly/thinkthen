@@ -29,7 +29,8 @@ def fixture(row, cases, named):
             if step.get('incremental'):
                 # Reuse the canonical owned JSONL recipe and the native lazy reader.
                 step.update(owned_jsonl=True, paths=['records.jsonl'], source_unit=5, jsonl_root=True)
-    if row['kind'] == 'named-input' and named[row['input']['case_ref']]['input'].get('source_case'):
+    if (row['kind'] == 'named-input' and named[row['input']['case_ref']]['input'].get('source_case')
+            and not any(key in named[row['input']['case_ref']]['input'] for key in ('records', 'steps'))):
         value['author_expect'] = named[row['input']['case_ref']]['expect']
     if row['kind'] == 'refusal':
         value['image_only'] = True

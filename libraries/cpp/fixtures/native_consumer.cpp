@@ -76,7 +76,7 @@ int main(int argc,char **argv) {
                     original.push_back(flag(v,"caption_files")?read("caption-"+std::to_string(i)+".txt"):flag(v,"text")&&items.at(i).is_string()?str(items.at(i)):items.at(i).dump());
                     row.original={1,content(original.back(),flag(v,"text")&&items.at(i).is_string())};
                 }
-                if(flag(v,"context_present")) { const auto& c=v.at("context"); contexts.push_back(c.is_string()?str(c):c.dump()); row.context={1,content(contexts.back(),c.is_string())}; }
+                if(flag(v,"context_present") || (v.contains("contexts") && !v.at("contexts").is_null())) { const auto& c=v.contains("contexts") && !v.at("contexts").is_null()?v.at("contexts").at(i):v.at("context"); contexts.push_back(c.is_string()?str(c):c.dump()); row.context={1,content(contexts.back(),c.is_string())}; }
                 if(v.contains("candidate_orders")) { for(const auto& unused:v.at("candidate_orders").at(i)) { (void)unused; thinkthen_choice_v1 option{}; option.name=n::counted(option_names.at(oi++)); choices[i].push_back(option); } row.options={choices[i].data(),choices[i].size()}; }
                 row.images={images.data(),images.size()}; records.push_back(row);
             }

@@ -115,6 +115,9 @@ def native_document(v):
     v['image_data']=[(ROOT/path).read_bytes().hex() for path in (v.get('image_paths',[]) if not v.get('paths') else [])]
     v['items_bytes']=[item if v.get('text') and isinstance(item,str) else shared.compact(item) for item in v['items']]
     v['items_kind']=[1 if v.get('text') and isinstance(item,str) else 2 for item in v['items']]
+    if v.get('contexts') is not None:
+        v['contexts_bytes']=[c if isinstance(c,str) else shared.compact(c) for c in v['contexts']]
+        v['contexts_kind']=[1 if isinstance(c,str) else 2 for c in v['contexts']]
     if v.get('context_present'):v['context_bytes']=v['context'] if isinstance(v['context'],str) else shared.compact(v['context']);v['context_kind']=1 if isinstance(v['context'],str) else 2
     if v.get('shared_context') is not None:v['shared_context_bytes']=v['shared_context'] if isinstance(v['shared_context'],str) else shared.compact(v['shared_context']);v['shared_context_kind']=1 if isinstance(v['shared_context'],str) else 2
     v['media_code']=1 if v.get('media')=='image/jpeg' else 2

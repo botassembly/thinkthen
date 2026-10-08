@@ -3222,6 +3222,437 @@
         "error": "usage",
         "requests_sent": 0
       }
+    },
+    {
+      "id": "recognize-context-cache-replay",
+      "verb": "recognize",
+      "input": {
+        "source_case": "44-recognize-C12-relations",
+        "metadata": {},
+        "records": [
+          "Amara works at Kestrel Labs.",
+          "Amara works at Kestrel Labs."
+        ],
+        "steps": [
+          {
+            "contexts": [
+              "First context",
+              "Second context"
+            ],
+            "settings": {
+              "record": "$FOLDER",
+              "model": "jev-1.13.0"
+            },
+            "expect": {
+              "values": [
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                },
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                }
+              ],
+              "requests_sent": 6
+            }
+          },
+          {
+            "contexts": [
+              "First context",
+              "Second context"
+            ],
+            "settings": {
+              "replay": "$FOLDER",
+              "model": "jev-1.13.0"
+            },
+            "expect": {
+              "values": [
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                },
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                }
+              ],
+              "requests_sent": 0
+            },
+            "count_delta": true
+          },
+          {
+            "contexts": [
+              "Changed context",
+              "Second context"
+            ],
+            "settings": {
+              "replay": "$FOLDER",
+              "model": "jev-1.13.0"
+            },
+            "expect": {
+              "error": "local",
+              "requests_sent": 0
+            },
+            "count_delta": true
+          },
+          {
+            "contexts": [
+              "Changed context",
+              "Second context"
+            ],
+            "settings": {
+              "cache": "$FOLDER",
+              "model": "jev-1.13.0"
+            },
+            "expect": {
+              "values": [
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                },
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                }
+              ],
+              "requests_sent": 3
+            },
+            "count_delta": true
+          },
+          {
+            "contexts": [
+              "Changed context",
+              "Second context"
+            ],
+            "settings": {
+              "cache": "$FOLDER",
+              "model": "jev-1.13.0"
+            },
+            "expect": {
+              "values": [
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                },
+                {
+                  "entities": [
+                    {
+                      "text": "Amara",
+                      "start": 0,
+                      "end": 5,
+                      "length": 5,
+                      "kind": "person",
+                      "strength": 1.0
+                    },
+                    {
+                      "text": "Kestrel Labs",
+                      "start": 15,
+                      "end": 27,
+                      "length": 12,
+                      "kind": "organization",
+                      "strength": 0.9972
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "relation": "works_for",
+                      "source": {
+                        "text": "Amara",
+                        "start": 0,
+                        "end": 5,
+                        "length": 5,
+                        "kind": "person",
+                        "strength": 1.0
+                      },
+                      "target": {
+                        "text": "Kestrel Labs",
+                        "start": 15,
+                        "end": 27,
+                        "length": 12,
+                        "kind": "organization",
+                        "strength": 0.9972
+                      },
+                      "probability": 0.97
+                    }
+                  ]
+                }
+              ],
+              "requests_sent": 0
+            },
+            "count_delta": true
+          }
+        ]
+      },
+      "expect": {
+        "steps": 5
+      }
     }
   ]
 }

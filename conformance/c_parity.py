@@ -121,6 +121,8 @@ def document(row, cases, named):
                 base.update(items=given['records'], contexts=given.get('contexts'),
                             shared_context=given.get('shared_context'), expect=case['expect'],
                             arm='case/'+row['id']+'/v1' if row.get('exchanges') else 'arm/full/capture/v1')
+            if given.get('steps'):
+                return {'arm':base['arm'], 'steps':[{**base, **step} for step in given['steps']]}
             return base
         if given.get('mode') == 'incremental':
             return {'verb': row['verb'], 'question': given['question'], 'items': given['records'],
