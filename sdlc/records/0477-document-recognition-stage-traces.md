@@ -30,3 +30,16 @@ Recognition's `--plan` describes boundary bodies and later request bounds. It ca
 Fresh read-only review accepted `eeee618da3d0b0fd6d8a53b6510af24267535ce3`, with the transcript whitespace qualification above.
 
 No product API, source scheduler, Request carrier, header, CLI trace export, trace store, site proof tooling, paid call or release action changed. This recipe covers the native Rust observer. CLI details and serialized events retain their existing limits. Broader repository and release gates belong to the coordinator.
+
+## Flagged-span recipe extension
+
+The extension from PM ask 12 composes the existing `choose` function with caller-supplied bounded candidate spans. `specification/recognize.md` documents the current span as `keep`, Unicode coordinate validation, not sure handling and caller ownership of applying a result. The generic caller-defined fixture adds a saved question and one authored `fixture` answer. Its caller script validates two candidates against the unchanged original text, invokes strict CLI replay without a key and maps the selected label back to candidate metadata. The script prints a proposal and applies no edit. The existing executable recognition page checks that proposal alongside the original recognition result.
+
+The extension checks passed separately:
+
+- `mustmatch test spec/recognize.md` passed all six blocks with repository scratch configuration and usage helpers. The extended fixture block pins the original recognition result and the proposed [8,13) amount span.
+- A focused replay check bound the saved loopback endpoint, ran the caller script without a key and counted zero connections. It checked the exact selected label and proposed span. A separate invalid-coordinate check moved a candidate start by one scalar and confirmed refusal before the command was invoked.
+- `cargo test --manifest-path libraries/rust/Cargo.toml --locked --offline` passed the existing example gate, including the unchanged native observer transcript and its zero-send assertion, against the extended recording.
+- `python3 sdlc/scripts/pages` and its `--self-test` passed. `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` passed with size warnings on unchanged source files. `git diff --check` passed.
+
+The extension taught us that the ordinary choice question file accepts objects as option descriptions, so each candidate can carry its text, kind and original coordinates without an extra API. The `é` prefix demonstrates why Unicode scalar positions must remain distinct from UTF-8 byte positions. A selected label still requires caller validation and acceptance; a saved controlled answer establishes software behavior, not revision accuracy. No product code, API, revise mode, PM state, paid call or release action changed.

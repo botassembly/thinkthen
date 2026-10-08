@@ -1,0 +1,7 @@
+{
+  "choose": "Which candidate covers the complete numeric receipt amount, including its decimal point and excluding sentence punctuation? The caller flagged the keep span for review. Choose keep if its current edges are correct.",
+  "options": {
+    "keep": {"start": 8, "end": 14, "text": "42.75.", "kind": "amount"},
+    "amount": {"start": 8, "end": 13, "text": "42.75", "kind": "amount"}
+  }
+}
