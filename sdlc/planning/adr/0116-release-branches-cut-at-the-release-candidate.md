@@ -29,4 +29,10 @@ The coordinator's steps around this rule live in [release-process.md](../release
 
 Ian ruled that there are no 0.1.x patch releases. `release/0.1` is frozen, and nothing is cherry-picked to it. Items 4 and 5 no longer apply to 0.1. Every fix lands on main and ships in 0.2. Ticket 0397 moves main to 0.2.0 at once. Main moves to the next version immediately after each release, while public install text keeps naming the latest published release.
 
-Items 1 to 3 and 7 stand for the 0.2 cut. The two release approvals remain safety gates. No standing patch-release approval is wanted. Ian can overturn this ruling.
+The 2026-10-07 amendment below governs the 0.2 cut and replaces the earlier rehearsal order and ref rule. The two release approvals remain safety gates. No standing patch-release approval is wanted. Ian can overturn this ruling.
+
+## Amendment, 2026-10-07: tag the candidate before rehearsal
+
+Ian's two-stage release ruling supersedes the rehearsal-before-cut order in item 3 and the branch-rehearsal rule in item 7. Once implementation, installed parity, candidate documentation and local checks are complete, cut `release/0.2` and tag the reviewed commit `rc/0.2.0-rc.N` with positive N. Then dispatch stage 1 rehearsal and Windows qualification from that tag. Branch rehearsals do not qualify publication. Fix failures on main, review and check the fixes, then use the next candidate tag.
+
+After successful qualification and release QA, Ian's explicit publication go permits stage 2. Tag the same qualified commit `v0.2.0` and dispatch release mode from that tag. Retain the existing run-specific publication approvals. Public install text continues to name the latest published release, currently 0.1.2, and changelog dates remain unknown until actual publication. The later documentation update must not replace the qualified commit under the release tag. [release-process.md](../release-process.md) owns the detailed order. Ian can overturn this amendment.

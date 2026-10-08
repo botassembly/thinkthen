@@ -4,20 +4,39 @@ Every release of every surface shares one version number.
 
 ## Unreleased: 0.2.0
 
-Version 0.2 is in progress on main.
+Version 0.2 is implemented on main and remains unreleased. The publication date is unknown. Public installation still names 0.1.2. Final combined installed-package parity, platform qualification, release QA and rehearsal remain required. Publication requires Ian's explicit go.
 
-The settled 0.2 SDK target uses `thinkthen.result/2` for new complete results with stable answer IDs, truthful source/model metadata and call/request identity. Rank details will return final rank positions under 0436. Bare CLI, scalar SQL, convenience values and generic C compatibility projections remain. These contracts are recorded by 0442; runtime/generated-schema/strict-reader adoption remains with 0443–0445, 0450 and carrier tickets.
+### Functions, files and saved questions
 
-The cache/2 target includes literal requested/reported models, normalized final endpoints and image media/bytes/order in versioned identity. Upgrade validates v1 records offline before transactional conversion; read-only replay changes no bytes. Damaged or ambiguous stores refuse before sends. Old/new concurrent writers and downgrade of migrated stores are unsupported; an old writer needs an unmigrated copy. Response no-store will prohibit persistence; refresh will send no-cache and evict old working answers after a good nonstorable reply. Explicit recording will fail locally for such a reply. Reserved proxy types refuse activation in 0.2; override execution waits for an admitted 0.3 protocol.
+Every SDK exposes the same ten functions: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. CLI, typed C, language SDKs, SQL and dataframe adapters use the native engine's admitted inputs, complete results, errors and cache/record/replay behavior. Existing family checks establish their reviewed implementations; the final combined installed campaign remains pending.
 
+File readers retain physical source locations separately from selected evidence and original records. Folder descendants sort by relative path; explicit operands and duplicates keep their order. Paths never become model evidence or cache identity. PostgreSQL retains its client-reader/keyed-table workaround and privileged bounded question-file loader.
+
+Saved questions add author names, wording versions, named lookup, restricted item/context declarations and authored yes/no readings. Existing 0.1 question files remain accepted. Local entries take precedence over named lookup. ThinkThen creates no question file or configuration. Declarations validate selected inputs without coercion; they do not implement arbitrary JSON Schema. Per-record context and replacement choose options remain associated with their records. Explicit empty context suppresses shared context. Effective context and options affect requests and cache identity.
+
+### Images and MCP
+
+`decide`, `choose` and `score` admit ordered JPEG/PNG images, including duplicates, with optional text. Separate whole-file image inputs retain their source provenance. The other seven functions refuse images before reading files or sending. Liquid `d1`, Perplexity `pplx-decider-v1-27b` and explicitly declared supported local setups have admitted image routes. TypeSafe, OpenRouter, Ollama, the named MLX route and OpenAI Decisions refuse images. Native decoded-input and vendor limits apply; oversized inputs refuse without hidden resizing. Admission makes no image accuracy claim.
+
+The local stdio server starts with `thinkthen mcp` and exposes exactly the ten function tools through one native engine, route and cache. It accepts native question selectors, files, records, context/options and admitted images, and returns native complete results and errors. It adds no administrative, question-writing or business-routing tools. Incoming frames are limited to 16 MiB including newline; outgoing frames are limited to 192 MiB including newline and both equivalent result representations. Output overflow closes after any work already performed. Installed MCP parity passed; archive timing and final Windows qualification remain pending.
+
+### Results, cache and compatibility
+
+New complete results use `thinkthen.result/2` with stable answer IDs, observed source/model metadata, call/request identity, timing, attempts and usage facts. Rank details now return final positions starting at 1. Bare CLI, scalar SQL, convenience values and generic C compatibility projections remain. Requested and reported models stay separate; absent observations remain absent. Cached calls report zero current send cost without inventing token counts.
+
+Cache/2 identity includes literal requested/reported models, normalized final endpoints and image media/bytes/order. Upgrade validates v1 records offline before transactional conversion; read-only replay changes no bytes. Damaged or ambiguous stores refuse before sends. Old/new concurrent writers and downgrade of migrated stores are unsupported; an old writer needs an unmigrated copy. Response no-store prohibits persistence; refresh sends no-cache and evicts old working answers after a good nonstorable reply. Explicit recording fails locally for such a reply. Reserved proxy types refuse activation in 0.2; override execution waits for an admitted 0.3 protocol.
+
+`runs audit` and `runs diff` are the visible offline commands. Hidden top-level `audit` and `diff` aliases retain their options, outputs, diagnostics and exit codes. Reserved command nouns remain unimplemented; no eleventh judging function is added.
+
+### Backends and known limits
 
 Python, TypeScript, Ruby, R and the C JSON door can select a named backend in their constructor. Packages that forward C settings JSON inherit `"backend"`. DuckDB and PostgreSQL select a backend through their session settings. SQLite accepts `"backend"` in its process configuration before the first engine build. SQL accepts no address or key.
 
-The default throttle is 8 simultaneous requests on every surface. Explicit throttles retain their process-wide precedence and range of 1 through 32 (ticket 0400).
+The default throttle is 8 simultaneous requests on every surface. Explicit throttles retain their process-wide precedence and range of 1 through 32.
 
-Named backends add `perplexity` and `openrouter`. Configuration entries may set a relative posting `path`. OpenRouter preserves descriptions and fills a missing yes-or-no side with `{}`. Existing configured entries named `perplexity` or `openrouter` must be renamed or removed because those names now select built-ins; a built-in configuration entry accepts only `requests_per_minute`.
+Named backends add `perplexity` and `openrouter`. Configuration entries may set a relative posting `path`. OpenRouter preserves descriptions and fills a missing yes-or-no side with `{}`. Existing configured entries named `perplexity` or `openrouter` must be renamed or removed because those names now select built-ins; a built-in configuration entry accepts only `requests_per_minute`. OpenAI Decisions text support is implemented through the native adapter. Each engine resolves one endpoint, key and provider API type; business routing belongs to the proxy.
 
-The release workflow covers the Windows x86-64 command, Rust crate, C DLL and Python wheel. Native qualification remains required. Windows Node, C# and JVM bindings are deferred to 0.3. Development command builds are unsigned.
+The release workflow covers the Windows x86-64 command, Rust crate, C DLL and Python wheel. Native qualification remains required. Windows Node, C# and JVM bindings are deferred to 0.3. Development command builds are unsigned. Final candidate documentation trials and clean public-package checks remain pending; public-package checks follow actual publication.
 
 ## 0.1.2 (2026-10-03)
 
