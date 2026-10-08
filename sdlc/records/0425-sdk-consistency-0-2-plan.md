@@ -41,3 +41,12 @@ What the build taught us: dating notes or changing public install text before qu
 
 The release process now hands QA the qualified installed packages and generated table. It removes the mandatory extra debug-package sweep and retains the complete no-skip installed campaign, applicable local checks, final hosted rehearsal, Windows qualification and release QA. The optional legacy debug archive is described honestly as separate evidence. New QA gaps default to unscheduled tickets; consequential release defects still get fixed. This follows the permanent proof-spiral rule rather than adding a temporary exception.
 Fresh read-only review accepts this handoff correction. It verified that installed and legacy debug-publication modes are distinct and that final hosted, Windows, QA and publication approvals remain required. Whitespace and the count-only public-name scan pass; no product source or required gate changed.
+
+
+## Candidate one status, 2026-10-08
+
+Candidate `rc/0.2.0-rc.1` and `release/0.2` are cut at `0553becc7fad0a5c29f81b6b010dec72f9488e7d`. Hosted rehearsal 37729582968 failed its Windows build job 113155466863 at “Build and pack the target”. Other rehearsal targets and Windows run 37729585318 remain active on that exact candidate and commit. RC1 is not qualified. The confirmed failure is Windows-only Clippy `excessive_nesting` at `crates/thinkthen/src/mcp/input/windows.rs:36`. The coordinator assigned the fix to lane 1 before the next candidate; other jobs continue. Neither run is recorded as passing. The full installed campaign and source/package revision distinctions remain in the existing 0432 record.
+
+The installed-package QA handoff is pushed as `inbox/beatles-bench/2026-10-08-thinkthen-final-installed-packages-are-ready-for-candidate-qa.md`. Lane 0 tracks candidate status on ticket/0425-candidate-one-status. Lane 1 is detached at origin/main and retains qualified installed packages, logs and matrix for QA. Lane 2 holds reviewed 0461 at 6897414e0 until after v0.2.0.
+
+Final hosted qualification, actual candidate QA and publication remain open. Publication still requires Ian's explicit go; public installation remains 0.1.2. This packet updates only the existing record, team note and milestone status. The count-only private-name scan and whitespace check pass. No source code, tests, proof gates, new records, candidate movement or workflow dispatch accompanies it.
