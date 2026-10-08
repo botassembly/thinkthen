@@ -129,7 +129,12 @@ fn body(chars: &mut Peekable<Chars<'_>>) -> Result<String, ExampleError> {
     while let Some(character) = chars.next() {
         match character {
             '\\' => text.push(escaped(chars)?),
-            '[' if chars.peek() == Some(&'[') => return Err(ExampleError::Brackets),
+            '[' => {
+                if chars.peek() == Some(&'[') || single(chars)?.is_some() {
+                    return Err(ExampleError::Brackets);
+                }
+                text.push('[');
+            }
             ']' if chars.peek() == Some(&']') => {
                 chars.next();
                 return Ok(text);

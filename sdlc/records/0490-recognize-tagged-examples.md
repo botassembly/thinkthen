@@ -17,3 +17,5 @@ The source ceiling grows for the typed carrier, single-bracket compatibility, sa
 The default whole-body recognition bound intentionally preserves existing request sizing and does not enforce the configured byte ceiling. Examples need a sized boundary bound and a final check of the complete encoded body; measuring only the annotated text would miss context, questions and JSON overhead.
 
 Pointer resolution previously collapsed missing members and invalid traversal into the same absent result. Example fallback needs that distinction, so the existing decoded pointer traversal now exposes optional selection with a typed error. Existing ordinary resolution keeps its established optional behavior.
+
+Fresh code review found that a double-bracket body accepted a nested single-bracket tag. The body parser now consults the existing single-bracket parser and refuses mixed nesting while retaining ordinary bracket literals. Both nesting directions and literal brackets pass the four parser/renderer tests. The source ceiling includes this small regression.

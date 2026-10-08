@@ -52,6 +52,8 @@ fn annotations_admit_only_whole_nonoverlapping_pieces_and_declared_kinds() {
         "[[person|Ada]",
         "[[person|]]",
         "[[person|[[person|Ada]]]]",
+        "[[person|[Ada | person]]]",
+        "[[person|Ada] | person]",
         "[[|Ada]]",
         "Ada\\x",
         "Ada]]",
@@ -65,6 +67,14 @@ fn annotations_admit_only_whole_nonoverlapping_pieces_and_declared_kinds() {
             super::brackets::parse(invalid).unwrap_err(),
             ExampleError::Brackets
         );
+    }
+}
+
+#[test]
+fn ordinary_bracket_literals_remain_text() {
+    for source in ["Ada [note]", "[[person|Ada [note] here]]"] {
+        let parsed = super::brackets::parse(source).unwrap();
+        assert!(parsed.text.contains("[note]"));
     }
 }
 
