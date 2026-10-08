@@ -3,7 +3,6 @@
 use std::fmt;
 
 use crate::core::{self, Question as CoreQuestion};
-use crate::public::question::Kind;
 use crate::public::{CallOptions, Description, Error, Question, QuestionKind};
 
 /// Controls one eager Polars column call, leaving the original question owned
@@ -87,13 +86,7 @@ impl<'a> PolarsCallOptions<'a> {
                 return Err(Error::usage("threshold does not belong to score"));
             }
             let rule = text.parse::<core::Threshold>().map_err(Error::refused)?;
-            question.threshold = Some(rule);
-            if matches!(question.kind, Kind::Decide | Kind::Banded) {
-                question.kind = match rule.is_cut() {
-                    true => Kind::Decide,
-                    false => Kind::Banded,
-                };
-            }
+            question.override_threshold(rule);
         }
         if self.yes.is_some() || self.no.is_some() {
             let CoreQuestion::Decide { yes, no, .. } = &mut question.core else {

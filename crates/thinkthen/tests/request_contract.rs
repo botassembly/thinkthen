@@ -392,3 +392,48 @@ fn native_and_canonical_replays_keep_the_original_answer_identity() {
     }
     assert_eq!(listener.count(), 1);
 }
+
+#[test]
+fn text_request_band_keeps_native_threshold_reading() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let question = Question::decide("Fits?").unwrap().band(0.8, 0.95).unwrap();
+    let expected = engine
+        .decide_records_complete_with(
+            &question,
+            vec![RecordInput {
+                original: QuestionInput::Text("Alpha.".into()),
+                context: None,
+                options: None,
+                examples: None,
+            }],
+            CallOptions::new(),
+        )
+        .unwrap();
+    let request = Request::new(RequestCall::Decide(RequestArguments {
+        question: RequestQuestion::Text {
+            text: "Fits?".into(),
+        },
+        input: RequestInput::Records {
+            items: vec![item("Alpha.")],
+        },
+        options: RequestOptions {
+            threshold: Some(RequestThreshold::Rule("0.8:0.95".into())),
+            ..RequestOptions::default()
+        },
+    }))
+    .admit()
+    .unwrap();
+    let RequestOutcome::Complete(actual) = engine
+        .execute_request(&request, RequestEnvironment::default())
+        .unwrap()
+    else {
+        panic!("complete banded call")
+    };
+    assert_eq!(
+        semantic(serde_json::to_value(actual.value()).unwrap()),
+        semantic(serde_json::to_value(expected.value()).unwrap())
+    );
+    let requests = listener.requests();
+    assert_eq!(requests[0].body, requests[1].body);
+}

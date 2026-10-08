@@ -55,8 +55,30 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
     use std::io::Write as _;
     use std::process::{Command, Stdio};
     let valid = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Alpha."}}}"#;
+    let definition = |value: serde_json::Value| {
+        valid.replace(
+            r#"{"kind":"text","text":"Fits?"}"#,
+            &serde_json::json!({"kind":"definition","value":value}).to_string(),
+        )
+    };
     let texts = [
         valid.to_owned(),
+        definition(serde_json::json!({"decide":"Fits?","true":null,"false":{"label":"no"}})),
+        definition(serde_json::json!({"choose":"Which?"})),
+        definition(serde_json::json!({"choose":"Which?","options":["a","b"]})),
+        definition(serde_json::json!({"tag":"Which?","labels":["a"]})),
+        definition(serde_json::json!({"score":"Grade?","levels":["low","high"]})),
+        definition(serde_json::json!({"find":"Which?"})),
+        definition(serde_json::json!({"version":1,"recognize":{"kinds":{"person":null}}})),
+        definition(serde_json::json!({"version":1,"questions":{"fits":{"decide":"Fits?"}}})),
+        definition(serde_json::json!({})),
+        definition(serde_json::json!({"decide":"Fits?","unknown":true})),
+        definition(serde_json::json!({"rank":"Fits?"})),
+        definition(serde_json::json!({"version":1,"recognize":{"unknown":true}})),
+        definition(serde_json::json!({"version":1,"recognize":{"kinds":null}})),
+        definition(
+            serde_json::json!({"version":1,"questions":{"fits":{"decide":"Fits?","model":"fixed"}}}),
+        ),
         valid.replace("\"input\":", "\"options\":{\"context\":\"\"},\"input\":"),
         valid.replace("thinkthen.request/1", "thinkthen.request/2"),
         valid.replace("\"input\":", "\"options\":{\"context\":null},\"input\":"),

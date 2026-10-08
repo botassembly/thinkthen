@@ -256,7 +256,7 @@ fn apply_question(q: &mut Question, options: &RequestOptions) -> Result<(), Erro
         q.metadata.reading.on.clear();
     }
     if let Some(rule) = &options.threshold {
-        q.threshold = Some(rule.native()?);
+        q.override_threshold(rule.native()?);
     }
     if q.kind() == crate::QuestionKind::Find && options.none {
         *q = q.clone().offering_none()?;

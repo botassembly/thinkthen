@@ -548,3 +548,16 @@ impl Question {
         }
     }
 }
+
+impl Question {
+    pub(super) fn override_threshold(&mut self, rule: Threshold) {
+        self.threshold = Some(rule);
+        if matches!(self.kind, Kind::Decide | Kind::Banded) {
+            self.kind = if rule.is_cut() {
+                Kind::Decide
+            } else {
+                Kind::Banded
+            };
+        }
+    }
+}

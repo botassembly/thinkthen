@@ -19,6 +19,636 @@
     "call"
   ],
   "$defs": {
+    "Authored_choose": {
+      "description": "A `choose` entry: the question text and its options, read under a single cut.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "choose": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "options": {
+          "$ref": "#/$defs/Authored_options"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_cut"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "choose"
+      ]
+    },
+    "Authored_criterion": {
+      "description": "What a side of a decide means, or what a score level means: nonblank text, an object, a list, or null.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Authored_cut": {
+      "description": "A single cut as a number or as text. A band, written LOW:HIGH, is not a cut; the parser also checks the range.",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "pattern": "^[^:]*$"
+        }
+      ]
+    },
+    "Authored_decide": {
+      "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "decide": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "false": {
+          "$ref": "#/$defs/Authored_criterion"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_threshold"
+        },
+        "true": {
+          "$ref": "#/$defs/Authored_criterion"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "decide"
+      ]
+    },
+    "Authored_description": {
+      "description": "A description an option or a label carries: text, an object, a list, or null. A blank string counts as a description in the grammar; the parser reads it as absent.",
+      "type": [
+        "string",
+        "object",
+        "array",
+        "null"
+      ]
+    },
+    "Authored_find": {
+      "description": "A whole-set find reading; candidates come from the actual ordered input units. Cuts, batch and authored candidates are absent.",
+      "type": "object",
+      "properties": {
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "find": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "find"
+      ]
+    },
+    "Authored_inputDeclaration": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "properties": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/Authored_inputProperty"
+              },
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+              }
+            },
+            "required": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "type": {
+              "const": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "properties"
+          ]
+        }
+      ]
+    },
+    "Authored_inputProperty": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "number"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "type"
+              ]
+            },
+            "type": {
+              "const": "array"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "items"
+          ]
+        }
+      ]
+    },
+    "Authored_labels": {
+      "description": "One to 20 tag labels, as a list of names or a map from each name to its description.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Authored_name"
+          },
+          "maxItems": 20,
+          "minItems": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Authored_description"
+          },
+          "maxProperties": 20,
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/Authored_name"
+          }
+        }
+      ]
+    },
+    "Authored_levels": {
+      "description": "Two to 10 levels, lowest first, as a list of names or a map from each name to what the level means.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Authored_name"
+          },
+          "maxItems": 10,
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Authored_criterion"
+          },
+          "maxProperties": 10,
+          "minProperties": 2,
+          "propertyNames": {
+            "$ref": "#/$defs/Authored_name"
+          }
+        }
+      ]
+    },
+    "Authored_name": {
+      "description": "A label or level name: text holding a printable character and no control character.",
+      "type": "string",
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+    },
+    "Authored_options": {
+      "description": "Two to 255 options, as a list of names or a map from each name to its description.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Authored_name"
+          },
+          "maxItems": 255,
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Authored_description"
+          },
+          "maxProperties": 255,
+          "minProperties": 2,
+          "propertyNames": {
+            "$ref": "#/$defs/Authored_name"
+          }
+        }
+      ]
+    },
+    "Authored_pointers": {
+      "description": "One JSON Pointer, or a list of them. The parser checks RFC 6901.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Authored_profile": {
+      "description": "A calibration identity: lowercase letters, digits, hyphens, and underscores.",
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "Authored_questionText": {
+      "description": "The question text: a nonblank string, an object, or a list. An object or a list may be empty; the value is the text.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        }
+      ]
+    },
+    "Authored_relate": {
+      "description": "A `relate` entry: one ordered set of relation rules and the pointers that identify each entity.",
+      "type": "object",
+      "properties": {
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "relate": {
+          "type": "object",
+          "properties": {
+            "fields": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "kind"
+              ]
+            },
+            "relations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Authored_relation"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "relations"
+          ]
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_cut"
+        },
+        "version": {
+          "const": 1
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "relate"
+      ]
+    },
+    "Authored_relation": {
+      "description": "One relation rule. A left-out source or target means any kind, as `*` and `ANY` do.",
+      "type": "object",
+      "properties": {
+        "either": {
+          "type": "boolean"
+        },
+        "name": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "reads": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "single": {
+          "description": "Each source has at most one target, so `relate` asks one menu per source. `recognize` refuses it, and `relate` refuses it beside `either`.",
+          "type": "boolean"
+        },
+        "source": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "target": {
+          "$ref": "#/$defs/Authored_name"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "Authored_score": {
+      "description": "A `score` entry: the question text and its levels, lowest first. A score takes no threshold; the answer is a number. A top-level `batch` sizes a record stream.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "levels": {
+          "$ref": "#/$defs/Authored_levels"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "score": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "score"
+      ]
+    },
+    "Authored_tag": {
+      "description": "A `tag` entry: the question text and its labels, each read under the same single cut. A top-level `batch` sizes a record stream.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "labels": {
+          "$ref": "#/$defs/Authored_labels"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "tag": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_cut"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "tag"
+      ]
+    },
+    "Authored_threshold": {
+      "description": "A cut as a number, or a cut or a band as text. The parser checks the range and the band form.",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
     "ContextSchema": {
       "anyOf": [
         {
@@ -77,7 +707,7 @@
       "description": "A tagged recognition example, as bracket text or literal text with scalar spans.",
       "anyOf": [
         {
-          "description": "Inline `[TEXT|KIND]` or `[[KIND|TEXT]]` tags; backslash escapes syntax characters.",
+          "description": "Inline `[TEXT | KIND]` tags; backslash escapes syntax characters.",
           "type": "string"
         },
         {
@@ -504,8 +1134,271 @@
       ]
     },
     "RequestDefinition": {
-      "description": "Existing authored question or question-set grammar, validated by native question admission.",
-      "type": "object"
+      "description": "Existing authored structural grammar. Native admission checks wording, thresholds, references and function applicability.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Authored_decide"
+        },
+        {
+          "$ref": "#/$defs/Authored_choose"
+        },
+        {
+          "$ref": "#/$defs/Authored_tag"
+        },
+        {
+          "$ref": "#/$defs/Authored_score"
+        },
+        {
+          "$ref": "#/$defs/Authored_relate"
+        },
+        {
+          "$ref": "#/$defs/Authored_find"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "context_schema": {
+              "$ref": "#/$defs/Authored_inputDeclaration"
+            },
+            "item_schema": {
+              "$ref": "#/$defs/Authored_inputDeclaration"
+            },
+            "model": {
+              "$ref": "#/$defs/Authored_name"
+            },
+            "name": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "on": {
+              "$ref": "#/$defs/Authored_pointers"
+            },
+            "profile": {
+              "$ref": "#/$defs/Authored_profile"
+            },
+            "recognize": {
+              "type": "object",
+              "properties": {
+                "entity_definition": {
+                  "$ref": "#/$defs/Authored_questionText"
+                },
+                "instructions": {
+                  "$ref": "#/$defs/Authored_questionText"
+                },
+                "kinds": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/$defs/Authored_description"
+                  },
+                  "maxProperties": 20
+                },
+                "relations": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Authored_relation"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "relation_threshold": {
+              "$ref": "#/$defs/Authored_cut"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Authored_cut"
+            },
+            "version": {
+              "const": 1
+            },
+            "wording_version": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "recognize"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "batch": {},
+            "profile": {
+              "$ref": "#/$defs/Authored_profile"
+            },
+            "questions": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
+                    "type": "object",
+                    "properties": {
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "decide": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "false": {
+                        "$ref": "#/$defs/Authored_criterion"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "threshold": {
+                        "$ref": "#/$defs/Authored_threshold"
+                      },
+                      "true": {
+                        "$ref": "#/$defs/Authored_criterion"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "decide"
+                    ]
+                  },
+                  {
+                    "description": "A `choose` entry: the question text and its options, read under a single cut.",
+                    "type": "object",
+                    "properties": {
+                      "choose": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "options": {
+                        "$ref": "#/$defs/Authored_options"
+                      },
+                      "threshold": {
+                        "$ref": "#/$defs/Authored_cut"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "choose"
+                    ]
+                  },
+                  {
+                    "description": "A `tag` entry: the question text and its labels, each read under the same single cut. A top-level `batch` sizes a record stream.",
+                    "type": "object",
+                    "properties": {
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "labels": {
+                        "$ref": "#/$defs/Authored_labels"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "tag": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "threshold": {
+                        "$ref": "#/$defs/Authored_cut"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "tag"
+                    ]
+                  },
+                  {
+                    "description": "A `score` entry: the question text and its levels, lowest first. A score takes no threshold; the answer is a number. A top-level `batch` sizes a record stream.",
+                    "type": "object",
+                    "properties": {
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "levels": {
+                        "$ref": "#/$defs/Authored_levels"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "score": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "score"
+                    ]
+                  }
+                ]
+              },
+              "minProperties": 1
+            },
+            "threshold": {
+              "$ref": "#/$defs/Authored_threshold"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "questions"
+          ]
+        }
+      ]
     },
     "RequestFraming": {
       "description": "Evidence framing for a caller-supplied bounded feed.",

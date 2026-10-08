@@ -190,14 +190,7 @@ fn set_json(set: &crate::core::QuestionSet) -> Result<crate::core::Json, Error> 
     Ok(crate::core::Json::Object(fields))
 }
 #[cfg(test)]
-impl schemars::JsonSchema for RequestDefinition {
-    fn schema_name() -> std::borrow::Cow<'static, str> {
-        "RequestDefinition".into()
-    }
-    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
-        schemars::json_schema!({"type":"object","description":"Existing authored question or question-set grammar, validated by native question admission."})
-    }
-}
+mod schema;
 
 fn encoded<T: Serialize>(value: &T) -> Result<crate::core::Json, Error> {
     let text = crate::core::json_line(value)
