@@ -6,6 +6,7 @@ use crate::ffi::carriers::{
     ContentV1, DetailsV1, InputViewV1, InputViewsV1, OptionalContentV1, OptionalU64V1,
     ReportedUsageV1, RowV1, SourceDetailV1, SourceDetailsV1,
 };
+use crate::ffi::values as abi;
 use thinkthen::{QuestionDetail, QuestionInput, ResultMetadata};
 impl Storage {
     fn partial_usage(&mut self, value: Option<thinkthen::ReportedUsage>) -> ReportedUsageV1 {
@@ -47,7 +48,7 @@ impl Storage {
                 OptionalContentV1 {
                     present: 1,
                     value: ContentV1 {
-                        kind: 1,
+                        kind: abi::THINKTHEN_CONTENT_TEXT_V1,
                         data: self.string(text),
                     },
                 },
@@ -60,7 +61,7 @@ impl Storage {
                     .map(|text| OptionalContentV1 {
                         present: 1,
                         value: ContentV1 {
-                            kind: 1,
+                            kind: abi::THINKTHEN_CONTENT_TEXT_V1,
                             data: self.string(text),
                         },
                     })
@@ -73,7 +74,7 @@ impl Storage {
                     OptionalContentV1 {
                         present: 1,
                         value: ContentV1 {
-                            kind: 1,
+                            kind: abi::THINKTHEN_CONTENT_TEXT_V1,
                             data: self.string(text),
                         },
                     }

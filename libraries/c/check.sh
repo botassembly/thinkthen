@@ -69,6 +69,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	echo 'libraries/c: the token cap refused before sending, installed'
 fi
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
+	python3 ../../sdlc/scripts/generate-c-header.py --check
 	python3 ../../sdlc/scripts/check-c-exports.py --self-test include/thinkthen.h
 	# The remaps keep the builder's home out of this build. release-pack --reuse rebuilds the library it packs (ticket 0128).
 	export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"

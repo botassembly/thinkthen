@@ -9,6 +9,13 @@ use crate::ffi::carriers::{
     RankViewV1, RowObservationDataV1, RowObservationV1, RowV1, ScoreAnswerV1, ScoreViewV1,
     TagViewV1,
 };
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE, THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE,
+    THINKTHEN_FUNCTION_FILTER_V1 as FILTER, THINKTHEN_FUNCTION_FIND_V1 as FIND,
+    THINKTHEN_FUNCTION_RANK_V1 as RANK, THINKTHEN_FUNCTION_SCORE_V1 as SCORE,
+    THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use thinkthen::{
     Answer, Judgment, Probabilities, ResolvedQuestion, ResolvedThreshold, ResultMetadata,
 };
@@ -41,8 +48,8 @@ impl Storage {
     ) -> Result<AnswerV1, Failure> {
         let mut data = AnswerDataV1::default();
         match (kind, probabilities) {
-            (1, Probabilities::YesNo { yes }) => data.probability = *yes,
-            (2 | 7, Probabilities::Named(named)) => {
+            (DECIDE, Probabilities::YesNo { yes }) => data.probability = *yes,
+            (CHOOSE | FIND, Probabilities::Named(named)) => {
                 let answer = NamedAnswerV1 {
                     pick: self.string(raw.ok_or_else(|| {
                         Failure::defect("native named answer lost its raw selection")
@@ -51,11 +58,11 @@ impl Storage {
                     confidence: metadata::double(confidence),
                 };
                 match kind {
-                    2 => data.choice = answer,
+                    CHOOSE => data.choice = answer,
                     _ => data.find = answer,
                 }
             }
-            (4, Probabilities::Named(named)) => {
+            (SCORE, Probabilities::Named(named)) => {
                 data.score = ScoreAnswerV1 {
                     level: self.string(raw.ok_or_else(|| {
                         Failure::defect("native score answer lost its raw selection")
@@ -64,13 +71,20 @@ impl Storage {
                     confidence: metadata::double(confidence),
                 };
             }
-            (3, Probabilities::Named(named)) => data.tag = self.named_probabilities(named),
+            (TAG, Probabilities::Named(named)) => data.tag = self.named_probabilities(named),
             _ => {
                 return Err(Failure::defect(
                     "native answer kind differs from its probability table",
                 ));
             }
         }
+        let kind = match kind {
+            DECIDE => abi::THINKTHEN_ANSWER_YES_NO_V1,
+            CHOOSE => abi::THINKTHEN_ANSWER_CHOICE_V1,
+            TAG => abi::THINKTHEN_ANSWER_TAG_V1,
+            SCORE => abi::THINKTHEN_ANSWER_SCORE_V1,
+            _ => abi::THINKTHEN_ANSWER_FIND_V1,
+        };
         Ok(AnswerV1 { kind, data })
     }
     pub(super) fn original_row(
@@ -109,7 +123,7 @@ impl Storage {
     }
 }
 macro_rules! atomic {
-    ($fn:ident, $ty:ident, $view:ident, $arm:ident, $kind:literal, $value:expr, $raw:expr) => {
+    ($fn:ident, $ty:ident, $view:ident, $arm:ident, $kind:expr, $value:expr, $raw:expr) => {
         pub(super) fn $fn(
             s: &mut Storage,
             row: &thinkthen::CompleteRecord<Original, thinkthen::$ty>,
@@ -143,12 +157,12 @@ macro_rules! atomic {
 }
 pub(super) fn question_kind(q: ResolvedQuestion<'_>) -> u32 {
     match q.kind() {
-        thinkthen::QuestionKind::Decide => 1,
-        thinkthen::QuestionKind::Choose => 2,
-        thinkthen::QuestionKind::Tag => 3,
-        thinkthen::QuestionKind::Score => 4,
-        thinkthen::QuestionKind::Rank => 6,
-        thinkthen::QuestionKind::Find => 7,
+        thinkthen::QuestionKind::Decide => DECIDE,
+        thinkthen::QuestionKind::Choose => CHOOSE,
+        thinkthen::QuestionKind::Tag => TAG,
+        thinkthen::QuestionKind::Score => SCORE,
+        thinkthen::QuestionKind::Rank => RANK,
+        thinkthen::QuestionKind::Find => FIND,
     }
 }
 atomic!(
@@ -156,7 +170,7 @@ atomic!(
     CompleteDecision,
     DecideViewV1,
     decide,
-    1,
+    DECIDE,
     |s: &mut Storage, r: &thinkthen::CompleteDecision| -> Result<_, Failure> {
         let meaning = s.meaning(r.value(), r.question())?;
         Ok(s.decision(r.value(), meaning.as_ref()))
@@ -168,7 +182,7 @@ atomic!(
     CompleteChoice,
     ChooseViewV1,
     choose,
-    2,
+    CHOOSE,
     |s: &mut Storage, r: &thinkthen::CompleteChoice| -> Result<_, Failure> {
         Ok(s.optional_string(r.value()))
     },
@@ -179,7 +193,7 @@ atomic!(
     CompleteTags,
     TagViewV1,
     tag,
-    3,
+    TAG,
     |s: &mut Storage, r: &thinkthen::CompleteTags| -> Result<_, Failure> {
         Ok(s.strings(r.value()))
     },
@@ -190,7 +204,7 @@ atomic!(
     CompleteScore,
     ScoreViewV1,
     score,
-    4,
+    SCORE,
     |_: &mut Storage, r: &thinkthen::CompleteScore| -> Result<_, Failure> { Ok(r.value()) },
     |r: &thinkthen::CompleteScore| r.raw_level().map(str::to_owned)
 );
@@ -199,7 +213,7 @@ atomic!(
     CompleteFilter,
     FilterViewV1,
     filter,
-    5,
+    FILTER,
     |_: &mut Storage, r: &thinkthen::CompleteFilter| -> Result<_, Failure> {
         Ok(i32::from(r.value()))
     },
@@ -239,7 +253,7 @@ pub(super) fn rank(
     };
     Ok(RowObservationV1 {
         index: row.ordinal(),
-        function: 6,
+        function: abi::THINKTHEN_FUNCTION_RANK_V1,
         data,
     })
 }
@@ -253,7 +267,7 @@ pub(super) fn find(
     common.question = OptionalQuestionV1 {
         present: 1,
         value: QuestionViewV1 {
-            kind: 7,
+            kind: FIND,
             text: s.native_content(r.question().text())?,
             none: i32::from(r.question().offers_none()),
             profile: s.optional_string(r.question().profile()),
@@ -285,7 +299,7 @@ pub(super) fn find(
     common.answer = OptionalAnswerV1 {
         present: 1,
         value: AnswerV1 {
-            kind: 5,
+            kind: abi::THINKTHEN_ANSWER_FIND_V1,
             data: answer,
         },
     };
@@ -308,7 +322,7 @@ pub(super) fn find(
     };
     Ok(RowObservationV1 {
         index: 0,
-        function: 7,
+        function: abi::THINKTHEN_FUNCTION_FIND_V1,
         data,
     })
 }

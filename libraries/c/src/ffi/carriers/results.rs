@@ -7,158 +7,380 @@ use super::{
     ProbabilitiesV1, QuestionSourcesV1, RecognizeAnswerV1, RecognizeValueV1, RelationAnswersV1,
     StringV1, StringsV1,
 };
-layout!(RowV1 {
-    answer_id: StringV1,
-    input: OptionalContentV1,
-    question: OptionalQuestionV1,
-    answer: OptionalAnswerV1,
-    threshold: OptionalRuleV1,
-    position: OptionalLocationV1,
-    input_file: OptionalStringV1,
-    meta: MetaV1,
-    images: OptionalImageViewsV1,
-});
-layout!(DecideViewV1 {
-    common: RowV1,
-    value: DecideValueV1,
-});
-layout!(ChooseViewV1 {
-    common: RowV1,
-    value: OptionalStringV1,
-});
-layout!(TagViewV1 {
-    common: RowV1,
-    value: StringsV1,
-});
-layout!(ScoreViewV1 {
-    common: RowV1,
-    value: f64,
-});
-layout!(FilterViewV1 {
-    common: RowV1,
-    value: i32,
-});
-layout!(RankViewV1 {
-    common: RowV1,
-    value: OptionalSizeV1,
-    question_name: OptionalStringV1,
-});
-layout!(FindViewV1 {
-    common: RowV1,
-    value: OptionalContentV1,
-    index: OptionalSizeV1,
-});
-layout!(AnnotateViewV1 {
-    common: RowV1,
-    answers: MembersV1,
-});
-layout!(RecognizeViewV1 {
-    common: RowV1,
-    value: RecognizeValueV1,
-    answer: RecognizeAnswerV1,
-});
-layout!(RelateViewV1 {
-    common: RowV1,
-    value: EdgesV1,
-    questions: RelationAnswersV1,
-});
-union_layout!(ObservedProbabilitiesDataV1 {
-    yes: f64,
-    named: ProbabilitiesV1,
-});
-layout!(ObservedProbabilitiesV1 {
-    kind: u32,
-    data: ObservedProbabilitiesDataV1,
-});
-layout!(ObservationSuccessV1 {
-    answer_id: StringV1,
-    observation_id: StringV1,
-    value: MemberValueV1,
-    probabilities: ObservedProbabilitiesV1,
-    confidence: OptionalDoubleV1,
-});
-union_layout!(QuestionObservationDataV1 {
-    success: ObservationSuccessV1,
-    failure: MemberFailureV1,
-});
-layout!(QuestionObservationV1 {
-    index: usize,
-    member: OptionalStringV1,
-    stage: OptionalDiscriminatorV1,
-    position: usize,
-    question_sha256: StringV1,
-    model: StringV1,
-    url: StringV1,
-    requests: StringsV1,
-    requests_sent: u64,
-    cached: i32,
-    failed_questions: usize,
-    usage: OptionalUsageV1,
-    question_sources: QuestionSourcesV1,
-    state: u32,
-    data: QuestionObservationDataV1,
-});
-union_layout!(RowObservationDataV1 {
-    decide: DecideViewV1,
-    choose: ChooseViewV1,
-    tag: TagViewV1,
-    score: ScoreViewV1,
-    filter: FilterViewV1,
-    rank: RankViewV1,
-    find: FindViewV1,
-    annotate: AnnotateViewV1,
-    recognize: RecognizeViewV1,
-    relate: RelateViewV1,
-});
-layout!(RowObservationV1 {
-    index: usize,
-    function: u32,
-    data: RowObservationDataV1,
-});
-union_layout!(ObservationDataV1 {
-    question: QuestionObservationV1,
-    row: RowObservationV1,
-});
-layout!(ObservationV1 {
-    kind: u32,
-    data: ObservationDataV1,
-});
-layout!(SummaryV1 {
-    state: u32,
-    schema: StringV1,
-    answer_id: OptionalStringV1,
-    function: OptionalDiscriminatorV1,
-    count: usize,
-    observation_count: usize,
-    meta: OptionalMetaV1,
-    facts: OptionalFactsV1,
-    attempts: OptionalAttemptsV1,
-    error: OptionalErrorV1,
-});
+/// C descriptor or borrowed view `RowV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RowV1 {
+    /// C field `answer_id`.
+    pub answer_id: StringV1,
+    /// C field `input`.
+    pub input: OptionalContentV1,
+    /// C field `question`.
+    pub question: OptionalQuestionV1,
+    /// C field `answer`.
+    pub answer: OptionalAnswerV1,
+    /// C field `threshold`.
+    pub threshold: OptionalRuleV1,
+    /// C field `position`.
+    pub position: OptionalLocationV1,
+    /// C field `input_file`.
+    pub input_file: OptionalStringV1,
+    /// C field `meta`.
+    pub meta: MetaV1,
+    /// C field `images`.
+    pub images: OptionalImageViewsV1,
+}
+/// C descriptor or borrowed view `DecideViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DecideViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: DecideValueV1,
+}
+/// C descriptor or borrowed view `ChooseViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ChooseViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: OptionalStringV1,
+}
+/// C descriptor or borrowed view `TagViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TagViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: StringsV1,
+}
+/// C descriptor or borrowed view `ScoreViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ScoreViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: f64,
+}
+/// C descriptor or borrowed view `FilterViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FilterViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: std::ffi::c_int,
+}
+/// C descriptor or borrowed view `RankViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RankViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: OptionalSizeV1,
+    /// C field `question_name`.
+    pub question_name: OptionalStringV1,
+}
+/// C descriptor or borrowed view `FindViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FindViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: OptionalContentV1,
+    /// C field `index`.
+    pub index: OptionalSizeV1,
+}
+/// C descriptor or borrowed view `AnnotateViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AnnotateViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `answers`.
+    pub answers: MembersV1,
+}
+/// C descriptor or borrowed view `RecognizeViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RecognizeViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: RecognizeValueV1,
+    /// C field `answer`.
+    pub answer: RecognizeAnswerV1,
+}
+/// C descriptor or borrowed view `RelateViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RelateViewV1 {
+    /// C field `common`.
+    pub common: RowV1,
+    /// C field `value`.
+    pub value: EdgesV1,
+    /// C field `questions`.
+    pub questions: RelationAnswersV1,
+}
+/// C union `ObservedProbabilitiesDataV1`; the parent discriminator selects its active arm.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union ObservedProbabilitiesDataV1 {
+    /// Active arm selected by the parent discriminator.
+    pub yes: f64,
+    /// C field `named`.
+    pub named: ProbabilitiesV1,
+}
+
+impl std::fmt::Debug for ObservedProbabilitiesDataV1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ObservedProbabilitiesDataV1")
+            .finish_non_exhaustive()
+    }
+}
+/// C descriptor or borrowed view `ObservedProbabilitiesV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ObservedProbabilitiesV1 {
+    /// C field `kind`.
+    pub kind: u32,
+    /// C field `data`.
+    pub data: ObservedProbabilitiesDataV1,
+}
+/// C descriptor or borrowed view `ObservationSuccessV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ObservationSuccessV1 {
+    /// C field `answer_id`.
+    pub answer_id: StringV1,
+    /// C field `observation_id`.
+    pub observation_id: StringV1,
+    /// C field `value`.
+    pub value: MemberValueV1,
+    /// C field `probabilities`.
+    pub probabilities: ObservedProbabilitiesV1,
+    /// C field `confidence`.
+    pub confidence: OptionalDoubleV1,
+}
+/// C union `QuestionObservationDataV1`; the parent discriminator selects its active arm.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union QuestionObservationDataV1 {
+    /// Active arm selected by the parent discriminator.
+    pub success: ObservationSuccessV1,
+    /// C field `failure`.
+    pub failure: MemberFailureV1,
+}
+
+impl std::fmt::Debug for QuestionObservationDataV1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QuestionObservationDataV1")
+            .finish_non_exhaustive()
+    }
+}
+/// C descriptor or borrowed view `QuestionObservationV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct QuestionObservationV1 {
+    /// C field `index`.
+    pub index: usize,
+    /// C field `member`.
+    pub member: OptionalStringV1,
+    /// C field `stage`.
+    pub stage: OptionalDiscriminatorV1,
+    /// C field `position`.
+    pub position: usize,
+    /// C field `question_sha256`.
+    pub question_sha256: StringV1,
+    /// C field `model`.
+    pub model: StringV1,
+    /// C field `url`.
+    pub url: StringV1,
+    /// C field `requests`.
+    pub requests: StringsV1,
+    /// C field `requests_sent`.
+    pub requests_sent: u64,
+    /// C field `cached`.
+    pub cached: std::ffi::c_int,
+    /// C field `failed_questions`.
+    pub failed_questions: usize,
+    /// C field `usage`.
+    pub usage: OptionalUsageV1,
+    /// C field `question_sources`.
+    pub question_sources: QuestionSourcesV1,
+    /// C field `state`.
+    pub state: u32,
+    /// C field `data`.
+    pub data: QuestionObservationDataV1,
+}
+/// C union `RowObservationDataV1`; the parent discriminator selects its active arm.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union RowObservationDataV1 {
+    /// Active arm selected by the parent discriminator.
+    pub decide: DecideViewV1,
+    /// C field `choose`.
+    pub choose: ChooseViewV1,
+    /// C field `tag`.
+    pub tag: TagViewV1,
+    /// C field `score`.
+    pub score: ScoreViewV1,
+    /// C field `filter`.
+    pub filter: FilterViewV1,
+    /// C field `rank`.
+    pub rank: RankViewV1,
+    /// C field `find`.
+    pub find: FindViewV1,
+    /// C field `annotate`.
+    pub annotate: AnnotateViewV1,
+    /// C field `recognize`.
+    pub recognize: RecognizeViewV1,
+    /// C field `relate`.
+    pub relate: RelateViewV1,
+}
+
+impl std::fmt::Debug for RowObservationDataV1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RowObservationDataV1")
+            .finish_non_exhaustive()
+    }
+}
+/// C descriptor or borrowed view `RowObservationV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RowObservationV1 {
+    /// C field `index`.
+    pub index: usize,
+    /// C field `function`.
+    pub function: u32,
+    /// C field `data`.
+    pub data: RowObservationDataV1,
+}
+/// C union `ObservationDataV1`; the parent discriminator selects its active arm.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union ObservationDataV1 {
+    /// Active arm selected by the parent discriminator.
+    pub question: QuestionObservationV1,
+    /// C field `row`.
+    pub row: RowObservationV1,
+}
+
+impl std::fmt::Debug for ObservationDataV1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ObservationDataV1").finish_non_exhaustive()
+    }
+}
+/// C descriptor or borrowed view `ObservationV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ObservationV1 {
+    /// C field `kind`.
+    pub kind: u32,
+    /// C field `data`.
+    pub data: ObservationDataV1,
+}
+/// C descriptor or borrowed view `SummaryV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SummaryV1 {
+    /// C field `state`.
+    pub state: u32,
+    /// C field `schema`.
+    pub schema: StringV1,
+    /// C field `answer_id`.
+    pub answer_id: OptionalStringV1,
+    /// C field `function`.
+    pub function: OptionalDiscriminatorV1,
+    /// C field `count`.
+    pub count: usize,
+    /// C field `observation_count`.
+    pub observation_count: usize,
+    /// C field `meta`.
+    pub meta: OptionalMetaV1,
+    /// C field `facts`.
+    pub facts: OptionalFactsV1,
+    /// C field `attempts`.
+    pub attempts: OptionalAttemptsV1,
+    /// C field `error`.
+    pub error: OptionalErrorV1,
+}
 // Additive detail views preserve the canonical v1 layouts above.
-layout!(ReportedUsageV1 {
-    present: i32,
-    input_tokens: super::OptionalU64V1,
-    output_tokens: super::OptionalU64V1,
-});
-layout!(SourceDetailV1 {
-    origin: u32,
-    answered_by: StringV1,
-    batch_size: OptionalSizeV1,
-});
-layout!(SourceDetailsV1 { data: *const SourceDetailV1, len: usize });
-layout!(InputViewV1 {
-    original: OptionalContentV1,
-    position: OptionalLocationV1,
-    images: OptionalImageViewsV1,
-});
-layout!(InputViewsV1 { data: *const InputViewV1, len: usize });
-layout!(DetailsV1 {
-    question: OptionalQuestionV1,
-    threshold: OptionalRuleV1,
-    raw_pick: OptionalStringV1,
-    usage: ReportedUsageV1,
-    question_sources: SourceDetailsV1,
-    observations: super::ObservationIdentitiesV1,
-    inputs: InputViewsV1,
-});
+/// Additive complete detail accessors; all pointers borrow result ownership.
+/// The singular question-observation observation_id is NULL/zero-length for
+/// aggregate questions; details.observations retains every actual identity.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ReportedUsageV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `input_tokens`.
+    pub input_tokens: super::OptionalU64V1,
+    /// C field `output_tokens`.
+    pub output_tokens: super::OptionalU64V1,
+}
+/// C descriptor or borrowed view `SourceDetailV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SourceDetailV1 {
+    /// C field `origin`.
+    pub origin: u32,
+    /// C field `answered_by`.
+    pub answered_by: StringV1,
+    /// C field `batch_size`.
+    pub batch_size: OptionalSizeV1,
+}
+/// C descriptor or borrowed view `SourceDetailsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SourceDetailsV1 {
+    /// C field `data`.
+    pub data: *const SourceDetailV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `InputViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct InputViewV1 {
+    /// C field `original`.
+    pub original: OptionalContentV1,
+    /// C field `position`.
+    pub position: OptionalLocationV1,
+    /// C field `images`.
+    pub images: OptionalImageViewsV1,
+}
+/// C descriptor or borrowed view `InputViewsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct InputViewsV1 {
+    /// C field `data`.
+    pub data: *const InputViewV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `DetailsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DetailsV1 {
+    /// C field `question`.
+    pub question: OptionalQuestionV1,
+    /// C field `threshold`.
+    pub threshold: OptionalRuleV1,
+    /// C field `raw_pick`.
+    pub raw_pick: OptionalStringV1,
+    /// C field `usage`.
+    pub usage: ReportedUsageV1,
+    /// C field `question_sources`.
+    pub question_sources: SourceDetailsV1,
+    /// C field `observations`.
+    pub observations: super::ObservationIdentitiesV1,
+    /// C field `inputs`.
+    pub inputs: InputViewsV1,
+}

@@ -8,6 +8,7 @@ use crate::ffi::carriers::{
     OptionalProfileWarningV1, OptionalSizeV1, OptionalStoppedV1, OptionalU16V1, OptionalU64V1,
     OptionalUsageV1, ProfileWarningV1, QuestionSourceV1, QuestionSourcesV1, StoppedV1, UsageV1,
 };
+use crate::ffi::values as abi;
 use thinkthen::{
     AttemptObservation, BatchSetting, Facts, Observation, Origin, QuestionSource, ResultMetadata,
     StopCause, Stopped,
@@ -38,21 +39,21 @@ fn u16_view(value: Option<u16>) -> OptionalU16V1 {
 }
 pub(super) const fn origin(value: Origin) -> u32 {
     match value {
-        Origin::Live => 1,
-        Origin::Cache => 2,
-        Origin::Replay => 3,
-        Origin::Proxy => 4,
-        Origin::Memory => 5,
+        Origin::Live => abi::THINKTHEN_ORIGIN_LIVE_V1,
+        Origin::Cache => abi::THINKTHEN_ORIGIN_CACHE_V1,
+        Origin::Replay => abi::THINKTHEN_ORIGIN_REPLAY_V1,
+        Origin::Proxy => abi::THINKTHEN_ORIGIN_PROXY_V1,
+        Origin::Memory => abi::THINKTHEN_ORIGIN_MEMORY_V1,
     }
 }
 fn batch(value: BatchSetting) -> BatchV1 {
     match value {
         BatchSetting::Max => BatchV1 {
-            kind: 2,
+            kind: abi::THINKTHEN_BATCH_MAX_V1,
             records: 0,
         },
         BatchSetting::Records(count) => BatchV1 {
-            kind: 1,
+            kind: abi::THINKTHEN_BATCH_RECORDS_V1,
             records: count.get(),
         },
     }
@@ -69,9 +70,9 @@ impl Storage {
                 request_sha256: self.string(a.request_sha256()),
                 wall_ms: a.wall_ms(),
                 outcome: match a.outcome() {
-                    thinkthen::AttemptOutcome::Ok => 1,
-                    thinkthen::AttemptOutcome::Status => 2,
-                    thinkthen::AttemptOutcome::Transport => 3,
+                    thinkthen::AttemptOutcome::Ok => abi::THINKTHEN_ATTEMPT_OK_V1,
+                    thinkthen::AttemptOutcome::Status => abi::THINKTHEN_ATTEMPT_STATUS_V1,
+                    thinkthen::AttemptOutcome::Transport => abi::THINKTHEN_ATTEMPT_TRANSPORT_V1,
                 },
                 sdk_request_id: self.string(a.sdk_request_id().as_str()),
                 status: u16_view(a.status()),
@@ -104,11 +105,11 @@ impl Storage {
                 let kind = match v {
                     Observation::Answered { observation_id } => {
                         data.observation_id = self.string(observation_id.as_str());
-                        1
+                        abi::THINKTHEN_ID_OBSERVATION_V1
                     }
                     Observation::Failed { failure_id } => {
                         data.failure_id = self.string(failure_id.as_str());
-                        2
+                        abi::THINKTHEN_ID_FAILURE_V1
                     }
                 };
                 ObservationIdentityV1 { kind, data }
@@ -209,17 +210,17 @@ pub(super) fn stopped(value: Stopped) -> OptionalStoppedV1 {
         value: StoppedV1 {
             at: size(value.at()),
             cause: match value.cause() {
-                StopCause::Usage => 1,
-                StopCause::Local => 2,
-                StopCause::NoKey => 3,
-                StopCause::Transport => 4,
-                StopCause::Status => 5,
-                StopCause::TooLarge => 6,
-                StopCause::Reply => 7,
-                StopCause::Backend => 8,
-                StopCause::Cancelled => 9,
-                StopCause::Defect => 10,
-                StopCause::Deadline => 11,
+                StopCause::Usage => abi::THINKTHEN_STOP_USAGE_V1,
+                StopCause::Local => abi::THINKTHEN_STOP_LOCAL_V1,
+                StopCause::NoKey => abi::THINKTHEN_STOP_NO_KEY_V1,
+                StopCause::Transport => abi::THINKTHEN_STOP_TRANSPORT_V1,
+                StopCause::Status => abi::THINKTHEN_STOP_STATUS_V1,
+                StopCause::TooLarge => abi::THINKTHEN_STOP_TOO_LARGE_V1,
+                StopCause::Reply => abi::THINKTHEN_STOP_REPLY_V1,
+                StopCause::Backend => abi::THINKTHEN_STOP_BACKEND_V1,
+                StopCause::Cancelled => abi::THINKTHEN_STOP_CANCELLED_V1,
+                StopCause::Defect => abi::THINKTHEN_STOP_DEFECT_V1,
+                StopCause::Deadline => abi::THINKTHEN_STOP_DEADLINE_V1,
             },
             status: u16_view(value.status()),
             retryable: i32::from(value.retryable()),

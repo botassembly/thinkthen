@@ -12,6 +12,7 @@ pub(crate) mod streaming;
 mod structured;
 use crate::current::Storage;
 use crate::ffi::carriers::{ObservationV1, RowObservationV1, SummaryV1};
+use crate::ffi::values as abi;
 pub(crate) use execute::ask;
 use std::fmt;
 /// Immutable result owner; every nested view allocation lives until this is freed.
@@ -66,7 +67,7 @@ pub(crate) fn failure(
     Ok(ResultHandle {
         _storage: storage,
         summary: SummaryV1 {
-            state: 2,
+            state: abi::THINKTHEN_RESULT_FAILURE_V1,
             facts,
             attempts,
             error,

@@ -24,6 +24,9 @@ for tool in cargo python3 node mustmatch jq script; do
 	fi
 done
 
+# Header generation is an external development CLI, outside every product graph.
+python3 -c 'import runpy; runpy.run_path("'"$REPO"'/sdlc/scripts/generate-c-header.py")["check_tool"]()'
+
 # The question-file schema self-test under rung 2 needs one Python module:
 # jsonschema, with Draft 2020-12 support. It is a test-only tool; nothing the
 # crate builds or runs imports it.

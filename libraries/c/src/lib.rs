@@ -4,7 +4,7 @@
 //! `include/thinkthen.h` and owns every exported symbol; `thinkthen` exports
 //! none. It reaches the engine only through the public Rust API.
 //!
-//! The door follows the header's lifetime rules exactly. An engine lives
+//! Rust owns the C lifetime rules and the generated header carries them. An engine lives
 //! until `thinkthen_engine_free`, a returned string until
 //! `thinkthen_free_string`, and the message from `thinkthen_error_message`
 //! until the calling thread records its next failure on that engine. Each
@@ -31,12 +31,31 @@ use failures::Held;
 #[derive(Debug)]
 pub struct Judgment {
     /// `THINKTHEN_YES`, `THINKTHEN_NO`, or `THINKTHEN_UNSURE`.
-    pub outcome: i32,
+    pub outcome: std::ffi::c_int,
     /// The probability the backend gave the yes side.
     pub probability: f64,
 }
 
-/// The header's opaque `thinkthen_engine`: one engine and its failure table.
+/// thinkthen.h is the single C header for thinkthen, version 0.2.0.
+/// Plain calls equal their _opts twin with THINKTHEN_NO_DEADLINE and a NULL token.
+/// Engines serve concurrent callers and rebuild state after a fork; free them
+/// only after all calls return. Free owned strings with thinkthen_free_string.
+/// Error messages and failure facts are borrowed; never free their pointers.
+/// See thinkthen_error_message for engine and NULL-engine pointer lifetimes.
+/// Nonzero returns leave all outputs unchanged. Eager calls have no partial
+/// rows; lazy batches retain completed prefixes. Prefer *_with_facts forms.
+/// Version 0.1.0 names, layouts, argument types and return codes stay frozen.
+/// Reference: https://github.com/botassembly/thinkthen/blob/main/libraries/c/DESIGN.md
+/// DESIGN.md references below name this online reference; archives retain
+/// their header/library contents.
+/// Argument refusals send nothing. NULL engine returns EUSAGE or NULL.
+/// question_json/request_json/spec_json must be NUL-terminated UTF-8.
+/// text reads exactly text_len bytes, never a terminator. NULL requires length
+/// zero; empty evidence still follows the engine's blank-evidence refusal.
+/// texts/lengths/bulk out have count entries; NULL is allowed only at count=0.
+/// Decide out and recognize/relate out/out_len must be nonnull.
+/// A NULL _opts token means no cancellation token.
+/// Opaque engine owner. Free after every concurrent call finishes.
 #[derive(Debug)]
 pub struct Door(Held);
 

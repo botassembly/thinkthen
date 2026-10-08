@@ -8,6 +8,7 @@ use super::{
     carriers::{ImageViewV1, OptionalStringV1},
     read,
 };
+use crate::ffi::values as abi;
 use crate::{
     Door,
     current::ImageHandle,
@@ -25,7 +26,7 @@ pub unsafe extern "C" fn thinkthen_image_clone(
     media: u32,
     filename: OptionalStringV1,
     out: *mut *mut ImageHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: caller supplies live handles and the declared counted extents.
     unsafe {
         crate::ffi::typed(
@@ -33,8 +34,8 @@ pub unsafe extern "C" fn thinkthen_image_clone(
             |_| {
                 read::required(out)?;
                 let media = match media {
-                    1 => thinkthen::ImageMedia::Jpeg,
-                    2 => thinkthen::ImageMedia::Png,
+                    abi::THINKTHEN_IMAGE_JPEG_V1 => thinkthen::ImageMedia::Jpeg,
+                    abi::THINKTHEN_IMAGE_PNG_V1 => thinkthen::ImageMedia::Png,
                     _ => return Err(Failure::usage("invalid image media")),
                 };
                 if len > thinkthen::MAX_IMAGE_BYTES {
@@ -60,7 +61,7 @@ pub unsafe extern "C" fn thinkthen_image_clone(
 pub unsafe extern "C" fn thinkthen_image_view(
     owner: *const ImageHandle,
     out: *mut ImageViewV1,
-) -> i32 {
+) -> std::ffi::c_int {
     guard(None, USAGE, || {
         // SAFETY: only null or live handles are allowed by the header.
         let Some(owner) = (unsafe { owner.as_ref() }) else {

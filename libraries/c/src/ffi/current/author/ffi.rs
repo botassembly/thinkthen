@@ -7,6 +7,11 @@
 use super::{question, read};
 use crate::current::author::Author;
 use crate::ffi::carriers::{InputDeclarationV1, QuestionAuthorV1, QuestionSpecV1, StringV1};
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE, THINKTHEN_FUNCTION_FIND_V1 as FIND,
+    THINKTHEN_FUNCTION_RANK_V1 as RANK, THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE,
+};
 use crate::{
     Door,
     current::{self, QuestionHandle},
@@ -21,23 +26,23 @@ unsafe fn declaration(value: InputDeclarationV1) -> Result<Option<InputDeclarati
     unsafe {
         let properties = read::slice(value.properties.data, value.properties.len)?;
         let required = read::strings(value.required)?;
-        if value.kind != 2 && (!properties.is_empty() || !required.is_empty()) {
+        if value.kind != CHOOSE && (!properties.is_empty() || !required.is_empty()) {
             return Err(Failure::usage(
                 "only object declarations take properties/required",
             ));
         }
         match value.kind {
-            0 => Ok(None),
-            1 => Ok(Some(InputDeclaration::String)),
-            2 => {
+            abi::DECLARATION_ABSENT_V1 => Ok(None),
+            abi::DECLARATION_STRING_V1 => Ok(Some(InputDeclaration::String)),
+            abi::DECLARATION_OBJECT_V1 => {
                 let properties = properties
                     .iter()
                     .map(|p| {
                         let kind = match p.kind {
-                            1 => InputPropertyType::String,
-                            2 => InputPropertyType::Number,
-                            3 => InputPropertyType::Boolean,
-                            4 => InputPropertyType::StringList,
+                            abi::PROPERTY_STRING_V1 => InputPropertyType::String,
+                            abi::PROPERTY_NUMBER_V1 => InputPropertyType::Number,
+                            abi::PROPERTY_BOOLEAN_V1 => InputPropertyType::Boolean,
+                            abi::PROPERTY_STRING_LIST_V1 => InputPropertyType::StringList,
                             _ => return Err(Failure::usage("invalid declaration property type")),
                         };
                         Ok(InputProperty::new(read::string(p.name)?, kind)?)
@@ -97,21 +102,21 @@ pub(super) unsafe fn new_with_task(
             |_| {
                 read::required(out)?;
                 let spec = read::reference(spec)?;
-                if task.is_some() && spec.kind != 9 {
+                if task.is_some() && spec.kind != RECOGNIZE {
                     return Err(Failure::usage(
                         "recognition task requires a recognition question",
                     ));
                 }
                 let author = author(metadata.as_ref())?;
                 let json = question::build(spec, Some(&author), task)?;
-                let mut q = if spec.kind == 6 && spec.members.len == 0 {
+                let mut q = if spec.kind == RANK && spec.members.len == 0 {
                     current::question::rank(json)
-                } else if spec.kind == 2 && spec.choices.len == 0 {
+                } else if spec.kind == CHOOSE && spec.choices.len == 0 {
                     current::question::dynamic(json)
                 } else {
                     current::parse(spec.kind, json)
                 }?;
-                if spec.kind == 7 && read::flag(spec.none)? {
+                if spec.kind == FIND && read::flag(spec.none)? {
                     let current::question::Native::Find(native) = &mut q.native else {
                         return Err(Failure::defect("native find constructor lost its kind"));
                     };
@@ -130,24 +135,27 @@ pub(super) unsafe fn new_with_task(
 /// Construct through native grammar with additive author metadata.
 /// # Safety
 /// All pointers follow include/thinkthen.h's storage and lifetime contract.
+/// Construct through the same native grammar, with separately counted author
+/// metadata. author=NULL means no author metadata. All inputs are cloned.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_question_new_authored(
     engine: *const Door,
     spec: *const QuestionSpecV1,
     author: *const QuestionAuthorV1,
     out: *mut *mut QuestionHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: unchanged descriptors pass through the common guarded constructor.
     unsafe { new(engine, spec, author, out) }
 }
 /// Borrow the native author snapshot owned by this question.
 /// # Safety
 /// Question and output obey the header's lifetime/storage contract.
+/// Borrow metadata owned by this immutable question until question_free.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_question_author(
     owner: *const QuestionHandle,
     out: *mut QuestionAuthorV1,
-) -> i32 {
+) -> std::ffi::c_int {
     guard(None, DEFECT, || {
         if out.is_null() {
             return USAGE;
@@ -194,7 +202,7 @@ pub(crate) unsafe extern "C" fn thinkthen_question_load_named(
     role: u32,
     name: StringV1,
     out: *mut *mut QuestionHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: unchanged descriptors pass through the common guarded loader.
     unsafe { load(engine, role, name, false, out) }
 }
@@ -207,7 +215,7 @@ pub(crate) unsafe extern "C" fn thinkthen_question_load_reference(
     role: u32,
     reference: StringV1,
     out: *mut *mut QuestionHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: unchanged descriptors pass through the common guarded loader.
     unsafe { load(engine, role, reference, true, out) }
 }
@@ -224,13 +232,17 @@ unsafe impl Sync for crate::current::author::AuthorOwner {}
 /// Import counted saved-question grammar through an explicitly selected native parser.
 /// # Safety
 /// Counted bytes and output obey the header's storage contract.
+/// Import saved question-file JSON through an explicit native grammar role.
+/// This imports a question only; judgment calls and result fields remain typed.
+/// Inline grammar failures return EUSAGE; no role guessing or parser fallback.
+/// The immutable handle owns every byte independently of json's lifetime.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_question_parse(
     engine: *const Door,
     role: u32,
     json: StringV1,
     out: *mut *mut QuestionHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: common edge validates live engine/output and counted UTF-8 storage.
     unsafe {
         crate::ffi::typed(

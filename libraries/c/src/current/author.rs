@@ -3,6 +3,7 @@ use super::Storage;
 use crate::ffi::carriers::{
     InputDeclarationV1, InputPropertiesV1, InputPropertyV1, OptionalU64V1, QuestionAuthorV1,
 };
+use crate::ffi::values as abi;
 use thinkthen::{InputDeclaration, InputPropertyType, QuestionName, WordingVersion};
 #[derive(Clone, Default)]
 pub(crate) struct Author {
@@ -64,7 +65,7 @@ impl Storage {
         match value {
             None => InputDeclarationV1::default(),
             Some(InputDeclaration::String) => InputDeclarationV1 {
-                kind: 1,
+                kind: abi::DECLARATION_STRING_V1,
                 ..InputDeclarationV1::default()
             },
             Some(InputDeclaration::Object(object)) => {
@@ -74,16 +75,16 @@ impl Storage {
                     .map(|p| InputPropertyV1 {
                         name: self.string(p.name()),
                         kind: match p.kind() {
-                            InputPropertyType::String => 1,
-                            InputPropertyType::Number => 2,
-                            InputPropertyType::Boolean => 3,
-                            InputPropertyType::StringList => 4,
+                            InputPropertyType::String => abi::PROPERTY_STRING_V1,
+                            InputPropertyType::Number => abi::PROPERTY_NUMBER_V1,
+                            InputPropertyType::Boolean => abi::PROPERTY_BOOLEAN_V1,
+                            InputPropertyType::StringList => abi::PROPERTY_STRING_LIST_V1,
                         },
                     })
                     .collect();
                 let (data, len) = self.array(properties);
                 InputDeclarationV1 {
-                    kind: 2,
+                    kind: abi::DECLARATION_OBJECT_V1,
                     properties: InputPropertiesV1 { data, len },
                     required: self.strings(object.required()),
                 }

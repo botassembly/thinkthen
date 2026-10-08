@@ -1,6 +1,7 @@
 //! Admission composes typed native records and preserves originals and locations.
 use crate::current::{Content, Input, SourceHandle};
 use crate::failures::Failure;
+use crate::ffi::values::THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE;
 use thinkthen::{
     InputEvidence, QuestionInput, RawRecord, RecordInput, RecordOption, RecordOptions,
     RecordReading, SourceLocation,
@@ -36,7 +37,7 @@ pub(super) fn compose(
     reading: Option<&RecordReading>,
 ) -> Result<RecordInput<Original>, thinkthen::Error> {
     let native = match retained.original.as_ref() {
-        Some(Content::Text(text)) if kind == 8 && retained.images.is_empty() => {
+        Some(Content::Text(text)) if kind == ANNOTATE && retained.images.is_empty() => {
             // Native annotation keeps structural JSON and literal text distinct at every location.
             if let Some(position) = &retained.position {
                 QuestionInput::annotation_text(

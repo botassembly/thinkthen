@@ -9,6 +9,14 @@ use super::{
     read,
 };
 use crate::failures::Failure;
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE,
+    THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE, THINKTHEN_FUNCTION_FILTER_V1 as FILTER,
+    THINKTHEN_FUNCTION_FIND_V1 as FIND, THINKTHEN_FUNCTION_RANK_V1 as RANK,
+    THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE, THINKTHEN_FUNCTION_RELATE_V1 as RELATE,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use serde::Serialize;
 use serde::ser::SerializeMap;
 use serde_json::value::RawValue;
@@ -79,9 +87,9 @@ unsafe fn choices(value: ChoicesV1, score: bool) -> Result<Box<RawValue>, Failur
 }
 fn rule(object: &mut Object, key: &str, value: RuleV1) -> Result<(), Failure> {
     match value.kind {
-        0 | 1 => Ok(()),
-        2 if value.low.is_finite() => object.put(key, value.low),
-        3 if value.low.is_finite() && value.high.is_finite() => {
+        abi::THINKTHEN_RULE_DEFAULT_V1 | abi::THINKTHEN_RULE_NULL_V1 => Ok(()),
+        abi::THINKTHEN_RULE_CUT_V1 if value.low.is_finite() => object.put(key, value.low),
+        abi::THINKTHEN_RULE_BAND_V1 if value.low.is_finite() && value.high.is_finite() => {
             object.put(key, format!("{}:{}", value.low, value.high))
         }
         _ => Err(Failure::usage("invalid threshold descriptor")),
@@ -118,7 +126,10 @@ pub(super) unsafe fn build(
     task: Option<crate::ffi::carriers::RecognitionTaskV1>,
 ) -> Result<String, Failure> {
     let mut body = Object::default();
-    if !(1..=10).contains(&spec.kind) {
+    if !matches!(
+        spec.kind,
+        DECIDE | CHOOSE | TAG | SCORE | FILTER | RANK | FIND | ANNOTATE | RECOGNIZE | RELATE
+    ) {
         return Err(Failure::usage("invalid question kind"));
     }
     read::flag(spec.batch.present)?;
@@ -127,7 +138,7 @@ pub(super) unsafe fn build(
     if spec.batch.present != 0 && spec.batch_max != 0 {
         return Err(Failure::usage("batch and batch_max conflict"));
     }
-    let set = spec.kind == 8 || (spec.kind == 6 && spec.members.len != 0);
+    let set = spec.kind == ANNOTATE || (spec.kind == RANK && spec.members.len != 0);
     // SAFETY: all descriptor fields obey the header's active-field storage rules.
     unsafe {
         if set {
@@ -145,8 +156,8 @@ pub(super) unsafe fn build(
             }
             body.put("version", 1)?;
             body.put("questions", members)?;
-        } else if spec.kind >= 9 {
-            let mut inner = if spec.kind == 9 {
+        } else if matches!(spec.kind, RECOGNIZE | RELATE) {
+            let mut inner = if spec.kind == RECOGNIZE {
                 recognition(spec.kinds, task)?
             } else {
                 Object::default()
@@ -164,7 +175,7 @@ pub(super) unsafe fn build(
             }
             body.put("version", 1)?;
             body.put(
-                if spec.kind == 9 {
+                if spec.kind == RECOGNIZE {
                     "recognize"
                 } else {
                     "relate"
@@ -173,24 +184,24 @@ pub(super) unsafe fn build(
             )?;
         } else {
             let verb = match spec.kind {
-                1 | 5 => "decide",
-                2 => "choose",
-                3 => "tag",
-                4 => "score",
-                6 if spec.choices.len != 0 => "score",
-                6 => "decide",
+                DECIDE | FILTER => "decide",
+                CHOOSE => "choose",
+                TAG => "tag",
+                SCORE => "score",
+                RANK if spec.choices.len != 0 => "score",
+                RANK => "decide",
                 _ => "find",
             };
             body.put(verb, read::content(spec.text)?)?;
             if spec.choices.len != 0 {
                 body.put(
                     match spec.kind {
-                        2 => "options",
-                        3 => "labels",
-                        4 | 6 => "levels",
+                        CHOOSE => "options",
+                        TAG => "labels",
+                        SCORE | RANK => "levels",
                         _ => "options",
                     },
-                    choices(spec.choices, spec.kind == 4 || spec.kind == 6)?,
+                    choices(spec.choices, spec.kind == SCORE || spec.kind == RANK)?,
                 )?;
             }
             if let Some(yes) = read::optional_content(spec.yes)? {
@@ -254,10 +265,12 @@ unsafe fn controls(body: &mut Object, spec: &QuestionSpecV1, set: bool) -> Resul
         if !set && spec.members.len != 0 {
             return Err(Failure::usage("members require annotate or rank set"));
         }
-        if spec.kind < 9 && (spec.kinds.len != 0 || spec.relations.len != 0) {
+        if !matches!(spec.kind, RECOGNIZE | RELATE)
+            && (spec.kinds.len != 0 || spec.relations.len != 0)
+        {
             return Err(Failure::usage("kinds/relations require entity functions"));
         }
-        if (set || spec.kind >= 9)
+        if (set || matches!(spec.kind, RECOGNIZE | RELATE))
             && (spec.text.kind != 0
                 || spec.yes.present != 0
                 || spec.no.present != 0
@@ -267,19 +280,22 @@ unsafe fn controls(body: &mut Object, spec: &QuestionSpecV1, set: bool) -> Resul
         }
         read::flag(spec.name_pointer.present)?;
         read::flag(spec.kind_pointer.present)?;
-        if spec.kind != 10 && (spec.name_pointer.present != 0 || spec.kind_pointer.present != 0) {
+        if spec.kind != RELATE && (spec.name_pointer.present != 0 || spec.kind_pointer.present != 0)
+        {
             return Err(Failure::usage("field pointers require relate"));
         }
         rule(body, "threshold", spec.threshold)?;
-        if spec.threshold.kind == 1 && matches!(spec.kind, 1 | 3 | 5 | 9 | 10) {
+        if spec.threshold.kind == abi::THINKTHEN_RULE_NULL_V1
+            && matches!(spec.kind, DECIDE | TAG | FILTER | RECOGNIZE | RELATE)
+        {
             return Err(Failure::usage("this question requires a threshold"));
         }
-        if spec.kind == 9 && spec.relation_threshold.kind == 1 {
+        if spec.kind == RECOGNIZE && spec.relation_threshold.kind == abi::THINKTHEN_RULE_NULL_V1 {
             return Err(Failure::usage(
                 "native recognition requires a relation threshold",
             ));
         }
-        if spec.relation_threshold.kind > 1 {
+        if spec.relation_threshold.kind > abi::THINKTHEN_RULE_NULL_V1 {
             rule(body, "relation_threshold", spec.relation_threshold)?;
         }
         if let Some(model) = read::optional_string(spec.model)? {
@@ -294,7 +310,7 @@ unsafe fn controls(body: &mut Object, spec: &QuestionSpecV1, set: bool) -> Resul
         if spec.batch_max != 0 {
             body.put("batch", "max")?;
         }
-        if spec.none != 0 && spec.kind != 7 {
+        if spec.none != 0 && spec.kind != FIND {
             body.put("none", true)?;
         }
         if spec.on.len != 0 {
@@ -333,7 +349,7 @@ pub(super) unsafe fn descriptor(
             .collect::<Result<Vec<_>, Failure>>()?;
         Ok(crate::current::QuestionData {
             kind: spec.kind,
-            text: if spec.kind < 8 && spec.members.len == 0 {
+            text: if !matches!(spec.kind, ANNOTATE | RECOGNIZE | RELATE) && spec.members.len == 0 {
                 Some(read::content(spec.text)?)
             } else {
                 None

@@ -3,6 +3,11 @@ use super::{ResultHandle, execute, inputs, rows, structured};
 use crate::current::{QuestionHandle, SourceHandle, Storage, question::Native};
 use crate::failures::Failure;
 use crate::ffi::carriers::RowObservationV1;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE,
+    THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE, THINKTHEN_FUNCTION_FILTER_V1 as FILTER,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use std::sync::{Arc, Mutex, PoisonError};
 use thinkthen::{
     Batch, CallOptions, CompleteRecord, Engine, Facts, LoadedQuestion, OwnedRecordObservation,
@@ -43,25 +48,25 @@ pub(crate) fn begin<'a>(
         inputs::compose(record?, kind, reading)
     });
     Ok(match (&question.native, kind) {
-        (Native::Atomic(LoadedQuestion::Question(q)), 1) => {
+        (Native::Atomic(LoadedQuestion::Question(q)), DECIDE) => {
             NativeBatch::Decide(engine.try_decide_records_complete_with(q, records, options))
         }
-        (Native::Atomic(LoadedQuestion::Banded(q)), 1) => {
+        (Native::Atomic(LoadedQuestion::Banded(q)), DECIDE) => {
             NativeBatch::Decide(engine.try_decide_records_complete_with(q, records, options))
         }
-        (Native::Atomic(LoadedQuestion::Question(q)), 2) => {
+        (Native::Atomic(LoadedQuestion::Question(q)), CHOOSE) => {
             NativeBatch::Choose(engine.try_choose_records_complete_with(q, records, options))
         }
-        (Native::Atomic(LoadedQuestion::Question(q)), 3) => {
+        (Native::Atomic(LoadedQuestion::Question(q)), TAG) => {
             NativeBatch::Tag(engine.try_tag_records_complete_with(q, records, options))
         }
-        (Native::Atomic(LoadedQuestion::Question(q)), 4) => {
+        (Native::Atomic(LoadedQuestion::Question(q)), SCORE) => {
             NativeBatch::Score(engine.try_score_records_complete_with(q, records, options))
         }
-        (Native::Atomic(LoadedQuestion::Question(q)), 5) => {
+        (Native::Atomic(LoadedQuestion::Question(q)), FILTER) => {
             NativeBatch::Filter(engine.try_filter_records_complete_with(q, records, options))
         }
-        (Native::Set(q), 8) => {
+        (Native::Set(q), ANNOTATE) => {
             NativeBatch::Annotate(engine.try_annotate_records_complete_with(q, records, options))
         }
         _ => {
@@ -95,7 +100,7 @@ fn finish(
 impl NativeBatch<'_> {
     pub(crate) fn next(&mut self, events: &Events) -> Option<Result<ResultHandle, Failure>> {
         macro_rules! pull {
-            ($batch:expr, $kind:literal, $convert:ident) => {
+            ($batch:expr, $kind:expr, $convert:ident) => {
                 $batch.next().map(|result| {
                     let row = result?;
                     finish(events, row.ordinal(), $kind, |storage, _| {
@@ -105,14 +110,14 @@ impl NativeBatch<'_> {
             };
         }
         match self {
-            Self::Decide(batch) => pull!(batch, 1, decide),
-            Self::Choose(batch) => pull!(batch, 2, choose),
-            Self::Tag(batch) => pull!(batch, 3, tag),
-            Self::Score(batch) => pull!(batch, 4, score),
-            Self::Filter(batch) => pull!(batch, 5, filter),
+            Self::Decide(batch) => pull!(batch, DECIDE, decide),
+            Self::Choose(batch) => pull!(batch, CHOOSE, choose),
+            Self::Tag(batch) => pull!(batch, TAG, tag),
+            Self::Score(batch) => pull!(batch, SCORE, score),
+            Self::Filter(batch) => pull!(batch, FILTER, filter),
             Self::Annotate(batch) => batch.next().map(|result| {
                 let row = result?;
-                finish(events, row.ordinal(), 8, |storage, selected| {
+                finish(events, row.ordinal(), ANNOTATE, |storage, selected| {
                     structured::annotate(storage, &row, selected)
                 })
             }),

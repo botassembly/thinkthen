@@ -1,175 +1,380 @@
 //! Canonical reviewed C layouts; see include/thinkthen.h.
-layout!(StringV1 {
-    data: *const std::ffi::c_char,
-    len: usize,
-});
-layout!(StringsV1 {
-    data: *const StringV1,
-    len: usize,
-});
-layout!(OptionalStringV1 {
-    present: i32,
-    value: StringV1,
-});
-layout!(OptionalSizeV1 {
-    present: i32,
-    value: usize,
-});
-layout!(OptionalU64V1 {
-    present: i32,
-    value: u64,
-});
-layout!(OptionalU16V1 {
-    present: i32,
-    value: u16,
-});
-layout!(OptionalDoubleV1 {
-    present: i32,
-    value: f64,
-});
-layout!(OptionalDiscriminatorV1 {
-    present: i32,
-    value: u32,
-});
-layout!(ContentV1 {
-    kind: u32,
-    data: StringV1,
-});
-layout!(OptionalContentV1 {
-    present: i32,
-    value: ContentV1,
-});
-layout!(RuleV1 {
-    kind: u32,
-    low: f64,
-    high: f64,
-});
-layout!(OptionalRuleV1 {
-    present: i32,
-    value: RuleV1,
-});
-layout!(ChoiceV1 {
-    name: StringV1,
-    description: OptionalContentV1,
-    weight: OptionalDoubleV1,
-});
-layout!(ChoicesV1 {
-    data: *const ChoiceV1,
-    len: usize,
-});
-layout!(RelationV1 {
-    name: StringV1,
-    source: StringV1,
-    target: StringV1,
-    reads: OptionalStringV1,
-    either: i32,
-    single: i32,
-});
-layout!(RelationsV1 {
-    data: *const RelationV1,
-    len: usize,
-});
-layout!(MemberSpecV1 {
-    name: StringV1,
-    question: *const crate::current::QuestionHandle,
-});
-layout!(MemberSpecsV1 {
-    data: *const MemberSpecV1,
-    len: usize,
-});
-layout!(RecognitionTaskV1 {
-    instructions: OptionalStringV1,
-    entity_definition: OptionalStringV1,
-});
-layout!(QuestionSpecV1 {
-    kind: u32,
-    text: ContentV1,
-    yes: OptionalContentV1,
-    no: OptionalContentV1,
-    choices: ChoicesV1,
-    threshold: RuleV1,
-    relation_threshold: RuleV1,
-    model: OptionalStringV1,
-    profile: OptionalStringV1,
-    batch: OptionalSizeV1,
-    batch_max: i32,
-    none: i32,
-    on: StringsV1,
-    members: MemberSpecsV1,
-    kinds: ChoicesV1,
-    relations: RelationsV1,
-    name_pointer: OptionalStringV1,
-    kind_pointer: OptionalStringV1,
-});
-layout!(QuestionMemberV1 {
-    name: StringV1,
-    question: *const QuestionViewV1,
-});
-layout!(QuestionMembersV1 {
-    data: *const QuestionMemberV1,
-    len: usize,
-});
-layout!(QuestionViewV1 {
-    kind: u32,
-    text: ContentV1,
-    yes: OptionalContentV1,
-    no: OptionalContentV1,
-    choices: ChoicesV1,
-    threshold: RuleV1,
-    relation_threshold: RuleV1,
-    model: OptionalStringV1,
-    profile: OptionalStringV1,
-    batch: OptionalSizeV1,
-    batch_max: i32,
-    none: i32,
-    on: StringsV1,
-    members: QuestionMembersV1,
-    kinds: ChoicesV1,
-    relations: RelationsV1,
-    name_pointer: OptionalStringV1,
-    kind_pointer: OptionalStringV1,
-});
-layout!(OptionalQuestionV1 {
-    present: i32,
-    value: QuestionViewV1,
-});
-layout!(ImagesV1 {
-    data: *const *const crate::current::ImageHandle,
-    len: usize,
-});
-layout!(ImageViewV1 {
-    media: u32,
-    bytes: *const u8,
-    bytes_len: usize,
-    width: u32,
-    height: u32,
-    filename: OptionalStringV1,
-});
-layout!(ImageViewsV1 {
-    data: *const ImageViewV1,
-    len: usize,
-});
-layout!(OptionalImageViewsV1 {
-    present: i32,
-    value: ImageViewsV1,
-});
-layout!(RecordV1 {
-    original: OptionalContentV1,
-    context: OptionalContentV1,
-    options: ChoicesV1,
-    images: ImagesV1,
-});
-layout!(SourceSpecV1 {
-    paths: StringsV1,
-    unit: u32,
-    window: usize,
-});
-layout!(ControlsV1 {
-    deadline_ms: i64,
-    cancel: *mut thinkthen::CancelToken,
-    context: OptionalContentV1,
-    batch: OptionalSizeV1,
-    batch_max: i32,
-    attempts: i32,
-    surface: StringV1,
-});
+/// C descriptor or borrowed view `StringV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct StringV1 {
+    /// C field `data`.
+    pub data: *const std::ffi::c_char,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `StringsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct StringsV1 {
+    /// C field `data`.
+    pub data: *const StringV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `OptionalStringV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalStringV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: StringV1,
+}
+/// C descriptor or borrowed view `OptionalSizeV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalSizeV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: usize,
+}
+/// C descriptor or borrowed view `OptionalU64V1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalU64V1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: u64,
+}
+/// C descriptor or borrowed view `OptionalU16V1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalU16V1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: u16,
+}
+/// C descriptor or borrowed view `OptionalDoubleV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalDoubleV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: f64,
+}
+/// C descriptor or borrowed view `OptionalDiscriminatorV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalDiscriminatorV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: u32,
+}
+/// C descriptor or borrowed view `ContentV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ContentV1 {
+    /// C field `kind`.
+    pub kind: u32,
+    /// C field `data`.
+    pub data: StringV1,
+}
+/// C descriptor or borrowed view `OptionalContentV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalContentV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: ContentV1,
+}
+/// CUT uses low; BAND uses low/high; NULL/DEFAULT use neither.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RuleV1 {
+    /// C field `kind`.
+    pub kind: u32,
+    /// C field `low`.
+    pub low: f64,
+    /// C field `high`.
+    pub high: f64,
+}
+/// C descriptor or borrowed view `OptionalRuleV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalRuleV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: RuleV1,
+}
+/// C descriptor or borrowed view `ChoiceV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ChoiceV1 {
+    /// C field `name`.
+    pub name: StringV1,
+    /// C field `description`.
+    pub description: OptionalContentV1,
+    /// C field `weight`.
+    pub weight: OptionalDoubleV1,
+}
+/// C descriptor or borrowed view `ChoicesV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ChoicesV1 {
+    /// C field `data`.
+    pub data: *const ChoiceV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `RelationV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RelationV1 {
+    /// C field `name`.
+    pub name: StringV1,
+    /// C field `source`.
+    pub source: StringV1,
+    /// C field `target`.
+    pub target: StringV1,
+    /// C field `reads`.
+    pub reads: OptionalStringV1,
+    /// C field `either`.
+    pub either: std::ffi::c_int,
+    /// C field `single`.
+    pub single: std::ffi::c_int,
+}
+/// C descriptor or borrowed view `RelationsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RelationsV1 {
+    /// C field `data`.
+    pub data: *const RelationV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `MemberSpecV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct MemberSpecV1 {
+    /// C field `name`.
+    pub name: StringV1,
+    /// C field `question`.
+    pub question: *const crate::current::QuestionHandle,
+}
+/// C descriptor or borrowed view `MemberSpecsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct MemberSpecsV1 {
+    /// C field `data`.
+    pub data: *const MemberSpecV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// Additive 0.3 recognition task; existing V1 question layouts remain unchanged.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RecognitionTaskV1 {
+    /// C field `instructions`.
+    pub instructions: OptionalStringV1,
+    /// C field `entity_definition`.
+    pub entity_definition: OptionalStringV1,
+}
+/// C descriptor or borrowed view `QuestionSpecV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct QuestionSpecV1 {
+    /// C field `kind`.
+    pub kind: u32,
+    /// C field `text`.
+    pub text: ContentV1,
+    /// C field `yes`.
+    pub yes: OptionalContentV1,
+    /// C field `no`.
+    pub no: OptionalContentV1,
+    /// C field `choices`.
+    pub choices: ChoicesV1,
+    /// C field `threshold`.
+    pub threshold: RuleV1,
+    /// C field `relation_threshold`.
+    pub relation_threshold: RuleV1,
+    /// C field `model`.
+    pub model: OptionalStringV1,
+    /// C field `profile`.
+    pub profile: OptionalStringV1,
+    /// C field `batch`.
+    pub batch: OptionalSizeV1,
+    /// C field `batch_max`.
+    pub batch_max: std::ffi::c_int,
+    /// C field `none`.
+    pub none: std::ffi::c_int,
+    /// C field `on`.
+    pub on: StringsV1,
+    /// C field `members`.
+    pub members: MemberSpecsV1,
+    /// C field `kinds`.
+    pub kinds: ChoicesV1,
+    /// C field `relations`.
+    pub relations: RelationsV1,
+    /// C field `name_pointer`.
+    pub name_pointer: OptionalStringV1,
+    /// C field `kind_pointer`.
+    pub kind_pointer: OptionalStringV1,
+}
+/// C descriptor or borrowed view `QuestionMemberV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct QuestionMemberV1 {
+    /// C field `name`.
+    pub name: StringV1,
+    /// C field `question`.
+    pub question: *const QuestionViewV1,
+}
+/// C descriptor or borrowed view `QuestionMembersV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct QuestionMembersV1 {
+    /// C field `data`.
+    pub data: *const QuestionMemberV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// Result questions expose nested questions directly, with no engine handle.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct QuestionViewV1 {
+    /// C field `kind`.
+    pub kind: u32,
+    /// C field `text`.
+    pub text: ContentV1,
+    /// C field `yes`.
+    pub yes: OptionalContentV1,
+    /// C field `no`.
+    pub no: OptionalContentV1,
+    /// C field `choices`.
+    pub choices: ChoicesV1,
+    /// C field `threshold`.
+    pub threshold: RuleV1,
+    /// C field `relation_threshold`.
+    pub relation_threshold: RuleV1,
+    /// C field `model`.
+    pub model: OptionalStringV1,
+    /// C field `profile`.
+    pub profile: OptionalStringV1,
+    /// C field `batch`.
+    pub batch: OptionalSizeV1,
+    /// C field `batch_max`.
+    pub batch_max: std::ffi::c_int,
+    /// C field `none`.
+    pub none: std::ffi::c_int,
+    /// C field `on`.
+    pub on: StringsV1,
+    /// C field `members`.
+    pub members: QuestionMembersV1,
+    /// C field `kinds`.
+    pub kinds: ChoicesV1,
+    /// C field `relations`.
+    pub relations: RelationsV1,
+    /// C field `name_pointer`.
+    pub name_pointer: OptionalStringV1,
+    /// C field `kind_pointer`.
+    pub kind_pointer: OptionalStringV1,
+}
+/// C descriptor or borrowed view `OptionalQuestionV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalQuestionV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: QuestionViewV1,
+}
+/// C descriptor or borrowed view `ImagesV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ImagesV1 {
+    /// C field `data`.
+    pub data: *const *const crate::current::ImageHandle,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `ImageViewV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ImageViewV1 {
+    /// C field `media`.
+    pub media: u32,
+    /// C field `bytes`.
+    pub bytes: *const u8,
+    /// C field `bytes_len`.
+    pub bytes_len: usize,
+    /// C field `width`.
+    pub width: u32,
+    /// C field `height`.
+    pub height: u32,
+    /// C field `filename`.
+    pub filename: OptionalStringV1,
+}
+/// C descriptor or borrowed view `ImageViewsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ImageViewsV1 {
+    /// C field `data`.
+    pub data: *const ImageViewV1,
+    /// C field `len`.
+    pub len: usize,
+}
+/// C descriptor or borrowed view `OptionalImageViewsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OptionalImageViewsV1 {
+    /// C field `present`.
+    pub present: std::ffi::c_int,
+    /// C field `value`.
+    pub value: ImageViewsV1,
+}
+/// C descriptor or borrowed view `RecordV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RecordV1 {
+    /// C field `original`.
+    pub original: OptionalContentV1,
+    /// C field `context`.
+    pub context: OptionalContentV1,
+    /// C field `options`.
+    pub options: ChoicesV1,
+    /// C field `images`.
+    pub images: ImagesV1,
+}
+/// C descriptor or borrowed view `SourceSpecV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SourceSpecV1 {
+    /// C field `paths`.
+    pub paths: StringsV1,
+    /// C field `unit`.
+    pub unit: u32,
+    /// C field `window`.
+    pub window: usize,
+}
+/// C descriptor or borrowed view `ControlsV1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ControlsV1 {
+    /// C field `deadline_ms`.
+    pub deadline_ms: i64,
+    /// C field `cancel`.
+    pub cancel: *mut thinkthen::CancelToken,
+    /// C field `context`.
+    pub context: OptionalContentV1,
+    /// C field `batch`.
+    pub batch: OptionalSizeV1,
+    /// C field `batch_max`.
+    pub batch_max: std::ffi::c_int,
+    /// C field `attempts`.
+    pub attempts: std::ffi::c_int,
+    /// C field `surface`.
+    pub surface: StringV1,
+}

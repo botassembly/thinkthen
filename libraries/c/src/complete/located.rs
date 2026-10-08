@@ -6,6 +6,7 @@ use crate::ffi::carriers::{
     SourceEdgesV1, SourceEndpointV1, SourceEntitiesV1, SourceEntityEdgeV1, SourceEntityEdgesV1,
     SourceEntityV1, SourceRecognitionV1, SourceRelationsV1,
 };
+use crate::ffi::values as abi;
 fn position(s: &mut Storage, value: &thinkthen::SourceLocation) -> OptionalLocationV1 {
     s.position(Some(&Position {
         file: value.file().to_owned(),
@@ -62,11 +63,11 @@ fn endpoint(
     let raw = value.record();
     let record = match raw.literal() {
         Some(text) => ContentV1 {
-            kind: 1,
+            kind: abi::THINKTHEN_CONTENT_TEXT_V1,
             data: s.string(text),
         },
         None => ContentV1 {
-            kind: 2,
+            kind: abi::THINKTHEN_CONTENT_JSON_V1,
             data: s.string(
                 &serde_json::to_string(raw)
                     .map_err(|_| Failure::defect("native source record could not be retained"))?,

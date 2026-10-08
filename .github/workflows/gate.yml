@@ -75,6 +75,14 @@ jobs:
           fi
 
       # The install rung requires these and never installs them. The pins come from sdlc/scripts/install.
+      - name: Install the external C header generator
+        run: |
+          set -eu
+          version=$(python3 -c 'import runpy; print(runpy.run_path("sdlc/scripts/generate-c-header.py")["VERSION"].split()[1])')
+          if [ "$(cbindgen --version 2>/dev/null || true)" != "cbindgen $version" ]; then
+            cargo install --locked --force "cbindgen@$version"
+          fi
+
       - name: Install cargo-public-api, its nightly, and PyYAML at the rung's pins
         run: |
           set -eu

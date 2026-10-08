@@ -9,6 +9,7 @@ use crate::ffi::carriers::{
     LocationV1, OptionalContentV1, OptionalDoubleV1, OptionalLocationV1, OptionalSizeV1,
     OptionalU16V1, OptionalU64V1, ProbabilitiesV1, ProbabilityV1, StringsV1,
 };
+use crate::ffi::values as abi;
 use thinkthen::{
     Annotated, Answer, Details, Facts, FailureCause, Judgment, Probabilities, QuestionDetail,
     Recognized,
@@ -61,22 +62,22 @@ pub(crate) fn value(s: &mut Storage, v: &Judgment) -> CurrentValueV1 {
     let mut out = CurrentValueV1::default();
     match v {
         Judgment::Decision(answer) => {
-            out.kind = 1;
+            out.kind = abi::THINKTHEN_FUNCTION_DECIDE_V1;
             if *answer != Answer::Unsure {
-                out.decide_kind = 1;
+                out.decide_kind = abi::THINKTHEN_DECIDE_BOOLEAN_V1;
                 out.boolean = i32::from(*answer == Answer::Yes);
             }
         }
         Judgment::Choice(choice) => {
-            out.kind = 2;
+            out.kind = abi::THINKTHEN_FUNCTION_CHOOSE_V1;
             out.choice = s.optional_string(choice.as_deref());
         }
         Judgment::Tags(tags) => {
-            out.kind = 3;
+            out.kind = abi::THINKTHEN_FUNCTION_TAG_V1;
             out.tags = strings(s, tags);
         }
         Judgment::Score(score) => {
-            out.kind = 4;
+            out.kind = abi::THINKTHEN_FUNCTION_SCORE_V1;
             out.score = *score;
         }
     }
@@ -171,12 +172,12 @@ pub(crate) fn atomic(s: &mut Storage, input: &Input, d: &Details) -> CurrentAtom
 }
 pub(crate) const fn failure(cause: FailureCause) -> u32 {
     match cause {
-        FailureCause::MissingAnswer => 1,
-        FailureCause::WrongKind => 2,
-        FailureCause::MissingProbability => 3,
-        FailureCause::InvalidProbability => 4,
-        FailureCause::InvalidDistribution => 5,
-        FailureCause::UnexpectedProbability => 6,
+        FailureCause::MissingAnswer => abi::THINKTHEN_MEMBER_MISSING_ANSWER_V1,
+        FailureCause::WrongKind => abi::THINKTHEN_MEMBER_WRONG_KIND_V1,
+        FailureCause::MissingProbability => abi::THINKTHEN_MEMBER_MISSING_PROBABILITY_V1,
+        FailureCause::InvalidProbability => abi::THINKTHEN_MEMBER_INVALID_PROBABILITY_V1,
+        FailureCause::InvalidDistribution => abi::THINKTHEN_MEMBER_INVALID_DISTRIBUTION_V1,
+        FailureCause::UnexpectedProbability => abi::THINKTHEN_MEMBER_UNEXPECTED_PROBABILITY_V1,
     }
 }
 pub(crate) fn annotation(
@@ -206,7 +207,7 @@ pub(crate) fn annotation(
                 Annotated::Failed(f) => {
                     return Ok(CurrentMemberV1 {
                         name,
-                        state: 2,
+                        state: abi::THINKTHEN_MEMBER_FAILURE_V1,
                         failure: failure(f.cause()),
                         ..CurrentMemberV1::default()
                     });
@@ -219,7 +220,7 @@ pub(crate) fn annotation(
             }
             Ok(CurrentMemberV1 {
                 name,
-                state: 1,
+                state: abi::THINKTHEN_MEMBER_SUCCESS_V1,
                 value: projected,
                 failure: 0,
             })
@@ -310,7 +311,11 @@ impl SavedQuestion {
                 output_tokens: self.usage.map_or(0, |u| u.output_tokens()),
                 ..CurrentMetaV1::default()
             },
-            state: if self.failure.is_some() { 2 } else { 1 },
+            state: if self.failure.is_some() {
+                abi::THINKTHEN_MEMBER_FAILURE_V1
+            } else {
+                abi::THINKTHEN_MEMBER_SUCCESS_V1
+            },
             value: self
                 .value
                 .as_ref()
@@ -325,9 +330,9 @@ impl SavedQuestion {
 }
 pub(crate) fn attempt(s: &mut Storage, a: &thinkthen::AttemptObservation) -> CurrentAttemptV1 {
     let outcome = match a.outcome() {
-        thinkthen::AttemptOutcome::Ok => 1,
-        thinkthen::AttemptOutcome::Status => 2,
-        thinkthen::AttemptOutcome::Transport => 3,
+        thinkthen::AttemptOutcome::Ok => abi::THINKTHEN_ATTEMPT_OK_V1,
+        thinkthen::AttemptOutcome::Status => abi::THINKTHEN_ATTEMPT_STATUS_V1,
+        thinkthen::AttemptOutcome::Transport => abi::THINKTHEN_ATTEMPT_TRANSPORT_V1,
     };
     let status = a.status();
     CurrentAttemptV1 {

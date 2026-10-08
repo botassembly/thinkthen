@@ -1,6 +1,7 @@
 //! The typed doors' bodies on the Rust side: every argument arrives checked
 //! and borrowed, and every answer leaves as a value the FFI edge writes.
 
+use crate::ffi::values as abi;
 use thinkthen::{
     Answer, CallOptions, CancelToken, Engine, Entity, Facts, Judgment, LoadedQuestion,
     Probabilities, Question, QuestionFileError, Recognize, Relate,
@@ -15,9 +16,9 @@ const MOST_RELATED: usize = 255;
 /// The header's outcome code for an answer.
 pub(crate) const fn outcome(answer: Answer) -> i32 {
     match answer {
-        Answer::Yes => 1,
-        Answer::No => 0,
-        Answer::Unsure => 2,
+        Answer::Yes => abi::THINKTHEN_YES,
+        Answer::No => abi::THINKTHEN_NO,
+        Answer::Unsure => abi::THINKTHEN_UNSURE,
     }
 }
 

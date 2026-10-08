@@ -11,6 +11,11 @@ use crate::ffi::carriers::{
     RelateViewV1, RelationAnswerDataV1, RelationAnswerV1, RelationAnswersV1, RelationSuccessV1,
     RowObservationDataV1, RowObservationV1,
 };
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE,
+    THINKTHEN_FUNCTION_RELATE_V1 as RELATE,
+};
 use thinkthen::{
     CompleteAnnotated, CompleteRecognized, CompleteRecord, CompleteRelated, OwnedRecordObservation,
 };
@@ -101,7 +106,7 @@ pub(super) fn annotate(
     };
     Ok(RowObservationV1 {
         index: row.ordinal(),
-        function: 8,
+        function: abi::THINKTHEN_FUNCTION_ANNOTATE_V1,
         data: output,
     })
 }
@@ -110,7 +115,7 @@ fn annotation_question(s: &mut Storage, questions: Vec<QuestionMemberV1>) -> Opt
     OptionalQuestionV1 {
         present: 1,
         value: QuestionViewV1 {
-            kind: 8,
+            kind: ANNOTATE,
             members: QuestionMembersV1 { data, len },
             ..QuestionViewV1::default()
         },
@@ -135,7 +140,7 @@ pub(super) fn recognize(
     common.question = OptionalQuestionV1 {
         present: 1,
         value: QuestionViewV1 {
-            kind: 9,
+            kind: RECOGNIZE,
             on: s.native_on(q.on()),
             kinds: s.native_choices(q.kinds())?,
             relations: s.native_relations(q.relations()),
@@ -162,7 +167,7 @@ pub(super) fn recognize(
     };
     Ok(RowObservationV1 {
         index: row.ordinal(),
-        function: 9,
+        function: abi::THINKTHEN_FUNCTION_RECOGNIZE_V1,
         data,
     })
 }
@@ -190,7 +195,7 @@ pub(super) fn relate(
     common.input = OptionalContentV1 {
         present: 1,
         value: ContentV1 {
-            kind: 2,
+            kind: abi::THINKTHEN_ANSWER_CHOICE_V1,
             data: s.string(&input),
         },
     };
@@ -199,7 +204,7 @@ pub(super) fn relate(
     common.question = OptionalQuestionV1 {
         present: 1,
         value: QuestionViewV1 {
-            kind: 10,
+            kind: RELATE,
             relations: s.native_relations(q.relations()),
             threshold: questions::rule(Some(q.threshold())),
             profile: s.optional_string(q.profile()),
@@ -226,7 +231,7 @@ pub(super) fn relate(
     };
     Ok(RowObservationV1 {
         index: 0,
-        function: 10,
+        function: abi::THINKTHEN_FUNCTION_RELATE_V1,
         data: output,
     })
 }
@@ -272,12 +277,14 @@ fn relation_members(
                 relation: s.string(m.relation()),
                 reads: s.string(m.reads()),
                 method: match m.method() {
-                    thinkthen::RelationMethod::YesNo => 1,
-                    thinkthen::RelationMethod::Choice => 2,
+                    thinkthen::RelationMethod::YesNo => abi::THINKTHEN_RELATION_YES_NO_V1,
+                    thinkthen::RelationMethod::Choice => abi::THINKTHEN_RELATION_CHOICE_V1,
                 },
                 direction: match m.direction() {
-                    thinkthen::RelationDirection::SourceToTarget => 1,
-                    thinkthen::RelationDirection::Either => 2,
+                    thinkthen::RelationDirection::SourceToTarget => {
+                        abi::THINKTHEN_DIRECTION_SOURCE_TO_TARGET_V1
+                    }
+                    thinkthen::RelationDirection::Either => abi::THINKTHEN_DIRECTION_EITHER_V1,
                 },
                 source: endpoint(s, &m.source()),
                 target: m

@@ -5,6 +5,11 @@
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures::{self, DEFECT, Failure, FailureSnapshot, Held, OK, USAGE};
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE,
+    THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE, THINKTHEN_FUNCTION_FILTER_V1 as FILTER,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use crate::ffi::{carriers::ControlsV1, current::read};
 use crate::{
     Door,
@@ -177,30 +182,110 @@ unsafe fn start(
         }
     })
 }
-macro_rules! start {
-    ($name:ident, $kind:literal) => {
-        /// Start an owned same-thread native batch without collecting its source.
-        /// # Safety
-        /// The installed header specifies counted storage, engine and same-thread lifetimes.
-        #[unsafe(no_mangle)]
-        pub(crate) unsafe extern "C" fn $name(
-            e: *const Door,
-            q: *const QuestionHandle,
-            s: *const SourceHandle,
-            c: *const ControlsV1,
-            out: *mut *mut BatchHandle,
-        ) -> i32 {
-            // SAFETY: unchanged pointers pass through the checked common edge.
-            unsafe { start(e, $kind, q, s, c, out) }
-        }
-    };
+
+/// Start an owned same-thread native batch without collecting its source.
+/// # Safety
+/// The installed header specifies counted storage, engine and same-thread lifetimes.
+/// Lazy record batches use the existing native scheduler for decide, choose,
+/// tag, score, filter and annotate. Start clones question, source selection,
+/// shared context and cancellation flag; callers may free question/source/token
+/// after start. The engine must remain live through batch_free. Start, next,
+/// facts and free must run on the creating thread with exclusive batch access.
+/// Ordinary packing and real input pauses determine stages; there are no caller
+/// stage markers. A source_records snapshot retains finite source bytes, while
+/// source_files pulls the native reader lazily. Reader unit 5 explicitly reads
+/// JSONL as typed JSON; ordinary text units never infer JSON from text.
+/// next returns OK with one independently owned typed result, or OK with NULL
+/// after exhaustion. Completed rows precede one terminal error; that error
+/// leaves out unchanged, then next returns OK with NULL. Returned row results
+/// outlive the batch, question, source and engine. Per-row summary facts are
+/// absent while work continues; batch_facts returns an owned final summary
+/// after exhaustion/error, and EUSAGE before termination without writing out.
+/// batch_free stops and joins native workers before releasing owned backing.
+/// The existing eager complete calls keep their all-before-send admission rule.
+/// Rank, find, recognize and relate retain their native aggregate semantics
+/// through the complete calls; they have no invented lazy batch interface.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_decide_batch_start(
+    e: *const Door,
+    q: *const QuestionHandle,
+    s: *const SourceHandle,
+    c: *const ControlsV1,
+    out: *mut *mut BatchHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged pointers pass through the checked common edge.
+    unsafe { start(e, DECIDE, q, s, c, out) }
 }
-start!(thinkthen_decide_batch_start, 1);
-start!(thinkthen_choose_batch_start, 2);
-start!(thinkthen_tag_batch_start, 3);
-start!(thinkthen_score_batch_start, 4);
-start!(thinkthen_filter_batch_start, 5);
-start!(thinkthen_annotate_batch_start, 8);
+/// Start an owned same-thread native batch without collecting its source.
+/// # Safety
+/// The installed header specifies counted storage, engine and same-thread lifetimes.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_choose_batch_start(
+    e: *const Door,
+    q: *const QuestionHandle,
+    s: *const SourceHandle,
+    c: *const ControlsV1,
+    out: *mut *mut BatchHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged pointers pass through the checked common edge.
+    unsafe { start(e, CHOOSE, q, s, c, out) }
+}
+/// Start an owned same-thread native batch without collecting its source.
+/// # Safety
+/// The installed header specifies counted storage, engine and same-thread lifetimes.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_tag_batch_start(
+    e: *const Door,
+    q: *const QuestionHandle,
+    s: *const SourceHandle,
+    c: *const ControlsV1,
+    out: *mut *mut BatchHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged pointers pass through the checked common edge.
+    unsafe { start(e, TAG, q, s, c, out) }
+}
+/// Start an owned same-thread native batch without collecting its source.
+/// # Safety
+/// The installed header specifies counted storage, engine and same-thread lifetimes.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_score_batch_start(
+    e: *const Door,
+    q: *const QuestionHandle,
+    s: *const SourceHandle,
+    c: *const ControlsV1,
+    out: *mut *mut BatchHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged pointers pass through the checked common edge.
+    unsafe { start(e, SCORE, q, s, c, out) }
+}
+/// Start an owned same-thread native batch without collecting its source.
+/// # Safety
+/// The installed header specifies counted storage, engine and same-thread lifetimes.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_filter_batch_start(
+    e: *const Door,
+    q: *const QuestionHandle,
+    s: *const SourceHandle,
+    c: *const ControlsV1,
+    out: *mut *mut BatchHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged pointers pass through the checked common edge.
+    unsafe { start(e, FILTER, q, s, c, out) }
+}
+/// Start an owned same-thread native batch without collecting its source.
+/// # Safety
+/// The installed header specifies counted storage, engine and same-thread lifetimes.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_annotate_batch_start(
+    e: *const Door,
+    q: *const QuestionHandle,
+    s: *const SourceHandle,
+    c: *const ControlsV1,
+    out: *mut *mut BatchHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged pointers pass through the checked common edge.
+    unsafe { start(e, ANNOTATE, q, s, c, out) }
+}
 /// Yield one independently owned result, or NULL on exhaustion, then one terminal error.
 /// # Safety
 /// Batch and output obey the installed same-thread/engine lifetime contract.
@@ -208,7 +293,7 @@ start!(thinkthen_annotate_batch_start, 8);
 pub(crate) unsafe extern "C" fn thinkthen_batch_next(
     owner: *mut BatchHandle,
     out: *mut *mut ResultHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: live exclusive same-thread batch; wrong-thread calls return without pulling.
     let Some(batch) = (unsafe { owner.as_mut() }) else {
         return USAGE;
@@ -259,7 +344,7 @@ pub(crate) unsafe extern "C" fn thinkthen_batch_next(
 pub(crate) unsafe extern "C" fn thinkthen_batch_facts(
     owner: *const BatchHandle,
     out: *mut *mut ResultHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     let Some(batch) = (unsafe { owner.as_ref() }) else {
         return USAGE;
     };

@@ -37,7 +37,7 @@ def declarations(header):
         if node['kind'] == 'TypedefDecl':
             refs = [n['decl']['id'] for n in walk(node) if n['kind'] == 'RecordType']
             if refs and refs[0] in records:
-                layouts[name] = fields(records[refs[0]])
+                layouts[name] = fields(records[refs[0]], records)
         elif node['kind'] == 'FunctionDecl':
             signature = node['type']['qualType']
             if node.get('variadic') or '__attribute__' in signature:
@@ -52,8 +52,8 @@ def declarations(header):
     return {'records': layouts, 'functions': functions, 'constants': constants}
 
 
-def fields(record, prefix=''):
-    """Flatten named fields and anonymous union arms from compiler AST nodes."""
+def fields(record, records, prefix=''):
+    """Flatten public union arms, whether Clang names their record or nests it."""
     out, anonymous = {}, None
     for node in record.get('inner', []):
         if node['kind'] == 'RecordDecl' and node.get('completeDefinition') and not node.get('name'):
@@ -65,10 +65,18 @@ def fields(record, prefix=''):
                 if '(unnamed' not in kind and '(anonymous' not in kind:
                     raise ValueError(f'unassociated anonymous C record: {name}')
                 out[name] = anonymous['tagUsed']
-                out.update(fields(anonymous, name + '.'))
+                out.update(fields(anonymous, records, name + '.'))
                 anonymous = None
             else:
                 out[name] = kind
+                # cbindgen emits named unions. Resolve the compiler's type rather
+                # than losing data.decide and the other public nested offsets.
+                union_name = node['type'].get('desugaredQualType', kind).removeprefix('union ')
+                unions = [r for r in records.values()
+                          if r.get('tagUsed') == 'union' and r.get('name') == union_name]
+                if unions:
+                    out[name] = 'union'
+                    out.update(fields(unions[0], records, name + '.'))
     return out
 
 
@@ -178,7 +186,7 @@ def pointee_type(kind, native, signed=True):
     """Describe a represented typed reference without guessing opaque pointees."""
     if not kind.endswith('*'):
         return 'not-a-pointer'
-    pointed = re.sub(r'\bconst\b', '', kind[:-1]).strip()
+    pointed = re.sub(r'\b(?:const|struct|union)\b', '', kind[:-1]).strip()
     if '*' in pointed:
         return 'pointer'
     if pointed.startswith('thinkthen_'):
@@ -219,21 +227,23 @@ def check_exports(header, library):
 def self_test(header):
     native = header_abi(header)
     compare_abi(native, header_abi(header, 'clang'))
-    text = Path(header).read_text()
+    text = re.sub(r'/\*.*?\*/', '', Path(header).read_text(), flags=re.S)
     plants = [
-        ('field', 'const char *data; size_t len;', 'size_t len; const char *data;'),
-        ('enum', '#define THINKTHEN_FUNCTION_DECIDE_V1 UINT32_C(1)', '#define THINKTHEN_FUNCTION_DECIDE_V1 UINT32_C(99)'),
-        ('argument', 'size_t row, size_t member, thinkthen_details_v1 *', 'size_t row, uint16_t member, thinkthen_details_v1 *'),
+        ('field', r'const char \*data;\s*size_t len;', 'size_t len; const char *data;'),
+        ('enum', r'#define THINKTHEN_FUNCTION_DECIDE_V1 (?:UINT32_C\(1\)|1u?\b)', '#define THINKTHEN_FUNCTION_DECIDE_V1 99'),
+        ('argument', r'size_t member\b', 'uint16_t member'),
         ('return', 'int thinkthen_result_row(', 'uint64_t thinkthen_result_row('),
-        ('pointer-depth', 'thinkthen_result **);', 'thinkthen_result *);'),
-        ('by-value', 'uint32_t media, thinkthen_optional_string_v1 filename', 'uint32_t media, const thinkthen_optional_string_v1 *filename'),
+        ('pointer-depth', r'thinkthen_result \*\*(?:out\b)?', 'thinkthen_result *out'),
+        ('by-value', r'uint32_t media,\s*(?:struct )?thinkthen_optional_string_v1 filename', 'uint32_t media, const thinkthen_optional_string_v1 *filename'),
     ]
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-abi-plants-') as scratch:
         for name, before, after in plants:
-            if before not in text:
+            pattern = re.escape(before) if name == 'return' else before
+            changed, count = re.subn(pattern, lambda _: after, text, count=1)
+            if not count:
                 raise ValueError(f'ABI drift plant has no declaration: {name}')
             copied = Path(scratch) / 'thinkthen.h'
-            copied.write_text(text.replace(before, after, 1))
+            copied.write_text(changed)
             try:
                 compare_abi(native, header_abi(copied))
             except ValueError as error:

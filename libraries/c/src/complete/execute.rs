@@ -5,6 +5,14 @@ use crate::failures::Failure;
 use crate::ffi::carriers::{
     OptionalDiscriminatorV1, OptionalMetaV1, OptionalStringV1, RowObservationV1, SummaryV1,
 };
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE,
+    THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE, THINKTHEN_FUNCTION_FILTER_V1 as FILTER,
+    THINKTHEN_FUNCTION_FIND_V1 as FIND, THINKTHEN_FUNCTION_RANK_V1 as RANK,
+    THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE, THINKTHEN_FUNCTION_RELATE_V1 as RELATE,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use std::sync::{Mutex, PoisonError};
 use thinkthen::{
     CallOptions, Engine, Facts, LoadedQuestion, OwnedRecordObservation, RecordObservation,
@@ -88,7 +96,7 @@ pub(super) fn result(
                 value: row.meta,
             })
             .unwrap_or_default(),
-        state: 1,
+        state: abi::THINKTHEN_RESULT_SUCCESS_V1,
         schema: storage.string("thinkthen.result/2"),
         function: OptionalDiscriminatorV1 {
             present: 1,
@@ -137,64 +145,56 @@ fn execute(
     ),
 ) -> Result<Vec<RowObservationV1>, Failure> {
     match (&question.native, kind) {
-        (Native::Atomic(LoadedQuestion::Question(q)), 1) => collect!(completed;
-            engine.decide_records_complete_with(q, records, options),
-            |r| rows::decide(s, r)
-        ),
-        (Native::Atomic(LoadedQuestion::Banded(q)), 1) => collect!(completed;
-            engine.decide_records_complete_with(q, records, options),
-            |r| rows::decide(s, r)
-        ),
-        (Native::Atomic(LoadedQuestion::Question(q)), 2) => collect!(completed;
-            engine.choose_records_complete_with(q, records, options),
-            |r| rows::choose(s, r)
-        ),
-        (Native::Atomic(LoadedQuestion::Question(q)), 3) => {
+        (Native::Atomic(LoadedQuestion::Question(q)), DECIDE) => {
+            collect!(completed;
+                engine.decide_records_complete_with(q, records, options),
+                |r| rows::decide(s, r)
+            )
+        }
+        (Native::Atomic(LoadedQuestion::Banded(q)), DECIDE) => {
+            collect!(completed;
+                engine.decide_records_complete_with(q, records, options),
+                |r| rows::decide(s, r)
+            )
+        }
+        (Native::Atomic(LoadedQuestion::Question(q)), CHOOSE) => {
+            collect!(completed;
+                engine.choose_records_complete_with(q, records, options),
+                |r| rows::choose(s, r)
+            )
+        }
+        (Native::Atomic(LoadedQuestion::Question(q)), TAG) => {
             collect!(completed; engine.tag_records_complete_with(q, records, options), |r| {
                 rows::tag(s, r)
             })
         }
-        (Native::Atomic(LoadedQuestion::Question(q)), 4) => collect!(completed;
-            engine.score_records_complete_with(q, records, options),
-            |r| rows::score(s, r)
-        ),
-        (Native::Atomic(LoadedQuestion::Question(q)), 5) => collect!(completed;
-            engine.filter_records_complete_with(q, records, options),
-            |r| rows::filter(s, r)
-        ),
-        (Native::Rank(q), 6) => collect!(completed;
-            engine.rank_records_complete_with(q, records, options),
-            |r| rows::rank(
-                s,
-                r,
-                observations::raw(
-                    &events.lock().unwrap_or_else(PoisonError::into_inner),
-                    r.ordinal(),
-                    None
-                )
-                .as_deref()
+        (Native::Atomic(LoadedQuestion::Question(q)), SCORE) => {
+            collect!(completed;
+                engine.score_records_complete_with(q, records, options),
+                |r| rows::score(s, r)
             )
+        }
+        (Native::Atomic(LoadedQuestion::Question(q)), FILTER) => {
+            collect!(completed;
+                engine.filter_records_complete_with(q, records, options),
+                |r| rows::filter(s, r)
+            )
+        }
+        (Native::Rank(q), RANK) => collect!(completed;
+            engine.rank_records_complete_with(q, records, options),
+            |r| rank_row(s, r, events)
         ),
-        (Native::Atomic(LoadedQuestion::Question(_)), 6) => {
+        (Native::Atomic(LoadedQuestion::Question(_)), RANK) => {
             let q = question.rank_reading()?;
             collect!(completed;
                 engine.rank_records_complete_with(&q, records, options),
-                |r| rows::rank(
-                    s,
-                    r,
-                    observations::raw(
-                        &events.lock().unwrap_or_else(PoisonError::into_inner),
-                        r.ordinal(),
-                        None
-                    )
-                    .as_deref()
-                )
+                |r| rank_row(s, r, events)
             )
         }
-        (Native::DynamicChoose(q), 2) => {
+        (Native::DynamicChoose(q), CHOOSE) => {
             collect!(completed; engine.choose_dynamic_records_complete_with(q, records, options), |r| rows::choose(s, r))
         }
-        (Native::Find(q), 7) => {
+        (Native::Find(q), FIND) => {
             let call = engine.find_records_complete_with(q, records, options)?;
             *completed = Some(call.facts().clone());
             Ok(vec![rows::find(
@@ -203,23 +203,27 @@ fn execute(
                 &events.lock().unwrap_or_else(PoisonError::into_inner),
             )?])
         }
-        (Native::Set(q), 8) => collect!(completed;
+        (Native::Set(q), ANNOTATE) => collect!(completed;
             engine.annotate_records_complete_with(q, records, options),
             |r| structured::annotate(s, r, &events.lock().unwrap_or_else(PoisonError::into_inner))
         ),
-        (Native::Recognize(q), 9) => collect!(completed;
-            engine.recognize_records_complete_with(q, records, options),
-            |r| structured::recognize(s, r)
-        ),
-        (Native::Relate(q), 10) => {
+        (Native::Recognize(q), RECOGNIZE) => {
+            collect!(completed;
+                engine.recognize_records_complete_with(q, records, options),
+                |r| structured::recognize(s, r)
+            )
+        }
+        (Native::Relate(q), RELATE) => {
             let call = engine.relate_records_complete_with(q, records, options)?;
             *completed = Some(call.facts().clone());
             Ok(vec![structured::relate(s, call.value())?])
         }
-        (Native::RankSet(set), 6) => collect!(completed;
-            engine.rank_set_records_complete_with(set, records, options),
-            |r| super::rank_set::row(s, r, &events.lock().unwrap_or_else(PoisonError::into_inner))
-        ),
+        (Native::RankSet(set), RANK) => {
+            collect!(completed;
+                engine.rank_set_records_complete_with(set, records, options),
+                |r| super::rank_set::row(s, r, &events.lock().unwrap_or_else(PoisonError::into_inner))
+            )
+        }
         _ => Err(Failure::usage(
             "this question reading is not admitted by the named complete call",
         )),
@@ -246,4 +250,17 @@ fn observation_details(
                 .ok_or_else(|| Failure::defect("native row event lost its details")),
         })
         .collect::<Result<Vec<_>, Failure>>()
+}
+
+fn rank_row(
+    s: &mut Storage,
+    row: &thinkthen::CompleteRecord<inputs::Original, thinkthen::CompleteRank>,
+    events: &Mutex<Vec<OwnedRecordObservation>>,
+) -> Result<RowObservationV1, Failure> {
+    let events = events.lock().unwrap_or_else(PoisonError::into_inner);
+    rows::rank(
+        s,
+        row,
+        observations::raw(&events, row.ordinal(), None).as_deref(),
+    )
 }

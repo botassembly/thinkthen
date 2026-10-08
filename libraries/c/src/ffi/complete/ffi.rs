@@ -14,6 +14,14 @@ use crate::ffi::carriers::{
     SummaryV1, TagViewV1,
 };
 use crate::ffi::current::read;
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE,
+    THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE, THINKTHEN_FUNCTION_FILTER_V1 as FILTER,
+    THINKTHEN_FUNCTION_FIND_V1 as FIND, THINKTHEN_FUNCTION_RANK_V1 as RANK,
+    THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE, THINKTHEN_FUNCTION_RELATE_V1 as RELATE,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use thinkthen::{CallOptions, Facts};
 unsafe fn run(
     engine: *const Door,
@@ -106,34 +114,147 @@ pub(super) unsafe fn options<'a>(
     }
     Ok(options)
 }
-macro_rules! call {
-    ($name:ident, $kind:literal) => {
-        /// Execute the named judgment with typed inputs and immutable complete results.
-        /// # Safety
-        /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
-        #[unsafe(no_mangle)]
-        pub(crate) unsafe extern "C" fn $name(
-            engine: *const Door,
-            question: *const QuestionHandle,
-            source: *const SourceHandle,
-            controls: *const ControlsV1,
-            out: *mut *mut ResultHandle,
-        ) -> i32 {
-            // SAFETY: unchanged inputs go through the common validated, guarded edge.
-            unsafe { run(engine, $kind, question, source, controls, out) }
-        }
-    };
+
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_decide_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, DECIDE, question, source, controls, out) }
 }
-call!(thinkthen_decide_complete, 1);
-call!(thinkthen_choose_complete, 2);
-call!(thinkthen_tag_complete, 3);
-call!(thinkthen_score_complete, 4);
-call!(thinkthen_filter_complete, 5);
-call!(thinkthen_rank_complete, 6);
-call!(thinkthen_find_complete, 7);
-call!(thinkthen_annotate_complete, 8);
-call!(thinkthen_recognize_complete, 9);
-call!(thinkthen_relate_complete, 10);
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_choose_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, CHOOSE, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_tag_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, TAG, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_score_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, SCORE, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_filter_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, FILTER, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_rank_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, RANK, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_find_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, FIND, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_annotate_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, ANNOTATE, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_recognize_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, RECOGNIZE, question, source, controls, out) }
+}
+/// Execute the named judgment with typed inputs and immutable complete results.
+/// # Safety
+/// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_relate_complete(
+    engine: *const Door,
+    question: *const QuestionHandle,
+    source: *const SourceHandle,
+    controls: *const ControlsV1,
+    out: *mut *mut ResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: unchanged inputs go through the common validated, guarded edge.
+    unsafe { run(engine, RELATE, question, source, controls, out) }
+}
 /// Free an immutable result after every borrowed view is finished. NULL is harmless.
 /// # Safety
 /// A nonnull result was allocated by this library and has not been freed.
@@ -150,7 +271,7 @@ unsafe fn view<T: Copy>(
     owner: *const ResultHandle,
     out: *mut T,
     read_view: impl FnOnce(&ResultHandle) -> Option<T>,
-) -> i32 {
+) -> std::ffi::c_int {
     failures::guard(None, DEFECT, || {
         if out.is_null() {
             return USAGE;
@@ -176,7 +297,7 @@ unsafe fn view<T: Copy>(
 pub(crate) unsafe extern "C" fn thinkthen_result_summary(
     owner: *const ResultHandle,
     out: *mut SummaryV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates NULLs before borrowing/publishing.
     unsafe { view(owner, out, |r| Some(r.summary)) }
 }
@@ -188,66 +309,158 @@ pub(crate) unsafe extern "C" fn thinkthen_result_observation(
     owner: *const ResultHandle,
     at: usize,
     out: *mut ObservationV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.observations.get(at).copied()) }
 }
 /// Borrow a final row at its output position, retaining its original input index.
 /// # Safety
 /// Owner and output obey the header's lifetime/storage contract.
+/// Borrow a final row by output position, retaining its original input index.
+/// Nested views borrow until result_free. NULL owner/output or an out-of-range
+/// position returns EUSAGE without writing output.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_result_row(
     owner: *const ResultHandle,
     at: usize,
     out: *mut RowObservationV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output; get validates the final output position.
     unsafe { view(owner, out, |r| r.rows.get(at).copied()) }
 }
-macro_rules! row {
-    ($name:ident, $ty:ident, $kind:literal, $arm:ident) => {
-        /// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
-        /// # Safety
-        /// Owner and output obey the header's lifetime/storage contract.
-        #[unsafe(no_mangle)]
-        pub(crate) unsafe extern "C" fn $name(
-            owner: *const ResultHandle,
-            at: usize,
-            out: *mut $ty,
-        ) -> i32 {
-            // SAFETY: native construction set the union arm from function; owner is immutable.
-            unsafe {
-                view(owner, out, |r| {
-                    r.rows
-                        .get(at)
-                        .filter(|row| row.function == $kind)
-                        .map(|row| row.data.$arm)
-                })
-            }
-        }
-    };
+
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_decide(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut DecideViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == DECIDE)
+                .map(|row| row.data.decide)
+        })
+    }
 }
-row!(thinkthen_result_decide, DecideViewV1, 1, decide);
-row!(thinkthen_result_choose, ChooseViewV1, 2, choose);
-row!(thinkthen_result_tag, TagViewV1, 3, tag);
-row!(thinkthen_result_score, ScoreViewV1, 4, score);
-row!(thinkthen_result_filter, FilterViewV1, 5, filter);
-row!(thinkthen_result_rank, RankViewV1, 6, rank);
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_choose(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut ChooseViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == CHOOSE)
+                .map(|row| row.data.choose)
+        })
+    }
+}
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_tag(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut TagViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == TAG)
+                .map(|row| row.data.tag)
+        })
+    }
+}
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_score(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut ScoreViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == SCORE)
+                .map(|row| row.data.score)
+        })
+    }
+}
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_filter(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut FilterViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == FILTER)
+                .map(|row| row.data.filter)
+        })
+    }
+}
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_rank(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut RankViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == RANK)
+                .map(|row| row.data.rank)
+        })
+    }
+}
 /// Number of saved member judgments; simple rank has none.
 /// # Safety
 /// Owner and output obey the installed header's storage contract.
+/// Saved rank sets retain every ordered member. Simple rank has zero members.
+/// Each member view has its own answer ID, complete probabilities and metadata.
+/// Views borrow the result; invalid indices return EUSAGE without writing output.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_result_rank_member_count(
     owner: *const ResultHandle,
     row: usize,
     out: *mut usize,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates the live owner/output and row kind before publication.
     unsafe {
         view(owner, out, |r| {
             r.rows
                 .get(row)
-                .filter(|v| v.function == 6)
+                .filter(|v| v.function == RANK)
                 .map(|_| r.rank_members.get(row).map_or(0, Vec::len))
         })
     }
@@ -261,7 +474,7 @@ pub(crate) unsafe extern "C" fn thinkthen_result_rank_member(
     row: usize,
     member: usize,
     out: *mut RankViewV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates NULLs and checked indices before publication.
     unsafe {
         view(owner, out, |r| {
@@ -273,34 +486,120 @@ pub(crate) unsafe extern "C" fn thinkthen_result_rank_member(
 /// Borrow full member details, including partial usage and source batch sizes.
 /// # Safety
 /// Owner and output obey the installed header's storage contract.
+/// Full member details retain independently present usage dimensions and source
+/// batch sizes. Nested views borrow the result until result_free. NULL arguments,
+/// wrong function, and invalid row/member indices return EUSAGE without writing.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_result_rank_member_details(
     owner: *const ResultHandle,
     row: usize,
     member: usize,
     out: *mut DetailsV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates NULLs and checked indices before publication.
     unsafe {
         view(owner, out, |r| {
-            r.rows.get(row).filter(|row| row.function == 6)?;
+            r.rows.get(row).filter(|row| row.function == RANK)?;
             r.rank_member_details.get(row)?.get(member).copied()
         })
     }
 }
 
-row!(thinkthen_result_find, FindViewV1, 7, find);
-row!(thinkthen_result_annotate, AnnotateViewV1, 8, annotate);
-row!(thinkthen_result_recognize, RecognizeViewV1, 9, recognize);
-row!(thinkthen_result_relate, RelateViewV1, 10, relate);
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_find(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut FindViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == FIND)
+                .map(|row| row.data.find)
+        })
+    }
+}
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_annotate(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut AnnotateViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == ANNOTATE)
+                .map(|row| row.data.annotate)
+        })
+    }
+}
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_recognize(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut RecognizeViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == RECOGNIZE)
+                .map(|row| row.data.recognize)
+        })
+    }
+}
+/// Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_relate(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut RelateViewV1,
+) -> std::ffi::c_int {
+    // SAFETY: native construction set the union arm from function; owner is immutable.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(at)
+                .filter(|row| row.function == RELATE)
+                .map(|row| row.data.relate)
+        })
+    }
+}
 /// Clone the calling thread's saved failure without altering its sticky error slot.
 /// # Safety
 /// Engine is NULL or live; out is writable when nonnull.
+/// Snapshot the calling thread's last failure for engine, or its failed-build
+/// slot for engine=NULL. Never clears/replaces that slot.
+/// With no saved failure: returns OK and writes *out=NULL (no allocation).
+/// With a pre-start failure: returns OK and writes an owned FAILURE result;
+/// facts/attempts are absent. With a started failure: returns OK and writes an
+/// owned FAILURE result with final facts and opt-in attempts, even if []
+/// because no send occurred. Both failure snapshots have absent schema,
+/// answer_id and function, count=observation_count=0, and meta.present=0.
+/// error is present; no origin/model/request/answer provenance is invented.
+/// The return value describes snapshot creation, not the saved failure code.
+/// out=NULL returns EUSAGE without changing the saved failure.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_error_complete(
     engine: *const Door,
     out: *mut *mut ResultHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     failures::guard(None, DEFECT, || {
         if out.is_null() {
             return USAGE;
@@ -328,7 +627,7 @@ pub(crate) unsafe extern "C" fn thinkthen_result_details(
     owner: *const ResultHandle,
     at: usize,
     out: *mut DetailsV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.row_details.get(at).copied()) }
 }
@@ -340,7 +639,7 @@ pub(crate) unsafe extern "C" fn thinkthen_result_observation_details(
     owner: *const ResultHandle,
     at: usize,
     out: *mut DetailsV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.observation_details.get(at).copied()) }
 }
@@ -348,12 +647,17 @@ pub(crate) unsafe extern "C" fn thinkthen_result_observation_details(
 /// Borrow the authored metadata of one complete row.
 /// # Safety
 /// Owner and output obey the header's lifetime/storage contract.
+/// Borrow native author snapshots until result_free. Row/member ordinals
+/// follow the existing named result accessors and annotation member order.
+/// Set envelopes and generated internal questions carry absent author fields.
+/// Invalid owner/output/ordinal or a member on a non-annotation row is Usage
+/// and leaves output unchanged. Observation includes both question/row events.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_result_question_author(
     owner: *const ResultHandle,
     at: usize,
     out: *mut crate::ffi::carriers::QuestionAuthorV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.authors.get(at).copied()) }
 }
@@ -366,7 +670,7 @@ pub(crate) unsafe extern "C" fn thinkthen_result_member_author(
     at: usize,
     member: usize,
     out: *mut crate::ffi::carriers::QuestionAuthorV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output; both ordinals use checked access.
     unsafe {
         view(owner, out, |r| {
@@ -385,7 +689,7 @@ pub(crate) unsafe extern "C" fn thinkthen_result_observation_author(
     owner: *const ResultHandle,
     at: usize,
     out: *mut crate::ffi::carriers::QuestionAuthorV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.observation_authors.get(at).copied()) }
 }
@@ -398,11 +702,11 @@ pub(crate) unsafe extern "C" fn thinkthen_result_source_recognition(
     owner: *const ResultHandle,
     row: usize,
     out: *mut crate::ffi::carriers::SourceRecognitionV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: checked row kind and indices select constructed immutable storage.
     unsafe {
         view(owner, out, |r| {
-            r.rows.get(row).filter(|v| v.function == 9)?;
+            r.rows.get(row).filter(|v| v.function == RECOGNIZE)?;
             r.source_recognition.get(row).copied()
         })
     }
@@ -415,11 +719,11 @@ pub(crate) unsafe extern "C" fn thinkthen_result_source_relations(
     owner: *const ResultHandle,
     row: usize,
     out: *mut crate::ffi::carriers::SourceRelationsV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: checked row kind and indices select constructed immutable storage.
     unsafe {
         view(owner, out, |r| {
-            r.rows.get(row).filter(|v| v.function == 10)?;
+            r.rows.get(row).filter(|v| v.function == RELATE)?;
             r.source_relations.get(row).copied()
         })
     }
@@ -433,11 +737,11 @@ pub(crate) unsafe extern "C" fn thinkthen_result_recognition_task_v1(
     owner: *const ResultHandle,
     at: usize,
     out: *mut crate::ffi::carriers::RecognitionTaskV1,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: view validates owner/output; checked row and sidecar access precede publication.
     unsafe {
         view(owner, out, |r| {
-            (r.rows.get(at)?.function == 9)
+            (r.rows.get(at)?.function == abi::THINKTHEN_FUNCTION_RECOGNIZE_V1)
                 .then(|| r.recognition_tasks.get(at).copied())
                 .flatten()
         })
