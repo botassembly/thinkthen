@@ -1,6 +1,8 @@
 # 0465: Ship the complete npm module inventory
 
-Status: OPEN. The after-sprint review reproduced omitted npm modules; the optional source smoke also disagrees with the intended Flutter bundle.
+Status: COMPLETE. The assembled npm package includes the complete modules and declarations; installed import and type checks pass. Public source-smoke families remain required.
+
+Landed: b59ab03c6
 
 Milestone: 0.2
 

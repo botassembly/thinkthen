@@ -1,6 +1,6 @@
 # 0465: Ship the complete npm module inventory
 
-Status: READY FOR LANDING. The reviewed branch is pushed; the coordinator owns landing.
+Status: COMPLETE. The package fixes pass installed checks, full tests and lint; fresh review accepts the changes.
 
 The assembled npm archive now includes `complete.js`, `_complete.js` and both declaration files. A fresh offline install of the actual assembled archive loaded the Linux native addon, imported the public complete API, and compiled and ran the existing CommonJS and ESM public type fixture. Removing installed `complete.js` made import fail as expected. The other three platform entries were assembly fixtures; this check makes no runtime claim for those hosts.
 
@@ -8,7 +8,7 @@ Optional Linux source-package smoke now requires every public family without req
 
 The first full test run exposed a local ThinkThen configuration entry in the triage demo. A fresh `XDG_CONFIG_HOME` made that demo pass. The next full run reached every binding smoke and found that Dart's selected compiler was not exported to its Python ABI check. Exporting `TT_DART` in the Dart smoke branch made its focused smoke pass. On final source `baf613301`, full tests passed: 1,757 workspace tests, 337 library-only tests, 23 external consumer tests, doctests, supporting checks and all nineteen binding smokes. Full lint and policy passed under 10 GB memory and 1 GB swap limits. Fresh read-only review accepted `93a81e959` and accepted the one-line Dart gate correction at `baf613301` with no findings.
 
-No registry change, hosted run, publication, release candidate or public Flutter archive is claimed. The ticket remains open for landing.
+No registry change, hosted run, publication, release candidate or public Flutter archive is claimed. The ticket is complete.
 
 ## What the build taught us
 
