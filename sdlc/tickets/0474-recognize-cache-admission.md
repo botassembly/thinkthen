@@ -29,3 +29,4 @@ One recognition operation validates its cache before sending and shares that adm
 ## Progress
 
 - 2026-10-08 landed db7ffd91c; next: Slice A fixes SQLite lock probes and shares recognition admission. Confirm the reported jobs-eight failure on the named main build; native Windows checks remain owed to the first authorized candidate. Keep the ticket open until those checks pass.
+- 2026-10-08 landed 8f90cbdce; next: Slice B guards raw cache creation and every SQLite constructor. Full functional tests, lint and specifications passed. Deliver this main build for the reported jobs-eight rerun; the original incident remains unconfirmed. Native Windows checks remain owed to the first authorized candidate, so keep 0474 open.
