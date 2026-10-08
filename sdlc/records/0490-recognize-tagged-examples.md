@@ -25,3 +25,13 @@ The fix review also found that a literal closing bracket adjoining a double-tag 
 The final parser review found inconsistent escaped literal bracket pairing in the convenience double-bracket alias. The coordinator authorized its removal. The final input grammar uses only the requested `[TEXT | KIND]` notation and structured examples. One table compares escaped and unescaped literal bracket variants against the same exact text and scalar-span carrier; nesting still refuses. Fixtures and documentation use this grammar. The four focused parser tests pass.
 
 Fresh correction review accepted `2e72414068757e9b3c21ae42b558693f0e44166a`. That revision removes the optional alias, retains the caller's text-first bracket notation and tests literal bracket variants against exact structured offsets. The review findings and intermediate fixes above explain why one grammar replaced the alias.
+
+## Final gates
+
+The unchanged `06345e60d` revision, with accepted product source from `2e7241406`, passed all three full gates with exit 0. Logs remain in the lane's `target/0490/lint.log`, `test.log` and `spec.log`. The gates used two build jobs, a 10 GB memory bound and a 1 GB swap bound. Peak scope memory was about 6.3 GiB. The lane remained about 24 GB across build output, libraries and databases, below its 40 GB cap.
+
+Lint passed private-name checks, policy, workflow fixtures, binding source ceilings, formatting, workspace Clippy, documentation and the 1,612-item public API inventory. Initial runs exposed missing binding ceiling updates and the new public declaration inventory; both were corrected. One intermediate run refused after the acceptance-record commit changed its starting SHA. The final run kept HEAD unchanged. Existing source-size and unmatched license-exception warnings remain nonfatal.
+
+Test passed 1,804 workspace tests, 348 library-only tests, doctests, 23 external consumer tests, 21 parity unit tests, 101 schema and C-door cases, child-environment and transformation checks, launcher fixtures and all 19 binding smoke checks. The broad native external consumer completed successfully after slow markers; no timeout was changed.
+
+Spec passed settings with zero failures, executable specifications, transforms, recognition and relation fixtures, probe harness fixtures and all 24 green demos. The existing page skips remain reported separately. No paid calls, release actions or publication ran. Canonical Request transport and host migration remain ticket 0491's separate scope.
