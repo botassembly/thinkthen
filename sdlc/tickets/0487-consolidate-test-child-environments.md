@@ -20,3 +20,7 @@ Tests use one child-environment entry point per language, preserving intentional
   Claim `sdlc/scripts/**`, `crates/thinkthen/tests/**`, `crates/thinkthen/src/mcp/tests/**`, `libraries/**/tests/**` and `databases/**/tests/**`.
 - Proof: Representative named-question, cache and installed children preserve expected behavior without ambient configuration. One planted direct write in the ordinary scope fails lint; legitimate environment behavior cases still run. Report actual migration scope and retain shared cases.
 - Defers: Broader architecture redesign. This is approved 0.2 work; do not silently defer it based on lane availability. Coordinate source claims and keep must-fix product defects first.
+
+## Progress
+
+- 2026-10-08 started
