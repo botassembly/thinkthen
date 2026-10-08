@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 /// Explicit reader media. Ordinary file reading remains text.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum ReaderMedia {
     /// Existing line/window/file text reader.
