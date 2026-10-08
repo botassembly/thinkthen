@@ -44,3 +44,20 @@ pub(super) fn selected(
     }
     Ok(spec)
 }
+
+pub(super) fn seeds(
+    record: &Record,
+    pointer: Option<&str>,
+    mut spec: RecognizeSpec,
+) -> Result<RecognizeSpec, Failure> {
+    if let Some(pointer) = pointer {
+        let pointer = crate::core::Pointer::new(pointer)
+            .map_err(|_| Failure::Usage("--seed-spans-field needs a valid JSON Pointer"))?;
+        if let Some(seeds) =
+            crate::core::selected_seeds(record, &pointer).map_err(Failure::Usage)?
+        {
+            spec.seed_spans = seeds;
+        }
+    }
+    Ok(spec)
+}

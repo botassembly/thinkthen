@@ -46,6 +46,7 @@ fn native_originals_need_no_clone_send_or_serialization_and_context_controls_wir
             .enumerate()
             .map(|(at, context)| RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: original(at),
                 context: context.map(Into::into),
                 options: None,
@@ -143,18 +144,21 @@ fn replacement_shortlists_remain_whole_ordered_and_per_question_coalescing_keeps
             [
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: original(0),
                     context: None,
                     options: Some(first.clone()),
                 },
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: original(1),
                     context: None,
                     options: Some(second),
                 },
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: original(2),
                     context: None,
                     options: Some(first),
@@ -189,6 +193,7 @@ fn replacement_shortlists_remain_whole_ordered_and_per_question_coalescing_keeps
             &Question::decide("Refund?").unwrap().cut(),
             [RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: original(0),
                 context: None,
                 options: Some(
@@ -270,12 +275,14 @@ fn eager_invalid_later_evidence_refuses_the_whole_native_source_before_sending()
             [
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: original(0),
                     context: None,
                     options: None,
                 },
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: Original {
                         id: 1,
                         text: " ",

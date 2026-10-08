@@ -36,6 +36,7 @@ fn an_external_cache_change_between_records_refuses_before_the_next_send() {
     };
     let rows = ["Ada met Acme.", "Bob met Corp."].map(|original| RecordInput {
         examples: None,
+        seed_spans: None,
         original,
         context: None,
         options: None,
@@ -187,6 +188,7 @@ fn recognition_admits_all_records_before_sends_and_empty_records_have_no_observa
     );
     let empty = RecordInput {
         examples: None,
+        seed_spans: None,
         original: "",
         context: None,
         options: None,

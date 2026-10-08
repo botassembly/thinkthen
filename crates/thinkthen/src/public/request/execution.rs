@@ -215,12 +215,18 @@ fn apply(definition: &mut RequestDefinition, options: &RequestOptions) -> Result
             if let Some(model) = &options.model {
                 ask.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
             }
+            if let Some(seeds) = &options.seed_spans {
+                ask = ask.with_seed_spans(seeds.clone());
+            }
             if let Some(examples) = &options.examples {
                 ask = ask.with_examples(examples.clone())?;
             }
             *definition = RequestDefinition::Recognition(ask);
         }
         RequestDefinition::Recognition(q) => {
+            if let Some(seeds) = &options.seed_spans {
+                *q = q.clone().with_seed_spans(seeds.clone());
+            }
             if let Some(examples) = &options.examples {
                 *q = q.clone().with_examples(examples.clone())?;
             }

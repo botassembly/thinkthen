@@ -13,6 +13,9 @@ mod bilou;
 mod categories;
 mod examples;
 mod pieces;
+mod seeds;
+pub use seeds::RecognitionSeedSpan;
+pub(crate) use seeds::{seed_stretches, selected_seeds};
 mod questions;
 
 use bilou::best_of;
@@ -93,11 +96,28 @@ pub(crate) fn step_two_questions(
             edges.truncate(1);
         }
         let held = Asked {
-            kind: !kinds.is_empty(),
+            kind: !kinds.is_empty()
+                || spec.is_some_and(|spec| {
+                    spec.seed_spans.iter().any(|seed| {
+                        pieces
+                            .get(stretch.0)
+                            .is_some_and(|piece| piece.start == seed.start)
+                            && pieces
+                                .get(stretch.1)
+                                .is_some_and(|piece| piece.end == seed.end)
+                    })
+                }),
             edges,
         };
         if held.kind {
-            questions.push(kind_question(text, pieces, stretch, kinds, spec)?);
+            let generic = vec![(ENTITY.to_owned(), None)];
+            questions.push(kind_question(
+                text,
+                pieces,
+                stretch,
+                if kinds.is_empty() { &generic } else { kinds },
+                spec,
+            )?);
         }
         if held.edge_question() {
             questions.push(edge_question(text, pieces, &held.edges, spec)?);

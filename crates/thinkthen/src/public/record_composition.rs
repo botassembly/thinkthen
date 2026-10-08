@@ -228,6 +228,7 @@ pub struct RecordReading {
     options: Option<core::Pointer>,
     context_schema: Option<super::InputDeclaration>,
     examples: Option<core::Pointer>,
+    seed_spans: Option<core::Pointer>,
 }
 impl RecordReading {
     /// Admit ordered pointers using the ordinary reader, including field-name clashes.
@@ -249,6 +250,7 @@ impl RecordReading {
             options: options.map(pointer).transpose()?,
             context_schema: None,
             examples: None,
+            seed_spans: None,
         })
     }
     /// Declare the selected per-item context's actual type before composition.
@@ -263,6 +265,13 @@ impl RecordReading {
     /// Refuses malformed JSON Pointers.
     pub fn with_examples_field(mut self, pointer: &str) -> Result<Self, Error> {
         self.examples = Some(core::Pointer::new(pointer).map_err(Error::refused)?);
+        Ok(self)
+    }
+    /// Select unconfirmed recognition seeds; missing retains the fallback.
+    /// # Errors
+    /// Refuses malformed JSON pointers.
+    pub fn with_seed_spans_field(mut self, pointer: &str) -> Result<Self, Error> {
+        self.seed_spans = Some(core::Pointer::new(pointer).map_err(Error::refused)?);
         Ok(self)
     }
     /// Compose one original without inserting context, candidates or provenance into evidence.
@@ -305,6 +314,12 @@ impl RecordReading {
             .map_err(Error::refused)?
             .into_owned();
         Ok(RecordInput {
+            seed_spans: self
+                .seed_spans
+                .as_ref()
+                .map(|pointer| core::selected_seeds(&original.0, pointer).map_err(Error::usage))
+                .transpose()?
+                .flatten(),
             examples: self
                 .examples
                 .as_ref()
@@ -330,6 +345,7 @@ impl RecordReading {
             || self.context.is_some()
             || self.options.is_some()
             || self.examples.is_some()
+            || self.seed_spans.is_some()
         {
             return Err(Error::usage(
                 "image source records have no field, context or options pointers",
@@ -347,6 +363,7 @@ impl RecordReading {
                     && self.context.is_none()
                     && self.options.is_none()
                     && self.examples.is_none()
+                    && self.seed_spans.is_none()
                 {
                     RawRecord::text(&source.record)?
                 } else {
@@ -364,6 +381,7 @@ impl RecordReading {
                 self.admit_images()?;
                 Ok(RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: source.question_input(),
                     context: None,
                     options: None,

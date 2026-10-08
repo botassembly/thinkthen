@@ -32,13 +32,19 @@ impl AdmittedRequest {
             RequestDefinition::Recognize(q) => Some(q.question()),
             _ => None,
         };
-        if let (Some(q), Some(examples)) = (recognize, &options.examples) {
+        let recognize = recognize.cloned().map(|q| {
+            options
+                .seed_spans
+                .as_ref()
+                .map_or(q.clone(), |seeds| q.with_seed_spans(seeds.clone()))
+        });
+        if let (Some(q), Some(examples)) = (recognize.as_ref(), &options.examples) {
             q.clone().with_examples(examples.clone())?;
         }
         let validator = Inline {
             reading: &reading,
             metadata: &metadata,
-            recognize,
+            recognize: recognize.as_ref(),
         };
         match &self.request.call.arguments().input {
             RequestInput::Records { items }
@@ -50,6 +56,7 @@ impl AdmittedRequest {
                         item.original.as_ref(),
                         item.context.as_ref(),
                         item.examples.as_ref(),
+                        item.seed_spans.as_ref(),
                     )?;
                 }
             }
@@ -58,12 +65,14 @@ impl AdmittedRequest {
                 Some(&RequestOriginal::Text { text: text.clone() }),
                 None,
                 None,
+                None,
             )?,
             RequestInput::Json { value, images } => validator.validate(
                 !images.is_empty(),
                 Some(&RequestOriginal::Json {
                     value: value.clone(),
                 }),
+                None,
                 None,
                 None,
             )?,
@@ -85,6 +94,7 @@ impl Inline<'_> {
         original: Option<&RequestOriginal>,
         context: Option<&crate::RecordContext>,
         examples: Option<&Vec<crate::RecognitionExample>>,
+        seeds: Option<&Vec<crate::RecognitionSeedSpan>>,
     ) -> Result<(), Error> {
         if let Some(context) = context {
             for metadata in self.metadata {
@@ -103,6 +113,11 @@ impl Inline<'_> {
         {
             for metadata in self.metadata {
                 metadata.validate_item(&crate::QuestionInput::Text(text.clone()))?;
+            }
+            if let Some(q) = self.recognize {
+                let q = seeds.map_or(q.clone(), |seeds| q.clone().with_seed_spans(seeds.clone()));
+                crate::core::seed_stretches(&q.0, &crate::core::pieces(text))
+                    .map_err(Error::usage)?;
             }
             return Ok(());
         }
@@ -123,6 +138,18 @@ impl Inline<'_> {
         }
         if let (Some(q), Some(examples)) = (self.recognize, &row.examples) {
             q.clone().with_examples(examples.clone())?;
+        }
+        if let Some(q) = self.recognize {
+            let selected = seeds.or(row.seed_spans.as_ref());
+            let q = selected.map_or(q.clone(), |seeds| q.clone().with_seed_spans(seeds.clone()));
+            let text = match &row.original {
+                crate::QuestionInput::Text(text) => text.as_str(),
+                crate::QuestionInput::Record(record) => record.plain(),
+                crate::QuestionInput::Images(_) => {
+                    return Err(Error::usage("recognition seeds require text"));
+                }
+            };
+            crate::core::seed_stretches(&q.0, &crate::core::pieces(text)).map_err(Error::usage)?;
         }
         Ok(())
     }

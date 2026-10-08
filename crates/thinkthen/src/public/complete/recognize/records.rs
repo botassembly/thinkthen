@@ -120,10 +120,13 @@ fn prepare<T: InputEvidence>(
     if record.options.is_some() {
         return Err(Error::usage("recognize takes no per-record options"));
     }
-    let ask = match record.examples {
+    let mut ask = match record.examples {
         Some(examples) => ask.clone().with_examples(examples)?,
         None => ask.clone(),
     };
+    if let Some(seeds) = record.seed_spans {
+        ask = ask.with_seed_spans(seeds);
+    }
     ask.0.metadata.validate_context(record.context.as_ref())?;
     let resolved = crate::public::RecordContext::resolved(record.context.as_ref(), fallback)?;
     let context = resolved

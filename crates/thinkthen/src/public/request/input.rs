@@ -143,6 +143,14 @@ pub struct RequestItem {
     )]
     #[cfg_attr(test, schemars(with = "Vec<OptionSchema>"))]
     pub options: Option<RecordOptions>,
+    /// Unconfirmed recognition proposals using exact Unicode scalar piece edges.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "Vec<crate::RecognitionSeedSpan>"))]
+    pub seed_spans: Option<Vec<crate::RecognitionSeedSpan>>,
     /// Optional recognition boundary examples; an empty list clears the fallback.
     #[serde(
         default,

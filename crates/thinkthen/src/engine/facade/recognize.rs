@@ -128,7 +128,10 @@ impl Engine {
             .zip(&rows)
             .map(|(piece, row)| PieceOdds::new(piece, row))
             .collect();
-        let stretches = found_names(&rows);
+        let mut stretches = found_names(&rows);
+        stretches.extend(crate::core::seed_stretches(spec, &pieces).map_err(Error::Usage)?);
+        stretches.sort_unstable();
+        stretches.dedup();
         let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
         let answers = self.execute(
             &asks,
@@ -324,13 +327,25 @@ pub(crate) fn step_one_context(
         });
     }
     let pieces = pieces(text);
+    crate::core::seed_stretches(spec, &pieces).map_err(Error::Usage)?;
     if pieces.is_empty() {
         return Ok((pieces, Asks::default(), Vec::new()));
     }
     let kinds: Vec<&str> = spec.kinds.iter().map(|(kind, _)| kind.as_str()).collect();
-    if !kinds.is_empty() {
-        let probe = kind_question(text, &pieces, (0, 0), &spec.kinds, Some(spec))
-            .map_err(|_| Error::RecognizeKinds)?;
+    if !kinds.is_empty() || !spec.seed_spans.is_empty() {
+        let generic = vec![("ENTITY".to_owned(), None)];
+        let probe = kind_question(
+            text,
+            &pieces,
+            (0, 0),
+            if kinds.is_empty() {
+                &generic
+            } else {
+                &spec.kinds
+            },
+            Some(spec),
+        )
+        .map_err(|_| Error::RecognizeKinds)?;
         let mut alone = Asks::default();
         alone.add(
             backend,
@@ -397,8 +412,12 @@ fn step_two(
         asked.extend(held);
         let first = stretches.get(group.start).map_or(0, |name| name.0);
         let last = stretches
-            .get(group.end.saturating_sub(1))
-            .map_or(first, |name| name.1);
+            .get(group)
+            .unwrap_or_default()
+            .iter()
+            .map(|name| name.1)
+            .max()
+            .unwrap_or(first);
         if !questions.is_empty() {
             asks.add(
                 backend,

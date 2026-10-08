@@ -189,6 +189,11 @@ fn admit_options(
     {
         return Err(Error::usage("examples apply only to recognize"));
     }
+    if (options.seed_spans.is_some() || options.seed_spans_field.is_some())
+        && function != Function::Recognize
+    {
+        return Err(Error::usage("seed spans apply only to recognize"));
+    }
     if options.options_field.is_some() && function != Function::Choose {
         return Err(Error::usage("options_field applies only to choose"));
     }
@@ -222,6 +227,7 @@ fn admit_options(
             &options.context_field,
             &options.options_field,
             &options.examples_field,
+            &options.seed_spans_field,
         ]
         .into_iter()
         .flatten(),
@@ -366,6 +372,14 @@ pub(super) fn admit_item(
     {
         return Err(Error::usage(
             "explicit item context/options conflict with projection pointers",
+        ));
+    }
+    if item.seed_spans.is_some() && function != Function::Recognize {
+        return Err(Error::usage("item seed spans apply only to recognize"));
+    }
+    if item.seed_spans.is_some() && options.seed_spans_field.is_some() {
+        return Err(Error::usage(
+            "item seed spans conflict with seed_spans_field",
         ));
     }
     if item.examples.is_some() && function != Function::Recognize {

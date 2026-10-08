@@ -112,12 +112,14 @@ fn complete_relation_records_keep_literal_mode_and_refuse_bad_whole_sets_before_
     let lines = [
         RecordInput {
             examples: None,
+            seed_spans: None,
             original: r#"{"name":"literal"}"#,
             context: None,
             options: None,
         },
         RecordInput {
             examples: None,
+            seed_spans: None,
             original: "Other.",
             context: None,
             options: None,

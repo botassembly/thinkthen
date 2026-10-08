@@ -409,6 +409,7 @@ fn different_candidate_orders_split_complete_questions_by_bytes_with_one_image_s
             .iter()
             .map(|names| thinkthen::RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: input.clone(),
                 context: None,
                 options: Some(

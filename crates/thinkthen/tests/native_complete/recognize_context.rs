@@ -21,6 +21,7 @@ fn recognition_keeps_record_context_separate_and_replays_only_unchanged_context(
     let rows = || {
         [Some("first"), Some("second"), Some(""), None].map(|context| RecordInput {
             examples: None,
+            seed_spans: None,
             original: "Ada met Acme.",
             context: context.map(Into::into),
             options: None,
@@ -58,6 +59,7 @@ fn recognition_keeps_record_context_separate_and_replays_only_unchanged_context(
             &ask,
             [RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: "Ada met Acme.",
                 context: Some("changed".into()),
                 options: None,
@@ -144,6 +146,7 @@ fn saved_recognition_exchanges_keep_each_context_on_every_stage() {
         .iter()
         .map(|row| RecordInput {
             examples: None,
+            seed_spans: None,
             original: text,
             context: row["context"].as_str().map(Into::into),
             options: None,
@@ -185,6 +188,7 @@ fn recognition_preserves_declared_object_context_and_refuses_mistyped_context_be
     );
     let rows = [RecordInput {
         examples: None,
+        seed_spans: None,
         original: "Ada met Acme.",
         context: Some(context.clone()),
         options: None,
@@ -204,12 +208,14 @@ fn recognition_preserves_declared_object_context_and_refuses_mistyped_context_be
             [
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: "Ada met Acme.",
                     context: Some(context),
                     options: None,
                 },
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: "Ada met Acme.",
                     context: Some("mistyped".into()),
                     options: None,
