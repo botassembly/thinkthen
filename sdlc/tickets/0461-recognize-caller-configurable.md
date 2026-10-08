@@ -1,6 +1,6 @@
 # 0461: Let callers define recognition entities
 
-Status: OPEN. Slice A caller wording, help and shared case is ready for final integration review and landing in 0.2. Implementation, earlier code review, Linux installed custom qualification and the finite model comparison are complete. Slice B is a size-based kind-limit proposal held until TCGA round one; the 20-kind cap remains. Caller wording recovered seven of eleven literal targets in the limited comparison.
+Status: OPEN. Slice A caller wording, help and shared case is ready for landing in 0.2. Implementation, read-only code reviews, Linux installed custom qualification and the finite model comparison are complete. Slice B is authorized after A because TCGA round one has reported and the size-based proposal was sent. It has lower priority than confirmed bugs and remains separate. The 20-kind cap remains. Caller wording recovered seven of eleven literal targets in the limited comparison.
 
 Reviews: accept
 
@@ -13,9 +13,9 @@ Signed: lane 2 ticket owner, 2026-10-07.
 
 Callers supply recognition instructions, an entity definition and descriptions for their own labels. Every recognition stage follows that declaration. A caller can request literal values with units, dates, counts, codes, doses, amounts, ordinary words or web addresses. Recognition applies no fixed semantic label list or suppression to a caller-defined task. The existing question wording remains the compatibility default only when callers omit all custom instructions, entity definition and label descriptions.
 
-Build started on lane 2 after fresh ticket acceptance. Ian promoted 0461 into 0.2 on 2026-10-08 and directed landing now alongside the after-sprint review. The shared custom-wording case and tested example accompany the change. The separate 20-kind-cap proposal remains held until TCGA round one.
+Build started on lane 2 after fresh ticket acceptance. Ian promoted 0461 into 0.2 on 2026-10-08 and directed landing now alongside the after-sprint review. The shared custom-wording case and tested example accompany the change. The separate kind-limit proposal is authorized after A and stays below confirmed bugs in priority.
 
-Slice A contains the implemented caller declaration, corrected help, shared case, prior installed qualification and model comparison. Slice B will propose a recognition-only menu with no count cap, subject to hard encoded-byte admission that preserves each entire menu. Both live and stored adapters would validate that boundary. TCGA round one and the PM decision precede implementation; slice A changes no cap.
+Slice A contains the implemented caller declaration, corrected help, shared case, prior installed qualification and model comparison. Slice B concerns a recognition-only menu with no built-in count cap, subject to hard actual encoded-byte admission in both stages, complete menus and preserved storage and replay. TCGA round one and the proposal condition are satisfied. Build B separately after A. Slice A changes no cap.
 
 ## Evidence
 
