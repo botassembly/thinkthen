@@ -2,6 +2,18 @@
 use super::{compile, crate_dir, run_with, text};
 use conformance_backend::Backend;
 #[test]
+fn public_batch_metadata_uses_header_kinds_for_setting_and_both_warning_sides() {
+    let backend = Backend::start().expect("loopback");
+    let output = run_with(
+        &compile(&crate_dir().join("tests/c/batch_metadata.c")),
+        &format!("{}/generic/v1", backend.origin()),
+        b"",
+        &[],
+    );
+    assert_eq!((output.status.code(), text(&output.stderr)), (Some(0), String::new()));
+    assert_eq!(backend.count(), 5);
+}
+#[test]
 fn immutable_image_bytes_dimensions_and_filename_outlive_the_engine() {
     let backend = Backend::start().expect("loopback");
     let image = crate_dir().join("../../specification/fixtures/images/red.png");

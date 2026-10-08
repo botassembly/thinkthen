@@ -187,8 +187,8 @@ impl Engine {
                         .map_err(|error| error.at_record(at))?;
                 let Original { held, .. } = original
                     .ok_or_else(|| Error::defect("a complete pulled row lost its original"))?;
-                let mut run = super::run(&engine, &held.question, self.profile.as_ref());
-                run.batch_setting = Some(setting.into());
+                let mut run =
+                    super::batch_run(&engine, &held.question, self.profile.as_ref(), setting);
                 run.context_sha256 = held.context_sha256;
                 let events = attempts.then(|| judged.answered.attempts.clone());
                 let mut canonical = super::atomic(

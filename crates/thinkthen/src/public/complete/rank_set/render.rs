@@ -121,8 +121,8 @@ fn members<T>(
         .zip(set.questions())
         .enumerate()
         .map(|(member, (((judged, keys), question), named))| {
-            let mut run = super::super::run(engine, question, public.profile.as_ref());
-            run.batch_setting = Some(setting.into());
+            let mut run =
+                super::super::batch_run(engine, question, public.profile.as_ref(), setting);
             run.context_sha256.clone_from(&held.context_sha256);
             let attempts = captured.then(|| judged.answered.attempts.clone());
             let mut canonical = super::super::atomic(

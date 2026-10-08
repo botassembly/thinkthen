@@ -181,6 +181,25 @@ fn run<'a>(
     }
 }
 
+fn batch_run<'a>(
+    engine: &'a crate::engine::facade::Engine,
+    question: &'a Question,
+    profile: Option<&'a core::BackendProfile>,
+    setting: core::Setting,
+) -> Run<'a> {
+    let mut result = run(engine, question, profile);
+    let saved = question.authored_threshold.then(|| {
+        question
+            .batch
+            .as_ref()
+            .and_then(core::Setting::of_json)
+            .unwrap_or(core::Setting::Records(std::num::NonZeroUsize::MIN))
+    });
+    result.batch_setting = Some(setting.into());
+    result.batch_warning = saved.and_then(|saved| core::BatchWarning::between(saved, setting));
+    result
+}
+
 fn spec(function: InputFunction, question: &Question, shown: Value, record: usize) -> AtomicSpec {
     AtomicSpec {
         declarations: question.reading_metadata(),
