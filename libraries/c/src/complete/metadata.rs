@@ -48,11 +48,11 @@ pub(super) const fn origin(value: Origin) -> u32 {
 fn batch(value: BatchSetting) -> BatchV1 {
     match value {
         BatchSetting::Max => BatchV1 {
-            kind: 1,
+            kind: 2,
             records: 0,
         },
         BatchSetting::Records(count) => BatchV1 {
-            kind: 2,
+            kind: 1,
             records: count.get(),
         },
     }

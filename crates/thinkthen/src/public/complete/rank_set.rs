@@ -187,18 +187,7 @@ impl Engine {
     }
 }
 fn questions(set: &core::QuestionSet) -> Vec<Question> {
-    set.questions()
-        .iter()
-        .map(|member| Question {
-            metadata: member.metadata().clone(),
-            core: member.question().clone(),
-            threshold: None,
-            model: None,
-            profile: set.profile().cloned(),
-            batch: None,
-            kind: crate::public::question::Kind::Rank,
-        })
-        .collect()
+    crate::public::rank_set::member_questions(set)
 }
 fn prepare<T: InputEvidence>(
     questions: &[Question],

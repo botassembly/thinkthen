@@ -1,5 +1,5 @@
 //! Original occurrences and per-record controls use the existing eager pipeline.
-use super::{admitted, atomic, run, spec};
+use super::{admitted, atomic, spec};
 use crate::core::{self, Value, pack::Ask};
 use crate::engine::{
     facade,
@@ -234,8 +234,8 @@ impl Engine {
                 .zip(held)
                 .enumerate()
                 .map(|(at, ((judged, keys), item))| {
-                    let mut run = run(&engine, &item.question, self.profile.as_ref());
-                    run.batch_setting = Some(setting.into());
+                    let mut run =
+                        super::batch_run(&engine, &item.question, self.profile.as_ref(), setting);
                     run.context_sha256 = item.context_sha256;
                     let attempts = requested_attempts.then(|| judged.answered.attempts.clone());
                     let mut result = atomic(

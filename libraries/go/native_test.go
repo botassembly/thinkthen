@@ -108,6 +108,34 @@ func completeQuestion(f Function) Question {
 	}
 	return q
 }
+func TestNativeBatchMetadataKeepsPublicMeaning(t *testing.T) {
+	e, count := completeBackend(t)
+	source := completeRecords("Refund me.")
+	question := SavedQuestion(LoadAtomic, json.RawMessage(`{"decide":"Refund?","threshold":0.5,"batch":1}`))
+	for _, example := range []struct {
+		controls CallControls
+		kind     BatchKind
+		records  uint64
+	}{
+		{CallControls{Batch: Some(uint64(2))}, BatchKindRecords, 2},
+		{CallControls{}, BatchKindMax, 0},
+	} {
+		call, err := e.DecideComplete(context.Background(), question, source, example.controls)
+		if err != nil {
+			t.Fatal(err)
+		}
+		meta := call.Rows[0].Common.Meta
+		if !meta.BatchSetting.Present || meta.BatchSetting.Value.Kind != example.kind || meta.BatchSetting.Value.Records != example.records {
+			t.Fatalf("decoded batch setting: %+v", meta.BatchSetting)
+		}
+		if !meta.BatchWarning.Present || meta.BatchWarning.Value.TunedFor.Kind != BatchKindRecords || meta.BatchWarning.Value.TunedFor.Records != 1 || meta.BatchWarning.Value.Running.Kind != example.kind {
+			t.Fatalf("decoded batch warning: %+v", meta.BatchWarning)
+		}
+	}
+	if count.Load() != 2 {
+		t.Fatalf("want two actual requests, got %d", count.Load())
+	}
+}
 func checkNativeCall[T any](t *testing.T, call CompleteCall[T], err error, want int) {
 	t.Helper()
 	if err != nil {
