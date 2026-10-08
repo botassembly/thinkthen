@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::OpenFlags;
 
 use super::{SQLITE, exists, make_folder, require_private};
 use crate::engine::error::Error;
@@ -36,11 +36,10 @@ impl Probe {
         if exists(&sqlite)? {
             // Closing a raw descriptor on the SQLite inode can drop another
             // connection's POSIX locks in this process.
-            let connection = Connection::open_with_flags(
+            let connection = super::opening::open(
                 &sqlite,
                 OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-            )
-            .map_err(|_| Error::RecordingStorage)?;
+            )?;
             if connection
                 .is_readonly("main")
                 .map_err(|_| Error::RecordingStorage)?

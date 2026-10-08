@@ -110,7 +110,7 @@ pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
 /// for another writer. The lock ends when the connection drops.
 #[cfg(not(windows))]
 fn locked(sqlite: &Path) -> Result<Connection, Error> {
-    let connection = Connection::open(sqlite).map_err(storage)?;
+    let connection = super::opening::open(sqlite, rusqlite::OpenFlags::default())?;
     connection.busy_timeout(Duration::ZERO).map_err(storage)?;
     waiting(Duration::from_secs(30), &Cancel::default(), || {
         connection.execute_batch("BEGIN IMMEDIATE")

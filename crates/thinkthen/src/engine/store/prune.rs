@@ -265,7 +265,7 @@ fn open(folder: &Path, writable: bool) -> Result<Option<Connection>, Error> {
     } else {
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX
     };
-    let connection = Connection::open_with_flags(&path, flags).map_err(storage)?;
+    let connection = super::opening::open(&path, flags)?;
     connection.busy_timeout(Duration::ZERO).map_err(storage)?;
     let cancel = Cancel::default();
     if writable {

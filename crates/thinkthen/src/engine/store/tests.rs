@@ -139,15 +139,15 @@ fn an_existing_index_needs_no_writer_and_a_missing_index_is_repaired() {
     }
 }
 
-fn scratch() -> tempdir::Scratch {
+pub(super) fn scratch() -> tempdir::Scratch {
     tempdir::Scratch::new()
 }
 
-mod tempdir {
+pub(super) mod tempdir {
     use std::path::{Path, PathBuf};
 
     /// A folder under the target directory, removed on drop.
-    pub(super) struct Scratch(PathBuf);
+    pub(crate) struct Scratch(PathBuf);
 
     impl Scratch {
         pub(super) fn new() -> Self {
@@ -159,7 +159,7 @@ mod tempdir {
             Self(path)
         }
 
-        pub(super) fn path(&self) -> &Path {
+        pub(crate) fn path(&self) -> &Path {
             &self.0
         }
     }
