@@ -1,6 +1,6 @@
 # The `ruby` platform gem on RubyGems is still the 0.0.1 placeholder
 
-Status: open. Filed 2026-10-03 from the 0.1.1 release (record `sdlc/records/0128-release-0-1.md`). Owner: the queue owner.
+Status: open only for public registry remediation/publication and qualification under the release hold. The 0.2 platform and diagnostic fallback gems are implemented.
 Milestone: 0.2
 
 RubyGems holds `thinkthen` 0.1.1 as four platform gems: `x86_64-linux`, `aarch64-linux`, `x86_64-darwin-24` and `arm64-darwin-24`. The plain `ruby` platform gem is still 0.0.1, the placeholder that reserved the name before the release. The release workflow publishes no `ruby` platform gem.
@@ -16,3 +16,7 @@ Choices:
 3. Publish a `ruby` platform gem that builds the native extension from source with Rust. That costs a Rust toolchain on the user's machine, as decision 7 of ticket 0128 rejected for PyPI.
 
 The proposed default is choice 1, the smallest step, followed by choice 2 if users report confusion. Windows gems arrive with the Windows stage 1 tickets, which shrinks the fallback case.
+
+## Reconciliation, 2026-10-08
+
+Commit `e2ec4deb6` builds the matching-version unsupported-platform diagnostic gem, and the `60f0dcb9a` installed campaign qualifies candidate Ruby behavior. The plain fallback no longer silently installs an inert candidate. Old public 0.0.1 placeholders remain an external registry obligation until Ian authorizes remediation/publication; no yank or public release ran. [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08) does not claim current registry remediation. The old proposed default and four-platform list below are historical alternatives, superseded for candidate assembly by the diagnostic gem.

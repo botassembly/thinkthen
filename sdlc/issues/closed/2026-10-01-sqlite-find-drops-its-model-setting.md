@@ -1,6 +1,7 @@
 # SQLite `thinkthen_find` drops its `model` setting
 
-Status: open. Found 2026-10-01 while building ticket 0378. Owner: the queue owner.
+Status: closed.
+Resolution: f22c092ca
 Milestone: 0.2
 
 SQLite's `thinkthen_find` accepts `{"model":"NAME"}` in its settings and then sends the engine's own model. DuckDB and PostgreSQL send the named model.

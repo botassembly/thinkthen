@@ -1,6 +1,7 @@
 # Recipe: Rules propose, the model confirms
 
-Status: closed. Ticket 0402 publishes the approved recipe with scoped measurements and runnable examples.
+Status: closed.
+Resolution: 94c06a551
 Kind: recipe
 Milestone: 0.2
 Owner: the queue owner
@@ -16,9 +17,9 @@ Confirm proposed values with choose, preserve exact copies and explicit absence,
 # Recipe: Rules propose, the model confirms
 
 Status: open. Recipe draft. Ian dropped extract as a function on 2026-10-04 in the change to the docs lane-order message. This relabels the extract draft filed on 2026-10-03. Owner: the queue owner. Ticket 0402 owns the recipe page and harness. The page remains draft until its measured numbers publish.
-Kind: idea
+Historical kind: idea
 When: the experiments team's experiment 4 reports
-Milestone: 0.2
+Historical milestone: 0.2
 
 Regular expressions or a dictionary match with Aho-Corasick find candidates. Decide or choose confirms the true positives. Choose takes options per record; candidate-finding code belongs to the recipe. This uses the existing functions and introduces no extract function or annotate mode.
 

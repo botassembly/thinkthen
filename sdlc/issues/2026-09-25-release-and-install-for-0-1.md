@@ -1,8 +1,8 @@
 # Release and install for 0.1
 
-Status: open. Owner: ticket 0128, whose Phase 4 (Ian's release run) remains. Phase 3b is done: rehearsal runs 36945370940, 36998358908 and 37010060315 passed every job through `draft` on all four targets, the last from `release/0.1` at `4e880cdf6`. Shortened 2026-09-30. Ian's ruling 10 of 2026-09-30: no public release before 0.1, and 0.1 waits for every surface and binding. Local and internal releases are fine. The eleven C-door language packages merged in on 2026-09-30; see "Language packages" below.
+Status: open only for carried-forward platform/public-install obligations under 0425 and 0398 in 0.2. Ticket 0128 completed the 0.1 release; the tables and Phase 4 requirements below preserve historical scope.
 
-Milestone: 0.1
+Milestone: 0.2
 
 ## Rulings that govern it
 
@@ -72,3 +72,7 @@ Each package was proved on one Linux host with one toolchain version, against sy
 Done when a tagged 0.1.0 release installs from every named channel on a clean machine, and each package passed the replay cases on its own platform before it was published.
 
 Phase 4 also runs each site install page's command once on a clean machine after the first publish. `SURFACES` in `site/src/data/catalog.mjs` holds every line. Owner: ticket 0128's release run. Added 2026-09-30 at the site team's request. A package rename is announced to the site team first, because the site build checks each page's package name against the binding's metadata.
+
+## Reconciliation, 2026-10-08
+
+[0128](../tickets/0128-release-and-install.md) records the completed public 0.1.2 release and its actual channel checks. Public install text still names 0.1.2. This issue no longer asks to publish 0.1 or finish its old Phase 4. Final 0.2 Windows/macOS qualification, public package installation and release QA remain with [0425](../tickets/0425-sdk-consistency-0-2-plan.md) and [0398](../tickets/0398-release-safety.md). The original failure/platform limits below remain history, not new 0.2 qualification. Ian’s 2026-10-08 release hold governs every candidate tag, workflow, release branch and publication. Native Windows cache admission/coexistence remains explicitly owed under [0474](../tickets/0474-recognize-cache-admission.md) and [0480](../tickets/0480-cache-convert-replay-coexistence.md).

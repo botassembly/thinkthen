@@ -1,6 +1,7 @@
 # Recipe: Verify a claim
 
-Status: closed. Ticket 0402 publishes the approved recipe with scoped measurements and runnable examples.
+Status: closed.
+Resolution: 94c06a551
 Kind: recipe
 Milestone: 0.2
 Owner: the queue owner
@@ -13,12 +14,12 @@ A person reviews every supports result against the original source before action
 
 ## Original draft history
 
-# Draft function: verify
+### Draft function: verify
 
-Status: open. Draft. Filed 2026-10-03 from the docs message "Proxy, terms and function drafts decided" and its addenda, on Ian's product decisions of 2026-10-02. No build work until the experiment reports. Owner: the queue owner.
-Kind: idea
-When: experiment 0007 reports
-Milestone: 0.2
+Historical disposition: open draft. Filed 2026-10-03 from the docs message "Proxy, terms and function drafts decided" and its addenda, on Ian's product decisions of 2026-10-02. No build work until the experiment reports. Owner: the queue owner.
+Historical kind: idea
+Historical trigger: experiment 0007 reports
+Historical milestone: 0.2
 
 `verify` would judge whether the text supports a claim. It likely covers qualification: whether a statement is negated, uncertain, or someone else's claim, with the plain statement as the claim.
 

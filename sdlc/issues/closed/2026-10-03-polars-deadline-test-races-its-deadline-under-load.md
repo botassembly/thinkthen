@@ -1,9 +1,11 @@
 # The Polars deadline test races its own deadline under load
 
-Status: open. Filed 2026-10-03 from the surfaces checkpoint sweep of 2026-10-03 on `release/0.1`. Owner: the queue owner.
+Status: closed.
+Resolution: 730aa68ed
 Milestone: 0.2
 Kind: debt
 Debt: 036
+Paid: 2026-10-08
 Severity: low
 Pay when: the next checkpoint sweep, or a second failure.
 

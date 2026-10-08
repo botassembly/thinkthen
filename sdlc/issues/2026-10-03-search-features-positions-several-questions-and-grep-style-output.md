@@ -1,6 +1,6 @@
 # Search features: positions, several questions, and grep-style output
 
-Status: open. Filed 2026-10-03 from two docs messages of 2026-10-02: "Five asks from searching talk transcripts with rank" (asks 1 to 4) and "Six features for searching text, measured". Ian agreed the library and command-line split below on 2026-10-02. Not a ticket. Owner: the queue owner.
+Status: open only for remaining complete SDK adoption and final qualification under 0425. CLI search intake/display and native rank sets have landed; the numbered asks below preserve the original proposal.
 Milestone: 0.2
 
 Ian asked for ThinkThen to work as a smarter grep, so the transcript how-to needs no awk or paste. The docs team's experiment 422 measured search approaches against 15 known quotes in three talk transcripts. The best approach found 14 of 15, where the earlier search found 5. All 36 live runs cost $0.13. The docs message holds each measurement.
@@ -34,3 +34,7 @@ Windowing and surrounding lines stay out of the library for now. They are one li
 A cheaper form needs no feature: one question that names all four ideas found 9 of 15 in 300 lines for a quarter of the cost. The how-to can teach it today.
 
 Related: `2026-10-01-rank-keeps-only-records-over-a-threshold.md`, `2026-10-03-rank-details-prints-value-null.md`, and the later idea `2026-09-30-batch-command-runs-many-questions-in-one-process.md`.
+
+## Reconciliation, 2026-10-08
+
+Ticket 0401 delivered intake, windows, numbers, scores, neighbors and native/CLI rank sets; `57de974e8` lands display, and `ffb1b253d` finalizes CLI rank positions. [0401 record](../records/0401-search-intake-and-display.md) states the reviewed behavior: top applies after turns merging, replacing the original per-question-top proposal below. Typed ordered SDK members landed at `b835816b6` and `0d78347db`; [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08) covers the installed consumers at `60f0dcb9a`. The public [rank contract](../../specification/rank.md) governs exact ordering and complete member facts. Current Request adoption remains with the 0491 family tickets, and final platform/release proof remains with 0425. Transcript-search recipe publication stays later; it is not missing runtime behavior.

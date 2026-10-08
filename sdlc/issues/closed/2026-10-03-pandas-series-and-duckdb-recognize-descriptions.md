@@ -1,6 +1,7 @@
 # The pandas binding refuses a Series on four functions, and DuckDB's recognize takes no kind descriptions
 
-Status: open. Filed 2026-10-03 from the docs message "Two binding gaps the docs found" of 2026-10-01 (site ticket 0052 slice A). Owner: the queue owner.
+Status: closed.
+Resolution: e056fa21c
 Milestone: 0.2
 
 Every function page opens with the same simple call in every language. Two gaps stop a sample from matching the command-line opening.
@@ -13,3 +14,7 @@ Neither belonged in 0.1. Each is a small change on one binding, and each keeps t
 ## 2026-10-06 ownership
 
 0410 owns pandas function/input parity and updates the affected plain-Series examples. 0434 owns DuckDB kind descriptions and its recognize example. Both are required in 0.2; 0296 owns accessor dispatch separately.
+
+## Verified fixes
+
+The pandas Series behavior landed with 0410 at `730aa68ed`. SQL kind descriptions landed with 0434/0435 at `7b3f7729b`; `e056fa21c` records the final integration results. [Dataframe record](../../records/0410-dataframes-ten-functions.md) and [SQL record](../../records/0434-sql-question-and-option-parity.md) retain the actual source/installed checks. The failure descriptions above describe the earlier source.

@@ -15,3 +15,7 @@ The work:
 A doc sample that fails at a checkpoint is fixed on its page, or filed as a code bug.
 
 Items 1 and 4 landed at `8a2db1df0`: `npm run test-docs` runs the doc tests, and Pages checks strict binding proof. Items 2 and 3 remain open with release safety. Ticket 0402 slice A changes no checkpoint or release workflow.
+
+## Reconciliation, 2026-10-08
+
+Items 1 and 4 remain landed at `8a2db1df0`; item 2 checkpoint enforcement and item 3 strict release proof remain open. `68abc60a4` enforces exact-commit rehearsal routing, which does not by itself run every documentation sample or replace those two obligations. The introductory sentence about neither workflow running them is historical; the current test-docs/Pages checks own their stated scope.

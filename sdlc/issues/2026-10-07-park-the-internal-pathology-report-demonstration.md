@@ -1,6 +1,7 @@
 # Park the pathology report demonstration
 
 Status: open.
+Milestone: later
 
 Kind: idea
 When: Trial curation demonstrates value and the queue owner accepts a bounded experiment.
