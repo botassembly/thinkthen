@@ -55,7 +55,14 @@ fi
 	cargo clippy --locked --offline --all-targets -- -D warnings
 	cargo test --locked --offline --lib
 }
-PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet --bin thinkthen_read_inputs
+if [ "$PG_HOST" = Darwin ]; then
+	# Cargo also links this package's library when it builds the client reader.
+	# Its PostgreSQL symbols resolve when the server loads the extension (ticket 0336).
+	PGRX_PG_CONFIG_PATH="$PG_CONFIG" RUSTFLAGS='-Clink-arg=-Wl,-undefined,dynamic_lookup' \
+		cargo build --locked --offline --quiet --bin thinkthen_read_inputs
+else
+	PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet --bin thinkthen_read_inputs
+fi
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
 # package.sh reads the same pg_config and target folder (ticket 0128).
