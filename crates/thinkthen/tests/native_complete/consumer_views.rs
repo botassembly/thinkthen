@@ -246,11 +246,8 @@ fn loaded_atomic_and_rank_preparation_selects_original_fields_and_retains_author
         .decide_records_complete_with(
             &question,
             [thinkthen::RecordInput {
-                examples: None,
-                seed_spans: None,
                 original: missing,
-                context: None,
-                options: None,
+                ..records()[0].clone()
             }],
             CallOptions::new(),
         )

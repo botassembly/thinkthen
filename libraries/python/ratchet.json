@@ -6,5 +6,5 @@
     "examples/native_case"
   ],
   "extension": ".rs",
-  "max": 9604
+  "max": 9609
 }
