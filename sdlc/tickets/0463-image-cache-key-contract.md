@@ -9,6 +9,8 @@ Severity: medium documentation inconsistency.
 
 Reviews: revision e71fa0b01, accept
 
+Reviews: revision 281f586225577cba3851c54f1a4a8e1787d68f15, accept
+
 ## Outcome
 
 The public v2 key formula reproduces both text and image keys offline. Existing image rows and native key validation remain unchanged.
