@@ -1,6 +1,6 @@
 # 0506: Judge caller-supplied recognition spans
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -29,6 +29,8 @@ struct RecognitionSeedSpan
 ```
 
 Reviews: revision 2010023e8, accept
+
+Landed: d0facac
 
 ## Outcome
 
