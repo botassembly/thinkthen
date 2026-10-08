@@ -259,13 +259,25 @@ fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() 
                 .unwrap();
         use std::io::{BufRead as _, Read as _, Write as _};
         child.stdin.as_mut().unwrap().write_all(PING).unwrap();
-        let mut line = String::new();
-        let mut reader = std::io::BufReader::new(child.stdout.take().unwrap());
-        reader.read_line(&mut line).unwrap();
-        drop(child.stdin.take());
-        let mut stdout = line.into_bytes();
-        reader.read_to_end(&mut stdout).unwrap();
-        let output = crate::wait::finish(child, "mcp configuration").unwrap();
+        let (ready, observed) = std::sync::mpsc::channel();
+        let stdout = child.stdout.take().unwrap();
+        let reader = std::thread::spawn(move || {
+            let mut reader = std::io::BufReader::new(stdout);
+            let mut bytes = Vec::new();
+            reader.read_until(b'\n', &mut bytes).unwrap();
+            ready.send(()).unwrap();
+            reader.read_to_end(&mut bytes).unwrap();
+            bytes
+        });
+        if observed.recv_timeout(crate::wait::CHILD_DEADLINE).is_err() {
+            let _ = child.kill();
+            let _ = child.wait();
+            reader.join().unwrap();
+            panic!("MCP sent no ping response before the child deadline");
+        }
+        let output = crate::wait::finish(child, "mcp configuration");
+        let stdout = reader.join().unwrap();
+        let output = output.unwrap();
         assert_eq!(
             output.status.code(),
             Some(0),
