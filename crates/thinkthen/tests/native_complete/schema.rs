@@ -1,4 +1,5 @@
 //! Validate actual public calls with the same strict schema packaged for hosts.
+use super::child::ChildEnvironment as _;
 use super::*;
 use serde::Serialize;
 use std::io::Write;
@@ -27,7 +28,7 @@ if case['definition']:
     for row in rows: validator.validate(row)
 "#;
     let mut child = Command::new("python3")
-        .env_clear()
+        .clear_environment()
         .env("PATH", std::env::var_os("PATH").unwrap_or_default())
         .args(["-c", script])
         .stdin(Stdio::piped())
