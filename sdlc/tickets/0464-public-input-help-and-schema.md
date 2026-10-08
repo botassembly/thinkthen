@@ -13,6 +13,8 @@ Reviews: revision 16eb57be4beea685e5d1b3f7f0f392b13d27de6a, accept
 
 Reviews: revision a0b2454d92c45b8a1b6380fd2ec0876cab63ea9c, accept
 
+Reviews: revision c308dd78736b63b87d9b5197016022444904d2b9, accept
+
 ## Outcome
 
 CLI help, decide output documentation and MCP tool schemas describe the behavior callers can use. The MCP command prints the established configuration permission warning on standard error. Invalid inputs still refuse locally before file reads or calls.

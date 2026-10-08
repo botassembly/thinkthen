@@ -9,3 +9,5 @@ Focused tests passed for schema combinations, native default/explicit source uni
 ## What the build taught us
 
 The native reader treats an omitted unit as line, so image media needs an explicit file unit in the advertised schema. MCP's early command path needs the permission bit from its existing configuration read to issue the same warning as the ordinary CLI without reading the file again.
+
+Fresh code review accepted `c308dd78736b63b87d9b5197016022444904d2b9` after the MCP startup test bounded its first reply and process exit and checked the complete protocol output.
