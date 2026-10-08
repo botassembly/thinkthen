@@ -17,3 +17,9 @@ Provide generated typed access for C, Zig, Ada and COBOL without hand-mirroring 
 - Changes: After0492/0502/0503, review generated carriers versus generated JSON accessors per host, then replace post0.1 mirrors only when installed typed cases pass. Claim `libraries/c/**`, `libraries/zig/**`, `libraries/ada/**`, `libraries/cobol/**`, respecting0482 and generated-header ownership.
 - Proof: C compiler and each installed host consumer read full typed fields and failures through shared cases. Raw JSON availability alone does not satisfy parity.
 - Defers: Business policy and language removal. Size: large constrained-host migration.
+
+## Revised code-reduction estimate
+
+The fallback generates layouts while retaining host value copying and native lifetime handling. At main `26fc8c900`, `libraries/ada/src/thinkthen_c*.ads` contains 1,967 nonblank lines and the seven COBOL `tt-*.cpy` carrier copybooks excluding constants contain 699. Estimate at most about 2,700 hand-maintained lines becoming generated across these named files. This is an upper bound: package declarations, imports, constants and any retained compatibility code reduce the replaceable portion. Generated carrier lines remain, so net source deletion may be small or zero after generator code is added.
+
+C already consumes the generated header. Zig can import it directly; its execution and owned-result code is not a disposable layout copy. The 0502 experiment did not establish a deletion estimate for those adapters. Preserve typed values, failure facts, representation limits and lifetimes; record actual manual code removed at landing. Do not apply the study's 25,000–35,000-line schema-reader estimate to this layout-only fallback.
