@@ -1,6 +1,6 @@
 # The build queue: everything left, in order
 
-Historical. [cleanup-2026-09-30.md](cleanup-2026-09-30.md) sets the current order of work.
+Historical. Read current status and order through `pm daily` and `pm next`; [milestones.md](milestones.md) defines release outcomes.
 
 Written 2026-09-21 by the product side at Ian's request. It folds the quality wave 1.5 findings, the product rulings, and every surface into one queue. It replaces nothing: `build-team-response-to-handoff-2026-09-21.md` holds the ticket plan and `go-ahead-for-the-build-team-2026-09-21.md` holds the approval. This page is the order and the map. The build team creates each ticket when its turn begins, and every ticket keeps its independent review. Ticket 0055's first pass was green on every test and the reviewer still rejected it for real gaps, which is the review working.
 

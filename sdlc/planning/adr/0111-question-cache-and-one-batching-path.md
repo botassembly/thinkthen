@@ -3,7 +3,7 @@
 - Status: **Accepted** by the coordinator, 2026-09-30, after two fresh design reviews. Ian can overturn each item.
 - Date: 2026-09-29
 
-This ADR builds Ian's rulings 2 to 6 and 8 of 2026-09-29 in `sdlc/planning/cleanup-2026-09-30.md`. It replaces ADR 0048 item 5 and amends the ADRs listed at the end. Ruling 7, one result schema generated from Rust, is its own ticket.
+This ADR builds Ian's rulings 2 to 6 and 8 of 2026-09-29 in `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`. It replaces ADR 0048 item 5 and amends the ADRs listed at the end. Ruling 7, one result schema generated from Rust, is its own ticket.
 
 ## Context
 

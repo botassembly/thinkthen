@@ -9,6 +9,8 @@ Review: accept. Fresh read-only Sol review accepted the design after the signoff
 
 Reviews: revision b6970338e, accept
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Design caller-supplied context separately for recognize stages so a caller can guide boundary, kind/edge, or relation questions without repeating one shared summary everywhere.

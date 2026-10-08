@@ -2,7 +2,7 @@
 
 Written 2026-09-22 by the product side for the architect. It covers the Rust engine and the command only. The library team owns the languages and the databases on the `surfaces` branch, and their items are listed at the end so nothing is picked up twice. Ian can overturn anything here.
 
-Read first: `handoff-to-the-architect-2026-09-21.md`, then `build-queue-2026-09-21.md` for the lanes, then `open-issues-for-the-architect-2026-09-22.md` for the map. This page is the short list.
+Historical sources: [the architect handoff](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/handoff-to-the-architect-2026-09-21.md), `build-queue-2026-09-21.md` and `open-issues-for-the-architect-2026-09-22.md`. Read current order and lanes through pm. This page records the earlier short list.
 
 ## Where the engine stands
 

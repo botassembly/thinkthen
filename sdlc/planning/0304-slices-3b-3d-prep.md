@@ -2,7 +2,7 @@
 
 Status: preparation for builders, 2026-09-30. Read against `origin/ticket/0304-s3a-engine-ask-all` at `4d0336943`, which is still changing. Lane 2 owns that branch and ticket 0304. This page changes neither. Line numbers below are from the 3a branch unless a line says `main`. Ian can overturn each recommendation.
 
-Read first: `sdlc/planning/cleanup-2026-09-30.md` "Lessons for builders", ADR 0111 with its 2026-09-30 amendment, and ticket 0304 "Slice 3 split" on the 3a branch.
+Read first: [historical lessons from 2026-09-30](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/cleanup-2026-09-30.md#historical-lessons-2026-09-30), ADR 0111 with its 2026-09-30 amendment, and ticket 0304 "Slice 3 split" on the 3a branch.
 
 ## What 3a already did that the ticket gave to 3b
 

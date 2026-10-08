@@ -1,6 +1,6 @@
 # Remaining queue reconciliation, 2026-09-28
 
-Source pin: `94db1bd24887bfcd05dfa0bec901b7198cfa69cc`. This is a read-only disposition recommendation, not a status, claim, contract, or release decision. Authority is **Every item** and **Lanes** in [the current work plan](../planning/work-plan-2026-09-27.md): 209 tracked rows, 129 done, 67 todo, 10 non-issues, 3 blocked; 62 prepared rows, 17 closed and 45 open. The old 75-row remaining-batches tables are historical. This pass reused the reviewed preparation and build records, then checked the original criteria and current source/pages for the close candidates below. It did not audit every source path behind all 67 rows or run a host package.
+Source pin: `94db1bd24887bfcd05dfa0bec901b7198cfa69cc`. This is a read-only disposition recommendation, not a status, claim, contract, or release decision. Authority is **Every item** and **Lanes** in [the current work plan](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md): 209 tracked rows, 129 done, 67 todo, 10 non-issues, 3 blocked; 62 prepared rows, 17 closed and 45 open. The old 75-row remaining-batches tables are historical. This pass reused the reviewed preparation and build records, then checked the original criteria and current source/pages for the close candidates below. It did not audit every source path behind all 67 rows or run a host package.
 
 ## Coverage and classification
 
@@ -18,7 +18,7 @@ I enumerated every `| todo |` entry in the plan's Every item table at the source
 | Batching/wire parity | 2, 3, 5, 28, 35 | 5 |
 | Optional/other behavior | 1, 11, 12, 26, 64, 65, 67 | 7 |
 
-The 12 new-port rows are one held integration wave, not 12 ready package investigations: Zig, Go, JVM, C#, PHP, COBOL, Ada, Swift, Objective-C, Dart, J8 cross-port integration, and C++. [Plan's 0249 instruction](../planning/work-plan-2026-09-27.md) still requires an explicit start. A language's source or experiment is not a supported installed package. `0128` Actions, dispatch, tags, publication and go-live/history reset retain Ian-specific authority. Linux and M5 isolated work may overlap when capacity permits; there is no blanket machine-wide heavy lock. Site copy belongs to marketing; the former temporary specification/library-doc hold has ended. The active `0257` builder owns audit source and cases, while codex-6 owns the C M5 evidence record.
+The 12 new-port rows are one held integration wave, not 12 ready package investigations: Zig, Go, JVM, C#, PHP, COBOL, Ada, Swift, Objective-C, Dart, J8 cross-port integration, and C++. [Plan's 0249 instruction](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md) still requires an explicit start. A language's source or experiment is not a supported installed package. `0128` Actions, dispatch, tags, publication and go-live/history reset retain Ian-specific authority. Linux and M5 isolated work may overlap when capacity permits; there is no blanket machine-wide heavy lock. Site copy belongs to marketing; the former temporary specification/library-doc hold has ended. The active `0257` builder owns audit source and cases, while codex-6 owns the C M5 evidence record.
 
 ## Actionable reconciliations
 

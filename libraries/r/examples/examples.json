@@ -4,7 +4,7 @@
  "language": "r",
  "install": "install.packages(\"thinkthen\", repos = NULL, type = \"source\")",
  "examples": {
-  "plan": {"r": "judge <- tt_decide(\"Is this a complaint?\"); preview <- tt_plan(judge, c(\"one\", \"two\")); cat(preview$records, preview$requests, \"\\n\")", "expected": "2 1"},
+  "plan": {"r": "judge <- tt_decide(\"Is this a complaint?\"); preview <- tt_plan(judge, c(\"one\", \"two\")); cat(preview$records, preview$requests, \"\\n\")", "expected": "2 2"},
   "decide": {
    "r": "cat(tt_decide(\"Is this a complaint?\", \"I demand a refund today\")$value, \"\\n\")",
    "expected": "TRUE"

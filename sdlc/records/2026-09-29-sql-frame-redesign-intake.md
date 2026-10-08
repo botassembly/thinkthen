@@ -25,7 +25,7 @@ Main already uses [ADR0106](../planning/adr/0106-typed-wrapper-call-facts.md) fo
 | F6 | 0297 | R judges and plan |
 | F7 | 0298 | Rust Polars lazy expressions |
 
-The [work plan](../planning/work-plan-2026-09-27.md) owns active file claims and the landing sequence. Codex2 prepares the sixteen tickets and common evidence on a pushed branch. The coordinator assigns implementation files only after review. Numbered drafts remain on their branch until the corresponding code lands. These are subdivisions of the accepted program, not sixteen completed issues or automatic closure of the existing SQL/frame criteria.
+The [work plan](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md) owns active file claims and the landing sequence. Codex2 prepares the sixteen tickets and common evidence on a pushed branch. The coordinator assigns implementation files only after review. Numbered drafts remain on their branch until the corresponding code lands. These are subdivisions of the accepted program, not sixteen completed issues or automatic closure of the existing SQL/frame criteria.
 
 ## Facts corrected before preparation
 

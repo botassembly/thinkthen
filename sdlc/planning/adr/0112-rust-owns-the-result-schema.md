@@ -3,7 +3,7 @@
 - Status: **Accepted** by the coordinator, 2026-09-30, after a fresh design review. Ian can overturn each item.
 - Date: 2026-09-30
 
-This ADR builds Ian's ruling 7 of 2026-09-29 in `sdlc/planning/cleanup-2026-09-30.md`: Rust owns every type, surfaces read results as JSON described by one schema generated from Rust, and ports add only named outcome and error codes and a null that cannot be mistaken for a failure. Ruling 8 limits the rest. It amends ADR 0082 and carries deferred ticket 0291, so the fourteen C-door bindings change once. Ticket 0314 builds it.
+This ADR builds Ian's ruling 7 of 2026-09-29 in `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`: Rust owns every type, surfaces read results as JSON described by one schema generated from Rust, and ports add only named outcome and error codes and a null that cannot be mistaken for a failure. Ruling 8 limits the rest. It amends ADR 0082 and carries deferred ticket 0291, so the fourteen C-door bindings change once. Ticket 0314 builds it.
 
 ## Context
 

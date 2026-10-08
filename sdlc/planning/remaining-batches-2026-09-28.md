@@ -1,8 +1,8 @@
 # Remaining work in ten batches
 
-Historical. [cleanup-2026-09-30.md](cleanup-2026-09-30.md) sets the current order of work.
+Historical. Read current status and order through `pm daily` and `pm next`; [milestones.md](milestones.md) defines release outcomes.
 
-This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-28. It groups work; it neither closes issues nor changes accepted outcomes. The [work plan](work-plan-2026-09-27.md#every-item) remains the status authority. Several rows alias a ticket or share implementation while retaining different criteria. Counts below are rows, not independent builds.
+This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-28. It groups work; it neither closes issues nor changes accepted outcomes. The [work plan](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md#every-item) records the historical inventory; pm owns current status. Several rows alias a ticket or share implementation while retaining different criteria. Counts below are rows, not independent builds.
 
 | Batch | Rows | Preparation and routing |
 | --- | ---: | --- |
@@ -20,7 +20,7 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Current open counts after the release hygiene fix
 
-The live queue has 68 to-do rows after the new settings-site citation regression after accepted audit-output0256, the reviewed register114 disposition and the register50/register88/SQL-alias corrections. The [Every item table](work-plan-2026-09-27.md#every-item) and its current Lanes section own status and assignments. The original 75-row inventory and dated evidence below are history; they must not revive closed issues, superseded platform claims or expired holds. The latest closure mapping and platform evidence remain in the work plan and their reviewed records. Current open rows group as follows:
+The historical snapshot had 68 to-do rows after the new settings-site citation regression after accepted audit-output0256, the reviewed register114 disposition and the register50/register88/SQL-alias corrections. The [Every item table](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md#every-item) and its Lanes section record historical status and assignments; pm owns current assignments. The original 75-row inventory and dated evidence below are history; they must not revive closed issues, superseded platform claims or expired holds. The latest closure mapping and platform evidence remain in the work plan and their reviewed records. The historical rows group as follows:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |

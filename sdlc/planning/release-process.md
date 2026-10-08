@@ -75,4 +75,4 @@ Main's public install text names the latest published release until the next rel
 
 ## 7. Registries and the site
 
-The queue owner owns the code, the release workflow, the site (`site/`) and the registry setup steps since Ian's ruling of 2026-10-02. Ian holds the registry logins. The docs team owned the setup steps before that (ruling 15 of [cleanup-2026-09-30.md](cleanup-2026-09-30.md)). The registries are PyPI, npm, crates.io, RubyGems, NuGet, Maven, pub.dev and the Homebrew tap. [ownership.md](ownership.md) names the folders.
+The queue owner owns the code, the release workflow, the site (`site/`) and the registry setup steps since Ian's ruling of 2026-10-02. Ian holds the registry logins. The docs team owned the setup steps before that (ruling 15 of [the preserved release ruling](../decisions/2026-10-08-preserve-planning-rulings.md#cache-types-and-release-rulings)). The registries are PyPI, npm, crates.io, RubyGems, NuGet, Maven, pub.dev and the Homebrew tap. [ownership.md](ownership.md) names the folders.

@@ -1,6 +1,6 @@
 # Cache follow-up preparation
 
-Read-only source survey at `614471dd`, refreshed against main `5de22aa2` and frozen 0228 branch `ab8c4cd7` (reviewed design `be0a2336`), for experiment 284 findings 09, 10, 23, 40 and 105. This record changes no contract or issue status. Tickets [0159](../tickets/0159-pin-the-default-model.md), [0163](../tickets/0163-the-cache-folder-and-its-pages.md), and prerequisite 0212 are landed. The older register text predates them. The [work-plan approval](../planning/work-plan-2026-09-27.md) approves 0228's narrow before-key exception; its branch's pending-Ian and 0212-hold sentences are historical. Approval does not implement the exception or amend settled ADR 0035.
+Read-only source survey at `614471dd`, refreshed against main `5de22aa2` and frozen 0228 branch `ab8c4cd7` (reviewed design `be0a2336`), for experiment 284 findings 09, 10, 23, 40 and 105. This record changes no contract or issue status. Tickets [0159](../tickets/0159-pin-the-default-model.md), [0163](../tickets/0163-the-cache-folder-and-its-pages.md), and prerequisite 0212 are landed. The older register text predates them. The [work-plan approval](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md) approves 0228's narrow before-key exception; its branch's pending-Ian and 0212-hold sentences are historical. Approval does not implement the exception or amend settled ADR 0035.
 
 | Finding | Current behavior and disposition | Smallest next step, prospective holds and strongest existing proof |
 | --- | --- | --- |
