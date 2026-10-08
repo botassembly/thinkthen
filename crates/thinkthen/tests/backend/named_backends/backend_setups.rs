@@ -104,7 +104,7 @@ fn malformed_setup_fields_refuse_with_exact_value_free_sentences_and_zero_sends(
             .into_iter()
             .find(|field| fields.get(*field).is_some());
         let expected = field.map_or_else(|| BUILTIN_ERROR.to_owned(), |field| format!(
-            "configuration entry for built-in backend `typesafe` cannot set `{field}`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing"
+            "configuration entry for built-in backend `typesafe` cannot set `{field}`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`"
         ));
         assert_eq!(said(&out).1, format!("thinkthen: {expected}\n"));
         assert_eq!(target.count(), 0);

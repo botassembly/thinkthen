@@ -456,7 +456,7 @@ fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
         assert_eq!(
             said(&out).1,
             format!(
-                "thinkthen: configuration entry for built-in backend `{name}` cannot set `url`; remove `url`, `path`, `key_env`, `model`, and `both_sides` to use the built-in backend, or rename both the custom entry in `backends` and the selected `backend` to keep custom routing\n"
+                "thinkthen: configuration entry for built-in backend `{name}` cannot set `url`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n"
             )
         );
         let rated =
