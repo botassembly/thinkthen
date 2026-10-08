@@ -529,7 +529,7 @@
     {"name":"annotate-find-not-a-member","definition":"annotateEntry","response":{"question":{"verb":"find","text":"Which?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"},"response_valid":false},
     {"name":"recognize-details","definition":"recognizeDetails","response":{"schema":"thinkthen.result/1","value":{"entities":[]},"question":{"verb":"recognize"},"answer":{"pieces":[],"names":[],"pairs":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {"name":"relate-details","definition":"relateDetails","response":{"schema":"thinkthen.result/1","value":[],"question":{"verb":"relate","fields":null,"relations":[],"threshold":0.5},"answer":{"questions":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
-    {"name":"c-call-success","definition":"callSuccess","response":{"value":[true,null],"facts":{"records":2,"requests_sent":1,"cache_answers":0,"seconds":0.01,"input_tokens":5,"output_tokens":3,"model":"jev-latest"}}},
+    {"name":"c-call-success","definition":"callSuccess","response":{"value":[true,null],"facts":{"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","records":2,"requests_sent":1,"cache_answers":0,"seconds":0.01,"input_tokens":5,"output_tokens":3,"model":"jev-latest"}}},
     {"name":"c-call-success-missing-facts","definition":"callSuccess","response":{"value":true},"response_valid":false},
     {"name":"c-detailed-record","definition":"callRecordDetails","response":{"schema":"thinkthen.result/1","input":{"id":"one","body":"alpha"},"value":"first","question":{"verb":"choose","text":"Which label?","options":["first","second"]},"answer":{"kind":"choice","pick":"first","probabilities":{"first":0.9,"second":0.1}},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["x"],"failed_questions":0}}},
     {"name":"c-detailed-record-missing-input","definition":"callRecordDetails","response":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Q?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["x"],"failed_questions":0}},"response_valid":false},
@@ -544,8 +544,8 @@
     {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}},
     {"name":"record-missing-pointer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}},
     {"name":"record-error-cannot-be-an-answer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"},"value":null},"response_valid":false},
-    {"name":"plan-p1","definition":"plan","plan_input":{"verb":"decide","question":"asks for a refund","input":["Refund me please."],"settings":{}},"response":{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false,"first_body_utf8":"{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Refund me please.\\\". asks for a refund\"}}}"}},
-    {"name":"plan-tokens-are-a-band","definition":"plan","response":{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":[93,166],"upper_bound":false,"first_body_utf8":null},"response_valid":false},
+    {"name":"plan-p1","definition":"plan","plan_input":{"verb":"decide","question":"asks for a refund","input":["Refund me please."],"settings":{}},"response":{"records":1,"requests":1,"estimated_bytes":182,"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false,"first_body_utf8":"{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Refund me please.\\\". asks for a refund\"}}}"}},
+    {"name":"plan-tokens-are-a-band","definition":"plan","response":{"records":1,"requests":1,"estimated_bytes":182,"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":[93,166],"upper_bound":false,"first_body_utf8":null},"response_valid":false},
     {
       "name": "native-result2-decide-false-author-declarations",
       "definition": "completeDecide",
@@ -1321,6 +1321,9 @@
           }
         },
         "facts": {
+          "largest_request_bytes": 182,
+          "largest_request_estimated_input_tokens": 166,
+          "token_estimate_method": "encoded-body-bytes-908-v1",
           "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
           "cache_answers": 0,
           "input_tokens": 887,
@@ -1455,6 +1458,9 @@
           }
         },
         "facts": {
+          "largest_request_bytes": 182,
+          "largest_request_estimated_input_tokens": 166,
+          "token_estimate_method": "encoded-body-bytes-908-v1",
           "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
           "cache_answers": 0,
           "input_tokens": 887,
@@ -2527,6 +2533,9 @@
           }
         },
         "facts": {
+          "largest_request_bytes": 182,
+          "largest_request_estimated_input_tokens": 166,
+          "token_estimate_method": "encoded-body-bytes-908-v1",
           "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
           "cache_answers": 0,
           "input_tokens": 887,
@@ -2629,6 +2638,9 @@
           }
         },
         "facts": {
+          "largest_request_bytes": 182,
+          "largest_request_estimated_input_tokens": 166,
+          "token_estimate_method": "encoded-body-bytes-908-v1",
           "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
           "cache_answers": 0,
           "input_tokens": 887,
@@ -2886,6 +2898,9 @@
           }
         },
         "facts": {
+          "largest_request_bytes": 182,
+          "largest_request_estimated_input_tokens": 166,
+          "token_estimate_method": "encoded-body-bytes-908-v1",
           "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
           "cache_answers": 0,
           "input_tokens": 887,
@@ -2987,6 +3002,9 @@
           }
         },
         "facts": {
+          "largest_request_bytes": 182,
+          "largest_request_estimated_input_tokens": 166,
+          "token_estimate_method": "encoded-body-bytes-908-v1",
           "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
           "cache_answers": 0,
           "input_tokens": 887,
