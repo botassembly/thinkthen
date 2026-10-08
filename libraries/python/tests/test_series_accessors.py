@@ -10,8 +10,8 @@ CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/cases.json"
 
 def test_priced_recognition_collection_uses_native_checked_cost(backend, tmp_path):
     configuration(tmp_path, {"usd_per_million_input": "0", "usd_per_million_output": "0"})
-    env = isolated(tmp_path)
-    env.update(child_env(backend, tmp_path, "case/41-offsets-past-an-accent-and-an-emoji"))
+    env = child_env(backend, tmp_path, "case/41-offsets-past-an-accent-and-an-emoji")
+    env.update(isolated(tmp_path))
     case = next(row for row in json.loads(CORPUS.read_text())["cases"] if row["id"] == "41-offsets-past-an-accent-and-an-emoji")
     printed = run(f"""
         import pandas as pd, thinkthen as tt, thinkthen.pandas

@@ -104,3 +104,49 @@ What the build taught us: tests copied away from a source checkout must locate t
 The combined Windows corrections at 16ea372f0 passed full local tests. Full lint then found the C fixture total grew by two nonblank lines for serialized native paths and checked output length. The C ceiling now equals the measured 2646 lines. This correction changes no behavior or assertions; lint is rerun before landing. The existing installed matrix remains applicable to unchanged production Linux code, and real Windows qualification remains open.
 
 The reviewed native/C and Python staging corrections are integrated at 16ea372f0. Full local tests passed there; full lint passed at ac965c3b8 after both measured C fixture ceilings were reconciled. The count changes alter no product code or assertions. Logs remain in target/0425-windows-final-landing-test.log and target/0425-windows-final-landing-lint-retry2.log. Candidate one rehearsal and Windows runs finished failed; macOS ARM/Intel and Linux ARM builds passed individually, while downstream rehearsal smoke and draft did not run. The coordinator cuts candidate two from this reviewed landing and reruns both hosted qualifications. Windows-specific compilation/runtime and final candidate QA remain open.
+
+## Candidate two crate fixture backend correction, 2026-10-08
+
+Rehearsal crate job 113175528987 failed every native-source cell with `FileNotFoundError`. The package gate built the unpacked Rust consumer in a separate scratch target, while the shared native fixture started `target/debug/conformance-backend` from the repository root. A fresh job had no binary at that path. The gate now builds only that test backend at the fixture's existing path, locked and offline. It still builds and executes the consumer from the unpacked crate and keeps the complete shared matrix. The fixture's local Rust compile now receives the repository's pinned toolchain because it starts Cargo from the scratch executable's directory.
+
+The existing `sdlc/scripts/package` gate passes locally, including the unpacked consumer's shared native cases, archive catalog, doctest and panic checks. Offline policy, ticket lint, shell syntax and whitespace checks pass. The first local run exposed the scratch-directory toolchain selection; the corrected rerun passed. Logs are `/tmp/thinkthen-0425-crate-backend-package.log`, `/tmp/thinkthen-0425-crate-backend-package-retry.log`, `/tmp/thinkthen-0425-crate-backend-policy.log` and `/tmp/thinkthen-0425-crate-backend-pm-lint.log`. Fresh read-only Sol review accepts the complete correction, including the pinned toolchain handoff. No full gates, hosted dispatch, paid call, source-library fallback or landing ran in this lane. The coordinator owns batching and candidate qualification.
+
+What the build taught us: a scratch-built consumer does not place its test backend at the fixture's root target path. Build the existing fixture dependency explicitly and pin Cargo when the fixture changes working directory.
+
+## Candidate two Windows named-question fixture correction, 2026-10-08
+
+The candidate two Windows build failed Clippy because `root` and `named` in the native named-question fixture were used only inside a Unix-only symlink block. The complete build log remains at `/tmp/thinkthen-rc2-windows-build.log`. The fixture now runs its common unread-content assertions on every platform and its unchanged symlink assertions through a Unix-only helper. No assertion or product code changed.
+
+The five native named-question tests, their focused offline Clippy target, offline source policy, formatting and whitespace checks pass on Linux. The fixture helper adds five measured nonblank Rust lines, so the source ratchet ceiling rises from 163270 to 163275. The ratchet check passes at the new measured total. Existing policy size warnings remain unchanged. This host has no Windows Rust target, so actual Windows Clippy and runtime qualification remain open. The coordinator owns the next hosted build, full gates and landing.
+
+Fresh read-only review accepts the correction at 912a75e8d with no remaining findings.
+
+## Candidate two qualification, 2026-10-08
+
+Candidate rc/0.2.0-rc.2 names reviewed main 76711d832a25ee60429bcad350b4c3bb3c472df1. Rehearsal 37735980917 and Windows qualification 37735983648 run on that exact tag and commit. The Windows root tests passed, including the retained pipe cancellation regressions. Root Clippy failed the Unix-only named-question fixture bindings and the C tests failed; the remaining steps are active. The crate package job also failed because its shared fixture could not start the local backend in a fresh checkout. These are failures, not candidate acceptance. Reviewed fixes are batched before the next candidate.
+
+Fresh read-only installed-package QA accepts the applicable Linux checkpoint with no consequential package or parity gap. It verified all 24 artifact checksums, the retained 29-consumer table and actual source/package revisions. This does not qualify final Windows or hosted candidate behavior. Its stale changelog parity claim is corrected here. Final candidate QA remains open.
+
+The installed QA review also confirmed reviewed compatibility evidence: 0456 retains unchanged 0.1 question grammar and paths, and 0443/0444 retain read-only v1 replay, transactional upgrade and original v1 fixtures. The installed campaign does not separately qualify historical migration through every package and platform; no such claim is made.
+
+## Candidate two managed JAR inventory correction, 2026-10-08
+
+Linux x86 rehearsal job 113175529220 passed the JVM check of freshly compiled JAR members, the actual native ABI comparison and all five ABI drift plants. Its later release-managed-pair assembly refused the door JAR because the fixed class inventory omitted `Door$NativeCall` and `NativeCalls$NativeCall`. Both private descriptor records entered with the JVM ABI check at 52b7df8a6c. The failure log remains at `/tmp/thinkthen-rc2-linux-x86.log`.
+
+The release helper and its existing synthetic fixture now list those two compiled classes. The exact directory and member inventories, inner package hashes, private-byte checks, source and C receipts, negative cases and JVM ABI checks remain in place. A fresh Java 21 compile produced 148 door classes, exactly matching the corrected fixed list. The actual JAR passed the release check; a JAR missing `Door$NativeCall.class` was refused. The managed-pair self-test, offline policy, full lint, ticket lint and whitespace checks pass. Existing source-size and license-exception warnings remain unchanged. Fresh read-only Sol review accepts the correction without findings. Final hosted rehearsal and release QA remain open. The coordinator owns batching and the next candidate.
+
+What the build taught us: when the JVM ABI checker gains compiled descriptor records, update the release helper's fixed class inventory in the same change. The compiled JAR check alone does not update that list.
+
+## Candidate two Windows configuration fixture correction, 2026-10-08
+
+Windows qualification job 113175486005 ran the C door and installed Python tests. The C door passed 69 cases and failed the named loader at `complete_authors.c:125`. The Python suite passed 153 cases and failed the priced recognition assertion because `estimated_cost_usd` was absent. The complete log remains at `/tmp/thinkthen-rc2-windows-qualification.log`. Both fixtures had written their configurations to owned scratch directories, but their child environments pointed Windows at other configuration directories.
+
+The C fixture now sets `APPDATA` to the same scratch directory as `XDG_CONFIG_HOME`. The Python fixture applies its isolated configuration paths after adding the loopback child settings, retaining its owned `APPDATA` and `LOCALAPPDATA`. The named loader, exact zero cost and request counts, and secrecy assertions remain unchanged. No product code, configuration policy or fallback changed.
+
+The focused C named-loader test and Python priced-recognition test pass on Linux. Offline source policy, Python Ruff, record lint and whitespace checks pass. Existing policy size warnings remain unchanged. The C workspace format check finds pre-existing formatting in `current.rs` near line 100, unchanged by this correction. Fresh read-only Sol review accepts the whole correction without findings. These checks do not qualify Windows behavior; the next hosted Windows run remains required. The coordinator owns batching and qualification.
+
+What the build taught us: a fixture that creates platform configuration must point its child to that directory after all helper environments are combined.
+
+The coordinator formatted the two existing fixture path chains under Rust 1.95 before the combined landing checks. The C Rust total grows from 15088 to 15093: one line selects the owned Windows configuration folder, and four format those chains. No assertion or product behavior changes.
+
+The complete candidate-two fix batch passed full local tests and lint at aae11e738. Logs remain in target/0425-rc3-landing-test.log and target/0425-rc3-landing-lint.log. Candidate-two Windows qualification finished failed overall, while its root tests, MSVC ASan ownership checks and packed command/C/Python/Rust checks passed. The Python suite retained ten explicitly Unix-only skips and thirteen stress deselections; these do not claim Windows coverage. Candidate-two rehearsal passed Linux ARM and Mac ARM builds; Intel Mac remains active, and downstream rehearsal checks remain unqualified. The coordinator lands the reviewed batch before candidate three. No publication ran.
