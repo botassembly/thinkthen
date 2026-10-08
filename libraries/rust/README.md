@@ -1,6 +1,6 @@
 # Rust examples
 
-One runnable program for each `thinkthen` function, plus the deck's Rust slide. Each program depends on `thinkthen` the way an outside user does: by path, with default features off and `bundled-sqlite` on, through the public API alone. A build must name `bundled-sqlite` or `host-sqlite`, the SQLite the question cache runs on; only a SQLite extension names `host-sqlite`.
+One runnable program for each `thinkthen` function, plus the deck's Rust slide and an offline recognition observer recipe. Each program depends on `thinkthen` the way an outside user does: by path, with default features off and `bundled-sqlite` on, through the public API alone. A build must name `bundled-sqlite` or `host-sqlite`, the SQLite the question cache runs on; only a SQLite extension names `host-sqlite`.
 
 `choices!` keeps `Variant => "label"` for a bare label. Add `: "description"` for text, or a block returning `Result<Description, Error>` for a structured description built with `Description::builder()`. In a typed `choose` or `tag` builder, `None` takes that variant default and `Some(description)` overrides it for that label. A question loaded from JSON keeps its own complete ordered map, including explicit `null` entries; binding it to a `Choice` checks labels without replacing its descriptions.
 
@@ -9,7 +9,7 @@ export THINKTHEN_API_KEY=...
 cargo run --example decide
 ```
 
-Every program builds its engine with `Engine::from_env()`, so it reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and optional `THINKTHEN_CA_BUNDLE` as the command does. The CA file replaces bundled Mozilla trust for that engine; the explicit `EngineBuilder::ca_bundle(path)` setter overrides the environment value. The path must be absolute. The file is checked at `build`, even for replay-only engines. Certificate and hostname verification stay on.
+Except for the explicit strict-replay observer recipe below, each program builds its engine with `Engine::from_env()`, so it reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and optional `THINKTHEN_CA_BUNDLE` as the command does. The CA file replaces bundled Mozilla trust for that engine; the explicit `EngineBuilder::ca_bundle(path)` setter overrides the environment value. The path must be absolute. The file is checked at `build`, even for replay-only engines. Certificate and hostname verification stay on.
 
 `Engine::from_env()` also reads the configuration file's `cache: false` switch. A bare `Engine::builder()` starts with library defaults and does not read the configuration file, so that switch does not turn off its cache. Call `Engine::builder().no_cache()` to turn it off explicitly.
 
@@ -58,3 +58,15 @@ for row in ranked.value().iter().take(5) {
 The CLI contract and executable replay examples live in [rank](../../specification/rank.md#rank-question-sets) and [rank sets](../../spec/rank-sets.md).
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Inspect recognition questions without a key
+
+[recognize_observe.rs](examples/recognize_observe.rs) is a complete native recipe. From this folder, run:
+
+```sh
+env -u THINKTHEN_API_KEY cargo run --locked --offline --example recognize_observe
+```
+
+It builds an explicit engine with no cache and strict replay of the saved generic receipt fixture. It uses `CallOptions::new().observe(&callback)`, owns borrowed question details inside the callback, and groups them by original record index, stage and question position. It prints the actual normalized question text, declared options and descriptions, typed answer or failure, probabilities, request references and source metadata. `Row` events mark completion, and the returned records retain their originals. The fixture runs twice to show separate zero-based original occurrences.
+
+The [recognition observation contract](../../specification/recognize.md#read-native-stage-observations) explains stage conditions, failures, privacy and the CLI/serialized-event limits. The existing example gate pins the output in [recognize_observe.txt](examples/recognize_observe.txt), removes the key and counts zero connections at the saved loopback endpoint. This recipe is the exception to the generic live loopback rule above; the saved endpoint must be available for the gate to bind its counter.
