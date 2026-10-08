@@ -1,12 +1,14 @@
 # 0502: Choose binding generation with a four-language experiment
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision 07b31b61a722f6b97a259980fb3ddc5c5d796a51, accept
+
+Landed: 9b0ba59
 
 ## Outcome
 
