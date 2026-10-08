@@ -83,4 +83,6 @@ A local Linux probe wheel built from this branch was installed in an isolated en
 
 Logs use `/tmp/thinkthen-0425-python-` with suffixes `build.log`, `installed-tests.log`, `pandas2.log`, `mypy.log`, `offline-cache-miss.log`, `policy.log`, `ratchet.log`, `private-count.log`, `pm-lint.log` and `lint.log`. Whole lint, offline policy, the unchanged source ratchet, ticket lint, whitespace and the count-only private-name scan pass. Existing source-size warnings remain unchanged. Final native Windows production/probe wheel checks, both installed test lanes and the complete candidate qualification remain required. No hosted dispatch, paid call, landing or full 29-consumer campaign ran.
 
+Fresh read-only reviewer `/root/windows_python_fixture_review` accepts `25ddc5cca81716bd4c4a2556f09099c74f46661a` without blocking findings. The coordinator owns batching, landing and the remaining native Windows qualification.
+
 What the build taught us: tests copied away from a source checkout must locate their carrier modules through the selected package and carry every corpus they read.
