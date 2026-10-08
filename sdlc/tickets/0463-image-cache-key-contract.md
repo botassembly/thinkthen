@@ -1,6 +1,6 @@
 # 0463: Document the image cache key domain
 
-Status: OPEN. The after-sprint review confirmed that the v2 cache formula omits the implemented image domain.
+Status: COMPLETE. The after-sprint review confirmed that the v2 cache formula omits the implemented image domain.
 
 Milestone: 0.2
 
@@ -10,6 +10,8 @@ Severity: medium documentation inconsistency.
 Reviews: revision e71fa0b01, accept
 
 Reviews: revision 281f586225577cba3851c54f1a4a8e1787d68f15, accept
+
+Landed: 3430059
 
 ## Outcome
 
