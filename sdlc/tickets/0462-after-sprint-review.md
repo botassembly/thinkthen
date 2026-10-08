@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Lane: claude-0 owns review coordination and sdlc/ changes; reviewers read main without edits.
 
+Reviews: revision c26986771, accept
+
 ## Outcome
 
 Every changed product area since rc/0.1.0-rc.1 has a fresh read-only review. Confirmed bugs have a fix or ticket with severity and a scope ruling. Open issues, deferred gaps, skipped or ignored tests and recorded failures have a disposition. Report what landed and what remains; do not claim absence of bugs from a passing suite alone.
