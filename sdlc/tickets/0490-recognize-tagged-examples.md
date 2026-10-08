@@ -4,7 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0489, 0491
+Depends on: 0489
+Depends on: 0491
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 

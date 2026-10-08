@@ -4,7 +4,8 @@ Status: OPEN. Fresh ticket review accepted the design; implementation has not st
 
 Milestone: 0.2
 
-Depends on: 0490, 0461
+Depends on: 0490
+Depends on: 0461
 Owner: builder.
 Signed: queue owner, 2026-10-08.
 Review: accept. Fresh read-only Sol review accepted the design after the signoff correction.

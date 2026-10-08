@@ -4,7 +4,8 @@ Status: ready. Deferred to 0.3 under Ian's 2026-10-05 scope ruling; the ticket s
 
 Milestone: 0.2
 
-Depends on: 0498, 0504
+Depends on: 0498
+Depends on: 0504
 
 ## Outcome
 
