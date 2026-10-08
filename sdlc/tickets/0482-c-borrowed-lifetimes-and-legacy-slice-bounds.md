@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
+Reviews: revision da9ce6e04d32f7f16341b033304919529662002e, accept
+
 ## Outcome
 
 The C header states borrowed failure-pointer lifetimes. Legacy counted inputs reject impossible byte extents before unsafe slice construction.
