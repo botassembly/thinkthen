@@ -118,7 +118,9 @@ if [ -n "$command_only" ]; then
 	exit 0
 fi
 
-# The opt-in Linux bundle must name every installed family before a backend starts.
+# The opt-in Linux bundle must name every public installed family before a backend starts.
+# Flutter is a private pilot archive supplied separately, not an output of release-container.
+# When present, its Dart/C pairing and installed app check still run below.
 # Ordinary release smoke keeps its original nine-family requirement below.
 if [ -n "$source_packages" ]; then
 	[ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || { echo 'release-smoke: source packages require Linux x86_64' >&2; exit 77; }
@@ -128,7 +130,7 @@ if [ -n "$source_packages" ]; then
 		[ -f "$DIR/$1" ] && [ ! -L "$DIR/$1" ] || { echo "release-smoke: missing or linked $1" >&2; exit 1; }
 		[ -f "$DIR/$1.sha256" ] && [ ! -L "$DIR/$1.sha256" ] || { echo "release-smoke: missing or linked $1.sha256" >&2; exit 1; }
 	}
-	for family in c go cpp csharp jvm swift zig php dart flutter ada objective-c cobol sqlite duckdb postgresql16; do
+	for family in c go cpp csharp jvm swift zig php dart ada objective-c cobol sqlite duckdb postgresql16; do
 		name=thinkthen-$family-$V-$target.tar.gz
 		for file in "$DIR"/thinkthen-"$family"-*.tar.gz*; do
 			[ -e "$file" ] || [ -L "$file" ] || continue

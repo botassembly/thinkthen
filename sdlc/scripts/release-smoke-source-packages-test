@@ -18,7 +18,7 @@ exit 88
 EOF
 chmod +x "$work/bin/cargo"
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$repo/crates/thinkthen/Cargo.toml" | head -n 1)
-for family in c go cpp csharp jvm swift zig php dart flutter ada objective-c cobol sqlite duckdb postgresql16; do
+for family in c go cpp csharp jvm swift zig php dart ada objective-c cobol sqlite duckdb postgresql16; do
 	: >"$work/bundle/thinkthen-$family-$version-$target.tar.gz"
 	: >"$work/bundle/thinkthen-$family-$version-$target.tar.gz.sha256"
 done
@@ -28,6 +28,15 @@ for name in "thinkthen-$version-x86_64-unknown-linux-musl.tar.gz" "thinkthen-$ve
 	: >"$work/bundle/$name"
 	: >"$work/bundle/$name.sha256"
 done
+# No Flutter file is packed by release-container. Complete public inventory
+# reaches the existing archive-pair check without one.
+set +e
+PATH="$work/bin:$PATH" sh "$repo/sdlc/scripts/release-smoke" --source-packages "$work/bundle" >"$work/out" 2>&1
+code=$?
+set -e
+[ "$code" -eq 1 ] && grep -Fqx "release-go-cpp-pair: checksum differs for thinkthen-c-$version-$target.tar.gz" "$work/out" ||
+	{ cat "$work/out" >&2; echo 'public inventory did not reach archive-pair validation' >&2; exit 1; }
+[ ! -e "$work/backend-started" ] || { echo 'release backend started for invalid source packages' >&2; exit 1; }
 expect_refusal() {
 	rm -f "$work/backend-started"
 	set +e
@@ -51,6 +60,10 @@ mv "$work/bundle/$go.sha256" "$work/go.sha256.saved"
 expect_refusal "release-smoke: missing or linked $go"
 mv "$work/go.saved" "$work/bundle/$go"
 mv "$work/go.sha256.saved" "$work/bundle/$go.sha256"
+dart=thinkthen-dart-$version-$target.tar.gz
+mv "$work/bundle/$dart" "$work/dart.saved"
+expect_refusal "release-smoke: missing or linked $dart"
+mv "$work/dart.saved" "$work/bundle/$dart"
 mv "$work/bundle/$go.sha256" "$work/go.sha256.saved"
 expect_refusal "release-smoke: missing or linked $go.sha256"
 mv "$work/go.sha256.saved" "$work/bundle/$go.sha256"
