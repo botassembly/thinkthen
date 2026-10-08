@@ -6,6 +6,10 @@ Milestone: 0.2
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
+Reviews: revision b0fc3e13e4451a1abeb38dfc0a9ecc29abd06905, reject
+
+Reviews: revision 83e9c8a21fc757d2903ba170f35e206d35d9393e, reject
+
 ## Outcome
 
 Adopt shared Request and generated results in SQLite through named typed public calls.
