@@ -1,6 +1,6 @@
 # 0461: Caller-defined recognition
 
-Native questions, saved files, CLI, C, MCP and host declarations preserve caller instructions, entity definitions and label descriptions. Omission preserves the previous default questions. Fresh whole-code review ACCEPT at `1b9aec049` covers custom semantics, defaults and C ownership. Installed custom qualification is complete. The ticket remains open for model evaluation. Landing follows v0.2.0.
+Native questions, saved files, CLI, C, MCP and host declarations preserve caller instructions, entity definitions and label descriptions. Omission preserves the previous default questions. Fresh whole-code review ACCEPT at `1b9aec049` covers custom semantics, defaults and C ownership. Installed custom qualification and the bounded model comparison are complete. Landing follows v0.2.0.
 
 Installed qualification uses the existing release packer and public consumer cases. Packaging found that the JVM native descriptor inventory omitted `thinkthen_question_recognition_task_v1`. Add its two-pointer, integer-return descriptor. The C declaration and implementation are unchanged. The existing independent header-versus-JAR ABI check reproduces the failure and checks the correction. One Java source line supplies the missing descriptor; the adjacent constructor and result getter contain no duplicate declaration to remove.
 
@@ -16,4 +16,36 @@ A qualification retry initially overwrote an extracted C library while Kotlin lo
 
 Completed consumers no longer need the ticket-owned copies `target/0461/uv-cache` and `target/0461/pub-cache`; they were removed. Their original shared caches remain and can recreate the copies. Release archives, useful accepted outputs, case inputs, installed consumers and logs remain. Also removed `target/0461/installed-tmp/thinkthen-c-parity-7x2za7hp`, `target/0461/installed-tmp/thinkthen-parity-7jo2st34` and `target/0461/pg/runtime`. Those interrupted scratch folders and the superseded partial PostgreSQL runtime are reproducible from the same fixtures and cached runtime. The lane remained below its 40 GB cap. Runs used a 6 GB memory cap, 1 GB swap cap, shared cache/toolchain read locks and separate lane output. No global Cargo exclusion was used.
 
-Qualification covers Linux x86-64. It does not qualify macOS or Windows, every optional typed task variant, or model accuracy. No paid call ran. Offline fixture execution establishes transport, decoding and ownership behavior. The frozen before-and-after model evaluation, including the retained 0031 receipt input, remains open and needs the coordinator's priced allocation. The coordinator owns final landing checks and all landings.
+Installed qualification covers Linux x86-64. It does not qualify macOS or Windows or every optional typed task variant. Offline fixture execution establishes transport, decoding and ownership behavior. The comparison below measures the frozen examples alone. The coordinator owns final landing checks and all landings.
+
+## Bounded model comparison, 2026-10-07
+
+The coordinator allocated $2.50 within Ian's existing $20 authority. The frozen plan specified 11 inputs and 22 manual calls, with one retry allowed, a complete-run exposure bound of $2.4192 and no tuning. Each pair used the same input, sole kind, TypeSafe route, `jev-1.13.0` and threshold 0.5. The default declaration omitted task wording and kind descriptions. The custom declaration supplied the frozen instructions, entity definition and kind description together. This comparison measures their combined effect; it does not isolate individual fields or compare executable versions.
+
+The source checkout was `9e29e054a`. Calls used the installed, qualified command under `target/0461/installed-custom/command/thinkthen`.. Each call ran explicitly through existing `sdlc/scripts/live` and `sdlc/scripts/time-limit`, with its planned request cap, timeout 15 seconds and `--max-retries 1`. Owned configuration, cache and usage directories isolated the run from existing settings. Separate recording directories retained request and response bodies locally. No paid harness or loop was added. Credentials came from the named environment variables and were never printed, recorded, hashed or stored.
+
+The receipt input equals the original 0031 `cord:test-002:total` text in `inputs/tasks.jsonl` byte for byte, including its stored line separators. The retained fixture and original text both yield `28,000` at Unicode scalar span `[81, 87)`. The prior 0031 result remains historical evidence; it is not counted as a prediction in this comparison.
+
+| Frozen input | Gold spans | Default returned spans | Custom returned spans |
+| --- | --- | --- | --- |
+| Length | `[8, 15)` | none | `12.5 mm` `[8, 15)` |
+| Date | `[6, 16)` | none | `2026-10-07` `[6, 16)` |
+| Count | `[7, 14)` | none | none |
+| Code | `[6, 11)` | none | `AB-12` `[6, 11)` |
+| Dose label, literal only | `[12, 16)` | none | `5 mg` `[12, 16)` |
+| Synthetic total | `[6, 11)` | none | `42.75` `[6, 11)` |
+| Web address | `[9, 30)` | none | none |
+| Requested ordinary word | `[16, 24)` | none | `ordinary` `[16, 24)` |
+| Absent amount | none | none | none |
+| Repeated amounts with Unicode prefix | `[11, 16)`, `[21, 26)` | none | none |
+| Retained 0031 receipt | `[81, 87)` | none | `28,000` `[81, 87)` |
+
+Exact-span scoring requires the frozen start, end and kind together. Default: 0 true positives, 0 false positives, 11 false negatives; precision is undefined because it returned no entities, and recall is 0/11. Custom: 7 true positives, 0 false positives, 4 false negatives; precision is 7/7 (100%), and recall is 7/11 (63.64%). Neither arm made a returned-label error. Exact cases were 1/11 for default and 8/11 for custom, including the absent target. Default returned an empty entity set in all 11 cases; custom returned an empty set in four cases, including the absent target. Empty sets are completed outputs, not transport faults. Custom answer details contain the missed count, address and both amount candidates, but the final threshold did not retain them. No threshold or wording was changed after observing this result.
+
+All 22 paid invocations exited 0. Default sent 22 requests with 30,832 input and 7,103 output tokens. Custom sent 21 requests with 36,508 input and 6,457 output tokens. There were zero retries, transport faults, cache answers or recovery calls. The isolated monthly usage file independently agrees with the summed run facts: 43 requests, 67,340 input tokens and 13,560 output tokens.
+
+[TypeSafe's official model tariff](https://docs.typesafe.ai/models), checked on 2026-10-07, charges $0.042 per million input tokens and no output charge. Usage-derived cost is $0.001294944 for default and $0.001533336 for custom, totaling $0.00282828. These are calculated costs from returned usage, not an invoice. The 57,600,000-token paid-run reservation was a conservative admission bound, not actual billing.
+
+One earlier local launch used an invalid array for saved default kinds and exited 5 with zero requests sent. The declaration was corrected to the documented kind-to-null map and checked with a zero-send plan before any paid call. The live ledger had already precharged 1,920,000 tokens for that refusal. The coordinator extended admission by that amount without increasing the dollar allocation. Total ledger precharge for this work was therefore 59,520,000 tokens, including the zero-send refusal. The ledger ended with zero tokens remaining; no further call ran.
+
+Inputs, declarations, raw recordings, results, run facts, exit codes, isolated usage and the offline aggregate remain local under `target/0461/manual-evaluation`. No raw artifact was pushed. The frozen comparison establishes improvement on these examples and records four remaining misses. It does not establish general model accuracy, clinical interpretation, platform parity or release qualification. No product source changed during evaluation. The branch is pushed for coordinator review; this work does not land the ticket.
