@@ -6,6 +6,8 @@ The cache specification scopes the existing v2 formula to text and gives the sep
 
 The existing ticket checker and its self-test passed. The existing Markdown link checker and its self-test passed; its link parser also checked every relative link in the changed cache specification. `git diff --check` passed. `pm lint` reported zero findings. No provider call, broad build or product test ran for this documentation correction.
 
+Fresh read-only review accepted source `281f586225577cba3851c54f1a4a8e1787d68f15` after comparing both domain tags, framing and ordered parts with native derivation and durable validation. It found no change to v1/v2 row semantics or fixtures.
+
 ## What the build taught us
 
 A key contract must name each domain tag as well as its framed parts. Sharing the parts does not make text and image keys interchangeable. Durable validation distinguishes explicit image state by its digest before selecting the tag.
