@@ -3,14 +3,15 @@ use crate::complete_native::{Inputs, Prepared, defect};
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
-    CallOptions, Engine, Error, LoadedQuestion, RecordObservation, Request, RequestArguments,
-    RequestCall, RequestDefinition, RequestEnvironment, RequestFeed, RequestInput, RequestOptions,
-    RequestOutcome, RequestQuestion, RequestValue, Surface,
+    AdmittedRequest, CallOptions, Engine, Error, LoadedQuestion, RecordObservation, Request,
+    RequestArguments, RequestCall, RequestDefinition, RequestEnvironment, RequestFeed,
+    RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
 };
 
 pub(super) fn run(
     engine: &Engine,
     prepared: &Prepared,
+    request: &AdmittedRequest,
     inputs: Inputs,
     options: CallOptions<'_>,
     surface: Surface,
@@ -39,8 +40,8 @@ pub(super) fn run(
         options
     };
     let result = (|| {
-        let request = request(prepared)?.admit()?;
-        let records = inputs.deferred_records(prepared.reading());
+        let reading = request.record_reading()?;
+        let records = inputs.deferred_records(prepared.reading().or(Some(&reading)));
         let feed = RequestFeed::from_records("sqlite", records);
         let feed = if inputs.image_inputs()? {
             feed.with_image_inputs()
@@ -53,7 +54,7 @@ pub(super) fn run(
             feed.eager()
         };
         let outcome = engine.execute_request(
-            &request,
+            request,
             RequestEnvironment {
                 controls: options,
                 feed: Some(feed),
@@ -68,7 +69,7 @@ pub(super) fn run(
     crate::complete_native::carrier(native, Value::Array(events))
 }
 
-fn request(prepared: &Prepared) -> Result<Request, Error> {
+pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
     let definition = match prepared {
         Prepared::Atomic(q) => RequestDefinition::Atomic(q.clone()),
         Prepared::Dynamic(q) => RequestDefinition::DynamicChoose(q.clone()),
@@ -106,7 +107,7 @@ fn request(prepared: &Prepared) -> Result<Request, Error> {
         Prepared::Recognize(_, _) => RequestCall::Recognize(args),
         Prepared::Relate(_) => RequestCall::Relate(args),
     };
-    Ok(Request::new(call))
+    Request::new(call).admit()
 }
 fn render(outcome: RequestOutcome) -> Result<Value, Error> {
     match outcome {

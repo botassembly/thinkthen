@@ -23,6 +23,10 @@ for verb, question, inputs in cases:
     document=json.loads(value)
     results.append(document['native']['error']['kind'])
     assert 'secret' not in value
+for inputs in ({'records':[], 'incremental':None}, {'records':[], 'unknown':True}):
+    value=db.execute('SELECT thinkthen_decide_complete(?,?)',
+        ['@missing-saved-question.json',json.dumps(inputs)]).fetchone()[0]
+    assert json.loads(value)['native']['error']['kind']=='usage', value
 say(results=results)
 ''', environment(backend))
     expect(got['results'], ['usage'] * 6, 'shared complete admission')

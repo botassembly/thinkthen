@@ -253,6 +253,10 @@ The native feed preserves composed originals and locations. Eager input validate
 every row before sending; incremental input retains its actual completed prefix.
 Caller-known image descriptors require route and function admission before reader
 access. An omitted image declaration never waives validation of actual image rows.
+Authored projections use the admitted native reading before declaration validation.
+Top-level input descriptors validate before SQL resolves a saved question. SQL still
+resolves saved selectors through its own authorized file reader; canonical selector
+translation and the legacy scalar/table execution paths remain later migration work.
 PostgreSQL retains the compatibility dispatcher until its Request migration.
 
 The existing surface checks execute all applicable shared cases through these

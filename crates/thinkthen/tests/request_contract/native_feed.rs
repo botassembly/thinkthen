@@ -39,6 +39,78 @@ fn row() -> RecordInput<QuestionInput> {
 }
 
 #[test]
+fn native_record_reading_retains_authored_projection_and_refuses_saved_selectors() {
+    let mut request = request();
+    let RequestCall::Decide(args) = &mut request.call else {
+        panic!("decide request")
+    };
+    args.question = RequestQuestion::Definition {
+        value: Question::from_json(
+            r#"{"decide":"Fits?","on":["/message"],"item_schema":{"type":"object","properties":{"ready":{"type":"boolean"},"body":{"type":"string"}},"required":["body"]}}"#,
+        )
+        .unwrap()
+        .into(),
+    };
+    let admitted = request.clone().admit().unwrap();
+    let composed = admitted
+        .record_reading()
+        .unwrap()
+        .compose(
+            RawRecord::json(r#"{"message":{"ready":false,"body":"café 😀"},"private":"unsent"}"#)
+                .unwrap(),
+        )
+        .unwrap();
+    assert_eq!(
+        composed.original.selected().to_json().unwrap(),
+        r#"{"ready":false,"body":"café 😀"}"#
+    );
+    let listener = Listener::answering(response).unwrap();
+    let outcome = engine(&listener)
+        .execute_request(
+            &admitted,
+            RequestEnvironment {
+                controls: CallOptions::new(),
+                feed: Some(
+                    RequestFeed::from_records(
+                        "native",
+                        std::iter::once(Ok(RecordInput {
+                            original: composed.original.question_input(),
+                            context: composed.context,
+                            options: composed.options,
+                            examples: composed.examples,
+                            seed_spans: composed.seed_spans,
+                        })),
+                    )
+                    .eager(),
+                ),
+            },
+        )
+        .unwrap();
+    assert!(matches!(outcome, RequestOutcome::Complete(_)));
+    assert_eq!(listener.count(), 1);
+    assert!(
+        !String::from_utf8(listener.requests()[0].body.clone())
+            .unwrap()
+            .contains("unsent")
+    );
+    let RequestCall::Decide(args) = &mut request.call else {
+        panic!("decide request")
+    };
+    args.question = RequestQuestion::File {
+        path: "missing-saved-question.json".into(),
+    };
+    assert_eq!(
+        request
+            .admit()
+            .unwrap()
+            .record_reading()
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Usage
+    );
+}
+
+#[test]
 fn native_feed_eager_refuses_before_sends_and_stream_retains_located_prefix() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);

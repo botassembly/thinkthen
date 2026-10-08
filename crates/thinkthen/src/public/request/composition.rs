@@ -11,6 +11,16 @@ pub(super) type Inputs<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
 
 impl AdmittedRequest {
+    /// Obtain typed projection for a caller composing native records.
+    /// This reads only admitted inline preparation and never opens a saved selector.
+    /// # Errors
+    /// Refuses unresolved saved selectors; projection validation retains Usage errors.
+    pub fn record_reading(&self) -> Result<RecordReading, Error> {
+        let definition = self.definition.as_ref().ok_or_else(|| {
+            Error::usage("native record reading requires an admitted inline definition")
+        })?;
+        reading(definition, &self.request.call.arguments().options)
+    }
     pub(super) fn records<'a>(
         &'a self,
         definition: &RequestDefinition,
@@ -228,12 +238,18 @@ fn authored_reading(definition: &RequestDefinition) -> Result<RecordReading, Err
             crate::LoadedQuestion::Banded(q) => question_reading(&q.0),
         },
         RequestDefinition::Rank(q) => question_reading(q),
+        RequestDefinition::DynamicChoose(q) => metadata_reading(&q.metadata),
         _ => RecordReading::new(&[], None, None),
     }
 }
 fn question_reading(q: &crate::Question) -> Result<RecordReading, Error> {
+    metadata_reading(&q.metadata)
+}
+fn metadata_reading(
+    metadata: &crate::core::declaration::QuestionMetadata,
+) -> Result<RecordReading, Error> {
     RecordReading::new(
-        &q.metadata
+        &metadata
             .reading
             .on
             .iter()

@@ -40,13 +40,14 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
             thinkthen::Settings::default()
         };
         let result = (|| {
-            let prepared = prepare(verb, &question, &settings)?;
             let inputs = crate::complete_native::Inputs::parse_request(&inputs)?;
-            Ok::<_, thinkthen::Error>((prepared, inputs))
+            let prepared = prepare(verb, &question, &settings)?;
+            let request = request::admit(&prepared)?;
+            Ok::<_, thinkthen::Error>((prepared, inputs, request))
         })();
         let value = match result {
             Err(error) => crate::complete_native::admission(&error),
-            Ok((prepared, inputs)) => {
+            Ok((prepared, inputs, request)) => {
                 let shared = settings.context().map(str::to_owned);
                 worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                     let options = shared
@@ -55,6 +56,7 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
                     Ok(request::run(
                         engine,
                         &prepared,
+                        &request,
                         inputs,
                         options,
                         Surface::Sqlite,
