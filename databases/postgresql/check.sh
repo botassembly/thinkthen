@@ -39,6 +39,15 @@ LIMIT=$REPO/sdlc/scripts/time-limit
 EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
 COMMAND=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
+# The client reader test binary uses this workspace's pgrx dependency. Give its
+# build the same pinned headers used for source packages without requiring a
+# cargo-pgrx home in the installed-archive smoke.
+PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo /usr/bin/pg_config; fi)}
+if [ -n "${THINKTHEN_ARTIFACT:-}" ] && [ "$PG_HOST" = Linux ]; then
+	[ -x "$PG_CONFIG" ] || not_run "the PostgreSQL 16 pg_config at $PG_CONFIG is missing"
+	case $("$PG_CONFIG" --version) in 'PostgreSQL 16.'*) ;; *) not_run "the PostgreSQL client reader needs PostgreSQL 16 headers at $PG_CONFIG" ;; esac
+	[ -f "$("$PG_CONFIG" --includedir-server)/postgres.h" ] || not_run "the PostgreSQL 16 server headers at $PG_CONFIG are missing"
+fi
 
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	echo "== build"
@@ -46,11 +55,10 @@ COMMAND=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
 	cargo clippy --locked --offline --all-targets -- -D warnings
 	cargo test --locked --offline --lib
 }
-cargo build --locked --offline --quiet --bin thinkthen_read_inputs
+PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet --bin thinkthen_read_inputs
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
 # package.sh reads the same pg_config and target folder (ticket 0128).
-PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo /usr/bin/pg_config; fi)}
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
 SHIPPED=$EXT-shipped
@@ -151,13 +159,17 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
+	PACKAGE_LIB=$RUN/artifact/lib
+	PACKAGE_SQL=$RUN/artifact/extension/thinkthen--$EXT_VERSION.sql
+	STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
 	mkdir -p "$SHIPPED" && cp -a "$EXT/." "$SHIPPED/"
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
 	runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
+	PACKAGE_LIB=$SHIPPED$("$PG_CONFIG" --pkglibdir)
+	PACKAGE_SQL=$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql
 }
 cp fixtures/*.json "$DATA/"
 fresh generic
@@ -165,10 +177,15 @@ qs -v ON_ERROR_STOP=1 -c "CREATE EXTENSION thinkthen" -f fixtures/tickets.sql -f
 
 echo "== the tree and the scripts"
 shipped_lacks_probe() {
-	same "$(grep -c thinkthen_panic_probe "$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql" || true)" 0
+	[ -f "$PACKAGE_SQL" ]
+	same "$(grep -c thinkthen_panic_probe "$PACKAGE_SQL" || true)" 0
 }
 check shipped_lacks_probe
-no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED$("$PG_CONFIG" --pkglibdir)"/thinkthen.* || true)" 0; }
+no_home_in_library() {
+	local files=("$PACKAGE_LIB"/thinkthen.*)
+	[ "${#files[@]}" = 1 ] && [ -f "${files[0]}" ]
+	same "$(grep -ac -- "$HOME" "${files[0]}" || true)" 0
+}
 check no_home_in_library
 # The backend guard is the one catch (ticket 0310), and each SQL function
 # body runs under it.
