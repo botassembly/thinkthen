@@ -112,6 +112,7 @@ pub(super) fn asks(
     url: &Url,
     record: &Record,
 ) -> Result<Vec<GroupAsks>, PrepareError> {
+    let context = judging.context_for(record).map_err(PrepareError::Other)?;
     judging
         .groups()
         .into_iter()
@@ -121,7 +122,7 @@ pub(super) fn asks(
                 judging.set(),
                 &places,
                 judging.engine().backend(),
-                judging.engine().profile(),
+                (judging.engine().profile(), context.as_ref()),
                 reading,
                 record,
             )?;
@@ -206,7 +207,7 @@ where
         questions: None,
         sized: true,
         inputs: inputs_cap,
-        context: false,
+        context: judging.context.is_some() || judging.context_field.is_some(),
         detailed: false,
         continues: false,
     };
@@ -320,7 +321,19 @@ fn placed(failed: Failed<Refused>, judging: &Judging<'_>) -> Placed {
         Failed::Pack { error, at } => Placed::at(
             match error {
                 pack::PackError::Profile(limit) => Failure::ProfileLimit(limit),
-                pack::PackError::Context { .. } => Failure::Defect("annotate packed a context"),
+                pack::PackError::Context {
+                    kind,
+                    limit,
+                    actual,
+                    initial,
+                } => crate::failure::context::Limits::new(judging.engine().profile()).refused(
+                    crate::core::BatchError::ContextOverLimit {
+                        kind,
+                        limit,
+                        actual,
+                    },
+                    initial,
+                ),
             },
             at,
         ),

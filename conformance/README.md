@@ -67,10 +67,10 @@ Each test starts its own backend. The count, the held gate, the rounds, and the 
 
 Lines are served in order. A `wait` answers on its own line later and never holds up the lines behind it. Its `wait ` prefix tells it from a `count` line when the two interleave. A `wait` still pending at the end can print before or after the final count. Rust tests call `Backend::wait`, `Backend::round`, and `Backend::release` in process.
 
-## Required 0.2 parity (0432 phase A)
+## Required 0.2 parity (0432)
 
 The `parity` section of `cases.json` is the independent public inventory:
-28 consumers, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
+29 consumers including MCP, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
 CLI/C, three SQL extensions and three dataframe surfaces kept separate.
 It references the existing 55 behavior cases, nine settings cases and type
 corpus rather than changing their landed schemas. `decide_many` is a decide
@@ -81,13 +81,40 @@ Run `sdlc/scripts/surfaces --parity-baseline` for phase A: only actual CLI,
 Rust and C consumers run; other rows remain missing/not checked. This bounded
 run also exits nonzero and cannot qualify full parity.
 
-Run `sdlc/scripts/surfaces --parity` explicitly for complete adoption. It runs the
-existing full consumers with no selector, writes logs and the current matrix
-to `target/parity/`, and exits nonzero for every failed or missing required
-cell, including exit 77. Routine gates validate the inventory and retain
-current green behavior; they do not require unfinished parity adoption.
-After all owners adopt the inventory, 0432 must make this full run mandatory
-and pass it before closing. The overall ticket remains open.
+The existing final checkpoint, `sdlc/scripts/test-full-cases --run`, runs the
+full test gate and `surfaces --full-functional`. The surface step requires the
+complete public suite and generates the current table in `target/parity/`.
+Each shared consumer command executes once, including each distinct public
+variant. Missing or failed required cells, skipped cases and exit 77 fail the
+checkpoint. It also retains the C crate's private safety checks and the
+release-pack/release-smoke tail. `surfaces --parity` uses the same strict path.
+For final installed parity, pass `--artifacts DIR` to either entry point. This
+mode selects each release package before starting consumers, extracts the
+command and C boundary once, then runs C safety and the strict installed
+matrix. It does not repeat the source matrices or rebuild product packages.
+The separate release-pack/release-smoke checkpoint remains required. Missing,
+ambiguous or linked package selections and incomplete public layouts fail.
+Routine gates validate the inventory and retain their existing scope; the
+Rust-only hosted gate does not qualify the complete support table. The overall
+ticket stays open until the required final checkpoint passes.
+
+Consumers receive owned HOME/XDG directories. Explicit `THINKTHEN_TOOLCHAINS`,
+`R_LIBS_USER`, `PUB_CACHE`, `UV_CACHE_DIR` and `UV_PYTHON_INSTALL_DIR` paths supply build dependencies
+without copying user configuration. Use owned writable pub and uv caches
+seeded from available offline dependencies; do not write a shared cache while
+holding its read lock.
+The caller's `CARGO_BUILD_JOBS` limit is retained and defaults to one.
+
+Installed callers may copy test code and read the shared fixtures from the
+checkout. Product imports, headers, libraries and commands resolve to the
+selected archives. The existing C executor accepts `consumer`, `header`,
+`library` and `compile_consumer` keywords. Its compiler callback receives the
+scratch directory, compiler environment, public include directory, library
+file and generated C source, and returns its actual executable. Optional
+`adapter_header` and `initialize` inputs compose wrapper declarations and
+runtime startup in that same caller. They do not copy or rewrite the shared
+Python executor. Rust's shared fixture compiler accepts the installed
+consumer manifest and retains the lane's existing Python target directory.
 
 Each required declaration has `id`, one of the ten `verb` values, `kind`,
 `input`, `expect` and `preconditions`. References resolve to existing fixtures;
@@ -109,8 +136,28 @@ one JSON line on stdout, for example:
 parity: {"consumer":"rust","case":"annotate-packed-groups","checks":["named","runtime"],"status":"pass"}
 ```
 
-The `checks` list must equal the declaration's list (default `named,runtime`;
-typed cells also require `compile`). Emit `fail` for a completed failed case;
+The `checks` list must equal the resolved declaration's list (default
+`named,runtime`; SDK and MCP typed cells also require `compile`). The CLI
+consumer declares `required_checks: ["named", "runtime"]` because its actual
+public boundary is a process. Its closed `case_rulings` map names eleven SDK-only
+cases, twenty-three question-file analogues and the held-call signal-drain
+analogue, plus one closed image-record admission variant. Each ruling has a fixed `boundary` and a nonempty `reason`.
+Materialized SDK collections validate the complete set before dispatch; CLI files retain incremental admission. Distinct large captions use raw document files with unchanged byte, image, original and exact wire assertions. They prove complete-question admission without a grouped-splitting claim. The Perplexity same-caption reversed-shortlist variant requires an over-cap JSONL envelope and has an exact Usage, exit 2, zero-send, no-result refusal. Liquid reversed shortlists and SDK splitting keep their original assertions.
+Executable analogues also declare concrete `expect` assertions. Question-file
+analogues retain the original invalid bytes, including duplicate keys and
+numeric spelling, and require Local, exit 5, no requests, no result and secrecy.
+The signal-drain analogue runs SIGINT and SIGTERM through the real process.
+It requires one completed row in order, one request, no suffix output, final
+cancelled facts, the actual signal exit and secrecy. Signal-delivery coordination
+never counts as a passing assertion.
+SDK cases and expectations retain their full compile/runtime requirements.
+
+SDK-only CLI rulings never become cells. Emitting a cell for one fails the
+runner. The matrix stores `case_rulings` separately from executed `cells`;
+the table shows each SDK-only reason and each analogue's actual boundary
+coverage. A ruling cannot turn a missing or failed execution into a pass.
+Unrelated exclusions and CLI applicability fields at another consumer fail
+inventory validation. Emit `fail` for a completed failed case;
 never emit a pass from a generic JSON call, schema-only validation, selector,
 ruling or missing toolchain. A shared folder must emit separate consumer IDs
 at each actual door. Unknown/duplicate IDs and skipped statuses fail. Process
@@ -185,9 +232,9 @@ missing runners/toolchains and exit 77 fail the strict run. Shared command
 folders must emit each public variant separately. The runner regression tests
 use simulated process output; their success establishes runner behavior only,
 never SDK parity. Development selectors stay in individual existing consumers;
-the final `surfaces --parity` run has none and permits no skip. Routine gates
-continue validating declarations during adoption. The passing complete run
-must become mandatory before 0432 can close.
+the final full-functional checkpoint has none and permits no skip. Routine
+gates continue validating declarations. The passing complete checkpoint is
+required before 0432 can close.
 
 ## Public input and safety boundaries (0432 ruling)
 

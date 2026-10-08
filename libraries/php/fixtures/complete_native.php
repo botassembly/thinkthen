@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once dirname(__DIR__).'/autoload.php';
+require_once (getenv('THINKTHEN_PHP_PACKAGE') ?: dirname(__DIR__)).'/autoload.php';
 use ThinkThen\Native\{Engine,Question,LoaderRole,Records,Record,Content,Files,FileUnit,Image,Choice,Controls,CompleteFailure};
 
 /** Exercise actual named public typed methods. Only arbitrary input content uses JSON. */

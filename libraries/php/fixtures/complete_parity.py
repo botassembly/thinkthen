@@ -23,6 +23,16 @@ def main():
     library=Path(os.environ.get('THINKTHEN_COMPLETE_LIBRARY',str(ROOT/'libraries/c/target/debug/libthinkthen_c.so')))
     dart=os.environ.get('TT_DART',str(Path.home()/'.local/opt/flutter/bin/dart'))
     flutter=os.environ.get('TT_FLUTTER',str(Path.home()/'.local/opt/flutter/bin/flutter'))
+    package = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / ('libraries/php' if consumer == 'php' else 'libraries/dart'))).resolve(strict=True)
+    dart_consumer = Path(os.environ.get('THINKTHEN_DART_CONSUMER', ROOT / 'libraries/dart/checks/consumers/alpha')).resolve(strict=True)
+    dart_binary = Path(os.environ.get('THINKTHEN_DART_BINARY', ROOT / 'libraries/dart/checks/scratch/complete-native'))
+    flutter_consumer = Path(os.environ.get('THINKTHEN_FLUTTER_CONSUMER', ROOT / 'libraries/dart/flutter/example'))
+    if os.environ.get('THINKTHEN_ARTIFACT'):
+        if not os.environ.get('THINKTHEN_PARITY_PACKAGE') or not os.environ.get('THINKTHEN_COMPLETE_LIBRARY'):
+            raise ValueError('installed complete parity requires extracted package and native library')
+        library.resolve(strict=True)
+        if consumer == 'dart': dart_binary.resolve(strict=True)
+        if consumer == 'flutter': flutter_consumer.resolve(strict=True)
     failures=0
     with tempfile.TemporaryDirectory(prefix='thinkthen-0429-') as tmp:
         scratch=Path(tmp)
@@ -38,12 +48,13 @@ def main():
             try:
                 settings=compact({'base_url':f'http://127.0.0.1:{backend.port}/generic/v1','cache':False,'max_retries':0})
                 env['THINKTHEN_API_KEY']='sk-conformance-loopback'
+                env['THINKTHEN_PHP_PACKAGE']=str(package)
                 if consumer=='php':command=['/usr/bin/php8.3','-n','-d','extension=ffi','-d','ffi.enable=1',str(ROOT/'libraries/php/fixtures/complete_constructed.php'),str(library),settings]
-                elif consumer=='dart':command=[dart,str(ROOT/'libraries/dart/checks/consumers/alpha/bin/complete_constructed.dart'),str(library),settings]
+                elif consumer=='dart':command=[dart,str(dart_consumer/'bin/complete_constructed.dart'),str(library),settings]
                 else:
-                    command=[flutter,'test','--no-pub','--reporter','expanded',str(ROOT/'libraries/dart/flutter/example/test/complete_constructed_test.dart')]
+                    command=[flutter,'test','--no-pub','--reporter','expanded',str(flutter_consumer/'test/complete_constructed_test.dart')]
                     env.update(TT_NATIVE_LIBRARY=str(library),TT_SETTINGS=settings)
-                output=subprocess.run(command,env=env,cwd=ROOT/'libraries/dart/flutter/example' if consumer=='flutter' else ROOT,capture_output=True,text=True,timeout=60)
+                output=subprocess.run(command,env=env,cwd=flutter_consumer if consumer=='flutter' else ROOT,capture_output=True,text=True,timeout=60)
                 assert output.returncode==0,(output.stdout,output.stderr)
                 assert 'sk-conformance-loopback' not in output.stdout+output.stderr
                 assert int(backend.read('count'))==11
@@ -83,13 +94,14 @@ def main():
                                 if consumer=='php':
                                     command=['/usr/bin/php8.3','-n','-d','extension=ffi','-d','ffi.enable=1','-d','memory_limit=2G',str(ROOT/'libraries/php/fixtures/complete_native.php'),str(path),str(library),compact(settings)]
                                 elif consumer=='dart':
-                                    command=[str(ROOT/'libraries/dart/checks/scratch/complete-native'),str(path),str(library),compact(settings)]
+                                    command=[str(dart_binary),str(path),str(library),compact(settings)]
                                 else:
-                                    command=[flutter,'test','--no-pub','--reporter','expanded',str(ROOT/'libraries/dart/flutter/example/test/complete_native_test.dart')]
+                                    command=[flutter,'test','--no-pub','--reporter','expanded',str(flutter_consumer/'test/complete_native_test.dart')]
                                     child.update(TT_INPUT=str(path),TT_NATIVE_LIBRARY=str(library),TT_SETTINGS=compact(settings),TT_OUTPUT=str(home/'output.json'))
-                                cwd=ROOT/'libraries/dart/flutter/example' if consumer=='flutter' else home
+                                cwd=flutter_consumer if consumer=='flutter' else home
                                 # Flutter calls explicitly adopt the fixture's owned current directory in its test.
                                 child['TT_CASE_HOME']=str(home)
+                                child['THINKTHEN_PHP_PACKAGE']=str(package)
                                 running=subprocess.Popen(command,env=child,cwd=cwd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                                 try:
                                     if step.get('held_cancel'):

@@ -11,7 +11,7 @@ pub(super) fn read(
     source: Box<dyn BufRead + Send>,
     framing: Framing,
     spec: &RelateSpec,
-) -> Result<Vec<RelationEntity>, Failure> {
+) -> Result<Entities, Failure> {
     let records = match framing {
         Framing::Document => document(source, spec)?,
         Framing::Lines => return lines(source, spec),
@@ -20,14 +20,16 @@ pub(super) fn read(
         Framing::Tsv => table(source, TableKind::Tsv)?,
     };
     let mut pairs = Vec::new();
-    for record in records {
+    let mut retained = 0usize;
+    for record in &records {
+        retain(record, &mut retained)?;
         record.validate_item(spec.metadata.item_schema.as_ref())?;
         pairs.push((
-            name_of(&record, spec)?.to_owned(),
+            name_of(record, spec)?.to_owned(),
             record.entity_text(spec.kind_field())?.to_owned(),
         ));
     }
-    admitted(spec, &pairs)
+    Ok((admitted(spec, &pairs)?, records))
 }
 
 /// The entity's name. A name `recognize` found carries `text` in place of
@@ -62,20 +64,20 @@ fn table(source: Box<dyn BufRead + Send>, kind: TableKind) -> Result<Vec<Record>
     TableRows::new(source, kind)?.collect()
 }
 
-fn lines(
-    source: Box<dyn BufRead + Send>,
-    spec: &RelateSpec,
-) -> Result<Vec<RelationEntity>, Failure> {
+fn lines(source: Box<dyn BufRead + Send>, spec: &RelateSpec) -> Result<Entities, Failure> {
     let reading = Reading::new(Framing::Lines, Vec::new())?;
     let mut pairs = Vec::new();
+    let mut records = Vec::new();
+    let mut retained = 0usize;
     for bytes in Chunks::new(source, true) {
         let bytes = bytes?;
-        reading
-            .record(&bytes)?
-            .validate_item(spec.metadata.item_schema.as_ref())?;
+        let record = reading.record(&bytes)?;
+        retain(&record, &mut retained)?;
+        record.validate_item(spec.metadata.item_schema.as_ref())?;
         pairs.push((reading.as_it_arrived(&bytes)?.to_owned(), "*".to_owned()));
+        records.push(record);
     }
-    admitted(spec, &pairs)
+    Ok((admitted(spec, &pairs)?, records))
 }
 
 pub(super) fn admitted(
@@ -92,3 +94,17 @@ pub(super) fn admitted(
         Failure::Relate(error)
     })
 }
+
+fn retain(record: &Record, total: &mut usize) -> Result<(), Failure> {
+    let original = crate::public::RawRecord(std::sync::Arc::new(record.clone()));
+    let bytes = original
+        .retained_bytes()
+        .map_err(|_| Failure::Defect("an original record could not be measured"))?;
+    *total = total
+        .checked_add(bytes)
+        .filter(|bytes| *bytes <= crate::core::MAX_RECORD_BYTES)
+        .ok_or(Failure::Usage("relate input exceeds 16 MiB"))?;
+    Ok(())
+}
+
+pub(super) type Entities = (Vec<RelationEntity>, Vec<Record>);

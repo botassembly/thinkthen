@@ -67,6 +67,16 @@ test('facts and terminal errors retain reported values and reject fabricated fie
   }
 });
 
+test('complete decisions retain authored readings and withhold their inspected content', () => {
+  for (const value of ['private reading', { private: [false, null] }, ['private reading', 2], null]) {
+    const original = { ...fixture.results[0].result, value, question: { verb: 'decide', text: 'Q', false: value } };
+    const result = decode('DecideResult', original);
+    assert.deepEqual(JSON.parse(JSON.stringify(result)), original);
+    assert.equal(inspect(result).includes('private'), false);
+    if (value !== null && typeof value === 'object') assert.equal(Object.isFrozen(result.value), true);
+  }
+});
+
 test('named request builders retain JSON occurrences and owned ordered images', () => {
   const inputs = { records: [false, null, { id: 1 }, { id: 1 }], context: { context: [] } };
   const specs = {

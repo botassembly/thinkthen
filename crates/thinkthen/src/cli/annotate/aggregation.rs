@@ -13,6 +13,7 @@ pub(super) fn finish(
     ordinal: usize,
     answered: Vec<GroupAnswer>,
 ) -> Result<Judged, Failure> {
+    let context = judging.context_for(&record)?;
     let annotation = assemble(&judging.set, answered, judging.engine.backend().model())?;
     let replayed = annotation.replayed;
     let failed_questions = annotation.failed_questions;
@@ -24,7 +25,14 @@ pub(super) fn finish(
             crate::result_json::complete::AnnotationRow {
                 input: record,
                 record: ordinal,
-                context_sha256: None,
+                context_sha256: context
+                    .as_ref()
+                    .map(|context| {
+                        context
+                            .as_text()
+                            .map(|text| crate::core::bytes_sha256(text.as_bytes()))
+                    })
+                    .transpose()?,
                 attempts: true,
             },
         )?;

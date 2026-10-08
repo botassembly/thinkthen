@@ -44,9 +44,9 @@ const MEANS = [
 ];
 const QUIET = flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code carries the answer. It works on one document only.');
 // The shared flags every record function takes. find takes none of them.
-const RECORD_FLAGS = ['--csv', '--tsv', '--context', '--batch', '--max-request-bytes', '--jobs'];
+const RECORD_FLAGS = ['--csv', '--tsv', '--image-media', '--context-field', '--batch', '--jobs'];
 // recognize and relate do not batch records.
-const SET_FLAGS = ['--csv', '--tsv', '--max-request-bytes', '--jobs'];
+const SET_FLAGS = ['--csv', '--tsv', '--image-media', '--jobs'];
 
 // The failure codes every function shares, from specification/channels.md.
 // A function's own list puts its answers first and then these.
@@ -335,18 +335,20 @@ export const FUNCTIONS = [
     title: '@question',
     goal: 'A question file saves one question with its threshold, and every command that reads it asks the same question.',
     primitive: 'Not a function',
-    line: 'A saved question that six functions accept.',
-    lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. Every command that reads the file then asks the same question.',
+    line: 'A saved question with its readings and threshold.',
+    lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, rank, find, recognize or relate. Every command that reads the file then asks the same question.',
     requests: 'None of its own. The function that reads it sends the requests.',
     args: '@FILE',
-    argsNote: 'It takes the place of the question words on decide, choose, tag, score, filter, and rank.',
+    argsNote: 'It takes the place of inline question arguments. Its verb must match the function; filter and rank also read decide questions, and rank reads score questions.',
     options: [
-      flag('the verb key', '', '', 'One of decide, choose, tag, or score. It names the verb and carries the question text.'),
-      flag('true, false', '', '', 'What a yes and a no mean, for a decide question.'),
+      flag('the verb key', '', '', 'The function’s saved grammar: decide, choose, tag, score, find, recognize or relate. The question-file specification gives each shape.'),
+      flag('true, false', '', '', 'Authored readings of yes and no for decide. Text, objects, lists and null remain as written; present null differs from absence.'),
       flag('options, labels', '', '', 'A list, or a map from label to what it means.'),
       flag('levels', '', '', 'The scale, lowest first.'),
       flag('threshold', '', '', 'A cut, or a band written LOW:HIGH.'),
       flag('on', '', '', 'One JSON Pointer, or a list of them.'),
+      flag('name, wording_version', '', '', 'Optional author name and wording version in development 0.2. They do not change the question digest.'),
+      flag('item_schema, context_schema', '', '', 'Restricted declarations validated after selection in development 0.2. They never project or coerce the input.'),
       flag('model, profile', '', '', 'The model to ask and the calibration profile to apply.'),
     ],
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],

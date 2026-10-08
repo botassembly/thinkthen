@@ -29,7 +29,7 @@ pub(super) fn dry_run(
         questions: None,
         sized: true,
         inputs: inputs_cap,
-        context: false,
+        context: judging.context.is_some() || judging.context_field.is_some(),
         detailed: false,
         continues: false,
     });
@@ -65,7 +65,19 @@ pub(super) fn dry_run(
             .add(entries, &mut closed)
             .map_err(|error| match error {
                 PackError::Profile(limit) => Failure::ProfileLimit(limit),
-                PackError::Context { .. } => Failure::Defect("annotate packed a context"),
+                PackError::Context {
+                    initial,
+                    kind,
+                    limit,
+                    actual,
+                } => crate::failure::context::Limits::new(engine.profile()).refused(
+                    crate::core::BatchError::ContextOverLimit {
+                        kind,
+                        limit,
+                        actual,
+                    },
+                    initial,
+                ),
             })?;
         for request in closed.drain(..) {
             preview_request(

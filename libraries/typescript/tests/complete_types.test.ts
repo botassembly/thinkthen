@@ -3,6 +3,9 @@ import { decode, AnswerId, CallId, type Result, type AnnotatedValue } from '../_
 import * as requests from '../_requests.js';
 const input: unknown = {};
 const decide = decode('DecideResult', input);
+const meaning: boolean | import('../_complete.js').Description = decide.value;
+// @ts-expect-error complete decisions may carry an authored reading.
+const bareMeaning: boolean | null = decide.value;
 const probability: number = decide.answer.probability;
 const id = decide.answer_id;
 const facts = decode('Facts', input);
@@ -47,7 +50,7 @@ requests.find({ score: 'Q', levels: ['low', 'high'] }, records);
 requests.tag({ tag: 'Q', labels: ['a'] }, { images: [{ data: new Uint8Array([1]) }] });
 // @ts-expect-error annotation is a record operation.
 requests.annotate({ version: 1, questions: {} }, { text: 'literal' });
-void [probability, server, offsets, line, pieces, kinds, source, target, aggregate, images, wrongId, wrongRequest, CallId];
+void [meaning, bareMeaning, probability, server, offsets, line, pieces, kinds, source, target, aggregate, images, wrongId, wrongRequest, CallId];
 
 // @ts-expect-error descriptions have a structured/string/null root.
 requests.choose({ choose: 'Q', options: { a: true } }, records);

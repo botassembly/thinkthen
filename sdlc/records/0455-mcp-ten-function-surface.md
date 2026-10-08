@@ -20,6 +20,18 @@ Fresh High review accepted the buffer change on d1718f3d1. That source passed 36
 
 The first full test run exposed an invalid ordering assumption in the existing single-signal image-input fixture. Signal termination can precede the polling thread's acknowledgment file. The fixture now observes bounded termination with the exact SIGINT or SIGTERM status after a completed write larger than the pipe buffer. It retains the open writer, empty output, secrecy and zero-send checks. Second-signal acknowledgment fixtures and production interrupt handling are unchanged. The unchanged candidate passed full lint and specification checks; the final gates run again after this test-only correction.
 
+## Local stdio timing
+
+The retained `target/0432-union-final-stress.log` records nine paired native/MCP calls for each case below. The adapter is Cargo-built via `CARGO_BIN_EXE_thinkthen` and uses local stdio against a loopback fixture backend. Cache is disabled. Startup and initialization took 6.759 ms. Atomic and whole-set pairs made 18 requests each; record pairs made 36. Each row reports nine native and nine MCP samples, in milliseconds.
+
+| Case | Input JSON bytes | Native median | Native exploratory p95 / max | MCP median | MCP exploratory p95 / max |
+| --- | --- | --- | --- | --- | --- |
+| Atomic decide | 32 | 2.531 | 2.910 / 2.910 | 3.584 | 3.741 / 3.741 |
+| Two-record decide | 59 | 2.721 | 3.050 / 3.050 | 3.840 | 4.200 / 4.200 |
+| Whole-set find | 41 | 2.573 | 2.843 / 2.843 | 3.596 | 4.077 / 4.077 |
+
+The bounded timing test passed. The wider stress log ends with `Terminated`; it does not establish a passing full stress command. These measurements cover the local Cargo-built adapter. Installed archive, remote-provider and proxy latency remain unmeasured. Nine samples give exploratory tail values only.
+
 ## Remaining
 
-The bounded timing campaign remains required. Final Windows behavior is measured on the completed 0.2 build. HTTP serving, proxy policy and unmeasured speed claims remain out.
+The full 29-consumer installed campaign remains required under 0432. Installed archive timing remains unmeasured. Final Windows behavior is measured on the completed 0.2 build. HTTP serving, proxy policy and unmeasured speed claims remain out.

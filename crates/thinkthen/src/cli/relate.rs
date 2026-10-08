@@ -22,6 +22,7 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     arguments.common.check_plan_name()?;
+    let shared_context = asking::context::shared(arguments.context.as_deref())?;
     let settled = config::settle(arguments)?;
     let configured = settled.spec.model.as_ref().map(ModelName::as_str);
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
@@ -34,7 +35,7 @@ pub(crate) fn run(
         .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common, environment, &backend)?;
-    let (entities, sources) =
+    let (entities, sources, originals) =
         source::selection(&arguments.common, input, settled.framing, &settled.spec)?;
     if entities.is_empty() {
         return Ok(ExitCode::SUCCESS);
@@ -58,6 +59,7 @@ pub(crate) fn run(
             from: settled.from,
             entity_count: entities.len(),
             key_env: environment.key_variable(),
+            shared_context: shared_context.as_deref(),
         };
         dry_run::write(&mut writer, context, &prepared)?;
         return Ok(ExitCode::SUCCESS);
@@ -70,7 +72,8 @@ pub(crate) fn run(
         backend.clone(),
         selected_profile,
         arguments.common.jobs,
-    )?;
+    )?
+    .with_aggregate_context(shared_context.clone());
     let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
     let cancel = environment
         .cancel()
@@ -85,6 +88,8 @@ pub(crate) fn run(
         spec: &settled.spec,
         entities: &entities,
         engine: &engine,
+        context: shared_context.as_deref(),
+        originals: &originals,
     };
     if let Some(sources) = &sources {
         source::write(&mut writer, &output, &execution, sources)?;

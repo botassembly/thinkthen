@@ -41,7 +41,7 @@ const sample = (name) => fs.readFileSync(`examples/install/backends/local/${name
 
   <h2>Other measured local evidence</h2>
   <p>The retained 2026-10-02 Lichen 0.1.0 server used gemma-4-26B-A4B QAT and answered one request at a time: median 0.947 seconds, 95th percentile 1.978 seconds, server memory 17.0 GiB. It reached ThinkThen by an explicit loopback System One address, without a built-in backend. Current upstream limits and images remain unverified. The <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0400-provider-setups-and-width.md">provider evidence record</a> retains the measured limits.</p>
-  <p>Experiment 0034 also passed the text check with local Clef Q4_K_M on v0.6.0, using a separate weight pin, BF16 projector and 8192 context/batch/ubatch. Its image exchanges belong to an experimental branch. Product image work is in review fixes under 0447/0448; these recordings establish no released library or SQL image support or accuracy result. <a href="/install/backends/openrouter/">Clef through OpenRouter</a> has a separate image limitation.</p>
+  <p>Experiment 0034 also passed the text check with local Clef Q4_K_M on v0.6.0, using a separate weight pin, BF16 projector and 8192 context/batch/ubatch. Its image exchanges belong to an experimental branch. Development 0.2 local image admission requires an exact supported setup declaration. The <a href="/learn/files/#images">image input rules</a> link those profiles. These recordings establish no image accuracy result. <a href="/install/backends/openrouter/">Clef through OpenRouter</a> has a separate image limitation.</p>
 
   <h2>Check the running model</h2>
   <p>Run the line for the server you started in another terminal. Each check sends real requests.</p>

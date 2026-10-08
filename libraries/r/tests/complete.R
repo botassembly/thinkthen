@@ -27,6 +27,13 @@ candidate <- .tt_complete_decode("FindCandidate",list(index=0,input=FALSE,probab
 stopifnot(identical(candidate$input,FALSE),candidate$source$first_line==2,candidate$probability==.25)
 decide <- .tt_complete_decode("DecideResult", f$results[[1L]]$result)
 stopifnot(identical(decide$value, FALSE), is.null(decide$question$true))
+for (value in list("private reading", list(private=list(FALSE,NULL)), list("private reading",2L), NULL)) {
+  original <- f$results[[1L]]$result; original["value"] <- list(value)
+  original$question <- list(verb="decide",text="Q",false=value)
+  result <- .tt_complete_decode("DecideResult",original)
+  stopifnot(same_json(jsonlite::fromJSON(.tt_complete_json_text(result),simplifyVector=FALSE),original),
+            !any(grepl("private",capture.output(print(result)))))
+}
 choose <- .tt_complete_decode("ChooseResult", f$results[[2L]]$result)
 stopifnot(is.null(choose$value), choose$answer$confidence == 0,
           identical(names(choose$answer$probabilities), c("b", "a")),

@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__).'/autoload.php';
+require (getenv('THINKTHEN_PHP_PACKAGE') ?: dirname(__DIR__)).'/autoload.php';
 use ThinkThen\Native\{Engine,Question,QuestionSpec,FunctionKind,Content,Choice,Member,Relation,Records,Record,Author,Declaration,Property,PropertyKind,CompleteResult};
-$ffi=FFI::cdef(file_get_contents(dirname(__DIR__).'/src/native/abi.h'),$argv[1]);
+$ffi=FFI::cdef(file_get_contents((getenv('THINKTHEN_PHP_PACKAGE') ?: dirname(__DIR__)).'/src/native/abi.h'),$argv[1]);
 $row=$ffi->new('thinkthen_row_observation_v1');$row->index=37;
 if($ffi->thinkthen_result_row(null,0,FFI::addr($row))!==1 || $row->index!==37)throw new RuntimeException('final row FFI refusal changed');
 $e=new Engine($argv[1],$argv[2]);

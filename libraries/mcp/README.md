@@ -4,8 +4,9 @@ The development command exposes `thinkthen mcp` over local stdio with exactly
 `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`,
 `recognize` and `relate`. It uses one environment-resolved native Engine and its
 default persistent cache. No additional package, daemon or publication is made.
-Full 0455 acceptance remains open: fresh whole MCP review, landing gates,
-complete shared parity, timing and final Windows qualification are still required.
+The reviewed local MCP implementation and installed 251-case parity passed before
+landing. Bounded timing, final platform qualification and release rehearsal remain
+required. Public installation remains 0.1.2 and does not provide this 0.2 command.
 
 After 0.2 is published, install the ordinary command:
 

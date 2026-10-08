@@ -77,6 +77,13 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     cp portable_batch_test.go "$wrapper/portable_batch_test.go"
     cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
     THINKTHEN_PORTABLE_NATIVE="$native" THINKTHEN_PORTABLE_MODULE="$wrapper" "$python_bin" fixtures/portable_batch.py
+    mkdir "$wrapper/consumer"
+    cp fixtures/type_case.go fixtures/native_case.go fixtures/native_output.go "$wrapper/consumer/"
+    (cd "$wrapper" && PKG_CONFIG_PATH="$native/lib/pkgconfig" CGO_ENABLED=1 GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local \
+      CGO_CFLAGS="-I$native/include" CGO_LDFLAGS="-L$native/lib -Wl,-rpath,$native/lib" \
+      go build -buildvcs=false -o "$wrapper/type-case" ./consumer)
+    THINKTHEN_GO_TYPECASE="$wrapper/type-case" THINKTHEN_GO_NATIVE_LIB="$native/lib" \
+      "$python_bin" fixtures/type_cases.py native
     "$python_bin" fixtures/installed_release.py "$wrapper" "$native"
     exit
 fi

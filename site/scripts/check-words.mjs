@@ -39,7 +39,8 @@ export const RULES = [
 const SETTING_NAME = new RegExp(String.raw`\b(?:Plan|Prune)${GAP}$`);
 
 const ALLOWED = [
-  ['/install/settings/', 'planned', 'whole-input records', 'Settings renders specification/settings.md word for word. "planned" there means the requests a run would send.'],
+  ['/install/settings/', 'preview', 'uncoalesced uninterrupted', 'Settings renders the contract for exact preview bytes, not a release status.'],
+  ['/install/settings/', 'preview', 'estimate of preview input tokens', 'Settings renders the contract for input-token estimates, not a release status.'],
 ];
 
 export function prose(html) {

@@ -202,6 +202,7 @@ def native_cases(binary):
     inventory=parity.inventory(); rows=list(parity.required_cases(inventory,CONSUMER).values())
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
+    required = {row['id'] for row in rows}
     rows += [{**row,'id':'native-filter-first-excluded'} for row in rows if row['id']=='15-rank-records']
     rows += [{**row,'id':'native-duplicate-row-indices'} for row in rows if row['id']=='complete-decide']
     failed=0
@@ -282,7 +283,7 @@ def native_cases(binary):
         except (AssertionError,ValueError,KeyError,TypeError,subprocess.SubprocessError,OSError) as f:error=type(f).__name__+': '+str(f)
         if error:
             failed+=1;print(CONSUMER+' complete fixture '+row['id']+' failed: '+error,file=sys.stderr)
-        print('parity: '+json.dumps({'consumer':CONSUMER,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail' if error else 'pass'}),flush=True)
+        print(('parity: ' if row['id'] in required else 'regression: ')+json.dumps({'consumer':CONSUMER,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail' if error else 'pass'}),flush=True)
     print(CONSUMER+' complete shared cases: %d/%d passed'%(len(rows)-failed,len(rows)))
     if failed:raise SystemExit(1)
 

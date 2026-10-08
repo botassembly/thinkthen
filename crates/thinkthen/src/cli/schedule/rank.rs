@@ -75,13 +75,14 @@ struct Named<'a> {
     original: &'a Record,
     name: &'a str,
     members: Vec<core::RankMemberDocument<'a>>,
+    index: usize,
 }
 impl Serialize for Named<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.canonical.serialize_occurrence_members(
             Some(self.original),
             Some(self.name),
-            None,
+            Some(self.index),
             Some(
                 self.members
                     .iter()
@@ -93,6 +94,17 @@ impl Serialize for Named<'_> {
             ),
             serializer,
         )
+    }
+}
+struct Single<'a> {
+    canonical: &'a CompleteAtomic,
+    index: usize,
+    original: Option<&'a Record>,
+}
+impl Serialize for Single<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.canonical
+            .serialize_occurrence(self.original, None, Some(self.index), serializer)
     }
 }
 fn position(at: usize) -> Result<NonZeroUsize, Failure> {
@@ -112,7 +124,13 @@ impl Judged {
         let value = position(at)?;
         let mut printed = Some(match rank.value {
             RankValue::Single(canonical) => {
-                core::json_line(&canonical.ranked(rank.record, value)?)?
+                let mut canonical = canonical.ranked(rank.record, value)?;
+                let original = canonical.take_input();
+                core::json_line(&Single {
+                    canonical: &canonical,
+                    index: rank.record,
+                    original: original.as_ref(),
+                })?
             }
             RankValue::Set { group, member } => {
                 let positions =
@@ -147,6 +165,7 @@ impl Judged {
                     )?;
                 core::json_line(&Named {
                     canonical: &canonical,
+                    index: rank.record,
                     original: &group.original,
                     name,
                     members: group

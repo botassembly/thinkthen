@@ -53,6 +53,15 @@ def test_all_ten_results_keep_typed_answers_and_original_values():
     assert empty.value == () and empty.meta.cached is False
 
 
+@pytest.mark.parametrize("meaning", [False, True, None, "private-reading", {"meaning": ["private-reading", False]}, ["private-reading", {"nested": None}]])
+def test_decide_complete_preserves_authored_meanings_without_exposing_them(meaning):
+    row = copy.deepcopy(FIXTURE["results"][0]["result"])
+    row["value"] = meaning
+    result = c.decode("DecideResult", row)
+    assert c.to_json(result) == row
+    assert "private-reading" not in repr(result)
+
+
 def test_ids_facts_and_started_failure_have_no_synthetic_defaults():
     facts = c.decode("Facts", FIXTURE["facts"])
     assert isinstance(facts.call_id, c.CallId)

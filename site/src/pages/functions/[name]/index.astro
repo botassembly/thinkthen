@@ -72,6 +72,7 @@ const jobsScope = name === 'annotate'
     <p class="lede">You give it {fn.takes}. You get back {fn.gives}.</p>
   )}
   {isFn && <p>{fn.requests}</p>}
+  {name === 'question-file' && <p>Development 0.2 adds explicit named lookup, author names, wording versions and restricted item/context declarations. Per-record context stays separate from the selected evidence. The <a href="https://github.com/botassembly/thinkthen#saved-questions-and-records-in-development-02">saved-question example</a> shows the file, command, lookup rules and authored yes/no readings.</p>}
   {!first && bench && <p>See <code>{fn.name}</code> run on Beatles Bench: <a href={bench.route}>{bench.title}</a></p>}
 
   <h2>Read the answer</h2>

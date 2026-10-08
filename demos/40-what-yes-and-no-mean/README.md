@@ -56,12 +56,12 @@ for notice in notices/longer.txt notices/same.txt notices/silent.txt; do
   ) && rc=0 || rc=$?
   printf '%s %s ' "$(basename -- "$notice")" "$rc"
   printf '%s' "$row" | jq -r '[.value, (.answer.probability | tostring)] | join(" ")'
-done | mustmatch "longer.txt 0 true 0.96
-same.txt 1 false 0.07
-silent.txt 0 true 0.81"
+done | mustmatch "longer.txt 0 The notice says the window runs longer than the earlier plan, or the notice does not settle the length at all. 0.96
+same.txt 1 The notice says the window runs no longer than the earlier plan. 0.07
+silent.txt 0 The notice says the window runs longer than the earlier plan, or the notice does not settle the length at all. 0.81"
 ```
 
-The silent notice moved from 0.1 to 0.81 and its exit code with it. Only the sentence saying what yes means changed. A desk that must chase an unstated length now gets a yes it can branch on, and a desk that wants the other rule writes the other sentence.
+Details show the selected authored meaning in `value`. Plain output and exit codes retain the Boolean decision. The silent notice moved from 0.1 to 0.81 and its exit code with it. Only the sentence saying what yes means changed. A desk that must chase an unstated length now gets a yes it can branch on, and a desk that wants the other rule writes the other sentence.
 
 ## Step 3: keep the two texts in a question file
 

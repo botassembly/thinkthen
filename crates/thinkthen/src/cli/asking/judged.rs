@@ -24,6 +24,7 @@ use crate::schedule::{Judged, Output, Placed};
 pub(super) struct Held {
     pub(super) record: Record,
     pub(super) images: Option<crate::public::ImageEvidence>,
+    pub(super) context: Option<crate::public::RecordContext>,
     pub(super) arrived: Option<Vec<u8>>,
     pub(super) at: usize,
     pub(super) ordinal: usize,
@@ -39,6 +40,9 @@ pub(super) fn records(
     source: crate::cli::intake::Intake,
 ) -> Result<Records, Failure> {
     let reading = reading.clone();
+    let context_field = configuration.context_field.clone();
+    let context_schema = configuration.declarations.context_schema.clone();
+    let declarations = configuration.declarations.clone();
     let streams = reading.streams();
     let limited = configuration.keeping == Keeping::Ordered && configuration.common.located();
     let mut remaining = crate::core::MAX_RECORD_BYTES;
@@ -66,43 +70,37 @@ pub(super) fn records(
                     (record, Some(bytes), None)
                 }
             };
+            if !streams
+                && !reading.has_fields()
+                && reading.declares_item()
+                && let Some(images) = item.images.as_ref().or(images.as_ref())
+            {
+                declarations
+                    .validate_item(&crate::public::QuestionInput::Images(images.clone()))
+                    .map_err(|error| Placed::at(Failure::Image(error.to_string()), item.at))?;
+            }
             let held = Held {
+                context: super::context::record(
+                    &record,
+                    context_field.as_deref(),
+                    context_schema.as_ref(),
+                )
+                .map_err(|error| Placed::at(error, item.at))?,
                 record,
-                images,
+                images: item.images.or(images),
                 arrived,
                 at: item.at,
                 ordinal,
                 position: item.position,
             };
             if limited {
-                charge(&reading, &held, &mut remaining)?;
+                super::reading::charge(&reading, &held, &mut remaining)?;
             }
             Ok(held)
         });
         stopped = held.is_err();
         Some(held)
     })))
-}
-
-/// Charge original evidence at source admission, leaving the iterator tail unread.
-fn charge(reading: &Reading, held: &Held, remaining: &mut usize) -> Result<(), Placed> {
-    let record_error = |error| Placed::at(Failure::record(error, reading.streams()), held.at);
-    let bytes = match &held.arrived {
-        Some(bytes) => reading.as_it_arrived(bytes).map_err(record_error)?.len(),
-        None => reading
-            .evidence(&held.record)
-            .map_err(record_error)?
-            .as_text()
-            .map_err(|error| Placed::at(Failure::from(error), held.at))?
-            .len(),
-    };
-    *remaining = remaining.checked_sub(bytes).ok_or_else(|| {
-        Placed::at(
-            Failure::Usage("source rank reads at most 16 MiB across all input records"),
-            held.at,
-        )
-    })?;
-    Ok(())
 }
 
 /// What one record's plan needs besides the record.
@@ -120,17 +118,23 @@ impl Planner<'_> {
     /// The quoted plan one record sends. A stream's record quotes the JSON
     /// value a batch has always quoted, and one document quotes its evidence.
     pub(super) fn plans(&self, held: &Held) -> Result<Vec<Plan>, Failure> {
+        let context = self.context_for(held)?;
         if let Some(images) = &held.images {
             if self.reading.declares_item() && images.text().is_none() {
                 return Err(Failure::Record(crate::core::RecordError::ItemSchema));
             }
-            if self.reading.declares_item() {
+            if self.reading.declares_item() && (self.reading.streams() || self.reading.has_fields())
+            {
                 self.reading.evidence(&held.record)?;
+            }
+            let mut state = images.state();
+            if self.reading.streams() || self.reading.has_fields() {
+                state.text = self.reading.batch_record(&held.record)?.value;
             }
             return crate::core::image::plan(
                 self.asked.clone(),
-                images.state(),
-                self.context.as_ref(),
+                state,
+                context.as_ref(),
                 self.asks.questions(&held.record)?,
                 self.profile,
                 self.route,
@@ -142,18 +146,31 @@ impl Planner<'_> {
         self.asks
             .questions(record)?
             .into_iter()
-            .map(|question| self.plan(record, question))
+            .map(|question| self.plan(record, question, context.as_ref()))
             .collect()
     }
 
-    fn plan(&self, record: &Record, question: crate::core::Question) -> Result<Plan, Failure> {
+    pub(super) fn context_for(&self, held: &Held) -> Result<Option<Evidence>, Failure> {
+        match held.context.as_ref() {
+            Some(context) => crate::public::RecordContext::resolved(Some(context), None)
+                .map_err(|_| Failure::Usage("the per-item context does not match context_schema")),
+            None => Ok(self.context.clone()),
+        }
+    }
+
+    fn plan(
+        &self,
+        record: &Record,
+        question: crate::core::Question,
+        context: Option<&Evidence>,
+    ) -> Result<Plan, Failure> {
         let planned = if self.reading.streams() {
             let batch = self.reading.batch_record(record)?;
             quoted_plan_of(
                 self.asked.clone(),
                 batch.evidence,
                 &batch.value,
-                self.context.as_ref(),
+                context,
                 vec![question],
                 self.profile,
             )
@@ -161,7 +178,7 @@ impl Planner<'_> {
             quoted_plan(
                 self.asked.clone(),
                 self.reading.evidence(record)?,
-                None,
+                context,
                 vec![question],
                 self.profile,
             )
@@ -219,7 +236,7 @@ impl Asker for JudgeAsker<'_> {
     type Error = Placed;
 
     fn validates_batches(&self) -> bool {
-        self.planner.reading.declares_item()
+        self.planner.reading.declares_item() || self.judging.declarations.context_schema.is_some()
     }
 
     fn label(&self, held: &Held) -> usize {
@@ -303,6 +320,17 @@ impl JudgeAsker<'_> {
                 attempts,
                 position: held.position.as_ref(),
                 images: held.images.as_ref(),
+                context_sha256: self
+                    .planner
+                    .context_for(held)?
+                    .as_ref()
+                    .map(|context| {
+                        context
+                            .as_text()
+                            .map(|text| crate::core::bytes_sha256(text.as_bytes()))
+                    })
+                    .transpose()
+                    .map_err(Failure::from)?,
             },
         )?;
         if judgment.answered.replayed {
@@ -338,6 +366,7 @@ pub(super) fn run(
     if matches!(configuration.keeping, Keeping::Passing | Keeping::Ordered) {
         output.guard_models();
     }
+    let per_record_context = configuration.context_field.is_some();
     let judging = Judging::new(configuration)?;
     let downstream = edge::Downstream::default();
     let asker = JudgeAsker {
@@ -358,7 +387,7 @@ pub(super) fn run(
         questions: None,
         sized: true,
         inputs,
-        context: asker.planner.context.is_some(),
+        context: asker.planner.context.is_some() || per_record_context,
         detailed: judging.view.details,
         continues: false,
     };

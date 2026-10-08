@@ -9,6 +9,7 @@ mod set_rank;
 /// The complete canonical document for decide, choose, tag, score, filter or rank.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Atomic {
+    pub(crate) function: crate::core::image::InputFunction,
     pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: ResultIdentity,
     pub(crate) legacy: DecisionResult,
@@ -18,6 +19,27 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    /// Resolve the documented presentation from the actual question and answer.
+    /// Typed accessors retain the primitive value, including authored null.
+    fn presented(&self) -> super::wire::AtomicValue<'_> {
+        if let Some(position) = self.rank_position {
+            return super::wire::AtomicValue::Rank(position);
+        }
+        if self.function == crate::core::image::InputFunction::Decide
+            && let crate::core::Question::Decide { yes, no, .. } = &self.legacy.question
+        {
+            let meaning = match self.legacy.value {
+                crate::core::Value::YesNo(Some(true)) => yes.as_ref(),
+                crate::core::Value::YesNo(Some(false)) => no.as_ref(),
+                _ => None,
+            };
+            if let Some(meaning) = meaning {
+                return super::wire::AtomicValue::Authored(meaning);
+            }
+        }
+        super::wire::AtomicValue::Primitive(&self.legacy.value)
+    }
+
     pub(crate) fn take_input(&mut self) -> Option<crate::core::Record> {
         self.legacy.input.take()
     }
@@ -112,10 +134,7 @@ impl Atomic {
         super::wire::AtomicDocument {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
-            value: self.rank_position.map_or_else(
-                || super::wire::AtomicValue::Primitive(&row.value),
-                super::wire::AtomicValue::Rank,
-            ),
+            value: self.presented(),
             input,
             index,
             images: self.images.as_deref(),

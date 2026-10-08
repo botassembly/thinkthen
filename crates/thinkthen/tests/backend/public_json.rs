@@ -202,7 +202,8 @@ fn details(
     }
     // Correlation IDs identify distinct live observations. Compare the retained
     // legacy judgment fields, not the independent answers' transient identities.
-    for key in ["value", "question", "answer", "threshold"] {
+    versioned_values(case, text, &legacy, &complete)?;
+    for key in ["question", "answer", "threshold"] {
         if legacy.get(key) != complete.get(key) {
             return Err(format!("the retained {key} differs"));
         }
@@ -238,6 +239,50 @@ fn details(
         return Err("the actual complete observation alignment differs".into());
     }
     Ok(1)
+}
+
+/// Pin released boolean values and complete authored values independently.
+fn versioned_values(
+    case: &Case,
+    text: &str,
+    legacy: &serde_json::Value,
+    complete: &serde_json::Value,
+) -> Result<(), String> {
+    let exchange = case
+        .exchanges
+        .iter()
+        .position(|held| held.evidence.as_deref() == Some(text))
+        .ok_or("no canonical exchange")?;
+    let answers = case
+        .expect
+        .get("success")
+        .and_then(|success| success.get("answers"))
+        .and_then(serde_json::Value::as_array)
+        .ok_or("no canonical answers")?;
+    let answer = answers
+        .iter()
+        .find(|answer| answer["exchange"].as_u64() == Some(exchange as u64))
+        .ok_or("no canonical answer")?;
+    let bare = &answer["bare"];
+    if &legacy["value"] != bare {
+        return Err("the released value differs from the canonical bare answer".into());
+    }
+    let question: serde_json::Value =
+        serde_json::from_str(case.question.as_ref().map_or("{}", |raw| raw.get()))
+            .map_err(|error| error.to_string())?;
+    let expected = if case.verb == "decide" {
+        bare.as_bool()
+            .and_then(|yes| question.get(if yes { "true" } else { "false" }))
+            .unwrap_or(bare)
+    } else {
+        bare
+    };
+    if &complete["value"] != expected {
+        return Err(
+            "the complete value differs from the independently expected authored answer".into(),
+        );
+    }
+    Ok(())
 }
 
 /// The command's standard output for one input.

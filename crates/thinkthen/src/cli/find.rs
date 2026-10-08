@@ -15,10 +15,11 @@ use crate::cli::{
     intake::{self, Position, Snapshot},
 };
 use crate::edge::{self, Environment};
-use crate::engine::facade::{self, Found};
+use crate::engine::facade;
 use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 mod question;
+mod result;
 
 /// Read one bounded set, ask once, and print its selected original unit.
 pub(crate) fn run(
@@ -35,32 +36,33 @@ pub(crate) fn run(
         sources,
     } = question::Prepared::new(arguments)?;
     let common = &common;
+    let context = asking::context::shared(arguments.common.context.as_deref())?;
     let mut display = display(arguments, common)?;
     let reading = Reading::new(framing(common), fields(common)?)?
         .with_item_schema(metadata.item_schema.clone());
-    let backend = environment.resolve(
-        common.backend.as_deref(),
-        common.url.as_deref(),
-        common.model.as_deref(),
-    )?;
+    let backend = environment
+        .resolve(
+            common.backend.as_deref(),
+            common.url.as_deref(),
+            common.model.as_deref(),
+        )?
+        .with_request_size(
+            environment.request_size(arguments.common.max_request_bytes.as_deref())?,
+        );
     let profile = profile::read(common, environment, &backend)?;
     let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
     let recording = folders.reported();
-    let engine = (!common.dry_run)
-        .then(|| {
-            asking::engine(
-                common,
-                environment,
-                folders,
-                backend.clone(),
-                profile.clone(),
-                None,
-            )
-        })
-        .transpose()?;
+    let engine = live_engine(
+        common,
+        environment,
+        folders,
+        backend.clone(),
+        profile.clone(),
+        context.clone(),
+    )?;
     let most = if arguments.none { 254 } else { 255 };
     let units = input_units(
         common,
@@ -86,7 +88,7 @@ pub(crate) fn run(
         return planned(
             &find,
             (&backend, environment.key_variable()),
-            profile.as_ref(),
+            (profile.as_ref(), context.as_deref()),
             (&reading, sources),
             units.len(),
             writer,
@@ -97,11 +99,11 @@ pub(crate) fn run(
     let found = engine.find(&find, &cancel).map_err(|error| {
         Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
     })?;
-    let rendered = rendered(
+    let rendered = result::rendered(
         common,
         &find,
         &engine,
-        &reading,
+        (&reading, context.as_deref()),
         &units,
         (found, metadata, resolved),
     )?;
@@ -112,11 +114,23 @@ pub(crate) fn run(
         rendered.score,
     )?;
     environment.usage().record_done();
-    Ok(if rendered.resolved {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::from(3)
-    })
+    Ok(ExitCode::from(if rendered.resolved { 0 } else { 3 }))
+}
+
+fn live_engine(
+    common: &Common,
+    environment: &Environment,
+    folders: Folders,
+    backend: Backend,
+    profile: Option<crate::core::BackendProfile>,
+    context: Option<String>,
+) -> Result<Option<facade::Engine>, Failure> {
+    (!common.dry_run)
+        .then(|| {
+            asking::engine(common, environment, folders, backend, profile, None)
+                .map(|engine| engine.with_aggregate_context(context))
+        })
+        .transpose()
 }
 
 fn display(arguments: &FindArguments, common: &Common) -> Result<Display, Failure> {
@@ -130,13 +144,16 @@ fn display(arguments: &FindArguments, common: &Common) -> Result<Display, Failur
 fn planned(
     find: &Find,
     (backend, key_env): (&Backend, &str),
-    profile: Option<&crate::core::BackendProfile>,
+    (profile, context): (Option<&crate::core::BackendProfile>, Option<&str>),
     (reading, sources): (&Reading, Option<crate::core::Sources>),
     records: usize,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let mut asks = facade::Asks::default();
     asks.add(backend, find.plan())?;
+    if let Some(context) = context {
+        asks = asks.with_context(backend, context)?;
+    }
     let prepared = asks.requests(backend, profile, facade::Bound::WHOLE)?;
     let mut summary = PlanSummary::new(false);
     summary
@@ -147,9 +164,18 @@ fn planned(
             .request(&request.body)
             .map_err(|_| Failure::Defect("a plan is too large"))?;
     }
-    let mut document = PlanDocument::of(backend, find.plan())
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
-        .key_env(key_env);
+    let mut document = match context {
+        Some(_) => PlanDocument::of_body(
+            backend,
+            summary
+                .first_body()
+                .ok_or(Failure::Defect("a find preview has no request"))?
+                .to_vec(),
+        ),
+        None => PlanDocument::of(backend, find.plan()),
+    }
+    .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
+    .key_env(key_env);
     if summary.first_body() != Some(document.request_body()) {
         return Err(Failure::Defect(
             "the disclosed request changed after preparation",
@@ -310,84 +336,6 @@ fn read_units(
         });
     }
     Ok(units)
-}
-
-fn rendered(
-    common: &Common,
-    find: &Find,
-    engine: &facade::Engine,
-    reading: &Reading,
-    units: &[Unit],
-    (found, declarations, question): (
-        Found,
-        crate::core::declaration::QuestionMetadata,
-        crate::core::Question,
-    ),
-) -> Result<Rendered, Failure> {
-    let selected = &found.selection;
-    let place = selected.selected();
-    let unit = place
-        .map(|place| {
-            units
-                .get(place)
-                .ok_or(Failure::Defect("a find selection is outside its units"))
-        })
-        .transpose()?;
-    let position = unit.map(|unit| unit.position.clone());
-    let score = place
-        .map(|place| {
-            selected
-                .probabilities()
-                .get(place)
-                .map(|(_, probability)| *probability)
-                .ok_or(Failure::Defect("a find selection carries no probability"))
-        })
-        .transpose()?;
-    let mut line = if common.details {
-        let value = unit.map(|unit| unit.record.clone());
-        let candidates = units
-            .iter()
-            .map(|unit| unit.evidence.as_text().map(|text| text.into_owned()))
-            .collect::<Result<Vec<_>, _>>()?;
-        let attempts = Some(found.answered.attempts.clone());
-        let canonical = crate::result_json::complete::find(
-            engine,
-            find,
-            found,
-            crate::result_json::complete::FindRow {
-                declarations,
-                question,
-                candidates,
-                input: value,
-                context_sha256: None,
-                attempts,
-            },
-        )
-        .map_err(|_| Failure::Defect("a complete find result could not be constructed"))?;
-        Some(json_line(&canonical)?)
-    } else {
-        unit.map(|unit| {
-            reading
-                .as_it_arrived(&unit.bytes)
-                .map(str::to_owned)
-                .map_err(|error| Failure::record(error, true))
-        })
-        .transpose()?
-    };
-    if common.details {
-        intake::locate(&mut line, position.as_ref())?;
-        intake::source_members(&mut line, position.as_ref())?;
-    } else if let (Some(unit), Some(position), Some(line)) =
-        (unit, position.as_ref().filter(|p| p.located), &mut line)
-    {
-        *line = intake::source_value(&unit.record, &json_line(&unit.record)?, position)?;
-    }
-    Ok(Rendered {
-        line,
-        resolved: place.is_some(),
-        position,
-        score,
-    })
 }
 
 fn stopped(place: usize, recording: bool, cause: Failure) -> Failure {

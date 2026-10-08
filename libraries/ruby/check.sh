@@ -43,7 +43,7 @@ done
 # plant fetches its local file:// git source into a scratch home.
 if sed '/^[[:space:]]*#/d; s/[[:space:]]#.*$//' check.sh build.sh | grep -E '(^|[^[:alnum:]_])cargo [a-z]' |
    grep -vE -e '^[[:space:]]*cargo fmt --check$' -e '^[[:space:]]*(CARGO_HOME="\$plant/home" )?cargo deny ' \
-     -e '^CARGO_HOME="\$plant/home" cargo fetch --quiet --manifest-path "\$plant/copy/Cargo.toml"$' \
+     -e '^CARGO_NET_OFFLINE=false CARGO_HOME="\$plant/home" cargo fetch --quiet --manifest-path "\$plant/copy/Cargo.toml"$' \
      -e '--locked --offline' -e "grep -v?E " -e "^[[:space:]]+-e '" >&2; then
   fail "a cargo call above lacks --locked --offline"
 fi
@@ -102,7 +102,8 @@ git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
 git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
 printf '[package]\nname = "binding"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
 # A local file:// fetch under a scratch CARGO_HOME: no network and no residue.
-CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
+# Cargo's offline mode also forbids the first checkout of this local fixture.
+CARGO_NET_OFFLINE=false CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
 set +e
 # cargo-deny exits with bit 8 set when the sources check fails.
 CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$repo/deny.toml" sources >"$plant/deny" 2>&1

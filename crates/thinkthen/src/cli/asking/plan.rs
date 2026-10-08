@@ -56,7 +56,7 @@ pub(super) fn packed(
         questions: None,
         sized: true,
         inputs,
-        context: planner.context.is_some(),
+        context: planner.context.is_some() || configuration.context_field.is_some(),
         detailed: false,
         continues: false,
     };

@@ -46,16 +46,18 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     python3 "$root/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
     version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$root/crates/thinkthen/Cargo.toml" | head -n 1)
     python3 "$here/tests/package_check.py" "$native/include/thinkthen.h" "$managed/Botassembly.ThinkThen.$version.nupkg"
-    mode=release
-    [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || mode=portable
-    THINKTHEN_RELEASE_NUPKG="$managed/Botassembly.ThinkThen.$version.nupkg" \
-    THINKTHEN_RELEASE_C_DIR="$native" \
-        python3 "$here/tests/isolated_consumer.py" "$mode" "$managed"
-    if [ "$mode" = portable ]; then
-        echo 'C# portable batch PASS: installed typed bulk from package files'
-    else
-        echo 'C# installed release PASS: two exact calls from package files'
-    fi
+    python3 - "$managed/Botassembly.ThinkThen.$version.nupkg" "$managed" <<'ASSEMBLY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as package:
+    package.extract('lib/net8.0/ThinkThen.dll', sys.argv[2])
+ASSEMBLY
+    [ -f "$managed/lib/net8.0/ThinkThen.dll" ] || exit 1
+    cp -R "$here/tests/source" "$managed/source"
+    cp "$here/tests/TypeCase.csproj" "$managed/TypeCase.csproj"
+    "$dotnet" build "$managed/TypeCase.csproj" -c Release -o "$managed/app" \
+        -p:ThinkThenAssembly="$managed/lib/net8.0/ThinkThen.dll" --source "$managed" -v quiet
+    THINKTHEN_TYPECASE_DLL="$managed/app/TypeCase.dll" THINKTHEN_RELEASE_C_DIR="$native" \
+        python3 "$here/tests/public_types.py"
     exit 0
 fi
 mkdir -p "$here/target/scratch/lib" "$here/target/scratch/nuget" "$here/target/scratch/dotnet-home" "$here/target/scratch/managed" "$here/target/artifacts/native/lib" "$here/target/logs"

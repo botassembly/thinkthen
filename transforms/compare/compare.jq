@@ -9,13 +9,34 @@
 # changed trusted labels stay at record level. Nonempty primary input is
 # refused; jq does not run a filter at all for empty ordinary input. Scalar detailed rows retain the
 # original report. Annotate detailed rows compare each shared named answer.
-# Values compare exactly, including tag array order. Yes-or-no probability
+# Saved v2 decide verdicts compare under their run threshold; other values
+# compare exactly, including tag array order. Yes-or-no probability
 # movement is reported independently per question. Malformed annotate rows
 # fail with a fixed message that echoes no row content.
+
+def saved_decision:
+  .schema? == "thinkthen.result/2" and .question.verb? == "decide"
+  and .answer.kind? == "yes_no" and .threshold? != null;
+
+def decision_verdict:
+  .answer.probability as $p
+  | (try (
+      if (.threshold | type) == "number" then [.threshold]
+      elif (.threshold | type) == "string"
+      then (.threshold | split(":") | map(tonumber))
+      else [] end
+    ) catch []) as $cuts
+  | if ($cuts | length) == 1 and $cuts[0] > 0 and $cuts[0] <= 1
+    then $p >= $cuts[0]
+    elif ($cuts | length) == 2 and $cuts[0] >= 0 and $cuts[1] <= 1
+         and $cuts[0] < $cuts[1]
+    then if $p >= $cuts[1] then true elif $p < $cuts[0] then false else null end
+    else error("compare: invalid decision threshold") end;
 
 def scalar_value:
   if has("value") | not
   then error("compare: value must be null, boolean, string, or number")
+  elif saved_decision then decision_verdict
   elif ((.value | type) as $type | ["null", "boolean", "string", "number"] | index($type)) == null
   then error("compare: value must be null, boolean, string, or number")
   else .value end;
@@ -162,10 +183,10 @@ def paired_rows($before_rows; $after_rows):
             | {id:$id, b:$old[$id], a:$new[$id]}]};
 
 def scalar_report($before_rows; $after_rows; $tolerance):
-  ($before_rows | map(scalar_value) | length) as $validated_before
-  | ($after_rows | map(scalar_value) | length) as $validated_after
-  | ($before_rows | map(yes_no_probability) | length) as $validated_before_probability
+  ($before_rows | map(yes_no_probability) | length) as $validated_before_probability
   | ($after_rows | map(yes_no_probability) | length) as $validated_after_probability
+  | ($before_rows | map(.value = scalar_value)) as $before_rows
+  | ($after_rows | map(.value = scalar_value)) as $after_rows
   | paired_rows($before_rows; $after_rows) as $joined
   | ($before_rows | scalar_facts) as $bf
   | ($after_rows | scalar_facts) as $af

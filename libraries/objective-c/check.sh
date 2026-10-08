@@ -53,6 +53,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
   THINKTHEN_PORTABLE_PACKAGE="$wrapper" THINKTHEN_PORTABLE_NATIVE="$consumer" \
     THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
+  THINKTHEN_PARITY_PACKAGE="$wrapper" THINKTHEN_NATIVE_ROOT="$native" \
+    python3 "$ROOT/checks/complete_parity.py"
   echo 'GNU Objective-C installed release PASS: five typed rows and three literal sends'
   exit 0
 fi

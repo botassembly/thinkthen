@@ -15,7 +15,7 @@ pub(super) struct Sources {
     occurrences: Vec<(RelationEntity, Occurrence)>,
 }
 
-type Selection = (Vec<RelationEntity>, Option<Sources>);
+type Selection = (Vec<RelationEntity>, Option<Sources>, Vec<Record>);
 
 pub(super) fn selection(
     common: &Common,
@@ -25,11 +25,17 @@ pub(super) fn selection(
 ) -> Result<Selection, Failure> {
     if common.located() || common.input.len() > 1 {
         let sources = read(common, input, framing, spec)?;
-        Ok((sources.entities.clone(), Some(sources)))
+        let inputs = sources
+            .occurrences
+            .iter()
+            .map(|(_, occurrence)| occurrence.record.clone())
+            .collect();
+        Ok((sources.entities.clone(), Some(sources), inputs))
     } else {
         let source =
             crate::edge::source(common.input.first().map(std::path::PathBuf::as_path), input)?;
-        Ok((super::input::read(source, framing, spec)?, None))
+        let (entities, inputs) = super::input::read(source, framing, spec)?;
+        Ok((entities, None, inputs))
     }
 }
 
@@ -188,6 +194,11 @@ pub(super) fn write(
         let located = Complete {
             canonical: &canonical,
             value: &edges,
+            originals: sources
+                .occurrences
+                .iter()
+                .map(|(_, occurrence)| occurrence)
+                .collect(),
         };
         crate::edge::write_line(writer, &crate::core::json_line(&located)?)?;
     } else {
@@ -203,10 +214,11 @@ pub(super) fn write(
 struct Complete<'a> {
     canonical: &'a crate::core::CompleteRelation,
     value: &'a Vec<Edge<'a>>,
+    originals: Vec<&'a Occurrence>,
 }
 impl Serialize for Complete<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.canonical
-            .serialize_with_value::<S, (), _>(None, self.value, serializer)
+            .serialize_occurrence(Some(&self.originals), self.value, Some(0), serializer)
     }
 }

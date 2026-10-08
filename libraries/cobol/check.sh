@@ -59,6 +59,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
   THINKTHEN_PORTABLE_PACKAGE="$wrapper" THINKTHEN_PORTABLE_NATIVE="$consumer" \
     THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
+  THINKTHEN_PARITY_PACKAGE="$wrapper" THINKTHEN_C_HEADER="$consumer/include/thinkthen.h" \
+    THINKTHEN_C_LIBRARY="$consumer/lib/libthinkthen.so" python3 "$ROOT/checks/native_parity.py"
   echo 'COBOL installed release PASS: five legacy rows and owned native results for direct and named backends'
   exit 0
 fi
