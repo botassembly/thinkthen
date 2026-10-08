@@ -73,7 +73,7 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 7. Secrecy sweep: canary key through every command and failure path, every output, recording, cache entry, and error; zero hits.
 8. The misbehaving-backend battery (area 7's 24 cases) passes against the stand-in.
 9. The cache rows that waves 1 could not run (default XDG folder, 100 MB cap, prune, `status`, one-command clear, full disk) pass, or the release record says why not.
-10. Superseded 2026-09-30 by Ian's ruling 8 (`cleanup-2026-09-30.md`): no vocabulary lint. The vocabulary lint is zero-hit on help, README, demos, and the marketing pages.
+10. Superseded 2026-09-30 by Ian's ruling 8 (`sdlc/decisions/2026-10-08-preserve-planning-rulings.md`): no vocabulary lint. The vocabulary lint is zero-hit on help, README, demos, and the marketing pages.
 11. Every wave-1 issue file is closed or waived with a name beside the waiver.
 12. The surfaces review's classes are closed or waived: wrong answers with no error, host crashes at a boundary, cancel per host, and the security rows (file access behind the host's own switch, functions marked direct-only, PUBLIC revoked, relate on the caller's connection).
 13. The packages carry licenses and platforms, and no package ships recordings: a recording commits its evidence, and a published package publishes it.

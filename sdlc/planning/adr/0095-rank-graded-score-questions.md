@@ -1,6 +1,6 @@
 # ADR 0095: Rank records by a saved graded question
 
-Status: accepted. Fresh technical design review accepted [ticket 0223](../../tickets/0223-graded-relevance-reranking.md) at `aecc15f2`. Ian approved `rank @score-file`, truthful score metadata and existing library rank semantics in [the work plan](../work-plan-2026-09-27.md#ians-approval-and-release-priority-2026-09-28), item 5. Fresh Medium code review accepted source `0e242567`; coordinator integration and settled reference-page updates remain pending. Date: 2026-09-28. Ian may overturn the choice later.
+Status: accepted. Fresh technical design review accepted [ticket 0223](../../tickets/0223-graded-relevance-reranking.md) at `aecc15f2`. Ian approved `rank @score-file`, truthful score metadata and existing library rank semantics in [the work plan](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md#ians-approval-and-release-priority-2026-09-28), item 5. Fresh Medium code review accepted source `0e242567`; coordinator integration and settled reference-page updates remain pending. Date: 2026-09-28. Ian may overturn the choice later.
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # Recognition release decision: seven open rows
 
-Preparation on `ticket/qf-recognition-release-decision` at `00fde686`: source, contracts, decisions and retained evidence only. The [work plan](../planning/work-plan-2026-09-27.md) remains status authority. This record changes no criterion, release status or product behavior. It corrects the older [remainder preparation](2026-09-28-recognition-batching-remainder-preparation.md): register 111's proposed guard has since landed in [0245](0245-bound-recognition-relation-plans-build.md). The [36-row readiness](2026-09-29-other-remainder-readiness.md) is a routing snapshot, not proof that seven new builds are needed.
+Preparation on `ticket/qf-recognition-release-decision` at `00fde686`: source, contracts, decisions and retained evidence only. The [work plan](https://github.com/botassembly/thinkthen/blob/eafcd3f26/sdlc/planning/work-plan-2026-09-27.md) remains status authority. This record changes no criterion, release status or product behavior. It corrects the older [remainder preparation](2026-09-28-recognition-batching-remainder-preparation.md): register 111's proposed guard has since landed in [0245](0245-bound-recognition-relation-plans-build.md). The [36-row readiness](2026-09-29-other-remainder-readiness.md) is a routing snapshot, not proof that seven new builds are needed.
 
 ## Decision by original criterion
 
