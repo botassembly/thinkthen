@@ -4,4 +4,6 @@ Native questions, saved files, CLI, C, MCP and host declarations preserve caller
 
 Installed qualification uses the existing release packer and public consumer cases. Packaging found that the JVM native descriptor inventory omitted `thinkthen_question_recognition_task_v1`. Add its two-pointer, integer-return descriptor. The C declaration and implementation are unchanged. The existing independent header-versus-JAR ABI check reproduces the failure and checks the correction. One Java source line supplies the missing descriptor; the adjacent constructor and result getter contain no duplicate declaration to remove.
 
+The installed C++ consumer also exposed broken positional aggregate construction of `native::Result`: the new recognition task vector preceded existing members. Move that owned vector to the end with an empty default. Existing aggregate arguments keep their positions. Named snapshot population and task ownership are unchanged. The retained aggregate compatibility check supplies the regression.
+
 No paid call ran. Offline fixture execution establishes transport, decoding and ownership behavior. It establishes no recognition accuracy claim. The frozen before-and-after model evaluation remains open and needs the coordinator's priced allocation. The coordinator owns final landing checks and all landings.
