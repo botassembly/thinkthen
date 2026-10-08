@@ -521,6 +521,9 @@ impl std::fmt::Debug for RecognizeArguments {
 /// Everything `recognize` was asked before its input is read.
 #[derive(Args)]
 pub(crate) struct RecognizeArguments {
+    /// Select each JSON record's separate context; empty text suppresses shared context.
+    #[arg(long, value_name = "POINTER", hide_short_help = true)]
+    pub(crate) context_field: Option<String>,
     /// Supply task wording for every recognition stage.
     #[arg(long, value_name = "TEXT")]
     pub(crate) instructions: Option<String>,

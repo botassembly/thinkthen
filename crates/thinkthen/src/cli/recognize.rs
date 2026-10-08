@@ -44,6 +44,7 @@ struct Running<'a> {
     engine: Engine,
     mismatch: profile::Mismatch,
     context: Option<String>,
+    context_field: Option<String>,
     cancel: crate::engine::Cancel<'static>,
 }
 
@@ -60,6 +61,8 @@ pub(crate) fn run(
     arguments.common.check_plan_name()?;
     let context = asking::context::shared(arguments.context.as_deref())?;
     let mut spec = config::settle(arguments)?;
+    crate::public::RecordReading::new(&[], arguments.context_field.as_deref(), None)
+        .map_err(|_| Failure::Usage("--context-field needs a valid JSON Pointer"))?;
     let max_text_bytes = arguments.max_text_bytes.unwrap_or(MAX_TEXT_BYTES);
     let pointers = if arguments.common.field.is_empty() {
         spec.on.clone()
@@ -130,11 +133,40 @@ pub(crate) fn run(
                 key_env: environment.key_variable(),
                 backend_name: environment.named(),
                 context: context.as_deref(),
+                context_field: arguments.context_field.as_deref(),
             },
             &mut writer,
         );
     }
 
+    let source: Box<dyn Iterator<Item = Result<Item, schedule::Placed>> + Send> =
+        if arguments.context_field.is_some() {
+            let mut held = Vec::new();
+            for item in source {
+                let item = item.map_err(|placed| placed.cause)?;
+                let record = match &item.data {
+                    Data::Bytes(bytes) => reading
+                        .record(bytes)
+                        .map_err(|error| Failure::record(error, reading.streams()))?,
+                    Data::Record(record) => record.clone(),
+                    Data::Images(_) => {
+                        return Err(Failure::Usage(
+                            "recognize accepts text only; images are unsupported",
+                        ));
+                    }
+                };
+                selected_context(
+                    &record,
+                    arguments.context_field.as_deref(),
+                    &spec,
+                    context.as_deref(),
+                )?;
+                held.push(Ok(item));
+            }
+            Box::new(held.into_iter())
+        } else {
+            Box::new(source)
+        };
     let running = Running {
         common: &arguments.common,
         max_text_bytes,
@@ -149,6 +181,7 @@ pub(crate) fn run(
         .with_aggregate_context(context.clone()),
         mismatch,
         context,
+        context_field: arguments.context_field.clone(),
         cancel: environment.cancel().with_storage_scope(),
     };
     let streams = reading.streams();
@@ -229,6 +262,7 @@ fn execute(
     running: &Running<'_>,
     spec: &RecognizeSpec,
     text: &str,
+    engine: &Engine,
 ) -> Result<
     (
         crate::engine::facade::Recognition,
@@ -240,8 +274,7 @@ fn execute(
         .cancel
         .with_captured_attempts(running.common.details);
     let mut events = std::collections::BTreeMap::new();
-    let recognition = running
-        .engine
+    let recognition = engine
         .recognize_observed(
             spec,
             text,
@@ -273,17 +306,35 @@ fn judged_record(
 ) -> Result<schedule::Judged, Failure> {
     let evidence = reading.evidence(&record)?;
     let text = evidence.as_text()?.into_owned();
-    let (recognition, events) = execute(running, spec, &text)?;
+    let context = selected_context(
+        &record,
+        running.context_field.as_deref(),
+        spec,
+        running.context.as_deref(),
+    )?;
+    let engine = running
+        .engine
+        .clone()
+        .with_aggregate_context_value(context.clone());
+    let (recognition, events) = execute(running, spec, &text, &engine)?;
     let replayed = !recognition.meta.live;
     let line = if running.common.details {
         let canonical = crate::result_json::complete::recognition(
-            &running.engine,
+            &engine,
             spec,
             recognition,
             crate::result_json::complete::RecognitionRow {
                 ordinal: row.ordinal,
                 input: row.streams.then_some(record),
-                context_sha256: asking::context::digest(running.context.as_deref()),
+                context_sha256: context
+                    .as_ref()
+                    .map(|value| {
+                        value
+                            .as_text()
+                            .map(|text| asking::context::digest(Some(&text)))
+                    })
+                    .transpose()?
+                    .flatten(),
                 attempts: Some(events),
             },
         )
@@ -326,4 +377,15 @@ fn judged_record(
         partial_failure: false,
         profile_mismatch: running.mismatch.notice(),
     })
+}
+
+fn selected_context(
+    record: &Record,
+    pointer: Option<&str>,
+    spec: &RecognizeSpec,
+    fallback: Option<&str>,
+) -> Result<Option<crate::core::Evidence>, Failure> {
+    let selected = asking::context::record(record, pointer, spec.metadata.context_schema.as_ref())?;
+    crate::public::RecordContext::resolved(selected.as_ref(), fallback)
+        .map_err(|_| Failure::Usage("the per-item context does not match context_schema"))
 }

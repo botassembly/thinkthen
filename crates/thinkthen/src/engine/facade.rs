@@ -83,7 +83,7 @@ pub(crate) struct Settings {
 #[derive(Clone)]
 pub(crate) struct Engine {
     backend: Backend,
-    aggregate_context: Option<String>,
+    aggregate_context: Option<crate::core::Json>,
     profile: Option<BackendProfile>,
     timeout: Duration,
     max_retries: u32,
@@ -153,7 +153,15 @@ pub(crate) struct Found {
 
 impl Engine {
     pub(crate) fn with_aggregate_context(mut self, context: Option<String>) -> Self {
-        self.aggregate_context = context;
+        self.aggregate_context = context.map(crate::core::Json::String);
+        self
+    }
+
+    pub(crate) fn with_aggregate_context_value(
+        mut self,
+        context: Option<crate::core::Evidence>,
+    ) -> Self {
+        self.aggregate_context = context.map(|value| value.as_json());
         self
     }
 

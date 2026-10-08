@@ -66,7 +66,7 @@ impl Engine {
             spec,
             text,
             MAX_TEXT_BYTES,
-            self.aggregate_context.as_deref(),
+            self.aggregate_context.as_ref(),
         )
         .map(|_| ())
     }
@@ -100,7 +100,7 @@ impl Engine {
             spec,
             text,
             limit,
-            self.aggregate_context.as_deref(),
+            self.aggregate_context.as_ref(),
         )?;
         let mut meta = Aggregate::default();
         let mut details = Probabilities::default();
@@ -313,7 +313,7 @@ fn step_one_context(
     spec: &RecognizeSpec,
     text: &str,
     limit: usize,
-    context: Option<&str>,
+    context: Option<&crate::core::Json>,
 ) -> Result<StepOne, Error> {
     if text.len() > limit {
         return Err(Error::TextTooLong {
