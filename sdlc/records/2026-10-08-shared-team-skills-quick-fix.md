@@ -6,7 +6,7 @@ Removed `work-plan-2026-09-27.md`, `cleanup-2026-09-30.md`, `bench-handoff.md`, 
 
 Checks: `pm lint` reports zero findings; its light flow skips link checks. A targeted inspection checked 516 local Markdown targets and 27 archived targets in changed documents, with no new missing target. Four historical source links were already missing in the base records: `decide_edge.rs`, both old `annotate_schedule.rs` files and `engine/request/tests.rs`. Existing ticket/issue backtick citations remain historical evidence. New prose matches none of the 35 private names in the external list. The instructions fit the existing size check, and `git diff --check` passes. The lane table and pm configuration are unchanged. pm reports build `94e514c`; the configured mailroom is `agents`. Product code, configuration and tests have unchanged inputs, so their existing evidence applies. Removed the owned 0471 lock scratch and retained warm builds.
 
-Review: the coordinator will add the fresh read-only review verdict and any correction here before landing.
+Fresh read-only review found two preparation pages that pointed to a nonexistent section in the preservation decision. A fresh developer repointed both to the historical lessons at source commit `eafcd3f26` and removed a superseded 0.3 SDK deferral from the decision. The reviewer checked final source `333d9843b9b6e2585bd067aeb0a9dcb7d154914a` and returned ACCEPT.
 
 ## What the build taught us
 
