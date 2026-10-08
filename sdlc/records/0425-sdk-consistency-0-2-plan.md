@@ -100,3 +100,5 @@ Logs use `/tmp/thinkthen-0425-python-` with suffixes `build.log`, `installed-tes
 Fresh read-only reviewer `/root/windows_python_fixture_review` accepts `25ddc5cca81716bd4c4a2556f09099c74f46661a` without blocking findings. The coordinator owns batching, landing and the remaining native Windows qualification.
 
 What the build taught us: tests copied away from a source checkout must locate their carrier modules through the selected package and carry every corpus they read.
+
+The combined Windows corrections at 16ea372f0 passed full local tests. Full lint then found the C fixture total grew by two nonblank lines for serialized native paths and checked output length. The C ceiling now equals the measured 2646 lines. This correction changes no behavior or assertions; lint is rerun before landing. The existing installed matrix remains applicable to unchanged production Linux code, and real Windows qualification remains open.
