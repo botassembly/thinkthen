@@ -54,6 +54,15 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
             return Err(error(false, RecognizeConfigError::Threshold));
         }
     }
+    let wording = |value: &str| {
+        crate::core::QuestionText::new(value).map_err(|_| error(false, RecognizeConfigError::Shape))
+    };
+    if let Some(value) = &arguments.instructions {
+        spec.instructions = Some(wording(value)?);
+    }
+    if let Some(value) = &arguments.entity_definition {
+        spec.entity_definition = Some(wording(value)?);
+    }
     Ok(spec)
 }
 

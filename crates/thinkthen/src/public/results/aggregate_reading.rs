@@ -43,6 +43,23 @@ impl ResolvedRelationRule<'_> {
 #[derive(Clone, Copy)]
 pub struct RecognitionReading<'a>(pub(crate) &'a core::RecognizeSpec);
 impl RecognitionReading<'_> {
+    /// Caller task wording, absent for the compatibility default.
+    #[must_use]
+    pub fn instructions(&self) -> Option<&str> {
+        self.0
+            .instructions
+            .as_ref()
+            .and_then(|v| v.as_json().as_str())
+    }
+    /// Caller definition of the literal entity spans.
+    #[must_use]
+    pub fn entity_definition(&self) -> Option<&str> {
+        self.0
+            .entity_definition
+            .as_ref()
+            .and_then(|v| v.as_json().as_str())
+    }
+
     /// Explicit authored model, independent of accepted response provenance.
     #[must_use]
     pub fn model(&self) -> Option<&str> {

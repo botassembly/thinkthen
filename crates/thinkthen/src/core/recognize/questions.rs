@@ -5,7 +5,7 @@ use std::ops::Range;
 use super::bilou::TAGS;
 use super::pieces::Piece;
 use crate::core::question::LabelsError;
-use crate::core::{Description, Labels, Question, QuestionText};
+use crate::core::{Description, Labels, Question, QuestionText, RecognizeSpec};
 
 /// How many pieces each side of a piece or name a snippet and a request show.
 pub(crate) const WINDOW: usize = 6;
@@ -116,18 +116,71 @@ fn step_one_words(kinds: &[&str]) -> String {
     )
 }
 
+/// The full caller declaration is shared by every membership and boundary question.
+fn task_words(spec: Option<&RecognizeSpec>) -> Option<String> {
+    let spec = spec?;
+    if spec.instructions.is_none()
+        && spec.entity_definition.is_none()
+        && !spec.kinds.iter().any(|(_, d)| {
+            d.as_ref()
+                .is_some_and(|d| !d.blank() && !matches!(d.as_json(), crate::core::Json::Null))
+        })
+    {
+        return None;
+    }
+    let mut words = String::from(
+        "Recognize literal entity spans in the text according to this caller declaration.",
+    );
+    if let Some(value) = &spec.instructions {
+        words.push_str("\nInstructions: ");
+        words.push_str(value.as_json().as_str().unwrap_or_default());
+    }
+    words.push_str("\nEntity definition: ");
+    words.push_str(
+        spec.entity_definition
+            .as_ref()
+            .and_then(|v| v.as_json().as_str())
+            .unwrap_or("A literal span that satisfies the caller's instructions and listed kinds."),
+    );
+    if !spec.kinds.is_empty() {
+        words.push_str("\nKinds and descriptions: ");
+        // A structured description retains its JSON shape and authored label order.
+        for (name, description) in &spec.kinds {
+            words.push_str(&format!("\n{name}: "));
+            if let Some(description) = description {
+                words.push_str(&serde_json::to_string(description).unwrap_or_default());
+            }
+        }
+    }
+    Some(words)
+}
+
 /// One pick-one BILOU question per piece in `group`.
 pub(crate) fn step_one_questions(
     text: &str,
     pieces: &[Piece],
     group: Range<usize>,
     kinds: &[&str],
+    spec: Option<&RecognizeSpec>,
 ) -> Result<Vec<Question>, LabelsError> {
-    let words = step_one_words(kinds);
+    let custom = task_words(spec);
+    let words = custom.as_ref().map_or_else(
+        || step_one_words(kinds),
+        |task| format!("{task}\n{SPLIT} Where does the [[ ]] token stand in an entity?"),
+    );
     let options = Labels::described(
         TAGS.iter()
             .zip(TAG_WORDS)
-            .map(|(tag, meaning)| ((*tag).to_owned(), Some(Description::text(meaning))))
+            .map(|(tag, meaning)| {
+                (
+                    (*tag).to_owned(),
+                    Some(Description::text(if custom.is_some() {
+                        meaning.replace("name", "entity")
+                    } else {
+                        meaning.to_owned()
+                    })),
+                )
+            })
             .collect(),
     )?;
     group
@@ -149,15 +202,23 @@ pub(crate) fn kind_question(
     pieces: &[Piece],
     name: (usize, usize),
     kinds: &[(String, Option<Description>)],
+    spec: Option<&RecognizeSpec>,
 ) -> Result<Question, LabelsError> {
+    let custom = task_words(spec);
+    let words = custom.as_ref().map_or_else(|| KIND_WORDS.to_owned(), |task|
+        format!("{task}\nWhich listed kind applies to the entity wrapped in [[ ]]? Choose none of these when the span fails the caller declaration or no listed kind applies."));
     let mut options = kinds.to_vec();
     options.push((
         NONE_OF_THESE.to_owned(),
-        Some(Description::text(DECLINE_WORDS)),
+        Some(Description::text(if custom.is_some() {
+            "The span fails the caller declaration or no listed kind applies."
+        } else {
+            DECLINE_WORDS
+        })),
     ));
     Ok(Question::Choose {
         text: text_of(format!(
-            "{KIND_WORDS}\n\nText: {}",
+            "{words}\n\nText: {}",
             marked(text, pieces, name, false)
         ))?,
         options: Labels::described(options)?,
@@ -221,7 +282,10 @@ pub(crate) fn edge_question(
     text: &str,
     pieces: &[Piece],
     options: &[(usize, usize)],
+    spec: Option<&RecognizeSpec>,
 ) -> Result<Question, LabelsError> {
+    let words = task_words(spec).map_or_else(|| EDGE_WORDS.to_owned(), |task|
+        format!("{task}\nPick the option that wraps exactly the whole requested entity. Retain literal punctuation that belongs to the entity, including decimal points, slashes and web-address punctuation. Leave surrounding sentence punctuation outside."));
     let mut labels: Vec<(String, Option<Description>)> = Vec::with_capacity(options.len());
     for (first, last) in options.iter().copied() {
         let mut label = edge_label(text, pieces, (first, last));
@@ -234,7 +298,7 @@ pub(crate) fn edge_question(
     let found = options.first().copied().unwrap_or_default();
     Ok(Question::Choose {
         text: text_of(format!(
-            "{EDGE_WORDS}\n\nText: {}",
+            "{words}\n\nText: {}",
             marked(text, pieces, found, false)
         ))?,
         options: Labels::described(labels)?,

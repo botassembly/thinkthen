@@ -515,6 +515,12 @@ pub(crate) struct ScoreArguments {
 /// Everything `recognize` was asked before its input is read.
 #[derive(Args, Debug)]
 pub(crate) struct RecognizeArguments {
+    /// Supply task wording for every recognition stage.
+    #[arg(long, value_name = "TEXT")]
+    pub(crate) instructions: Option<String>,
+    /// Define the literal spans to recognize.
+    #[arg(long, value_name = "TEXT")]
+    pub(crate) entity_definition: Option<String>,
     /// Share the exact UTF-8 contents of FILE across every recognition stage.
     #[arg(long, value_name = "FILE", hide_short_help = true)]
     pub(crate) context: Option<PathBuf>,
