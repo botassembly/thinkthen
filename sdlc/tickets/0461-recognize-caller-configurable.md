@@ -1,6 +1,6 @@
 # 0461: Let callers define recognition entities
 
-Status: OPEN. Implementation, code review, Linux installed custom qualification and the finite model comparison are complete. Ian moved this ticket into 0.2 on 2026-10-08. Final integration checks and landing are next; caller wording recovered seven of eleven literal targets in the limited comparison.
+Status: OPEN. Slice A caller wording, help and shared case is ready for final integration review and landing in 0.2. Implementation, earlier code review, Linux installed custom qualification and the finite model comparison are complete. Slice B is a size-based kind-limit proposal held until TCGA round one; the 20-kind cap remains. Caller wording recovered seven of eleven literal targets in the limited comparison.
 
 Reviews: accept
 
@@ -14,6 +14,8 @@ Signed: lane 2 ticket owner, 2026-10-07.
 Callers supply recognition instructions, an entity definition and descriptions for their own labels. Every recognition stage follows that declaration. A caller can request literal values with units, dates, counts, codes, doses, amounts, ordinary words or web addresses. Recognition applies no fixed semantic label list or suppression to a caller-defined task. The existing question wording remains the compatibility default only when callers omit all custom instructions, entity definition and label descriptions.
 
 Build started on lane 2 after fresh ticket acceptance. Ian promoted 0461 into 0.2 on 2026-10-08 and directed landing now alongside the after-sprint review. The shared custom-wording case and tested example accompany the change. The separate 20-kind-cap proposal remains held until TCGA round one.
+
+Slice A contains the implemented caller declaration, corrected help, shared case, prior installed qualification and model comparison. Slice B will propose a size-based replacement for the 20-kind cap after TCGA round one. It changes no cap now and requires a separate review before implementation.
 
 ## Evidence
 

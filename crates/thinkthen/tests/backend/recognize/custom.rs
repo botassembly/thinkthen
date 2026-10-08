@@ -127,6 +127,12 @@ fn each_custom_input_enables_values_without_an_extra_switch() {
         vec!["--instructions", INSTRUCTIONS],
         vec!["--entity-definition", DEFINITION],
         vec!["--kind", "amount=Receipt total amount, not its label."],
+        vec![
+            "--entity-definition",
+            DEFINITION,
+            "--kind",
+            "amount=Receipt total amount, not its label.",
+        ],
     ] {
         let listener = Listener::answering(literal).expect("listener");
         let output = local(&listener, &args, Some("fake"), INPUT.as_bytes());
@@ -134,7 +140,7 @@ fn each_custom_input_enables_values_without_an_extra_switch() {
         let result: Value = serde_json::from_str(&stdout(&output)).expect("JSON");
         assert_eq!(
             result,
-            expected(if args[0] == "--kind" {
+            expected(if args.contains(&"--kind") {
                 "amount"
             } else {
                 "ENTITY"

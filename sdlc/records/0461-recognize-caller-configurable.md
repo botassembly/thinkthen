@@ -57,6 +57,8 @@ Fresh read-only diagnosis found no code defect in the four model misses. Recorde
 
 Ian moved 0461 into 0.2 and directed landing alongside the after-sprint review. Current main was merged into the lane without dropping ticket work. The merge reconciled source ratchets with the measured combined totals and retained main's release hold. The prior installed qualification, bounded comparison and fresh review remain evidence for unchanged recognition behavior and host interfaces.
 
+This landing is slice A. The ticket remains open for slice B, the size-based kind-limit proposal after TCGA round one. No cap or validation behavior changes in slice A.
+
 Shared 0.2 conformance case `56-recognize-caller-defined-amount` is part of this branch. It carries instructions, entity definition and a described `amount` kind through exact token and kind/boundary requests. All 29 installed consumers already passed this case. The case remains the single shared custom-wording case; no duplicate fixture was added. The CLI help and recognition specification now state that described kinds reach every recognition step. The ticket, contract, ADR and milestone reflect the 0.2 decision. The 20-kind cap remains in place pending the separate TCGA round-one proposal.
 
 The offline tested command shape for the TCGA team is:
