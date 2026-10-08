@@ -149,6 +149,7 @@ impl Engine {
         self.annotate_records_complete_with(
             questions,
             records.into_iter().map(|original| RecordInput {
+                examples: None,
                 original,
                 context: None,
                 options: None,
@@ -251,6 +252,9 @@ fn prepare_record<T: InputEvidence>(
     fallback: Option<&str>,
     at: usize,
 ) -> Result<(Held<T>, Prepared), Error> {
+    if record.examples.is_some() {
+        return Err(Error::usage("record examples are admitted only for recognize").at_record(at));
+    }
     if record.options.is_some() {
         return Err(Error::usage("record options are admitted only for choose"));
     }

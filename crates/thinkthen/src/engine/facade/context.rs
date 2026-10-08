@@ -7,13 +7,13 @@ pub(super) fn contextual_requests(
     backend: &Backend,
     profile: Option<&BackendProfile>,
     context: Option<&crate::core::Json>,
+    bound: Bound,
 ) -> Result<Vec<Request>, Error> {
     match context {
-        Some(context) => asks.clone().with_context_value(backend, context)?.requests(
-            backend,
-            profile,
-            Bound::WHOLE,
-        ),
-        None => asks.requests(backend, profile, Bound::WHOLE),
+        Some(context) => asks
+            .clone()
+            .with_context_value(backend, context)?
+            .requests(backend, profile, bound),
+        None => asks.requests(backend, profile, bound),
     }
 }

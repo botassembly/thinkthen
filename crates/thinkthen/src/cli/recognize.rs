@@ -22,6 +22,7 @@ use crate::schedule;
 
 mod config;
 mod dry_run;
+mod examples;
 mod source;
 
 #[cfg(test)]
@@ -45,6 +46,7 @@ struct Running<'a> {
     mismatch: profile::Mismatch,
     context: Option<String>,
     context_field: Option<String>,
+    examples_field: Option<String>,
     cancel: crate::engine::Cancel<'static>,
 }
 
@@ -59,8 +61,18 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     arguments.common.check_plan_name()?;
-    let context = asking::context::shared(arguments.context.as_deref())?;
+    if let Some(pointer) = arguments.examples_field.as_deref() {
+        crate::core::Pointer::new(pointer)
+            .map_err(|_| Failure::Usage("--examples-field needs a valid JSON Pointer"))?;
+        if !arguments.common.jsonl && !arguments.common.csv && !arguments.common.tsv {
+            return Err(Failure::Usage(
+                "--examples-field needs JSON or table records",
+            ));
+        }
+    }
     let mut spec = config::settle(arguments)?;
+    let context = asking::context::shared(arguments.context.as_deref())?;
+    examples::shared(arguments.examples.as_deref(), &mut spec)?;
     crate::public::RecordReading::new(&[], arguments.context_field.as_deref(), None)
         .map_err(|_| Failure::Usage("--context-field needs a valid JSON Pointer"))?;
     let max_text_bytes = arguments.max_text_bytes.unwrap_or(MAX_TEXT_BYTES);
@@ -134,13 +146,14 @@ pub(crate) fn run(
                 backend_name: environment.named(),
                 context: context.as_deref(),
                 context_field: arguments.context_field.as_deref(),
+                examples_field: arguments.examples_field.as_deref(),
             },
             &mut writer,
         );
     }
 
     let source: Box<dyn Iterator<Item = Result<Item, schedule::Placed>> + Send> =
-        if arguments.context_field.is_some() {
+        if arguments.context_field.is_some() || arguments.examples_field.is_some() {
             let mut held = Vec::new();
             for item in source {
                 let item = item.map_err(|placed| placed.cause)?;
@@ -155,11 +168,25 @@ pub(crate) fn run(
                         ));
                     }
                 };
-                selected_context(
+                let context = selected_context(
                     &record,
                     arguments.context_field.as_deref(),
                     &spec,
                     context.as_deref(),
+                )?;
+                let selected =
+                    examples::selected(&record, arguments.examples_field.as_deref(), &spec)?;
+                let text = reading.evidence(&record)?.as_text()?.into_owned();
+                crate::engine::facade::step_one_context(
+                    &backend,
+                    selected_profile.as_ref(),
+                    &selected,
+                    &text,
+                    max_text_bytes,
+                    context
+                        .as_ref()
+                        .map(crate::core::Evidence::as_json)
+                        .as_ref(),
                 )?;
                 held.push(Ok(item));
             }
@@ -182,6 +209,7 @@ pub(crate) fn run(
         mismatch,
         context,
         context_field: arguments.context_field.clone(),
+        examples_field: arguments.examples_field.clone(),
         cancel: environment.cancel().with_storage_scope(),
     };
     let streams = reading.streams();
@@ -226,6 +254,7 @@ fn judged_item(
             ));
         }
     };
+    let spec = examples::selected(&record, running.examples_field.as_deref(), spec)?;
     let location = item
         .position
         .as_ref()
@@ -242,7 +271,7 @@ fn judged_item(
     let mut judged = judged_record(
         running,
         reading,
-        spec,
+        &spec,
         record,
         Render {
             streams,

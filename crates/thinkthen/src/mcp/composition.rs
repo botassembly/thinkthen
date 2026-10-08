@@ -69,6 +69,7 @@ impl Invocation {
                 controls.admission()?;
                 let row = reading.compose(RawRecord::json(raw.get())?)?;
                 Ok(RecordInput {
+                    examples: None,
                     original: row.original.question_input(),
                     context: row.context,
                     options: row.options,
@@ -92,12 +93,14 @@ impl Invocation {
             };
             let row = reading.compose(RawRecord::text(&text)?)?;
             return Ok(Box::new(std::iter::once(Ok(RecordInput {
+                examples: None,
                 original: row.original.question_input(),
                 context: row.context,
                 options: row.options,
             }))));
         }
         Ok(Box::new(std::iter::once(Ok(RecordInput {
+            examples: None,
             original,
             context: None,
             options: None,
@@ -190,6 +193,7 @@ fn compose_source(
             crate::SourceLocation::new(text.file, Some(text.first_line), Some(text.last_line))?,
         )?;
         return Ok(RecordInput {
+            examples: None,
             original,
             context: None,
             options: None,

@@ -6,6 +6,7 @@ use std::{fs, path::PathBuf, process::Output, sync::Arc};
 
 mod context;
 mod custom;
+mod examples;
 mod rules;
 mod stores;
 mod unicode;

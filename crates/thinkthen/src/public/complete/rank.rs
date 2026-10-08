@@ -111,6 +111,7 @@ impl Engine {
         self.rank_records_complete_with(
             question,
             records.into_iter().map(|original| RecordInput {
+                examples: None,
                 original,
                 context: None,
                 options: None,

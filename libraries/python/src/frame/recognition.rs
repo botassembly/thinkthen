@@ -28,6 +28,7 @@ pub(super) fn each_complete(
     let collector = observed.clone();
     let observer = |event: thinkthen::RecordObservation<'_>| collector.push(event);
     let records = texts.iter().map(|text| thinkthen::RecordInput {
+        examples: None,
         original: (*text).to_owned(),
         context: None,
         options: None,

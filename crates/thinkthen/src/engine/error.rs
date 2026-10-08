@@ -86,6 +86,7 @@ pub(crate) enum Error {
     UsageOverflow,
     /// Recognition asked for more kinds than one kind question can carry.
     RecognizeKinds,
+    RecognitionExamples(crate::core::ExampleError),
     /// The backend failed one question recognition requires.
     RecognizeLogical,
     /// A recognize text passed its byte limit, so no request was sent.
@@ -186,6 +187,7 @@ impl Error {
             | Self::NoKey(_)
             | Self::WidthActive(_)
             | Self::RecognizeKinds
+            | Self::RecognitionExamples(_)
             | Self::TextTooLong { .. }
             | Self::RecognizeRelationNames { .. }
             | Self::RecognizeRelationQuestions { .. } => Kind::Usage,

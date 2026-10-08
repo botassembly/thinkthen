@@ -205,12 +205,14 @@ fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInp
                 record.original.with_images(images)?
             };
             RecordInput {
+                examples: None,
                 original: evidence.question_input(),
                 context: record.context,
                 options: record.options,
             }
         }
         None => RecordInput {
+            examples: None,
             original: QuestionInput::Images(ImageEvidence::new(None, images)?),
             context: None,
             options: None,
@@ -273,6 +275,7 @@ fn compose_file(
     };
     let record = reading.compose(RawRecord::json(&source.record)?)?;
     Ok(RecordInput {
+        examples: None,
         original: record
             .original
             .with_location(SourceLocation::new(

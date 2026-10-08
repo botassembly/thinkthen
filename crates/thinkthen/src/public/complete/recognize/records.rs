@@ -13,6 +13,7 @@ struct Unit<T> {
     text: String,
     engine: facade::Engine,
     context: Option<String>,
+    ask: Recognize,
 }
 impl Engine {
     /// Recognize selected native record text while retaining each original and location.
@@ -74,7 +75,7 @@ impl Engine {
                 let before = stop.facts().attempts().map_or(0, <[_]>::len);
                 let found = super::execute(
                     &unit.engine,
-                    ask,
+                    &unit.ask,
                     &unit.text,
                     &cancel,
                     &stop,
@@ -92,7 +93,7 @@ impl Engine {
                     .map(|attempts| attempts.iter().skip(before).cloned().collect());
                 let mut result = rendered(
                     &unit.engine,
-                    ask,
+                    &unit.ask,
                     found,
                     value,
                     (at, unit.context.as_deref(), attempts),
@@ -119,6 +120,10 @@ fn prepare<T: InputEvidence>(
     if record.options.is_some() {
         return Err(Error::usage("recognize takes no per-record options"));
     }
+    let ask = match record.examples {
+        Some(examples) => ask.clone().with_examples(examples)?,
+        None => ask.clone(),
+    };
     ask.0.metadata.validate_context(record.context.as_ref())?;
     let resolved = crate::public::RecordContext::resolved(record.context.as_ref(), fallback)?;
     let context = resolved
@@ -151,6 +156,7 @@ fn prepare<T: InputEvidence>(
         text,
         engine,
         context,
+        ask,
     })
 }
 

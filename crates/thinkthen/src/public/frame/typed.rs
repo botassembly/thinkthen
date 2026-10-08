@@ -43,6 +43,7 @@ pub(super) fn texts(column: &Series) -> Result<Vec<Option<RecordInput<String>>>,
         .iter()
         .map(|cell| {
             cell.map(|text| RecordInput {
+                examples: None,
                 original: text.to_owned(),
                 context: None,
                 options: None,

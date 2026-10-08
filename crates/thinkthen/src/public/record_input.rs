@@ -15,6 +15,8 @@ pub struct RecordInput<T> {
     pub context: Option<RecordContext>,
     /// The entire ordered replacement shortlist, or fixed question options.
     pub options: Option<RecordOptions>,
+    /// Replacement recognition examples; an empty list suppresses shared examples.
+    pub examples: Option<Vec<super::RecognitionExample>>,
 }
 
 impl<T> fmt::Debug for RecordInput<T> {
@@ -22,6 +24,7 @@ impl<T> fmt::Debug for RecordInput<T> {
         f.debug_struct("RecordInput")
             .field("context", &self.context.as_ref().map(|_| "<withheld>"))
             .field("options", &self.options)
+            .field("examples", &self.examples.as_ref().map(Vec::len))
             .finish_non_exhaustive()
     }
 }

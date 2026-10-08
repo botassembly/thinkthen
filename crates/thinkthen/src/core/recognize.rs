@@ -11,11 +11,14 @@ use crate::core::{Description, Question};
 
 mod bilou;
 mod categories;
+mod examples;
 mod pieces;
 mod questions;
 
 use bilou::best_of;
 pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
+pub(crate) use examples::{ExampleError, example_file, render_examples, selected_examples};
+pub use examples::{RecognitionExample, RecognitionExampleEntity, RecognitionExampleText};
 pub(crate) use pieces::{Piece, pieces};
 pub(crate) use questions::{
     NONE_OF_THESE, edge_label, edge_options, edge_question, evidence, kind_question, name_groups,

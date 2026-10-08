@@ -155,6 +155,23 @@ pub(super) use crate::public::question::model_of as model;
 pub struct Recognize(pub(crate) RecognizeSpec);
 
 impl Recognize {
+    /// Replace shared boundary examples without changing the saved question reading.
+    /// # Errors
+    /// Refuses malformed annotations, undeclared kinds or invalid piece edges.
+    pub fn with_examples(
+        mut self,
+        examples: Vec<crate::public::RecognitionExample>,
+    ) -> Result<Self, Error> {
+        core::render_examples(&self.0, &examples).map_err(Error::refused)?;
+        self.0.examples = examples;
+        Ok(self)
+    }
+
+    /// Borrow the shared examples in their caller-supplied order.
+    #[must_use]
+    pub fn examples(&self) -> &[crate::public::RecognitionExample] {
+        &self.0.examples
+    }
     /// Borrow the admitted authored declaration and resolved reading rules.
     #[must_use]
     pub fn reading(&self) -> crate::public::RecognitionReading<'_> {

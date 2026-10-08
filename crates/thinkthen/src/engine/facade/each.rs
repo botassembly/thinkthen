@@ -33,6 +33,15 @@ impl Bound {
         sized: false,
     };
 
+    /// Examples make boundary bodies subject to the configured byte ceiling.
+    /// Empty examples retain the historical whole-window packing behavior.
+    pub(crate) const fn boundary(has_examples: bool) -> Self {
+        Self {
+            questions: None,
+            sized: has_examples,
+        }
+    }
+
     /// `relate` and `recognize` step 3: at most 400 questions, or a
     /// profile's smaller question limit, within the request size.
     pub(crate) fn pairs(profile: Option<&BackendProfile>) -> Self {
@@ -67,6 +76,26 @@ pub(crate) struct Request {
 }
 
 impl Asks {
+    pub(crate) fn with_examples(
+        mut self,
+        backend: &Backend,
+        examples: &[String],
+    ) -> Result<Self, Error> {
+        if examples.is_empty() {
+            return Ok(self);
+        }
+        let model = pack::model_json(backend.model().as_str())
+            .map_err(|_| Error::Defect("an aggregate model could not be rendered"))?;
+        for ask in &mut self.asks {
+            ask.state = ask
+                .state
+                .with_examples(examples)
+                .map_err(|_| Error::Defect("recognition examples could not be rendered"))?;
+            ask.key = ask.state.key(backend.url(), &model, &ask.question);
+        }
+        Ok(self)
+    }
+
     pub(crate) fn with_context(self, backend: &Backend, context: &str) -> Result<Self, Error> {
         self.with_context_value(backend, &crate::core::Json::String(context.to_owned()))
     }

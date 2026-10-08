@@ -118,6 +118,7 @@ pub(super) fn recognize(
 ) -> Result<Call<Vec<Option<Recognized>>>, Error> {
     let cells = text(texts)?;
     let records = cells.iter().flatten().map(|text| RecordInput {
+        examples: None,
         original: text.to_owned(),
         context: None,
         options: None,

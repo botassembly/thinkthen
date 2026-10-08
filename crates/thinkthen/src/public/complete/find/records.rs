@@ -76,7 +76,7 @@ impl Engine {
 }
 
 fn prepare<T: InputEvidence>(unit: RecordInput<T>, bytes: &mut usize) -> Result<Unit<T>, Error> {
-    if unit.context.is_some() || unit.options.is_some() {
+    if unit.context.is_some() || unit.options.is_some() || unit.examples.is_some() {
         return Err(Error::usage(
             "find takes one whole-set call context and no per-record controls",
         ));

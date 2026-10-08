@@ -117,7 +117,7 @@ impl Engine {
         let stages = vec!["boundary"; asks.len()];
         let answers = self.execute(
             &asks,
-            Bound::WHOLE,
+            Bound::boundary(!spec.examples.is_empty()),
             &stages,
             (&mut meta, &mut observe),
             cancel,
@@ -307,7 +307,7 @@ pub(crate) fn step_one(
     step_one_context(backend, profile, spec, text, limit, None)
 }
 
-fn step_one_context(
+pub(crate) fn step_one_context(
     backend: &Backend,
     profile: Option<&BackendProfile>,
     spec: &RecognizeSpec,
@@ -315,6 +315,8 @@ fn step_one_context(
     limit: usize,
     context: Option<&crate::core::Json>,
 ) -> Result<StepOne, Error> {
+    let examples =
+        crate::core::render_examples(spec, &spec.examples).map_err(Error::RecognitionExamples)?;
     if text.len() > limit {
         return Err(Error::TextTooLong {
             bytes: text.len(),
@@ -334,7 +336,7 @@ fn step_one_context(
             backend,
             &window_plan(backend, (text, &pieces), (0, 0), vec![probe])?,
         )?;
-        contextual_requests(&alone, backend, profile, context)?;
+        contextual_requests(&alone, backend, profile, context, Bound::WHOLE)?;
     }
     let mut asks = Asks::default();
     for group in step_one_groups(pieces.len()) {
@@ -346,7 +348,23 @@ fn step_one_context(
             &window_plan(backend, (text, &pieces), (group.start, last), questions)?,
         )?;
     }
-    let requests = contextual_requests(&asks, backend, profile, context)?;
+    let asks = asks.with_examples(backend, &examples)?;
+    let requests = contextual_requests(
+        &asks,
+        backend,
+        profile,
+        context,
+        Bound::boundary(!examples.is_empty()),
+    )?;
+    if !examples.is_empty()
+        && requests
+            .iter()
+            .any(|request| request.body.len() > backend.ceiling())
+    {
+        return Err(Error::Usage(
+            "recognition examples exceed the configured request-byte limit",
+        ));
+    }
     Ok((pieces, asks, requests))
 }
 

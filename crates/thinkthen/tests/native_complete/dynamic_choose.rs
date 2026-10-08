@@ -14,6 +14,7 @@ fn record_only_choose_resolves_saved_reading_and_sends_each_whole_actual_shortli
             &question,
             [
                 RecordInput {
+                    examples: None,
                     original: "One.",
                     context: None,
                     options: Some(
@@ -25,6 +26,7 @@ fn record_only_choose_resolves_saved_reading_and_sends_each_whole_actual_shortli
                     ),
                 },
                 RecordInput {
+                    examples: None,
                     original: "Two.",
                     context: None,
                     options: Some(
@@ -63,6 +65,7 @@ fn missing_later_record_candidates_refuse_before_sending_and_empty_choose_has_no
             &question,
             [
                 RecordInput {
+                    examples: None,
                     original: "One.",
                     context: None,
                     options: Some(
@@ -70,6 +73,7 @@ fn missing_later_record_candidates_refuse_before_sending_and_empty_choose_has_no
                     ),
                 },
                 RecordInput {
+                    examples: None,
                     original: "Two.",
                     context: None,
                     options: None,
@@ -129,6 +133,7 @@ fn explicit_record_choose_model_replaces_saved_model_and_retains_the_whole_short
         .choose_dynamic_records_complete_with(
             &selected,
             [RecordInput {
+                examples: None,
                 original: "One.",
                 context: None,
                 options: Some(
@@ -179,6 +184,7 @@ fn saved_record_choose_pointer_selects_parsed_evidence_and_refuses_literal_json_
             .choose_dynamic_records_complete_with(
                 &question,
                 [RecordInput {
+                    examples: None,
                     original: input,
                     context: None,
                     options: Some(candidates()),
@@ -197,6 +203,7 @@ fn saved_record_choose_pointer_selects_parsed_evidence_and_refuses_literal_json_
         .choose_dynamic_records_complete_with(
             &question,
             [RecordInput {
+                examples: None,
                 original: input,
                 context: None,
                 options: Some(candidates()),

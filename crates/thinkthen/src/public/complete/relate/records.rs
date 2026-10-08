@@ -107,7 +107,7 @@ fn prepare<T: InputEvidence>(
     record: RecordInput<T>,
     (lines, bytes): (&mut Option<bool>, &mut usize),
 ) -> Result<Prepared<T>, Error> {
-    if record.context.is_some() || record.options.is_some() {
+    if record.context.is_some() || record.options.is_some() || record.examples.is_some() {
         return Err(Error::usage(
             "relate takes one whole-set call context and no per-record controls",
         ));

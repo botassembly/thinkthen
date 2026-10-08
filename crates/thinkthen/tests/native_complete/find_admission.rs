@@ -84,6 +84,7 @@ fn composed_find_admission_stops_at_one_excess_candidate_without_dropping_the_co
         let units = (0..1_000).map(|_| {
             pulls.fetch_add(1, Ordering::Relaxed);
             Ok(RecordInput {
+                examples: None,
                 original: "Plain.",
                 context: None,
                 options: None,

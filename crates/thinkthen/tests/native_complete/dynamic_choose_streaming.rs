@@ -123,6 +123,7 @@ fn missing_first_or_later_dynamic_candidates_stop_at_their_original_without_read
         let records = (0..3).map(|at| {
             pulled.set(pulled.get() + 1);
             Ok(RecordInput {
+                examples: None,
                 original: "Same.",
                 context: None,
                 options: (prefix && at == 0).then(|| candidates(r#"["b","a"]"#)),
@@ -180,6 +181,7 @@ fn dynamic_candidate_order_retains_originals_probabilities_and_distinct_replay_i
     let records = || {
         lists.iter().enumerate().map(|(at, list)| {
             Ok(RecordInput {
+                examples: None,
                 original: Original(at, std::rc::Rc::new(())),
                 context: Some("Guide.".into()),
                 options: Some(candidates(list)),
@@ -259,6 +261,7 @@ fn dynamic_choose_cancellation_stops_before_polling_and_after_a_delivered_row() 
         let records = (0..2).map(|_| {
             pulled.set(pulled.get() + 1);
             Ok(RecordInput {
+                examples: None,
                 original: "Same.",
                 context: None,
                 options: Some(candidates(r#"["b","a"]"#)),
