@@ -23,7 +23,7 @@ fn response(body: &[u8]) -> Canned {
         .unwrap()
         .iter()
         .map(|(name, q)| {
-            let answer = if q["type"] == "noul" {
+            let answer = if q["type"] == "noul" || q.get("criteria").is_none() {
                 json!({"type":"noul","noul":0.9})
             } else {
                 let criteria = q["criteria"].as_object().unwrap();
@@ -123,8 +123,7 @@ fn semantic(mut value: Value) -> Value {
 #[test]
 fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
     let listener = Listener::answering(response).unwrap();
-    let engine = engine(&listener);
-    let primitive = |q: Question| args(q.into(), RequestInput::Records { items: vec![item("Alpha.")] });
+        let primitive = |q: Question| args(q.into(), RequestInput::Records { items: vec![item("Alpha.")] });
     let choice = Question::choose_labels("Which?")
         .unwrap()
         .label("a", None)
@@ -209,6 +208,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
     ];
     for call in cases {
         let function = call.function();
+        eprintln!("request equivalence: {function:?}");
         let request = Request::new(call);
         let typed = request.clone().admit().unwrap();
         let definition = typed.resolve_question().unwrap();
@@ -235,8 +235,8 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
             })
             .collect();
         let before = listener.count();
-        let expected = direct(&engine, function, &definition, rows);
-        let RequestOutcome::Complete(native) = engine
+        let expected = direct(&engine(&listener), function, &definition, rows);
+        let RequestOutcome::Complete(native) = engine(&listener)
             .execute_request(&typed, RequestEnvironment::default())
             .unwrap()
         else {
@@ -246,7 +246,7 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
             .unwrap()
             .admit()
             .unwrap();
-        let RequestOutcome::Complete(decoded) = engine
+        let RequestOutcome::Complete(decoded) = engine(&listener)
             .execute_request(&canonical, RequestEnvironment::default())
             .unwrap()
         else {
@@ -267,13 +267,13 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
         assert!(count > 0, "{function:?}");
         for at in 0..count {
             assert_eq!(
-                requests[before + at].body,
-                requests[before + count + at].body,
+                requests[at].body,
+                requests[count + at].body,
                 "{function:?}"
             );
             assert_eq!(
-                requests[before + at].body,
-                requests[before + 2 * count + at].body,
+                requests[at].body,
+                requests[2 * count + at].body,
                 "{function:?}"
             );
         }
