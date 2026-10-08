@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use super::{Found, JSONL, SQLITE, exists, storage};
 use crate::core::pack::{QuestionKey, State, model_json};
 use crate::core::{ReportedUsage, Url, bytes_sha256, hex};
+use crate::engine::Cancel;
 use crate::engine::error::Error;
 
 /// One state line.
@@ -350,11 +352,22 @@ impl Replayed {
         Self::indexed(read(path)?)
     }
 
-    pub(super) fn connection(connection: &Connection) -> Result<Self, Error> {
+    pub(super) fn connection(
+        connection: &Connection,
+        cancel: &Cancel,
+        limit: Duration,
+    ) -> Result<Self, Error> {
         connection.execute_batch("BEGIN").map_err(storage)?;
-        let indexed = Entries::read(connection)
-            .and_then(Self::indexed)
-            .map_err(super::versioned::sqlite_error);
+        // BEGIN is deferred. This read admits the committed snapshot before
+        // decoding entries, so only lock contention enters the retry loop.
+        let indexed = super::waiting(limit, cancel, || {
+            connection.query_row("SELECT count(*) FROM sqlite_schema", [], |row| {
+                row.get::<_, i64>(0)
+            })
+        })
+        .and_then(|_| Entries::read(connection))
+        .and_then(Self::indexed)
+        .map_err(super::versioned::sqlite_error);
         let ended = connection.execute_batch("ROLLBACK").map_err(storage);
         indexed.and_then(|index| ended.map(|()| index))
     }

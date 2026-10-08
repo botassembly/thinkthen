@@ -77,6 +77,7 @@ pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
         #[cfg(windows)]
         drop(connection);
         fs::remove_file(&sqlite).map_err(|_| Error::RecordingStorage)?;
+        sync_folder(folder).map_err(|_| Error::RecordingStorage)?;
         #[cfg(not(windows))]
         drop(connection);
     }

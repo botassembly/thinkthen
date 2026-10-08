@@ -52,7 +52,8 @@ fn row<'a>(state: &'a State, question: &'a str, answer: &'a str) -> Row<'a> {
 }
 
 fn written(folder: &Path, rows: &[Row<'_>]) {
-    let mut store = Store::open(folder, Mode::Cache, false, None).expect("open");
+    let mut store =
+        Store::open(folder, Mode::Cache, false, None, &Cancel::default()).expect("open");
     store.write(rows, &Cancel::default()).expect("write");
 }
 
@@ -62,7 +63,7 @@ fn one_store_scans_once_for_its_own_writes_and_refuses_an_external_corruption() 
     let state = state();
     written(folder.path(), &[row(&state, A, FIRST)]);
     let cancel = Cancel::default();
-    let mut operation = Store::open(folder.path(), Mode::Cache, false, None)
+    let mut operation = Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default())
         .expect("open")
         .prepared(&cancel)
         .expect("admit");
@@ -88,7 +89,7 @@ fn one_store_scans_once_for_its_own_writes_and_refuses_an_external_corruption() 
     ));
     assert_eq!(operation.validation_scans, 2);
     assert!(matches!(
-        Store::open(folder.path(), Mode::Record, false, None)
+        Store::open(folder.path(), Mode::Record, false, None, &Cancel::default())
             .expect("separate call")
             .prepared(&cancel),
         Err(Error::Entry(..))
@@ -106,7 +107,7 @@ fn an_existing_index_needs_no_writer_and_a_missing_index_is_repaired() {
     holder
         .execute_batch("BEGIN IMMEDIATE")
         .expect("writer lock");
-    Store::open(folder.path(), Mode::Cache, false, None)
+    Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default())
         .expect("open")
         .prepared(&cancel)
         .expect("read-only admission while a writer holds the file");
@@ -115,7 +116,7 @@ fn an_existing_index_needs_no_writer_and_a_missing_index_is_repaired() {
         .execute_batch("DROP INDEX answers_route_question_state")
         .expect("remove index");
     #[allow(unused_mut, reason = "Unix checks disappearance on the open store")]
-    let mut repaired = Store::open(folder.path(), Mode::Cache, false, None)
+    let mut repaired = Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default())
         .expect("open")
         .prepared(&cancel)
         .expect("repair index");
@@ -174,14 +175,16 @@ mod tempdir {
 fn a_cache_answers_a_hit_misses_the_rest_and_replaces_under_record() {
     let folder = scratch();
     let state = state();
-    let mut empty = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
+    let mut empty =
+        Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default()).expect("open");
     assert_eq!(
         empty.lookup(&[key(A)], &Cancel::default()).expect("lookup"),
         [None]
     );
     assert!(!folder.path().exists(), "a lookup creates nothing");
     written(folder.path(), &[row(&state, A, FIRST)]);
-    let mut store = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
+    let mut store =
+        Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default()).expect("open");
     let found = store
         .lookup(&[key(B), key(A)], &Cancel::default())
         .expect("lookup");
@@ -196,12 +199,13 @@ fn a_cache_answers_a_hit_misses_the_rest_and_replaces_under_record() {
         Some(crate::core::ReportedUsage::from_complete(Usage::new(7, 1)))
     );
 
-    let mut record = Store::open(folder.path(), Mode::Record, false, None).expect("open");
+    let mut record =
+        Store::open(folder.path(), Mode::Record, false, None, &Cancel::default()).expect("open");
     assert!(!record.looks_up() && record.writes());
     record
         .write(&[row(&state, A, SECOND)], &Cancel::default())
         .expect("replace");
-    let replaced = Store::open(folder.path(), Mode::Replay, false, None)
+    let replaced = Store::open(folder.path(), Mode::Replay, false, None, &Cancel::default())
         .expect("open")
         .lookup(&[key(A)], &Cancel::default())
         .expect("lookup");
@@ -233,7 +237,8 @@ fn a_new_store_is_private_and_a_read_only_replay_writes_nothing() {
         names(),
         fs::read(folder.path().join(SQLITE)).expect("bytes"),
     );
-    let mut replay = Store::open(folder.path(), Mode::Replay, false, None).expect("open");
+    let mut replay =
+        Store::open(folder.path(), Mode::Replay, false, None, &Cancel::default()).expect("open");
     assert!(replay.replays() && !replay.writes());
     assert!(
         replay
@@ -258,7 +263,7 @@ fn a_replay_of_a_folder_holding_both_files_is_refused() {
     written(folder.path(), &[row(&state, A, FIRST)]);
     fs::write(folder.path().join(JSONL), "").expect("fixture");
     assert!(matches!(
-        Store::open(folder.path(), Mode::Replay, false, None),
+        Store::open(folder.path(), Mode::Replay, false, None, &Cancel::default()),
         Err(Error::StoreAmbiguous)
     ));
 }
@@ -292,17 +297,23 @@ fn a_fixture_replays_from_memory_and_writes_the_same_bytes_again() {
     let fixture = scratch();
     fs::create_dir_all(fixture.path()).expect("folder");
     fs::write(fixture.path().join(JSONL), &text).expect("fixture");
-    let found = Store::open(fixture.path(), Mode::Replay, false, None)
-        .expect("open")
-        .lookup(&[key(A), key(B)], &Cancel::default())
-        .expect("lookup");
+    let found = Store::open(
+        fixture.path(),
+        Mode::Replay,
+        false,
+        None,
+        &Cancel::default(),
+    )
+    .expect("open")
+    .lookup(&[key(A), key(B)], &Cancel::default())
+    .expect("lookup");
     assert!(found.iter().all(Option::is_some));
     assert!(!fixture.path().join(SQLITE).exists());
 
     let edited = text.replacen("noul", "unknown", 1);
     fs::write(fixture.path().join(JSONL), edited).expect("edit");
     assert!(matches!(
-        Store::open(fixture.path(), Mode::Replay, false, None),
+        Store::open(fixture.path(), Mode::Replay, false, None, &Cancel::default()),
         Err(Error::Entry(name, why)) if name == JSONL && !why.is_empty()
     ));
 }
@@ -312,7 +323,8 @@ fn a_lookup_waits_through_another_writer_and_then_answers() {
     let folder = scratch();
     let state = state();
     written(folder.path(), &[row(&state, A, FIRST)]);
-    let mut store = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
+    let mut store =
+        Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default()).expect("open");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
     // The flag goes up just before the commit, so a lookup that answered
@@ -340,10 +352,11 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
     let folder = scratch();
     let state = state();
     written(folder.path(), &[row(&state, A, FIRST)]);
-    let mut store = Store::open(folder.path(), Mode::Cache, false, None)
+    let mut store = Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default())
         .expect("open")
         .with_busy_limit(Duration::from_millis(200));
-    let mut writer = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
+    let mut writer =
+        Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default()).expect("open");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
     let started = Instant::now();
@@ -396,7 +409,7 @@ fn a_read_only_replay_that_meets_an_unfinished_write_is_refused() {
     }
     writer.execute_batch("ROLLBACK").expect("rollback");
     assert!(matches!(
-        Store::open(hot.path(), Mode::Replay, false, None),
+        Store::open(hot.path(), Mode::Replay, false, None, &Cancel::default()),
         Err(Error::StoreHotJournal)
     ));
 }

@@ -151,6 +151,7 @@ impl Store {
         mode: Mode,
         private: bool,
         replayed: Option<Arc<Replayed>>,
+        cancel: &Cancel,
     ) -> Result<Self, Error> {
         if fs::metadata(folder).is_ok_and(|metadata| metadata.is_file()) {
             return Err(Error::RecordingPathIsFile);
@@ -176,7 +177,11 @@ impl Store {
                     store.replayed = Some(read?);
                 }
                 (true, false) => {
-                    store.replayed = Some(Arc::new(Replayed::connection(&read_only(&sqlite)?)?))
+                    store.replayed = Some(Arc::new(Replayed::connection(
+                        &read_only(&sqlite)?,
+                        cancel,
+                        store.busy_limit,
+                    )?))
                 }
                 (false, false) => {}
             }
