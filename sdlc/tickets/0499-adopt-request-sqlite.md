@@ -23,3 +23,7 @@ Adopt shared Request and generated results in SQLite through named typed public 
 SQLite's existing composed records retain file and line locations and distinguish eager admission from incremental execution. The migration owns the narrow shared Request feed bridge required to preserve those properties. Extend `crates/thinkthen/src/public/request/**`, its outside-in request tests, existing API documentation and measured gate metadata only as needed. One developer owns this bridge; recognition stage-context work waits before touching the same files.
 
 Already-composed feeds must preserve selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. Document which combinations are supported and refuse incompatible combinations before sending. Keep SQLite's new execution path separate from the compatibility module PostgreSQL imports; remove that compatibility copy when 0500 migrates. This changes native composition, not the canonical request schema or SQL authority.
+
+## Progress
+
+- 2026-10-08 started
