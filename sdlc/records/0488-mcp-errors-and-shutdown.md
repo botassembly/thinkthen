@@ -10,6 +10,6 @@ The installed regression sends malformed envelopes through the owned subprocess,
 
 ## Lesson
 
-The initial failing caller table established a protocol defect in correlation and a version-specific error shape. It did not establish a defect in shutdown. Protocol versions can narrow base JSON-RPC rules, so a plausible generic response expectation is not enough. The first focused compile found two mistaken test adaptations after changing the parser error type; those adaptations were corrected before behavioral checks.
+The initial failing caller table established a protocol defect in correlation and a version-specific error shape. It did not establish a defect in shutdown. Protocol versions can narrow base JSON-RPC rules, so a plausible generic response expectation is not enough. The first focused compile found two mistaken test adaptations after changing the parser error type; those adaptations were corrected before behavioral checks. The first full lint found forbidden JSON indexing in error output. A typed response now serializes the optional ID directly and removes that panic-shaped operation.
 
 No paid call, production data or private key was used. Loopback fixtures cannot establish compatibility with every external MCP client or Windows runner behavior; those remain separate qualification boundaries.

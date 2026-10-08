@@ -41,7 +41,7 @@ impl std::fmt::Debug for Message {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize)]
 pub(super) struct Fault {
     pub(super) code: i32,
     pub(super) message: &'static str,
