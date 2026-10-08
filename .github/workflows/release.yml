@@ -192,6 +192,7 @@ jobs:
       - run: cargo fetch --locked
       - run: cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
       - run: cargo fetch --locked --manifest-path libraries/python/Cargo.toml
+      - run: python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
       - run: sh sdlc/scripts/package
       - run: cargo publish --dry-run --locked --package thinkthen
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

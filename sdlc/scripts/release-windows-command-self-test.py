@@ -63,7 +63,7 @@ esac''',
         "rustup": 'echo "rustup $*" >> "$WINDOWS_HOST_LOG"',
         "cargo": 'echo "cargo $*" >> "$WINDOWS_HOST_LOG"',
         "python3": f'''if [ "$1" = -m ]; then
-    [ "$*" = "-m pip install --disable-pip-version-check maturin==1.15.0" ] || exit 92
+    [ "$*" = "-m pip install --disable-pip-version-check maturin==1.15.0 jsonschema==4.25.1" ] || exit 92
     echo "python3 $*" >> "$WINDOWS_HOST_LOG"
     exit 0
 fi
@@ -82,7 +82,7 @@ exec '{sys.executable}' "$@"''',
         "cargo fetch --locked --manifest-path Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/c/Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/python/Cargo.toml",
-        "python3 -m pip install --disable-pip-version-check maturin==1.15.0"]
+        "python3 -m pip install --disable-pip-version-check maturin==1.15.0 jsonschema==4.25.1"]
 
 
 def interruption_routing(smoke, base):
