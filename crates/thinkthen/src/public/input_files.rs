@@ -82,7 +82,11 @@ pub struct InputFileReader<R: BufRead>(Mode<R>);
 
 enum Mode<R: BufRead> {
     Text(FileReader<R>),
-    Image { file: String, reader: Option<R> },
+    Image {
+        file: String,
+        reader: Option<R>,
+        limit: usize,
+    },
 }
 impl<R: BufRead> std::fmt::Debug for InputFileReader<R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -105,6 +109,7 @@ impl<R: BufRead> InputFileReader<R> {
             ReaderMedia::Image => Mode::Image {
                 file,
                 reader: Some(reader),
+                limit: super::MAX_IMAGE_BYTES,
             },
         }))
     }
@@ -114,7 +119,11 @@ impl<R: BufRead> Iterator for InputFileReader<R> {
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.0 {
             Mode::Text(reader) => reader.next().map(|record| record.map(SourceItem::Text)),
-            Mode::Image { file, reader } => Some(read_image(reader.take()?).map(|record| {
+            Mode::Image {
+                file,
+                reader,
+                limit,
+            } => Some(read_image(reader.take()?, *limit).map(|record| {
                 SourceItem::Image(ImageSourceRecord {
                     record,
                     file: file.clone(),
@@ -124,16 +133,19 @@ impl<R: BufRead> Iterator for InputFileReader<R> {
     }
 }
 
-fn read_image(reader: impl Read) -> Result<ImageInput, Error> {
+fn read_image(reader: impl Read, limit: usize) -> Result<ImageInput, Error> {
     let mut bytes = Vec::new();
     reader
-        .take((super::MAX_IMAGE_BYTES + 1) as u64)
+        .take((limit + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(|_| Error::local("source image file could not be read"))?;
     if bytes.len() > super::MAX_IMAGE_BYTES {
         return Err(Error::usage(
             "image exceeds the 25165824 compressed byte SDK limit",
         ));
+    }
+    if bytes.len() > limit {
+        return Err(attachment_budget_error());
     }
     let media = match image::guess_format(&bytes).ok() {
         Some(image::ImageFormat::Jpeg) => ImageMedia::Jpeg,
@@ -154,6 +166,7 @@ pub struct SourceItems {
     options: InputReaderOptions,
     current: Option<InputFileReader<std::io::BufReader<std::fs::File>>>,
     stopped: bool,
+    image_bytes_remaining: Option<usize>,
 }
 /// Select explicit paths/folders with media specified separately from evidence.
 /// # Errors
@@ -172,7 +185,31 @@ pub fn read_inputs(
         options,
         current: None,
         stopped: false,
+        image_bytes_remaining: None,
     })
+}
+fn attachment_budget_error() -> Error {
+    Error::usage("retained attachments exceed the input byte ceiling")
+}
+impl SourceItems {
+    /// Internal transport admission leaves ordinary native readers unchanged.
+    #[cfg(feature = "cli")]
+    pub(crate) fn bounded_images(
+        paths: impl IntoIterator<Item = impl AsRef<Path>>,
+        options: InputReaderOptions,
+        remaining: usize,
+    ) -> Result<Self, Error> {
+        if options.media == ReaderMedia::Image && remaining == 0 {
+            return Err(attachment_budget_error());
+        }
+        let mut source = read_inputs(paths, options)?;
+        source.image_bytes_remaining = Some(remaining);
+        Ok(source)
+    }
+
+    pub(crate) fn image_bytes_remaining(&self) -> usize {
+        self.image_bytes_remaining.unwrap_or(usize::MAX)
+    }
 }
 impl Iterator for SourceItems {
     type Item = Result<SourceItem, Error>;
@@ -182,15 +219,34 @@ impl Iterator for SourceItems {
         }
         loop {
             if let Some(item) = self.current.as_mut().and_then(Iterator::next) {
+                let item = item.and_then(|item| {
+                    if let SourceItem::Image(image) = &item
+                        && let Some(remaining) = &mut self.image_bytes_remaining
+                    {
+                        *remaining = remaining
+                            .checked_sub(image.record.bytes().len())
+                            .ok_or_else(attachment_budget_error)?;
+                    }
+                    Ok(item)
+                });
                 self.stopped = item.is_err();
                 return Some(item);
             }
             self.current = None;
             let (path, name) = self.paths.pop_front()?;
+            if self.options.media == ReaderMedia::Image && self.image_bytes_remaining == Some(0) {
+                self.stopped = true;
+                return Some(Err(attachment_budget_error()));
+            }
             let opened = super::files::open_regular(&path)
                 .map_err(|_| Error::local("source file could not be opened"));
             self.current = match opened.and_then(|file| {
-                InputFileReader::new(name, std::io::BufReader::new(file), self.options)
+                let mut reader =
+                    InputFileReader::new(name, std::io::BufReader::new(file), self.options)?;
+                if let Mode::Image { limit, .. } = &mut reader.0 {
+                    *limit = (*limit).min(self.image_bytes_remaining());
+                }
+                Ok(reader)
             }) {
                 Ok(reader) => Some(reader),
                 Err(error) => {

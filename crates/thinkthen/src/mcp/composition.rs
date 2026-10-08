@@ -45,11 +45,12 @@ impl Invocation {
             reading.with_context_schema(schema.clone())
         });
         if let Some(inputs) = &self.arguments.inputs {
+            let mut remaining = super::protocol::MAX_MESSAGE;
             let rows = inputs
                 .iter()
                 .map(|input| {
                     controls.admission()?;
-                    input.compose(&reading, declared_context(prepared))
+                    input.compose(&reading, declared_context(prepared), &mut remaining)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             return Ok(Box::new(rows.into_iter().map(Ok)));

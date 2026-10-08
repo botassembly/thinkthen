@@ -41,7 +41,7 @@ impl Attachment {
             Self::Declared(image) => &image.path,
         }
     }
-    fn read(&self) -> Result<ImageInput, Error> {
+    fn read(&self, remaining: &mut usize) -> Result<ImageInput, Error> {
         let options = crate::InputReaderOptions {
             reading: crate::ReaderOptions {
                 unit: crate::SourceUnit::File,
@@ -49,13 +49,14 @@ impl Attachment {
             },
             media: crate::ReaderMedia::Image,
         };
-        let mut source = crate::read_inputs([self.path()], options)?;
+        let mut source = crate::SourceItems::bounded_images([self.path()], options, *remaining)?;
         let Some(crate::SourceItem::Image(image)) = source.next().transpose()? else {
             return Err(Error::usage("an attachment requires one image file"));
         };
         if source.next().transpose()?.is_some() {
             return Err(Error::usage("an attachment requires one image file"));
         }
+        *remaining = source.image_bytes_remaining();
         match self {
             Self::Path(_) => Ok(image.record),
             Self::Declared(declared) => ImageInput::new(declared.media, image.record.bytes()),
@@ -114,6 +115,7 @@ impl Descriptor {
         &self,
         reading: &RecordReading,
         schema: Option<&crate::InputDeclaration>,
+        remaining: &mut usize,
     ) -> Result<RecordInput<QuestionInput>, Error> {
         if self.text.is_none() && self.json.is_none() && self.source.is_none() {
             reading.admit_images()?;
@@ -121,7 +123,7 @@ impl Descriptor {
         let images = self
             .images
             .iter()
-            .map(Attachment::read)
+            .map(|image| image.read(remaining))
             .collect::<Result<Vec<_>, _>>()?;
         let mut row = if let Some(source) = &self.source {
             let mut items = crate::read_inputs(&source.paths, source.options())?;

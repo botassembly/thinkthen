@@ -1,7 +1,7 @@
 //! The one capped question-file reader, through the public loaders (ticket 0345).
 //!
 //! Each loader reads at most 1 MiB and one byte. A file of exactly 1 MiB
-//! loads, one byte more and `/dev/zero` are too large, and a missing file or
+//! loads and one byte more is too large. Nonregular paths, a missing file or
 //! invalid UTF-8 could not be read. Every refusal is local.
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
@@ -75,7 +75,10 @@ fn each_loader_reads_one_mib_and_refuses_more_invalid_utf8_or_a_missing_file() {
         ];
         // Windows has no endless file like `/dev/zero`.
         if cfg!(unix) {
-            cases.push((Path::new("/dev/zero"), format!("the {role} is too large")));
+            cases.push((
+                Path::new("/dev/zero"),
+                format!("the {role} could not be read"),
+            ));
         }
         for (path, sentence) in cases {
             let error = load(path).expect_err("a refusal");
@@ -103,7 +106,7 @@ fn the_reader_names_each_reason() {
     if cfg!(unix) {
         assert!(matches!(
             thinkthen::read_question_file("/dev/zero"),
-            Err(QuestionFileError::TooLarge)
+            Err(QuestionFileError::Unreadable(_))
         ));
     }
     assert!(matches!(

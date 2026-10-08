@@ -62,12 +62,15 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
         );
 
         let over = written(&format!("size-{verb}-over"), &padded(text, LIMIT + 1));
-        let mut files = vec![over.as_str()];
+        let mut files = vec![(over.as_str(), "the question file is too large")];
         // Windows has no endless file like `/dev/zero`.
         if cfg!(unix) {
-            files.push("@/dev/zero");
+            files.push((
+                "@/dev/zero",
+                "the question file could not be opened: question source is not regular",
+            ));
         }
-        for file in files {
+        for (file, sentence) in files {
             let output = run_with(
                 &[verb, file, "--url", &url, "--no-cache"],
                 evidence.as_bytes(),
@@ -77,7 +80,7 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
             assert_eq!(output.status.code(), Some(5), "{verb} {file}");
             assert_eq!(
                 String::from_utf8_lossy(&output.stderr),
-                "thinkthen: the question file is too large\n",
+                format!("thinkthen: {sentence}\n"),
                 "{verb} {file}"
             );
             assert!(output.stdout.is_empty(), "{verb} {file}");

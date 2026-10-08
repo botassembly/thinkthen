@@ -1,6 +1,6 @@
 # ADR 0128: Bound retained MCP attachments and refuse nonregular selectors
 
-Proposed for ticket 0481. The coordinator must accept this ADR after design review before changing the settled MCP contract. Ian can overturn the support boundary below.
+Accepted by the coordinator after fresh design review of ticket 0481 at `20ca32e0532fc829a028120f8f7b77b4ff092d02`, recorded on main at `c32496494`. Ian can overturn the support boundary below.
 
 ## Authority and evidence
 
@@ -8,7 +8,7 @@ Ticket 0481 authorizes bounded aggregate attachment retention and selector liven
 
 At source `ab6dd644528b9eae3d3e2bfeaa6e7a5b5348bf6b`, `mcp/composition.rs::records` eagerly collects all explicit descriptors. `mcp/inputs.rs::compose` reads each attachment separately before complete native admission. Each file read is capped by the native per-image ceiling, but retained rows have no aggregate attachment ceiling. Default record count is unlimited. Repeating a small valid file therefore retains one new compressed buffer per occurrence despite a small protocol frame. Native immutable handle clones share their buffers; separate file reads create distinct buffers.
 
-The owned [reproduction](../../../specification/fixtures/mcp-input-bounds/reproduce.py) constructs a valid synthetic PNG, repeats its path across individually valid image-only descriptors, then names an absent file. It reaches that last file after the retained originals exceed the framing ceiling. The failure sends no backend request. This establishes eager retention before execution; it does not measure a maximum process-memory bound.
+The owned [reproduction](../../../specification/fixtures/mcp-input-bounds/README.md) constructs a valid synthetic PNG, repeats its path across individually valid image-only descriptors, then names an absent file. It reaches that last file after the retained originals exceed the framing ceiling. The failure sends no backend request. This establishes eager retention before execution; it does not measure a maximum process-memory bound.
 
 `public/question_file.rs::read_question_file` opens the selected path before checking its kind. Its byte cap cannot prevent FIFO open from blocking or `/dev/stdin` from reading the protocol pipe. The same fixture leaves the FIFO selector's tool worker occupied while ping remains responsive and another tool call receives busy. The stdin selector either leaves the worker occupied or competes with the protocol reader for the next frame. Protocol responsiveness does not establish tool completion, cancellation or worker joining. The fixture separately observes shutdown and kills and reaps every remaining child.
 
