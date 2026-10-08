@@ -26,3 +26,4 @@ Tests use one child-environment entry point per language, preserving intentional
 ## Progress
 
 - 2026-10-08 started
+- 2026-10-08 landed 98a876029; next: Slice B unifies Python child homes. Full routine Python tests, malformed ambient configuration cases, examples and the existing child check pass after rebuilding the matching extension. Remaining Ruby, JavaScript, R, native and shared fixture families stay open; migrate them without colliding with the contract rollout.
