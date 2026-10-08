@@ -196,7 +196,7 @@ fn hinted_kind_can_be_corrected_or_declined_and_nested_evidence_reaches_its_last
         input.as_bytes(),
     ));
     assert_eq!(detail["answer"]["names"].as_array().unwrap().len(), 2);
-    assert_eq!(detail["answer"]["names"][1]["kinds"]["person"], 1.0);
+    assert_eq!(detail["answer"]["names"][0]["kinds"]["person"], 1.0);
     let sent = listener.requests();
     let stage = questions(&sent[1].body);
     assert!(
@@ -205,7 +205,10 @@ fn hinted_kind_can_be_corrected_or_declined_and_nested_evidence_reaches_its_last
             .filter(|q| q["criteria"].get("person").is_some())
             .all(|q| q["criteria"].get("organization").is_some())
     );
-    assert!(String::from_utf8_lossy(&sent[1].body).contains("Ora"));
+    assert_eq!(
+        serde_json::from_slice::<Value>(&sent[1].body).unwrap()["state"],
+        text
+    );
     let refusing = Listener::answering(|body| {
         let request: Value = serde_json::from_slice(body).unwrap();
         if request["questions"].as_object().unwrap().values().any(|q| q["criteria"].get("person").is_some()) {
