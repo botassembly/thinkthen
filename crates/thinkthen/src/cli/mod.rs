@@ -113,12 +113,7 @@ pub fn entry() -> ExitCode {
             (ExitCode::from(code), stopped)
         }
     };
-    if environment.usage().has_held_model_mismatch() {
-        let _unwritten = writeln!(
-            stderr.lock(),
-            "thinkthen: warning: a held answer names a different model and cannot be reused online"
-        );
-    }
+    warn_held_model_mismatch(&environment, stderr.lock());
     finish_usage(&environment);
     if wants_facts {
         let snapshot = environment.usage().run_snapshot();
@@ -162,6 +157,15 @@ pub(crate) fn warn_configuration_shared(shared: bool, mut writer: impl Write) {
         #[cfg(windows)]
         let warning = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it; it decides where the key and evidence go";
         let _unwritten = writeln!(writer, "{warning}").and_then(|()| writer.flush());
+    }
+}
+
+fn warn_held_model_mismatch(environment: &Environment, mut writer: impl Write) {
+    if environment.usage().has_held_model_mismatch() {
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: warning: a held answer names a different model and cannot be reused online"
+        );
     }
 }
 
