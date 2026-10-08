@@ -231,17 +231,19 @@ managed-build)
 	sh sdlc/scripts/release-workflow managed-tools "$4"
 	[ ! -e "$2/managed.json" ] && [ ! -L "$2/managed.json" ] || fail 'managed receipt already exists'
 	scratch_dir managed_stage
-	mkdir -p "$managed_stage/src" "$managed_stage/feed" "$managed_stage/csharp" "$managed_stage/jvm" \
+	mkdir -p "$managed_stage/src" "$managed_stage/feed" "$managed_stage/csharp" "$managed_stage/jvm" "$managed_stage/c" \
 		"$managed_stage/dotnet-home" "$managed_stage/nuget"
 	# The second source verification precedes this independent managed extraction.
 	python3 sdlc/scripts/release-managed-pair.py source-check "$2/source.tar" "$2/source.json" "$5"
 	tar -xf "$2/source.tar" -C "$managed_stage/src"
+	tar -xzf "$c_archive" -C "$managed_stage/c"
 	DOTNET_CLI_HOME="$managed_stage/dotnet-home" NUGET_PACKAGES="$managed_stage/nuget" \
 	DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
 	"${THINKTHEN_DOTNET:-dotnet}" pack "$managed_stage/src/libraries/csharp/ThinkThen.csproj" -c Release \
 		--source "$managed_stage/feed" -o "$managed_stage/csharp" -v quiet
 	THINKTHEN_JVM_OUT="$managed_stage/jvm" sh "$managed_stage/src/libraries/jvm/build.sh"
-	THINKTHEN_JVM_OUT="$managed_stage/jvm" python3 "$managed_stage/src/libraries/jvm/tests/package_check.py"
+	THINKTHEN_JVM_OUT="$managed_stage/jvm" THINKTHEN_RELEASE_C_DIR="$managed_stage/c" \
+		python3 "$managed_stage/src/libraries/jvm/tests/package_check.py"
 	nupkg=$managed_stage/csharp/Botassembly.ThinkThen.$version.nupkg
 	[ -f "$nupkg" ] && [ ! -L "$nupkg" ] || fail 'fresh nupkg is missing'
 	python3 - "$nupkg" "$managed_stage/jvm/jars" "$2/managed.json" <<'PY'
