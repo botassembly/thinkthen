@@ -39,6 +39,11 @@
       "name": "0.2",
       "targetRef": "origin/main",
       "state": "active"
+    },
+    {
+      "name": "0.3",
+      "targetRef": "origin/main",
+      "state": "active"
     }
   ]
 }
