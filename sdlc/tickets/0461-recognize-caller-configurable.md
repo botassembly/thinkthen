@@ -95,3 +95,7 @@ Run a new request-admission regression against the baseline and show its failure
 Use focused recognition and question-file integration tests during implementation, `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` before code review, `sdlc/scripts/tickets`, affected shared and installed surface cases, and `sdlc/scripts/spec` when the executable examples change. The coordinator runs full tests and lint on the landing commit. Keep one complete set of behavior tests and remove temporary scaffolding.
 
 The later before-and-after model evaluation uses identical frozen generic texts, labels, model, route and threshold. Preserve the prior raw 0031 result as historical evidence rather than treating it as a new prediction under a different question. Report exact-span precision and recall with denominators, label errors, faults, requests and actual usage. Reuse existing evaluation facilities; do not build new proof tooling. Before any paid arm, cite current official pricing and obtain the coordinator's finite allocation inside the shared $20 ledger through `sdlc/scripts/live`. This ticket reserves no dollars. If the route is unavailable, retain that gap and do not claim the model evaluation passed. Send the bounded result to the PM after review through the owning coordinator.
+
+## Progress
+
+- 2026-10-08 started
