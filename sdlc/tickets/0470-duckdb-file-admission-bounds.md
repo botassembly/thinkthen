@@ -11,12 +11,12 @@ Reviews: revision caddaecbc, accept
 
 ## Outcome
 
-DuckDB complete-file calls cannot accumulate unlimited decoded content before engine limits and cancellation apply. Valid record-stream behavior and native whole-set limits remain consistent with other surfaces.
+DuckDB complete-file calls bound descriptor staging before native admission, so engine limits and cancellation can stop further file reads. This does not promise a constant bound for retained results or generic whole-set operations; their existing contracts remain.
 
 ## Evidence
 
 - Starts from: 0462 SQL review at 7ea661c1e; cpp/src/complete_files.cpp accumulates every reader descriptor into one string before the native call. files_manifest.cpp caps path bytes only. Native text/image limits are per item, so repeated admitted paths do not bound total retained content.
 - Keeps: DuckDB-authorized FileSystem access, order, duplicates, original locations, secrecy, cancellation and native per-item/whole-set limits. No invented hard cap that needlessly rejects otherwise supported record streams.
-- Changes: Design and build bounded streaming of file descriptors into native admission, or a reviewed aggregate limit consistent with the existing whole-set contract where streaming cannot apply. Name ownership/thread/cancellation boundaries explicitly; do not read all content before checking limits. Specify any new limit as part of the public contract.
+- Changes: Keep authorized DuckDB file handles/readers on the calling thread. Give an owned native call handle begin/push/finish/free operations and a capacity-one descriptor channel to a Rust worker; copy descriptors, never send DuckDB handles/context pointers. Close on EOF, reader failure or cancellation. Stop the producer when native admission closes the receiver; preserve completed prefixes and refuse whole-set overflow before reading suffixes. Cancel/join the owned worker before freeing its handle. Bound pre-engine read-ahead without inventing an aggregate cap for generic rank. Native retained output and non-incremental collection still scale with accepted data; this fix makes no total-memory guarantee.
 - Proof: Fresh design/ticket and code reviews, with High review for unsafe ownership changes. Existing reader/complete/cancellation fixtures plus a deterministic bounded-admission case that fails on the accumulator path. No memory-exhaustion campaign, paid calls, hosted workflow or new proof framework.
-- Defers: No DuckDB feature redesign, provider limit tuning or release management. Process exhaustion is inferred and must remain labeled that way.
+- Defers: No DuckDB feature redesign, provider limit tuning or release management. Process exhaustion is inferred and must remain labeled that way. Changes to generic rank or total result-memory contracts require a separate reviewed design, not an arbitrary cap in this adapter.
