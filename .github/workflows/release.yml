@@ -190,6 +190,8 @@ jobs:
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - run: rustup toolchain install 1.95.0 --profile minimal
       - run: cargo fetch --locked
+      - run: cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
+      - run: cargo fetch --locked --manifest-path libraries/python/Cargo.toml
       - run: sh sdlc/scripts/package
       - run: cargo publish --dry-run --locked --package thinkthen
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

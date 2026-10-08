@@ -50,3 +50,15 @@ Candidate `rc/0.2.0-rc.1` and `release/0.2` are cut at `0553becc7fad0a5c29f81b6b
 The installed-package QA handoff is pushed as `inbox/beatles-bench/2026-10-08-thinkthen-final-installed-packages-are-ready-for-candidate-qa.md`. Lane 0 tracks candidate status on ticket/0425-candidate-one-status. Lane 1 is detached at origin/main and retains qualified installed packages, logs and matrix for QA. Lane 2 holds reviewed 0461 at 6897414e0 until after v0.2.0.
 
 Final hosted qualification, actual candidate QA and publication remain open. Publication still requires Ian's explicit go; public installation remains 0.1.2. This packet updates only the existing record, team note and milestone status. The count-only private-name scan and whitespace check pass. No source code, tests, proof gates, new records, candidate movement or workflow dispatch accompanies it.
+
+## Candidate one crate dependency correction, 2026-10-08
+
+Rehearsal 37729582968 also failed crate job 113155466714. The package check reached its Rust native fixture, which builds the Python workspace's `native_case` example offline. The crate job had fetched only the root workspace, so Cargo could not resolve the existing pinned PyO3 dependency. The failure log is retained locally as `/tmp/thinkthen-rc1-crate.log`.
+
+The crate job now fetches the locked standalone consumer and Python manifests before running the unchanged offline package check. These manifests cover the package check's archive-linked Rust consumer and native fixture compiler. No dependency, feature, runner or gate changes. No shared cache acquisition, complete package rebuild, full parity campaign, paid call or dispatch ran locally. Hosted candidate qualification remains required.
+
+Focused checks pass: offline policy, workflow routing and its 113-case self-test, source-package refusal checks, locked offline metadata resolution for both admitted manifests, ticket lint, whitespace and a count-only private-name scan. Existing source-size warnings remain unchanged. Local logs use `/tmp/thinkthen-0425-crate-` with suffixes `policy.log`, `workflows.log`, `workflow-self-test.log`, `source-packages.log`, `consumer-metadata.json`, `python-metadata.json` and `pm-lint.log`. The focused checks do not qualify a hosted candidate.
+
+Fresh read-only reviewer `/root/crate_fix_review` accepts the whole correction. The coordinator owns batching, landing and the next candidate dispatch.
+
+What the build taught us: root-workspace acquisition does not cover the standalone workspaces reached by package fixtures. Fetch each admitted manifest before the offline gate.
