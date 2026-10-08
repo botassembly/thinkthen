@@ -10,6 +10,7 @@ use crate::core::{Framing, Reading};
 
 /// The physical unit an explicit reader returns.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum SourceUnit {
     /// One physical text line, excluding its final ending.
@@ -23,6 +24,7 @@ pub enum SourceUnit {
 
 /// Controls shared by the command, native libraries and database readers.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ReaderOptions {
     /// Line units by default.

@@ -1,0 +1,2022 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Request",
+  "description": "One closed request object. Native construction requires no JSON conversion.",
+  "type": "object",
+  "properties": {
+    "call": {
+      "description": "The requested judging function and its arguments.",
+      "$ref": "#/$defs/RequestCall"
+    },
+    "schema": {
+      "description": "The explicit wire version.",
+      "$ref": "#/$defs/RequestVersion"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "call"
+  ],
+  "$defs": {
+    "Authored_choose": {
+      "description": "A `choose` entry: the question text and its options, read under a single cut.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "choose": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "options": {
+          "$ref": "#/$defs/Authored_options"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_cut"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "choose"
+      ]
+    },
+    "Authored_criterion": {
+      "description": "What a side of a decide means, or what a score level means: nonblank text, an object, a list, or null.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Authored_cut": {
+      "description": "A single cut as a number or as text. A band, written LOW:HIGH, is not a cut; the parser also checks the range.",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "pattern": "^[^:]*$"
+        }
+      ]
+    },
+    "Authored_decide": {
+      "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "decide": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "false": {
+          "$ref": "#/$defs/Authored_criterion"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_threshold"
+        },
+        "true": {
+          "$ref": "#/$defs/Authored_criterion"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "decide"
+      ]
+    },
+    "Authored_description": {
+      "description": "A description an option or a label carries: text, an object, a list, or null. A blank string counts as a description in the grammar; the parser reads it as absent.",
+      "type": [
+        "string",
+        "object",
+        "array",
+        "null"
+      ]
+    },
+    "Authored_find": {
+      "description": "A whole-set find reading; candidates come from the actual ordered input units. Cuts, batch and authored candidates are absent.",
+      "type": "object",
+      "properties": {
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "find": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "find"
+      ]
+    },
+    "Authored_inputDeclaration": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "properties": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/Authored_inputProperty"
+              },
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+              }
+            },
+            "required": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "type": {
+              "const": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "properties"
+          ]
+        }
+      ]
+    },
+    "Authored_inputProperty": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "number"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "type"
+              ]
+            },
+            "type": {
+              "const": "array"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "items"
+          ]
+        }
+      ]
+    },
+    "Authored_labels": {
+      "description": "One to 20 tag labels, as a list of names or a map from each name to its description.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Authored_name"
+          },
+          "maxItems": 20,
+          "minItems": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Authored_description"
+          },
+          "maxProperties": 20,
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/Authored_name"
+          }
+        }
+      ]
+    },
+    "Authored_levels": {
+      "description": "Two to 10 levels, lowest first, as a list of names or a map from each name to what the level means.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Authored_name"
+          },
+          "maxItems": 10,
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Authored_criterion"
+          },
+          "maxProperties": 10,
+          "minProperties": 2,
+          "propertyNames": {
+            "$ref": "#/$defs/Authored_name"
+          }
+        }
+      ]
+    },
+    "Authored_name": {
+      "description": "A label or level name: text holding a printable character and no control character.",
+      "type": "string",
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+    },
+    "Authored_options": {
+      "description": "Two to 255 options, as a list of names or a map from each name to its description.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Authored_name"
+          },
+          "maxItems": 255,
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Authored_description"
+          },
+          "maxProperties": 255,
+          "minProperties": 2,
+          "propertyNames": {
+            "$ref": "#/$defs/Authored_name"
+          }
+        }
+      ]
+    },
+    "Authored_pointers": {
+      "description": "One JSON Pointer, or a list of them. The parser checks RFC 6901.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Authored_profile": {
+      "description": "A calibration identity: lowercase letters, digits, hyphens, and underscores.",
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "Authored_questionText": {
+      "description": "The question text: a nonblank string, an object, or a list. An object or a list may be empty; the value is the text.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        }
+      ]
+    },
+    "Authored_relate": {
+      "description": "A `relate` entry: one ordered set of relation rules and the pointers that identify each entity.",
+      "type": "object",
+      "properties": {
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "relate": {
+          "type": "object",
+          "properties": {
+            "fields": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "kind"
+              ]
+            },
+            "relations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Authored_relation"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "relations"
+          ]
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_cut"
+        },
+        "version": {
+          "const": 1
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "relate"
+      ]
+    },
+    "Authored_relation": {
+      "description": "One relation rule. A left-out source or target means any kind, as `*` and `ANY` do.",
+      "type": "object",
+      "properties": {
+        "either": {
+          "type": "boolean"
+        },
+        "name": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "reads": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "single": {
+          "description": "Each source has at most one target, so `relate` asks one menu per source. `recognize` refuses it, and `relate` refuses it beside `either`.",
+          "type": "boolean"
+        },
+        "source": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "target": {
+          "$ref": "#/$defs/Authored_name"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "Authored_score": {
+      "description": "A `score` entry: the question text and its levels, lowest first. A score takes no threshold; the answer is a number. A top-level `batch` sizes a record stream.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "levels": {
+          "$ref": "#/$defs/Authored_levels"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "score": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "score"
+      ]
+    },
+    "Authored_tag": {
+      "description": "A `tag` entry: the question text and its labels, each read under the same single cut. A top-level `batch` sizes a record stream.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        },
+        "context_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "item_schema": {
+          "$ref": "#/$defs/Authored_inputDeclaration"
+        },
+        "labels": {
+          "$ref": "#/$defs/Authored_labels"
+        },
+        "model": {
+          "$ref": "#/$defs/Authored_name"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "on": {
+          "$ref": "#/$defs/Authored_pointers"
+        },
+        "profile": {
+          "$ref": "#/$defs/Authored_profile"
+        },
+        "tag": {
+          "$ref": "#/$defs/Authored_questionText"
+        },
+        "threshold": {
+          "$ref": "#/$defs/Authored_cut"
+        },
+        "wording_version": {
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "tag"
+      ]
+    },
+    "Authored_threshold": {
+      "description": "A cut as a number, or a cut or a band as text. The parser checks the range and the band form.",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "ContextSchema": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "additionalProperties": true
+        }
+      ]
+    },
+    "ImageMedia": {
+      "description": "Initially validated media; extensions never select a media type.",
+      "oneOf": [
+        {
+          "description": "JPEG still image.",
+          "type": "string",
+          "const": "image/jpeg"
+        },
+        {
+          "description": "PNG still image.",
+          "type": "string",
+          "const": "image/png"
+        }
+      ]
+    },
+    "OptionSchema": {
+      "type": "object",
+      "properties": {
+        "description": true,
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "ReaderMedia": {
+      "description": "Explicit reader media. Ordinary file reading remains text.",
+      "oneOf": [
+        {
+          "description": "Existing line/window/file text reader.",
+          "type": "string",
+          "const": "text"
+        },
+        {
+          "description": "One validated image per explicit whole file.",
+          "type": "string",
+          "const": "image"
+        }
+      ]
+    },
+    "RecognitionExample": {
+      "description": "A tagged recognition example, as bracket text or literal text with scalar spans.",
+      "anyOf": [
+        {
+          "description": "Inline `[TEXT | KIND]` tags; backslash escapes syntax characters.",
+          "type": "string"
+        },
+        {
+          "description": "Original text, declared entity spans and an optional broader vocabulary.",
+          "$ref": "#/$defs/RecognitionExampleText"
+        }
+      ]
+    },
+    "RecognitionExampleEntity": {
+      "description": "One entity's inclusive start, exclusive end and declared kind.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive Unicode-scalar position in the original text.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "A label in this example's effective vocabulary.",
+          "type": "string"
+        },
+        "start": {
+          "description": "Inclusive Unicode-scalar position in the original text.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "kind"
+      ]
+    },
+    "RecognitionExampleText": {
+      "description": "Literal example text and its entity annotations.",
+      "type": "object",
+      "properties": {
+        "entities": {
+          "description": "Nonoverlapping entity spans, using Unicode-scalar offsets.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionExampleEntity"
+          }
+        },
+        "kinds": {
+          "description": "Allowed kinds; omission uses the recognition's kinds, or generic ENTITY.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "description": "Exact decoded original text.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "entities"
+      ]
+    },
+    "RequestBatch": {
+      "description": "A bounded native batch setting.",
+      "anyOf": [
+        {
+          "description": "A positive record count.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        {
+          "description": "The existing max setting.",
+          "type": "string"
+        }
+      ]
+    },
+    "RequestCall": {
+      "description": "The closed function tag selects one native invocation.",
+      "oneOf": [
+        {
+          "description": "A yes/no judgment.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "decide"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "One ordered option.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "choose"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "Every applicable label.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "tag"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "A placement on ordered levels.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "score"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "Keep passing records.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "filter"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "Order records.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "rank"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "Select a text unit.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "find"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "Ask a named question set.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "annotate"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "Identify named entities.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "recognize"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        },
+        {
+          "description": "Judge entity relations.",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "relate"
+            },
+            "input": {
+              "description": "Explicit evidence selector.",
+              "$ref": "#/$defs/RequestInput"
+            },
+            "options": {
+              "description": "Absent controls retain existing defaults.",
+              "$ref": "#/$defs/RequestOptions",
+              "default": {
+                "attempts": false,
+                "details": false,
+                "files_only": false,
+                "none": false
+              }
+            },
+            "question": {
+              "description": "Explicit question selector; literal @ text remains literal.",
+              "$ref": "#/$defs/RequestQuestion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "input"
+          ]
+        }
+      ]
+    },
+    "RequestDefinition": {
+      "description": "Existing authored structural grammar. Native admission checks wording, thresholds, references and function applicability.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Authored_decide"
+        },
+        {
+          "$ref": "#/$defs/Authored_choose"
+        },
+        {
+          "$ref": "#/$defs/Authored_tag"
+        },
+        {
+          "$ref": "#/$defs/Authored_score"
+        },
+        {
+          "$ref": "#/$defs/Authored_relate"
+        },
+        {
+          "$ref": "#/$defs/Authored_find"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "context_schema": {
+              "$ref": "#/$defs/Authored_inputDeclaration"
+            },
+            "item_schema": {
+              "$ref": "#/$defs/Authored_inputDeclaration"
+            },
+            "model": {
+              "$ref": "#/$defs/Authored_name"
+            },
+            "name": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "on": {
+              "$ref": "#/$defs/Authored_pointers"
+            },
+            "profile": {
+              "$ref": "#/$defs/Authored_profile"
+            },
+            "recognize": {
+              "type": "object",
+              "properties": {
+                "entity_definition": {
+                  "$ref": "#/$defs/Authored_questionText"
+                },
+                "instructions": {
+                  "$ref": "#/$defs/Authored_questionText"
+                },
+                "kinds": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/$defs/Authored_description"
+                  },
+                  "maxProperties": 20
+                },
+                "relations": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Authored_relation"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "relation_threshold": {
+              "$ref": "#/$defs/Authored_cut"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Authored_cut"
+            },
+            "version": {
+              "const": 1
+            },
+            "wording_version": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "recognize"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "batch": {},
+            "profile": {
+              "$ref": "#/$defs/Authored_profile"
+            },
+            "questions": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
+                    "type": "object",
+                    "properties": {
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "decide": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "false": {
+                        "$ref": "#/$defs/Authored_criterion"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "threshold": {
+                        "$ref": "#/$defs/Authored_threshold"
+                      },
+                      "true": {
+                        "$ref": "#/$defs/Authored_criterion"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "decide"
+                    ]
+                  },
+                  {
+                    "description": "A `choose` entry: the question text and its options, read under a single cut.",
+                    "type": "object",
+                    "properties": {
+                      "choose": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "options": {
+                        "$ref": "#/$defs/Authored_options"
+                      },
+                      "threshold": {
+                        "$ref": "#/$defs/Authored_cut"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "choose"
+                    ]
+                  },
+                  {
+                    "description": "A `tag` entry: the question text and its labels, each read under the same single cut. A top-level `batch` sizes a record stream.",
+                    "type": "object",
+                    "properties": {
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "labels": {
+                        "$ref": "#/$defs/Authored_labels"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "tag": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "threshold": {
+                        "$ref": "#/$defs/Authored_cut"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "tag"
+                    ]
+                  },
+                  {
+                    "description": "A `score` entry: the question text and its levels, lowest first. A score takes no threshold; the answer is a number. A top-level `batch` sizes a record stream.",
+                    "type": "object",
+                    "properties": {
+                      "context_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "item_schema": {
+                        "$ref": "#/$defs/Authored_inputDeclaration"
+                      },
+                      "levels": {
+                        "$ref": "#/$defs/Authored_levels"
+                      },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                      },
+                      "on": {
+                        "$ref": "#/$defs/Authored_pointers"
+                      },
+                      "score": {
+                        "$ref": "#/$defs/Authored_questionText"
+                      },
+                      "wording_version": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "score"
+                    ]
+                  }
+                ]
+              },
+              "minProperties": 1
+            },
+            "threshold": {
+              "$ref": "#/$defs/Authored_threshold"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "questions"
+          ]
+        }
+      ]
+    },
+    "RequestFraming": {
+      "description": "Evidence framing for a caller-supplied bounded feed.",
+      "oneOf": [
+        {
+          "description": "One whole document.",
+          "type": "string",
+          "const": "document"
+        },
+        {
+          "description": "One literal text record per line.",
+          "type": "string",
+          "const": "lines"
+        },
+        {
+          "description": "One original JSON value per line.",
+          "type": "string",
+          "const": "jsonl"
+        },
+        {
+          "description": "One record per CSV row.",
+          "type": "string",
+          "const": "csv"
+        },
+        {
+          "description": "One record per TSV row.",
+          "type": "string",
+          "const": "tsv"
+        }
+      ]
+    },
+    "RequestImage": {
+      "description": "Closed attachment descriptors; bytes stay native until serialized.",
+      "oneOf": [
+        {
+          "description": "Explicit attachment path and optional media assertion.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "file"
+            },
+            "media": {
+              "description": "Optional declared JPEG/PNG MIME.",
+              "$ref": "#/$defs/ImageMedia"
+            },
+            "path": {
+              "description": "User-selected image path.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "path"
+          ]
+        },
+        {
+          "description": "Original bytes represented as canonical base64 on the wire.",
+          "type": "object",
+          "properties": {
+            "bytes": {
+              "description": "Exact bytes.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "bytes"
+            },
+            "media": {
+              "description": "JPEG/PNG MIME.",
+              "$ref": "#/$defs/ImageMedia"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "media",
+            "bytes"
+          ]
+        }
+      ]
+    },
+    "RequestInput": {
+      "description": "Closed evidence selectors; feed contains no runtime reader.",
+      "oneOf": [
+        {
+          "description": "One literal text item.",
+          "type": "object",
+          "properties": {
+            "images": {
+              "description": "Ordered attachments.",
+              "type": "array",
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/RequestImage"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "description": "Original text.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text"
+          ]
+        },
+        {
+          "description": "One authored JSON item, including JSON null.",
+          "type": "object",
+          "properties": {
+            "images": {
+              "description": "Ordered attachments.",
+              "type": "array",
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/RequestImage"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "json"
+            },
+            "value": {
+              "description": "Original ordered JSON."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ]
+        },
+        {
+          "description": "Ordered closed per-item descriptors.",
+          "type": "object",
+          "properties": {
+            "items": {
+              "description": "All supplied item descriptors.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RequestItem"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "records"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "items"
+          ]
+        },
+        {
+          "description": "Ordered find candidates.",
+          "type": "object",
+          "properties": {
+            "items": {
+              "description": "Complete unit set.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RequestItem"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "units"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "items"
+          ]
+        },
+        {
+          "description": "Ordered relate entity originals.",
+          "type": "object",
+          "properties": {
+            "items": {
+              "description": "Complete entity set.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RequestItem"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "entities"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "items"
+          ]
+        },
+        {
+          "description": "Ordered explicit filesystem source.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "source"
+            },
+            "source": {
+              "description": "Native source selection.",
+              "$ref": "#/$defs/RequestSource"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "source"
+          ]
+        },
+        {
+          "description": "A feed supplied separately by the execution environment.",
+          "type": "object",
+          "properties": {
+            "framing": {
+              "description": "Native framing selection.",
+              "$ref": "#/$defs/RequestFraming",
+              "default": "document"
+            },
+            "images": {
+              "description": "Optional ordered attachments to each item.",
+              "type": "array",
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/RequestImage"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "feed"
+            },
+            "name": {
+              "description": "Caller-assigned feed name.",
+              "type": "string"
+            },
+            "reading": {
+              "description": "Physical reading controls for located feeds.",
+              "$ref": "#/$defs/RequestReader",
+              "default": {
+                "unit": "line"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name"
+          ]
+        }
+      ]
+    },
+    "RequestItem": {
+      "description": "A closed descriptor with distinct absence and explicit empty context.",
+      "type": "object",
+      "properties": {
+        "context": {
+          "description": "Explicit per-item context; null refuses.",
+          "$ref": "#/$defs/ContextSchema"
+        },
+        "examples": {
+          "description": "Optional recognition boundary examples; an empty list clears the fallback.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionExample"
+          }
+        },
+        "images": {
+          "description": "Ordered attachments, retaining duplicates.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RequestImage"
+          }
+        },
+        "options": {
+          "description": "Whole replacement ordered shortlist; null refuses.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OptionSchema"
+          }
+        },
+        "original": {
+          "description": "Absent only for image-only evidence.",
+          "$ref": "#/$defs/RequestOriginal"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RequestOptions": {
+      "description": "Optional controls; absent values retain the native defaults, null refuses.",
+      "type": "object",
+      "properties": {
+        "attempts": {
+          "description": "Collect observed attempts.",
+          "type": "boolean",
+          "default": false
+        },
+        "batch": {
+          "description": "Native batch scheduling.",
+          "$ref": "#/$defs/RequestBatch"
+        },
+        "context": {
+          "description": "Shared context fallback, including explicit empty text.",
+          "type": "string"
+        },
+        "context_field": {
+          "description": "Per-item context projection.",
+          "type": "string"
+        },
+        "deadline_ms": {
+          "description": "Existing millisecond deadline, including -1 for no deadline.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "details": {
+          "description": "Compatibility details output for scalar calls.",
+          "type": "boolean",
+          "default": false
+        },
+        "examples": {
+          "description": "Optional recognition boundary examples; an empty list clears the fallback.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecognitionExample"
+          }
+        },
+        "examples_field": {
+          "description": "Optional per-record recognition example projection.",
+          "type": "string"
+        },
+        "field": {
+          "description": "Evidence projection pointers in their caller order.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files_only": {
+          "description": "Keep one selected record per physical file.",
+          "type": "boolean",
+          "default": false
+        },
+        "max_requests_total": {
+          "description": "Process send budget for this call.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "model": {
+          "description": "Explicit model on the engine's configured route.",
+          "type": "string"
+        },
+        "none": {
+          "description": "Offer a none candidate in find.",
+          "type": "boolean",
+          "default": false
+        },
+        "options_field": {
+          "description": "Per-item ordered choose shortlist projection.",
+          "type": "string"
+        },
+        "threshold": {
+          "description": "Explicit reading override.",
+          "$ref": "#/$defs/RequestThreshold"
+        },
+        "top": {
+          "description": "Retain the requested number of ranked rows.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "RequestOriginal": {
+      "description": "Optional original; omission admits an images-only item.",
+      "oneOf": [
+        {
+          "description": "Literal text never reinterpreted as JSON.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "description": "Exact text.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text"
+          ]
+        },
+        {
+          "description": "Ordered arbitrary JSON evidence.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "json"
+            },
+            "value": {
+              "description": "Original value."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ]
+        }
+      ]
+    },
+    "RequestQuestion": {
+      "description": "Closed question selectors keep filesystem authority at the edge.",
+      "oneOf": [
+        {
+          "description": "Literal question wording.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "description": "Exact text.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text"
+          ]
+        },
+        {
+          "description": "Existing authored grammar or a directly converted native preparation.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "definition"
+            },
+            "value": {
+              "description": "The typed prepared definition.",
+              "$ref": "#/$defs/RequestDefinition"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ]
+        },
+        {
+          "description": "Explicit question-file path.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "file"
+            },
+            "path": {
+              "description": "User-selected path.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "path"
+          ]
+        },
+        {
+          "description": "Explicit saved question name.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "name"
+            },
+            "name": {
+              "description": "Native question-name grammar.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name"
+          ]
+        },
+        {
+          "description": "Explicit native reference lookup.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "reference"
+            },
+            "reference": {
+              "description": "Native reference with path precedence.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reference"
+          ]
+        }
+      ]
+    },
+    "RequestReader": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/SourceUnit",
+          "default": "line"
+        },
+        "window": {
+          "type": "integer",
+          "format": "uint",
+          "default": null,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "RequestSource": {
+      "description": "Explicit source paths and physical-unit controls.",
+      "type": "object",
+      "properties": {
+        "media": {
+          "description": "Whole-file media; text is the default.",
+          "$ref": "#/$defs/ReaderMedia",
+          "default": "text"
+        },
+        "paths": {
+          "description": "Caller paths, retaining order and duplicates.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reading": {
+          "description": "Native physical-unit settings.",
+          "$ref": "#/$defs/RequestReader",
+          "default": {
+            "unit": "line"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "paths"
+      ]
+    },
+    "RequestThreshold": {
+      "description": "A cut or authored threshold rule.",
+      "anyOf": [
+        {
+          "description": "Numeric cut.",
+          "type": "number",
+          "format": "double"
+        },
+        {
+          "description": "Existing named or band reading.",
+          "type": "string"
+        }
+      ]
+    },
+    "RequestVersion": {
+      "description": "The admitted wire version; other versions are refused.",
+      "oneOf": [
+        {
+          "description": "The first canonical request grammar.",
+          "type": "string",
+          "const": "thinkthen.request/1"
+        }
+      ]
+    },
+    "SourceUnit": {
+      "description": "The physical unit an explicit reader returns.",
+      "oneOf": [
+        {
+          "description": "One physical text line, excluding its final ending.",
+          "type": "string",
+          "const": "line"
+        },
+        {
+          "description": "A nonoverlapping group of physical lines.",
+          "type": "string",
+          "const": "window"
+        },
+        {
+          "description": "The entire original file, including its endings.",
+          "type": "string",
+          "const": "file"
+        }
+      ]
+    }
+  }
+}

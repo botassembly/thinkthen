@@ -450,36 +450,3 @@ pub(crate) struct StatusArguments {
     #[arg(long, value_name = "NAME")]
     pub(crate) backend: Option<String>,
 }
-
-impl Command {
-    pub(crate) fn check_images(&self) -> Result<(), crate::failure::Failure> {
-        use crate::failure::Failure;
-        let refusal = match self {
-            Self::Tag(a) if a.common.images() => {
-                Some("tag accepts text only; images are unsupported")
-            }
-            Self::Filter(a) if a.common.images() => {
-                Some("filter accepts text only; images are unsupported")
-            }
-            Self::Rank(a) if a.common.images() => {
-                Some("rank accepts text only; images are unsupported")
-            }
-            Self::Annotate(a) if a.common.images() => {
-                Some("annotate accepts text only; images are unsupported")
-            }
-            Self::Find(a)
-                if !a.common.image.is_empty() || a.common.media.as_deref() == Some("image") =>
-            {
-                Some("find accepts text only; images are unsupported")
-            }
-            Self::Recognize(a) if a.common.images() => {
-                Some("recognize accepts text only; images are unsupported")
-            }
-            Self::Relate(a) if a.common.images() => {
-                Some("relate accepts text only; images are unsupported")
-            }
-            _ => None,
-        };
-        refusal.map_or(Ok(()), |message| Err(Failure::Usage(message)))
-    }
-}

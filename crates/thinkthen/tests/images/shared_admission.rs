@@ -4,9 +4,13 @@
     reason = "malformed saved fixtures or loopback setup fail this test, never production input"
 )]
 use super::{Color, engine, fixture, input, questions, url};
-use conformance_backend::{Canned, Listener};
+use conformance_backend::{Canned, Listener, Rendezvous};
 use serde_json::{Value, json};
 use std::io::Cursor;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 use thinkthen::{
     BatchSetting, CallOptions, Engine, Error, ErrorKind, ImageInput, ImageMedia, InputFileReader,
     InputReaderOptions, Question, QuestionInput, ReaderMedia, ReaderOptions, SourceUnit,
@@ -169,7 +173,20 @@ fn typed_many(
     engine: &Engine,
     role: &str,
     inputs: [QuestionInput; 2],
+    release: Arc<Rendezvous>,
 ) -> Result<Vec<QuestionInput>, Error> {
+    let mut inputs = inputs.into_iter();
+    let mut release = Some(release);
+    let inputs = std::iter::from_fn(move || {
+        let item = inputs.next();
+        // The exhaustion pull follows admission of both originals, unlike the second pull.
+        if item.is_none()
+            && let Some(release) = release.take()
+        {
+            assert!(release.wait());
+        }
+        item
+    });
     let options = CallOptions::new().batch(BatchSetting::Max);
     match role {
         "decide" => engine
@@ -298,6 +315,15 @@ fn shared_image_assets_execute_all_scalar_admission_categories_with_counted_send
     }
 }
 
+fn held_first(reply: &str, first: &AtomicBool, release: &Arc<Rendezvous>) -> Canned {
+    let reply = Canned::ok(reply);
+    if first.swap(false, Ordering::SeqCst) {
+        reply.after_release(Arc::clone(release))
+    } else {
+        reply
+    }
+}
+
 #[test]
 fn complete_image_questions_keep_distinct_states_and_coalesce_identical_questions() {
     let corpus = corpus();
@@ -314,7 +340,11 @@ fn complete_image_questions_keep_distinct_states_and_coalesce_identical_question
             .flat_map(|role| [false, true].map(move |distinct| (role, distinct)))
         {
             let reply = saved_reply(scenario["profile_ref"].as_str().unwrap(), role);
-            let listener = Listener::answering(move |_| Canned::ok(&reply)).unwrap();
+            let release = Arc::new(Rendezvous::new(2));
+            let first = AtomicBool::new(true);
+            let responding = Arc::clone(&release);
+            let listener =
+                Listener::answering(move |_| held_first(&reply, &first, &responding)).unwrap();
             let profile = &parity["image_profiles"][scenario["profile_ref"].as_str().unwrap()];
             let engine = setup(&listener, profile);
             let construction = &scenario["construction"];
@@ -324,7 +354,7 @@ fn complete_image_questions_keep_distinct_states_and_coalesce_identical_question
                 caption.replace_range(0..1, "I");
             }
             let second = input(Some(&caption), originals(construction).unwrap());
-            let rows = typed_many(&engine, role, [first.clone(), second.clone()]).unwrap();
+            let rows = typed_many(&engine, role, [first.clone(), second.clone()], release).unwrap();
             assert_eq!(rows, [first.clone(), second.clone()]);
             assert_eq!(
                 listener.count(),

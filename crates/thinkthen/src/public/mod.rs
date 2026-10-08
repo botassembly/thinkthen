@@ -6,6 +6,7 @@
 use std::sync::OnceLock;
 
 mod images;
+mod request;
 pub use images::{
     ImageEvidence, ImageInput, ImageMedia, InputEvidence, InputFunction, MAX_IMAGE_BYTES,
     MAX_IMAGES, QuestionInput,
@@ -14,6 +15,7 @@ pub use images::{
     choose_input, choose_input_with, decide_input, decide_input_with, details_input,
     details_input_with, score_input, score_input_with,
 };
+pub use request::*;
 mod input_files;
 pub use input_files::{
     ImageSourceRecord, InputFileReader, InputReaderOptions, ReaderMedia, SourceItem, SourceItems,
@@ -47,6 +49,7 @@ mod plan;
 mod proxy;
 mod pull;
 mod question;
+pub(crate) use question::Kind as NativeQuestionKind;
 mod question_file;
 mod record_choose;
 mod record_composition;

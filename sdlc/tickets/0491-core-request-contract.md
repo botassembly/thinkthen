@@ -214,6 +214,8 @@ struct RequestOptions
 struct RequestSource
 ```
 
+Reviews: revision f32a0211d, accept
+
 ## Outcome
 
 Define one versioned Rust Request contract for all ten functions and native execution; generate specification/request.schema.json and parse thinkthen_call through a compatibility translation.

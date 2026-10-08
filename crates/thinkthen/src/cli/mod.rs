@@ -24,6 +24,7 @@ pub(crate) mod profile;
 mod question_text;
 pub(crate) mod recognize;
 pub(crate) mod relate;
+mod request;
 pub(crate) mod schedule;
 pub(crate) mod status;
 pub(crate) mod table;
@@ -64,20 +65,24 @@ pub fn entry() -> ExitCode {
     if let Some(Command::Mcp(arguments)) = &cli.command {
         return mcp_entry(arguments);
     }
-    let offline = match &cli.command {
-        Some(Command::Transform(arguments)) => {
-            Some(transform::run(&arguments.command, stdout.lock()))
-        }
-        Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) => {
-            Some(audit::run(arguments, stdout.lock()))
-        }
-        Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) => {
-            Some(diff::run(arguments, stdout.lock()))
-        }
-        _ => None,
-    };
-    if let Some(result) = offline {
-        return report_offline(result, stderr.lock());
+    if let Some(Command::Transform(arguments)) = &cli.command {
+        return report_offline(
+            transform::run(&arguments.command, stdout.lock()),
+            stderr.lock(),
+        );
+    }
+    if let Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) =
+        &cli.command
+    {
+        return report_offline(audit::run(arguments, stdout.lock()), stderr.lock());
+    }
+    if let Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) =
+        &cli.command
+    {
+        return report_offline(diff::run(arguments, stdout.lock()), stderr.lock());
+    }
+    if let Some(code) = request_admission(&cli, wants_facts, started, accepted, stderr.lock()) {
+        return code;
     }
     // Every command that reads input may write a recording or a cache entry.
     if cli.command.as_ref().is_some_and(Command::reads_input)
@@ -108,12 +113,7 @@ pub fn entry() -> ExitCode {
             (ExitCode::from(code), stopped)
         }
     };
-    if environment.usage().has_held_model_mismatch() {
-        let _unwritten = writeln!(
-            stderr.lock(),
-            "thinkthen: warning: a held answer names a different model and cannot be reused online"
-        );
-    }
+    warn_held_model_mismatch(&environment, stderr.lock());
     finish_usage(&environment);
     if wants_facts {
         let snapshot = environment.usage().run_snapshot();
@@ -157,6 +157,15 @@ pub(crate) fn warn_configuration_shared(shared: bool, mut writer: impl Write) {
         #[cfg(windows)]
         let warning = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it; it decides where the key and evidence go";
         let _unwritten = writeln!(writer, "{warning}").and_then(|()| writer.flush());
+    }
+}
+
+fn warn_held_model_mismatch(environment: &Environment, mut writer: impl Write) {
+    if environment.usage().has_held_model_mismatch() {
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: warning: a held answer names a different model and cannot be reused online"
+        );
     }
 }
 
@@ -231,9 +240,6 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
     }
     if let Some(command) = cli.command.as_ref().filter(|command| command.reads_input()) {
         edge::waiting(command.input(), io::stderr().lock());
-    }
-    if let Some(command) = &cli.command {
-        command.check_images()?;
     }
     let input = io::stdin();
     match &cli.command {
@@ -341,4 +347,17 @@ fn report_offline(result: Result<(), Failure>, writer: impl Write) -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(failure) => failure::report(&failure, writer),
     }
+}
+
+fn request_admission(
+    cli: &Cli,
+    wants_facts: bool,
+    started: std::time::Instant,
+    accepted: std::time::Instant,
+    writer: impl std::io::Write,
+) -> Option<ExitCode> {
+    let command = cli.command.as_ref()?;
+    request::admit(command)
+        .err()
+        .map(|failure| report_early(&failure, wants_facts, (started, accepted), writer))
 }

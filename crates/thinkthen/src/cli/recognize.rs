@@ -50,6 +50,13 @@ struct Running<'a> {
     cancel: crate::engine::Cancel<'static>,
 }
 
+/// Prepare inline recognition declarations for shared admission without evidence reads.
+pub(crate) fn request_definition(
+    arguments: &crate::args::RecognizeArguments,
+) -> Result<crate::Recognize, Failure> {
+    config::settle(arguments).map(crate::Recognize)
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "the command edge keeps validation and mode selection in their observable order"
