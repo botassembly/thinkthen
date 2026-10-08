@@ -9,6 +9,8 @@ Severity: medium storage correctness and responsiveness.
 
 Reviews: fresh Sol High ticket review, accept
 
+Reviews: revision 62161ace2, accept
+
 ## Outcome
 
 One recognition operation validates its cache before sending and shares that admission across its records and stages. Current-schema validation does not take a migration write transaction. Damaged saved answers still refuse before a request. Reported recording failures get a concrete reproduction and fix owner rather than being assumed solved by this optimization.
