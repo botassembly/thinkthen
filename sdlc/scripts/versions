@@ -13,6 +13,7 @@ Usage: versions [--tag vX.Y.Z | --set X.Y.Z | --self-test]
 
 import pathlib
 import re
+import runpy
 import shutil
 import subprocess
 import sys
@@ -55,8 +56,10 @@ PLACES = [
     ("libraries/typescript/package-lock.json", r'(?m)"": \{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
     ("libraries/ruby/lib/thinkthen/version.rb", r'VERSION = "([^"]+)"', WHOLE),
     ("libraries/r/thinkthen/DESCRIPTION", r"(?m)^Version: (\S+)$", WHOLE),
-    ("libraries/c/include/thinkthen.h", r"(?m)^ \* thinkthen\.h .* version (\d+\.\d+\.\d+)\.$", WHOLE),
-    ("libraries/c/include/thinkthen.h", r"(?m)^/\* Version (\d+\.\d+\.\d+), the version", WHOLE),
+    ("libraries/c/src/lib.rs", r"(?m)^/// thinkthen\.h .* version (\d+\.\d+\.\d+)\.$", WHOLE),
+    ("libraries/c/src/ffi/values.rs", r"(?m)^/// Version (\d+\.\d+\.\d+), the version", WHOLE),
+    *[("libraries/c/src/ffi/values.rs", rf"(?m)^pub const THINKTHEN_VERSION_{n}: i32 = (\d+);$", PART[i])
+      for i, n in enumerate(["MAJOR", "MINOR", "PATCH"])],
     *[("libraries/c/include/thinkthen.h", rf"(?m)^#define THINKTHEN_VERSION_{n} (\d+)$", PART[i])
       for i, n in enumerate(["MAJOR", "MINOR", "PATCH"])],
     ("databases/postgresql/thinkthen.control", r"(?m)^default_version = '([^']+)'$", WHOLE),
@@ -224,6 +227,8 @@ def set_version(root, new):
         return [f"{error}; nothing was written" for error in errors]
     texts = {}
     for path, pattern, part in places(cargo):
+        if path == "libraries/c/include/thinkthen.h":
+            continue  # Generated output is checked above and staged below.
         text = texts[path] if path in texts else originals[path]
         hit = re.search(pattern, text)
         if hit is None:
@@ -241,6 +246,11 @@ def set_version(root, new):
         if any(package["version"] != new for package in parsed["package"] if package["name"] in names):
             return [f"versions: {lock} has a package entry the update cannot read; nothing was written"]
         texts[lock] = changed
+    try:
+        generator = runpy.run_path(str(REPO / "sdlc/scripts/generate-c-header.py"))
+        texts["libraries/c/include/thinkthen.h"] = generator["generate"](root, texts).decode()
+    except (RuntimeError, OSError, subprocess.CalledProcessError):
+        return ["versions: C header generation failed; nothing was written"]
     for path, text in texts.items():
         (root / path).write_text(text, encoding="utf-8")
     return []
@@ -265,6 +275,8 @@ def self_test():
     """Each edge row against a copy of the real places, with the whole output pinned."""
     def fresh(tmp):
         root = pathlib.Path(tmp)
+        shutil.copytree(REPO / "libraries/c/src", root / "libraries/c/src")
+        shutil.copyfile(REPO / "libraries/c/cbindgen.toml", root / "libraries/c/cbindgen.toml")
         cargo, metadata, _ = manifests(REPO)
         planted = ["libraries/ruby/lib/thinkthen/version.rb", "libraries/r/thinkthen/DESCRIPTION",
                    "databases/postgresql/thinkthen.control", "sdlc/surfaces.txt", "install.sh", "site/public/install.sh", "install.ps1", "site/public/install.ps1"]
@@ -345,6 +357,8 @@ def self_test():
          (1, [f"versions: tag {version} does not match version {version}; the tag must read v{version}"])),
         ("set", lambda r: None, ["--set", "9.8.7"], (0, [ok.replace(version, "9.8.7")])),
         ("bad-set", lambda r: None, ["--set", "1.2"], (2, ["versions: --set takes X.Y.Z in digits, not '1.2'; nothing was written"])),
+        ("header-parse-set", lambda r: edit(r, "libraries/c/src/lib.rs", "pub mod ffi;", "pub mod ffi;\npub struct {"),
+         ["--set", "9.8.7"], (1, ["versions: C header generation failed; nothing was written"])),
         ("lost-set", lambda r: edit(r, "databases/postgresql/thinkthen.control", "default_version", "# version"), ["--set", "9.8.7"],
          (1, ["versions: databases/postgresql/thinkthen.control has no version line the check can read; nothing was written"])),
         ("missing-set", lambda r: (r / "libraries/swift/Package.swift").unlink(), ["--set", "9.8.7"],

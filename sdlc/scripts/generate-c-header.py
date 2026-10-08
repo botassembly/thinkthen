@@ -3,6 +3,7 @@
 import argparse
 import difflib
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,20 +29,25 @@ def check_tool():
         raise RuntimeError(f'C header generation requires {VERSION}; found {found}')
 
 
-def generate():
+def generate(root=ROOT, replacements=None):
     check_tool()
-    crate = ROOT / 'libraries/c'
+    crate = root / 'libraries/c'
     env = tool_environment()
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-header-') as scratch:
-        metadata = Path(scratch) / 'metadata.json'
-        # Supplying locked metadata prevents cbindgen's default metadata command
-        # from updating a product lockfile. Neither command can use the network.
-        metadata.write_bytes(subprocess.check_output(
-            ['cargo', 'metadata', '--locked', '--offline', '--all-features',
-             '--format-version', '1', '--manifest-path', str(crate / 'Cargo.toml')], env=env))
+        source = crate / 'src/lib.rs'
+        if replacements is not None:
+            # The version updater generates its proposed header before writing
+            # any product file. Only Rust sources need staging; no build runs.
+            staged = Path(scratch) / 'src'
+            shutil.copytree(crate / 'src', staged)
+            for name, text in replacements.items():
+                if name.startswith('libraries/c/src/'):
+                    (staged / name.removeprefix('libraries/c/src/')).write_text(text)
+            source = staged / 'lib.rs'
+        # Source mode follows modules without Cargo metadata or dependency
+        # traversal, so it cannot resolve dependencies or rewrite a lockfile.
         return subprocess.check_output(
-            ['cbindgen', '--quiet', '--metadata', str(metadata), '--config',
-             str(crate / 'cbindgen.toml'), '--crate', 'thinkthen-c', str(crate)], env=env)
+            ['cbindgen', '--quiet', '--config', str(crate / 'cbindgen.toml'), str(source)], env=env)
 
 
 def main():

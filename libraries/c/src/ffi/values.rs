@@ -1,27 +1,35 @@
 //! Canonical C values. Descriptor discriminators remain u32 so unknown host values are validated safely.
-/// C value `THINKTHEN_VERSION_MAJOR`.
+/// Version 0.2.0, the version of the library this header ships with.
+/// Version 0.1.0 is the first release.
 pub const THINKTHEN_VERSION_MAJOR: i32 = 0;
 /// C value `THINKTHEN_VERSION_MINOR`.
 pub const THINKTHEN_VERSION_MINOR: i32 = 2;
 /// C value `THINKTHEN_VERSION_PATCH`.
 pub const THINKTHEN_VERSION_PATCH: i32 = 0;
-/// C value `THINKTHEN_OK`.
+/// Zero means success; codes 1..6 identify failures, never answers.
+/// On failure every output stays unchanged; error_code, error_message,
+/// error_retryable and error_facts_json describe the calling thread's failure.
 pub const THINKTHEN_OK: i32 = 0;
-/// C value `THINKTHEN_EUSAGE`.
+/// the arguments/input broke the grammar; the rejected stage was not sent
 pub const THINKTHEN_EUSAGE: i32 = 1;
-/// C value `THINKTHEN_EBACKEND`.
+/// the wire failed or refused
 pub const THINKTHEN_EBACKEND: i32 = 2;
-/// C value `THINKTHEN_EDEADLINE`.
+/// the caller's own budget ran out; no rows came
 pub const THINKTHEN_EDEADLINE: i32 = 3;
-/// C value `THINKTHEN_ELOCAL`.
+/// a named local file, cache, or recording failed
 pub const THINKTHEN_ELOCAL: i32 = 4;
-/// C value `THINKTHEN_ECANCELLED`.
+/// the token fired; sent requests finished and no rows came
 pub const THINKTHEN_ECANCELLED: i32 = 5;
-/// C value `THINKTHEN_EDEFECT`.
+/// the engine broke its own contract
 pub const THINKTHEN_EDEFECT: i32 = 6;
-/// C value `THINKTHEN_NO_DEADLINE`.
+/// _opts budgets are exact int64_t milliseconds from the call.
+/// THINKTHEN_NO_DEADLINE (-1) sets none; zero returns EDEADLINE before sending.
+/// Other negatives or values above 4294967295000 ms return EUSAGE before sending.
+/// Positive budgets stop within one tick. Clamp elapsed computed budgets at
+/// zero so an expired deadline never becomes the no-deadline sentinel.
 pub const THINKTHEN_NO_DEADLINE: i64 = -1i64;
-/// C value `THINKTHEN_YES`.
+/// The three answers a yes-or-no question gives. UNSURE is the machine word;
+/// the specification says "not sure" in prose.
 pub const THINKTHEN_YES: i32 = 1;
 /// C value `THINKTHEN_NO`.
 pub const THINKTHEN_NO: i32 = 0;
@@ -31,7 +39,7 @@ pub const THINKTHEN_UNSURE: i32 = 2;
 pub const THINKTHEN_CONTENT_TEXT_V1: u32 = 1u32;
 /// C value `THINKTHEN_CONTENT_JSON_V1`.
 pub const THINKTHEN_CONTENT_JSON_V1: u32 = 2u32;
-/// C value `THINKTHEN_RULE_DEFAULT_V1`.
+/// input-only missing reading
 pub const THINKTHEN_RULE_DEFAULT_V1: u32 = 0u32;
 /// C value `THINKTHEN_RULE_NULL_V1`.
 pub const THINKTHEN_RULE_NULL_V1: u32 = 1u32;
@@ -119,9 +127,9 @@ pub const THINKTHEN_ORIGIN_LIVE_V1: u32 = 1u32;
 pub const THINKTHEN_ORIGIN_CACHE_V1: u32 = 2u32;
 /// C value `THINKTHEN_ORIGIN_REPLAY_V1`.
 pub const THINKTHEN_ORIGIN_REPLAY_V1: u32 = 3u32;
-/// C value `THINKTHEN_ORIGIN_PROXY_V1`.
+/// reserved, never emitted in 0.2
 pub const THINKTHEN_ORIGIN_PROXY_V1: u32 = 4u32;
-/// C value `THINKTHEN_ORIGIN_MEMORY_V1`.
+/// reserved, never emitted in 0.2
 pub const THINKTHEN_ORIGIN_MEMORY_V1: u32 = 5u32;
 /// C value `THINKTHEN_ID_OBSERVATION_V1`.
 pub const THINKTHEN_ID_OBSERVATION_V1: u32 = 1u32;

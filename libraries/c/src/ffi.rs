@@ -384,7 +384,7 @@ pub unsafe extern "C" fn thinkthen_decide(
 ///
 /// Every pointer follows the header's argument rules.
 /// The same call with the options beside it: `deadline_ms` is the budget
-/// and `cancel` is the token, both described above.
+/// and `cancel` is the token, documented on THINKTHEN_NO_DEADLINE.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_decide_opts(
     engine: *const Door,

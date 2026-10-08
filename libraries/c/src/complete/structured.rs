@@ -195,7 +195,7 @@ pub(super) fn relate(
     common.input = OptionalContentV1 {
         present: 1,
         value: ContentV1 {
-            kind: abi::THINKTHEN_ANSWER_CHOICE_V1,
+            kind: abi::THINKTHEN_CONTENT_JSON_V1,
             data: s.string(&input),
         },
     };

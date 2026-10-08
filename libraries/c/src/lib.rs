@@ -16,10 +16,12 @@
 
 pub mod ffi;
 
+/// cbindgen:ignore
 mod call;
 mod current;
 mod door;
 mod failures;
+/// cbindgen:ignore
 mod plan;
 mod settings;
 

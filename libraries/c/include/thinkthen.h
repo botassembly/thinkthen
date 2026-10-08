@@ -96,32 +96,32 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_DIRECTION_SOURCE_TO_TARGET_V1 1u
 
 /*
- C value `THINKTHEN_EBACKEND`.
+ the wire failed or refused
  */
 #define THINKTHEN_EBACKEND 2
 
 /*
- C value `THINKTHEN_ECANCELLED`.
+ the token fired; sent requests finished and no rows came
  */
 #define THINKTHEN_ECANCELLED 5
 
 /*
- C value `THINKTHEN_EDEADLINE`.
+ the caller's own budget ran out; no rows came
  */
 #define THINKTHEN_EDEADLINE 3
 
 /*
- C value `THINKTHEN_EDEFECT`.
+ the engine broke its own contract
  */
 #define THINKTHEN_EDEFECT 6
 
 /*
- C value `THINKTHEN_ELOCAL`.
+ a named local file, cache, or recording failed
  */
 #define THINKTHEN_ELOCAL 4
 
 /*
- C value `THINKTHEN_EUSAGE`.
+ the arguments/input broke the grammar; the rejected stage was not sent
  */
 #define THINKTHEN_EUSAGE 1
 
@@ -251,12 +251,18 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_NO 0
 
 /*
- C value `THINKTHEN_NO_DEADLINE`.
+ _opts budgets are exact int64_t milliseconds from the call.
+ THINKTHEN_NO_DEADLINE (-1) sets none; zero returns EDEADLINE before sending.
+ Other negatives or values above 4294967295000 ms return EUSAGE before sending.
+ Positive budgets stop within one tick. Clamp elapsed computed budgets at
+ zero so an expired deadline never becomes the no-deadline sentinel.
  */
 #define THINKTHEN_NO_DEADLINE -1ll
 
 /*
- C value `THINKTHEN_OK`.
+ Zero means success; codes 1..6 identify failures, never answers.
+ On failure every output stays unchanged; error_code, error_message,
+ error_retryable and error_facts_json describe the calling thread's failure.
  */
 #define THINKTHEN_OK 0
 
@@ -271,12 +277,12 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_ORIGIN_LIVE_V1 1u
 
 /*
- C value `THINKTHEN_ORIGIN_MEMORY_V1`.
+ reserved, never emitted in 0.2
  */
 #define THINKTHEN_ORIGIN_MEMORY_V1 5u
 
 /*
- C value `THINKTHEN_ORIGIN_PROXY_V1`.
+ reserved, never emitted in 0.2
  */
 #define THINKTHEN_ORIGIN_PROXY_V1 4u
 
@@ -326,7 +332,7 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_RULE_CUT_V1 2u
 
 /*
- C value `THINKTHEN_RULE_DEFAULT_V1`.
+ input-only missing reading
  */
 #define THINKTHEN_RULE_DEFAULT_V1 0u
 
@@ -441,7 +447,8 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_UNSURE 2
 
 /*
- C value `THINKTHEN_VERSION_MAJOR`.
+ Version 0.2.0, the version of the library this header ships with.
+ Version 0.1.0 is the first release.
  */
 #define THINKTHEN_VERSION_MAJOR 0
 
@@ -456,7 +463,8 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_VERSION_PATCH 0
 
 /*
- C value `THINKTHEN_YES`.
+ The three answers a yes-or-no question gives. UNSURE is the machine word;
+ the specification says "not sure" in prose.
  */
 #define THINKTHEN_YES 1
 
@@ -3527,7 +3535,7 @@ int thinkthen_decide_many_with_facts_opts(const struct thinkthen_engine *engine,
 
  Every pointer follows the header's argument rules.
  The same call with the options beside it: `deadline_ms` is the budget
- and `cancel` is the token, both described above.
+ and `cancel` is the token, documented on THINKTHEN_NO_DEADLINE.
  */
 int thinkthen_decide_opts(const struct thinkthen_engine *engine,
                           const char *question_json,
@@ -3544,8 +3552,8 @@ int thinkthen_decide_opts(const struct thinkthen_engine *engine,
  Preferred typed forms: each successful call owns final facts JSON beside
  its result. The facts object contains records, requests_sent, cache_answers,
  seconds, and optional input_tokens, output_tokens, and model. Free each
- returned JSON string with thinkthen_free_string. The old typed symbols
- above remain ABI-compatible bare-result forms; they do not return facts.
+ returned JSON string with thinkthen_free_string. The original decide, decide_many, recognize and relate
+ forms remain ABI-compatible bare-result forms; they do not return facts.
  A nonzero code changes no output slot. A started failure's facts remain
  available from thinkthen_error_facts_json under its borrowed lifetime.
  All output slots must be nonnull (except the zero-count answer array) and

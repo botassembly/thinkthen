@@ -91,8 +91,8 @@ unsafe fn run<T>(
 /// Preferred typed forms: each successful call owns final facts JSON beside
 /// its result. The facts object contains records, requests_sent, cache_answers,
 /// seconds, and optional input_tokens, output_tokens, and model. Free each
-/// returned JSON string with thinkthen_free_string. The old typed symbols
-/// above remain ABI-compatible bare-result forms; they do not return facts.
+/// returned JSON string with thinkthen_free_string. The original decide, decide_many, recognize and relate
+/// forms remain ABI-compatible bare-result forms; they do not return facts.
 /// A nonzero code changes no output slot. A started failure's facts remain
 /// available from thinkthen_error_facts_json under its borrowed lifetime.
 /// All output slots must be nonnull (except the zero-count answer array) and

@@ -4,7 +4,7 @@ The implementation starts at `762e1652d` after 0491's `c242d97e1` landing and in
 
 ## Dependency decision
 
-The reviewed external tool is cbindgen 0.29.4. The standard library provides file and process operations; it provides no Rust syntax tree, module traversal, Rust declaration parser or C declarator generator. cbindgen supplies those facilities. Its [versioned documentation](https://github.com/mozilla/cbindgen/blob/v0.29.4/docs.md) describes stable source parsing, dependency parsing and export renaming; its [Cargo manifest](https://github.com/mozilla/cbindgen/blob/v0.29.4/Cargo.toml) declares MPL-2.0. The tool remains outside every product runtime, build and development Cargo dependency graph. No product manifest or lockfile adds it, and no product license allowance changes. Gate setup installs the standalone CLI. The generation script checks its exact version before loading locked offline metadata. It uses no nightly expansion, compiler bootstrap variable, expansion flag or generated-header filter.
+The reviewed external tool is cbindgen 0.29.4. The standard library provides file and process operations; it provides no Rust syntax tree, module traversal, Rust declaration parser or C declarator generator. cbindgen supplies those facilities. Its [versioned documentation](https://github.com/mozilla/cbindgen/blob/v0.29.4/docs.md) describes stable source parsing, dependency parsing and export renaming; its [Cargo manifest](https://github.com/mozilla/cbindgen/blob/v0.29.4/Cargo.toml) declares MPL-2.0. The tool remains outside every product runtime, build and development Cargo dependency graph. No product manifest or lockfile adds it, and no product license allowance changes. Gate setup installs the standalone CLI. The generation script checks its exact version before parsing the crate root and its modules directly without Cargo metadata. It writes no product lockfile. It uses no nightly expansion, compiler bootstrap variable, expansion flag or generated-header filter.
 
 ## Interface and memory decisions
 
@@ -20,6 +20,6 @@ The existing `call/legacy.rs` translator exceeded the function line limit before
 
 `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` passes after the exact generated-header exclusion and the zero-initialization FFI leaf. `cargo clippy --manifest-path libraries/c/Cargo.toml --locked --offline --all-targets -- -D warnings` passes with a bounded systemd user scope. `cargo test --manifest-path libraries/c/Cargo.toml --locked --offline --lib` passes, including the C11/C++17 consumer, native ownership, threading, cancellation, refusal and logical zero-default cases. The compiler-based C declaration self-test passes its field, enum, return, argument, pointer-depth, by-value and omission plants. A separately captured pre-change compiler description matches the generated description for all prior declarations and values after normalizing equivalent struct-tag spellings.
 
-## Lessons
+## What the build taught us
 
 Source generation can remove declaration drift while preserving independent compiler and consumer checks. Stable parsing needs visible declarations, but behavior can remain in shared helpers. Private initialization storage must not become an additional C layout contract. Typed validity and active-arm rules give the useful memory contract; padding-byte scans do not.
