@@ -186,8 +186,8 @@ fn hinted_kind_can_be_corrected_or_declined_and_nested_evidence_reaches_its_last
     let input = format!(
         "{}\n",
         json!({"body":text,"seeds":[
-            {"start":0,"end":end,"kind":"organization"},{"start":0,"end":3,"kind":"person"},
-            {"start":0,"end":3,"kind":"organization"}
+            {"start":0,"end":end,"kind":"organization"},{"start":4,"end":7,"kind":"person"},
+            {"start":4,"end":7,"kind":"organization"}
         ]})
     );
     let detail = json(&run(
