@@ -110,3 +110,5 @@ The reviewed native/C and Python staging corrections are integrated at 16ea372f0
 The candidate two Windows build failed Clippy because `root` and `named` in the native named-question fixture were used only inside a Unix-only symlink block. The complete build log remains at `/tmp/thinkthen-rc2-windows-build.log`. The fixture now runs its common unread-content assertions on every platform and its unchanged symlink assertions through a Unix-only helper. No assertion or product code changed.
 
 The five native named-question tests, their focused offline Clippy target, offline source policy, formatting and whitespace checks pass on Linux. The fixture helper adds five measured nonblank Rust lines, so the source ratchet ceiling rises from 163270 to 163275. The ratchet check passes at the new measured total. Existing policy size warnings remain unchanged. This host has no Windows Rust target, so actual Windows Clippy and runtime qualification remain open. The coordinator owns the next hosted build, full gates and landing.
+
+Fresh read-only review accepts the correction at 912a75e8d with no remaining findings.
