@@ -8,6 +8,8 @@ Reviews: revision b9027d08b, accept
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
+Reviews: revision c5b73b5ca04203ca5b5d6a6c91c14d31d8722ed3, accept
+
 ## Outcome
 
 Resolve MCP error-ID and stdin-close behavior against the admitted protocol before changing replies or shutdown semantics.
