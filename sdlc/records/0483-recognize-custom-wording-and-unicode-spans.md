@@ -15,3 +15,7 @@ The original code failed both the grammatical-description assertion and the BOM 
 Replacing a noun cannot supply the correct article. Built-in descriptions need authored sentences, while caller declarations retain their text. Skipping a narrow initial prefix during splitting preserves scalar offsets without rewriting input or changing internal formatting. A corrected custom request needs a reconstructed replay key. Replay and fixture boundaries should inherit an owned empty configuration.
 
 General tokenization, model accuracy and overlapping-span policy remain outside this ticket. Paid calls, releases and platform qualification were not run.
+
+## Integration checks
+
+The coordinator authorized merging main `54e0ef85c21cf83f2b83cc54ad5af12a68388a66` into this ticket branch. The only conflict was the Rust ceiling; `node sdlc/scripts/ratchet.mjs` measures the combined source at 165088, including this ticket's 96-line growth over main. A comparison against `65bdbe253` found no changes in the reviewed recognition source, public tests, specification or owned wording/replay fixtures. Policy, the 38-test recognition selection, `pm lint` and `git diff --check` passed. Building the integrated C library with `cargo build --locked --offline --manifest-path libraries/c/Cargo.toml --lib -j2`, then running `python3 libraries/php/fixtures/run_matrix.py`, passed the owned full-body/state oracle with 39 requests and its secrecy checks. These checks used the same bounded offline scope and owned empty configuration. Ticket 0487 owns the configuration-isolation gap.

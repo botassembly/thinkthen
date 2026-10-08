@@ -17,6 +17,8 @@ Design caller-supplied context separately for recognize stages so a caller can g
 
 ## Evidence
 
+- Reviewed design: [ADR 0126](../planning/adr/0126-recognition-stage-context-and-boundary-proposals.md) defines stage names, call/saved/per-record precedence, empty clearing and stage-local identity. It uses Request-generated types rather than a second carrier grammar.
+
 - Starts from: PM inbox `2026-10-08-pm-thinkthen-pm-scope-rulings-on-the-tcga-recognize-asks.md`, ask 2; the current shared `--context` can carry a short summary. Existing `step_one_context`, `step_two`, and relation plans use one aggregate context.
 - Keeps: The whole-call context default and existing request/cache identity when no stage setting is supplied. Context remains caller data, not SDK routing policy.
 - Changes: Under Ian's 2026-10-08 ruling, settle stage names, precedence with shared and per-record context, saved/native/CLI typed spellings, admission before sends, request-size behavior, and per-stage cache identity in the specification. Implement in 0.2 through the shared request contract and generated bindings.

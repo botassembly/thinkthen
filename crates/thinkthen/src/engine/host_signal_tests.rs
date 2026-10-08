@@ -228,7 +228,7 @@ fn file_size_child() {
         1,
         results,
         &|()| {
-            Store::open(&folder, Mode::Record, false, None)
+            Store::open(&folder, Mode::Record, false, None, &Cancel::default())
                 .and_then(|mut store| store.write(std::slice::from_ref(&row), &Cancel::default()))
         },
         &|| (),

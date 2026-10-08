@@ -266,8 +266,9 @@ pub(crate) fn retryable(held: Option<&Held>) -> i32 {
 }
 
 /// The last message. The pointer stays valid until the calling thread
-/// records its next failure on this engine, or with a null engine until its
-/// next `thinkthen_engine_new`: only this thread replaces its own entry.
+/// records its next failure on this engine, the engine is freed, or the
+/// thread exits. With a null engine, its distinct slot lasts until the
+/// next constructor call on this thread or thread exit.
 pub(crate) fn message(held: Option<&Held>) -> *const std::ffi::c_char {
     last(held, |last| last.message.as_ptr()).unwrap_or_else(|| {
         if held.is_some() {

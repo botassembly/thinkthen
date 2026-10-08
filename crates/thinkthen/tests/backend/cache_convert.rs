@@ -397,7 +397,7 @@ fn conflicting_fixture_live_and_old_histories_refuse_without_rewriting_any_sourc
 }
 
 #[test]
-fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
+fn conversion_keeps_the_committed_row_when_a_writer_holds_the_live_file() {
     let folder = scratch("locked").expect("a folder");
     old_folder(&folder).expect("old entries");
     assert_eq!(convert(&folder, &[]).expect("a run").0, Some(0));
@@ -446,11 +446,22 @@ fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
     let (code, said) = convert(&folder, &[]).expect("a run");
     let waited = started.elapsed();
     writer.join().expect("the writer");
+    // Windows refuses the existing writable handle before publication.
+    // Once that writer closes, a retry must retain its committed row.
+    #[cfg(windows)]
+    let (code, said) = {
+        assert_eq!(code, Some(5), "{said}");
+        assert!(folder.join("thinkthen.sqlite").exists());
+        convert(&folder, &[]).expect("conversion after the writer closes")
+    };
     assert_eq!(code, Some(0), "{said}");
+    #[cfg(not(windows))]
     assert!(
         waited >= std::time::Duration::from_millis(300),
         "{waited:?}"
     );
+    #[cfg(windows)]
+    let _ = waited;
     let written = answers(&folder).expect("answers");
     let found = written
         .iter()

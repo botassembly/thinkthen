@@ -6,6 +6,26 @@ Reviews: accept
 
 Priority: high
 Milestone: 0.2
+
+Reviews: revision 8f3ec7cfb4241e9cce9dbb012cf15783aef797b7, accept
+
+## Slice B: Admit complete recognition menus by encoded request size
+
+Ian approved replacing the inherited 20-kind cap with a size limit. The proposal was sent to the PM before implementation and TCGA round one has reported. These conditions are satisfied. Slice A retains its existing checked caller declaration and changes no cap. Slice B follows it and receives a fresh amendment review before code.
+
+Remove the recognition-only built-in kind-count maximum. Keep kind names, descriptions, caller order, duplicate and reserved-name rules. Keep public choose's 255-option limit and tag's 20-label limit. Use an internal validated recognition choice menu in both live question construction and both provider stored-question reconstruction. A menu stays whole: splitting requests means splitting between complete questions, never dividing labels or combining probabilities across label groups.
+
+Recognition uses a hard limit on the actual encoded request body. The default effective limit is 96,000 bytes; caller max-request-bytes and a selected profile can change or lower it according to the existing ceiling contract. An explicitly selected profile max_options remains a local caller constraint; absent profiles and built-in recognition impose no option-count cap. This is software admission, not a claim that any vendor accepts an arbitrary large menu.
+
+Add a recognition-specific sized, strict-singleton bound through engine facade each Asks.requests. Preserve ordinary functions' existing oversized-singleton behavior. Engine.ask_each must preflight all encoded bodies in a stage before any stage send. Apply this bound to both recognition execution stages, contextual requests, step-one context probes and CLI plan. A single oversized complete question produces a safe refusal without authored text. Ordinary packers may split only complete questions. Include descriptions, task wording, context and evidence in the measured adapter-encoded body.
+
+Plan can validate stage-one and probe bodies but cannot know spans derived from later answers. Keep its documented later-stage upper-bound treatment. Validate every actual stage-two request after spans are derived and before any stage-two sends. If stage one has already sent, a later refusal preserves those actual run, usage and recording facts while sending zero additional requests. Never claim zero total requests for that path.
+
+Default wording and cache bytes remain unchanged for previously admitted inputs. Stored-answer/replay construction accepts the same recognition menu and refuses malformed values normally. No model routing, new planner framework, dependency or proof tooling is added.
+
+Outside-in checks cover 255 and 256 caller kinds, including internal none, through both providers' live and stored/replay paths; exact byte limit and one-byte excess for both encoders; a derived stage-two long span and preserved earlier facts; selected profile option and byte constraints; unchanged default keys and wording; public choose 256 and tag over-limit refusals. Count requests for initial and later refusal rather than relying on plan. Use saved exchanges only. Run policy before one fresh code review, full tests/lint on landing source and applicable spec/surfaces. One existing 0461 record gains the slice outcome and lessons.
+
+Stage-selective context, boundary-only execution, proposed-span output and trace documentation are separately owned by 0478, 0479, 0476 and 0477 in 0.2. This amendment implements only menu and encoded-size admission. No paid call or release management is authorized by this amendment.
 Owner: lane 2
 Signed: lane 2 ticket owner, 2026-10-07.
 

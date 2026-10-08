@@ -39,6 +39,25 @@ unsafe fn held<'a>(engine: *const Door) -> Option<&'a Held> {
 /// The header's `THINKTHEN_NO_DEADLINE`.
 const NO_DEADLINE: i64 = -1;
 
+fn extent(count: usize, element: usize) -> Result<(), Failure> {
+    if count
+        .checked_mul(element)
+        .is_none_or(|size| size > isize::MAX as usize)
+    {
+        Err(Failure::usage("an array is too large"))
+    } else {
+        Ok(())
+    }
+}
+
+fn text_extent(len: usize) -> Result<(), Failure> {
+    if len > isize::MAX as usize {
+        Err(Failure::usage("a text is too large"))
+    } else {
+        Ok(())
+    }
+}
+
 /// A NUL-terminated string the header names, refused when null or not UTF-8.
 ///
 /// # Safety
@@ -67,7 +86,8 @@ unsafe fn text<'a>(text: *const c_char, len: usize) -> Result<&'a str, Failure> 
             Err(Failure::usage("a null text with a nonzero length"))
         };
     }
-    // SAFETY: `text` is not null, and the caller promises `len` bytes.
+    text_extent(len)?;
+    // SAFETY: nonnull with addressable length; the caller promises `len` bytes.
     let bytes = unsafe { std::slice::from_raw_parts(text.cast::<u8>(), len) };
     std::str::from_utf8(bytes).map_err(|_| Failure::usage("a text is not UTF-8"))
 }
@@ -92,7 +112,9 @@ unsafe fn texts<'a>(
     if lengths.is_null() {
         return Err(Failure::usage("a null lengths array with a nonzero count"));
     }
-    // SAFETY: both arrays are not null, and the caller promises `count` entries.
+    extent(count, std::mem::size_of::<*const c_char>())?;
+    extent(count, std::mem::size_of::<usize>())?;
+    // SAFETY: nonnull with addressable extents; the caller promises `count` entries.
     let (texts, lengths) = unsafe {
         (
             std::slice::from_raw_parts(texts, count),
