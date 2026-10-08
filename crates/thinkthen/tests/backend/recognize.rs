@@ -7,6 +7,7 @@ use std::{fs, path::PathBuf, process::Output, sync::Arc};
 mod custom;
 mod rules;
 mod stores;
+mod unicode;
 
 const ADA: &[u8] = b"Ada met Acme.";
 
