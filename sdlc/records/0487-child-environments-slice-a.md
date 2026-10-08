@@ -14,8 +14,12 @@ The Python test wrapper now forwards an owned home to `conformance/children/chil
 
 On the existing built extension and loopback backend, the named-backend, selected-setup and secrecy tests plus the engine's explicit-cache, replay, URL-precedence and environment-setting cases passed. All examples passed. The same selection and examples passed with an owned malformed ambient configuration and planted dummy parent keys, tokens and passwords. Linux ran these checks; Windows access controls were preserved in source but were not exercised. No native fixtures, product code or intentional environment-behavior cases changed.
 
+The first full routine Python run failed because the existing extension lacked current collection functions, the current complete-call signature and test probes. Planning and producer-release failures also reproduced with the original helper loaded from the starting revision. Rebuilding only the Python extension with the normal offline probe configuration resolved every failure: the full routine suite, including its Arrow, release and stopping checks, passed. The selected malformed-parent cases and both example environments then passed on that build. Stress cases remain outside the routine profile. Checks and individual exits are under the lane's `target/0487-*` paths.
+
 ## What the build taught us
 
 Isolating the entry runner fixes the inherited-configuration failure for its descendants. Shared child helpers then remove duplicate setup from ordinary callers while leaving tests of environment behavior explicit.
 
 The Python helper's owned `config`, `cache`, `state` and `local` paths match the fixture locations already used by callers. Passing the home removes repeated maps without relocating fixtures. Explicit environment overrides still win, including the engine test that places usage totals in its chosen state folder. Supplying folder names does not create them, so the explicit-cache test still detects unwanted default-cache writes.
+
+A passing focused environment selection cannot establish that a cached extension matches the whole Python source package. Running the routine suite exposed the mismatch, and the normal probe build settled it without changing expectations or broadening the product change.
