@@ -226,8 +226,9 @@ def main():
         reject(f"compressed-private-{name}", lambda: inspect(name, secret.getvalue()))
     (TARGET / "jars/manifest.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print("JVM JARs: exact compiled members, metadata, no diagnostic exports and planted negatives PASS")
-    header = ROOT.parents[1] / 'libraries/c/include/thinkthen.h'
-    library = ROOT.parents[1] / 'libraries/c/target/debug/libthinkthen_c.so'
+    native = os.environ.get('THINKTHEN_RELEASE_C_DIR')
+    header = Path(native) / 'include/thinkthen.h' if native else ROOT.parents[1] / 'libraries/c/include/thinkthen.h'
+    library = Path(native) / 'lib/libthinkthen.so' if native else ROOT.parents[1] / 'libraries/c/target/debug/libthinkthen_c.so'
     abi_check(header, TARGET / 'jars/thinkthen-door.jar', library)
     abi_plants(header, library)
 

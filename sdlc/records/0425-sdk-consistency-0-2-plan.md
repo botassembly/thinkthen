@@ -62,3 +62,13 @@ Focused checks pass: offline policy, workflow routing and its 113-case self-test
 Fresh read-only reviewer `/root/crate_fix_review` accepts the whole correction. The coordinator owns batching, landing and the next candidate dispatch.
 
 What the build taught us: root-workspace acquisition does not cover the standalone workspaces reached by package fixtures. Fetch each admitted manifest before the offline gate.
+
+## Candidate one managed ABI staging correction, 2026-10-08
+
+The Linux x86 rehearsal failed in the JVM package ABI check. The managed build verified the release C archive, but the package check loaded a nonexistent source-tree debug library. The failure log is retained locally as `/tmp/thinkthen-rc1-linux-x86.log`.
+
+The managed build now extracts that verified C archive into its owned staging directory. The JVM package check uses its header and library through the existing `THINKTHEN_RELEASE_C_DIR` input. The unchanged checks still inspect the actual compiled JAR members, metadata and private-byte plants, compare actual layouts and linked descriptors, and reject all five ABI drift plants. Explicit staged inputs never fall back to a source library. Local source checks and the installed positional-input check retain their existing behavior. The JVM Python test ceiling grows from 1036 to 1037 for the staged-directory selection; no test or verification framework is added.
+
+Focused checks pass with a freshly built staged JVM package and the retained installed campaign's C archive at 60f0dcb9a: 127 actual layouts, 96 represented constants and 77 linked descriptors match, and all five ABI drift plants refuse. The installed JAR ABI check and one captured-answer case through each installed Java, Kotlin and Scala consumer pass. An older local archive lacks a current native symbol and was rejected; it was not used as passing evidence. Offline policy, the existing managed-pair self-test, ticket lint, shell syntax and whitespace checks pass. Local logs use `/tmp/thinkthen-0425-managed-` with suffixes `staging-build.log`, `staging-package.log`, `installed-abi.log`, `installed-consumers.log`, `policy.log`, `pair.log`, `pm-lint.log` and `lint.log`. Whole lint also passes; existing source-size and license-exception warnings remain unchanged. Fresh read-only reviewer `/root/managed_abi_fix_review` accepts the whole correction without findings.
+
+What the build taught us: validating an archive's identity does not select it for a downstream ABI check. Pass the extracted release inputs to the existing check. No full installed campaign, hosted dispatch, paid call or landing ran. The coordinator owns batching, landing and the next candidate.
