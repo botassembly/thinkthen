@@ -1,6 +1,5 @@
 """Constructor backend selection keeps provider paths, forms and captured keys."""
 import json
-import os
 import pathlib
 import sys
 
@@ -17,9 +16,7 @@ def paths(slot, count=1):
 
 
 def isolated(folder, **extra):
-    return clean_env(HOME=str(folder), XDG_CONFIG_HOME=str(folder / "config"),
-                     XDG_CACHE_HOME=str(folder / "cache"), XDG_STATE_HOME=str(folder / "state"),
-                     **({"APPDATA":str(folder / "config"), "LOCALAPPDATA":str(folder / "local")} if os.name == "nt" else {}), **extra)
+    return clean_env(home=folder, **extra)
 
 
 def configuration(folder, value):

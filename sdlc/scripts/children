@@ -55,6 +55,8 @@ OWNED_HOME_CALLERS = {
     "libraries/mcp/conformance.py", "libraries/mcp/installed.py", "libraries/mcp/test_installed.py",
     "crates/thinkthen/tests/native_named_questions.rs", "crates/thinkthen/tests/native_cache_policy.rs",
     "crates/thinkthen/tests/public_controls/alone.rs",
+    "libraries/python/tests/conftest.py", "libraries/python/tests/test_named_backends.py",
+    "libraries/python/tests/test_backend_setups.py", "libraries/python/tests/examples.py",
 }
 DIRECT_FOLDER = re.compile(
     r'''\.env\(\s*["'](?:XDG_\w+|APPDATA|LOCALAPPDATA)["']|'''
