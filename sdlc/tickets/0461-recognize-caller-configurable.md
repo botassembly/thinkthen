@@ -1,6 +1,6 @@
 # 0461: Let callers define recognition entities
 
-Status: OPEN. Ticket review ACCEPT on a456d9af3 and fresh whole-code review ACCEPT on 1b9aec049. All 29 installed consumers pass the custom amount case; model evaluation remains open and landing follows v0.2.0.
+Status: OPEN. Implementation, code review, Linux installed custom qualification and the finite model comparison are complete. Final integration checks and landing follow v0.2.0; caller wording recovered seven of eleven literal targets in the limited comparison.
 
 Reviews: accept
 
