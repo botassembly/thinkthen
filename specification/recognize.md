@@ -176,6 +176,33 @@ With relations, numeric `relation_pairs_upper_bound` and `relation_requests_uppe
 
 This specification makes no public price claim.
 
+## Review a flagged span with choose
+
+A caller can review a span it has flagged by asking the existing [choose](choose.md) function to select from bounded candidate spans. Supply the current span as a `keep` option. Generate a small set of plausible alternatives near that span, with separate labels and descriptions containing their literal text, kind and original coordinates. Bound the neighborhood and candidate count in caller code. Ask a question that states the entity definition and explains when to keep the current span. This composition uses the existing functions; it adds no revise mode or function.
+
+Validate every candidate against the unchanged original text before asking. Check integer offsets, a nonempty in-range span, and exact equality between the declared span text and the original slice. Use the offset convention of the surface that returned the recognition result. CLI and Rust spans count zero-based Unicode scalar values with an exclusive end; UTF-8 byte indices cannot slice them directly. Convert host offsets when crossing surfaces. Preserve the original record occurrence and span identity so repeated text cannot select the wrong occurrence.
+
+The [saved question](fixtures/recognize/caller-defined/flagged-span.json) uses the original generic text `é TOTAL 42.75.`. For this review example, the caller flags `42.75.` at [8,14) as its current span. The first option, `keep`, retains it; the sole alternative, `amount`, proposes `42.75` at [8,13). The earlier recognition fixture already returns the correct amount; this separate example supplies a hypothetical flagged span. Each option description is an object that the existing question-file reader accepts.
+
+Run the CLI from the repository root with the development command on PATH:
+
+```sh
+fixture=specification/fixtures/recognize/caller-defined
+env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen choose \
+  @"$fixture/flagged-span.json" --url "$(cat "$fixture/url.txt")" \
+  --model jev-1.13.0 --replay "$fixture/recording" --no-cache < "$fixture/text.txt"
+```
+
+The controlled replay prints `"amount"` and exits 0. The [runnable caller recipe](fixtures/recognize/caller-defined/flagged-span.py) validates both candidates before running that command and maps its answer back to the candidate metadata:
+
+```sh
+python3 specification/fixtures/recognize/caller-defined/flagged-span.py
+```
+
+It prints `{"pick":"amount","proposed":{"start":8,"end":13,"text":"42.75","kind":"amount"}}`. Its local candidate cap is a caller choice. Both examples use the saved fixture without a key or network access. These authored fixture answers establish the composition and coordinate mapping; they measure no model accuracy.
+
+In a real call, `choose` can return `null` with exit 3 for not sure. The recipe retains the current span in that case; other failures stop it. A `keep` answer retains the current span too. The caller owns any threshold, escalation and acceptance policy. Recheck the source text and candidate coordinates before applying a proposal if the source can change. The caller owns applying the result and checking any overlap with other entities. ThinkThen returns a label and never edits the original text or recognition result.
+
 ## Read native stage observations
 
 Native Rust callers can inspect each logical question through `CallOptions::new().observe(&callback)` on `Engine::recognize_records_complete_with`. The [runnable recipe](../libraries/rust/examples/recognize_observe.rs) replays the repository's saved generic receipt fixture twice, retains each original record, and copies each borrowed `QuestionDetail` with `to_owned()` inside the callback. It groups snapshots by `(index, stage, position)` in a map. `index` is the zero-based original record occurrence; `position` is the zero-based question position within that record's stage. Stage names are `boundary`, `kind`, `edge` and `relation`. The map's lexical stage order is for lookup; it does not describe execution order.

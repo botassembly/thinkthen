@@ -27,6 +27,7 @@ printf '%s\n' '{"body":"Ada","examples":[{"text":"Zoë","entities":[{"start":0,"
 ```bash
 fixture="$(git rev-parse --show-toplevel)/specification/fixtures/recognize/caller-defined"
 cat "$fixture/text.txt" | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize @"$fixture/question.json" --url "$(cat "$fixture/url.txt")" --replay "$fixture/recording" --no-cache | jq -c '.entities' | mustmatch '[{"text":"42.75","start":8,"end":13,"length":5,"kind":"amount","strength":1.0}]'
+python3 "$fixture/flagged-span.py" | mustmatch '{"pick":"amount","proposed":{"start":8,"end":13,"text":"42.75","kind":"amount"}}'
 ```
 
 An empty or blank text refuses the plan as it refuses a live run. It prints no plan.

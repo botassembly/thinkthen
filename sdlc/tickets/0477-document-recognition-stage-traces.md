@@ -15,6 +15,8 @@ Reviews: revision eeee618da3d0b0fd6d8a53b6510af24267535ce3, accept
 
 Landed: 892e0ab
 
+Reviews: revision 1d131b130, accept
+
 ## Outcome
 
 Document a working way to read each recognize logical question and its answer by original record and stage using the existing native observer. Add no trace API or storage.
