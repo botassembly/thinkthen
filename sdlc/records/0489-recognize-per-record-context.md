@@ -18,10 +18,18 @@ The implementation addressed two concrete integration findings. Several typed ho
 
 The completion pass reran `git diff --check` and `python3 -m unittest conformance.test_parity`; both exited 0, and all 21 parity unit tests passed. `completion-parity-unit.log` holds the latter output.
 
-## Execution limits
+## Final gates
 
-The completion environment blocks socket creation and the systemd user bus with `Operation not permitted`. It also blocks the compiler cache. The first lint attempt exited 1 at the compiler cache. A cache-disabled lint retry passed policy, catalog, ticket checks, recognition keys, child environment checks, C ABI checks and version checks. It was stopped with exit 130 after the scope restriction was confirmed. `final-lint.log` holds the retry output; it is not a passing full lint gate.
+The final completion environment permits loopback sockets, the systemd user bus and the compiler cache. A loopback bind and a systemd scope both exited 0. Heavy gates ran with `MemoryMax=10G`, `MemorySwapMax=1G` and two build jobs. The earlier restricted attempts in `final-lint.log` do not describe this environment.
 
-Full lint, full specification checks and the requested six-case MCP rerun after the 0487 runner integration remain uncompleted in this environment. Earlier `integrated-mcp-selected.log` records six MCP passes before that runner integration. The current sandbox cannot supply the required loopback access or process scope, and permits no approval escalation. These checks require an authorized execution environment. No new product defect was found by the permitted completion checks.
+`completion-lint.log` records a full `sdlc/scripts/lint` run with exit 0, including policy, child-environment checks, fixture checks, surface registry, formatting, Clippy, documentation and public API inventory. Existing source-size and unmatched license-exception warnings remain nonfatal.
+
+`completion-spec.log` records a full `sdlc/scripts/spec` run with exit 0, including settings, executable specifications, transforms, recognition and relation fixtures, probe harness fixtures and all 24 green demos. The page runner reports its existing skipped examples separately.
+
+`completion-mcp-selected.log` records six passing recognition context cases after the 0487 test-helper integration, with exit 0. The existing MCP conformance runner selected the six canonical rows in memory without changing runner or fixture source. Every case used its own loopback backend and the integrated child-environment helper. `completion-final-parity-unit.log` records 21 passing parity unit tests with exit 0. `git diff --check` exited 0. These checks found no new product defect. The earlier full-suite top-level exit code remains unknown as described above.
 
 The lane occupies about 25 GB across `target/`, `libraries/` and `databases/`, below its 40 GB cap. Reuse complete behavior evidence while its inputs apply; retain an explicit missing exit code rather than inventing a passing result or repeating the suite solely to replace lost process metadata.
+
+## What the build taught us
+
+Test execution limits can prevent loopback proof without indicating a product defect. Preserve the actual failed attempt, then run the missing agreed checks when the required execution environment becomes available. Existing stage output remains useful when source and inputs are unchanged.
