@@ -23,15 +23,21 @@ fn canonical_namespace_routes_original_bytes_and_legacy_schema_stays_ignored() {
         r#"{"schema":"thinkthen.request/2","schema":"unrelated","decide":"Fits?","evidence":"Alpha."}"#.to_owned(),
         r#"{"schema":"unrelated","decide":"old","decide":"Fits?","evidence":"old","evidence":"Alpha."}"#.to_owned(),
         r#"{"recognize":{},"records":["Alpha."],"evidence":"Alpha."}"#.to_owned(),
+        r#"{"filter":"Fits?","threshold":"0.2:0.8","records":["Alpha."]}"#.to_owned(),
     ] { script.ask("call", &[listener.base(), &request]); }
     let output = run(&driver, listener.base(), &script.0);
     assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
     let replies = replies(&output.stdout).unwrap();
     assert_eq!(
         replies.iter().map(|r| r.0).collect::<Vec<_>>(),
-        vec![0, 0, 1, 1, 0, 0, 1]
+        vec![0, 0, 1, 1, 0, 0, 1, 1]
     );
     assert!(replies[6].1.contains("recognize takes no records key"));
+    assert!(
+        replies[7]
+            .1
+            .contains("filter keeps a record at a cut, not a band")
+    );
     let canonical: serde_json::Value = serde_json::from_str(&replies[1].1).unwrap();
     assert!(canonical.to_string().contains("thinkthen.result/2"));
     let mut legacy_a: serde_json::Value = serde_json::from_str(&replies[4].1).unwrap();

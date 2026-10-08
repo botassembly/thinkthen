@@ -65,8 +65,21 @@ pub fn entry() -> ExitCode {
     if let Some(Command::Mcp(arguments)) = &cli.command {
         return mcp_entry(arguments);
     }
-    if let Some(code) = offline_entry(&cli) {
-        return code;
+    if let Some(Command::Transform(arguments)) = &cli.command {
+        return report_offline(
+            transform::run(&arguments.command, stdout.lock()),
+            stderr.lock(),
+        );
+    }
+    if let Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) =
+        &cli.command
+    {
+        return report_offline(audit::run(arguments, stdout.lock()), stderr.lock());
+    }
+    if let Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) =
+        &cli.command
+    {
+        return report_offline(diff::run(arguments, stdout.lock()), stderr.lock());
     }
     if let Some(code) = request_admission(&cli, wants_facts, started, accepted, stderr.lock()) {
         return code;
@@ -343,22 +356,4 @@ fn request_admission(
     request::admit(command)
         .err()
         .map(|failure| report_early(&failure, wants_facts, (started, accepted), writer))
-}
-
-fn offline_entry(cli: &Cli) -> Option<ExitCode> {
-    let stdout = io::stdout();
-    let stderr = io::stderr();
-    let offline = match &cli.command {
-        Some(Command::Transform(arguments)) => {
-            Some(transform::run(&arguments.command, stdout.lock()))
-        }
-        Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) => {
-            Some(audit::run(arguments, stdout.lock()))
-        }
-        Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) => {
-            Some(diff::run(arguments, stdout.lock()))
-        }
-        _ => None,
-    };
-    offline.map(|result| report_offline(result, stderr.lock()))
 }

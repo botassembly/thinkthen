@@ -33,10 +33,13 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-request-") as scratch:
         ["rank", reference, "--input", str(source), "--media", "image"],
         ["decide", reference, "--input", str(source), "--field", "invalid-pointer"],
         ["decide", reference, "--input", str(source), "--model", ""],
+        ["recognize", reference, "--input", str(source), "--context-field", "invalid-pointer"],
     ]
     for arguments in cases:
         result = subprocess.run([sys.argv[1], *arguments], env=env, input=b"", capture_output=True, timeout=10)
         assert result.returncode == 2, (arguments, result.returncode, result.stderr)
+        if arguments[0] == "recognize":
+            assert result.stderr == b'thinkthen: --context-field `invalid-pointer`: a pointer is RFC 6901, so it is empty or begins with `/`\n', result.stderr
         try:
             events = os.read(fd, 65536)
         except BlockingIOError:

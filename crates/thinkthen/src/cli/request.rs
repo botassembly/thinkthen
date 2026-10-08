@@ -134,6 +134,7 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
                 };
             let mut options = options(&a.common, None, None);
             options.details = false;
+            options.context_field = a.context_field.clone();
             options.examples_field = a.examples_field.clone();
             RequestCall::Recognize(arguments(&mut a.common.clone(), question, options)?)
         }
