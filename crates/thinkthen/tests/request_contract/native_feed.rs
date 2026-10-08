@@ -2,6 +2,10 @@
 use super::*;
 use std::cell::Cell;
 
+#[allow(
+    clippy::unwrap_used,
+    reason = "fixed native fixture construction stops on an invalid setup"
+)]
 fn request() -> Request {
     Request::new(RequestCall::Decide(args(
         Question::decide("Fits?").unwrap().cut().into(),
@@ -13,6 +17,10 @@ fn request() -> Request {
         },
     )))
 }
+#[allow(
+    clippy::unwrap_used,
+    reason = "fixed located fixture construction stops on an invalid setup"
+)]
 fn row() -> RecordInput<QuestionInput> {
     let row = RecordReading::new(&[], None, None)
         .unwrap()
