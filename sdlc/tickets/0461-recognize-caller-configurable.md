@@ -11,6 +11,8 @@ Reviews: revision 8f3ec7cfb4241e9cce9dbb012cf15783aef797b7, accept
 
 Reviews: revision 33631cc62, reject
 
+Reviews: revision a106961a4, accept
+
 ## Slice B: Admit complete recognition menus by encoded request size
 
 Ian approved replacing the inherited 20-kind cap with a size limit. The proposal was sent to the PM before implementation and TCGA round one has reported. These conditions are satisfied. Slice A retains its existing checked caller declaration and changes no cap. Slice B follows it and receives a fresh amendment review before code.
