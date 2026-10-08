@@ -246,7 +246,6 @@ impl PartialEq for Question {
     fn eq(&self, other: &Self) -> bool {
         self.core == other.core
             && self.threshold == other.threshold
-            && self.authored_threshold == other.authored_threshold
             && self.model == other.model
             && self.profile == other.profile
             && self.batch == other.batch
