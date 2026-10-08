@@ -9,6 +9,8 @@ Review: accept. Fresh read-only Sol review accepted the design after the signoff
 
 Reviews: revision b6970338e, accept
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Document a working way to read each recognize logical question and its answer by original record and stage using the existing native observer. Add no trace API or storage.
@@ -19,4 +21,5 @@ Document a working way to read each recognize logical question and its answer by
 - Keeps: Existing result, recording and cache privacy rules; no SDK or CLI coverage claim beyond the native Rust route. The observer sees supplied original records and may expose sensitive question/evidence text to the caller.
 - Changes: Add a concise native Rust recipe beside recognition documentation. Show `CallOptions::new().observe(&callback)`, match `Question` events, copy or `to_owned()` inside the callback, group by zero-based `index`, `stage`, then `position`, and read the logical text/options and answer/failure/probabilities. Mention that `Row` marks a completed record, that a failed request yields no complete result, and that cache/replay can produce the same logical observations with source metadata. State the CLI/serialized-event limitation plainly.
 - Proof: Replay a repository saved recognition fixture with no key and no send; compile/run the documented example through the docs example gate. Assert at least one boundary question and its answer, record/stage/position mapping, and no claim that every kind/edge/relation stage occurs on every input.
-- Defers: CLI trace export, store/query framework, and new 0.3 ticket only if the native route fails the runnable fixture proof.
+- Also changes: Document the actual step-1 boundary and step-2 kind/edge question shapes, with a runnable plan example showing which rendering is exposed by `--plan`. Say explicitly that question wording is subject to change and is not a stable interchange format. The tagged-example input is the stable interface for teaching recognition once its conditional implementation lands. Use generic software fixtures.
+- Defers: CLI trace export and a store/query framework. Any confirmed SDK gap remains in 0.2; 0.3 is the proxy.
