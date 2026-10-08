@@ -344,7 +344,13 @@ PYWIN
 			sqlite_python=$(brew --prefix python@3.14)/bin/python3.14
 			"$sqlite_python" -c 'import sqlite3; sqlite3.connect(":memory:").enable_load_extension(True)' ||
 				fail "the SQLite check's Python cannot load extensions: $sqlite_python"
-			[ -z "${GITHUB_ENV:-}" ] || printf 'THINKTHEN_PYTHON=%s\n' "$sqlite_python" >>"$GITHUB_ENV"
+			# Keep Brew intact while giving that same interpreter the schema validator.
+			sqlite_venv=$HOME/.cache/thinkthen-toolchains/sqlite-python-3.14
+			uv venv --quiet --python "$sqlite_python" "$sqlite_venv"
+			uv pip install --quiet --python "$sqlite_venv/bin/python" 'jsonschema==4.25.1'
+			"$sqlite_venv/bin/python" -c 'import sqlite3, jsonschema; sqlite3.connect(":memory:").enable_load_extension(True)' ||
+				fail "the SQLite check's Python lacks its extension or schema support: $sqlite_venv/bin/python"
+			[ -z "${GITHUB_ENV:-}" ] || printf 'THINKTHEN_PYTHON=%s\n' "$sqlite_venv/bin/python" >>"$GITHUB_ENV"
 		fi
 	else
 		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
@@ -357,6 +363,10 @@ PYWIN
 		fi
 	fi
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+		# The installed TypeScript consumer compiles with this locked host-native toolchain offline.
+		scratch_dir npm_seed
+		cp libraries/typescript/package.json libraries/typescript/package-lock.json "$npm_seed/"
+		npm ci --no-audit --no-fund --silent --prefix "$npm_seed"
 		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
 		# Fill uv's cache for the Python the check will pick (ticket 0369).
 		. libraries/python/host.sh
