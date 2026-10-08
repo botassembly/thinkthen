@@ -352,7 +352,7 @@ impl Engine {
                 Some(store) => store.revalidate(cancel)?,
                 None => {
                     *held = Some(
-                        Store::open(folder, mode, storage.private_default, replayed)?
+                        Store::open(folder, mode, storage.private_default, replayed, cancel)?
                             .prepared(cancel)?,
                     );
                 }

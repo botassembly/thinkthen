@@ -188,6 +188,7 @@ mod audit_refusals;
 mod audit_sets;
 mod audit_verbs;
 mod audit_write;
+mod cache_coexistence;
 mod cache_convert;
 mod choose_and_score_edge;
 mod decide_edge;

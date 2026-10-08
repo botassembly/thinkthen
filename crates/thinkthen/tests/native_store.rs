@@ -349,6 +349,8 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
 mod conversion;
 #[path = "native_store/history.rs"]
 mod history;
+#[path = "native_store/replay_contention.rs"]
+mod replay_contention;
 #[path = "native_store/request_keys.rs"]
 mod request_keys;
 
