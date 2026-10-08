@@ -17,7 +17,7 @@ class TestPackage < Minitest::Test
     "(macOS 15.0 or later). This fallback cannot run ThinkThen."
 
   def child(root, code, *args)
-    Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH DYLD_LIBRARY_PATH], HOME: root, GEM_HOME: "#{root}/gems",
+    Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH DYLD_LIBRARY_PATH], home: root, GEM_HOME: "#{root}/gems",
                               GEM_PATH: "#{root}/gems", LANG: "C.UTF-8"),
                   RbConfig.ruby, "-e", code, *args, chdir: root, unsetenv_others: true)
   end

@@ -5,8 +5,10 @@
 module Children
   SECRET = /\ATHINKTHEN_|KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH/i
 
-  # PATH, each kept name the parent has, then the values set here.
-  def self.env(keep: [], **values)
+  # Tool children omit home. Product children supply their owned root;
+  # these paths preserve the Ruby fixtures' home and xdg-* locations.
+  # Explicit values still win, including nil to unset a name at spawn.
+  def self.env(keep: [], home: nil, **values)
     env = { "PATH" => ENV.fetch("PATH", "/usr/bin:/bin") }
     keep.each do |name|
       if SECRET.match?(name)
@@ -14,6 +16,14 @@ module Children
                              "set a THINKTHEN_ value or a fake key explicitly"
       end
       env[name] = ENV[name] if ENV.key?(name)
+    end
+    if home
+      env.merge!("HOME" => File.join(home, "home"),
+                 "XDG_CONFIG_HOME" => File.join(home, "xdg-config"),
+                 "XDG_CACHE_HOME" => File.join(home, "xdg-cache"),
+                 "XDG_STATE_HOME" => File.join(home, "xdg-state"),
+                 "APPDATA" => File.join(home, "xdg-config"),
+                 "LOCALAPPDATA" => File.join(home, "local"))
     end
     env.merge(values.transform_keys(&:to_s))
   end
