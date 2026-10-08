@@ -7,6 +7,7 @@ require "json"
 require "minitest/autorun"
 require "open3"
 require "rbconfig"
+require "tmpdir"
 require_relative "../../../conformance/children/children"
 
 class TestPublicNames < Minitest::Test
@@ -16,7 +17,8 @@ class TestPublicNames < Minitest::Test
              recognize relate score score_many score_with_level tag tag_many usage with_tick].freeze
 
   def test_the_loaded_module_shows_only_the_pinned_names
-    out, errors, status = Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH]), RbConfig.ruby, "-I", File.expand_path("../lib", __dir__),
+    out, errors, status = Dir.mktmpdir("thinkthen-ruby-names-") do |root|
+      Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH GEM_PATH], home: root), RbConfig.ruby, "-I", File.expand_path("../lib", __dir__),
                                          "-rjson", "-rthinkthen", "-e", <<~RUBY, unsetenv_others: true)
       T = ThinkThen
       puts JSON.generate(
@@ -30,6 +32,7 @@ class TestPublicNames < Minitest::Test
         ranked: T::Ranked.public_instance_methods(false).sort
       )
     RUBY
+    end
     assert status.success?, errors
     names = JSON.parse(out, symbolize_names: true).transform_values { |list| list.map(&:to_sym) }
     assert_equal({

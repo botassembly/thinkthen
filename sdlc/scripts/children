@@ -57,6 +57,8 @@ OWNED_HOME_CALLERS = {
     "crates/thinkthen/tests/public_controls/alone.rs",
     "libraries/python/tests/conftest.py", "libraries/python/tests/test_named_backends.py",
     "libraries/python/tests/test_backend_setups.py", "libraries/python/tests/examples.py",
+    "libraries/ruby/tests/backend.rb", "libraries/ruby/tests/test_package.rb",
+    "libraries/ruby/tests/test_public_names.rb",
 }
 DIRECT_FOLDER = re.compile(
     r'''\.env\(\s*["'](?:XDG_\w+|APPDATA|LOCALAPPDATA)["']|'''
@@ -241,6 +243,8 @@ def rust_msg(path, number):
 
 
 CASES = [
+    ("libraries/ruby/tests/backend.rb", 'env = Children.env("XDG_CONFIG_HOME" => folder)\n',
+     [f"children: libraries/ruby/tests/backend.rb:1: {FOLDERS}"]),
     ("libraries/mcp/installed.py", 'env = {"XDG_CONFIG_HOME": folder}\n',
      [f"children: libraries/mcp/installed.py:1: {FOLDERS}"]),
     ("libraries/mcp/test_installed.py", 'env["APPDATA"] = folder\nenv.update(XDG_STATE_HOME=folder)\n',
