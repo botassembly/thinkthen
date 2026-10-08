@@ -7,6 +7,8 @@ Milestone: 0.2
 Owner: builder.
 Severity: medium upgrade correctness.
 
+Reviews: revision d42ed2365, accept
+
 ## Outcome
 
 An upgrader can resolve an old custom entry that now names a built-in backend. A safe error names the fixed built-in entry, offending legacy field and concrete repair. Existing compatible quota/profile entries remain accepted. Normal commands and --plan use the same corrected path; --help remains available.
