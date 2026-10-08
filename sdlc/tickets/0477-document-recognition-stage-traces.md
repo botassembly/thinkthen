@@ -9,6 +9,8 @@ Review: accept. Fresh read-only Sol review accepted the design after the signoff
 
 Reviews: revision b6970338e, accept
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Document a working way to read each recognize logical question and its answer by original record and stage using the existing native observer. Add no trace API or storage.

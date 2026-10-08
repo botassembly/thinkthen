@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Resolve MCP error-ID and stdin-close behavior against the admitted protocol before changing replies or shutdown semantics.

@@ -9,6 +9,8 @@ Review: accept. Fresh read-only Sol review accepted the design after the signoff
 
 Reviews: revision b6970338e, accept
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Design and implement a caller-requested step-1-only recognition mode with caller kinds and wording. Return boundary proposals without running kind, edge, or relation stages.

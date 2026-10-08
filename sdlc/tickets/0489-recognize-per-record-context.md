@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Recognition accepts a separate context for each record across every surface that already supports context-field on decide and rank. The context reaches every recognition stage and contributes to that record's cache identity.

@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Define one versioned Rust Request contract for all ten functions and native execution; generate specification/request.schema.json and parse thinkthen_call through a compatibility translation.

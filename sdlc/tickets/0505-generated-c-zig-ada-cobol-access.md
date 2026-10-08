@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
+
 ## Outcome
 
 Provide generated typed access for C, Zig, Ada and COBOL without hand-mirroring the post0.1 carriers.
