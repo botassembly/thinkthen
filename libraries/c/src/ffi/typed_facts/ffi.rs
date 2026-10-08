@@ -4,7 +4,6 @@
 
 use std::ffi::{CString, c_char};
 use std::mem::size_of;
-use std::ptr;
 
 use thinkthen::{CancelToken, Facts};
 
@@ -86,23 +85,45 @@ unsafe fn run<T>(
     })
 }
 
-macro_rules! plain {
-    ($name:ident => $opts:ident($($arg:ident: $ty:ty),*; $($out:ident: $out_ty:ty),*)) => {
-        /// The options twin with no deadline or cancel token.
-        ///
-        /// # Safety
-        /// All pointers obey the corresponding options form's contract.
-        #[unsafe(no_mangle)]
-        pub(crate) unsafe extern "C" fn $name($($arg: $ty,)* $($out: $out_ty),*) -> i32 {
-            // SAFETY: the pointers pass unchanged to the checked options form.
-            unsafe { $opts($($arg,)* -1, ptr::null_mut(), $($out),*) }
-        }
-    };
+/// Call `thinkthen_decide_with_facts_opts` without a deadline or cancellation token.
+/// # Safety
+/// All pointers obey the corresponding options form's contract.
+/// Preferred typed forms: each successful call owns final facts JSON beside
+/// its result. The facts object contains records, requests_sent, cache_answers,
+/// seconds, and optional input_tokens, output_tokens, and model. Free each
+/// returned JSON string with thinkthen_free_string. The original decide, decide_many, recognize and relate
+/// forms remain ABI-compatible bare-result forms; they do not return facts.
+/// A nonzero code changes no output slot. A started failure's facts remain
+/// available from thinkthen_error_facts_json under its borrowed lifetime.
+/// All output slots must be nonnull (except the zero-count answer array) and
+/// must not share an address. Counts times pointer, size_t, and answer sizes,
+/// and every text length, must fit PTRDIFF_MAX. The caller supplies live,
+/// aligned, adequately sized, nonoverlapping input and output storage.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts(
+    engine: *const Door,
+    question_json: *const c_char,
+    evidence: *const c_char,
+    evidence_len: usize,
+    out: *mut Judgment,
+    facts_json: *mut *mut c_char,
+    facts_len: *mut usize,
+) -> std::ffi::c_int {
+    // SAFETY: caller pointers pass unchanged to the checked options form.
+    unsafe {
+        thinkthen_decide_with_facts_opts(
+            engine,
+            question_json,
+            evidence,
+            evidence_len,
+            -1,
+            std::ptr::null_mut(),
+            out,
+            facts_json,
+            facts_len,
+        )
+    }
 }
-
-plain!(thinkthen_decide_with_facts => thinkthen_decide_with_facts_opts(
-    engine: *const Door, question_json: *const c_char, evidence: *const c_char, evidence_len: usize;
-    out: *mut Judgment, facts_json: *mut *mut c_char, facts_len: *mut usize));
 
 /// Decide and return an owned facts JSON string.
 ///
@@ -119,7 +140,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts_opts(
     out: *mut Judgment,
     facts_json: *mut *mut c_char,
     facts_len: *mut usize,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: all raw inputs are checked before the first send.
     unsafe {
         run(
@@ -142,10 +163,36 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts_opts(
     }
 }
 
-plain!(thinkthen_decide_many_with_facts => thinkthen_decide_many_with_facts_opts(
-    engine: *const Door, question_json: *const c_char, texts: *const *const c_char,
-    lengths: *const usize, count: usize;
-    out: *mut Judgment, facts_json: *mut *mut c_char, facts_len: *mut usize));
+/// Call `thinkthen_decide_many_with_facts_opts` without a deadline or cancellation token.
+/// # Safety
+/// All pointers obey the corresponding options form's contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts(
+    engine: *const Door,
+    question_json: *const c_char,
+    texts: *const *const c_char,
+    lengths: *const usize,
+    count: usize,
+    out: *mut Judgment,
+    facts_json: *mut *mut c_char,
+    facts_len: *mut usize,
+) -> std::ffi::c_int {
+    // SAFETY: caller pointers pass unchanged to the checked options form.
+    unsafe {
+        thinkthen_decide_many_with_facts_opts(
+            engine,
+            question_json,
+            texts,
+            lengths,
+            count,
+            -1,
+            std::ptr::null_mut(),
+            out,
+            facts_json,
+            facts_len,
+        )
+    }
+}
 
 /// Decide in input order and return final owned batch facts.
 ///
@@ -163,7 +210,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts_opts(
     out: *mut Judgment,
     facts_json: *mut *mut c_char,
     facts_len: *mut usize,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: all raw inputs are checked before the first send.
     unsafe {
         run(
@@ -203,10 +250,36 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts_opts(
     }
 }
 
-plain!(thinkthen_recognize_with_facts => thinkthen_recognize_with_facts_opts(
-    engine: *const Door, spec_json: *const c_char, evidence: *const c_char, evidence_len: usize;
-    out: *mut *mut c_char, out_len: *mut usize,
-    facts_json: *mut *mut c_char, facts_len: *mut usize));
+/// Call `thinkthen_recognize_with_facts_opts` without a deadline or cancellation token.
+/// # Safety
+/// All pointers obey the corresponding options form's contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts(
+    engine: *const Door,
+    spec_json: *const c_char,
+    evidence: *const c_char,
+    evidence_len: usize,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+    facts_json: *mut *mut c_char,
+    facts_len: *mut usize,
+) -> std::ffi::c_int {
+    // SAFETY: caller pointers pass unchanged to the checked options form.
+    unsafe {
+        thinkthen_recognize_with_facts_opts(
+            engine,
+            spec_json,
+            evidence,
+            evidence_len,
+            -1,
+            std::ptr::null_mut(),
+            out,
+            out_len,
+            facts_json,
+            facts_len,
+        )
+    }
+}
 
 /// Recognize and return owned result and facts JSON strings.
 ///
@@ -224,7 +297,7 @@ pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts_opts(
     out_len: *mut usize,
     facts_json: *mut *mut c_char,
     facts_len: *mut usize,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: all raw inputs are checked before the first send.
     unsafe {
         run(
@@ -255,11 +328,38 @@ pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts_opts(
     }
 }
 
-plain!(thinkthen_relate_with_facts => thinkthen_relate_with_facts_opts(
-    engine: *const Door, spec_json: *const c_char, texts: *const *const c_char,
-    lengths: *const usize, count: usize;
-    out: *mut *mut c_char, out_len: *mut usize,
-    facts_json: *mut *mut c_char, facts_len: *mut usize));
+/// Call `thinkthen_relate_with_facts_opts` without a deadline or cancellation token.
+/// # Safety
+/// All pointers obey the corresponding options form's contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_relate_with_facts(
+    engine: *const Door,
+    spec_json: *const c_char,
+    texts: *const *const c_char,
+    lengths: *const usize,
+    count: usize,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+    facts_json: *mut *mut c_char,
+    facts_len: *mut usize,
+) -> std::ffi::c_int {
+    // SAFETY: caller pointers pass unchanged to the checked options form.
+    unsafe {
+        thinkthen_relate_with_facts_opts(
+            engine,
+            spec_json,
+            texts,
+            lengths,
+            count,
+            -1,
+            std::ptr::null_mut(),
+            out,
+            out_len,
+            facts_json,
+            facts_len,
+        )
+    }
+}
 
 /// Relate and return owned result and facts JSON strings.
 ///
@@ -278,7 +378,7 @@ pub(crate) unsafe extern "C" fn thinkthen_relate_with_facts_opts(
     out_len: *mut usize,
     facts_json: *mut *mut c_char,
     facts_len: *mut usize,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: all raw inputs are checked before the first send.
     unsafe {
         run(

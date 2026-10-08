@@ -1,6 +1,14 @@
 //! Select native question grammar; never parse a question independently.
 use super::QuestionHandle;
 use crate::failures::Failure;
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE,
+    THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE, THINKTHEN_FUNCTION_FILTER_V1 as FILTER,
+    THINKTHEN_FUNCTION_FIND_V1 as FIND, THINKTHEN_FUNCTION_RANK_V1 as RANK,
+    THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE, THINKTHEN_FUNCTION_RELATE_V1 as RELATE,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use serde_json::value::RawValue;
 use thinkthen::{
     LoadedQuestion, Question, QuestionSet, RankSet, Recognize, RecordChooseQuestion, Relate,
@@ -19,21 +27,21 @@ pub(crate) enum Native {
 pub(crate) fn parse(kind: u32, json: String) -> Result<QuestionHandle, Failure> {
     let mut reading = None;
     let native = match kind {
-        1..=5 => Native::Atomic(Question::from_json(&json)?),
-        6 => Native::RankSet(RankSet::from_json(&json)?),
-        8 => Native::Set(QuestionSet::from_json(&json)?),
-        7 => {
+        DECIDE | CHOOSE | TAG | SCORE | FILTER => Native::Atomic(Question::from_json(&json)?),
+        RANK => Native::RankSet(RankSet::from_json(&json)?),
+        ANNOTATE => Native::Set(QuestionSet::from_json(&json)?),
+        FIND => {
             let (question, selected) = thinkthen::FindQuestionFile::from_json(&json)?.into_parts();
             reading = Some(selected);
             Native::Find(question)
         }
-        9 => {
+        RECOGNIZE => {
             let (question, selected) =
                 thinkthen::RecognizeQuestionFile::from_json(&json)?.into_parts();
             reading = Some(selected);
             Native::Recognize(question)
         }
-        10 => Native::Relate(Relate::from_records_json(&json)?),
+        RELATE => Native::Relate(Relate::from_records_json(&json)?),
         _ => return Err(Failure::usage("invalid question kind")),
     };
     Ok(finish(json, native, reading))
@@ -81,26 +89,26 @@ pub(crate) fn named(role: u32, value: &str, reference: bool) -> Result<QuestionH
     }
     let mut reading = None;
     let native = match role {
-        1 => Native::Atomic(load!(Question)),
-        2 => Native::Set(load!(QuestionSet)),
-        3 => Native::DynamicChoose(load!(RecordChooseQuestion)),
-        4 => {
+        abi::LOAD_ATOMIC_V1 => Native::Atomic(load!(Question)),
+        abi::LOAD_SET_V1 => Native::Set(load!(QuestionSet)),
+        abi::LOAD_DYNAMIC_CHOOSE_V1 => Native::DynamicChoose(load!(RecordChooseQuestion)),
+        abi::LOAD_RECOGNIZE_V1 => {
             let (q, selected) = load!(thinkthen::RecognizeQuestionFile).into_parts();
             reading = Some(selected);
             Native::Recognize(q)
         }
-        5 => Native::Relate(if reference {
+        abi::LOAD_RELATE_V1 => Native::Relate(if reference {
             Relate::load_records_reference(value)?
         } else {
             Relate::load_records_named(value)?
         }),
-        6 => Native::Rank(if reference {
+        abi::LOAD_RANK_V1 => Native::Rank(if reference {
             Question::load_rank_reference(value)?
         } else {
             Question::load_rank_named(value)?
         }),
-        7 => Native::RankSet(load!(RankSet)),
-        8 => {
+        abi::LOAD_RANK_SET_V1 => Native::RankSet(load!(RankSet)),
+        abi::LOAD_FIND_V1 => {
             let (q, selected) = load!(thinkthen::FindQuestionFile).into_parts();
             reading = Some(selected);
             Native::Find(q)
@@ -121,17 +129,17 @@ pub(crate) fn load(path: &str) -> Result<QuestionHandle, Failure> {
     let body: std::collections::BTreeMap<String, Box<RawValue>> = serde_json::from_str(&json)
         .map_err(|_| Failure::local("the question file has invalid question content"))?;
     let kind = if body.contains_key("questions") {
-        8
+        ANNOTATE
     } else if body.contains_key("recognize") {
-        9
+        RECOGNIZE
     } else if body.contains_key("relate") {
-        10
+        RELATE
     } else if body.contains_key("find") {
-        7
+        FIND
     } else {
-        1
+        DECIDE
     };
-    if kind == 1 && (!body.contains_key("choose") || body.contains_key("options")) {
+    if kind == DECIDE && (!body.contains_key("choose") || body.contains_key("options")) {
         return Ok(finish(json, Native::Atomic(Question::load(path)?), None));
     }
     let parsed = if body.contains_key("choose") && !body.contains_key("options") {
@@ -144,7 +152,7 @@ pub(crate) fn load(path: &str) -> Result<QuestionHandle, Failure> {
 impl QuestionHandle {
     pub(crate) fn fits_complete(&self, kind: u32) -> bool {
         self.fits(kind)
-            || kind == 6
+            || kind == RANK
                 && matches!(&self.native,
             Native::Atomic(LoadedQuestion::Question(q)) if matches!(q.kind(), thinkthen::QuestionKind::Decide | thinkthen::QuestionKind::Score))
     }
@@ -160,19 +168,22 @@ impl QuestionHandle {
 
     pub(crate) fn fits(&self, kind: u32) -> bool {
         match (&self.native, kind) {
-            (Native::Atomic(question), 1..=5) => {
+            (Native::Atomic(question), DECIDE | CHOOSE | TAG | SCORE | FILTER) => {
                 use thinkthen::QuestionKind as K;
                 matches!(
                     (question.kind(), kind),
-                    (K::Decide, 1 | 5) | (K::Choose, 2) | (K::Tag, 3) | (K::Score, 4)
+                    (K::Decide, DECIDE | FILTER)
+                        | (K::Choose, CHOOSE)
+                        | (K::Tag, TAG)
+                        | (K::Score, SCORE)
                 )
             }
-            (Native::DynamicChoose(_), 2) => true,
-            (Native::Rank(_) | Native::RankSet(_), 6)
-            | (Native::Find(_), 7)
-            | (Native::Set(_), 6 | 8)
-            | (Native::Recognize(_), 9)
-            | (Native::Relate(_), 10) => true,
+            (Native::DynamicChoose(_), CHOOSE) => true,
+            (Native::Rank(_) | Native::RankSet(_), RANK)
+            | (Native::Find(_), FIND)
+            | (Native::Set(_), RANK | ANNOTATE)
+            | (Native::Recognize(_), RECOGNIZE)
+            | (Native::Relate(_), RELATE) => true,
             _ => false,
         }
     }
@@ -182,18 +193,20 @@ impl QuestionHandle {
 pub(crate) fn parse_role(role: u32, json: &str) -> Result<QuestionHandle, Failure> {
     let mut reading = None;
     let native = match role {
-        1 => Native::Atomic(Question::from_json(json)?),
-        2 => Native::Set(QuestionSet::from_json(json)?),
-        3 => Native::DynamicChoose(RecordChooseQuestion::from_json(json)?),
-        4 => {
+        abi::LOAD_ATOMIC_V1 => Native::Atomic(Question::from_json(json)?),
+        abi::LOAD_SET_V1 => Native::Set(QuestionSet::from_json(json)?),
+        abi::LOAD_DYNAMIC_CHOOSE_V1 => {
+            Native::DynamicChoose(RecordChooseQuestion::from_json(json)?)
+        }
+        abi::LOAD_RECOGNIZE_V1 => {
             let (q, selected) = thinkthen::RecognizeQuestionFile::from_json(json)?.into_parts();
             reading = Some(selected);
             Native::Recognize(q)
         }
-        5 => Native::Relate(Relate::from_records_json(json)?),
-        6 => Native::Rank(Question::rank_from_json(json)?),
-        7 => Native::RankSet(RankSet::from_json(json)?),
-        8 => {
+        abi::LOAD_RELATE_V1 => Native::Relate(Relate::from_records_json(json)?),
+        abi::LOAD_RANK_V1 => Native::Rank(Question::rank_from_json(json)?),
+        abi::LOAD_RANK_SET_V1 => Native::RankSet(RankSet::from_json(json)?),
+        abi::LOAD_FIND_V1 => {
             let (q, selected) = thinkthen::FindQuestionFile::from_json(json)?.into_parts();
             reading = Some(selected);
             Native::Find(q)

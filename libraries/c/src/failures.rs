@@ -2,6 +2,7 @@
 //! the recording thread, and the panic guard every exported symbol runs
 //! behind.
 
+use crate::ffi::values as abi;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -12,20 +13,20 @@ use std::thread::ThreadId;
 use thinkthen::{Engine, ErrorKind, Facts, contained};
 
 /// The header's success code.
-pub(crate) const OK: i32 = 0;
+pub(crate) const OK: i32 = abi::THINKTHEN_OK;
 /// The header's usage code, which a null engine also returns.
-pub(crate) const USAGE: i32 = 1;
+pub(crate) const USAGE: i32 = abi::THINKTHEN_EUSAGE;
 /// The header's defect code, the guard's answer when a panic reached it.
-pub(crate) const DEFECT: i32 = 6;
+pub(crate) const DEFECT: i32 = abi::THINKTHEN_EDEFECT;
 
 /// The header's code for a kind, in the header's own order.
 const fn code_of(kind: ErrorKind) -> i32 {
     match kind {
         ErrorKind::Usage => USAGE,
-        ErrorKind::Backend => 2,
-        ErrorKind::Deadline => 3,
-        ErrorKind::Local => 4,
-        ErrorKind::Cancelled => 5,
+        ErrorKind::Backend => abi::THINKTHEN_EBACKEND,
+        ErrorKind::Deadline => abi::THINKTHEN_EDEADLINE,
+        ErrorKind::Local => abi::THINKTHEN_ELOCAL,
+        ErrorKind::Cancelled => abi::THINKTHEN_ECANCELLED,
         ErrorKind::Defect => DEFECT,
     }
 }

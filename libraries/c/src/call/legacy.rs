@@ -9,14 +9,7 @@ use thinkthen::{
 
 pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Failure> {
     let definition = definition(request)?;
-    if request.verb == "filter"
-        && matches!(
-            &definition,
-            RequestDefinition::Atomic(LoadedQuestion::Banded(_))
-        )
-    {
-        return Err(Failure::usage("filter keeps a record at a cut, not a band"));
-    }
+    refuse_banded_filter(request, &definition)?;
     let input = if let Some(source) = request.envelope.get("source") {
         RequestInput::Source {
             source: super::source::parse(source.get())?.request_source(),
@@ -141,4 +134,19 @@ fn definition(request: &LegacyRequest) -> Result<RequestDefinition, Failure> {
         _ => Question::from_json(&object(&question)?)?.into(),
     };
     Ok(definition)
+}
+
+fn refuse_banded_filter(
+    request: &LegacyRequest,
+    definition: &RequestDefinition,
+) -> Result<(), Failure> {
+    if request.verb == "filter"
+        && matches!(
+            definition,
+            RequestDefinition::Atomic(LoadedQuestion::Banded(_))
+        )
+    {
+        return Err(Failure::usage("filter keeps a record at a cut, not a band"));
+    }
+    Ok(())
 }

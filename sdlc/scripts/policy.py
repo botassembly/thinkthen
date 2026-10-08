@@ -77,6 +77,7 @@ BINDING_SOURCE_EXTENSIONS = {
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 GENERATED_BINDING_SOURCES = {
+    "libraries/c/include/thinkthen.h",
     "libraries/r/thinkthen/src/rust/document.rs",
     "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc",
     "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h",

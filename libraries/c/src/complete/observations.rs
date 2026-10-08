@@ -6,15 +6,16 @@ use crate::ffi::carriers::{
     MemberFailureV1, ObservationDataV1, ObservationSuccessV1, ObservationV1,
     OptionalDiscriminatorV1, QuestionObservationDataV1, QuestionObservationV1, RowObservationV1,
 };
+use crate::ffi::values as abi;
 use thinkthen::{FailureCause, Observation, OwnedRecordObservation, QuestionDetail};
 pub(super) const fn cause(cause: FailureCause) -> u32 {
     match cause {
-        FailureCause::MissingAnswer => 1,
-        FailureCause::WrongKind => 2,
-        FailureCause::MissingProbability => 3,
-        FailureCause::InvalidProbability => 4,
-        FailureCause::InvalidDistribution => 5,
-        FailureCause::UnexpectedProbability => 6,
+        FailureCause::MissingAnswer => abi::THINKTHEN_MEMBER_MISSING_ANSWER_V1,
+        FailureCause::WrongKind => abi::THINKTHEN_MEMBER_WRONG_KIND_V1,
+        FailureCause::MissingProbability => abi::THINKTHEN_MEMBER_MISSING_PROBABILITY_V1,
+        FailureCause::InvalidProbability => abi::THINKTHEN_MEMBER_INVALID_PROBABILITY_V1,
+        FailureCause::InvalidDistribution => abi::THINKTHEN_MEMBER_INVALID_DISTRIBUTION_V1,
+        FailureCause::UnexpectedProbability => abi::THINKTHEN_MEMBER_UNEXPECTED_PROBABILITY_V1,
     }
 }
 pub(super) fn raw(
@@ -56,13 +57,13 @@ pub(super) fn convert(
                         (*index, member.as_deref(), *stage, *position),
                         detail.detail(),
                     )?;
-                    1
+                    abi::THINKTHEN_EVENT_QUESTION_V1
                 }
                 OwnedRecordObservation::Row { index, .. } => {
                     data.row = *rows.iter().find(|row| row.index == *index).ok_or_else(|| {
                         Failure::defect("a native row event lost its complete original occurrence")
                     })?;
-                    2
+                    abi::THINKTHEN_EVENT_ROW_V1
                 }
             };
             Ok(ObservationV1 { kind, data })
@@ -76,10 +77,10 @@ fn question(
 ) -> Result<QuestionObservationV1, Failure> {
     let stage = stage
         .map(|stage| match stage {
-            "boundary" => Ok(1),
-            "kind" => Ok(2),
-            "edge" => Ok(3),
-            "relation" => Ok(4),
+            "boundary" => Ok(abi::THINKTHEN_STAGE_BOUNDARY_V1),
+            "kind" => Ok(abi::THINKTHEN_STAGE_KIND_V1),
+            "edge" => Ok(abi::THINKTHEN_STAGE_EDGE_V1),
+            "relation" => Ok(abi::THINKTHEN_STAGE_RELATION_V1),
             _ => Err(Failure::defect(
                 "native observation supplied an unknown stage",
             )),
@@ -95,7 +96,7 @@ fn question(
             ),
             cause: cause(failure),
         };
-        2
+        abi::THINKTHEN_MEMBER_FAILURE_V1
     } else {
         let observation_id = match d.observations() {
             [Observation::Answered { observation_id }] => Some(observation_id),
@@ -124,7 +125,7 @@ fn question(
             ),
             confidence: metadata::double(d.confidence()),
         };
-        1
+        abi::THINKTHEN_MEMBER_SUCCESS_V1
     };
     Ok(QuestionObservationV1 {
         index,

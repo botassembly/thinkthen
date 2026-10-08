@@ -107,23 +107,24 @@ fn c11_and_cpp17_consumers_match_reviewed_signatures_and_rust_carrier_layouts() 
 #[test]
 fn absent_and_authored_boolean_decisions_have_distinct_zeroed_union_payloads() {
     let absent = DecideValueDataV1::default();
-    // SAFETY: default explicitly initializes the full union storage to zero.
-    let bytes = unsafe {
-        std::slice::from_raw_parts(
-            (&raw const absent).cast::<u8>(),
-            size_of::<DecideValueDataV1>(),
-        )
-    };
-    assert!(bytes.iter().all(|byte| *byte == 0));
+    // SAFETY: zero is valid for both arms. Read initialized fields, never padding.
+    let authored = unsafe { absent.authored };
+    assert_eq!(unsafe { absent.boolean }, 0);
+    assert_eq!(authored.kind, 0);
+    assert!(authored.data.data.is_null());
+    assert_eq!(authored.data.len, 0);
     let absent = MemberValueDataV1::default();
-    // SAFETY: all arms are repr(C) primitives/zero-valid descriptors; default fills the largest arm.
-    let bytes = unsafe {
-        std::slice::from_raw_parts(
-            (&raw const absent).cast::<u8>(),
-            size_of::<MemberValueDataV1>(),
-        )
-    };
-    assert!(bytes.iter().all(|byte| *byte == 0));
+    // SAFETY: all arms recursively contain zero-valid scalar/raw-pointer fields.
+    let decision = unsafe { absent.decide };
+    let choice = unsafe { absent.choose };
+    let tags = unsafe { absent.tag };
+    assert_eq!(decision.kind, 0);
+    assert_eq!(choice.present, 0);
+    assert!(choice.value.data.is_null());
+    assert_eq!(choice.value.len, 0);
+    assert!(tags.data.is_null());
+    assert_eq!(tags.len, 0);
+    assert_eq!(unsafe { absent.score }, 0.0);
     let mut storage = crate::current::Storage::default();
     let value = storage.decision(
         thinkthen::Answer::Yes,

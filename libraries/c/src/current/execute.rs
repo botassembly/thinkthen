@@ -6,6 +6,9 @@ use super::{
     views::{self, Row},
 };
 use crate::failures::Failure;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_RANK_V1 as RANK, THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE,
+};
 use std::sync::{
     Mutex, PoisonError,
     atomic::{AtomicUsize, Ordering},
@@ -25,8 +28,8 @@ pub(crate) fn ask(
             "the question kind does not match the named call",
         ));
     }
-    let rank_set = if kind == 6 && matches!(question.native, Native::Set(_)) {
-        Some(super::parse(6, question.json.clone())?)
+    let rank_set = if kind == RANK && matches!(question.native, Native::Set(_)) {
+        Some(super::parse(RANK, question.json.clone())?)
     } else {
         None
     };
@@ -44,7 +47,7 @@ pub(crate) fn ask(
         {
             let mut held = collected.lock().unwrap_or_else(PoisonError::into_inner);
             let q = views::SavedQuestion::new(
-                if kind == 9 {
+                if kind == RECOGNIZE {
                     input_index.load(Ordering::Relaxed)
                 } else {
                     index

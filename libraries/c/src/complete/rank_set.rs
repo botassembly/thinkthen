@@ -74,7 +74,7 @@ pub(super) fn row(
     };
     Ok(RowObservationV1 {
         index: row.ordinal(),
-        function: 6,
+        function: crate::ffi::values::THINKTHEN_FUNCTION_RANK_V1,
         data,
     })
 }

@@ -24,7 +24,7 @@ pub(super) unsafe extern "C" fn thinkthen_question_new_recognition_v1(
     metadata: *const QuestionAuthorV1,
     task: *const RecognitionTaskV1,
     out: *mut *mut QuestionHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     // SAFETY: validate required task within the engine's ordinary guarded failure path.
     unsafe {
         crate::ffi::typed(
@@ -50,7 +50,7 @@ fn borrowed(value: Option<&str>) -> OptionalStringV1 {
 pub(super) unsafe extern "C" fn thinkthen_question_recognition_task_v1(
     owner: *const QuestionHandle,
     out: *mut RecognitionTaskV1,
-) -> i32 {
+) -> std::ffi::c_int {
     guard(None, USAGE, || {
         if out.is_null() {
             return USAGE;

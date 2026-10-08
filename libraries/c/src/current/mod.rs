@@ -14,6 +14,7 @@ pub(crate) use descriptors::QuestionData;
 mod views;
 use crate::failures::Failure;
 use crate::ffi::current::carriers::{ContentV1, OptionalStringV1, StringV1};
+use crate::ffi::values as abi;
 use serde::Serialize;
 use serde_json::value::RawValue;
 use std::fmt;
@@ -75,8 +76,8 @@ impl ImageHandle {
     pub(crate) fn view(&self) -> crate::ffi::carriers::ImageViewV1 {
         crate::ffi::carriers::ImageViewV1 {
             media: match self.native.media() {
-                thinkthen::ImageMedia::Jpeg => 1,
-                thinkthen::ImageMedia::Png => 2,
+                thinkthen::ImageMedia::Jpeg => abi::THINKTHEN_IMAGE_JPEG_V1,
+                thinkthen::ImageMedia::Png => abi::THINKTHEN_IMAGE_PNG_V1,
             },
             bytes: self.native.bytes().as_ptr(),
             bytes_len: self.native.bytes().len(),
@@ -279,8 +280,8 @@ impl Storage {
     pub(crate) fn content(&mut self, value: &Content) -> ContentV1 {
         ContentV1 {
             kind: match value {
-                Content::Text(_) => 1,
-                Content::Json(_) => 2,
+                Content::Text(_) => abi::THINKTHEN_CONTENT_TEXT_V1,
+                Content::Json(_) => abi::THINKTHEN_CONTENT_JSON_V1,
             },
             data: self.string(value.text()),
         }

@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
+Reviews: revision 443b593f47216b3e88351beb7f5135b4245212aa, accept
+
 ## Outcome
 
 Generate the committed C header from Rust-owned exports, layouts, values and ownership documentation.

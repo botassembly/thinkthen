@@ -7,6 +7,7 @@
 use super::carriers::{ContentV1, OptionalContentV1, OptionalStringV1, StringV1, StringsV1};
 use crate::current::Content;
 use crate::failures::Failure;
+use crate::ffi::values as abi;
 pub(crate) fn required<T>(ptr: *const T) -> Result<(), Failure> {
     if ptr.is_null() {
         Err(Failure::usage("a null required pointer"))
@@ -55,8 +56,8 @@ pub(crate) unsafe fn content(value: ContentV1) -> Result<Content, Failure> {
     // SAFETY: active counted content is readable through return.
     let text = unsafe { string(value.data) }?;
     match value.kind {
-        1 => Ok(Content::Text(text.to_owned())),
-        2 => {
+        abi::THINKTHEN_CONTENT_TEXT_V1 => Ok(Content::Text(text.to_owned())),
+        abi::THINKTHEN_CONTENT_JSON_V1 => {
             Ok(Content::Json(serde_json::from_str(text).map_err(|_| {
                 Failure::usage("content is not one JSON value")
             })?))

@@ -29,7 +29,21 @@ def declarations(header):
         raise RuntimeError('ABI declaration discovery requires Clang; Windows layout qualification must run the emitted probe with its own C compiler')
     ast = json.loads(run(['clang', '-std=c11', '-x', 'c', '-fsyntax-only', '-Xclang', '-ast-dump=json', str(header)]))
     records = {n['id']: n for n in walk(ast) if n['kind'] == 'RecordDecl' and n.get('completeDefinition')}
-    layouts, functions = {}, {}
+    record_types = {n['id']: n for n in walk(ast) if n['kind'] == 'RecordDecl'}
+    aliases = {}
+    for node in ast.get('inner', []):
+        if node['kind'] == 'TypedefDecl':
+            refs = [n['decl']['id'] for n in walk(node) if n['kind'] == 'RecordType']
+            if refs and refs[0] in record_types and record_types[refs[0]].get('name'):
+                record = record_types[refs[0]]
+                aliases[record['tagUsed'] + ' ' + record['name']] = node['name']
+
+    def canonical(kind):
+        # Resolve only aliases Clang proves refer to the same record. Const,
+        # pointer depth and distinct carrier identities remain significant.
+        return re.sub(r'\b(?:struct|union) \w+\b', lambda m: aliases.get(m[0], m[0]), kind)
+
+    layouts, functions, union_owners = {}, {}, {}
     for node in ast.get('inner', []):
         name = node.get('name', '')
         if not name.startswith('thinkthen_'):
@@ -37,23 +51,31 @@ def declarations(header):
         if node['kind'] == 'TypedefDecl':
             refs = [n['decl']['id'] for n in walk(node) if n['kind'] == 'RecordType']
             if refs and refs[0] in records:
-                layouts[name] = fields(records[refs[0]])
+                record = records[refs[0]]
+                layouts[name] = {field: canonical(kind)
+                                 for field, kind in fields(record, records).items()}
+                for field in record.get('inner', []):
+                    if field['kind'] == 'FieldDecl':
+                        kind = field['type'].get('desugaredQualType', field['type']['qualType'])
+                        if kind.startswith('union ') and kind in aliases:
+                            union_owners.setdefault(aliases[kind], []).append((name, field['name']))
         elif node['kind'] == 'FunctionDecl':
             signature = node['type']['qualType']
             if node.get('variadic') or '__attribute__' in signature:
                 raise ValueError(f'unsupported C calling convention or variadic declaration: {name}')
-            functions[name] = {'return': signature.split('(', 1)[0].strip(),
-                               'arguments': [n['type']['qualType'] for n in node.get('inner', []) if n['kind'] == 'ParmVarDecl']}
+            functions[name] = {'return': canonical(signature.split('(', 1)[0].strip()),
+                               'arguments': [canonical(n['type']['qualType']) for n in node.get('inner', []) if n['kind'] == 'ParmVarDecl']}
     macros = run(['clang', '-std=c11', '-x', 'c', '-dM', '-E', str(header)])
     constants = sorted(set(re.findall(r'^#define (THINKTHEN_\w+)[ \t]+\S', macros, re.M)) |
                        {n['name'] for n in walk(ast) if n['kind'] == 'EnumConstantDecl' and n.get('name', '').startswith('THINKTHEN_')})
     if not layouts or not functions or not constants:
         raise ValueError('the public header must declare carriers, functions and constants')
-    return {'records': layouts, 'functions': functions, 'constants': constants}
+    return {'records': layouts, 'functions': functions, 'constants': constants,
+            'union_owners': union_owners}
 
 
-def fields(record, prefix=''):
-    """Flatten named fields and anonymous union arms from compiler AST nodes."""
+def fields(record, records, prefix=''):
+    """Flatten public union arms, whether Clang names their record or nests it."""
     out, anonymous = {}, None
     for node in record.get('inner', []):
         if node['kind'] == 'RecordDecl' and node.get('completeDefinition') and not node.get('name'):
@@ -65,10 +87,18 @@ def fields(record, prefix=''):
                 if '(unnamed' not in kind and '(anonymous' not in kind:
                     raise ValueError(f'unassociated anonymous C record: {name}')
                 out[name] = anonymous['tagUsed']
-                out.update(fields(anonymous, name + '.'))
+                out.update(fields(anonymous, records, name + '.'))
                 anonymous = None
             else:
                 out[name] = kind
+                # cbindgen emits named unions. Resolve the compiler's type rather
+                # than losing data.decide and the other public nested offsets.
+                union_name = node['type'].get('desugaredQualType', kind).removeprefix('union ')
+                unions = [r for r in records.values()
+                          if r.get('tagUsed') == 'union' and r.get('name') == union_name]
+                if unions:
+                    out[name] = 'union'
+                    out.update(fields(unions[0], records, name + '.'))
     return out
 
 
@@ -122,7 +152,8 @@ def compile_probe(source, compiler=None):
 def header_abi(header, compiler=None):
     declared = declarations(header)
     output = compile_probe(probe_source(header, declared), compiler)
-    facts = {'records': {}, 'constants': {}, 'functions': copy.deepcopy(declared['functions'])}
+    facts = {'records': {}, 'constants': {}, 'functions': copy.deepcopy(declared['functions']),
+             'union_owners': declared['union_owners']}
     for line in output.splitlines():
         kind, *values = line.split('\t')
         if kind == 'platform':
@@ -150,14 +181,29 @@ def header_abi(header, compiler=None):
 
 def compare_abi(expected, actual):
     """Compare independently selected represented declarations, including omissions."""
-    if expected == actual:
-        return
+    def represented(name, source, other):
+        # A named alias for an already represented nested union is additive.
+        # The compiler still measures that alias's own alignment and layout;
+        # both sides must match every complete parent and its data.* arms.
+        owners = source.get('union_owners', {}).get(name, [])
+        if not owners or any(name in t and '*' not in t
+                             for p in source['functions'].values()
+                             for t in (p['return'], *p['arguments'])):
+            return False
+        return all(source['records'][parent] == other['records'].get(parent)
+                   and source['records'][name]['size'] == source['records'][parent]['fields'][field]['width']
+                   for parent, field in owners)
+
     changed = [f'{section}.{name}' for section in ('records', 'constants', 'functions')
                for name in sorted(set(expected.get(section, {})) | set(actual.get(section, {})))
-               if expected.get(section, {}).get(name) != actual.get(section, {}).get(name)]
+               if expected.get(section, {}).get(name) != actual.get(section, {}).get(name)
+               and not (section == 'records' and
+                        ((name not in actual['records'] and represented(name, expected, actual)) or
+                         (name not in expected['records'] and represented(name, actual, expected))))]
     if expected.get('platform') != actual.get('platform'):
         changed.append('platform')
-    raise ValueError('C ABI mismatch: ' + ', '.join(changed))
+    if changed:
+        raise ValueError('C ABI mismatch: ' + ', '.join(changed))
 
 
 def wire_type(kind, width, signed=True):
@@ -178,7 +224,7 @@ def pointee_type(kind, native, signed=True):
     """Describe a represented typed reference without guessing opaque pointees."""
     if not kind.endswith('*'):
         return 'not-a-pointer'
-    pointed = re.sub(r'\bconst\b', '', kind[:-1]).strip()
+    pointed = re.sub(r'\b(?:const|struct|union)\b', '', kind[:-1]).strip()
     if '*' in pointed:
         return 'pointer'
     if pointed.startswith('thinkthen_'):
@@ -192,7 +238,9 @@ def pointee_type(kind, native, signed=True):
 
 def represented_abi(native, records, functions, constants, signed=True):
     """Select independently required host imports and normalize represented types."""
-    result = {'records': {}, 'functions': {}, 'constants': {n: native['constants'][n] for n in constants}}
+    result = {'records': {}, 'functions': {}, 'constants': {n: native['constants'][n] for n in constants},
+              'union_owners': {name: owners for name, owners in native.get('union_owners', {}).items()
+                               if all(parent in records for parent, _ in owners)}}
     for name in records:
         record = copy.deepcopy(native['records'][name])
         for field in record['fields'].values():
@@ -219,21 +267,24 @@ def check_exports(header, library):
 def self_test(header):
     native = header_abi(header)
     compare_abi(native, header_abi(header, 'clang'))
-    text = Path(header).read_text()
+    text = re.sub(r'/\*.*?\*/', '', Path(header).read_text(), flags=re.S)
     plants = [
-        ('field', 'const char *data; size_t len;', 'size_t len; const char *data;'),
-        ('enum', '#define THINKTHEN_FUNCTION_DECIDE_V1 UINT32_C(1)', '#define THINKTHEN_FUNCTION_DECIDE_V1 UINT32_C(99)'),
-        ('argument', 'size_t row, size_t member, thinkthen_details_v1 *', 'size_t row, uint16_t member, thinkthen_details_v1 *'),
+        ('field', r'const char \*data;\s*size_t len;', 'size_t len; const char *data;'),
+        ('union-arm', r'(?:struct )?thinkthen_decide_value_v1 decide;', 'uint64_t decide;'),
+        ('enum', r'#define THINKTHEN_FUNCTION_DECIDE_V1 (?:UINT32_C\(1\)|1u?\b)', '#define THINKTHEN_FUNCTION_DECIDE_V1 99'),
+        ('argument', r'size_t member\b', 'uint16_t member'),
         ('return', 'int thinkthen_result_row(', 'uint64_t thinkthen_result_row('),
-        ('pointer-depth', 'thinkthen_result **);', 'thinkthen_result *);'),
-        ('by-value', 'uint32_t media, thinkthen_optional_string_v1 filename', 'uint32_t media, const thinkthen_optional_string_v1 *filename'),
+        ('pointer-depth', r'thinkthen_result \*\*(?:out\b)?', 'thinkthen_result *out'),
+        ('by-value', r'uint32_t media,\s*(?:struct )?thinkthen_optional_string_v1 filename', 'uint32_t media, const thinkthen_optional_string_v1 *filename'),
     ]
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-abi-plants-') as scratch:
         for name, before, after in plants:
-            if before not in text:
+            pattern = re.escape(before) if name == 'return' else before
+            changed, count = re.subn(pattern, lambda _: after, text, count=1)
+            if not count:
                 raise ValueError(f'ABI drift plant has no declaration: {name}')
             copied = Path(scratch) / 'thinkthen.h'
-            copied.write_text(text.replace(before, after, 1))
+            copied.write_text(changed)
             try:
                 compare_abi(native, header_abi(copied))
             except ValueError as error:

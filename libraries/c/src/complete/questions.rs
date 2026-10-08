@@ -5,19 +5,29 @@ use crate::ffi::carriers::{
     ChoiceV1, ChoicesV1, ContentV1, OptionalContentV1, OptionalQuestionV1, OptionalRuleV1,
     OptionalSizeV1, QuestionViewV1, RelationV1, RelationsV1, RuleV1, StringsV1,
 };
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE, THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE,
+    THINKTHEN_FUNCTION_FIND_V1 as FIND, THINKTHEN_FUNCTION_RANK_V1 as RANK,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use thinkthen::{QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold};
 pub(super) fn rule(value: Option<ResolvedThreshold>) -> RuleV1 {
     match value {
         None => RuleV1 {
-            kind: 1,
+            kind: abi::THINKTHEN_RULE_NULL_V1,
             ..RuleV1::default()
         },
         Some(ResolvedThreshold::Cut(low)) => RuleV1 {
-            kind: 2,
+            kind: abi::THINKTHEN_RULE_CUT_V1,
             low,
             high: 0.0,
         },
-        Some(ResolvedThreshold::Band { low, high }) => RuleV1 { kind: 3, low, high },
+        Some(ResolvedThreshold::Band { low, high }) => RuleV1 {
+            kind: abi::THINKTHEN_RULE_BAND_V1,
+            low,
+            high,
+        },
     }
 }
 pub(super) fn threshold(value: Option<ResolvedThreshold>) -> OptionalRuleV1 {
@@ -33,11 +43,11 @@ impl Storage {
     ) -> Result<ContentV1, Failure> {
         Ok(match value.text() {
             Some(text) => ContentV1 {
-                kind: 1,
+                kind: abi::THINKTHEN_CONTENT_TEXT_V1,
                 data: self.string(text),
             },
             None => ContentV1 {
-                kind: 2,
+                kind: abi::THINKTHEN_CONTENT_JSON_V1,
                 data: self.string(&value.to_json()?),
             },
         })
@@ -96,12 +106,12 @@ impl Storage {
             },
             batch_max: i32::from(matches!(batch, Some(thinkthen::BatchSetting::Max))),
             kind: match question.kind() {
-                thinkthen::QuestionKind::Decide => 1,
-                thinkthen::QuestionKind::Choose => 2,
-                thinkthen::QuestionKind::Tag => 3,
-                thinkthen::QuestionKind::Score => 4,
-                thinkthen::QuestionKind::Rank => 6,
-                thinkthen::QuestionKind::Find => 7,
+                thinkthen::QuestionKind::Decide => DECIDE,
+                thinkthen::QuestionKind::Choose => CHOOSE,
+                thinkthen::QuestionKind::Tag => TAG,
+                thinkthen::QuestionKind::Score => SCORE,
+                thinkthen::QuestionKind::Rank => RANK,
+                thinkthen::QuestionKind::Find => FIND,
             },
             text: self.native_content(question.text())?,
             yes: self.optional_native_content(question.yes())?,

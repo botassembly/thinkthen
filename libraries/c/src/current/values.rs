@@ -6,19 +6,24 @@ use crate::ffi::carriers::{
     ObservedProbabilitiesV1, OptionalEntityEdgesV1, ProbabilitiesV1, ProbabilityV1,
     RecognizeValueV1, StringsV1,
 };
+use crate::ffi::values as abi;
+use crate::ffi::values::{
+    THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE, THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE,
+    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
+};
 use thinkthen::{Answer, Judgment, NamedProbability, Probabilities, Recognized, RecognizedEntity};
 impl Storage {
     pub(crate) fn decision(&mut self, answer: Answer, authored: Option<&Content>) -> DecideValueV1 {
         let mut data = DecideValueDataV1::default();
         let kind = match answer {
-            Answer::Unsure => 0,
+            Answer::Unsure => abi::THINKTHEN_DECIDE_NULL_V1,
             Answer::Yes | Answer::No => {
                 if let Some(authored) = authored {
                     data.authored = self.content(authored);
-                    2
+                    abi::THINKTHEN_DECIDE_AUTHORED_V1
                 } else {
                     data.boolean = i32::from(answer == Answer::Yes);
-                    1
+                    abi::THINKTHEN_DECIDE_BOOLEAN_V1
                 }
             }
         };
@@ -38,19 +43,19 @@ impl Storage {
         let kind = match value {
             Judgment::Decision(answer) => {
                 data.decide = self.decision(*answer, authored);
-                1
+                DECIDE
             }
             Judgment::Choice(choice) => {
                 data.choose = self.optional_string(choice.as_deref());
-                2
+                CHOOSE
             }
             Judgment::Tags(tags) => {
                 data.tag = self.strings(tags);
-                3
+                TAG
             }
             Judgment::Score(score) => {
                 data.score = *score;
-                4
+                SCORE
             }
         };
         MemberValueV1 { kind, data }
@@ -74,11 +79,11 @@ impl Storage {
         let kind = match probabilities {
             Probabilities::YesNo { yes } => {
                 data.yes = *yes;
-                1
+                abi::THINKTHEN_PROBABILITIES_YES_V1
             }
             Probabilities::Named(named) => {
                 data.named = self.named_probabilities(named);
-                2
+                abi::THINKTHEN_PROBABILITIES_NAMED_V1
             }
         };
         ObservedProbabilitiesV1 { kind, data }

@@ -45,7 +45,9 @@ pub(crate) fn declarations(header: &str) -> Result<Vec<String>, &'static str> {
     for statement in code.split(';') {
         if structure_depth > 0
             || statement.trim_start().starts_with("typedef struct")
+            || statement.trim_start().starts_with("typedef union")
             || statement.trim_start().starts_with("struct ")
+            || statement.trim_start().starts_with("union ")
         {
             structure_depth += statement.matches('{').count();
             structure_depth = structure_depth
@@ -111,7 +113,7 @@ mod tests {
     fn independent_declarations_and_refusals() {
         assert_eq!(
             declarations(
-                "/* thinkthen_hidden(void); */\ntypedef struct { int n; thinkthen_string_v1 value; } thinkthen_record_v1;\nstruct thinkthen_view_v1 { union { int boolean; thinkthen_string_v1 text; } data; thinkthen_record_v1 record; };\nvoid thinkthen_z(void);\nconst char *thinkthen_a(int n);"
+                "/* thinkthen_hidden(void); */\ntypedef struct { int n; thinkthen_string_v1 value; } thinkthen_record_v1;\ntypedef union thinkthen_union_v1 { int boolean; thinkthen_string_v1 text; } thinkthen_union_v1;\nstruct thinkthen_view_v1 { thinkthen_union_v1 data; thinkthen_record_v1 record; };\nvoid thinkthen_z(void);\nconst char *thinkthen_a(int n);"
             ),
             Ok(vec!["thinkthen_a".into(), "thinkthen_z".into()])
         );

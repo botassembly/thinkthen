@@ -85,6 +85,7 @@ python3 sdlc/scripts/recognize-keys
 python3 sdlc/scripts/children --self-test
 python3 sdlc/scripts/children
 # Ticket 0459: the target C compiler measures every public carrier and signature.
+python3 sdlc/scripts/generate-c-header.py --check
 python3 sdlc/scripts/check-c-exports.py --self-test libraries/c/include/thinkthen.h
 # Ticket 0133: a rung's child and allow-list itself both hold exactly the pinned
 # names. Each is planted beside a key, a stray THINKTHEN_ name, a target folder,
