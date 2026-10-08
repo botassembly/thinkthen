@@ -22,8 +22,9 @@ impl Engine {
         let engine = contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
+            let cancel = cancel.with_storage_scope();
             let found =
-                execute(&engine, ask, evidence, cancel, &stop, (0, None)).map_err(Error::from)?;
+                execute(&engine, ask, evidence, &cancel, &stop, (0, None)).map_err(Error::from)?;
             let value = Recognized::from_native(found.value.clone())?;
             stop.observe(crate::public::RecordObservation::Row {
                 index: 0,

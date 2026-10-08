@@ -60,6 +60,70 @@ fn choose(response: &str, arguments: &[&str]) -> io::Result<(Listener, Output)> 
     Ok((listener, output))
 }
 
+#[test]
+fn two_choose_processes_share_a_fresh_and_populated_cache() {
+    let listener = Listener::answering(|body| {
+        let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+        let answers = request["questions"]
+            .as_object()
+            .expect("questions")
+            .keys()
+            .map(|name| (name.clone(), serde_json::json!({"type":"choice","choice":"billing","probabilities":{"billing":0.9,"shipping":0.04,"account":0.04,"other":0.02}})))
+            .collect::<serde_json::Map<_, _>>();
+        Canned::ok(&serde_json::json!({"model":"local-1","answers":answers}).to_string())
+    }).expect("listener");
+    let root =
+        std::env::temp_dir().join(format!("choose-two-cache-writers-{}", std::process::id()));
+    let _removed = std::fs::remove_dir_all(&root);
+    let base = listener.base().to_owned();
+    let cache = root.to_string_lossy().into_owned();
+    let input = b"\"first\"\n\"second\"\n\"first\"\n\"third\"\n\"fourth\"\n\"second\"\n\"fifth\"\n\"sixth\"\n";
+    for _ in 0..2 {
+        let start = std::sync::Arc::new(std::sync::Barrier::new(3));
+        let runs: Vec<_> = (0..2)
+            .map(|_| {
+                let start = std::sync::Arc::clone(&start);
+                let base = base.clone();
+                let cache = cache.clone();
+                std::thread::spawn(move || {
+                    start.wait();
+                    let args = [
+                        "choose",
+                        "Which team?",
+                        "billing",
+                        "shipping",
+                        "account",
+                        "other",
+                        "--url",
+                        &base,
+                        "--model",
+                        "local-1",
+                        "--jsonl",
+                        "--details",
+                        "--facts",
+                        "--jobs",
+                        "8",
+                        "--cache",
+                        &cache,
+                    ];
+                    spawn(&args, &[("THINKTHEN_API_KEY", "sk-test-value")], input).expect("run")
+                })
+            })
+            .collect();
+        start.wait();
+        for run in runs {
+            let output = run.join().expect("worker");
+            assert_eq!(
+                output.status.code(),
+                Some(0),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 8);
+        }
+    }
+}
+
 /// Ask a placement of a listener serving this one response.
 fn score(response: &str, arguments: &[&str]) -> io::Result<(Listener, Output)> {
     let listener = Listener::serving(vec![Canned::ok(response)])?;

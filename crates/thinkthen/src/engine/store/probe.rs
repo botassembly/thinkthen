@@ -4,6 +4,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use rusqlite::{Connection, OpenFlags};
+
 use super::{SQLITE, exists, make_folder, require_private};
 use crate::engine::error::Error;
 
@@ -21,7 +23,7 @@ impl Probe {
         Self { folder, private }
     }
 
-    /// Make the folder as a write would, open an existing file for writing,
+    /// Make the folder as a write would, check an existing file through SQLite,
     /// and create and remove one file of its own in the folder, where SQLite
     /// puts its journal. The store file itself is neither made nor changed.
     pub(crate) fn check(&self) -> Result<(), Error> {
@@ -32,11 +34,19 @@ impl Probe {
         make_folder(&self.folder)?;
         let sqlite = self.folder.join(SQLITE);
         if exists(&sqlite)? {
-            fs::OpenOptions::new()
-                .read(true)
-                .write(true)
-                .open(&sqlite)
-                .map_err(|_| Error::RecordingStorage)?;
+            // Closing a raw descriptor on the SQLite inode can drop another
+            // connection's POSIX locks in this process.
+            let connection = Connection::open_with_flags(
+                &sqlite,
+                OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )
+            .map_err(|_| Error::RecordingStorage)?;
+            if connection
+                .is_readonly("main")
+                .map_err(|_| Error::RecordingStorage)?
+            {
+                return Err(Error::RecordingStorage);
+            }
         }
         let probe = self.folder.join(format!(
             ".thinkthen-probe-{}-{}",

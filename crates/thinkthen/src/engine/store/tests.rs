@@ -56,6 +56,88 @@ fn written(folder: &Path, rows: &[Row<'_>]) {
     store.write(rows, &Cancel::default()).expect("write");
 }
 
+#[test]
+fn one_store_scans_once_for_its_own_writes_and_refuses_an_external_corruption() {
+    let folder = scratch();
+    let state = state();
+    written(folder.path(), &[row(&state, A, FIRST)]);
+    let cancel = Cancel::default();
+    let mut operation = Store::open(folder.path(), Mode::Cache, false, None)
+        .expect("open")
+        .prepared(&cancel)
+        .expect("admit");
+    assert_eq!(operation.validation_scans, 1);
+    operation
+        .write(&[row(&state, B, SECOND)], &cancel)
+        .expect("own answer");
+    operation
+        .revalidate(&cancel)
+        .expect("own write is admitted");
+    assert_eq!(operation.validation_scans, 1);
+
+    let outside = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("outside");
+    outside
+        .execute(
+            "UPDATE answers SET answer = 'broken' WHERE question = ?1",
+            [A],
+        )
+        .expect("external change");
+    assert!(matches!(
+        operation.revalidate(&cancel),
+        Err(Error::Entry(..))
+    ));
+    assert_eq!(operation.validation_scans, 2);
+    assert!(matches!(
+        Store::open(folder.path(), Mode::Record, false, None)
+            .expect("separate call")
+            .prepared(&cancel),
+        Err(Error::Entry(..))
+    ));
+}
+
+#[test]
+fn an_existing_index_needs_no_writer_and_a_missing_index_is_repaired() {
+    let folder = scratch();
+    let state = state();
+    written(folder.path(), &[row(&state, A, FIRST)]);
+    let path = folder.path().join(SQLITE);
+    let cancel = Cancel::default();
+    let holder = rusqlite::Connection::open(&path).expect("holder");
+    holder
+        .execute_batch("BEGIN IMMEDIATE")
+        .expect("writer lock");
+    Store::open(folder.path(), Mode::Cache, false, None)
+        .expect("open")
+        .prepared(&cancel)
+        .expect("read-only admission while a writer holds the file");
+    holder.execute_batch("ROLLBACK").expect("release");
+    holder
+        .execute_batch("DROP INDEX answers_route_question_state")
+        .expect("remove index");
+    #[allow(unused_mut, reason = "Unix checks disappearance on the open store")]
+    let mut repaired = Store::open(folder.path(), Mode::Cache, false, None)
+        .expect("open")
+        .prepared(&cancel)
+        .expect("repair index");
+    let count: i64 = holder
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE name='answers_route_question_state'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("index exists");
+    assert_eq!(count, 1);
+    #[cfg(not(windows))]
+    {
+        drop(holder);
+        fs::remove_file(&path).expect("external conversion removes sqlite");
+        assert!(matches!(
+            repaired.revalidate(&cancel),
+            Err(Error::RecordingStorage)
+        ));
+    }
+}
+
 fn scratch() -> tempdir::Scratch {
     tempdir::Scratch::new()
 }

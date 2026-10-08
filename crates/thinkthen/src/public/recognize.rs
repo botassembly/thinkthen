@@ -510,13 +510,14 @@ impl Engine {
             crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
+            let cancel = cancel.with_storage_scope();
             let mut positions = [0; 4];
             let found = engine
                 .recognize_observed(
                     &ask.0,
                     evidence,
                     MAX_TEXT_BYTES,
-                    cancel,
+                    &cancel,
                     |stage, question, answered| {
                         observe_question(
                             &stop,

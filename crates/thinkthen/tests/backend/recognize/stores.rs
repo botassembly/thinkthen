@@ -3,6 +3,76 @@
 use super::*;
 use conformance_backend::Rendezvous;
 
+#[test]
+fn concurrent_recognition_completes_with_fresh_and_populated_cache_or_recording() {
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-eight-recording");
+    let _removed = fs::remove_dir_all(&root);
+    let listener = Listener::answering(automatic).expect("listener");
+    let input = b"Ada met Acme.\nBob met Corp.\nAda met Acme.\nCarl met Town.\nDana met Acme.\nBob met Corp.\nErin met Corp.\nFrank met Acme.\n";
+    for mode in ["--cache", "--record"] {
+        for jobs in ["1", "8"] {
+            let folder = root.join(format!("{mode}-{jobs}"));
+            let recording = folder.to_string_lossy();
+            for _ in 0..2 {
+                let result = local(
+                    &listener,
+                    &[&KINDS[..], &["--lines", "--jobs", jobs, mode, &recording]].concat(),
+                    Some("key"),
+                    input,
+                );
+                assert_eq!(
+                    result.status.code(),
+                    Some(0),
+                    "{mode} jobs={jobs}: {}",
+                    String::from_utf8_lossy(&result.stderr)
+                );
+                assert_eq!(String::from_utf8_lossy(&result.stdout).lines().count(), 8);
+            }
+        }
+    }
+}
+
+#[test]
+fn two_recognition_processes_share_a_fresh_and_populated_cache() {
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-two-cache-writers");
+    let _removed = fs::remove_dir_all(&root);
+    let listener = Listener::answering(automatic).expect("listener");
+    let base = listener.base().to_owned();
+    let cache = root.to_string_lossy().into_owned();
+    let input = b"Ada met Acme.\nBob met Corp.\nAda met Acme.\nCarl met Town.\nDana met Acme.\nBob met Corp.\nErin met Corp.\nFrank met Acme.\n";
+    for _ in 0..2 {
+        let start = Arc::new(std::sync::Barrier::new(3));
+        let runs: Vec<_> = (0..2)
+            .map(|_| {
+                let start = Arc::clone(&start);
+                let base = base.clone();
+                let cache = cache.clone();
+                std::thread::spawn(move || {
+                    start.wait();
+                    let args = [
+                        &["recognize", "--url", &base, "--model", "local-1"][..],
+                        &KINDS,
+                        &["--lines", "--jobs", "8", "--cache", &cache],
+                    ]
+                    .concat();
+                    spawn(&args, &[("THINKTHEN_API_KEY", "key")], input).expect("command")
+                })
+            })
+            .collect();
+        start.wait();
+        for run in runs {
+            let output = run.join().expect("worker");
+            assert_eq!(
+                output.status.code(),
+                Some(0),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 8);
+        }
+    }
+}
+
 /// A one-question profile splits every request and prints the same names and edges.
 #[test]
 fn a_one_question_profile_prints_what_the_whole_requests_print() {
@@ -85,6 +155,14 @@ fn split_recognition_mixes_cache_and_live_then_replays_without_a_key() {
         (stdout(&mixed), stdout(&replay)),
         (stdout(&first), stdout(&first))
     );
+    assert!(listener.requests().is_empty());
+    let outside = rusqlite::Connection::open(root.join("thinkthen.sqlite")).expect("outside");
+    outside
+        .execute("UPDATE answers SET answer='broken'", [])
+        .expect("corrupt saved answers");
+    let refused = local(&listener, &options, Some("key"), ADA);
+    assert_eq!(refused.status.code(), Some(5));
+    assert!(refused.stdout.is_empty());
     assert!(listener.requests().is_empty());
 }
 

@@ -57,6 +57,7 @@ pub(crate) struct Cancel<'a> {
     attempts: Arc<AtomicU64>,
     attempt_sink: Option<AttemptSink>,
     attempt_digest: Option<Arc<str>>,
+    storage_scope: Option<Arc<std::sync::Mutex<Option<store::Store>>>>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
     #[cfg(test)]
@@ -108,6 +109,17 @@ impl Drop for Sending<'_> {
 }
 
 impl<'a> Cancel<'a> {
+    pub(crate) fn with_storage_scope(&self) -> Self {
+        Self {
+            storage_scope: Some(Arc::new(std::sync::Mutex::new(None))),
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn storage_scope(&self) -> Option<&Arc<std::sync::Mutex<Option<store::Store>>>> {
+        self.storage_scope.as_ref()
+    }
+
     pub(crate) fn with_cache_refresh(&self, refresh: bool) -> Self {
         Self {
             cache_refresh: refresh,

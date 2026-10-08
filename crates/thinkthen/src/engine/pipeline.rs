@@ -15,7 +15,7 @@ use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError, PackLimits, Packer, QuestionKey};
 use crate::engine::error::Error;
 use crate::engine::facade::Engine;
-use crate::engine::store::{Mode, Store};
+use crate::engine::store::{Mode, Shared, Store};
 use crate::engine::{Cancel, fork_safe, workers};
 
 mod receipt;
@@ -262,7 +262,12 @@ impl Engine {
             .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
         let limits = self.pack_limits(packing);
         let window = (state.width + 1).saturating_mul(limits.inputs);
-        let probe = store.as_ref().and_then(Store::probe);
+        let probe = store.as_ref().and_then(|shared| {
+            shared
+                .lock()
+                .ok()
+                .and_then(|held| held.as_ref().and_then(Store::probe))
+        });
         let sender = send::Sender::new(self, &state, model.clone(), packing, probe);
         let (events, received) = fork_safe::channel();
         let mut host = start(Port(events.clone()));
@@ -311,7 +316,11 @@ impl Engine {
 
     /// The call's store, by the modes table of ADR 0111 section 3, or `None`
     /// under `--no-cache`.
-    fn store(&self, state: &super::facade::State, cancel: &Cancel) -> Result<Option<Store>, Error> {
+    fn store(
+        &self,
+        state: &super::facade::State,
+        cancel: &Cancel,
+    ) -> Result<Option<Shared>, Error> {
         let storage = self.storage();
         let refresh = storage.refresh_cache
             || self
@@ -333,9 +342,23 @@ impl Engine {
         } else {
             None
         };
-        Store::open(folder, mode, storage.private_default, replayed)
-            .and_then(|store| store.prepared(cancel))
-            .map(Some)
+        let shared = cancel
+            .storage_scope()
+            .cloned()
+            .unwrap_or_else(|| Arc::new(std::sync::Mutex::new(None)));
+        {
+            let mut held = shared.lock().map_err(|_| Error::RecordingStorage)?;
+            match held.as_mut() {
+                Some(store) => store.revalidate(cancel)?,
+                None => {
+                    *held = Some(
+                        Store::open(folder, mode, storage.private_default, replayed)?
+                            .prepared(cancel)?,
+                    );
+                }
+            }
+        }
+        Ok(Some(shared))
     }
 }
 
