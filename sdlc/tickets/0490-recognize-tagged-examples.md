@@ -9,9 +9,11 @@ Depends on: 0491
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
+Reviews: revision c477a9ac099cfcb43307e8e79c414215eb39bc97, accept
+
 ## Outcome
 
-Callers supply tagged examples without knowing recognition's piece boundaries or question wording. Build only after experiment 469 demonstrates benefit and the PM receives the added work size; target 0.2 under that condition.
+Callers supply tagged examples without knowing recognition's piece boundaries or question wording. The PM cleared the evidence and scope conditions on 2026-10-08. Build in 0.2 after per-record context, rendering only answered step-1 questions before recognition controls and binding migration.
 
 ## Evidence
 
@@ -19,4 +21,4 @@ Callers supply tagged examples without knowing recognition's piece boundaries or
 - Keeps: Per-record context from 0489 as an independent input; default requests and keys when examples are absent; all languages and one endpoint. Retrieval remains caller-owned.
 - Changes: Review an ADR for `--examples FILE` and `--examples-field POINTER`, shared and per-record precedence, inline bracket notation and JSON Lines containing text plus Unicode-scalar spans and declared kinds. Render only answered step-1 questions through recognition's own piecer. Show current-pass kinds and mark other entities OUT; add no step-2 examples. Refuse undeclared kinds and span edges inside a piece before calls. Show rendered examples and token accounting in `--plan`; include examples in stage cache identities and the shared Request schema. Claim `crates/thinkthen/src/core/recognize/**`, `crates/thinkthen/src/engine/facade/recognize/**`, `crates/thinkthen/src/public/**`, `crates/thinkthen/src/cli/recognize/**`, `specification/recognize.md`, `specification/request.schema.json` and `conformance/**`. Family tickets adopt the schema once. The PM cleared the experiment gate on 2026-10-08; build after 0489 and before the controls.
 - Proof: Generic software examples cover both forms, non-ASCII spans, per-record isolation, invalid kind/edge refusal with zero sends, plan rendering, exact requests and offline cache/replay parity through typed interfaces. Do not promise model improvement from software fixtures.
-- Defers: Implementation until experiment 469's evidence arrives; retrieval, model selection and proxy business logic. Review the ticket now. Give the PM an incremental size and dependency assessment before starting implementation.
+- Defers: Retrieval, model selection, proxy business logic and step-2 examples. The approved incremental scope remains separate from general per-record context.
