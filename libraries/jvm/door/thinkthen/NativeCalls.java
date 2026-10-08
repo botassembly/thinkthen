@@ -12,6 +12,7 @@ final class NativeCalls {
   SymbolLookup symbols=SymbolLookup.libraryLookup(Path.of(System.getProperty("thinkthen.library")),Arena.global());Linker linker=Linker.nativeLinker();
   add(linker,symbols,"thinkthen_question_new",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,ADDRESS));
   add(linker,symbols,"thinkthen_question_new_recognition_v1",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,ADDRESS,ADDRESS,ADDRESS));
+  add(linker,symbols,"thinkthen_question_recognition_task_v1",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS));
   add(linker,symbols,"thinkthen_result_recognition_task_v1",FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_LONG,ADDRESS));
   add(linker,symbols,"thinkthen_question_new_authored",FunctionDescriptor.of(JAVA_INT,ADDRESS,ADDRESS,ADDRESS,ADDRESS));
   add(linker,symbols,"thinkthen_result_member_author",FunctionDescriptor.of(JAVA_INT,ADDRESS,JAVA_LONG,JAVA_LONG,ADDRESS));
