@@ -9,6 +9,8 @@ Depends on: 0491
 
 Reviews: revision 7a5c4a25d, reject
 
+Reviews: revision b6bb29af3, accept
+
 ## Outcome
 
 Let a caller supply character spans for each record, with optional kinds. Merge these with step-1 proposals and judge them in step 2 through the existing recognition route. A supplied kind is a proposal, never a confirmed answer.
