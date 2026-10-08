@@ -50,9 +50,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
     assert_eq!(requests.len(), 3);
     let largest = requests
         .iter()
-        .map(|request| request.body.len())
-        .max()
-        .expect("sent body");
+        .fold(0, |most, request| most.max(request.body.len()));
     for request in requests {
         assert_eq!(
             request.header("X-ThinkThen-Call-Id"),
