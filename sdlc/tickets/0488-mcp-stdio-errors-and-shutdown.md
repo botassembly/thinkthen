@@ -1,6 +1,6 @@
 # 0488: Preserve MCP errors and shutdown behavior
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Reviews: revision b9027d08b, accept
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision c5b73b5ca04203ca5b5d6a6c91c14d31d8722ed3, accept
+
+Landed: 52b460e
 
 ## Outcome
 
