@@ -1,12 +1,14 @@
 # 0482 — c-borrowed-lifetimes-and-legacy-slice-bounds
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
 Reviews: revision da9ce6e04d32f7f16341b033304919529662002e, accept
+
+Landed: e7cded0
 
 ## Outcome
 
