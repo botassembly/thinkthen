@@ -11,6 +11,23 @@ Reviews: revision 7a5c4a25d, reject
 
 Reviews: revision b6bb29af3, accept
 
+### Added public declarations
+
+```text
+RecognitionSeedSpan::end: usize
+RecognitionSeedSpan::kind: Option<String>
+RecognitionSeedSpan::start: usize
+RecordInput::seed_spans: Option<Vec<RecognitionSeedSpan>>
+RequestItem::seed_spans: Option<Vec<RecognitionSeedSpan>>
+RequestOptions::seed_spans: Option<Vec<RecognitionSeedSpan>>
+RequestOptions::seed_spans_field: Option<String>
+fn Recognize::with_seed_spans(self, Vec<RecognitionSeedSpan>) -> Recognize
+fn RecordReading::with_seed_spans_field(self, &str) -> Result<RecordReading, Error>
+impl Deserialize<'de> for RecognitionSeedSpan
+impl Serialize for RecognitionSeedSpan
+struct RecognitionSeedSpan
+```
+
 ## Outcome
 
 Let a caller supply character spans for each record, with optional kinds. Merge these with step-1 proposals and judge them in step 2 through the existing recognition route. A supplied kind is a proposal, never a confirmed answer.
