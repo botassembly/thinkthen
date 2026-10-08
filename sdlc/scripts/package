@@ -90,12 +90,15 @@ RUSTPACKAGE
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$built" \
     cargo build --quiet --locked --offline --manifest-path "$isolated/consumer/Cargo.toml" --package consumer --example native_case
-python3 - "$REPO" "$built/debug/examples/native_case" >"$isolated/native-source.log" <<'RUSTPACKAGE'
+# The shared native fixture starts the test backend from the repository target,
+# while the unpacked consumer above stays in its separate build folder.
+CARGO_TARGET_DIR="$REPO/target" cargo build --quiet --locked --offline --package conformance-backend
+python3 - "$REPO" "$built/debug/examples/native_case" "$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml)" >"$isolated/native-source.log" <<'RUSTPACKAGE'
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
-sys.exit(bool(run('rust',[sys.argv[2]],root)))
+sys.exit(bool(run('rust',[sys.argv[2]],root,extra_env={'RUSTUP_TOOLCHAIN':sys.argv[3]})))
 RUSTPACKAGE
 cp "$built/debug/thinkthen" "$isolated/thinkthen"
 scratch_remove "$source" && scratch_remove "$built"
