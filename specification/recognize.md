@@ -8,7 +8,7 @@ Recognize runs in three steps. Step 1 splits the text into pieces and asks where
 
 ## Caller-defined entities
 
-Settled for 0.3 by [ADR 0124](../sdlc/planning/adr/0124-caller-defined-recognition.md). `--instructions TEXT`, `--entity-definition TEXT` and existing `--kind KIND=DESCRIPTION` define the recognition task. Any supplied task wording or meaningful label description selects neutral entity questions. Dates, numbers, codes, amounts, units, ordinary words and web addresses can be entities. ThinkThen applies no fixed semantic suppression in this mode. Protocol labels and structural token rules retain their roles.
+Settled for 0.2 by [ADR 0124](../sdlc/planning/adr/0124-caller-defined-recognition.md). `--instructions TEXT`, `--entity-definition TEXT` and existing `--kind KIND=DESCRIPTION` define the recognition task. Any supplied task wording or meaningful label description selects neutral entity questions. Dates, numbers, codes, amounts, units, ordinary words and web addresses can be entities. ThinkThen applies no fixed semantic suppression in this mode. Protocol labels and structural token rules retain their roles.
 
 Every token, kind, decline and boundary question carries the complete caller declaration. Boundary questions preserve punctuation that belongs to the requested span. An instructions-only or definition-only declaration needs no kinds and produces `ENTITY`. A described kind needs no extra switch. Null and blank label descriptions retain their existing absent meaning. Instructions and entity definitions must be nonblank strings; explicit null, blank or another type refuses before sending. Multiline strings are accepted as task wording. ThinkThen executes no caller commands.
 
@@ -74,12 +74,12 @@ Lowering the cut can keep a weaker name that step 1 found and step 2 classified.
 | --- | --- |
 | A name is missing | Inspect `--details` first. Lower `--threshold` only if the name was found and classified but fell below the cut; it cannot recover a step-1 miss or a step-2 `none of these` decline. |
 | Too many names appear | Raise `--threshold` to remove lower-strength names. This may also remove correct names and cannot repair a wrong span or kind. |
-| A custom kind never appears | Give that kind a clear `--kind KIND=DESCRIPTION` description for step 2. Descriptions do not reach step 1 and cannot make it detect a missed name; custom kinds are only as useful as their descriptions and the text available to the questions. |
+| A custom kind never appears | Give that kind a clear `--kind KIND=DESCRIPTION` description. It reaches the token, kind and boundary questions. Inspect `--details` to see whether the span was found, declined or fell below the cut. |
 | Too many relation edges appear | Raise `--relation-threshold` to drop lower-probability edges, or lower it to retain more asked edges. The cut acts after pair requests and cannot reduce their count, create an unasked pair or change which names were found. Narrow the relation rules or input to reduce planned pairs. |
 
 ## Kinds
 
-Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives a description, which reaches only the step-2 kind option. Bare and described kinds do not mix. A run takes 0 to 20 distinct nonblank kinds: `thinkthen: recognize takes 0 to 20 distinct, nonblank kinds`. A `--kind` with no `=` is refused at exit 2: ``--kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind``.
+Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives a description, which reaches every recognition step. Bare and described kinds do not mix. A run takes 0 to 20 distinct nonblank kinds: `thinkthen: recognize takes 0 to 20 distinct, nonblank kinds`. A `--kind` with no `=` is refused at exit 2: ``--kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind``.
 
 `none of these`, `ENTITY` and `ANY` are reserved in any ASCII case. The refusal echoes no text: `thinkthen: recognize reserves the kind names none of these, ENTITY and ANY in any ASCII case`. It exits 2 on the command line and 5 from a question file.
 

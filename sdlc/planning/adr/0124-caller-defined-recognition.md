@@ -24,4 +24,4 @@ Use the existing failure guard and status conventions. These sidecars avoid exte
 
 ## Evidence and limits
 
-The public admission regression failed on the reviewed baseline because the closed saved grammar rejected the new members. The implementation changes native task wording and its carriers. Offline loopback responses prove admission, transport, exact spans, identity and compatibility. They do not establish model accuracy. The priced model evaluation remains with the coordinator and requires a finite allocation. Landing waits for v0.2.0.
+The public admission regression failed on the reviewed baseline because the closed saved grammar rejected the new members. The implementation changes native task wording and its carriers. Offline loopback responses prove admission, transport, exact spans, identity and compatibility. They do not establish model accuracy. The bounded model comparison is recorded in the 0461 record. Ian moved 0461 into 0.2 on 2026-10-08.

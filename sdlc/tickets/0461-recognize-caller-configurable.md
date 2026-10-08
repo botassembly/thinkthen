@@ -1,11 +1,11 @@
 # 0461: Let callers define recognition entities
 
-Status: OPEN. Implementation, code review, Linux installed custom qualification and the finite model comparison are complete. Final integration checks and landing follow v0.2.0; caller wording recovered seven of eleven literal targets in the limited comparison.
+Status: OPEN. Implementation, code review, Linux installed custom qualification and the finite model comparison are complete. Ian moved this ticket into 0.2 on 2026-10-08. Final integration checks and landing are next; caller wording recovered seven of eleven literal targets in the limited comparison.
 
 Reviews: accept
 
 Priority: high
-Milestone: 0.3
+Milestone: 0.2
 Owner: lane 2
 Signed: lane 2 ticket owner, 2026-10-07.
 
@@ -13,7 +13,7 @@ Signed: lane 2 ticket owner, 2026-10-07.
 
 Callers supply recognition instructions, an entity definition and descriptions for their own labels. Every recognition stage follows that declaration. A caller can request literal values with units, dates, counts, codes, doses, amounts, ordinary words or web addresses. Recognition applies no fixed semantic label list or suppression to a caller-defined task. The existing question wording remains the compatibility default only when callers omit all custom instructions, entity definition and label descriptions.
 
-Build starts on lane 2 after fresh ticket acceptance. Land after v0.2.0 ships. This is high-priority next work for milestone 0.3; it does not gate the 0.2 release or move its work aside. The design changes documentation and surface contracts, so it does not qualify for the inbox's exception before rc.1.
+Build started on lane 2 after fresh ticket acceptance. Ian promoted 0461 into 0.2 on 2026-10-08 and directed landing now alongside the after-sprint review. The shared custom-wording case and tested example accompany the change. The separate 20-kind-cap proposal remains held until TCGA round one.
 
 ## Evidence
 
@@ -39,7 +39,7 @@ The native path starts in `core/recognize_file.rs`, `core/recognize/questions.rs
 
 The C JSON question loaders already converge on `RecognizeQuestionFile`. Extend native typed construction and authored description readers through an additive, versioned C entry point or carrier; do not append fields to an existing public V1 struct or silently discard them. Record and review the exact additive ABI in the implementation ADR before host adoption. Carry the same fields through typed host recognition builders, question-file loaders, SQL declaration inputs, pandas and Polars adapters, and the MCP recognition schema. Reuse existing common declaration readers. Update the affected installed-package conformance cases; generic JSON acceptance alone does not establish typed parity.
 
-Coordinate any shared C, schema, SDK or documentation files with their 0.2 owners before editing. Keep all work on `ticket/0461-recognize-caller-configurable` in lane 2. The coordinator continues the installed campaign independently and owns integration after v0.2.0. Add no dependency or verification runner feature.
+Keep all work on `ticket/0461-recognize-caller-configurable` in lane 2. Existing installed qualification covers the shared case. Land this ticket in 0.2 after integrated review and checks. Add no dependency or verification runner feature.
 
 ## Distinguishing examples and checks
 

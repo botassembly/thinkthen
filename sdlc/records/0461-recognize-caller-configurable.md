@@ -52,3 +52,17 @@ Inputs, declarations, raw recordings, results, run facts, exit codes, isolated u
 
 
 Fresh read-only diagnosis found no code defect in the four model misses. Recorded requests carry the full custom declaration and propose every missed gold span. The count, web address and two amount occurrences have final strengths 0.3966, 0.2703, 0.4876 and 0.2919; the documented product of span and kind confidence falls below the configured 0.5 cut. Both amount occurrences remain separate until that reading step. The comparison covers eleven literal targets and one absent target; these results support restrained claims.
+
+## 0.2 integration, 2026-10-08
+
+Ian moved 0461 into 0.2 and directed landing alongside the after-sprint review. Current main was merged into the lane without dropping ticket work. The merge reconciled source ratchets with the measured combined totals and retained main's release hold. The prior installed qualification, bounded comparison and fresh review remain evidence for unchanged recognition behavior and host interfaces.
+
+Shared 0.2 conformance case `56-recognize-caller-defined-amount` is part of this branch. It carries instructions, entity definition and a described `amount` kind through exact token and kind/boundary requests. All 29 installed consumers already passed this case. The case remains the single shared custom-wording case; no duplicate fixture was added. The CLI help and recognition specification now state that described kinds reach every recognition step. The ticket, contract, ADR and milestone reflect the 0.2 decision. The 20-kind cap remains in place pending the separate TCGA round-one proposal.
+
+The offline tested command shape for the TCGA team is:
+
+```sh
+printf '%s\n' 'é TOTAL 42.75.' | thinkthen recognize --entity-definition 'The complete numeric amount, including its decimal point.' --kind amount='Receipt total amount, not its label.'
+```
+
+With the ticket's saved loopback response, the command returns `42.75` as kind `amount` at Unicode scalar span `[8,13)`. The example requests literal text only. A live model may return a different answer; this offline proof establishes request construction, decoding and offsets.
