@@ -1,6 +1,6 @@
 # 0411: Reread stored answers under changed rules on every surface
 
-Status: in progress. Existing SDK adoption landed in 0431 at e2641d87c. The other family checklists retain their required changed-reading cache/replay cases; close when all required surfaces pass.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 

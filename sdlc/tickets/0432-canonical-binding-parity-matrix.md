@@ -1,6 +1,6 @@
 # 0432: Enforce shared behavior and generate the current parity table
 
-Status: in progress. Reviewed routing, CLI adoption, authored-value corrections and public docs are landed in slice D. The complete 29-consumer installed campaign remains open; its passing table is required before the release candidate.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 

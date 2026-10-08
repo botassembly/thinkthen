@@ -1,6 +1,6 @@
 # 0418: Rank question sets through typed language and frame APIs
 
-Status: in progress. Native ordered rank members and existing SDK adoption landed through 0431 at e2641d87c. Foreign binding and dataframe adoption remain under their family checklists.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 

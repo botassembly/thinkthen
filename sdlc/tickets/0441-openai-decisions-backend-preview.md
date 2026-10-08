@@ -1,6 +1,6 @@
 # 0441: Ship the OpenAI Decisions text backend in 0.2
 
-Status: in progress. The native OpenAI text adapter, saved reply fixtures and cache identity corrections are on main with passing integration checks. Cross-surface adoption and the complete parity run remain with the binding and SQL owners.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 

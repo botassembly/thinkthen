@@ -1,6 +1,6 @@
 # 0414: Separate context from aggregate evidence everywhere
 
-Status: in progress. Native context behavior is landed. CLI adoption is pushed in the 0432 lane and remains under construction; final shared-case qualification across the required families remains open.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 

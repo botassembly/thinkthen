@@ -1,6 +1,6 @@
 # 0454: Store actual batch size and preserve per-question caching
 
-Status: in progress. Native actual observation batch size and per-question cache identity are implemented and landed. Remaining surface adoption and final cache checks remain in the family checklists and 0444.
+Status: COMPLETE. Reviewed implementation and adoption pass the full 29-consumer installed campaign at 60f0dcb9a. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08). Final platform, release QA and publication remain under 0425.
 
 Milestone: 0.2
 Owner: builder.
