@@ -26,8 +26,19 @@ pub(crate) fn pieces(text: &str) -> Vec<Piece> {
     let mut pieces: Vec<Piece> = Vec::new();
     let mut open: Option<(usize, usize)> = None;
     let mut scalar = 0;
+    let mut prefix = true;
     for (byte, character) in text.char_indices() {
         let next = byte + character.len_utf8();
+        if prefix
+            && matches!(
+                character,
+                '\u{feff}' | '\u{200b}' | '\u{200c}' | '\u{200d}' | '\u{2060}'
+            )
+        {
+            scalar += 1;
+            continue;
+        }
+        prefix = false;
         if character.is_whitespace() || is_mark(character) {
             close(&mut pieces, open.take(), byte, scalar);
             if !character.is_whitespace() {
