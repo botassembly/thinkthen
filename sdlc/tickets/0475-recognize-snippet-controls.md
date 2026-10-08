@@ -1,4 +1,4 @@
-# 0475: Let callers set recognition snippet and batch sizes
+# 0475: Let callers set recognition snippet width
 
 Status: OPEN. Fresh ticket review accepted the design; implementation has not started.
 
@@ -14,7 +14,7 @@ Reviews: revision b6970338e, accept
 
 ## Outcome
 
-Let each recognize question choose the number of context pieces shown on either side of a token or name. Keep six when omitted. Add a bounded step-1 batch-piece control if it remains a small extension of the same planner; keep 40 when omitted.
+Let each recognize question choose the number of context pieces shown on either side of a token or name. Keep six when omitted. The PM's later ruling keeps this ticket to one snippet-width option and drops the optional batch-size control.
 
 ## Evidence
 
