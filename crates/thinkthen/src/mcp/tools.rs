@@ -200,5 +200,15 @@ fn source_schema(file_only: bool, images: bool) -> Value {
     {
         properties.remove("window");
     }
+    if !file_only {
+        source["allOf"] = json!([
+            {"if":{"properties":{"unit":{"const":"window"}},"required":["unit"]},
+                "then":{"required":["window"]}},
+            {"if":{"required":["window"]},
+                "then":{"properties":{"unit":{"const":"window"}},"required":["unit"]}},
+            {"if":{"properties":{"media":{"const":"image"}},"required":["media"]},
+                "then":{"properties":{"unit":{"const":"file"}},"required":["unit"]}}
+        ]);
+    }
     source
 }

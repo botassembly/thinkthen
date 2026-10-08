@@ -17,7 +17,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     }
 
     let long = String::from_utf8_lossy(&long.stdout);
-    let stop = long.find("The answer is a bare").expect("answer");
+    let stop = long.find("The bare answer is").expect("answer");
     let first = "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?'";
     let second = "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9";
     let printed = long[..stop].lines().filter(|s| s.starts_with("printf "));
@@ -52,6 +52,14 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
         assert!(!long.contains(hidden), "{hidden} is in {long}");
     }
     assert!(long.contains("set -e"), "the help warns about set -e");
+    assert!(
+        long.contains("authored `--true` or `--false` meaning"),
+        "{long}"
+    );
+    assert!(
+        long.contains("`answer.probability` against `threshold`"),
+        "{long}"
+    );
     assert!(
         long.contains("no or not sure"),
         "the help names both nonzero answers"

@@ -126,6 +126,24 @@ fn table_and_jobs_options_are_absent_from_the_find_parser() {
 }
 
 #[test]
+fn help_omits_unsupported_image_attachment_and_repeated_prose() {
+    let help = run(&["find", "--help"], b"").expect("binary runs");
+    assert_eq!(help.status.code(), Some(0));
+    let printed = String::from_utf8_lossy(&help.stdout);
+    assert!(!printed.contains("--image"), "{printed}");
+    assert!(
+        printed.contains("Image media is unsupported by find"),
+        "{printed}"
+    );
+    assert_eq!(printed.matches("leaves together").count(), 1, "{printed}");
+    let refused =
+        run(&["find", "Which?", "--image", "missing.png"], b"one\ntwo\n").expect("binary runs");
+    assert_eq!(refused.status.code(), Some(2));
+    assert!(refused.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("images are unsupported"));
+}
+
+#[test]
 fn empty_input_succeeds_without_reading_a_key() {
     let output = run(&["find", "Which unit answers?"], b"").expect("binary runs");
     assert_eq!(output.status.code(), Some(0));

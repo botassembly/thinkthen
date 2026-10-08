@@ -5,6 +5,8 @@ use super::super::{
 };
 use serde_json::{Value, json};
 use std::io::Cursor;
+use std::io::Write as _;
+use std::process::Stdio;
 
 #[test]
 fn malformed_envelopes_do_not_echo_payloads_or_admit_null_ids() {
@@ -124,6 +126,89 @@ fn catalog_names_match_independent_function_inventory_and_only_advertise_tools()
                 .is_none()
         );
     }
+}
+
+#[test]
+fn advertised_source_schema_accepts_only_native_unit_media_window_combinations() {
+    let list = tools::list(&json!({"type":"object"}));
+    let decide = list["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|tool| tool["name"] == "decide")
+        .unwrap();
+    let tag = list["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|tool| tool["name"] == "tag")
+        .unwrap();
+    let script = r#"
+import json,sys
+from jsonschema import Draft202012Validator
+case=json.load(sys.stdin)
+for schema,source,expected in case['cases']:
+    actual=Draft202012Validator(schema).is_valid(source)
+    assert actual == expected, (source,expected,actual)
+"#;
+    let source = &decide["inputSchema"]["properties"]["source"];
+    let text_source = &tag["inputSchema"]["properties"]["source"];
+    let paths = json!(["file.txt"]);
+    let cases = [
+        (source, json!({"paths":paths}), true),
+        (source, json!({"paths":paths,"unit":"line"}), true),
+        (
+            source,
+            json!({"paths":paths,"unit":"window","window":2}),
+            true,
+        ),
+        (
+            source,
+            json!({"paths":paths,"unit":"file","media":"image"}),
+            true,
+        ),
+        (source, json!({"paths":paths,"media":"image"}), false),
+        (
+            source,
+            json!({"paths":paths,"unit":"line","media":"image"}),
+            false,
+        ),
+        (
+            source,
+            json!({"paths":paths,"unit":"window","window":2,"media":"image"}),
+            false,
+        ),
+        (source, json!({"paths":paths,"unit":"window"}), false),
+        (source, json!({"paths":paths,"window":2}), false),
+        (
+            source,
+            json!({"paths":paths,"unit":"file","window":2}),
+            false,
+        ),
+        (
+            text_source,
+            json!({"paths":paths,"unit":"file","media":"image"}),
+            false,
+        ),
+    ];
+    let mut child = crate::test_deadline::child::command("python3", &[])
+        .args(["-c", script])
+        .stdin(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(json!({"cases":cases}).to_string().as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[test]

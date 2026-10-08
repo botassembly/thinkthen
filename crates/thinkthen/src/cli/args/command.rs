@@ -42,7 +42,10 @@ pub(crate) enum Command {
     ///
     /// printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9
     ///
-    /// The answer is a bare `true`, `false`, or `null`. The exit code is 0 for
+    /// The bare answer is `true`, `false`, or `null`. With `--details`, `value`
+    /// holds the authored `--true` or `--false` meaning for a yes or no answer
+    /// when supplied. Read `answer.probability` against `threshold` for the
+    /// yes/no reading. The exit code is 0 for
     /// yes, 1 for no, 3 for not sure, and any other code when the run is broken
     /// or interrupted. Under `set -e` or `set -o pipefail` a no or not sure
     /// answer ends the script, so put the command in an `if`, a `case`, or a
@@ -141,9 +144,7 @@ pub(crate) enum Command {
     Choose(ChooseArguments),
 
     /// Pick the one line or record that best answers a question. Every line or
-    /// record leaves together and sees every other one.
-    ///
-    /// Every line or record leaves together in one request and sees every other
+    /// record leaves together in one request and sees every other
     /// one. Input defaults to lines; --jsonl reads records and --field selects
     /// what the model sees. The set holds 2 to 255 lines or records, or 2 to
     /// 254 with --none, and at most 16 MiB across the original input.
