@@ -1,12 +1,14 @@
 # 0492: Generate the C header from Rust definitions
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision 443b593f47216b3e88351beb7f5135b4245212aa, accept
+
+Landed: 2502db2
 
 ## Outcome
 
