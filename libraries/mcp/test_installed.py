@@ -10,6 +10,8 @@ import unittest
 from client import Client, CancelledError, ProtocolError, ToolError
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'conformance/children'))
+from children import child_env
 BINARY, BACKEND = sys.argv[1:3]
 # unittest sees only its own arguments.
 sys.argv[1:] = []
@@ -19,9 +21,8 @@ class Installed(unittest.TestCase):
     def setUp(self):
         self.scratch = tempfile.TemporaryDirectory(prefix='thinkthen-mcp-behavior-')
         self.home = Path(self.scratch.name)
-        self.env = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'HOME': str(self.home),
-                    'XDG_CONFIG_HOME': str(self.home / 'config'), 'XDG_CACHE_HOME': str(self.home / 'cache'),
-                    'XDG_STATE_HOME': str(self.home / 'state'), 'THINKTHEN_API_KEY': 'sk-mcp-loopback-only'}
+        self.env = child_env(home=self.home, LANG='C.UTF-8',
+                             THINKTHEN_API_KEY='sk-mcp-loopback-only')
         self.backend = subprocess.Popen((BACKEND,), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, text=True, env=self.env)
         self.port = self.backend.stdout.readline().strip()

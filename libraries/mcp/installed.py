@@ -6,13 +6,14 @@ import tempfile
 from client import Client, ProtocolError, ToolError
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'conformance/children'))
+from children import child_env
 
 
 def run(binary):
     case = json.loads((ROOT / 'conformance/cases.json').read_text())['cases'][0]
     with tempfile.TemporaryDirectory(prefix='thinkthen-mcp-installed-') as folder:
-        env = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'HOME': folder,
-               'XDG_CONFIG_HOME': folder, 'XDG_CACHE_HOME': folder, 'XDG_STATE_HOME': folder}
+        env = child_env(home=folder, LANG='C.UTF-8')
         recording = ROOT / case['exchanges'][0]['provenance']['path']
         with Client.launch((binary, 'mcp', '--replay', str(recording), '--no-cache'), env=env) as client:
             assert client.ping() == {}, 'ping failed'

@@ -34,10 +34,7 @@ pub(super) fn alone(path: &str, body: impl FnOnce()) {
         "--nocapture",
         "--test-threads=1",
     ])
-    .home(&home)
-    .env("XDG_CONFIG_HOME", home.join("config"))
-    .env("XDG_CACHE_HOME", home.join("cache"))
-    .env("XDG_STATE_HOME", home.join("state"))
+    .isolated_home(&home)
     .env(ALONE, path)
     .stdin(Stdio::null())
     .stdout(Stdio::piped())

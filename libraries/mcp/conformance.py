@@ -11,6 +11,8 @@ import threading
 from client import Client, CancelledError, ProtocolError, ToolError
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'conformance/children'))
+from children import child_env
 sys.path.insert(0, str(ROOT / 'conformance'))
 from c_parity import Backend, ERRORS, assertions, compact, document, prepare
 from c_images import assert_images
@@ -374,12 +376,11 @@ def run(port, binary):
             with tempfile.TemporaryDirectory(prefix='thinkthen-mcp-parity-') as tmp:
                 home = Path(tmp) / 'home'
                 home.mkdir()
-                tmp = str(home)
-                env = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8', 'HOME': tmp,
-                       'XDG_CONFIG_HOME': tmp + '/config', 'XDG_CACHE_HOME': tmp + '/cache',
-                       'XDG_STATE_HOME': tmp + '/state', 'THINKTHEN_API_KEY': 'sk-conformance-loopback',
-                       'LIQUIDAI_API_KEY': 'sk-conformance-loopback', 'PERPLEXITY_API_KEY': 'sk-conformance-loopback',
-                       'OPENROUTER_API_KEY': 'sk-conformance-loopback'}
+                env = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8',
+                                THINKTHEN_API_KEY='sk-conformance-loopback',
+                                LIQUIDAI_API_KEY='sk-conformance-loopback',
+                                PERPLEXITY_API_KEY='sk-conformance-loopback',
+                                OPENROUTER_API_KEY='sk-conformance-loopback')
                 backend = Backend(ROOT / 'target/debug/conformance-backend', env)
                 try:
                     prepare(home, value)

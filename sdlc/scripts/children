@@ -48,6 +48,20 @@ EXEMPT = {
 PENDING = {}
 TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
 
+# Ordinary product children migrated to the owned-home helpers. Configuration,
+# default-path and secrecy fixtures outside this family deliberately set folders;
+# toolchain/container runners also retain their own installation environments.
+OWNED_HOME_CALLERS = {
+    "libraries/mcp/conformance.py", "libraries/mcp/installed.py", "libraries/mcp/test_installed.py",
+    "crates/thinkthen/tests/native_named_questions.rs", "crates/thinkthen/tests/native_cache_policy.rs",
+    "crates/thinkthen/tests/public_controls/alone.rs",
+}
+DIRECT_FOLDER = re.compile(
+    r'''\.env\(\s*["'](?:XDG_\w+|APPDATA|LOCALAPPDATA)["']|'''
+    r'''["'](?:XDG_\w+|APPDATA|LOCALAPPDATA)["']\s*(?:\]\s*=|:)|'''
+    r'''\b(?:XDG_\w+|APPDATA|LOCALAPPDATA)\s*=''')
+FOLDERS = "set product child folders through the shared owned-home helper"
+
 SPAWNS = {
     "Rust": re.compile(r"Command::new\("),
     "Python": re.compile(r"\b(?:subprocess\.(?:run|Popen|call|check_call|check_output)|asyncio\.create_subprocess_exec)\s*\("),
@@ -156,6 +170,8 @@ def findings(path, text):
     text = uncommented(text, language)
     line = lambda at: text.count("\n", 0, at) + 1
     out = []
+    if path in OWNED_HOME_CALLERS:
+        out.extend((line(hit.start()), "folders") for hit in DIRECT_FOLDER.finditer(text))
     if language != "TypeScript" or "child_process" in text:
         for hit in SPAWNS[language].finditer(text):
             if language == "Rust":
@@ -178,7 +194,8 @@ def findings(path, text):
 
 def said(path, number, rule):
     language = LANGUAGES[pathlib.PurePath(path).suffix]
-    return f"children: {path}:{number}: {INHERITS.format(language) if rule == 'inherits' else READS}"
+    message = {"inherits": INHERITS.format(language), "reads": READS, "folders": FOLDERS}[rule]
+    return f"children: {path}:{number}: {message}"
 
 
 def tracked(root):
@@ -222,6 +239,14 @@ def rust_msg(path, number):
 
 
 CASES = [
+    ("libraries/mcp/installed.py", 'env = {"XDG_CONFIG_HOME": folder}\n',
+     [f"children: libraries/mcp/installed.py:1: {FOLDERS}"]),
+    ("libraries/mcp/test_installed.py", 'env["APPDATA"] = folder\nenv.update(XDG_STATE_HOME=folder)\n',
+     [f"children: libraries/mcp/test_installed.py:{n}: {FOLDERS}" for n in (1, 2)]),
+    ("crates/thinkthen/tests/native_cache_policy.rs", 'command.env("LOCALAPPDATA", folder);\n',
+     [f"children: crates/thinkthen/tests/native_cache_policy.rs:1: {FOLDERS}"]),
+    ("libraries/mcp/installed.py", 'env = child_env(home=folder)\n', []),
+    ("crates/thinkthen/tests/backend/cache_configuration.rs", 'command.env("XDG_CONFIG_HOME", folder);\n', []),
     ("a.rs", 'fn f() { Command::new("sh").arg("-c").output(); }\n', [rust_msg("a.rs", 1)]),
     ("a.rs", 'fn f() { Command::new("sh").env_clear().arg("-c").output(); }\n', []),
     ("a.rs", "fn f() {\n    let mut c = Command::new(x);\n    c.env_clear();\n    c.spawn();\n}\n", []),
