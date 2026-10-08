@@ -1,6 +1,6 @@
 # 0425: Put the complete SDK outcome into the 0.2 plan
 
-Status: OPEN. The reviewed plan, implemented-behavior notes, documentation trials and local MCP timing are complete. The combined installed-package table, final platform qualification, release QA and publication-dependent checks remain.
+Status: OPEN. Installed parity is complete; final qualification remains incomplete. Ian held release work on 2026-10-08 pending 0462 and the TCGA recognize decision; new release management requires his permission.
 
 Milestone: 0.2
 
@@ -41,3 +41,8 @@ Authority: Ian’s ruling in mailroom `2026-10-07-thinkthen-m5-use-and-the-two-s
 2. Stage 2: after successful candidate checks, release QA and Ian’s explicit publication go, tag the same qualified commit `v0.2.0` and dispatch release.yml in mode `release`. Keep the existing publication environment and run-specific approvals. Published-package checks follow actual publication.
 
 Dispatch hosted workflows only for a release candidate or a Windows-only fix that cannot be checked locally. Batch Windows fixes into one dispatch. Do not run hosted checks after each ticket or treat Linux evidence as Windows/macOS qualification.
+
+
+## Release hold, 2026-10-08
+
+Ian's current instruction supersedes automatic stage-one progression. Candidate six's two workflows are canceled. Cut no new candidate tag, run no GitHub workflow and advance no release branch without permission. Complete the after-sprint review and bug sweep in 0462, retain 0461 pending the PM's TCGA ruling, and report the confirmed fixes and remaining work. The six-candidate retrospective is in the existing 0425 record. Publication still requires Ian's explicit go.
