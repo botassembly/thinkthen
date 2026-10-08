@@ -11,3 +11,9 @@ Nonempty examples enforce the configured ceiling against the complete encoded bo
 The focused checks passed: three parser/renderer tests, five CLI backend cases, fourteen native tests selected by recognition names, package all-target Clippy, policy, settings and six executable recognition examples. Backend cases count actual loopback sends for early refusal, preserve earlier request and attempt facts on later failure, compare equivalent bracket and scalar examples, verify exact ceiling and one byte over, and exercise cache changes and replay. Native cases reuse `conformance/recognition-examples.json` with non-ASCII and combining characters. No paid backend or publication ran.
 
 The source ceiling grows for the typed carrier, single-bracket compatibility, safe selection and native behavior coverage. Mapping RecordInput centrally replaces repeated field copies rather than adding another carrier. Existing cohesive CLI arguments and public recognition files retain their source-size warnings. Full gate results will be recorded here after completion.
+
+## What the build taught us
+
+The default whole-body recognition bound intentionally preserves existing request sizing and does not enforce the configured byte ceiling. Examples need a sized boundary bound and a final check of the complete encoded body; measuring only the annotated text would miss context, questions and JSON overhead.
+
+Pointer resolution previously collapsed missing members and invalid traversal into the same absent result. Example fallback needs that distinction, so the existing decoded pointer traversal now exposes optional selection with a typed error. Existing ordinary resolution keeps its established optional behavior.
