@@ -21,3 +21,9 @@ Add every step-1 decoded name stretch to CLI recognize `--details`, with its spa
   Claim `crates/thinkthen/src/engine/facade/recognize/**`, `crates/thinkthen/src/cli/recognize/**`, `specification/recognize.md` and `conformance/**`.
 - Proof: A saved or loopback case covers a kept span, declined kind, under-cut span, edge-adjusted span, and duplicate where one proposal wins. Pin proposal order, offsets, actual probabilities and omitted uncomputed fields; pin unchanged bare output, requests and replay/cache keys. A failed record emits no partial stage result; prior completed records retain their existing behavior.
 - Defers: Calibration, alternative undecoded spans, a trace store/export API, and host SDK projection.
+
+## Consumer clarification to settle before implementation
+
+The TCGA message `2026-10-08-tcga-demo-check-seed-judgment-separately-from-the-boundary-cut.md` asks for every supplied seed's bounds, kind distribution, span probability and final disposition, including seeds below the strength cut, through CLI, Rust Request and Python. Landed 0506 adds supplied seeds to the proposal union and preserves the existing strength formula; it does not expose the missing span probability or disposition. The CLI-only scope above cannot satisfy all three requested routes.
+
+Coordinator recommendation: capture the admitted proposal union once, including supplied seeds, expose the same typed proposal facts through the canonical complete recognition result, and let CLI and the 0496 Python migration project them. Keep the existing threshold and model calls unchanged; callers inspect proposal facts separately from final kept entities. Settle this scope correction with the PM before implementation so each language migrates once. Do not claim that the current `answer.names` table supplies span probability or final disposition, or that a Python seed route is already shipped.
