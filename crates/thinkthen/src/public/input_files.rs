@@ -210,6 +210,31 @@ impl SourceItems {
     pub(crate) fn image_bytes_remaining(&self) -> usize {
         self.image_bytes_remaining.unwrap_or(usize::MAX)
     }
+
+    fn charge_image(&mut self, item: SourceItem) -> Result<SourceItem, Error> {
+        if let SourceItem::Image(image) = &item
+            && let Some(remaining) = &mut self.image_bytes_remaining
+        {
+            *remaining = remaining
+                .checked_sub(image.record.bytes().len())
+                .ok_or_else(attachment_budget_error)?;
+        }
+        Ok(item)
+    }
+
+    fn open(
+        &self,
+        path: &Path,
+        name: String,
+    ) -> Result<InputFileReader<std::io::BufReader<std::fs::File>>, Error> {
+        let file = super::files::open_regular(path)
+            .map_err(|_| Error::local("source file could not be opened"))?;
+        let mut reader = InputFileReader::new(name, std::io::BufReader::new(file), self.options)?;
+        if let Mode::Image { limit, .. } = &mut reader.0 {
+            *limit = (*limit).min(self.image_bytes_remaining());
+        }
+        Ok(reader)
+    }
 }
 impl Iterator for SourceItems {
     type Item = Result<SourceItem, Error>;
@@ -219,16 +244,7 @@ impl Iterator for SourceItems {
         }
         loop {
             if let Some(item) = self.current.as_mut().and_then(Iterator::next) {
-                let item = item.and_then(|item| {
-                    if let SourceItem::Image(image) = &item
-                        && let Some(remaining) = &mut self.image_bytes_remaining
-                    {
-                        *remaining = remaining
-                            .checked_sub(image.record.bytes().len())
-                            .ok_or_else(attachment_budget_error)?;
-                    }
-                    Ok(item)
-                });
+                let item = item.and_then(|item| self.charge_image(item));
                 self.stopped = item.is_err();
                 return Some(item);
             }
@@ -238,16 +254,7 @@ impl Iterator for SourceItems {
                 self.stopped = true;
                 return Some(Err(attachment_budget_error()));
             }
-            let opened = super::files::open_regular(&path)
-                .map_err(|_| Error::local("source file could not be opened"));
-            self.current = match opened.and_then(|file| {
-                let mut reader =
-                    InputFileReader::new(name, std::io::BufReader::new(file), self.options)?;
-                if let Mode::Image { limit, .. } = &mut reader.0 {
-                    *limit = (*limit).min(self.image_bytes_remaining());
-                }
-                Ok(reader)
-            }) {
+            self.current = match self.open(&path, name) {
                 Ok(reader) => Some(reader),
                 Err(error) => {
                     self.stopped = true;

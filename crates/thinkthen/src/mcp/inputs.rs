@@ -59,7 +59,9 @@ impl Attachment {
         *remaining = source.image_bytes_remaining();
         match self {
             Self::Path(_) => Ok(image.record),
-            Self::Declared(declared) => ImageInput::new(declared.media, image.record.bytes()),
+            Self::Declared(declared) => {
+                ImageInput::new(declared.media, image.record.0.bytes.clone())
+            }
         }
     }
 }
