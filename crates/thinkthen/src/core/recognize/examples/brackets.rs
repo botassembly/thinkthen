@@ -126,6 +126,7 @@ fn label(chars: &mut Peekable<Chars<'_>>) -> Result<String, ExampleError> {
 
 fn body(chars: &mut Peekable<Chars<'_>>) -> Result<String, ExampleError> {
     let mut text = String::new();
+    let mut literal_brackets = 0;
     while let Some(character) = chars.next() {
         match character {
             '\\' => text.push(escaped(chars)?),
@@ -133,7 +134,12 @@ fn body(chars: &mut Peekable<Chars<'_>>) -> Result<String, ExampleError> {
                 if chars.peek() == Some(&'[') || single(chars)?.is_some() {
                     return Err(ExampleError::Brackets);
                 }
+                literal_brackets += 1;
                 text.push('[');
+            }
+            ']' if literal_brackets > 0 => {
+                literal_brackets -= 1;
+                text.push(']');
             }
             ']' if chars.peek() == Some(&']') => {
                 chars.next();

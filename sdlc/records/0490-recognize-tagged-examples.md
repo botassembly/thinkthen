@@ -19,3 +19,5 @@ The default whole-body recognition bound intentionally preserves existing reques
 Pointer resolution previously collapsed missing members and invalid traversal into the same absent result. Example fallback needs that distinction, so the existing decoded pointer traversal now exposes optional selection with a typed error. Existing ordinary resolution keeps its established optional behavior.
 
 Fresh code review found that a double-bracket body accepted a nested single-bracket tag. The body parser now consults the existing single-bracket parser and refuses mixed nesting while retaining ordinary bracket literals. Both nesting directions and literal brackets pass the four parser/renderer tests. The source ceiling includes this small regression.
+
+The fix review also found that a literal closing bracket adjoining a double-tag delimiter fell outside the entity span. The body parser now counts unescaped literal bracket pairs before recognizing its outer delimiter. An exact text and scalar-span assertion passes alongside the mixed-nesting refusal. Binding ceilings that include the shared R complete sources were updated to count the required initializer migration.

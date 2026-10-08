@@ -76,6 +76,10 @@ fn ordinary_bracket_literals_remain_text() {
         let parsed = super::brackets::parse(source).unwrap();
         assert!(parsed.text.contains("[note]"));
     }
+    let parsed = super::brackets::parse("[[person|Ada [note]]]").unwrap();
+    assert_eq!(parsed.text, "Ada [note]");
+    assert_eq!(parsed.entities[0].start, 0);
+    assert_eq!(parsed.entities[0].end, 10);
 }
 
 #[test]
