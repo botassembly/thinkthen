@@ -2,7 +2,7 @@
 
 Status: OPEN.
 
-Milestone: 0.3
+Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
@@ -14,6 +14,6 @@ Resolve MCP error-ID and stdin-close behavior against the admitted protocol befo
 
 - Starts from: second-opinion PM message of 2026-10-08, ask 6; runtime/protocol paths can emit null IDs and cancel queued work or discard a partial final line at EOF. Source behavior is confirmed; a violation of the admitted protocol is not yet established.
 - Keeps: Framed stdio, cancellation/shutdown guarantees, ten tools, current installed conformance and no administration endpoint.
-- Changes: Compare the admitted specification and actual public tests with readable-ID errors, queued calls and complete/partial EOF lines. Specify the chosen behavior and only then implement any confirmed contract correction. Keep this in 0.3 unless a reproducible 0.2 conformance breach warrants promotion through PM.
+- Changes: Compare the admitted specification and actual public tests with readable-ID errors, queued calls and complete/partial EOF lines. Specify the chosen behavior and implement confirmed contract corrections in 0.2 under Ian's 2026-10-08 ruling. Claim `crates/thinkthen/src/mcp/**` and affected framed-client tests.
 - Proof: Owned framed client cases cover valid/invalid IDs and EOF while work is queued, without paid calls. No arbitrary protocol expectation or silent entity/data loss.
-- Defers: 0.2 implementation absent a confirmed contract breach; HTTP services, new tools and business logic.
+- Defers: HTTP services, new tools and proxy business logic.
