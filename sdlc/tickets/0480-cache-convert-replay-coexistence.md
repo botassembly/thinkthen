@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
+Reviews: revision 8c770b941fa7054c99fdbbb4de994760cfa13382, accept
+
 ## Outcome
 
 Preserve acknowledged answers across cache conversion and concurrent use. Replay reads a committed snapshot within the existing cancellation and lock-wait bounds.
