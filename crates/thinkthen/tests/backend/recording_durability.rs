@@ -76,6 +76,46 @@ fn every_command_refuses_recording_storage_before_key_lookup_or_a_request() {
     }
 }
 
+#[cfg(unix)]
+#[test]
+fn a_read_only_cache_file_refuses_before_a_request() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let cache = folder("read-only-cache-file");
+    let named = cache.to_string_lossy().into_owned();
+    let listener = Listener::answering(|_| Canned::ok(TRUE)).expect("listener");
+    let options = [
+        "decide",
+        QUESTION,
+        "--url",
+        listener.base(),
+        "--model",
+        "local-1",
+        "--cache",
+        &named,
+    ];
+    let first = spawn(
+        &options,
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        EVIDENCE.as_bytes(),
+    )
+    .expect("first command");
+    assert_eq!(first.status.code(), Some(0));
+    assert_eq!(listener.requests().len(), 1);
+    let sqlite = cache.join("thinkthen.sqlite");
+    fs::set_permissions(&sqlite, fs::Permissions::from_mode(0o400)).expect("read-only cache");
+    let second = spawn(
+        &options,
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"A different request.",
+    )
+    .expect("second command");
+    assert_eq!(second.status.code(), Some(5));
+    assert_eq!(String::from_utf8_lossy(&second.stderr), STORAGE);
+    assert!(listener.requests().is_empty());
+    fs::set_permissions(&sqlite, fs::Permissions::from_mode(0o600)).expect("restore cache");
+}
+
 #[test]
 fn concurrent_record_only_processes_each_send_and_the_later_write_wins() {
     let recording = folder("record-only-process-race");
