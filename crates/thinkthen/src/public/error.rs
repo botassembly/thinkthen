@@ -352,6 +352,7 @@ fn message(error: &EngineError) -> String {
         }
         EngineError::UsageOverflow => "the backend reported token counts whose total is too large",
         EngineError::RecognizeKinds => "recognize takes 0 to 20 distinct, nonblank kinds",
+        EngineError::RecognitionExamples(error) => return error.to_string(),
         EngineError::RecognizeRelationNames { count, limit } => {
             return crate::engine::error::relation_names_message(*count, *limit);
         }

@@ -136,6 +136,7 @@ impl Descriptor {
         } else if let Some(json) = &self.json {
             let row = reading.compose(RawRecord::json(json.get())?)?;
             RecordInput {
+                examples: None,
                 original: row.original.question_input(),
                 context: row.context,
                 options: row.options,
@@ -143,12 +144,14 @@ impl Descriptor {
         } else if let Some(text) = &self.text {
             let row = reading.compose(RawRecord::text(text)?)?;
             RecordInput {
+                examples: None,
                 original: row.original.question_input(),
                 context: row.context,
                 options: row.options,
             }
         } else {
             RecordInput {
+                examples: None,
                 original: QuestionInput::Images(crate::ImageEvidence::new(None, images.clone())?),
                 context: None,
                 options: None,

@@ -151,6 +151,7 @@ impl Engine {
         self.rank_set_records_complete_with(
             set,
             records.into_iter().map(|original| RecordInput {
+                examples: None,
                 original,
                 context: None,
                 options: None,
@@ -198,6 +199,11 @@ fn prepare<T: InputEvidence>(
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
         options.admission()?;
+        if record.examples.is_some() {
+            return Err(
+                Error::usage("record examples are admitted only for recognize").at_record(at),
+            );
+        }
         if record.options.is_some() {
             return Err(Error::usage("rank accepts no per-item options").at_record(at));
         }
@@ -210,6 +216,7 @@ fn prepare<T: InputEvidence>(
                 InputFunction::Rank,
                 question,
                 RecordInput {
+                    examples: None,
                     original: input.clone(),
                     context: record.context.clone(),
                     options: None,

@@ -45,6 +45,7 @@ fn native_originals_need_no_clone_send_or_serialization_and_context_controls_wir
             .into_iter()
             .enumerate()
             .map(|(at, context)| RecordInput {
+                examples: None,
                 original: original(at),
                 context: context.map(Into::into),
                 options: None,
@@ -141,16 +142,19 @@ fn replacement_shortlists_remain_whole_ordered_and_per_question_coalescing_keeps
             &fixed,
             [
                 RecordInput {
+                    examples: None,
                     original: original(0),
                     context: None,
                     options: Some(first.clone()),
                 },
                 RecordInput {
+                    examples: None,
                     original: original(1),
                     context: None,
                     options: Some(second),
                 },
                 RecordInput {
+                    examples: None,
                     original: original(2),
                     context: None,
                     options: Some(first),
@@ -184,6 +188,7 @@ fn replacement_shortlists_remain_whole_ordered_and_per_question_coalescing_keeps
         .decide_records_complete_with(
             &Question::decide("Refund?").unwrap().cut(),
             [RecordInput {
+                examples: None,
                 original: original(0),
                 context: None,
                 options: Some(
@@ -264,11 +269,13 @@ fn eager_invalid_later_evidence_refuses_the_whole_native_source_before_sending()
             &Question::decide("Refund?").unwrap().cut(),
             [
                 RecordInput {
+                    examples: None,
                     original: original(0),
                     context: None,
                     options: None,
                 },
                 RecordInput {
+                    examples: None,
                     original: Original {
                         id: 1,
                         text: " ",

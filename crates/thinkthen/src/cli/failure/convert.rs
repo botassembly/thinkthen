@@ -102,6 +102,12 @@ impl From<EngineError> for Failure {
                 file: false,
                 error: crate::core::RecognizeConfigError::Kinds,
             }),
+            EngineError::RecognitionExamples(error) => {
+                Self::Recognize(super::recognize::Error::Examples {
+                    record: None,
+                    error,
+                })
+            }
             EngineError::RecognizeLogical => {
                 Self::Recognize(super::recognize::Error::LogicalQuestion)
             }

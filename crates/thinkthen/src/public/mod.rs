@@ -61,6 +61,7 @@ pub use record_composition::{RawRecord, RecordEvidence, RecordReading, SourceLoc
 pub use record_context::{ObjectContext, RecordContext};
 pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
+pub use crate::core::{RecognitionExample, RecognitionExampleEntity, RecognitionExampleText};
 mod recognize_question;
 pub use recognize_question::RecognizeQuestionFile;
 mod relate;

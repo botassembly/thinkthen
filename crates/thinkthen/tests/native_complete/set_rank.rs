@@ -249,6 +249,7 @@ fn complete_set_rank_admits_every_member_and_empty_input_without_inventing_obser
             &set,
             [
                 Ok(RecordInput {
+                    examples: None,
                     original: "a",
                     context: None,
                     options: None,

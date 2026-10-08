@@ -113,6 +113,7 @@ fn direct(
                 .decide_records_complete_with(
                     decide,
                     ["x", "y"].map(|original| RecordInput {
+                        examples: None,
                         original,
                         context: None,
                         options: None

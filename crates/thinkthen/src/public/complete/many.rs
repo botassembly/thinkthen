@@ -7,6 +7,7 @@ use crate::public::{
 
 fn records<T>(original: T) -> RecordInput<T> {
     RecordInput {
+        examples: None,
         original,
         context: None,
         options: None,

@@ -101,6 +101,7 @@ fn source_relations_keep_nonserializable_nonclone_originals_and_refuse_mixed_sou
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}}}"#)).unwrap();
     let engine = engine(&listener);
     let make = |name, at| RecordInput {
+        examples: None,
         original: Original {
             value: item(name, at, "source.txt", "false").original,
             marker: std::rc::Rc::new(()),

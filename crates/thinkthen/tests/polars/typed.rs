@@ -45,6 +45,7 @@ fn typed_column_refuses_different_counts_or_null_positions_before_sending() {
     let column = Series::new("body".into(), [Some("a"), None]);
     let record = || {
         Some(RecordInput {
+            examples: None,
             original: "a".to_owned(),
             context: None,
             options: None,

@@ -10,6 +10,7 @@ fn context() -> RecordContext {
 }
 fn input(context: Option<RecordContext>) -> RecordInput<&'static str> {
     RecordInput {
+        examples: None,
         original: "Refund me.",
         context,
         options: None,

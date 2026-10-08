@@ -104,6 +104,7 @@ fn whole_set_find_and_rank_reader_failures_and_unsupported_controls_refuse_befor
     let records = || {
         [
             Ok(RecordInput {
+                examples: None,
                 original: "Valid.",
                 context: None,
                 options: None,
@@ -127,11 +128,13 @@ fn whole_set_find_and_rank_reader_failures_and_unsupported_controls_refuse_befor
     assert_eq!(ranked.stopped().at(), Some(2));
     let originals = [
         RecordInput {
+            examples: None,
             original: "First.",
             context: None,
             options: None,
         },
         RecordInput {
+            examples: None,
             original: "Second.",
             context: Some("".into()),
             options: None,

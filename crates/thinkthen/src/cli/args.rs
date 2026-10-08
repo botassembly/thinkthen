@@ -521,6 +521,12 @@ impl std::fmt::Debug for RecognizeArguments {
 /// Everything `recognize` was asked before its input is read.
 #[derive(Args)]
 pub(crate) struct RecognizeArguments {
+    /// Teach boundary questions with bracket or JSON Lines examples from FILE.
+    #[arg(long, value_name = "FILE", hide_short_help = true)]
+    pub(crate) examples: Option<PathBuf>,
+    /// Select each JSON record's replacement examples; an empty array clears fallback.
+    #[arg(long, value_name = "POINTER", hide_short_help = true)]
+    pub(crate) examples_field: Option<String>,
     /// Select each JSON record's separate context; empty text suppresses shared context.
     #[arg(long, value_name = "POINTER", hide_short_help = true)]
     pub(crate) context_field: Option<String>,

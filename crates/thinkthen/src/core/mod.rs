@@ -44,6 +44,8 @@ mod question_file;
 mod question_set;
 mod recognition_result;
 mod recognize;
+pub(crate) use recognize::{ExamplesError, example_file, render_examples, selected_examples};
+pub use recognize::{RecognitionExample, RecognitionExampleEntity, RecognitionExampleText};
 mod surface;
 pub(crate) use recognition_result::{PairOdds, Place, RecognitionOdds, RecognizedValue};
 pub use surface::{Surface, SurfaceError};

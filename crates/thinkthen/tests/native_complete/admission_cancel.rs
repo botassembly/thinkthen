@@ -20,6 +20,7 @@ fn call(
 ) -> Result<(), thinkthen::Error> {
     let records = || {
         (0..3).map(|_| RecordInput {
+            examples: None,
             original: Original { token, snapshots },
             context: None,
             options: None,
@@ -79,6 +80,7 @@ fn native_finite_source_cancel_stops_before_pulling_the_next_record() {
         assert_eq!(at, 0, "a cancelled native source was pulled again");
         token.cancel();
         Some(Ok(RecordInput {
+            examples: None,
             original: "Plain.",
             context: None,
             options: None,

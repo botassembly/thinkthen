@@ -313,6 +313,9 @@ pub(super) fn prepare_record<T: InputEvidence>(
     fallback: Option<&str>,
     at: usize,
 ) -> Result<(Held<T>, Prepared), Error> {
+    if record.examples.is_some() {
+        return Err(Error::usage("record examples are admitted only for recognize").at_record(at));
+    }
     let question = record.options.as_ref().map_or_else(
         || Ok(question.clone()),
         |options| options.replacing(question),

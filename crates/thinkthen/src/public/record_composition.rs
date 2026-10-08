@@ -227,6 +227,7 @@ pub struct RecordReading {
     context: Option<core::Pointer>,
     options: Option<core::Pointer>,
     context_schema: Option<super::InputDeclaration>,
+    examples: Option<core::Pointer>,
 }
 impl RecordReading {
     /// Admit ordered pointers using the ordinary reader, including field-name clashes.
@@ -247,6 +248,7 @@ impl RecordReading {
             context: context.map(pointer).transpose()?,
             options: options.map(pointer).transpose()?,
             context_schema: None,
+            examples: None,
         })
     }
     /// Declare the selected per-item context's actual type before composition.
@@ -255,6 +257,13 @@ impl RecordReading {
     pub fn with_context_schema(mut self, schema: super::InputDeclaration) -> Self {
         self.context_schema = Some(schema);
         self
+    }
+    /// Select replacement recognition examples while retaining missing-member fallback.
+    /// # Errors
+    /// Refuses malformed JSON Pointers.
+    pub fn with_examples_field(mut self, pointer: &str) -> Result<Self, Error> {
+        self.examples = Some(core::Pointer::new(pointer).map_err(Error::refused)?);
+        Ok(self)
     }
     /// Compose one original without inserting context, candidates or provenance into evidence.
     /// # Errors
@@ -296,6 +305,14 @@ impl RecordReading {
             .map_err(Error::refused)?
             .into_owned();
         Ok(RecordInput {
+            examples: self
+                .examples
+                .as_ref()
+                .map(|pointer| {
+                    core::selected_examples(&original.0, pointer).map_err(Error::refused)
+                })
+                .transpose()?
+                .flatten(),
             original: RecordEvidence {
                 original,
                 evidence: selected.evidence,
@@ -309,7 +326,11 @@ impl RecordReading {
         })
     }
     pub(crate) fn admit_images(&self) -> Result<(), Error> {
-        if self.reading.has_fields() || self.context.is_some() || self.options.is_some() {
+        if self.reading.has_fields()
+            || self.context.is_some()
+            || self.options.is_some()
+            || self.examples.is_some()
+        {
             return Err(Error::usage(
                 "image source records have no field, context or options pointers",
             ));
@@ -325,6 +346,7 @@ impl RecordReading {
                 let original = if !self.reading.has_fields()
                     && self.context.is_none()
                     && self.options.is_none()
+                    && self.examples.is_none()
                 {
                     RawRecord::text(&source.record)?
                 } else {
@@ -336,15 +358,12 @@ impl RecordReading {
                     Some(source.first_line),
                     Some(source.last_line),
                 )?);
-                Ok(RecordInput {
-                    original: record.original.question_input(),
-                    context: record.context,
-                    options: record.options,
-                })
+                Ok(record.map_original(|original| original.question_input()))
             }
             SourceItem::Image(source) => {
                 self.admit_images()?;
                 Ok(RecordInput {
+                    examples: None,
                     original: source.question_input(),
                     context: None,
                     options: None,

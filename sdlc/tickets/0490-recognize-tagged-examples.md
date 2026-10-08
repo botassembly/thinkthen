@@ -10,6 +10,8 @@ Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision c477a9ac099cfcb43307e8e79c414215eb39bc97, accept
 
+Reviews: revision 2e72414068757e9b3c21ae42b558693f0e44166a, accept
+
 ## Outcome
 
 Callers supply tagged examples without knowing recognition's piece boundaries or question wording. The PM cleared the evidence and scope conditions on 2026-10-08. Build in 0.2 after per-record context, rendering only answered step-1 questions before recognition controls and binding migration.

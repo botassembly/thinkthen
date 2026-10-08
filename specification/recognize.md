@@ -16,6 +16,26 @@ One call shares the engine's endpoint, pool, concurrency limit and storage scope
 
 Request adoption uses the existing per-record `context` field and reader projection `context_field`. Families adopting the versioned request in ADR 0125 must convert those values to `RecordInput` and `RecordReading`; they must not introduce another recognition context carrier. The legacy unversioned C JSON interface retains its recognition-record refusal.
 
+## Tagged examples
+
+Settled for 0.2 under [ADR 0127](../sdlc/planning/adr/0127-tagged-recognition-examples.md). `--examples FILE` supplies shared UTF-8 examples. A bracket file contains one example per nonempty line, using `[TEXT | KIND]`. Backslash escapes backslash, square brackets and the vertical bar. The single-bracket spelling trims syntax whitespace around its text and kind; use structured spans when those spaces belong to the original text. Single brackets without an unescaped vertical bar remain literal text. Nested tags, empty entities and incomplete tags refuse.
+
+A JSON Lines file contains strings with bracket examples or closed objects containing `text`, `entities` and optional `kinds`. Each entity contains `start`, `end` and `kind`. Example offsets always count zero-based Unicode scalar values, with an exclusive end, even on hosts whose result offsets use another convention. An example file whose first nonempty line starts with `{` or a JSON string quote selects JSON Lines; otherwise it selects line-based bracket text. Empty lines are ignored. A malformed row refuses the whole file without trying another format.
+
+```json
+{"text":"Zoë met Orbit.","entities":[{"start":0,"end":3,"kind":"person"},{"start":8,"end":13,"kind":"organization"}],"kinds":["person","organization"]}
+```
+
+`--examples-field POINTER` selects an array of those example values from each original JSON or table record. A missing selected member retains shared examples; a present empty array clears them. Null, another type or traversal through an invalid container refuses. Context selection remains independent: clearing record context does not clear examples, and clearing examples does not clear context. The CLI admits every selected record and its initial bodies before sending any request. Bounded native feeds retain their existing admitted-prefix behavior.
+
+Each example defaults to the resolved recognition kinds, or `ENTITY` when none were requested. A structured example's optional `kinds` declares a broader allowed vocabulary. Every entity must name an allowed kind, and its edges must coincide with recognition's own piece edges. Blank text, empty vocabularies, duplicate labels, overlapping spans and invalid edges refuse before sends. Valid entities outside the current recognition kind selection answer OUT; they still undergo span validation. Retrieval and example selection belong to the caller.
+
+Recognition renders every piece through its actual step-1 questions, in order, and follows each question with BEGIN, INSIDE, END, SINGLE or OUT. Selected entity answers include their kind. The ordered rendered examples enter each boundary request once, beside its evidence. General record context retains its exact value. Kind, edge and relation requests receive no examples. Changing examples changes ordinary boundary cache and recording identity; identical bracket and span examples share identity. Omission and an empty selected list retain existing request bytes and keys. Examples remain call inputs and do not enter saved question files or the context digest.
+
+`--plan` shows the exact rendered boundary bodies and includes their complete bytes in existing token accounting. Its request display describes the first record; its final summary counts every record. Nonempty examples make boundary bodies obey the configured request-byte ceiling and profile, including when a single question cannot fit. Groups may split without dropping examples. The historical no-example boundary behavior remains unchanged. Model-window admission and largest-request reporting belong to the separate recognition size controls.
+
+Native callers use `Recognize::with_examples`, `RecordInput.examples` and `RecordReading::with_examples_field`. Canonical Request adoption uses recognize options `examples` and `examples_field`, plus explicit record `examples`. An explicit per-item list conflicts with a projection pointer. Types and schema come from the shared Rust carrier; family migration adopts it once. Software fixtures establish admission, rendering and replay behavior, not model improvement.
+
 ## Caller-defined entities
 
 Settled for 0.2 by [ADR 0124](../sdlc/planning/adr/0124-caller-defined-recognition.md). `--instructions TEXT`, `--entity-definition TEXT` and existing `--kind KIND=DESCRIPTION` define the recognition task. Any supplied task wording or meaningful label description selects neutral entity questions. Dates, numbers, codes, amounts, units, ordinary words and web addresses can be entities. ThinkThen applies no fixed semantic suppression in this mode. Protocol labels and structural token rules retain their roles.

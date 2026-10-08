@@ -111,11 +111,13 @@ fn complete_relation_records_keep_literal_mode_and_refuse_bad_whole_sets_before_
         .unwrap();
     let lines = [
         RecordInput {
+            examples: None,
             original: r#"{"name":"literal"}"#,
             context: None,
             options: None,
         },
         RecordInput {
+            examples: None,
             original: "Other.",
             context: None,
             options: None,

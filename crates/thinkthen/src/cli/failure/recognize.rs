@@ -4,6 +4,10 @@ use super::Failure;
 
 #[derive(Debug)]
 pub(crate) enum Error {
+    Examples {
+        record: Option<usize>,
+        error: crate::core::ExamplesError,
+    },
     Config {
         file: bool,
         error: crate::core::RecognizeConfigError,
@@ -21,6 +25,10 @@ pub(crate) enum Error {
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
     Some(match failure {
+        Failure::Recognize(Error::Examples { record, error }) => (2, match record {
+            Some(at) => format!("record {at}: {error}"),
+            None => error.to_string(),
+        }),
         Failure::Recognize(Error::Config { file, error }) => {
             (if *file { 5 } else { 2 }, error.to_string())
         }

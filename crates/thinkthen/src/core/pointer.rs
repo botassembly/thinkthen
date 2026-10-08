@@ -36,6 +36,10 @@ pub(crate) enum PointerError {
     Control,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+#[error("a selected pointer traverses a JSON object or array")]
+pub(crate) struct PointerSelectionError;
+
 /// One JSON Pointer, kept as the user wrote it and as the parts it names.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "String"))]
@@ -83,14 +87,27 @@ impl Pointer {
 
     /// The value this pointer names, or `None` when the record holds none.
     pub(crate) fn resolve<'a>(&self, value: &'a Json) -> Option<&'a Json> {
+        self.select_optional(value).ok().flatten()
+    }
+
+    /// Distinguish an absent member from an invalid container along its path.
+    pub(crate) fn select_optional<'a>(
+        &self,
+        value: &'a Json,
+    ) -> Result<Option<&'a Json>, PointerSelectionError> {
         let mut found = value;
         for name in &self.parts {
-            found = match index(name) {
-                Some(place) => found.element(place).or_else(|| found.member(name))?,
-                None => found.member(name)?,
+            let selected = match found {
+                Json::Object(_) => found.member(name),
+                Json::Array(_) => found.element(index(name).ok_or(PointerSelectionError)?),
+                _ => return Err(PointerSelectionError),
             };
+            let Some(selected) = selected else {
+                return Ok(None);
+            };
+            found = selected;
         }
-        Some(found)
+        Ok(Some(found))
     }
 }
 

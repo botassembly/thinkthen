@@ -64,6 +64,7 @@ fn invalid_record_candidates_fail_at_admission_without_disclosing_content() {
 fn record_debug_requires_no_original_traits_and_withholds_caller_content() {
     struct Original;
     let input = RecordInput {
+        examples: None,
         original: Original,
         context: Some("private-marker".into()),
         options: Some(
