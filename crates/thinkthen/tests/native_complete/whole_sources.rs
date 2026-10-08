@@ -105,6 +105,7 @@ fn whole_set_find_and_rank_reader_failures_and_unsupported_controls_refuse_befor
         [
             Ok(RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: "Valid.",
                 context: None,
                 options: None,
@@ -129,12 +130,14 @@ fn whole_set_find_and_rank_reader_failures_and_unsupported_controls_refuse_befor
     let originals = [
         RecordInput {
             examples: None,
+            seed_spans: None,
             original: "First.",
             context: None,
             options: None,
         },
         RecordInput {
             examples: None,
+            seed_spans: None,
             original: "Second.",
             context: Some("".into()),
             options: None,

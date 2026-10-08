@@ -250,6 +250,7 @@ fn complete_set_rank_admits_every_member_and_empty_input_without_inventing_obser
             [
                 Ok(RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: "a",
                     context: None,
                     options: None,

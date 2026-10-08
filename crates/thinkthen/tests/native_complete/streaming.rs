@@ -81,6 +81,7 @@ fn pulled_originals_need_no_clone_send_or_serialize_and_collection_keeps_complet
     let records = (0..2).map(|number| {
         Ok(RecordInput {
             examples: None,
+            seed_spans: None,
             original: Original {
                 number,
                 local: Rc::new(()),
@@ -115,6 +116,7 @@ fn pulled_originals_need_no_clone_send_or_serialize_and_collection_keeps_complet
         pulled.set(pulled.get() + 1);
         Ok(RecordInput {
             examples: None,
+            seed_spans: None,
             original: "Never.",
             context: None,
             options: None,
@@ -172,6 +174,7 @@ fn pulled_choose_score_tag_and_filter_execute_concrete_complete_results() {
     let inputs = || {
         [Ok(RecordInput {
             examples: None,
+            seed_spans: None,
             original: "Text.",
             context: None,
             options: None,
@@ -275,12 +278,14 @@ fn an_explicit_per_record_context_obeys_the_caller_byte_cap_before_its_row_sends
         [
             RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: "First.",
                 context: None,
                 options: None,
             },
             RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: "Second.",
                 context: Some("x".repeat(200).into()),
                 options: None,

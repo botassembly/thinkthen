@@ -176,6 +176,33 @@ With relations, numeric `relation_pairs_upper_bound` and `relation_requests_uppe
 
 This specification makes no public price claim.
 
+## Review a flagged span with choose
+
+A caller can review a span it has flagged by asking the existing [choose](choose.md) function to select from bounded candidate spans. Supply the current span as a `keep` option. Generate a small set of plausible alternatives near that span, with separate labels and descriptions containing their literal text, kind and original coordinates. Bound the neighborhood and candidate count in caller code. Ask a question that states the entity definition and explains when to keep the current span. This composition uses the existing functions; it adds no revise mode or function.
+
+Validate every candidate against the unchanged original text before asking. Check integer offsets, a nonempty in-range span, and exact equality between the declared span text and the original slice. Use the offset convention of the surface that returned the recognition result. CLI and Rust spans count zero-based Unicode scalar values with an exclusive end; UTF-8 byte indices cannot slice them directly. Convert host offsets when crossing surfaces. Preserve the original record occurrence and span identity so repeated text cannot select the wrong occurrence.
+
+The [saved question](fixtures/recognize/caller-defined/flagged-span.json) uses the original generic text `é TOTAL 42.75.`. For this review example, the caller flags `42.75.` at [8,14) as its current span. The first option, `keep`, retains it; the sole alternative, `amount`, proposes `42.75` at [8,13). The earlier recognition fixture already returns the correct amount; this separate example supplies a hypothetical flagged span. Each option description is an object that the existing question-file reader accepts.
+
+Run the CLI from the repository root with the development command on PATH:
+
+```sh
+fixture=specification/fixtures/recognize/caller-defined
+env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen choose \
+  @"$fixture/flagged-span.json" --url "$(cat "$fixture/url.txt")" \
+  --model jev-1.13.0 --replay "$fixture/recording" --no-cache < "$fixture/text.txt"
+```
+
+The controlled replay prints `"amount"` and exits 0. The [runnable caller recipe](fixtures/recognize/caller-defined/flagged-span.py) validates both candidates before running that command and maps its answer back to the candidate metadata:
+
+```sh
+python3 specification/fixtures/recognize/caller-defined/flagged-span.py
+```
+
+It prints `{"pick":"amount","proposed":{"start":8,"end":13,"text":"42.75","kind":"amount"}}`. Its local candidate cap is a caller choice. Both examples use the saved fixture without a key or network access. These authored fixture answers establish the composition and coordinate mapping; they measure no model accuracy.
+
+In a real call, `choose` can return `null` with exit 3 for not sure. The recipe retains the current span in that case; other failures stop it. A `keep` answer retains the current span too. The caller owns any threshold, escalation and acceptance policy. Recheck the source text and candidate coordinates before applying a proposal if the source can change. The caller owns applying the result and checking any overlap with other entities. ThinkThen returns a label and never edits the original text or recognition result.
+
 ## Read native stage observations
 
 Native Rust callers can inspect each logical question through `CallOptions::new().observe(&callback)` on `Engine::recognize_records_complete_with`. The [runnable recipe](../libraries/rust/examples/recognize_observe.rs) replays the repository's saved generic receipt fixture twice, retains each original record, and copies each borrowed `QuestionDetail` with `to_owned()` inside the callback. It groups snapshots by `(index, stage, position)` in a map. `index` is the zero-based original record occurrence; `position` is the zero-based question position within that record's stage. Stage names are `boundary`, `kind`, `edge` and `relation`. The map's lexical stage order is for lookup; it does not describe execution order.
@@ -196,3 +223,13 @@ Cache and strict replay can supply the same logical question observations withou
 Serialized `RecordObservation` events omit actual question text. CLI `--details` provides question digests and stage distributions, but does not provide this indexed question transcript. Recordings retain request and response bodies, but do not themselves present the record/stage/position join. This recipe covers the native Rust observer route. It establishes no equivalent trace feature in other SDKs or the CLI.
 
 The callback exposes supplied question and evidence text to the caller. Copy or own it before the callback returns, and protect any caller-created transcript under the same privacy rules as the originals and recordings. The recipe retains its snapshots only in memory and prints them to standard output; it introduces no trace store.
+
+## Caller-supplied span proposals
+
+Recognition accepts unconfirmed spans through `RequestOptions.seed_spans` or `RequestItem.seed_spans`. Each `RecognitionSeedSpan` holds integer `start` and `end` offsets and an optional `kind`. Offsets count Unicode scalar values in the actual selected recognition evidence, without normalization. The interval is zero-based and excludes its end. Both edges must exactly match existing recognition piece edges, and the interval must be nonempty and within the evidence. Admission refuses an edge inside a piece; it never rounds it.
+
+`RequestOptions.seed_spans_field` and CLI `--seed-spans-field /seeds` select an array from each original JSON record. A missing member uses the shared fallback. An empty array clears it. Explicit null refuses. Explicit item spans conflict with a selection pointer. A present kind must exactly match a declared kind; omitted kind supplies no hint, and null refuses. These inputs are proposals for the current record. They are neither answered examples nor saved question spans.
+
+Step 2 judges the union of supplied spans and decoded boundary proposals. Identical bounds appear once, regardless of their hints; distinct overlapping and nested proposals remain. Classification asks every declared kind and the decline option. Without declared kinds, supplied spans ask internal `ENTITY` and decline options, including one-piece spans. A supplied kind never forces or narrows the answer. Shared evidence extends to the furthest end in a proposal group.
+
+Seeds preserve boundary questions and their request identity. Generated classification questions and evidence determine their own cache and replay identity. The existing final strength remains classification probability times boundary span probability. A seed that step 1 missed can therefore receive a confident classification in details and still fall below the final cut. Plans include seed overlaps in later name, classification and relation bounds; they send nothing and do not predict those answers.

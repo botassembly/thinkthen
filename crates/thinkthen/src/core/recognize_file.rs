@@ -17,6 +17,7 @@ pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
 #[cfg_attr(test, schemars(inline, with = "crate::core::Json"))]
 pub(crate) struct RecognizeSpec {
     pub(crate) examples: Vec<crate::core::RecognitionExample>,
+    pub(crate) seed_spans: Vec<crate::core::RecognitionSeedSpan>,
     pub(crate) metadata: crate::core::declaration::QuestionMetadata,
     pub(crate) kinds: RecognizeKinds,
     pub(crate) instructions: Option<QuestionText>,
@@ -115,6 +116,7 @@ impl RecognizeSpec {
         validate_relations(&kinds, &relations)?;
         Ok(Self {
             examples: Vec::new(),
+            seed_spans: Vec::new(),
             metadata: crate::core::declaration::QuestionMetadata::default(),
             kinds,
             instructions: None,
@@ -173,6 +175,7 @@ impl RecognizeSpec {
         Ok(Self {
             metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
             examples: Vec::new(),
+            seed_spans: Vec::new(),
             kinds,
             instructions: task_text(
                 value

@@ -22,7 +22,8 @@ impl AdmittedRequest {
         let explicit = options.field.is_some()
             || options.context_field.is_some()
             || options.options_field.is_some()
-            || options.examples_field.is_some();
+            || options.examples_field.is_some()
+            || options.seed_spans_field.is_some();
         let reading = reading(definition, options)?;
         let context = context_schema(definition).cloned();
         let reading = context.clone().map_or(reading.clone(), |schema| {
@@ -47,6 +48,7 @@ impl AdmittedRequest {
                     context: None,
                     options: None,
                     examples: None,
+                    seed_spans: None,
                     images: images.clone(),
                 };
                 let row = compose_item(&item, &reading, context.as_ref())?;
@@ -60,6 +62,7 @@ impl AdmittedRequest {
                     context: None,
                     options: None,
                     examples: None,
+                    seed_spans: None,
                     images: images.clone(),
                 };
                 let row = compose_item(&item, &reading, context.as_ref())?;
@@ -117,6 +120,7 @@ fn compose_item(
                 context: None,
                 options: None,
                 examples: None,
+                seed_spans: None,
             }
         }
         Some(RequestOriginal::Text { text }) => compose_original(reading, RawRecord::text(text)?)?,
@@ -128,6 +132,7 @@ fn compose_item(
                 context: None,
                 options: None,
                 examples: None,
+                seed_spans: None,
             }
         }
     };
@@ -137,6 +142,9 @@ fn compose_item(
     }
     if let Some(options) = &item.options {
         row.options = Some(options.clone());
+    }
+    if let Some(seeds) = &item.seed_spans {
+        row.seed_spans = Some(seeds.clone());
     }
     if let Some(examples) = &item.examples {
         row.examples = Some(examples.clone());
@@ -170,6 +178,7 @@ pub(super) fn compose_original(
         context: row.context,
         options: row.options,
         examples: row.examples,
+        seed_spans: row.seed_spans,
     })
 }
 fn read_image(image: &RequestImage) -> Result<ImageInput, Error> {
@@ -257,7 +266,8 @@ pub(super) fn reading(
     let explicit = options.field.is_some()
         || options.context_field.is_some()
         || options.options_field.is_some()
-        || options.examples_field.is_some();
+        || options.examples_field.is_some()
+        || options.seed_spans_field.is_some();
     let reading = if explicit {
         RecordReading::new(
             &fields,
@@ -269,6 +279,11 @@ pub(super) fn reading(
     };
     let reading = if let Some(pointer) = &options.examples_field {
         reading.with_examples_field(pointer)?
+    } else {
+        reading
+    };
+    let reading = if let Some(pointer) = &options.seed_spans_field {
+        reading.with_seed_spans_field(pointer)?
     } else {
         reading
     };
@@ -289,6 +304,7 @@ fn source_row(
             context: None,
             options: None,
             examples: None,
+            seed_spans: None,
         });
     }
     reading.compose_source(item)

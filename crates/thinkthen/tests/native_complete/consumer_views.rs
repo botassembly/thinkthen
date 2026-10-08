@@ -62,6 +62,7 @@ fn observer_remapping_after_null_omission_preserves_actual_details_and_identitie
             &question,
             retained.iter().map(|(_, item)| RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: *item,
                 context: None,
                 options: None,
@@ -193,6 +194,7 @@ fn loaded_atomic_and_rank_preparation_selects_original_fields_and_retains_author
     let records = || {
         [thinkthen::RecordInput {
             examples: None,
+            seed_spans: None,
             original: input.clone(),
             context: None,
             options: None,
@@ -244,10 +246,8 @@ fn loaded_atomic_and_rank_preparation_selects_original_fields_and_retains_author
         .decide_records_complete_with(
             &question,
             [thinkthen::RecordInput {
-                examples: None,
                 original: missing,
-                context: None,
-                options: None,
+                ..records()[0].clone()
             }],
             CallOptions::new(),
         )
@@ -277,6 +277,7 @@ fn located_annotation_documents_use_the_native_json_or_literal_reading_without_l
             &set,
             [RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: structured.clone(),
                 context: None,
                 options: None,
@@ -301,6 +302,7 @@ fn located_annotation_documents_use_the_native_json_or_literal_reading_without_l
             &root,
             [RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: literal.clone(),
                 context: None,
                 options: None,
@@ -346,6 +348,7 @@ fn atomic_and_rank_pointer_reading_preserves_literal_text_and_admits_explicit_js
         let records = || {
             [RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: input.clone(),
                 context: None,
                 options: None,
@@ -380,6 +383,7 @@ fn atomic_and_rank_pointer_reading_preserves_literal_text_and_admits_explicit_js
         let records = || {
             [RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: input.clone(),
                 context: None,
                 options: None,
@@ -425,6 +429,7 @@ fn annotation_documents_send_structural_json_without_inventing_a_location() {
             &set,
             [RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: input.clone(),
                 context: None,
                 options: None,
@@ -438,6 +443,7 @@ fn annotation_documents_send_structural_json_without_inventing_a_location() {
         &set,
         [Ok(RecordInput {
             examples: None,
+            seed_spans: None,
             original: input.clone(),
             context: None,
             options: None,

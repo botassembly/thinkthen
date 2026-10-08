@@ -46,6 +46,7 @@ fn typed_column_refuses_different_counts_or_null_positions_before_sending() {
     let record = || {
         Some(RecordInput {
             examples: None,
+            seed_spans: None,
             original: "a".to_owned(),
             context: None,
             options: None,

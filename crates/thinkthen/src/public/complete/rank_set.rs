@@ -152,6 +152,7 @@ impl Engine {
             set,
             records.into_iter().map(|original| RecordInput {
                 examples: None,
+                seed_spans: None,
                 original,
                 context: None,
                 options: None,
@@ -217,6 +218,7 @@ fn prepare<T: InputEvidence>(
                 question,
                 RecordInput {
                     examples: None,
+                    seed_spans: None,
                     original: input.clone(),
                     context: record.context.clone(),
                     options: None,

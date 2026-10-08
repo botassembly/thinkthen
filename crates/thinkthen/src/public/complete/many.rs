@@ -8,6 +8,7 @@ use crate::public::{
 fn records<T>(original: T) -> RecordInput<T> {
     RecordInput {
         examples: None,
+        seed_spans: None,
         original,
         context: None,
         options: None,

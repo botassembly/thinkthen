@@ -112,6 +112,7 @@ impl Engine {
             question,
             records.into_iter().map(|original| RecordInput {
                 examples: None,
+                seed_spans: None,
                 original,
                 context: None,
                 options: None,

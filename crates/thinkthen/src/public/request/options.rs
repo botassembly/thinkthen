@@ -104,6 +104,14 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "String"))]
     pub options_field: Option<String>,
+    /// Unconfirmed recognition proposals using exact Unicode scalar piece edges.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "Vec<crate::RecognitionSeedSpan>"))]
+    pub seed_spans: Option<Vec<crate::RecognitionSeedSpan>>,
     /// Optional recognition boundary examples; an empty list clears the fallback.
     #[serde(
         default,
@@ -112,6 +120,14 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "Vec<crate::RecognitionExample>"))]
     pub examples: Option<Vec<crate::RecognitionExample>>,
+    /// Per-record seed selection; missing retains fallback and an empty list clears it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "String"))]
+    pub seed_spans_field: Option<String>,
     /// Optional per-record recognition example projection.
     #[serde(
         default,

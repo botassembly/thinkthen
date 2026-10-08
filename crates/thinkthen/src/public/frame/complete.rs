@@ -119,6 +119,7 @@ pub(super) fn recognize(
     let cells = text(texts)?;
     let records = cells.iter().flatten().map(|text| RecordInput {
         examples: None,
+        seed_spans: None,
         original: text.to_owned(),
         context: None,
         options: None,

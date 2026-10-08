@@ -93,6 +93,7 @@ impl Invocation {
         }
         Ok(Box::new(std::iter::once(Ok(RecordInput {
             examples: None,
+            seed_spans: None,
             original,
             context: None,
             options: None,
@@ -186,6 +187,7 @@ fn compose_source(
         )?;
         return Ok(RecordInput {
             examples: None,
+            seed_spans: None,
             original,
             context: None,
             options: None,

@@ -11,6 +11,7 @@ fn context() -> RecordContext {
 fn input(context: Option<RecordContext>) -> RecordInput<&'static str> {
     RecordInput {
         examples: None,
+        seed_spans: None,
         original: "Refund me.",
         context,
         options: None,

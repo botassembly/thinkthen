@@ -82,6 +82,7 @@ pub(super) struct Question<'a> {
     pub(super) context: Option<&'a str>,
     pub(super) context_field: Option<&'a str>,
     pub(super) examples_field: Option<&'a str>,
+    pub(super) seed_spans_field: Option<&'a str>,
 }
 
 pub(super) fn run(
@@ -124,12 +125,14 @@ fn planned(
         context,
         context_field,
         examples_field,
+        seed_spans_field,
     } = question;
     let mut summary = PlanSummary::new(true);
     let mut first = None;
     for record in records {
         let record = record?;
         let spec = super::examples::selected(&record, examples_field, spec)?;
+        let spec = super::examples::seeds(&record, seed_spans_field, spec)?;
         let context = super::selected_context(&record, context_field, &spec, context)?;
         let text = reading.evidence(&record)?.as_text()?.into_owned();
         let context_value = context.as_ref().map(crate::core::Evidence::as_json);
@@ -165,7 +168,7 @@ fn planned(
         summary
             .possible_requests(name_bound)
             .map_err(|_| Failure::Defect("a plan is too large"))?;
-        let bound = relation_upper_bound(&spec, pieces.len());
+        let bound = relation_upper_bound(&spec, pieces.len().saturating_add(spec.seed_spans.len()));
         if let Some(bound) = bound {
             summary
                 .possible_requests(bound)
@@ -209,8 +212,14 @@ fn planned(
 }
 
 fn name_upper_bound(spec: &RecognizeSpec, pieces: usize) -> Result<usize, Failure> {
-    pieces
-        .checked_mul(if spec.kinds.is_empty() { 1 } else { 2 })
+    let decoded = pieces.checked_mul(if spec.kinds.is_empty() { 1 } else { 2 });
+    decoded
+        .and_then(|count| {
+            spec.seed_spans
+                .len()
+                .checked_mul(2)
+                .and_then(|seeds| count.checked_add(seeds))
+        })
         .ok_or(Failure::Defect("a plan is too large"))
 }
 

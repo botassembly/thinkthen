@@ -114,6 +114,7 @@ fn direct(
                     decide,
                     ["x", "y"].map(|original| RecordInput {
                         examples: None,
+                        seed_spans: None,
                         original,
                         context: None,
                         options: None

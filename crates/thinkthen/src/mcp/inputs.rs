@@ -137,6 +137,7 @@ impl Descriptor {
             let row = reading.compose(RawRecord::json(json.get())?)?;
             RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: row.original.question_input(),
                 context: row.context,
                 options: row.options,
@@ -145,6 +146,7 @@ impl Descriptor {
             let row = reading.compose(RawRecord::text(text)?)?;
             RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: row.original.question_input(),
                 context: row.context,
                 options: row.options,
@@ -152,6 +154,7 @@ impl Descriptor {
         } else {
             RecordInput {
                 examples: None,
+                seed_spans: None,
                 original: QuestionInput::Images(crate::ImageEvidence::new(None, images.clone())?),
                 context: None,
                 options: None,

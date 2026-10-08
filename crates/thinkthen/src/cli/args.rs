@@ -527,6 +527,9 @@ pub(crate) struct RecognizeArguments {
     /// Select each JSON record's replacement examples; an empty array clears fallback.
     #[arg(long, value_name = "POINTER", hide_short_help = true)]
     pub(crate) examples_field: Option<String>,
+    /// Select unconfirmed scalar seed spans for each JSON record.
+    #[arg(long, value_name = "POINTER", hide_short_help = true)]
+    pub(crate) seed_spans_field: Option<String>,
     /// Select each JSON record's separate context; empty text suppresses shared context.
     #[arg(long, value_name = "POINTER", hide_short_help = true)]
     pub(crate) context_field: Option<String>,

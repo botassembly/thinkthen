@@ -119,6 +119,7 @@ pub(super) fn compose(
     let options = options(&retained.options)?;
     Ok(RecordInput {
         examples: None,
+        seed_spans: None,
         original: Original { retained, native },
         context,
         options,

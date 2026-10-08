@@ -7,6 +7,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change, plus `spec` and affected surfaces when needed. Load and timing run only through `test-stress --run`. Gates use no network.
 - `policy.py` enforces source file limits; `sdlc/ratchet.json` holds the measured source ceiling. Explain warnings and growth in the commit; avoid mechanical splits.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
+- Run checks that read Git history after committing the changes, and finish them before committing again.
 - Beelink is primary. M5 may run experiments and Mac-specific checks, including before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
 - Cap each lane at 40 GB total, including `libraries/` and `databases/`. At landing delete only its ticket-owned `target/` scratch/logs; keep warm builds. Fully clean idle lanes only below 50 GB free. Require 50 GB free before full parity. Keep branch-specific source/build copies; sharing mixes branches.
 
