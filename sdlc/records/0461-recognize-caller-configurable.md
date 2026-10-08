@@ -97,4 +97,6 @@ The named outside-in cases in `crates/thinkthen/tests/backend/recognize/sized.rs
 
 Guaranteed local model-window refusal remains an unresolved completion criterion. The byte-to-token estimate is neither an authoritative token count nor a verified model byte ceiling. No estimated token hard cap, unknown-route refusal, tokenizer project or paid call accompanies this implementation. The PM must settle that contract before slice B can be called complete.
 
+The new complete-menu case failed against baseline product source with the prior recognition count refusal, then passed against the implementation. The existing library suite passed every case except its expected stale derived-schema comparison; the existing schema rewrite command regenerated those artifacts for a comparison rerun.
+
 The implementation lesson is to keep recognition menu validation separate from public verb cardinality and to carry one strict bound through initial planning and post-cache packing. Actual sends own facts maxima; preparation probes own admission only. Repeated boundary questions can share a live send, so later-refusal evidence counts observed requests instead of assuming one send per logical question.
