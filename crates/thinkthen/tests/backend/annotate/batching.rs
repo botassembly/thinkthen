@@ -225,7 +225,7 @@ fn structured_question_text_keeps_singleton_request_bytes_at_max() {
         String::from_utf8_lossy(&output.stdout)
             .lines()
             .map(|line| {
-                crate::native_results::compatibility::judgment(
+                crate::native_results::compatibility::judgment_with_member_facts(
                     serde_json::from_str(line).expect("complete row"),
                 )
             })
