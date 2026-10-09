@@ -65,6 +65,13 @@ tryCatch({
 }, error=function(e) {
   if (is.null(e$kind)) stop(e)
   if (!is.null(e$complete)) {
+    stopifnot(inherits(e$complete, "thinkthen_CallError"), inherits(e$complete, "thinkthen_complete"),
+      identical(capture.output(print(e$complete)), "<complete carrier: content withheld>"))
+    if (!inherits(e$complete$facts, "thinkthen_absent")) {
+      stopifnot(inherits(e$complete$facts, "thinkthen_Facts"), inherits(e$complete$facts$call_id, "thinkthen_CallId"))
+      gc()
+      stopifnot(inherits(e$complete$facts$call_id, "thinkthen_CallId"))
+    }
     plain<-get(".tt_complete_plain",asNamespace("thinkthen"))
     cat(jsonlite::toJSON(list(completed=if(length(prefix)) list(results=lapply(prefix,function(r) plain(r$result)),facts=plain(e$complete$facts),ordinals=lapply(prefix,`[[`,"ordinal"),inputs=lapply(prefix,function(r) plain(r$input))) else NULL,error=plain(e$complete),facts=if(inherits(e$complete$facts,"thinkthen_absent")) NULL else plain(e$complete$facts)),auto_unbox=TRUE,null="null",digits=NA));return(invisible(NULL))
   }

@@ -2,6 +2,17 @@
 use super::{Crossed, completion_of, deadline_of, interrupt_pending, text_of};
 use crate::{calls, usage};
 use extendr_api::prelude::*;
+#[derive(Debug)]
+struct NativeBatch {
+    session: crate::complete::stream::Session,
+    verb: String,
+}
+
+#[extendr]
+fn tt_complete_error_native(error: Robj) -> Crossed<Robj> {
+    crate::native_results::failure(&text_of(&error, "complete error")?)
+}
+
 #[extendr]
 fn tt_complete_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed<List> {
     let request = text_of(&request, "complete request")?;
@@ -48,60 +59,66 @@ fn tt_complete_batch_start(request: Robj, deadline: Robj) -> Crossed<Robj> {
     let deadline = deadline_of(&deadline)?
         .filter(|d| *d >= 0.0)
         .map(|d| d as i64);
+    let text = text_of(&request, "complete request")?;
+    let verb = crate::complete::parse(&text)
+        .map_err(|e| crate::carry(&e))?
+        .verb;
     let session = crate::complete::stream::Session::start(
         crate::engine()?,
-        text_of(&request, "complete request")?,
+        text,
         deadline,
         None,
         None,
         thinkthen::Surface::R,
     )
     .map_err(|e| crate::carry(&e))?;
-    Ok(ExternalPtr::new(session).into())
+    Ok(ExternalPtr::new(NativeBatch { session, verb }).into())
 }
 #[extendr]
-fn tt_complete_batch_pull(batch: Robj) -> Crossed<String> {
-    let session = ExternalPtr::<crate::complete::stream::Session>::try_from(batch)
+fn tt_complete_batch_pull(batch: Robj) -> Crossed<Robj> {
+    let session = ExternalPtr::<NativeBatch>::try_from(batch)
         .map_err(|_| usage("a native complete batch is required"))?;
-    session.advance().map_err(|e| crate::carry(&e))?;
+    session.session.advance().map_err(|e| crate::carry(&e))?;
     loop {
         if interrupt_pending() {
-            session.cancel();
+            session.session.cancel();
             return Err(crate::interrupted());
         }
-        if let Some(event) = session.poll().map_err(|e| crate::carry(&e))? {
-            return Ok(event);
+        if let Some(event) = session.session.poll().map_err(|e| crate::carry(&e))? {
+            return crate::native_results::event(&event, &session.verb);
         }
     }
 }
 #[extendr]
 fn tt_complete_batch_poll(batch: Robj, advance: bool) -> Crossed<Robj> {
-    let session = ExternalPtr::<crate::complete::stream::Session>::try_from(batch)
+    let session = ExternalPtr::<NativeBatch>::try_from(batch)
         .map_err(|_| usage("a native complete batch is required"))?;
     if advance {
-        session.advance().map_err(|e| crate::carry(&e))?;
+        session.session.advance().map_err(|e| crate::carry(&e))?;
     }
     if interrupt_pending() {
-        session.cancel();
+        session.session.cancel();
         return Err(crate::interrupted());
     }
-    Ok(match session.poll().map_err(|e| crate::carry(&e))? {
-        Some(event) => event.into(),
-        None => ().into(),
-    })
+    Ok(
+        match session.session.poll().map_err(|e| crate::carry(&e))? {
+            Some(event) => crate::native_results::event(&event, &session.verb)?,
+            None => ().into(),
+        },
+    )
 }
 #[extendr]
 fn tt_complete_batch_close(batch: Robj) -> Crossed<()> {
-    let session = ExternalPtr::<crate::complete::stream::Session>::try_from(batch)
+    let session = ExternalPtr::<NativeBatch>::try_from(batch)
         .map_err(|_| usage("a native complete batch is required"))?;
-    session.close();
+    session.session.close();
     Ok(())
 }
 #[extendr]
 fn tt_complete_batch_cancel(batch: Robj) -> Crossed<()> {
-    let session = ExternalPtr::<crate::complete::stream::Session>::try_from(batch)
+    let session = ExternalPtr::<NativeBatch>::try_from(batch)
         .map_err(|_| usage("a native complete batch is required"))?;
-    session.cancel();
+    session.session.cancel();
     Ok(())
 }
 
@@ -149,6 +166,7 @@ fn tt_engine_set(
 extendr_module! {
 mod complete;
     fn tt_engine_set;
+fn tt_complete_error_native;
 fn tt_complete_native;
 fn tt_complete_batch_start;
 fn tt_complete_batch_pull;
