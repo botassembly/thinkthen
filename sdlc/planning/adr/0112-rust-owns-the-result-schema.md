@@ -76,29 +76,15 @@ The residual risk is the `with` forms and any hand impls. They are few, and the 
 
 ### 4. What ports do
 
-A port reads the JSON the engine gives it into the host's ordinary JSON value: a dict, map, hash, list, `JsonNode`, `serde_json::Value` or equivalent. It adds exactly three things:
+The [2026-10-09 ruling](../../decisions/2026-10-09-thin-first-class-bindings.md) replaces the plain-host-value rule and typed-host prohibition. Rust owns every result type. Direct Rust bindings expose Rust-owned host objects. C-interface bindings expose generated host types over the owned JSON session. C, Zig, Ada and COBOL derive fixed layouts from the existing generated C header through `sdlc/scripts/generate-c-header.py`. No target maintains a second result field inventory or a runtime schema validator.
 
-1. **Named outcomes.** `YES`, `NO`, `UNSURE` with the C header's values 1, 0, 2, in the host's enum or constant idiom. A port maps JSON `true`, `false`, `null` to them.
-2. **Named error kinds.** `usage`, `backend`, `deadline`, `local`, `cancelled`, `defect`, with the C codes 1 to 6, in the host's enum, exception class or constant idiom. The retryable flag and message ride along.
-3. **Null versus failure.** One helper per port reads an annotate answer as unresolved, a value, or a failure with its `kind` and `cause`. A static language returns a three-case type. A dynamic language returns the JSON value and offers `failed(member)`, which returns the failure object or nothing. No port turns a failure into null. The helper applies only to the answer names of a row's `value` and `answers`. The record members of an annotated row stay open in the schema and are never read as failures.
+The existing schema test derives both result schemas together. `sdlc/generators/results/generate.py` consumes that Rust-derived graph, and the same test checks committed target output after checking the schemas. A target template implements only language naming, value conversion and ownership. Required members and nullable forms come from the derived schema. Optional host properties use explicit presence where missing and explicit null differ. Failure objects remain distinct from null answers. Known observations and unknown nested members survive plain conversion and JSON round trip. Unknown members remain data and never enable proxy behavior.
 
-Everything else stays host JSON. A reader ignores members it does not know.
+The first target template is `sdlc/generators/results/templates/csharp.py`. Its existing gate entry is `schema_tests::the_committed_result_schema_is_the_one_the_rust_types_derive`, reached through `sdlc/scripts/test`. The bounded target is `completeFacts` and its transitive graph. The candidate output is `sdlc/generators/results/csharp/CompleteFacts.g.cs`; host installation belongs to 0516. Immutable typed views own their JSON document. Optional and nullable properties use `Presence<T>` with missing, null and value states. String alternatives expose generated named values and retain future strings. `ToPlain`, `ToJson` and `ToJsonString` preserve the whole document, including unknown members, without activating behavior. These API details require review before host adoption.
 
-All packages are 0.0.1 and unreleased, so removing typed classes needs no deprecation. Deleted in the port pass, subject to each family's exact inventory:
+The full function-result union design and remaining target templates are not settled by this bounded template. A target rejects an unsupported known union during generation instead of silently erasing it to opaque JSON. Ticket 0513 owns those targets. Each host migration replaces its handwritten result layer and runs the shared corpus through its installed public API. Schema ownership and versioning in sections 1 through 3 remain in force.
 
-- Ada: the JSON validator and closed facts set in `thinkthen.adb`; `Run_Facts`, `JSON_Result`, `Entity`, `Relation_Edge`. `Outcome`, `Error_Kind` and the annotate field state stay.
-- C++: `CallFacts`, `Entity`, `Recognized`, `RelatedEntity`, `Edge`; the strict decoder shrinks to what reading host values needs. `ErrorKind` and `FailedField` stay.
-- COBOL: the seven-key facts check. The 88-level outcome and failure codes stay.
-- Dart: `typed.dart` except `ErrorKind` and the sealed annotate field.
-- JVM: `ResultEnvelope.java`'s allowed and required sets.
-- Objective-C: `facts_decode`'s key list and `TTCallFacts`. `TTErrorKind` and `TTFieldState` stay.
-- C#, Go, Swift, Zig: the typed facts structs. Their error-kind enums stay.
-- R: the field-by-field `list!` builders in `calls.rs` and `calls/render.rs`. The Rust side returns the serialized JSON and R reads it with `jsonlite`, already imported. R's one-based offset conversion stays.
-- Ruby: the key-by-key hash builders in `src/ffi/result.rs` and `result.rs`. Ruby reads the JSON with the standard `json` library.
-- Python: the `Facts` class becomes the same read-only mapping every other result already is. Its error classes stay.
-- TypeScript and PHP: nothing to delete.
-
-The C door itself stops building JSON by hand. `call.rs` and `failures.rs` serialize `DoorReply` and `Facts`. The door has no JSON call error: a failed call returns a code, a message and facts. (Amended in 0314 slice 2.) Today's `facts` bytes come from an unordered `json!` map, so their keys print in sorted order; the struct fields take that same order, and door output stays byte-identical.
+The C door serializes `DoorReply` and `Facts`; it does not build JSON by hand. Its frozen call error returns a code, message and facts. The owned session supplies its reviewed complete envelopes. Nothing in this amendment changes those ABI contracts.
 
 ### 5. How this combines with 0291
 
@@ -114,9 +100,9 @@ The port pass starts after ADR 0111 slice 3 lands, because that slice moves the 
 Per ruling 7, these wait:
 
 - Per-language label-set types, enum-derived label sets and description metadata beyond what each port has today.
-- Typed C result structs or description arrays in the ABI. The C door stays JSON.
+- Description arrays in the ABI. The frozen C door stays JSON; generated fixed result layouts are required by the 2026-10-09 ruling and owned by 0505.
 - SQL enums, domains or typed return columns.
-- Pydantic models or other schema-typed host classes, and generated TypeScript declarations or Python stubs. `index.d.ts` and `__init__.pyi` stay as they are.
+- External host validation frameworks such as Pydantic. Generated typed host results, declarations and stubs are now required by the 2026-10-09 ruling and are built under 0513 and the host migration tickets.
 - Span types that name their offset unit, and frame dtype changes.
 - A generated question-file schema.
 - Replacing `spec/result.md`'s member table check with schema validation.
@@ -146,5 +132,5 @@ The design author's calls:
 1. `schemars` as a dev-dependency, derived in a unit test, with `with` forms or hand impls for hand `Serialize` types and per-verb definitions named in the test.
 2. The question-file schema, now including `doorRequest`, stays hand-kept under its parser parity corpus.
 3. Strict port readers become tolerant, per the existing compatibility rule.
-4. Typed result classes in Ada, C++, Dart and the facts structs elsewhere are removed from public APIs.
+4. The 2026-10-09 ruling replaces handwritten result classes with generated first-class types; section 4 records the bounded first target.
 5. The port pass waits for ADR 0111 slice 3 and shares 0291's families.

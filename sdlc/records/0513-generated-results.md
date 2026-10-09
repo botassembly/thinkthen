@@ -1,0 +1,19 @@
+# Generated facts and presence
+
+This bounded slice starts from `db7917daa0cb19b09e4ad51ffec58a97ee923b1c`. It extends the existing Rust schema pipeline and supplies a C# candidate for the 0516 pilot. It does not install a host result layer.
+
+`sdlc/generators/results/generate.py` selects `completeFacts` and its transitive definitions from the existing Rust-derived complete schema. The C# template generates every member from those definitions. It has no facts member inventory. Existing Rust required-member and nullable schema forms already express the needed distinctions, so neither the serializer nor either schema changes. The existing schema test now checks the generated declarations after checking both Rust-derived schemas. The Rust source ceiling grows by seven nonblank lines for that gate call; inspection found no equivalent shared host-generation check to reuse. Existing size warnings concern unchanged files.
+
+The first template, `sdlc/generators/results/templates/csharp.py`, emits `sdlc/generators/results/csharp/CompleteFacts.g.cs`. Immutable views own their JSON. Optional and nullable members expose missing, null and value states. Typed attempt and persistence views retain all original members. String alternatives provide named values and retain future strings. Plain conversion and round trip retain unknown nested data. These values never activate proxy behavior. ADR 0112 sections 4 and 6 describe the candidate API and retain Rust ownership, versioning and tolerant reading.
+
+## Evidence
+
+The C# contract consumer compiles with .NET 8 and warnings treated as errors. Its first compile rejected an inferred concrete collection inside `Presence<IReadOnlyList<Attempt>>`; explicit generated type arguments fixed the conversion. The consumer then passes presence, false, zero, null token estimates, persistence states and failed advice, final failure facts, typed status attempts, unknown nested members and document ownership. It reads the existing shared fixture exported from main `986324637`, including 0520's observation cases. No fixture copy is committed. It does not claim execution or installed-package parity.
+
+The consumer command is `dotnet build sdlc/generators/results/csharp/Conformance.csproj --source target/0513-results/feed -p:BaseIntermediateOutputPath=ABSOLUTE_TARGET/obj/ -o ABSOLUTE_TARGET/bin`, followed by `dotnet ABSOLUTE_TARGET/bin/Conformance.dll SHARED_FIXTURE`. The build used an empty owned feed and cleared environment with an owned .NET home and package cache. Target output belongs to `target/0513-results/OWNER`.
+
+`cargo test --locked --offline -p thinkthen --lib schema_tests::the_committed_result_schema_is_the_one_the_rust_types_derive -j2` passes. The owned systemd unit applies 8 GiB memory, 1 GiB swap and two build jobs. The test derives both schemas and checks the generated C# bytes. The unit finishes successfully and becomes inactive. `generate.py --check`, `cargo fmt --check`, `policy.py` and the source ratchet pass. Policy reports only preexisting size warnings. A changed output and a temporary source-schema member both fail the generation check with `generated C# results differ`.
+
+## Limits
+
+The complete function-result unions and remaining target templates require their own typed alternatives. The generator rejects unsupported known forms instead of producing an opaque JSON fallback. This slice proves facts conversion through a generated consumer, not all ten functions through installed languages. Host installation, handwritten-reader removal, sessions, asynchronous behavior and cleanup belong to 0516 and the family migrations. The constrained targets reuse the existing C header generator when their layouts are implemented. No C header generation or ABI change is claimed here.
