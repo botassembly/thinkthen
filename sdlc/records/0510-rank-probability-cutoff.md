@@ -9,3 +9,5 @@ Fresh read-only review accepted ac60aee9d21141d4961ab7ee9027da2fc031ebdf. Focuse
 ## What the build taught us
 
 A reading default from another function can change behavior during shared admission. Keep omitted rank thresholds absent and test that distinction through Request. Cache identity and reading identity serve different purposes; compare saved answer reuse and model bytes rather than requiring identical reading digests. The measured source growth is 273 nonblank Rust lines, chiefly owning admission and outside-in cases. Existing rules and test entry points supply the checks without another verification layer.
+
+Changing an accepted reading can invalidate an older refusal sentence in a neighboring command's test. A saved rank band still fails locally with exit 5, but its diagnostic must describe rank's single-cut contract. Historical records retain the earlier contract; active expectations follow the accepted reading.
