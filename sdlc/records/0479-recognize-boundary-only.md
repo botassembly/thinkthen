@@ -14,7 +14,7 @@ The existing schema generator produces Request, result and complete-reading sche
 
 Offline audit and diff use proposal probability and match offsets without assigning a classified kind. Raised cuts retain the existing run-cut floor. Audit case rows retain BoundaryOnly shape even when a cut leaves no proposals. Diff JSON retains raw proposals; tables print text, offsets and probability. Whole audit parsing and fixtures retain their behavior.
 
-## Evidence and lessons
+## What the build taught us
 
 All backend responses came from existing saved fixtures or owned loopback listeners. No paid calls or release operations ran. Cargo checks used the existing warm outputs with offline mode, jobs two, the mold link flag, and a scope capped at 8 GiB memory and 1 GiB swap.
 
@@ -33,3 +33,7 @@ The existing public API inventory found three literal ticket omissions: the life
 The final affected Clippy command passed with `--lib --test native_complete --test backend -- -D warnings`. Existing audit selections passed 51 cases and diff selections passed 19 cases, including literal Whole JSON and table goldens. All three new BoundaryOnly command cases passed after the offline additions. `cargo fmt --all` and `git diff --check` passed.
 
 After the owning ticket corrected those literal declarations, the existing API inventory passed: 1884 declared items checked and four planted defects refused. The final lane measurement across `target`, `libraries` and `databases` was 36,467,156,057 bytes, below 40 GiB. Only four identified scratch folders left by this ticket's failed command cases were removed. No additional full target tree was created, and pre-existing warm outputs were preserved. All owned check scopes and process sessions completed and were reaped.
+
+The full documentation gate found a missing recognition mode settings row and an existing source-list assumption: extracting the first two `.contains` lists became incorrect after same-file parser helper extraction. The settings check now reads only the actual top-level and recognize admission guards in `declaration`, preserving missing/stale checks and the existing self-test. The reference names the mode, saved key and current host availability.
+
+The focused settings check passed with 83 rows, 84 flags, nine environment names, 24 question-file keys and zero failures. Its existing self-test passed all 12 cases. Both commands used the existing compiled binary on PATH under the bounded scope. `git diff --check` passed; this correction changed no product Rust source.

@@ -19,7 +19,7 @@ import tempfile
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PAGE = REPO / "specification" / "settings.md"
 SCHEMA = REPO / "specification" / "question-file.schema.json"
-RECOGNIZE = REPO / "crates/thinkthen/src/core/recognize_file.rs"  # its two key lists: the file, then `recognize`
+RECOGNIZE = REPO / "crates/thinkthen/src/core/recognize_file.rs"  # declaration() admits the file and recognize keys
 # The configuration reader's field lists: the file's top level, then a `backends` entry.
 CONFIG_SOURCES = ((REPO / "crates/thinkthen/src/config.rs", "UNKNOWN"),
                   (REPO / "crates/thinkthen/src/config/backends.rs", "EXTRA"))
@@ -138,7 +138,18 @@ def schema_keys():
     entries = [(name, entry["properties"]) for name, entry in defs.items() if name in entry.get("properties", {})]
     keys = {k for _, props in entries for k in props} | {
         f"{k}.{sub}" for _, props in entries for k, held in props.items() for sub in held.get("properties", {})}
-    top, section = (re.findall(r'"([a-z_]+)"', held) for held in LISTED.findall(RECOGNIZE.read_text(encoding="utf-8"))[:2])
+    source = RECOGNIZE.read_text(encoding="utf-8")
+    declaration = re.search(r"^fn declaration\(.*?(?=^fn |\Z)", source, re.M | re.S)
+    if declaration is None:
+        raise ValueError("recognize reader has no declaration admission function")
+    admitted = []
+    for binding in ("members", "fields"):
+        guard = rf"\b{binding}\.iter\(\)\.any\(\|\(name, _\)\| \{{\s*"
+        listed = re.search(guard + LISTED.pattern, declaration.group(0))
+        if listed is None:
+            raise ValueError(f"recognize declaration has no {binding} admission list")
+        admitted.append(re.findall(r'"([a-z_]+)"', listed.group(1)))
+    top, section = admitted
     return (keys | set(top) | {f"recognize.{k}" for k in section}) - NOT_KEYS
 
 
