@@ -195,6 +195,9 @@ class Probe {
  }
  static void Main(string[] args) {
   var assembly=Assembly.LoadFrom(args[0]);var records=new Dictionary<string,object>();var functions=new Dictionary<string,object>();
+  var engine=assembly.GetType("ThinkThen.Engine",true)!;
+  if(engine.GetMethods(BindingFlags.Public|BindingFlags.Instance|BindingFlags.Static).Any(m=>m.Name is "Call" or "CallTyped" or "Decide" or "DecideMany" or "Recognize" or "Relate" || m.Name.EndsWith("Complete") || m.Name.EndsWith("Batch")) || engine.GetMethods().Where(m=>m.Name=="Open").Any(m=>m.GetParameters().Any(p=>p.ParameterType==typeof(string))))throw new Exception("retired public execution API retained");
+  foreach(string old in new[]{"Native","CompleteReaders","Requests","Questions","ICompleteEngine","CompleteRequest","Answer","Outcome"})if(assembly.GetType("ThinkThen."+old) is {IsPublic:true})throw new Exception("retired public type retained: "+old);
   var dynamicAssembly=AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("AbiAlign"),AssemblyBuilderAccess.Run);
   dynamicAssembly.SetCustomAttribute(new CustomAttributeBuilder(typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[]{typeof(string)})!,new object[]{assembly.GetName().Name!}));
   var module=dynamicAssembly.DefineDynamicModule("align");
