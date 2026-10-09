@@ -25,3 +25,7 @@ One public core module admits every request: inputs, question files, label descr
 This amendment governs the earlier wording. One public Request edge admits requests through shared Rust grammar, limits, defaults and validation. Pure core retains typed semantic rules and imports no Request, decoder, reader or runtime handle, preserving ADR 0125. Surfaces retain host conversion, pointer representability and file-authority checks without restating engine semantic limits.
 
 The first slice removes duplicate SQL record-descriptor validation through existing Request conversion and admission. Claim `crates/thinkthen/src/public/request/input.rs`, `crates/thinkthen/src/public/request/composition.rs`, `crates/thinkthen/src/public/request/transport.rs`, `databases/sqlite/src/complete_native/inputs.rs`, `databases/sqlite/src/complete/request.rs` and `crates/thinkthen/tests/request_contract/projections.rs`. Name later consumers before their slices; remove cross-crate includes after those consumers migrate. Retain legacy C translation, accepted duplicate-key behavior and diagnostics. The requested lint detects restated engine semantic limits, not legitimate host checks or any mention of a constant.
+
+## Progress
+
+- 2026-10-09 started
