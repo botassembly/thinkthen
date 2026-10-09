@@ -445,3 +445,118 @@ fn ordered_shortlist_descriptors_preserve_description_order_and_native_refusals(
         );
     }
 }
+
+#[test]
+fn located_find_keeps_duplicate_occurrences_and_separates_the_none_candidate() {
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("request-find-source-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let path = folder.join("units.txt");
+    std::fs::write(&path, "First.\n\nSecond.\n").unwrap();
+    for (unit, none_wins) in [(SourceUnit::File, false), (SourceUnit::Line, true)] {
+        let listener = Listener::answering(move |body| {
+            let request: Value = serde_json::from_slice(body).unwrap();
+            let probabilities = request["questions"]["q1"]["criteria"]
+                .as_object().unwrap().keys()
+                .map(|key| (key.clone(), json!(u8::from(key == if none_wins { "none" } else { "u002" }))))
+                .collect::<serde_json::Map<_, _>>();
+            Canned::ok(&json!({"model":"fixed","answers":{"q1":{"type":"choice","probabilities":probabilities}}}).to_string())
+        }).unwrap();
+        let engine = engine(&listener);
+        let mut arguments = args(
+            RequestDefinition::Find(FindQuestionFile::from_json(r#"{"find":"Which?"}"#).unwrap()),
+            RequestInput::Source {
+                source: RequestSource {
+                    paths: vec![path.clone(), path.clone()],
+                    reading: ReaderOptions { unit, window: None },
+                    media: ReaderMedia::Text,
+                },
+            },
+        );
+        arguments.options.none = true;
+        let session = engine
+            .request_session(Request::new(RequestCall::Find(arguments)))
+            .unwrap();
+        let mut documents = vec![];
+        loop {
+            match session.try_read() {
+                RequestSessionRead::Result(packet) => documents
+                    .push(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap()),
+                RequestSessionRead::End => break,
+                RequestSessionRead::Pending => std::thread::yield_now(),
+            }
+        }
+        let result = &documents
+            .iter()
+            .find(|packet| packet["kind"] == "aggregate")
+            .unwrap()["value"];
+        let candidates = result["candidates"].as_array().unwrap();
+        let originals = if unit == SourceUnit::File {
+            vec!["First.\n\nSecond.\n"; 2]
+        } else {
+            vec!["First.", "Second.", "First.", "Second."]
+        };
+        assert_eq!(candidates.len(), originals.len() + 1);
+        for (index, (candidate, original)) in candidates.iter().zip(&originals).enumerate() {
+            assert_eq!(candidate["index"], index);
+            assert_eq!(candidate["input"], *original);
+            let first = if unit == SourceUnit::File {
+                1
+            } else {
+                1 + 2 * (index % 2)
+            };
+            let last = if unit == SourceUnit::File { 3 } else { first };
+            assert_eq!(
+                candidate["source"],
+                json!({"file":path.to_str().unwrap(),"first_line":first,"last_line":last})
+            );
+        }
+        let synthetic = candidates.last().unwrap();
+        assert!(synthetic["index"].is_null() && synthetic["input"].is_null());
+        assert!(synthetic.get("source").is_none());
+        assert_eq!(
+            result["index"],
+            if none_wins { Value::Null } else { json!(1) }
+        );
+        let detail = &documents
+            .iter()
+            .find(|packet| packet["value"]["kind"] == "question")
+            .unwrap()["value"]["detail"];
+        assert_eq!(detail["inputs"], json!(originals));
+        assert_eq!(
+            detail["input_sources"],
+            json!(
+                candidates
+                    .iter()
+                    .take(originals.len())
+                    .enumerate()
+                    .map(|(index, candidate)| json!({"index":index,"source":candidate["source"]}))
+                    .collect::<Vec<_>>()
+            )
+        );
+        assert!(detail.get("input_source").is_none());
+        assert_eq!(listener.count(), 1);
+    }
+    std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+fn empty_find_refuses_before_sending_or_inventing_a_none_answer() {
+    let listener = Listener::answering(response).unwrap();
+    let mut arguments = args(
+        Question::find("Which?").unwrap().into(),
+        RequestInput::Units { items: vec![] },
+    );
+    arguments.options.none = true;
+    let request = Request::new(RequestCall::Find(arguments)).admit().unwrap();
+    let error = engine(&listener)
+        .execute_request(&request, RequestEnvironment::default())
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.detail().message(),
+        "a find question offering none takes 2 to 254 units"
+    );
+    assert!(error.facts().is_none());
+    assert_eq!(listener.count(), 0);
+}

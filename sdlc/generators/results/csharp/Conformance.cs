@@ -246,6 +246,15 @@ static class Conformance
                 var detail = question.Detail;
                 Retains(original, detail);
                 Retains(original["question"]!, detail.Question);
+                if (detail.InputSource.State == PresenceState.Value)
+                    Retains(original["input_source"]!, detail.InputSource.Value);
+                foreach (var occurrence in detail.InputSources)
+                {
+                    Check(occurrence.Index < (ulong)detail.Inputs.Count, "native source index identifies an actual original");
+                    var location = original["input_sources"]!.AsArray().Single(value => value!["index"]!.GetValue<ulong>() == occurrence.Index)!;
+                    Retains(location, occurrence);
+                    Check(occurrence.Source.File == location["source"]!["file"]!.GetValue<string>(), "typed native location retains its authored file");
+                }
                 var expected = original.AsObject();
                 var value = expected["value"];
                 var state = !expected.ContainsKey("value") ? PresenceState.Missing : value is null ? PresenceState.Null : PresenceState.Value;

@@ -283,7 +283,7 @@ pub(crate) fn contextual(
     ))
 }
 
-fn physical_source(input: &QuestionInput) -> Option<core::CompletePhysicalSource> {
+pub(super) fn physical_source(input: &QuestionInput) -> Option<core::CompletePhysicalSource> {
     let source = match input {
         QuestionInput::Text(_) => None,
         QuestionInput::Images(images) => images.location(),
