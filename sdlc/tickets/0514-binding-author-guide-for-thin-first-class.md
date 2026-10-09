@@ -1,12 +1,14 @@
 # 0514: Rewrite the binding author guide for thin, first-class bindings
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 4cd756859, accept
 
 Reviews: revision b0a33b1f61a98a129c2374c2058383c57e65f637, accept
+
+Landed: e34970e
 
 ## Outcome
 
