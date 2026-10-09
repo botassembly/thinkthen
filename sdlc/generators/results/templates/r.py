@@ -35,6 +35,8 @@ def name(key):
 def expression(source, value='value'):
     if not isinstance(source, dict):
         return f'plain({value})'
+    if source.get('pattern') == '^[0-9a-f]{64}$':
+        return f'tagged(plain({value})?, "Digest", "thinkthen_identity")'
     if '$ref' in source:
         return f'convert({json.dumps(source["$ref"].removeprefix("#/$defs/"))}, {value})'
     alternatives = source.get('anyOf', source.get('oneOf', []))
@@ -83,7 +85,7 @@ def render(definitions):
             fields = ',\n'.join(f'({json.dumps(member)}, {str(member in source.get("required", [])).lower()}, |value| {expression(field)})'
                                 for member, field in source['properties'].items())
             lines.append(f'object(value, {json.dumps(name(key))}, &[{fields}])')
-        elif source.get('type') == 'string' and 'pattern' in source and key.endswith('Id'):
+        elif source.get('type') == 'string' and source.get('pattern') == '^[0-9a-f]{64}$':
             lines.append(f'tagged(plain(value)?, {json.dumps(name(key))}, "thinkthen_identity")')
         elif 'primitive_schemas' in source:
             item = source['primitive_schemas'].get('object')

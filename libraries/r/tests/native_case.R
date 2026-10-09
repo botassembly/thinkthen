@@ -28,6 +28,12 @@ tryCatch({
   for (result in done$results) {
     stopifnot(inherits(result, "thinkthen_complete"), inherits(result$answer_id, "thinkthen_AnswerId"))
     stopifnot("value" %in% names(plain(result)))
+    for (key in c("question_sha256", "questions_sha256", "context_sha256")) {
+      digest <- result$meta[[key]]
+      if (!inherits(digest, "thinkthen_absent")) stopifnot(inherits(digest, "thinkthen_Digest"),
+        identical(capture.output(print(digest)), "<complete identity>"))
+    }
+    stopifnot(all(vapply(result$meta$requests, inherits, TRUE, "thinkthen_Digest")))
     retained <- result$value
     gc()
     stopifnot(identical(result[["value"]], retained),

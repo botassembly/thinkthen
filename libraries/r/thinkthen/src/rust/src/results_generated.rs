@@ -370,7 +370,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completeattemptOutcome", value)
                 }),
                 ("request_id", false, plain),
-                ("request_sha256", true, plain),
+                ("request_sha256", true, |value| {
+                    tagged(plain(value)?, "Digest", "thinkthen_identity")
+                }),
                 ("sdk_request_id", true, |value| {
                     convert("completeSdkRequestId", value)
                 }),
@@ -644,7 +646,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     }
                 }),
                 ("cached", true, plain),
-                ("context_sha256", false, plain),
+                ("context_sha256", false, |value| {
+                    tagged(plain(value)?, "Digest", "thinkthen_identity")
+                }),
                 ("failed_questions", true, plain),
                 ("model", true, plain),
                 ("observations", true, |value| {
@@ -664,12 +668,20 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeprofileWarning", value)
                     }
                 }),
-                ("question_sha256", false, plain),
+                ("question_sha256", false, |value| {
+                    tagged(plain(value)?, "Digest", "thinkthen_identity")
+                }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
                 }),
-                ("questions_sha256", false, plain),
-                ("requests", true, |value| array(value, plain)),
+                ("questions_sha256", false, |value| {
+                    tagged(plain(value)?, "Digest", "thinkthen_identity")
+                }),
+                ("requests", true, |value| {
+                    array(value, |value| {
+                        tagged(plain(value)?, "Digest", "thinkthen_identity")
+                    })
+                }),
                 ("requests_sent", true, plain),
                 ("tool", true, plain),
                 ("url", true, plain),
