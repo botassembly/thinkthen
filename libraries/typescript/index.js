@@ -55,7 +55,7 @@ function opened(envelope) {
   const parsed = JSON.parse(envelope);
   if (parsed.err) {
     const error = new ThinkThenError(parsed.err.kind, parsed.err.message, parsed.err.retryable);
-    if (parsed.err.native_complete !== undefined) error.complete = require('./_complete.js').decode('CallError',parsed.err.native_complete);
+    if (parsed.err.native_complete !== undefined) error.complete = require('./_complete.js').decode('CallError',parsed.err.native_complete,true);
     if (parsed.err.facts !== undefined) error.facts = freezeJson(parsed.err.facts);
     if (parsed.err.details !== undefined) error.details = freezeJson(parsed.err.details);
     throw error;

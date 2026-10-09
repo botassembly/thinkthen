@@ -169,12 +169,29 @@ public sealed class ObservationObservationId : Observation
     public string ObservationId => Required("observation_id").GetString()!;
 }
 
+public readonly record struct Origin(string Value)
+{
+    public static Origin Live => new("live");
+    public static Origin Cache => new("cache");
+    public static Origin Replay => new("replay");
+    public static Origin Proxy => new("proxy");
+    public static Origin Memory => new("memory");
+}
+
 public sealed class PersistenceObservation : ResultObject
 {
     public PersistenceObservation(JsonElement document) : base(document) { }
     public Presence<string> Advice => Optional<string>("advice", member => member.GetString()!);
     public string ObservedAt => Required("observed_at").GetString()!;
     public UsagePersistence State => new UsagePersistence(Required("state").GetString()!);
+}
+
+public sealed class QuestionSource : ResultObject
+{
+    public QuestionSource(JsonElement document) : base(document) { }
+    public string AnsweredBy => Required("answered_by").GetString()!;
+    public Presence<uint> BatchSize => Optional<uint>("batch_size", member => member.GetUInt32());
+    public Origin Origin => new Origin(Required("origin").GetString()!);
 }
 
 public readonly record struct RelationDirection(string Value)
@@ -210,11 +227,16 @@ public sealed class RelationMemberAnswerId : RelationMember
     public RelationMemberAnswerId(JsonElement document) : base(document) { }
     public RelationDirection Direction => new RelationDirection(Required("direction").GetString()!);
     public RelationMethod Method => new RelationMethod(Required("method").GetString()!);
+    public IReadOnlyList<Observation> Observations => Array.AsReadOnly(Required("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
+    public Question Question => global::ThinkThen.Results.Question.Read(Required("question"));
+    public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(Required("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Reads => Required("reads").GetString()!;
     public string Relation => Required("relation").GetString()!;
     public string Request => Required("request").GetString()!;
     public RelatedEntity Source => new RelatedEntity(Required("source"));
     public Presence<RelatedEntity> Target => Optional<RelatedEntity>("target", member => new RelatedEntity(member));
+    public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(Required("threshold"));
+    public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
     public bool Accepted => Required("accepted").GetBoolean();
     public Answer Answer => global::ThinkThen.Results.Answer.Read(Required("answer"));
     public string AnswerId => Required("answer_id").GetString()!;
@@ -226,11 +248,16 @@ public sealed class RelationMemberFailureId : RelationMember
     public RelationMemberFailureId(JsonElement document) : base(document) { }
     public RelationDirection Direction => new RelationDirection(Required("direction").GetString()!);
     public RelationMethod Method => new RelationMethod(Required("method").GetString()!);
+    public IReadOnlyList<Observation> Observations => Array.AsReadOnly(Required("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
+    public Question Question => global::ThinkThen.Results.Question.Read(Required("question"));
+    public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(Required("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Reads => Required("reads").GetString()!;
     public string Relation => Required("relation").GetString()!;
     public string Request => Required("request").GetString()!;
     public RelatedEntity Source => new RelatedEntity(Required("source"));
     public Presence<RelatedEntity> Target => Optional<RelatedEntity>("target", member => new RelatedEntity(member));
+    public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(Required("threshold"));
+    public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
     public Failure Failure => new Failure(Required("failure"));
     public string FailureId => Required("failure_id").GetString()!;
 }
@@ -429,10 +456,101 @@ public sealed class FindAnswer : ResultObject
     public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string, double>(Required("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
 }
 
+public abstract class Question : ResultObject
+{
+    protected Question(JsonElement document) : base(document) { }
+    public static Question Read(JsonElement document)
+    {
+        Question? result = null;
+        if (document.TryGetProperty("verb", out var tagQuestionDecide) && tagQuestionDecide.ValueKind == JsonValueKind.String && tagQuestionDecide.GetString() == "decide")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionDecide(document);
+        }
+        if (document.TryGetProperty("verb", out var tagQuestionChoose) && tagQuestionChoose.ValueKind == JsonValueKind.String && tagQuestionChoose.GetString() == "choose")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionChoose(document);
+        }
+        if (document.TryGetProperty("verb", out var tagQuestionTag) && tagQuestionTag.ValueKind == JsonValueKind.String && tagQuestionTag.GetString() == "tag")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionTag(document);
+        }
+        if (document.TryGetProperty("verb", out var tagQuestionScore) && tagQuestionScore.ValueKind == JsonValueKind.String && tagQuestionScore.GetString() == "score")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionScore(document);
+        }
+        return result ?? throw new JsonException("Unknown result variant.");
+    }
+}
+
+public sealed class QuestionChoose : Question
+{
+    public QuestionChoose(JsonElement document) : base(document) { }
+    public IReadOnlyList<string> Options => Array.AsReadOnly(Required("options").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+    public JsonElement Text => Required("text").Clone();
+    public string Verb => Required("verb").GetString()!;
+}
+
+public sealed class QuestionDecide : Question
+{
+    public QuestionDecide(JsonElement document) : base(document) { }
+    public Presence<JsonElement> False => Optional<JsonElement>("false", member => member.Clone());
+    public JsonElement Text => Required("text").Clone();
+    public Presence<JsonElement> True => Optional<JsonElement>("true", member => member.Clone());
+    public string Verb => Required("verb").GetString()!;
+}
+
+public sealed class QuestionScore : Question
+{
+    public QuestionScore(JsonElement document) : base(document) { }
+    public IReadOnlyList<string> Levels => Array.AsReadOnly(Required("levels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+    public JsonElement Text => Required("text").Clone();
+    public string Verb => Required("verb").GetString()!;
+}
+
+public sealed class QuestionTag : Question
+{
+    public QuestionTag(JsonElement document) : base(document) { }
+    public IReadOnlyList<string> Labels => Array.AsReadOnly(Required("labels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+    public JsonElement Text => Required("text").Clone();
+    public string Verb => Required("verb").GetString()!;
+}
+
 public sealed class RelatedEntity : ResultObject
 {
     public RelatedEntity(JsonElement document) : base(document) { }
     public string Kind => Required("kind").GetString()!;
     public string Name => Required("name").GetString()!;
+}
+
+public abstract class Threshold
+{
+    private readonly JsonElement document;
+    protected Threshold(JsonElement document) { this.document = document.Clone(); }
+    protected JsonElement Document => document;
+    public JsonElement ToJson() => document.Clone();
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public string ToJsonString() => document.GetRawText();
+    public static Threshold Read(JsonElement document) => document.ValueKind switch
+    {
+        JsonValueKind.Number => new ThresholdNumber(document),
+        JsonValueKind.String => new ThresholdString(document),
+        _ => throw new JsonException("Unknown primitive result variant.")
+    };
+}
+
+public sealed class ThresholdNumber : Threshold
+{
+    public ThresholdNumber(JsonElement document) : base(document) { }
+    public double Value => Document.GetDouble();
+}
+
+public sealed class ThresholdString : Threshold
+{
+    public ThresholdString(JsonElement document) : base(document) { }
+    public string Value => Document.GetString()!;
 }
 

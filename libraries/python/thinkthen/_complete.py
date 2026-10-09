@@ -10,7 +10,7 @@ JsonValue = Union[None, bool, int, float, str, tuple["JsonValue", ...], Mapping[
 QuestionText = str | tuple[JsonValue, ...] | Mapping[str, JsonValue]
 Description = QuestionText | None
 
-from ._carriers import ABSENT, Absent, Carrier, Identity, Span
+from ._carriers import ABSENT, Absent, Carrier, Identity, Span, _json
 
 class CallId(Identity): pass
 
@@ -624,45 +624,43 @@ def _invalid():
     raise ValueError("invalid complete result")
 
 
-def _json(value):
-    if value is None or type(value) in (str, bool, int):
-        return value
-    if type(value) is float and math.isfinite(value):
-        return value
-    if isinstance(value, (list, tuple)):
-        return tuple(_json(x) for x in value)
-    if isinstance(value, Mapping) and all(type(k) is str for k in value):
-        return MappingProxyType({k: _json(v) for k, v in value.items()})
-    return _invalid()
-
-
-def decode(kind, value):
+def decode(kind, value, *, preserve_unknown=False):
     """Validate a result/2 carrier, preserving absence, null and array order."""
     if kind in _ALIASES or "|" in kind:
-        for variant in _ALIASES.get(kind, kind.split("|")):
+        variants = _ALIASES.get(kind, kind.split("|"))
+        if preserve_unknown and isinstance(value, Mapping):
+            identities = [{k.rstrip("?") for k, t in _MODELS.get(v, {}).items()
+                           if isinstance(globals().get(t), type) and issubclass(globals()[t], Identity)} for v in variants]
+            shared = set.intersection(*identities) if identities else set()
+            if sum(bool((keys - shared).intersection(value)) for keys in identities) > 1: return _invalid()
+        for variant in variants:
             try:
-                return decode(variant, value)
+                return decode(variant, value, preserve_unknown=preserve_unknown)
             except ValueError:
                 pass
         return _invalid()
     if kind.startswith("["):
         if not isinstance(value, (list, tuple)): return _invalid()
-        return tuple(decode(kind[1:-1], x) for x in value)
+        return tuple(decode(kind[1:-1], x, preserve_unknown=preserve_unknown) for x in value)
     if kind.startswith("{"):
         if not isinstance(value, Mapping) or not all(type(k) is str for k in value): return _invalid()
-        return MappingProxyType({k: decode(kind[1:-1], v) for k, v in value.items()})
+        return MappingProxyType({k: decode(kind[1:-1], v, preserve_unknown=preserve_unknown) for k, v in value.items()})
     if kind in _MODELS:
         shape = _MODELS[kind]
-        if not isinstance(value, Mapping) or set(value) - {k.rstrip("?") for k in shape}: return _invalid()
+        if not isinstance(value, Mapping): return _invalid()
+        extra = set(value) - {k.rstrip("?") for k in shape}
+        if extra and not preserve_unknown: return _invalid()
         held = {}
         for key, typed in shape.items():
             name = key.rstrip("?")
             if name not in value:
                 if not key.endswith("?"): return _invalid()
                 continue
-            held[name + "_" if name in ("true", "false") else name] = decode(typed, value[name])
+            held[name + "_" if name in ("true", "false") else name] = decode(typed, value[name], preserve_unknown=preserve_unknown)
         _check(kind, value)
-        return globals()[kind](**held)
+        result = globals()[kind](**held)
+        if extra: object.__setattr__(result, "_unknown_members", _json({k: value[k] for k in value if k in extra}))
+        return result
     if kind == "one":
         if type(value) is int and value == 1: return value
     if kind == "bytes":
@@ -736,8 +734,8 @@ def _check(kind, value):
 def to_json(value):
     """Project immutable carriers without creating IDs or default metadata."""
     if isinstance(value, Carrier):
-        return {field.name[:-1] if field.name in ("true_", "false_") else field.name: to_json(getattr(value, field.name))
-                for field in fields(value) if getattr(value, field.name) is not ABSENT}
+        return {**{k: to_json(v) for k, v in getattr(value, "_unknown_members", {}).items()}, **{field.name[:-1] if field.name in ("true_", "false_") else field.name: to_json(getattr(value, field.name))
+                for field in fields(value) if getattr(value, field.name) is not ABSENT}}
     if isinstance(value, Mapping): return {k: to_json(v) for k, v in value.items()}
     if isinstance(value, tuple): return [to_json(x) for x in value]
     if isinstance(value, Identity): return str(value)

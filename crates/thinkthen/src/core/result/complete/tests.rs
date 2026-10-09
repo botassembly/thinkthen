@@ -153,9 +153,15 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
     let successful = AnnotationMember {
         declarations: Default::default(),
         threshold: Some(Threshold::band(0.2, 0.95).unwrap()),
-        sources: Vec::new(),
-        observations: Vec::new(),
-        reported_usage: None,
+        sources: vec![QuestionSource {
+            origin: Origin::Replay,
+            answered_by: ModelName::new("actual").unwrap(),
+            batch_size: std::num::NonZeroU32::new(13),
+        }],
+        observations: vec![Observation::Answered {
+            observation_id: ObservationId::new("b".repeat(64)).unwrap(),
+        }],
+        reported_usage: Some(crate::core::ReportedUsage::new(Some(0), None)),
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
         legacy: AnnotatedEntry::Answered(AnnotatedAnswer::new(
             Value::YesNo(None),
@@ -169,7 +175,9 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         declarations: Default::default(),
         threshold: Some(Threshold::default()),
         sources: Vec::new(),
-        observations: Vec::new(),
+        observations: vec![Observation::Failed {
+            failure_id: crate::core::FailureId::new("d".repeat(64)).unwrap(),
+        }],
         reported_usage: None,
         identity: MemberIdentity::Failed(crate::core::FailureId::new("d".repeat(64)).unwrap()),
         legacy: AnnotatedEntry::Failed(AnnotatedFailure::new(
@@ -186,18 +194,33 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         "c".repeat(64)
     )));
     assert!(!success_json.contains("failure"));
+    let success: serde_json::Value = serde_json::from_str(&success_json).unwrap();
+    assert_eq!(
+        success["question_sources"],
+        serde_json::json!([
+            {"origin":"replay","answered_by":"actual","batch_size":13}
+        ])
+    );
+    assert_eq!(
+        success["observations"],
+        serde_json::json!([
+            {"observation_id":"b".repeat(64)}
+        ])
+    );
+    assert_eq!(success["usage"], serde_json::json!({"input_tokens":0}));
     let failure_json = json_line(&failed).unwrap();
     assert_eq!(
         failure_json,
         format!(
-            r#"{{"failure_id":"{}","question":{{"verb":"decide","text":"refund?"}},"failure":{{"kind":"backend","cause":"missing_probability"}},"request":"failure-key"}}"#,
+            r#"{{"failure_id":"{}","question":{{"verb":"decide","text":"refund?"}},"failure":{{"kind":"backend","cause":"missing_probability"}},"threshold":0.5,"request":"failure-key","question_sources":[],"observations":[{{"failure_id":"{}"}}]}}"#,
+            "d".repeat(64),
             "d".repeat(64)
         )
     );
     for absent in [
         r#""answer":"#,
         r#""value":"#,
-        r#""threshold":"#,
+        r#""usage":"#,
         r#""answer_id":"#,
     ] {
         assert!(!failure_json.contains(absent));

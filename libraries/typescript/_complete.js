@@ -126,30 +126,36 @@ function identity(value) {
   if (typeof value !== 'string' || !/^[0-9a-f]{64}$/.test(value)) return invalid();
   return value;
 }
-function decode(kind, value) {
+function decode(kind, value, preserveUnknown = false) {
   if (aliases[kind] || kind.includes('|')) {
-    for (const one of aliases[kind] ?? kind.split('|')) {
-      try { return decode(one, value); } catch (error) { if (!(error instanceof TypeError)) throw error; }
+    const variants = aliases[kind] ?? kind.split('|');
+    if (preserveUnknown && object(value)) {
+      const identities = variants.map(v => Object.entries(models[v] ?? {}).filter(([, t]) => ids.includes(t)).map(([k]) => k.replace(/\?$/, '')));
+      const shared = identities[0].filter(k => identities.every(keys => keys.includes(k)));
+      if (identities.filter(keys => keys.some(k => !shared.includes(k) && has(value, k))).length > 1) return invalid();
+    }
+    for (const one of variants) {
+      try { return decode(one, value, preserveUnknown); } catch (error) { if (!(error instanceof TypeError)) throw error; }
     }
     return invalid();
   }
   if (kind.startsWith('[')) {
     if (!Array.isArray(value)) return invalid();
-    return Object.freeze(value.map(x => decode(kind.slice(1, -1), x)));
+    return Object.freeze(value.map(x => decode(kind.slice(1, -1), x, preserveUnknown)));
   }
   if (kind.startsWith('{')) {
     if (!object(value)) return invalid();
-    return frozen(Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decode(kind.slice(1, -1), v)])));
+    return frozen(Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decode(kind.slice(1, -1), v, preserveUnknown)])));
   }
   if (models[kind]) {
     const shape = models[kind];
     const names = Object.keys(shape).map(k => k.replace(/\?$/, ''));
-    if (!object(value) || Reflect.ownKeys(value).some(k => k !== hidden && !names.includes(k))) return invalid();
-    const held = {};
+    if (!object(value) || (!preserveUnknown && Reflect.ownKeys(value).some(k => k !== hidden && !names.includes(k)))) return invalid();
+    const held = preserveUnknown ? Object.fromEntries(Object.entries(value).filter(([k]) => !names.includes(k)).map(([k, v]) => [k, json(v)])) : {};
     for (const [key, type] of Object.entries(shape)) {
       const name = key.replace(/\?$/, '');
       if (!has(value, name)) { if (!key.endsWith('?')) return invalid(); continue; }
-      const item = decode(type, value[name]);
+      const item = decode(type, value[name], preserveUnknown);
       Object.defineProperty(held, name, type === 'bytes'
         ? { get: () => new Uint8Array(item), enumerable: true }
         : { value: item, enumerable: true });

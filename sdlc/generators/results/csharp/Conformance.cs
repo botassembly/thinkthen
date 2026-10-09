@@ -202,6 +202,47 @@ static class Conformance
     public static void Main(string[] args)
     {
         var fixture = JsonNode.Parse(File.ReadAllText(args[0]))!.AsObject();
+        var annotation = fixture["results"]!.AsArray().Single(row => row!["type"]!.GetValue<string>() == "AnnotateResult")!["result"]!;
+        var member = annotation["answers"]!["ok"]!;
+        var threshold = Read(member["threshold"]!, Threshold.Read);
+        Check(threshold is ThresholdString band && band.Value == "0.3:0.7", "typed string threshold retains authored band");
+        Check(JsonNode.DeepEquals(member["threshold"], threshold.ToPlain()), "threshold owns primitive JSON after disposal");
+        var relation = fixture["results"]!.AsArray().Single(row => row!["type"]!.GetValue<string>() == "RelateResult")!["result"]!;
+        var cut = Read(relation["question"]!["threshold"]!, Threshold.Read);
+        Check(cut is ThresholdNumber number && number.Value == 0.5, "typed numeric threshold retains cut");
+        Check(JsonNode.DeepEquals(relation["question"]!["threshold"], JsonNode.Parse(cut.ToJsonString())), "numeric threshold round trips");
+        foreach (var invalid in new[] { "null", "true", "[]", "{}" })
+        {
+            using var document = JsonDocument.Parse(invalid);
+            try { Threshold.Read(document.RootElement); throw new Exception("unsupported threshold kind accepted"); }
+            catch (JsonException) { }
+        }
+        var question = (QuestionDecide)Read(member["question"]!, Question.Read);
+        Check(question.Text.ValueKind == JsonValueKind.Array, "authored question content remains an owned array");
+        Check(question.True.State == PresenceState.Null && question.False.Value.ValueKind == JsonValueKind.Object, "authored readings retain null and object presence");
+        Retains(member["question"]!, question);
+        var missingReading = member["question"]!.DeepClone().AsObject();
+        missingReading.Remove("true");
+        Check(((QuestionDecide)Read(missingReading, Question.Read)).True.State == PresenceState.Missing, "missing authored reading differs from null");
+        if (args.Length > 1)
+        {
+            var native = JsonNode.Parse(File.ReadAllText(args[1]))!["results"]!.AsArray();
+            var nativeRelation = native.Single(row => row!["type"]!.GetValue<string>() == "RelateResult")!["result"]!;
+            foreach (var source in nativeRelation["answer"]!["questions"]!.AsArray())
+            {
+                var nativeMember = Read(source!, RelationMember.Read);
+                var sources = nativeMember is RelationMemberAnswerId success ? success.QuestionSources : ((RelationMemberFailureId)nativeMember).QuestionSources;
+                var nativeObservations = nativeMember is RelationMemberAnswerId answered ? answered.Observations : ((RelationMemberFailureId)nativeMember).Observations;
+                var reading = nativeMember is RelationMemberAnswerId answer ? answer.Question : ((RelationMemberFailureId)nativeMember).Question;
+                var rule = nativeMember is RelationMemberAnswerId accepted ? accepted.Threshold : ((RelationMemberFailureId)nativeMember).Threshold;
+                Check(sources.Single().AnsweredBy == "fixed" && sources.Single().BatchSize.Value == 2, "generated member retains actual native batch source");
+                Check(nativeObservations.Count == 1, "generated member retains actual native observation");
+                Retains(source!["observations"]![0]!, nativeObservations.Single());
+                Check(((QuestionDecide)reading).Text.GetString() == source!["question"]!["text"]!.GetValue<string>(), "generated member retains actual native question");
+                Check(rule is ThresholdNumber numeric && numeric.Value == 0.5, "generated member retains actual native threshold");
+                Retains(source!, nativeMember);
+            }
+        }
         Variants(fixture);
         RoundTrip(fixture["facts"]!);
         // Final failure facts use exactly the same generated carrier.

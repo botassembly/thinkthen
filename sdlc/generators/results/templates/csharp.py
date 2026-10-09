@@ -43,6 +43,8 @@ def shape(schema):
             return shape(variants[0])
     if isinstance(schema.get('type'), list):
         kinds = [kind for kind in schema['type'] if kind != 'null']
+        if sorted(kinds) == ['number', 'string']:
+            return {**schema, 'primitive_variants': ['number', 'string']}
         if len(kinds) != 1:
             raise ValueError(f'C# target needs a typed union for {schema}')
         schema['type'] = kinds[0]
@@ -51,13 +53,18 @@ def shape(schema):
 
 def conversion(schema, definitions, expression='member', depth=0):
     schema = shape(schema)
+    if schema == {}:
+        # An explicitly unrestricted authored value owns arbitrary JSON content.
+        return 'JsonElement', f'{expression}.Clone()'
     if '$ref' in schema:
         key = schema['$ref'].removeprefix('#/$defs/')
         target = shape(definitions[key])
-        if 'properties' in target or enum_values(target) or 'variants' in target:
+        if ('properties' in target or enum_values(target) or 'variants' in target
+                or 'primitive_variants' in target):
             kind = name(key)
             argument = f'{expression}.GetString()!' if enum_values(target) else expression
-            return kind, (f'global::ThinkThen.Results.{kind}.Read({expression})' if 'variants' in target else
+            return kind, (f'global::ThinkThen.Results.{kind}.Read({expression})' if
+                          'variants' in target or 'primitive_variants' in target else
                           f'new {kind}({argument})')
         return conversion(target, definitions, expression, depth)
     if isinstance(schema.get('const'), str):
@@ -143,7 +150,10 @@ public abstract class ResultObject
 def render(definitions):
     chunks = [SUPPORT]
     declared = [name(key) for key, schema in definitions.items()
-                if 'properties' in schema or 'variants' in schema or enum_values(schema)]
+                if 'properties' in schema or 'variants' in schema or enum_values(schema)
+                or 'primitive_variants' in shape(schema)]
+    declared.extend(name(key) + name(variant) for key, schema in definitions.items()
+                    for variant in shape(schema).get('primitive_variants', []))
     if any(not kind for kind in declared) or len(set(declared)) != len(declared):
         raise ValueError('colliding or empty C# result type names')
     parents = {variant: name(key) for key, schema in definitions.items()
@@ -154,6 +164,8 @@ def render(definitions):
         values = enum_values(schema)
         if 'variants' in schema:
             chunks.append(render_union(kind, schema['variants'], definitions))
+        elif 'primitive_variants' in schema:
+            chunks.append(render_primitive_union(kind, schema['primitive_variants'], definitions))
         elif values:
             chunks.append(f'public readonly record struct {kind}(string Value)\n{{\n')
             for value in values:
@@ -176,6 +188,28 @@ def render(definitions):
         else:
             # Primitive references use their native C# types at the member edge.
             conversion(schema, definitions)
+    return ''.join(chunks)
+
+
+def render_primitive_union(kind, variants, definitions):
+    chunks = [f'public abstract class {kind}\n{{\n'
+              '    private readonly JsonElement document;\n'
+              f'    protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
+              '    protected JsonElement Document => document;\n'
+              '    public JsonElement ToJson() => document.Clone();\n'
+              '    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;\n'
+              '    public string ToJsonString() => document.GetRawText();\n'
+              f'    public static {kind} Read(JsonElement document) => document.ValueKind switch\n    {{\n']
+    for variant in variants:
+        token = {'number': 'Number', 'string': 'String'}[variant]
+        chunks.append(f'        JsonValueKind.{token} => new {kind}{name(variant)}(document),\n')
+    chunks.append('        _ => throw new JsonException("Unknown primitive result variant.")\n'
+                  '    };\n}\n\n')
+    for variant in variants:
+        native, decode = conversion({'type': variant}, definitions, 'Document')
+        chunks.append(f'public sealed class {kind}{name(variant)} : {kind}\n{{\n'
+                      f'    public {kind}{name(variant)}(JsonElement document) : base(document) {{ }}\n'
+                      f'    public {native} Value => {decode};\n}}\n\n')
     return ''.join(chunks)
 
 

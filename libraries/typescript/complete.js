@@ -12,7 +12,7 @@ class Functions {
     const completed = await this.#invoke(JSON.stringify(request), call);
     const rows = Array.isArray(completed.value.results) ? completed.value.results : [completed.value.results];
     const kind = verb[0].toUpperCase() + verb.slice(1) + 'Result';
-    return Object.freeze({results:Object.freeze(rows.map(row => carriers.decode(kind,row))), facts:carriers.decode('Facts',completed.value.facts), ordinals:Object.freeze(completed.value.ordinals), inputs:Object.freeze(completed.value.inputs.map(v => carriers.decode('NativeInput',v)))});
+    return Object.freeze({results:Object.freeze(rows.map(row => carriers.decode(kind,row,true))), facts:carriers.decode('Facts',completed.value.facts,true), ordinals:Object.freeze(completed.value.ordinals), inputs:Object.freeze(completed.value.inputs.map(v => carriers.decode('NativeInput',v,true)))});
   }
   #stream(verb,question,input,controls={}) {
     return new Batch(this.#batch(JSON.stringify({verb,question,input,attempts:controls.attempts===true}),controls),verb[0].toUpperCase()+verb.slice(1)+'Result',controls.signal,this.#opened);
@@ -52,13 +52,13 @@ class Batch {
     this.#busy=true;
     try {
       const event=JSON.parse(await new Promise((resolve)=>this.#native.pull(resolve)));
-      if(event.row) return {done:false,value:Object.freeze({result:carriers.decode(this.#kind,event.row),ordinal:event.ordinal,input:carriers.decode('NativeInput',event.input)})};
+      if(event.row) return {done:false,value:Object.freeze({result:carriers.decode(this.#kind,event.row,true),ordinal:event.ordinal,input:carriers.decode('NativeInput',event.input,true)})};
       await this.return();
       if(event.error) {
-        this.facts=event.error.facts ? carriers.decode('Facts',event.error.facts):undefined;
+        this.facts=event.error.facts ? carriers.decode('Facts',event.error.facts,true):undefined;
         this.#opened(JSON.stringify({err:{...event.error,native_complete:event.error}}));
       }
-      this.facts=carriers.decode('Facts',event.facts);
+      this.facts=carriers.decode('Facts',event.facts,true);
       return {done:true,value:undefined};
     } finally {this.#busy=false;}
   }

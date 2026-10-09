@@ -78,12 +78,12 @@ def test_ids_facts_and_started_failure_have_no_synthetic_defaults():
 @pytest.mark.parametrize("change", [
     {"schema": "thinkthen.result/1"}, {"answer_id": "a" * 63},
     {"value": 0}, {"answer": {"kind": "yes_no", "probability": True}},
-    {"position": {"file": "x", "first": 4}}, {"proxy": None},
+    {"position": {"file": "x", "first": 4}},
 ])
 def test_invalid_complete_results_refuse_without_exposing_input(change):
     row = copy.deepcopy(FIXTURE["results"][0]["result"])
     row.update(change)
-    with pytest.raises(ValueError, match="invalid"): c.decode("DecideResult", row)
+    with pytest.raises(ValueError, match="invalid"): c.decode("DecideResult", row, preserve_unknown=True)
 
 
 def test_inconsistent_provenance_is_not_repaired():
@@ -172,3 +172,30 @@ def test_current_facts_preserve_request_measurements_and_persistence():
         assert facts.usage_persistence.observed_at == 'facts_snapshot'
         assert facts.usage_persistence.advice == raw['usage_persistence'].get('advice', c.ABSENT)
         assert c.to_json(facts) == raw
+
+
+def test_output_extensions_round_trip_owned_json_without_relaxing_requests():
+    extension = {'null': None, 'false': False, 'zero': 0, 'array': [None, False, 0], 'object': {'nested': []}}
+    for fixture in FIXTURE['results'] + FIXTURE['native_members']:
+        raw = copy.deepcopy(fixture['result'])
+        raw['proxy'] = None
+        raw['extension'] = copy.deepcopy(extension)
+        raw['meta']['extension'] = copy.deepcopy(extension)
+        if fixture['type'] == 'AnnotateResult':
+            for entry in raw['answers'].values(): entry['extension'] = copy.deepcopy(extension)
+        if fixture['type'] == 'RelateResult':
+            for entry in raw['answer']['questions']: entry['extension'] = copy.deepcopy(extension)
+        result = c.decode(fixture['type'], raw, preserve_unknown=True)
+        assert c.to_json(result) == raw
+        assert isinstance(result.answer_id, c.AnswerId)
+        raw['extension']['array'].append('mutated')
+        assert c.to_json(result)['extension'] == extension
+        assert 'extension' not in repr(result)
+    for kind, entry in [('AnnotationEntry', FIXTURE['results'][7]['result']['answers']['ok']),
+                        ('RelationEntry', FIXTURE['results'][9]['result']['answer']['questions'][0])]:
+        with pytest.raises(ValueError, match='invalid'):
+            c.decode(kind, {**entry, 'failure_id': 'b' * 64}, preserve_unknown=True)
+    with pytest.raises(ValueError, match='invalid'):
+        c.decode('DecideSpec', {'decide': 'Q', 'proxy': None})
+    with pytest.raises(ValueError, match='invalid'):
+        c.decode('DecideResult', {**FIXTURE['results'][0]['result'], 'answer': {'kind': 'new', 'probability': .5}}, preserve_unknown=True)

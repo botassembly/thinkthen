@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Generic, Iterator, Literal, TypeVar
 from ._complete import *
+from ._carriers import Absent as Absent
 from . import CancelToken
 R = TypeVar('R')
 @dataclass(frozen=True, kw_only=True)

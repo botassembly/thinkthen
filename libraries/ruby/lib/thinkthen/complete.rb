@@ -160,11 +160,17 @@ module ThinkThen
       end
     end
 
-    def self.decode(kind, value)
+    def self.decode(kind, value, preserve_unknown: false)
       if ALIASES.key?(kind) || kind.include?("|")
-        (ALIASES[kind] || kind.split("|")).each do |variant|
+        variants = ALIASES[kind] || kind.split("|")
+        if preserve_unknown && value.is_a?(Hash)
+          identities = variants.map { |v| (MODELS[v] || {}).select { |_, t| IDS.include?(t) }.keys.map { |k| k.delete_suffix("?") } }
+          shared = identities.reduce { |a, b| a & b }
+          invalid if identities.count { |keys| (keys - shared).any? { |k| value.key?(k) } } > 1
+        end
+        variants.each do |variant|
           begin
-            return decode(variant, value)
+            return decode(variant, value, preserve_unknown: preserve_unknown)
           rescue ArgumentError
             next
           end
@@ -173,15 +179,17 @@ module ThinkThen
       end
       if kind.start_with?("[")
         invalid unless value.is_a?(Array)
-        return value.map { |v| decode(kind[1...-1], v) }.freeze
+        return value.map { |v| decode(kind[1...-1], v, preserve_unknown: preserve_unknown) }.freeze
       end
       if kind.start_with?("{")
         invalid unless value.is_a?(Hash) && value.keys.all? { |k| k.is_a?(String) }
-        return value.to_h { |k, v| [k.dup.freeze, decode(kind[1...-1], v)] }.freeze
+        return value.to_h { |k, v| [k.dup.freeze, decode(kind[1...-1], v, preserve_unknown: preserve_unknown)] }.freeze
       end
       if MODELS.key?(kind)
         shape = MODELS[kind]
-        invalid unless value.is_a?(Hash) && (value.keys - shape.keys.map { |k| k.delete_suffix("?") }).empty?
+        invalid unless value.is_a?(Hash)
+        extra = value.keys - shape.keys.map { |k| k.delete_suffix("?") }
+        invalid unless preserve_unknown || extra.empty?
         held = {}
         shape.each do |key, type|
           name = key.delete_suffix("?")
@@ -190,10 +198,12 @@ module ThinkThen
             held[name.to_sym] = ABSENT
             next
           end
-          held[name.to_sym] = decode(type, value[name])
+          held[name.to_sym] = decode(type, value[name], preserve_unknown: preserve_unknown)
         end
         check(kind, value)
-        return const_get(kind).new(**held).freeze
+        result = const_get(kind).new(**held)
+        result.instance_variable_set(:@unknown_members, json(value.select { |k, _| extra.include?(k) })) unless extra.empty?
+        return result.freeze
       end
       return value == 1 && value.is_a?(Integer) ? value : invalid if kind == "one"
       return value.is_a?(String) ? value.b.dup.freeze : invalid if kind == "bytes"
@@ -274,7 +284,7 @@ module ThinkThen
     def self.to_json_value(value)
       case value
       when Struct
-        value.to_h.reject { |_, v| v.equal?(ABSENT) }.to_h { |k, v| [k.to_s, to_json_value(v)] }
+        (value.instance_variable_get(:@unknown_members) || {}).merge(value.to_h.reject { |_, v| v.equal?(ABSENT) }.to_h { |k, v| [k.to_s, to_json_value(v)] })
       when Hash then value.to_h { |k, v| [k, to_json_value(v)] }
       when Array then value.map { |v| to_json_value(v) }
       else value
