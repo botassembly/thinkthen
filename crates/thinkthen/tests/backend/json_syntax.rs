@@ -34,8 +34,8 @@ fn assert_refused(output: &Output, listener: &Listener, code: i32, message: &str
 
 #[test]
 fn question_file_syntax_names_the_question_file_and_sends_nothing() {
-    let cases: [(&str, &str, &[u8], usize); 5] = [
-        ("decide", "empty", b"", 0),
+    let cases = [
+        ("decide", "empty", b"".as_slice(), 0),
         ("decide", "bom", b"\xef\xbb\xbf{\"decide\":\"q\"}", 1),
         ("decide", "trailing", b"{\"decide\":\"q\",}\n", 15),
         ("find", "unfinished", b"{", 1),
@@ -60,6 +60,37 @@ fn question_file_syntax_names_the_question_file_and_sends_nothing() {
                 "the question file is not valid JSON: the JSON at line 1 column {column} is not one"
             ),
         );
+    }
+}
+
+#[test]
+fn saved_find_definition_diagnostics_keep_the_question_file_cause() {
+    let cases: [(&str, &[u8], &str); 3] = [
+        ("array", b"[]", "a question file is one JSON object"),
+        (
+            "empty",
+            b"{}",
+            "`find` in the question file is text, an object, or a list",
+        ),
+        (
+            "another-kind",
+            br#"{"decide":"q"}"#,
+            "a question file takes no key `decide`",
+        ),
+    ];
+    for (name, bytes, message) in cases {
+        let listener = listener().expect("a loopback listener");
+        let path = written(&format!("syntax-find-definition-{name}.json"), bytes)
+            .expect("a question file");
+        let question = format!("@{}", path.display());
+        let output = spawn(
+            &["find", &question, "--url", listener.base()],
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            b"evidence",
+        )
+        .expect("the compiled binary runs");
+        assert_refused(&output, &listener, 5, message);
+        assert!(!said(&output).contains("sk-test-value"));
     }
 }
 

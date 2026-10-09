@@ -27,7 +27,7 @@ impl AdmittedRequest {
     }
 
     pub(crate) fn resolve_once(&mut self) -> Result<RequestDefinition, Error> {
-        let definition = self.resolve_question()?;
+        let definition = self.resolve_question_for(Some(self.request.call.function()))?;
         self.definition = Some(definition.clone());
         Ok(definition)
     }
@@ -41,6 +41,9 @@ impl AdmittedRequest {
     /// # Errors
     /// Saved selector failures are Local; definitions retain Usage admission.
     pub fn resolve_question(&self) -> Result<RequestDefinition, Error> {
+        self.resolve_question_for(None)
+    }
+    fn resolve_question_for(&self, expected: Option<Function>) -> Result<RequestDefinition, Error> {
         if let Some(q) = &self.definition {
             return Ok(q.clone());
         }
@@ -64,8 +67,14 @@ impl AdmittedRequest {
                 ));
             }
         };
-        let value =
-            RequestDefinition::from_authored_json(&text).map_err(|error| error.into_local())?;
+        // A retained host call already names its function. Use the native saved
+        // find parser directly so its typed file cause survives resolution.
+        let value = if expected == Some(Function::Find) {
+            crate::FindQuestionFile::from_json(&text).map(RequestDefinition::Find)
+        } else {
+            RequestDefinition::from_authored_json(&text)
+        }
+        .map_err(|error| error.into_local())?;
         let value =
             admit_definition(self.request.call.function(), value).map_err(|e| e.into_local())?;
         admit_definition_controls(&value, &self.request.call.arguments().options)
