@@ -319,3 +319,143 @@ impl fmt::Debug for OwnedRecordObservation {
         }
     }
 }
+
+mod row;
+use row::{JudgmentDocument, ProbabilitiesDocument, SessionObservedRowDocument};
+
+/// Borrowed serialization of one actual owned native event.
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "sessionObservation")
+)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub(crate) enum SessionObservationDocument<'a> {
+    Question {
+        index: usize,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        member: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stage: Option<&'static str>,
+        position: usize,
+        detail: SessionQuestionDetailDocument<'a>,
+    },
+    Row {
+        index: usize,
+        value: SessionObservedRowDocument<'a>,
+    },
+}
+impl<'a> SessionObservationDocument<'a> {
+    pub(crate) fn of(value: &'a OwnedRecordObservation) -> Self {
+        match value {
+            OwnedRecordObservation::Question {
+                index,
+                member,
+                stage,
+                position,
+                detail,
+            } => Self::Question {
+                index: *index,
+                member: member.as_deref(),
+                stage: *stage,
+                position: *position,
+                detail: SessionQuestionDetailDocument::of(detail.detail()),
+            },
+            OwnedRecordObservation::Row { index, value } => Self::Row {
+                index: *index,
+                value: SessionObservedRowDocument::of(value),
+            },
+        }
+    }
+}
+
+/// Complete projection of the native question detail, independent of legacy observation JSON.
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "sessionQuestionDetail")
+)]
+pub(crate) struct SessionQuestionDetailDocument<'a> {
+    question_sha256: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<JudgmentDocument<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    failure: Option<core::BackendFailure>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    probabilities: Option<ProbabilitiesDocument<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    confidence: Option<f64>,
+    model: &'a str,
+    url: &'a str,
+    requests: &'a [String],
+    requests_sent: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "Option<core::Usage>"))]
+    usage: Option<super::Usage>,
+    cached: bool,
+    failed_questions: usize,
+    question: core::declaration::ReadableQuestion<'a, core::Question>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    threshold: Option<core::Threshold>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    raw_pick: Option<&'a str>,
+    question_sources: &'a [QuestionSource],
+    observations: &'a [Observation],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    answer_id: Option<&'a AnswerId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    failure_id: Option<&'a FailureId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reported_usage: Option<ReportedUsage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "Option<serde_json::Value>"))]
+    input: Option<&'a QuestionInput>,
+    #[cfg_attr(test, schemars(with = "Vec<serde_json::Value>"))]
+    inputs: Vec<&'a QuestionInput>,
+}
+impl<'a> SessionQuestionDetailDocument<'a> {
+    fn of(detail: QuestionDetail<'a>) -> Self {
+        let held = detail.0;
+        Self {
+            question_sha256: &held.question_sha256,
+            value: held.value.as_ref().map(JudgmentDocument::of),
+            failure: held.failure,
+            probabilities: held.probabilities.as_ref().map(ProbabilitiesDocument::of),
+            confidence: detail.confidence(),
+            model: &held.model,
+            url: &held.url,
+            requests: &held.requests,
+            requests_sent: detail.requests_sent(),
+            usage: detail.usage(),
+            cached: detail.cached(),
+            failed_questions: detail.failed_questions(),
+            question: core::declaration::ReadableQuestion::atomic(
+                &held.actual.question,
+                &held.actual.declarations,
+            ),
+            threshold: held.actual.threshold,
+            raw_pick: held.actual.raw_pick.as_deref(),
+            question_sources: &held.actual.sources,
+            observations: &held.actual.observations,
+            answer_id: match &held.actual.identity {
+                Some(MemberIdentity::Answered(id)) => Some(id),
+                _ => None,
+            },
+            failure_id: match &held.actual.identity {
+                Some(MemberIdentity::Failed(id)) => Some(id),
+                _ => None,
+            },
+            reported_usage: detail.reported_usage(),
+            input: held.actual.input.as_deref(),
+            inputs: held
+                .actual
+                .input
+                .iter()
+                .chain(held.actual.inputs.iter())
+                .map(AsRef::as_ref)
+                .collect(),
+        }
+    }
+}

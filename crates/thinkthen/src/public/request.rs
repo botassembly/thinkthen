@@ -13,6 +13,8 @@ mod session;
 mod session_queue;
 mod session_result;
 #[cfg(test)]
+pub(crate) use session_result::SessionPacketDocument;
+#[cfg(test)]
 mod tests;
 pub(crate) mod transport;
 use super::{Error, LoadedQuestion};
