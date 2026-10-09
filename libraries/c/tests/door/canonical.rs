@@ -2,6 +2,7 @@
 use super::cases::{Script, replies};
 use super::{compile, crate_dir, run, text};
 use conformance_backend::{Canned, Listener};
+use serde_json::{Value, json};
 
 #[test]
 fn canonical_namespace_routes_original_bytes_and_legacy_schema_stays_ignored() {
@@ -52,4 +53,99 @@ fn canonical_namespace_routes_original_bytes_and_legacy_schema_stays_ignored() {
     let requests = listener.requests();
     assert_eq!(requests[0].body, requests[1].body);
     assert_eq!(requests[1].body, requests[2].body);
+}
+
+#[test]
+fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
+    .unwrap();
+    let base = listener.base();
+    // The unchanged request from the JVM Matrix.requests[11] reaches the same C door.
+    let projected = r#"{"annotate":{"version":1,"questions":{"check":{"decide":"Is it?","on":"/body"}}},"records":["{\"body\":\"annotate-on\",\"hidden\":\"not-sent\"}"]}"#;
+    let mut script = Script::default();
+    script.ask("settings", &[base, r#"{"model":"fixed"}"#]);
+    for _ in 0..2 {
+        script.ask("call", &[base, projected]);
+    }
+    let set = json!({"version":1,"questions":{"check":{"decide":"Q?","on":"/a"}}});
+    for depth in [127, 128] {
+        let record = format!(
+            "{{\"a\":{}1{}}}",
+            "[".repeat(depth - 1),
+            "]".repeat(depth - 1)
+        );
+        script.ask(
+            "call",
+            &[
+                base,
+                &json!({"annotate":set,"records":[record]}).to_string(),
+            ],
+        );
+    }
+    script.ask(
+        "call",
+        &[
+            base,
+            &json!({"annotate":set,"records":[r#"{"a":1,"a":2}"#]}).to_string(),
+        ],
+    );
+    let plain = json!({"version":1,"questions":{"check":{"decide":"Q?"}}});
+    script.ask(
+        "call",
+        &[
+            base,
+            &json!({"annotate":plain,"records":["{not json"]}).to_string(),
+        ],
+    );
+    let canonical = json!({"schema":"thinkthen.request/1","call":{
+        "function":"annotate","question":{"kind":"definition","value":set},
+        "input":{"kind":"records","items":[{"original":{"kind":"text","text":r#"{"a":1}"#}}]}
+    }});
+    script.ask("call", &[base, &canonical.to_string()]);
+    let output = run(
+        &compile(&crate_dir().join("tests/c/driver.c")),
+        base,
+        &script.0,
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let got = replies(&output.stdout).unwrap();
+    assert_eq!(
+        got.iter().map(|reply| reply.0).collect::<Vec<_>>(),
+        [0, 0, 0, 0, 1, 1, 0, 1]
+    );
+    let first: Value = serde_json::from_str(&got[1].1).unwrap();
+    let cached: Value = serde_json::from_str(&got[2].1).unwrap();
+    assert_eq!(first["value"], json!([{"check":true}]));
+    assert_eq!(cached["value"], first["value"]);
+    assert_eq!(first["facts"]["requests_sent"], 1);
+    assert_eq!(cached["facts"]["requests_sent"], 0);
+    assert_eq!(cached["facts"]["cache_answers"], 1);
+    assert_eq!(
+        got[4].1,
+        "the JSON nests more than 127 levels of arrays and objects, the most this tool reads"
+    );
+    assert_eq!(
+        got[5].1,
+        "a JSON record holds each member name once, and one name arrived twice"
+    );
+    assert_eq!(
+        got[7].1,
+        "question `check` reads `on`, and this record's evidence is text with no members"
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 3, "cached and refused records send nothing");
+    let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
+    assert_eq!(
+        body["questions"]["q1"]["instructions"],
+        "The text is \"annotate-on\". Is it?"
+    );
+    assert!(!text(&requests[0].body).contains("not-sent"));
+    assert!(!text(&requests[0].body).contains("hidden"));
+    let fallback: Value = serde_json::from_slice(&requests[2].body).unwrap();
+    assert_eq!(
+        fallback["questions"]["q1"]["instructions"],
+        "The text is \"{not json\". Q?"
+    );
 }

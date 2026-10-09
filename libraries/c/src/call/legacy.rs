@@ -2,9 +2,9 @@
 use super::{Request as LegacyRequest, alone, flag, member, object};
 use crate::failures::Failure;
 use thinkthen::{
-    AdmittedRequest, LoadedQuestion, Question, QuestionSet, RawRecord, Request, RequestArguments,
-    RequestBatch, RequestCall, RequestDefinition, RequestInput, RequestItem, RequestOptions,
-    RequestOriginal, RequestQuestion,
+    AdmittedRequest, LoadedQuestion, Question, QuestionInput, QuestionSet, RawRecord, Request,
+    RequestArguments, RequestBatch, RequestCall, RequestDefinition, RequestInput, RequestItem,
+    RequestOptions, RequestOriginal, RequestQuestion,
 };
 
 pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Failure> {
@@ -38,8 +38,29 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
                 serde_json::from_str::<Vec<String>>(raw)
             })?
             .into_iter()
-            .map(|text| item(RequestOriginal::Text { text }))
-            .collect()
+            .map(|text| {
+                let original = if request.verb == "annotate" {
+                    let QuestionInput::Record(record) = QuestionInput::annotation_document(&text)?
+                    else {
+                        return Err(Failure::defect(
+                            "an annotation document has no original record",
+                        ));
+                    };
+                    let value = record.original();
+                    value.literal().map_or_else(
+                        || RequestOriginal::Json {
+                            value: value.clone(),
+                        },
+                        |text| RequestOriginal::Text {
+                            text: text.to_owned(),
+                        },
+                    )
+                } else {
+                    RequestOriginal::Text { text }
+                };
+                Ok(item(original))
+            })
+            .collect::<Result<Vec<_>, Failure>>()?
         };
         if request.verb == "relate" {
             RequestInput::Entities { items }
