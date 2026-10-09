@@ -3,6 +3,15 @@ use std::any::Any;
 
 pub(crate) enum Diagnostic {
     Engine(crate::engine::error::Error),
+    EngineRange {
+        cause: crate::engine::error::Error,
+        first: usize,
+        last: usize,
+    },
+    PartialReply {
+        first: usize,
+        last: usize,
+    },
     #[cfg(feature = "cli")]
     CliInput(Box<crate::cli::failure::Failure>),
     Refusal(Box<dyn Any + Send + Sync>),

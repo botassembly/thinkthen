@@ -135,6 +135,24 @@ impl From<crate::Error> for Failure {
         use crate::public::error::diagnostic::Diagnostic;
         match error.take_diagnostic() {
             Some(Diagnostic::Engine(cause)) => Self::from(cause),
+            Some(Diagnostic::EngineRange { cause, first, last }) => {
+                let cause = Self::from(cause);
+                match cause {
+                    Self::Transport(_) | Self::Status(_) | Self::TokenLimit | Self::Reply(_)
+                        if last > first =>
+                    {
+                        Self::BatchFailed {
+                            last: last.saturating_add(1),
+                            cause: Box::new(cause),
+                        }
+                    }
+                    other => other,
+                }
+            }
+            Some(Diagnostic::PartialReply { first, last }) => Self::PartialReply {
+                first: first.saturating_add(1),
+                last: last.saturating_add(1),
+            },
             Some(Diagnostic::CliInput(cause)) => *cause,
             Some(Diagnostic::Model(cause)) => Self::Usage(match cause {
                 crate::core::BlankTextError::ModelControl => {

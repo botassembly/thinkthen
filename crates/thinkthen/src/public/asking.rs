@@ -76,6 +76,7 @@ pub(crate) struct Decided {
     pub(crate) outcome: AnswerOutcome,
     pub(crate) answered: facade::Answered,
     pub(crate) keys: Vec<String>,
+    span: (usize, usize),
 }
 
 /// Why one text has no answer.
@@ -183,6 +184,10 @@ impl Asker for Decisions {
         let [outcome] = <[AnswerOutcome; 1]>::try_from(outcomes)
             .map_err(|_| Miss::Refused(Error::defect("a question read more than one outcome")))?;
         let decided = Decided {
+            span: answers
+                .iter()
+                .find(|answer| answer.answer.is_err())
+                .map_or((text.at, text.at), |answer| answer.span),
             input: std::sync::Arc::new(text.input),
             answered: pipeline::receipt(&answers, vec![outcome.clone()]).map_err(refused)?,
             keys: answers.iter().map(|answered| answered.key.hex()).collect(),
@@ -265,9 +270,21 @@ impl Decided {
 pub(crate) fn failure(failed: Failed<Miss>) -> Error {
     match failed {
         Failed::Asker(Miss::Refused(error)) => error,
-        Failed::Asker(Miss::Failed(_)) => backend_failed(),
+        Failed::Asker(Miss::Failed(decided)) => {
+            backend_failed().with_diagnostic(super::error::diagnostic::Diagnostic::PartialReply {
+                first: decided.span.0,
+                last: decided.span.1,
+            })
+        }
         Failed::Pack { error, .. } => packed(error),
-        Failed::Engine { error, .. } | Failed::Stopped(error) => Error::from(error),
+        Failed::Engine { error, first, last } => Error::from(error.clone()).with_diagnostic(
+            super::error::diagnostic::Diagnostic::EngineRange {
+                cause: error,
+                first,
+                last,
+            },
+        ),
+        Failed::Stopped(error) => Error::from(error),
     }
 }
 
