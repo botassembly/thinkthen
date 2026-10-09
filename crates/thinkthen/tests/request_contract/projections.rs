@@ -335,3 +335,31 @@ fn record_descriptor_limit_matches_request_admission() {
     assert_eq!(converted.kind(), canonical.kind());
     assert_eq!(converted.to_string(), canonical.to_string());
 }
+
+#[test]
+fn record_descriptors_compose_ordered_images_with_native_validation() {
+    let bytes = include_bytes!("../../../../specification/fixtures/images/red.png");
+    let reading = RecordReading::new(&["/ignored"], None, None).unwrap();
+    let source = json!({"images": [
+        {"media": "image/png", "bytes": bytes.as_slice()},
+        {"media": "image/png", "bytes": bytes.as_slice()}
+    ]})
+    .to_string();
+    let item = RequestItem::from_record_descriptor(&source).unwrap();
+    let row = item.compose_record(&reading).unwrap();
+    let QuestionInput::Images(images) = row.original else {
+        panic!("image-only record")
+    };
+    assert_eq!(images.images().len(), 2);
+    assert!(images.images().iter().all(|image| image.bytes() == bytes));
+    let item = RequestItem::from_record_descriptor(
+        r#"{"text":"Alpha.","images":[{"media":"image/png","bytes":[1,2]}]}"#,
+    )
+    .unwrap();
+    let converted = item
+        .compose_record(&RecordReading::new(&[], None, None).unwrap())
+        .unwrap_err();
+    let native = ImageInput::new(ImageMedia::Png, vec![1, 2]).unwrap_err();
+    assert_eq!(converted.kind(), native.kind());
+    assert_eq!(converted.to_string(), native.to_string());
+}

@@ -262,11 +262,7 @@ fn descriptor_images(source: &str) -> Result<Vec<RequestImage>, Error> {
                     .ok_or_else(|| Error::usage("image requires compressed bytes"))?,
             )
             .map_err(|_| Error::usage("image bytes is an integer array"))?;
-            let image = crate::ImageInput::new(media, bytes)?;
-            Ok(RequestImage::Bytes {
-                media,
-                bytes: image.bytes().to_vec(),
-            })
+            Ok(RequestImage::Bytes { media, bytes })
         })
         .collect()
 }
