@@ -42,6 +42,15 @@ fn Engine::finish_usage_status(&self) -> UsagePersistence
 const fn Facts::usage_persistence(&self) -> Option<UsagePersistence>
 impl Serialize for UsagePersistence
 ```
+
+## What the build taught us
+
+The existing writer failure latch belongs to shared counters. An atomic latch lets observation report a known failure even while another thread holds the queue. A nonblocking queue observation reports Pending during contention and never waits for filesystem work. The existing finalizer retains its usage-lock deadline and leaves other filesystem operations unbounded.
+
+Complete invocation facts freeze the engine's persistence state when facts are snapshotted. A Pending snapshot remains Pending after a later finalizer reports Failed or Written. Aggregate tallies carry no persistence observation. Legacy count-only facts retain their serialized shape. The shared facade state door attaches counters to call facts across call families without duplicating host logic.
+
+The existing held-writer, stage-failure and inherited-parent queue fixtures exercise the contract. A loopback consumer preserves the valid answer, reported tokens and exact request counts after failure. Only fixed advice reaches complete facts. Host engines, the C status request and three SQL status functions require the remaining adoption slices before the ticket's full outcome is met.
+
 ## Progress
 
 - 2026-10-09 started
