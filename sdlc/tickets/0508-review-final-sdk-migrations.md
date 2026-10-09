@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 056b72947, accept
+
 ## Outcome
 
 Run Ian's second after-sprint review after the final language and database migrations and before the full installed-package run. Fresh read-only reviewers identify consequential bugs and specification drift across the final 0.2 code. Every confirmed finding receives a fix ticket or an explicit scope ruling.
