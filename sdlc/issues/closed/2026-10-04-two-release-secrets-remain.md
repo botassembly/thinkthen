@@ -1,6 +1,7 @@
 # Two release secrets remain outside trusted publishing
 
-Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the queue owner.
+Status: closed.
+Resolution: 0425
 Milestone: 0.2
 
 crates.io, PyPI, npm, RubyGems, NuGet and pub.dev publish through trusted publishing and keep no secret. Two jobs still read secrets from the `release` environment:

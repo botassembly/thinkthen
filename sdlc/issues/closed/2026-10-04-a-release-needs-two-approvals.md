@@ -1,6 +1,7 @@
 # A release needs two environment approvals and an 80-minute wait
 
-Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the queue owner. Both approvals stay as safety gates under the docs team's 2026-10-04 ranking. No standing patch-release approval is wanted. Items 2 and 4 remain debt.
+Status: closed.
+Resolution: 0425
 Milestone: 0.2
 Kind: debt
 Debt: 037

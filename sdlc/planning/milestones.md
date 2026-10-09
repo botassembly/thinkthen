@@ -38,7 +38,7 @@ Path to 0.1:
 Open items:
 
 - [0128: Release and install for 0.1](../tickets/0128-release-and-install.md)
-- [Release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md)
+- [Release and install for 0.1](../issues/closed/2026-09-25-release-and-install-for-0-1.md)
 - [0394: macOS gems install on every macOS version](../tickets/0394-darwin-gem-platform.md), for 0.1.2
 
 Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268, 0269, 0270, 0271, 0272, 0273 and 0299, and the issue [README: where to get a key, how to change the backend, and the overhead line](../issues/closed/2026-09-29-readme-key-backend-and-overhead-lines.md). Closed 2026-10-02 on the coordinator's ruling: [0149](../tickets/0149-sql-settings.md) and [0157](../tickets/0157-library-size-and-retry-settings.md).
@@ -94,7 +94,7 @@ The reviewed 2026-10-07 intake adds [0457: source-size warnings](../tickets/0457
 - [0443: Carry SDK call identity and cache instructions](../tickets/0443-sdk-call-identity-and-cache-policy.md)
 - [0444: Version cache keys and preserve offline replay](../tickets/0444-versioned-cache-identity-and-replay.md)
 - [0445: Complete attempt observations and command facts](../tickets/0445-complete-attempt-and-command-facts.md)
-- [Every surface gives back run facts](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), through the explicit owners in the plan.
+- [Every surface gives back run facts](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md), through the explicit owners in the plan.
 - [0415: Signed DuckDB community listing](../tickets/0415-signed-duckdb-community-listing.md), submitted upstream; publication remains DuckDB’s decision.
 
 - [0446: Add vision and the SDK boundary to the 0.2 plan](../tickets/0446-vision-and-sdk-boundary-0-2-plan.md)
@@ -162,7 +162,7 @@ Open items:
 - [Relation pairs span the whole text](../issues/2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md)
 - [Tuning loop asks: cases to label, repeated runs, and cost beside the score](../issues/2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md)
 - [A lone record over the size setting is sent, and one backend refusal stops the file](../issues/2026-09-30-a-lone-oversized-record-is-sent-anyway.md)
-- [A usage write that fails after a good start is silent on the libraries](../issues/2026-09-30-a-usage-write-that-fails-after-a-good-start-is-silent-on-the-libraries.md)
+- [A usage write that fails after a good start is silent on the libraries](../issues/closed/2026-09-30-a-usage-write-that-fails-after-a-good-start-is-silent-on-the-libraries.md)
 - [A batch command that runs many questions in one process, after 0.1](../issues/2026-09-30-batch-command-runs-many-questions-in-one-process.md)
 - [OpenTelemetry traces for backend calls, after 0.1](../issues/2026-09-30-opentelemetry-traces-after-0-1.md)
 - [The Polars door cannot test lazy streaming](../issues/2026-09-30-polars-door-cannot-test-lazy-streaming.md)

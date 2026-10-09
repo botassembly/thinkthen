@@ -1,6 +1,7 @@
 # AGENTS.md tells outside agents how to report
 
-Status: open. Filed 2026-10-03 from the docs message "Proxy, terms and function drafts decided" (ask 5). Owner: the queue owner.
+Status: closed.
+Resolution: 0467
 Milestone: 0.2
 
 Ian wants `AGENTS.md` to tell an outside agent how to report a problem: open a GitHub issue with a label, use the discussion board for questions, and link a fork in the issue in place of opening a pull request.

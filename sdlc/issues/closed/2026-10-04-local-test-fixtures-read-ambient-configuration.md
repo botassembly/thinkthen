@@ -1,11 +1,12 @@
 # Local test fixtures read ambient configuration
 
-Status: open only for remaining child-environment isolation under [0487](../tickets/0487-consolidate-test-child-environments.md). The spec/demo configuration-home defect is fixed by 0471 at `ed7f5d9`.
+Status: closed.
+Resolution: 0487
 Milestone: 0.2
 Kind: debt
 Debt: 038
 Severity: medium
-Pay when: the next reviewed fixture-isolation slice, related to [0404](../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
+Pay when: the next reviewed fixture-isolation slice, related to [0404](../../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
 
 Ambient configuration makes local fixture results depend on the runner's setup and can conceal the actual regression a gate is meant to catch.
 

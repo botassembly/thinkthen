@@ -1,6 +1,7 @@
 # `rank --threshold P` keeps only records at or above a probability
 
-Status: open. Filed 2026-10-01 on Ian's ruling. Owner: the queue owner, in 0.2.
+Status: closed.
+Promoted: 0510
 Kind: idea
 When: 0.2 work starts on main
 Milestone: 0.2

@@ -20,6 +20,8 @@ The root Rust ceiling decreases from 176011 to 176009. The C Rust ceiling increa
 
 ## Review and integration
 
+The combined landing lint found the C-language ceiling still counted one removed deadline-fixture line. The existing measurement is 2752; lowering its metadata fixes that gate without changing the tested C source.
+
 A fresh read-only reviewer accepted source 2660db24. Integration preserves the accepted product and test changes; its source-ceiling conflict resolves to the existing tool's measured 176318 lines after 0511. Branch evidence covers the affected behavior; no new full main qualification is claimed.
 
 ## What the build taught us

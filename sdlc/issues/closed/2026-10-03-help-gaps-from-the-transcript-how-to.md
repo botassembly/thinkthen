@@ -1,6 +1,7 @@
 # Help and warning gaps from the transcript how-to
 
-Status: open for the refresh-cache warning choice and remaining record/accounting help. Filter-versus-rank guidance already appears in the current site examples.
+Status: closed.
+Resolution: 0467
 Milestone: 0.2
 
 The site's transcript how-to ran on 0.1.0 and found four gaps. None changes an answer.
@@ -12,4 +13,4 @@ The site's transcript how-to ran on 0.1.0 and found four gaps. None changes an a
 
 ## Reconciliation, 2026-10-08
 
-The current transcript example in `site/src/data/catalog.mjs` says to use rank to explore and filter to keep. Item 3 no longer asks for that missing distinction; labeled-case threshold advice remains an editorial obligation. Items 1, 2 and 4 retain their asks. `cli/asking.rs` still emits the spend warning per process. Result/2 carries observed request counts and call facts separately; the [result contract](../../specification/result.md) governs current names, rather than the old 0.1 row excerpt. This issue authorizes no spend-warning suppression or paid rerun.
+The current transcript example in `site/src/data/catalog.mjs` says to use rank to explore and filter to keep. Item 3 no longer asks for that missing distinction; labeled-case threshold advice remains an editorial obligation. Items 1, 2 and 4 retain their asks. `cli/asking.rs` still emits the spend warning per process. Result/2 carries observed request counts and call facts separately; the [result contract](../../../specification/result.md) governs current names, rather than the old 0.1 row excerpt. This issue authorizes no spend-warning suppression or paid rerun.

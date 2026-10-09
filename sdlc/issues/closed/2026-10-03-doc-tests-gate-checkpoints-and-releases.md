@@ -1,6 +1,7 @@
 # The doc tests gate each checkpoint and each release
 
-Status: open. Filed 2026-10-03 from the docs message "The doc tests gate the code release" of 2026-10-01. Owner: the queue owner. Ticket 0398 slice C owns the exact-commit rehearsal guard only; this issue retains checkpoint doc-test enforcement and strict release proof checks in items 2 and 3.
+Status: closed.
+Resolution: 0425
 Milestone: 0.2
 
 Ian ruled on 2026-10-01 that every documentation example is a test in this repository, run before any release of the site or of the code. The examples already replay: `npm run smoke-bindings` and `npm run smoke-sql` in `site/` run every language and SQL sample with no key and no network. Neither `sdlc/scripts/` nor `.github/workflows/release.yml` runs them.

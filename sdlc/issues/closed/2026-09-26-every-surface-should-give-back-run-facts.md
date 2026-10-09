@@ -1,6 +1,7 @@
 # Every surface should give back what Jev tells us about each run
 
-Status: open only for final platform, candidate and public-package qualification under [0425](../tickets/0425-sdk-consistency-0-2-plan.md). The five implementation parts below are historical scope, fulfilled by the complete SDK/SQL adoption and installed campaign.
+Status: closed.
+Resolution: 0425
 
 Milestone: 0.2
 
@@ -58,4 +59,4 @@ All five open parts are required in 0.2 through the owners above. The SQL deferr
 
 ## Reconciliation, 2026-10-08
 
-The installed 29-consumer campaign at `60f0dcb9a`, landed by `0553becc7`, covers complete results, caller prices, SQL invocation facts, identity/provenance and attempt/time adoption. See [0432 qualification](../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08), [SQL adoption](../records/0435-sql-call-facts-and-prices.md), the result/recording contracts and each owning public README. Missing provider server time remains absent rather than invented; saved and loopback responses establish parsing only. Historical 0.1 observations below do not describe an unimplemented 0.2 API. Runtime persistence reporting remains separately open under [0468](../tickets/0468-usage-write-failure-reporting.md). Final native Windows/macOS checks and public installations remain owed; no paid diagnostic or release action is authorized here.
+The installed 29-consumer campaign at `60f0dcb9a`, landed by `0553becc7`, covers complete results, caller prices, SQL invocation facts, identity/provenance and attempt/time adoption. See [0432 qualification](../../records/0432-shared-parity-cases.md#final-installed-qualification-2026-10-08), [SQL adoption](../../records/0435-sql-call-facts-and-prices.md), the result/recording contracts and each owning public README. Missing provider server time remains absent rather than invented; saved and loopback responses establish parsing only. Historical 0.1 observations below do not describe an unimplemented 0.2 API. Runtime persistence reporting remains separately open under [0468](../../tickets/0468-usage-write-failure-reporting.md). Final native Windows/macOS checks and public installations remain owed; no paid diagnostic or release action is authorized here.

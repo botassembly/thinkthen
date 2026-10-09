@@ -44,7 +44,7 @@ Implemented source claim from the current work plan:
 
 ## Evidence
 
-- Starts from: [Every-call ruling](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), ADR 0106, accepted 0255/0277/0279/0280 and approved 0281 design, current C header and the [preparation](../records/0282-ada-objc-cobol-call-facts-preparation.md).
+- Starts from: [Every-call ruling](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md), ADR 0106, accepted 0255/0277/0279/0280 and approved 0281 design, current C header and the [preparation](../records/0282-ada-objc-cobol-call-facts-preparation.md).
 - Keeps: Old typed values, JSON envelopes, frozen C ABI, six failures, same-thread borrowed-error copy, Ada task join, Objective-C handle/deallocation limit, COBOL bounded buffers and raw-C probes.
 - Changes: Four Ada and four Objective-C typed routes, including counted variants, and COBOL's sole typed `TT-DECIDE` expose final owned facts from their single existing C operation.
 - Proof: Exact route/value/listener checks, strict host fact decoding, identical packed cache replay where supported, no-usage/model and empty-work distinction, typed failure lifetime, controlled overlap only where claimed, and matched copied installed typed consumers.

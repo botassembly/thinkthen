@@ -1,6 +1,7 @@
 # Release and install for 0.1
 
-Status: open only for carried-forward platform/public-install obligations under 0425 and 0398 in 0.2. Ticket 0128 completed the 0.1 release; the tables and Phase 4 requirements below preserve historical scope.
+Status: closed.
+Resolution: 0425
 
 Milestone: 0.2
 
@@ -37,7 +38,7 @@ Merged on 2026-09-30 from eleven "consumer proof needs a supported package" issu
 
 ### What exists
 
-Ticket 0249 landed each package's source under `libraries/<lang>/` with its own `check.sh`, and the [integration closure](../records/0249-integration-closure.md) accepted all eleven. Tickets 0261 to 0266 built local release packages for each. Each package passes its product check on Ubuntu 24.04.3 x86_64 against the current C header. Each typed route returns owned facts (tickets 0277, 0279, 0280, 0282). Nothing is published.
+Ticket 0249 landed each package's source under `libraries/<lang>/` with its own `check.sh`, and the [integration closure](../../records/0249-integration-closure.md) accepted all eleven. Tickets 0261 to 0266 built local release packages for each. Each package passes its product check on Ubuntu 24.04.3 x86_64 against the current C header. Each typed route returns owned facts (tickets 0277, 0279, 0280, 0282). Nothing is published.
 
 ### What every package still needs
 
@@ -75,4 +76,4 @@ Phase 4 also runs each site install page's command once on a clean machine after
 
 ## Reconciliation, 2026-10-08
 
-[0128](../tickets/0128-release-and-install.md) records the completed public 0.1.2 release and its actual channel checks. Public install text still names 0.1.2. This issue no longer asks to publish 0.1 or finish its old Phase 4. Final 0.2 Windows/macOS qualification, public package installation and release QA remain with [0425](../tickets/0425-sdk-consistency-0-2-plan.md) and [0398](../tickets/0398-release-safety.md). The original failure/platform limits below remain history, not new 0.2 qualification. Ian’s 2026-10-08 release hold governs every candidate tag, workflow, release branch and publication. Native Windows cache admission/coexistence remains explicitly owed under [0474](../tickets/0474-recognize-cache-admission.md) and [0480](../tickets/0480-cache-convert-replay-coexistence.md).
+[0128](../../tickets/0128-release-and-install.md) records the completed public 0.1.2 release and its actual channel checks. Public install text still names 0.1.2. This issue no longer asks to publish 0.1 or finish its old Phase 4. Final 0.2 Windows/macOS qualification, public package installation and release QA remain with [0425](../../tickets/0425-sdk-consistency-0-2-plan.md) and [0398](../../tickets/0398-release-safety.md). The original failure/platform limits below remain history, not new 0.2 qualification. Ian’s 2026-10-08 release hold governs every candidate tag, workflow, release branch and publication. Native Windows cache admission/coexistence remains explicitly owed under [0474](../../tickets/0474-recognize-cache-admission.md) and [0480](../../tickets/0480-cache-convert-replay-coexistence.md).
