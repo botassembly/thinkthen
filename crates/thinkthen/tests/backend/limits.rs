@@ -50,7 +50,8 @@ fn wide(bytes: usize) -> String {
 /// crossed the wire. The first record is answered and printed, which shows the
 /// refusal belongs to the one record rather than to the command line.
 #[test]
-fn a_record_over_the_limit_stops_the_run_and_sends_nothing_for_itself() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_a_record_over_the_limit_stops_the_run_and_sends_nothing_for_itself() {
     let listener = serving(2).expect("a loopback listener");
     let good = "{\"id\":\"R-1\",\"body\":\"The payout failed again.\"}\n";
     let input = format!("{good}{{\"body\":\"{}\"}}\n", wide(MAX_RECORD_BYTES));
@@ -75,7 +76,8 @@ fn a_record_over_the_limit_stops_the_run_and_sends_nothing_for_itself() {
 
 /// One document over the limit is refused with no request at all.
 #[test]
-fn a_document_over_the_limit_is_refused_before_any_request() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_a_document_over_the_limit_is_refused_before_any_request() {
     let listener = serving(1).expect("a loopback listener");
 
     let output = decide(listener.base(), &[], &wide(MAX_RECORD_BYTES + 1))
@@ -94,7 +96,8 @@ fn a_document_over_the_limit_is_refused_before_any_request() {
 /// part of a refused record to the backend. The listener counts the requests,
 /// so the case proves the tail was never sent.
 #[test]
-fn the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record() {
     let listener = serving(4).expect("a loopback listener");
     let input = format!("{}\n", wide(MAX_RECORD_BYTES + 12));
 

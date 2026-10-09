@@ -370,7 +370,8 @@ fn empty_and_blank_windows_advance_positions_without_sends() -> io::Result<()> {
 }
 
 #[test]
-fn joined_window_size_is_checked_before_admission() -> io::Result<()> {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_joined_window_size_is_checked_before_admission() -> io::Result<()> {
     let place = folder("window-size")?;
     let file = place.join("large");
     let listener = Listener::answering(answer)?;

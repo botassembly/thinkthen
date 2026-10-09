@@ -477,6 +477,7 @@ fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anythin
 
     for refusal in REFUSALS
         .iter()
+        .filter(|refusal| refusal.evidence != "{huge}")
         .chain(&OPERANDS)
         .chain([&OVER_RECORDS])
         .chain(&RELATE)
@@ -490,5 +491,21 @@ fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anythin
         listener.requests().is_empty(),
         "a refused command line opens no connection"
     );
+    assert_eq!(listener.connections(), 0);
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_oversized_records_refuse_every_command_without_disclosure_or_sends() {
+    let listener = Listener::serving(Vec::<Canned>::new()).expect("a loopback listener");
+    for refusal in REFUSALS
+        .iter()
+        .filter(|refusal| refusal.evidence == "{huge}")
+    {
+        for verb in VERBS {
+            refuse(refusal, verb, &listener).expect("the compiled binary runs");
+        }
+    }
+    assert!(listener.requests().is_empty());
     assert_eq!(listener.connections(), 0);
 }

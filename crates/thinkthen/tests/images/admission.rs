@@ -8,7 +8,7 @@ use thinkthen::{
 };
 
 #[test]
-fn final_body_limits_are_exact_and_explicit_caller_limits_narrow_images() {
+fn explicit_caller_limits_narrow_images() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
     let engine = engine(&listener, "liquid", "d1");
     let image = fixture(RED, thinkthen::ImageMedia::Png);
@@ -16,21 +16,6 @@ fn final_body_limits_are_exact_and_explicit_caller_limits_narrow_images() {
         .decide_input(&question(), &input(None, vec![image.clone()]))
         .unwrap();
     let base = listener.requests()[0].body.len();
-    engine
-        .decide_input(
-            &question(),
-            &input(Some(&"x".repeat(4_499_999 - base)), vec![image.clone()]),
-        )
-        .unwrap();
-    assert_eq!(listener.requests()[0].body.len(), 4_499_999);
-    let error = engine
-        .decide_input(
-            &question(),
-            &input(Some(&"x".repeat(4_500_000 - base)), vec![image.clone()]),
-        )
-        .unwrap_err();
-    assert_eq!(error.kind(), ErrorKind::Usage);
-    assert_eq!(listener.count(), 2);
     let narrowed = Engine::builder()
         .backend("liquid")
         .unwrap()
@@ -52,7 +37,7 @@ fn final_body_limits_are_exact_and_explicit_caller_limits_narrow_images() {
             .kind(),
         ErrorKind::Usage
     );
-    assert_eq!(listener.count(), 2);
+    assert_eq!(listener.count(), 1);
 }
 #[test]
 fn moved_file_names_do_not_change_existing_identity_and_source_has_no_lines() {
@@ -199,4 +184,31 @@ fn direct_question_model_override_rechecks_images_without_changing_endpoint() {
     let body: serde_json::Value = serde_json::from_slice(&requests[0].body).unwrap();
     assert_eq!(body["model"], "d1:free");
     assert!(body.get("images").is_none());
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_final_image_body_limits_are_exact() {
+    let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
+    let engine = engine(&listener, "liquid", "d1");
+    let image = fixture(RED, thinkthen::ImageMedia::Png);
+    engine
+        .decide_input(&question(), &input(None, vec![image.clone()]))
+        .unwrap();
+    let base = listener.requests()[0].body.len();
+    engine
+        .decide_input(
+            &question(),
+            &input(Some(&"x".repeat(4_499_999 - base)), vec![image.clone()]),
+        )
+        .unwrap();
+    assert_eq!(listener.requests()[0].body.len(), 4_499_999);
+    let error = engine
+        .decide_input(
+            &question(),
+            &input(Some(&"x".repeat(4_500_000 - base)), vec![image.clone()]),
+        )
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(listener.count(), 2);
 }

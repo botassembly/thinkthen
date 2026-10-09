@@ -33,7 +33,9 @@ fn relation_source_rows_are_bounded_before_deduplication_and_before_reading_the_
 }
 
 #[test]
-fn oversized_whitespace_is_refused_before_skipping_and_before_the_next_file() -> io::Result<()> {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_oversized_whitespace_is_refused_before_skipping_and_before_the_next_file()
+-> io::Result<()> {
     let place = folder("source-whitespace-limit")?;
     let path = place.join("first.txt");
     let next = place.join("next.txt");
@@ -105,7 +107,9 @@ fn recognition_relation_endpoints_map_unicode_crlf_spans_in_every_output_shape()
 }
 
 #[test]
-fn relation_source_original_jsonl_evidence_is_bounded_before_any_request() -> io::Result<()> {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_relation_source_original_jsonl_evidence_is_bounded_before_any_request()
+-> io::Result<()> {
     let place = folder("source-relation-evidence")?;
     let first = place.join("first.txt");
     let second = place.join("second.txt");
@@ -143,7 +147,8 @@ fn relation_source_original_jsonl_evidence_is_bounded_before_any_request() -> io
 }
 
 #[test]
-fn relation_source_expansion_counts_escaped_evidence_and_withholds_every_output_shape()
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_relation_source_expansion_counts_escaped_evidence_and_withholds_every_output_shape()
 -> io::Result<()> {
     let place = folder("source-relation-expansion")?;
     let path = place.join("names.txt");
@@ -213,7 +218,9 @@ fn all_255_source_occurrences_keep_every_duplicate_endpoint_pair() -> io::Result
 }
 
 #[test]
-fn oversized_whitespace_keeps_a_completed_stream_prefix_and_sends_no_tail() -> io::Result<()> {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_oversized_whitespace_keeps_a_completed_stream_prefix_and_sends_no_tail()
+-> io::Result<()> {
     let place = folder("source-whitespace-prefix")?;
     let first = place.join("first.txt");
     let next = place.join("next.txt");

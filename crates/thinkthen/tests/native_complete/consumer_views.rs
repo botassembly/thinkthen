@@ -464,10 +464,18 @@ fn annotation_document_constructor_retains_native_literal_and_refusal_boundaries
     assert_eq!(record.original().literal(), Some("{literal document"));
     assert!(record.location().is_none());
     let depth = format!("{}0{}", "[".repeat(128), "]".repeat(128));
-    let oversized = "x".repeat(16 * 1024 * 1024 + 1);
-    for input in [" ", r#"{"private":1,"private":2}"#, &depth, &oversized] {
+    for input in [" ", r#"{"private":1,"private":2}"#, &depth] {
         let error = thinkthen::QuestionInput::annotation_document(input).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert!(!error.to_string().contains("private"));
     }
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_annotation_document_refuses_oversized_literal() {
+    let oversized = "x".repeat(16 * 1024 * 1024 + 1);
+    let error = thinkthen::QuestionInput::annotation_document(&oversized).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert!(!error.to_string().contains("private"));
 }

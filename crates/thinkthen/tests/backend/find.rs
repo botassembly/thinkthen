@@ -175,11 +175,9 @@ fn every_preflight_stop_is_keyed_and_opens_no_connection() {
         .map(|place| format!("unit {place}\n"))
         .collect::<String>()
         .into_bytes();
-    let oversized = vec![b'x'; crate::support::MAX_RECORD_BYTES + 1];
     let cases: Vec<Preflight> = vec![
         (vec![], b"one\n".to_vec(), 2),
         (vec![], many, 2),
-        (vec![], oversized, 2),
         (
             vec!["--jsonl", "--field", "/missing"],
             b"{}\n{}\n".to_vec(),
@@ -322,4 +320,18 @@ fn a_closed_output_pipe_ends_find_quietly_after_the_paid_answer_finishes() {
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     assert!(output.stderr.is_empty());
     assert_eq!(listener.requests().len(), 1);
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_find_oversized_input_opens_no_connection() {
+    let listener = Listener::serving(Vec::new()).expect("listener");
+    let output = spawn(
+        &["find", "Which?", "--url", listener.base()],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        &vec![b'x'; crate::support::MAX_RECORD_BYTES + 1],
+    )
+    .expect("find preflight");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(listener.requests().is_empty());
 }
