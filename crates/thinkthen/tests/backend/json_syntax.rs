@@ -34,18 +34,20 @@ fn assert_refused(output: &Output, listener: &Listener, code: i32, message: &str
 
 #[test]
 fn question_file_syntax_names_the_question_file_and_sends_nothing() {
-    let cases: [(&str, &[u8], usize); 3] = [
-        ("empty", b"", 0),
-        ("bom", b"\xef\xbb\xbf{\"decide\":\"q\"}", 1),
-        ("trailing", b"{\"decide\":\"q\",}\n", 15),
+    let cases: [(&str, &str, &[u8], usize); 5] = [
+        ("decide", "empty", b"", 0),
+        ("decide", "bom", b"\xef\xbb\xbf{\"decide\":\"q\"}", 1),
+        ("decide", "trailing", b"{\"decide\":\"q\",}\n", 15),
+        ("find", "unfinished", b"{", 1),
+        ("find", "unfinished-space", b"{ ", 2),
     ];
-    for (name, bytes, column) in cases {
+    for (verb, name, bytes, column) in cases {
         let listener = listener().expect("a loopback listener");
         let path =
             written(&format!("syntax-question-{name}.json"), bytes).expect("a question file");
         let question = format!("@{}", path.display());
         let output = spawn(
-            &["decide", &question, "--url", listener.base()],
+            &[verb, &question, "--url", listener.base()],
             &[("THINKTHEN_API_KEY", "sk-test-value")],
             b"evidence",
         )
