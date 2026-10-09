@@ -28,7 +28,7 @@ fn complete_decision_schema_admits_authored_content_while_accessors_stay_boolean
         );
         let document = serde_json::to_value(call.complete().unwrap()).unwrap();
         assert_eq!(document["value"]["value"], meaning);
-        super::schema::check(&document, "completeAtomic");
+        super::schema::check(&document, "completeDecide");
     }
 }
 

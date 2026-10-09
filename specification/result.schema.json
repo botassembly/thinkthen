@@ -18,19 +18,6 @@
       ],
       "type": "object"
     },
-    "AtomicValue": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/value"
-        },
-        {},
-        {
-          "format": "uint",
-          "minimum": 1,
-          "type": "integer"
-        }
-      ]
-    },
     "BoundaryMode": {
       "enum": [
         "boundary_only"
@@ -102,7 +89,7 @@
           "$ref": "#/$defs/CompleteFacts"
         },
         "value": {
-          "$ref": "#/$defs/completeAtomic"
+          "$ref": "#/$defs/completeAtomic_DecideValue"
         }
       },
       "required": [
@@ -237,6 +224,17 @@
         "seconds"
       ],
       "type": "object"
+    },
+    "DecideValue": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {}
+      ]
     },
     "ErrorSnapshot": {
       "properties": {
@@ -2223,7 +2221,7 @@
           ]
         },
         "value": {
-          "$ref": "#/$defs/completeAtomicValue"
+          "$ref": "#/$defs/completeDecideValue"
         }
       },
       "required": [
@@ -2238,19 +2236,495 @@
       "type": "object",
       "unevaluatedProperties": false
     },
-    "completeAtomicValue": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/completevalue"
+    "completeAtomic_Array_of_string": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
         },
-        {},
-        {
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAtomic_DecideValue": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/completeDecideValue"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAtomic_NonZeroUsize": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
           "format": "uint",
           "maximum": 18446744073709551615,
           "minimum": 1,
           "type": "integer"
         }
-      ]
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAtomic_Nullable_string": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAtomic_boolean": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeAtomic_double": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/completeanswer"
+        },
+        "answer_id": {
+          "$ref": "#/$defs/completeAnswerId"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/completeImage"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "input": true,
+        "members": {
+          "items": {
+            "$ref": "#/$defs/completeRankMember"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "meta": {
+          "$ref": "#/$defs/completeMeta"
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_name": {
+          "type": [
+            "string"
+          ]
+        },
+        "schema": {
+          "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
     },
     "completeAttempt": {
       "properties": {
@@ -2951,7 +3425,9 @@
             }
           ]
         },
-        "value": true
+        "value": {
+          "$ref": "#/$defs/completeDecideValue"
+        }
       },
       "required": [
         "schema",
@@ -2964,6 +3440,17 @@
       ],
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completeDecideValue": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {}
+      ]
     },
     "completeDetailed": {
       "anyOf": [
@@ -4276,8 +4763,9 @@
           "items": {
             "$ref": "#/$defs/completeRankMember"
           },
-          "minItems": 1,
-          "type": "array"
+          "type": [
+            "array"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -4307,6 +4795,8 @@
           "type": "null"
         },
         "value": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 1,
           "type": "integer"
         }
@@ -4465,20 +4955,6 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
-        "file": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "first_line": {
-          "format": "uint",
-          "maximum": 18446744073709551615,
-          "minimum": 0,
-          "type": [
-            "integer"
-          ]
-        },
         "images": {
           "items": {
             "$ref": "#/$defs/completeImage"
@@ -4487,25 +4963,8 @@
             "array"
           ]
         },
-        "input_file": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "last_line": {
-          "format": "uint",
-          "maximum": 18446744073709551615,
-          "minimum": 0,
-          "type": [
-            "integer"
-          ]
-        },
         "meta": {
           "$ref": "#/$defs/completeMeta"
-        },
-        "position": {
-          "$ref": "#/$defs/completePosition"
         },
         "question": {
           "$ref": "#/$defs/completeReadableQuestion"
@@ -4524,6 +4983,8 @@
           "type": "null"
         },
         "value": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 1,
           "type": "integer"
         }
@@ -5373,6 +5834,7 @@
           "type": "null"
         },
         "value": {
+          "format": "double",
           "type": "number"
         }
       },

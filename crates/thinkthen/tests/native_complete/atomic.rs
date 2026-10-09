@@ -139,6 +139,7 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
     schema::call(&tagged, "completeTag");
     assert_eq!(tagged.value().value(), ["a"]);
     let document: Value = serde_json::from_str(&tagged.value().to_json().unwrap()).unwrap();
+    assert_eq!(document["value"], json!(["a"]));
     assert_eq!(
         document["answer"]["probabilities"],
         json!({"a":0.9,"b":0.1})
