@@ -65,6 +65,7 @@ pub(crate) struct QuestionDocument<'a> {
     profile: Option<&'a ProfileName>,
 }
 impl RecognizeSpec {
+    pub(crate) const DEFAULT_SNIPPET_PIECES: u32 = 6;
     pub(crate) fn validate_mode(&self) -> Result<(), RecognizeConfigError> {
         usize::try_from(self.snippet_pieces).map_err(|_| RecognizeConfigError::SnippetPieces)?;
         self.mode.validate_controls(
@@ -150,7 +151,7 @@ impl RecognizeSpec {
             seed_spans: Vec::new(),
             metadata: crate::core::declaration::QuestionMetadata::default(),
             kinds,
-            snippet_pieces: 6,
+            snippet_pieces: Self::DEFAULT_SNIPPET_PIECES,
             instructions: None,
             entity_definition: None,
             relations,
@@ -212,11 +213,11 @@ pub(crate) fn task_text(
 }
 
 fn default_snippet(value: &u32) -> bool {
-    *value == 6
+    *value == RecognizeSpec::DEFAULT_SNIPPET_PIECES
 }
 fn parse_snippet(value: Option<&Json>) -> Result<u32, RecognizeConfigError> {
     let Some(value) = value else {
-        return Ok(6);
+        return Ok(RecognizeSpec::DEFAULT_SNIPPET_PIECES);
     };
     let value = number_u64(value)
         .and_then(|n| u32::try_from(n).ok())

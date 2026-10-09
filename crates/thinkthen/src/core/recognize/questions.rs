@@ -7,12 +7,10 @@ use super::pieces::Piece;
 use crate::core::question::LabelsError;
 use crate::core::{Description, Labels, Question, QuestionText, RecognizeSpec};
 
-/// How many pieces each side of a piece or name a snippet and a request show.
-pub(crate) const WINDOW: usize = 6;
+/// The admitted caller width, or the shared compatibility default.
 fn width(spec: Option<&RecognizeSpec>) -> usize {
-    spec.map_or(WINDOW, |s| {
-        usize::try_from(s.snippet_pieces).unwrap_or(usize::MAX)
-    })
+    let value = spec.map_or(RecognizeSpec::DEFAULT_SNIPPET_PIECES, |s| s.snippet_pieces);
+    usize::try_from(value).unwrap_or(usize::MAX)
 }
 
 /// How many piece questions one step-1 request holds at most.

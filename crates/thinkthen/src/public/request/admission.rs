@@ -197,7 +197,8 @@ fn admit_options(
         return Err(Error::usage("relation threshold is a recognize single cut"));
     }
     if let Some(value) = options.snippet_pieces {
-        spec.snippet_pieces = value;
+        usize::try_from(value)
+            .map_err(|_| Error::usage("snippet pieces must be representable by the host"))?;
     }
     if let Some(mode) = options.mode {
         mode.validate_controls(

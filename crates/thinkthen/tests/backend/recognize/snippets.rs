@@ -123,7 +123,7 @@ fn snippet_width_plan_keys_and_replay_follow_actual_windows() {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("snippet-width-replay");
     fs::create_dir_all(&root).unwrap();
     let mut keys = Vec::new();
-    for width in ["0", "6", "8", "4294967295"] {
+    for width in ["0", "6", "15", "4294967295"] {
         let directory = root.join(width);
         let directory = directory.to_string_lossy();
         let args = ["person", "--snippet-pieces", width];
@@ -205,4 +205,28 @@ fn zero_snippet_width_retains_each_edge_candidate_without_surrounding_pieces() {
     );
     assert_eq!(edge["criteria"]["Ada"], "...[[Ada]]...");
     assert_eq!(edge["criteria"]["Ada,"], "...[[Ada,]]...");
+}
+
+#[test]
+fn snippet_cache_reuses_only_the_same_generated_windows() {
+    let listener = Listener::answering(automatic).unwrap();
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("snippet-width-cache");
+    let cache = root.to_string_lossy();
+    let input =
+        b"one two three four five six seven Ada eight nine ten eleven twelve thirteen fourteen";
+    for (width, expected) in [("0", 2), ("6", 2), ("6", 0), ("15", 2), ("4294967295", 0)] {
+        let output = local(
+            &listener,
+            &["person", "--snippet-pieces", width, "--cache", &cache],
+            Some("fake"),
+            input,
+        );
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(listener.requests().len(), expected);
+    }
+    fs::remove_dir_all(root).unwrap();
 }

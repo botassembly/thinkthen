@@ -233,7 +233,7 @@ impl Recognize {
             kinds: Vec::new(),
             instructions: None,
             entity_definition: None,
-            snippet_pieces: 6,
+            snippet_pieces: RecognizeSpec::DEFAULT_SNIPPET_PIECES,
             relations: Vec::new(),
             threshold: None,
             relation_threshold: None,
