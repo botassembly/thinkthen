@@ -70,6 +70,10 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         definition(serde_json::json!({"score":"Grade?","levels":["low","high"]})),
         definition(serde_json::json!({"find":"Which?"})),
         definition(serde_json::json!({"version":1,"recognize":{"kinds":{"person":null}}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":"boundary_only"}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":"whole"}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":null}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":"unknown"}})),
         definition(serde_json::json!({"version":1,"questions":{"fits":{"decide":"Fits?"}}})),
         definition(serde_json::json!({})),
         definition(serde_json::json!({"decide":"Fits?","unknown":true})),
@@ -160,4 +164,109 @@ fn stage_context_is_closed_strict_and_recognition_only() {
     let encoded = serde_json::to_string(&RequestDefinition::from(prepared)).unwrap();
     assert!(encoded.contains(r#""stage_context":{"boundary":"","relation":"retained"}"#));
     assert!(!format!("{:?}", question).contains("retained"));
+}
+
+#[test]
+fn recognition_mode_resolves_before_source_reads_and_refuses_skipped_controls() {
+    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"version":1,"recognize":DECL}},"input":{"kind":"source","source":{"paths":["missing-evidence"]}},"options":OPTIONS}}"#;
+    for mode in ["whole", "boundary_only"] {
+        let text = request
+            .replace("DECL", "{}")
+            .replace("OPTIONS", &format!(r#"{{"mode":"{mode}"}}"#));
+        assert!(Request::from_json(&text).unwrap().admit().is_ok());
+    }
+    for control in [
+        r#""relations":[]"#,
+        r#""stage_context":{"kind_edge":""}"#,
+        r#""stage_context":{"relation":""}"#,
+    ] {
+        let text = request
+            .replace("DECL", &format!("{{{control}}}"))
+            .replace("OPTIONS", r#"{"mode":"boundary_only"}"#);
+        let error = Request::from_json(&text).unwrap().admit().unwrap_err();
+        assert_eq!(
+            error.detail().message(),
+            "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"
+        );
+    }
+}
+
+#[test]
+fn recognition_authored_controls_survive_native_wire_round_trips_without_adding_defaults() {
+    let request = |ask: crate::Recognize, mode| {
+        Request::new(RequestCall::Recognize(RequestArguments {
+            question: RequestQuestion::Definition { value: ask.into() },
+            input: RequestInput::Text {
+                text: "Ada".into(),
+                images: Vec::new(),
+            },
+            options: RequestOptions {
+                mode: Some(mode),
+                ..RequestOptions::default()
+            },
+        }))
+    };
+    let implicit = request(
+        crate::Recognize::builder().build().unwrap(),
+        crate::RecognitionMode::BoundaryOnly,
+    );
+    let wire = serde_json::to_string(&implicit).unwrap();
+    assert!(!wire.contains("relation_threshold"));
+    assert!(Request::from_json(&wire).unwrap().admit().is_ok());
+    for ask in [
+        crate::Recognize::builder()
+            .relation_threshold(0.5)
+            .unwrap()
+            .build()
+            .unwrap(),
+        crate::Recognize::from_json(r#"{"version":1,"recognize":{"relations":[]}}"#).unwrap(),
+    ] {
+        let authored = request(ask, crate::RecognitionMode::BoundaryOnly);
+        let native = authored.clone().admit().unwrap_err();
+        let decoded = Request::from_json(&serde_json::to_string(&authored).unwrap())
+            .unwrap()
+            .admit()
+            .unwrap_err();
+        assert_eq!(native.detail().message(), decoded.detail().message());
+    }
+    let saved = crate::Recognize::from_json(r#"{"version":1,"recognize":{"mode":"boundary_only","stage_context":{"relation":""}},"relation_threshold":0.5}"#).unwrap();
+    let whole = request(saved, crate::RecognitionMode::Whole);
+    assert!(whole.clone().admit().is_ok());
+    assert!(
+        Request::from_json(&serde_json::to_string(&whole).unwrap())
+            .unwrap()
+            .admit()
+            .is_ok()
+    );
+}
+
+#[test]
+fn recognition_mode_and_cuts_have_closed_safe_admission() {
+    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"version":1,"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":CONTROL}}"#;
+    for controls in [
+        r#"{"mode":null}"#,
+        r#"{"mode":"secret-invalid"}"#,
+        r#"{"mode":"whole","mode":"boundary_only"}"#,
+        r#"{"threshold":"0.4:0.6"}"#,
+        r#"{"relation_threshold":"0.4:0.6"}"#,
+        r#"{"mode":"boundary_only","relation_threshold":0.5}"#,
+    ] {
+        let text = request.replace("CONTROL", controls);
+        let error = Request::from_json(&text)
+            .and_then(Request::admit)
+            .unwrap_err();
+        assert!(!error.detail().message().contains("secret-invalid"));
+    }
+    for controls in [
+        r#"{"threshold":0.5}"#,
+        r#"{"mode":"whole","relation_threshold":0.5}"#,
+        r#"{"mode":"boundary_only","threshold":0.5,"stage_context":{"boundary":""}}"#,
+    ] {
+        assert!(
+            Request::from_json(&request.replace("CONTROL", controls))
+                .unwrap()
+                .admit()
+                .is_ok()
+        );
+    }
 }

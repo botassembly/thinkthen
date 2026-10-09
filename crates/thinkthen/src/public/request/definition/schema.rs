@@ -25,6 +25,9 @@ impl JsonSchema for super::RequestDefinition {
             generator
                 .subschema_for::<crate::RecognitionStageContext>()
                 .to_value(),
+            generator
+                .subschema_for::<crate::RecognitionMode>()
+                .to_value(),
         );
         let set = set(&definitions);
         for (name, definition) in definitions {
@@ -58,7 +61,11 @@ fn rewrite_refs(value: &mut Value) {
 fn reference(name: &str) -> Value {
     json!({"$ref":format!("#/$defs/Authored_{name}")})
 }
-fn recognize(definitions: &serde_json::Map<String, Value>, stage_context: Value) -> Value {
+fn recognize(
+    definitions: &serde_json::Map<String, Value>,
+    stage_context: Value,
+    mode: Value,
+) -> Value {
     // Existing find declarations supply the shared metadata, route and pointers.
     let mut properties = definitions["find"]["properties"]
         .as_object()
@@ -75,7 +82,8 @@ fn recognize(definitions: &serde_json::Map<String, Value>, stage_context: Value)
             "relations":{"type":"array","items":reference("relation")},
             "instructions":reference("questionText"),
             "entity_definition":reference("questionText"),
-            "stage_context":stage_context
+            "stage_context":stage_context,
+            "mode": mode
         }}));
     json!({"type":"object","required":["version","recognize"],
         "additionalProperties":false,"properties":properties})

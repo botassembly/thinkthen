@@ -144,7 +144,7 @@ fn graded(answer: &Answer, key: &Key, rule: Rule) -> Result<Grade, MeasureError>
         let kept = items.kept(rule)?;
         let [matched, extra, missed] = items::tally(items, wanted, matching, rule)?;
         return Ok((
-            Some(item_shape(answer.verb, kept)),
+            Some(item_shape(answer.verb, items.mode, kept)),
             key.saved_value(answer).cloned(),
             None,
             "items",
@@ -183,9 +183,14 @@ fn truth(want: Want) -> Option<Json> {
     }
 }
 
-fn item_shape(verb: Verb, kept: &[Item]) -> Json {
+fn item_shape(verb: Verb, mode: crate::core::RecognitionMode, kept: &[Item]) -> Json {
     let items = Json::Array(kept.iter().map(|item| item.printed.clone()).collect());
-    if verb == Verb::Recognize {
+    if verb == Verb::Recognize && mode == crate::core::RecognitionMode::BoundaryOnly {
+        Json::Object(vec![
+            ("mode".to_owned(), Json::String("boundary_only".to_owned())),
+            ("proposals".to_owned(), items),
+        ])
+    } else if verb == Verb::Recognize {
         Json::Object(vec![("entities".to_owned(), items)])
     } else {
         items

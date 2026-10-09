@@ -118,6 +118,8 @@ mod source_recognition;
 
 #[path = "native_complete/find_admission.rs"]
 mod find_admission;
+#[path = "native_complete/recognize_boundary.rs"]
+mod recognize_boundary;
 #[path = "native_complete/recognize_context.rs"]
 mod recognize_context;
 #[path = "native_complete/recognize_examples.rs"]

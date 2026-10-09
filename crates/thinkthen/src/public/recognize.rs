@@ -13,6 +13,8 @@ use crate::public::question::{self, Description};
 use crate::public::results::Written;
 
 mod debug;
+mod proposals;
+pub use proposals::{BoundaryProposal, RecognitionValue};
 mod observation;
 use crate::public::results::observe_question;
 use observation::observe_row;
@@ -155,6 +157,12 @@ pub(super) use crate::public::question::model_of as model;
 pub struct Recognize(pub(crate) RecognizeSpec);
 
 impl Recognize {
+    /// Select recognition stages while retaining the caller declaration.
+    #[must_use]
+    pub fn with_mode(mut self, mode: crate::RecognitionMode) -> Self {
+        self.0.mode = mode;
+        self
+    }
     /// Replace shared boundary examples without changing the saved question reading.
     /// # Errors
     /// Refuses malformed annotations, undeclared kinds or invalid piece edges.
@@ -213,6 +221,7 @@ impl Recognize {
     #[must_use]
     pub fn builder() -> RecognizeBuilder {
         RecognizeBuilder {
+            mode: crate::RecognitionMode::Whole,
             kinds: Vec::new(),
             instructions: None,
             entity_definition: None,
@@ -254,6 +263,7 @@ impl Recognize {
 
 /// A recognition request under construction.
 pub struct RecognizeBuilder {
+    mode: crate::RecognitionMode,
     kinds: Vec<Kind>,
     instructions: Option<core::QuestionText>,
     entity_definition: Option<core::QuestionText>,
@@ -264,6 +274,12 @@ pub struct RecognizeBuilder {
 }
 
 impl RecognizeBuilder {
+    /// Select whole recognition or boundary proposals.
+    #[must_use]
+    pub const fn mode(mut self, mode: crate::RecognitionMode) -> Self {
+        self.mode = mode;
+        self
+    }
     /// Supply the recognition task wording for every entity stage.
     /// # Errors
     /// Refuses blank wording before any request.
@@ -356,6 +372,8 @@ impl RecognizeBuilder {
             written(self.relation_threshold).as_deref(),
         )
         .map_err(Error::refused)?;
+        spec.mode = self.mode;
+        spec.validate_mode().map_err(Error::refused)?;
         spec.model = self.model;
         spec.instructions = self.instructions;
         spec.entity_definition = self.entity_definition;
@@ -478,6 +496,7 @@ impl Relation {
 /// The names one text holds, and their relations when rules were given.
 #[derive(Clone, PartialEq)]
 pub struct Recognized {
+    proposals: Option<Vec<BoundaryProposal>>,
     entities: Vec<RecognizedEntity>,
     relations: Option<Vec<Relation>>,
     json: Written,
@@ -486,10 +505,22 @@ pub struct Recognized {
 impl Recognized {
     pub(crate) fn from_native(found: core::RecognizedValue) -> Result<Self, Error> {
         let json = Written::of(&found)?;
+        let (entities, relations, proposals) = match found {
+            core::RecognizedValue::Whole {
+                entities,
+                relations,
+            } => (entities, relations, None),
+            core::RecognizedValue::BoundaryOnly { proposals, .. } => (
+                Vec::new(),
+                None,
+                Some(proposals.into_iter().map(BoundaryProposal).collect()),
+            ),
+        };
         let row = Self {
             json,
-            entities: found.entities.into_iter().map(RecognizedEntity).collect(),
-            relations: found.relations.map(|edges| {
+            proposals,
+            entities: entities.into_iter().map(RecognizedEntity).collect(),
+            relations: relations.map(|edges| {
                 edges
                     .into_iter()
                     .map(|edge| Relation {
@@ -549,6 +580,7 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<crate::public::Call<Recognized>, Error> {
+        ask.0.validate_mode().map_err(Error::refused)?;
         ask.0
             .metadata
             .validate_item(&crate::public::QuestionInput::Text(evidence.to_owned()))?;

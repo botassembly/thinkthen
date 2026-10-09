@@ -54,6 +54,7 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
         T: InputEvidence,
     {
+        ask.0.validate_mode().map_err(Error::refused)?;
         let options = options.started()?;
         options.admission()?;
         let engine =

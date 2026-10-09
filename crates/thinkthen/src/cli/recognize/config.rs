@@ -68,6 +68,13 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
         kind_edge: arguments.kind_edge_context.clone(),
         relation: arguments.relation_context.clone(),
     });
+    if let Some(mode) = &arguments.mode {
+        spec.mode = crate::RecognitionMode::parse(mode)
+            .ok_or(Failure::Usage(crate::RecognitionMode::USAGE))?;
+    }
+    spec.authored_relation_threshold |= arguments.relation_threshold.is_some();
+    spec.validate_mode()
+        .map_err(|why| error(file.is_some(), why))?;
     Ok(spec)
 }
 

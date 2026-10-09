@@ -16,6 +16,7 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<CompleteRecognized>, Error> {
+        ask.0.validate_mode().map_err(Error::refused)?;
         ask.0
             .metadata
             .validate_item(&crate::public::QuestionInput::Text(evidence.to_owned()))?;

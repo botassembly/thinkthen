@@ -212,6 +212,9 @@ fn planned(
 }
 
 fn name_upper_bound(spec: &RecognizeSpec, pieces: usize) -> Result<usize, Failure> {
+    if !spec.mode.is_whole() {
+        return Ok(0);
+    }
     let decoded = pieces.checked_mul(if spec.kinds.is_empty() { 1 } else { 2 });
     decoded
         .and_then(|count| {
@@ -224,6 +227,9 @@ fn name_upper_bound(spec: &RecognizeSpec, pieces: usize) -> Result<usize, Failur
 }
 
 fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {
+    if !spec.mode.is_whole() {
+        return Some(0);
+    }
     (!spec.relations.is_empty()).then(|| {
         let directed = tokens.saturating_mul(tokens.saturating_sub(1));
         spec.relations.iter().fold(0_usize, |total, rule| {

@@ -31,6 +31,67 @@
         }
       ]
     },
+    "BoundaryMode": {
+      "enum": [
+        "boundary_only"
+      ],
+      "type": "string"
+    },
+    "BoundaryOdds": {
+      "properties": {
+        "pieces": {
+          "items": {
+            "$ref": "#/$defs/pieceOdds"
+          },
+          "type": "array"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/BoundaryProposal"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pieces",
+        "proposals"
+      ],
+      "type": "object"
+    },
+    "BoundaryProposal": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "length": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "start": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "length",
+        "probability"
+      ],
+      "type": "object"
+    },
     "CallId": {
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
@@ -687,6 +748,9 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "mode": {
+          "$ref": "#/$defs/RecognitionMode"
+        },
         "name": {
           "anyOf": [
             {
@@ -704,7 +768,14 @@
           ]
         },
         "relation_threshold": {
-          "$ref": "#/$defs/threshold"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/threshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "relations": {
           "items": {
@@ -738,8 +809,7 @@
       "required": [
         "verb",
         "kinds",
-        "threshold",
-        "relation_threshold"
+        "threshold"
       ],
       "type": "object"
     },
@@ -821,6 +891,28 @@
         "threshold"
       ],
       "type": "object"
+    },
+    "RecognitionMode": {
+      "oneOf": [
+        {
+          "const": "whole",
+          "type": "string"
+        },
+        {
+          "const": "boundary_only",
+          "type": "string"
+        }
+      ]
+    },
+    "RecognitionOdds": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/recognizeAnswer"
+        },
+        {
+          "$ref": "#/$defs/BoundaryOdds"
+        }
+      ]
     },
     "RecognitionStageContext": {
       "additionalProperties": false,
@@ -2232,6 +2324,72 @@
       "required": [
         "completed",
         "error"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeBoundaryMode": {
+      "enum": [
+        "boundary_only"
+      ],
+      "type": "string"
+    },
+    "completeBoundaryOdds": {
+      "properties": {
+        "pieces": {
+          "items": {
+            "$ref": "#/$defs/completepieceOdds"
+          },
+          "type": "array"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/completeBoundaryProposal"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pieces",
+        "proposals"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeBoundaryProposal": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "length": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "start": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "length",
+        "probability"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -4564,6 +4722,9 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "mode": {
+          "$ref": "#/$defs/completeRecognitionMode"
+        },
         "name": {
           "anyOf": [
             {
@@ -4577,7 +4738,11 @@
           ]
         },
         "relation_threshold": {
-          "$ref": "#/$defs/completethreshold"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            }
+          ]
         },
         "relations": {
           "items": {
@@ -4607,8 +4772,7 @@
       "required": [
         "verb",
         "kinds",
-        "threshold",
-        "relation_threshold"
+        "threshold"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -4683,7 +4847,7 @@
     "completeRecognition": {
       "properties": {
         "answer": {
-          "$ref": "#/$defs/completerecognizeAnswer"
+          "$ref": "#/$defs/completeRecognitionOdds"
         },
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
@@ -4752,6 +4916,28 @@
       ],
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completeRecognitionMode": {
+      "oneOf": [
+        {
+          "const": "whole",
+          "type": "string"
+        },
+        {
+          "const": "boundary_only",
+          "type": "string"
+        }
+      ]
+    },
+    "completeRecognitionOdds": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completerecognizeAnswer"
+        },
+        {
+          "$ref": "#/$defs/completeBoundaryOdds"
+        }
+      ]
     },
     "completeRecognitionStageContext": {
       "additionalProperties": false,
@@ -6330,27 +6516,50 @@
       "unevaluatedProperties": false
     },
     "completerecognize": {
-      "properties": {
-        "entities": {
-          "items": {
-            "$ref": "#/$defs/completeentity"
+      "anyOf": [
+        {
+          "properties": {
+            "entities": {
+              "items": {
+                "$ref": "#/$defs/completeentity"
+              },
+              "type": "array"
+            },
+            "relations": {
+              "items": {
+                "$ref": "#/$defs/completeentityEdge"
+              },
+              "type": [
+                "array"
+              ]
+            }
           },
-          "type": "array"
+          "required": [
+            "entities"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
         },
-        "relations": {
-          "items": {
-            "$ref": "#/$defs/completeentityEdge"
+        {
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/completeBoundaryMode"
+            },
+            "proposals": {
+              "items": {
+                "$ref": "#/$defs/completeBoundaryProposal"
+              },
+              "type": "array"
+            }
           },
-          "type": [
-            "array"
-          ]
+          "required": [
+            "mode",
+            "proposals"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
         }
-      },
-      "required": [
-        "entities"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
+      ]
     },
     "completerecognizeAnswer": {
       "properties": {
@@ -7588,27 +7797,49 @@
       "type": "object"
     },
     "recognize": {
-      "properties": {
-        "entities": {
-          "items": {
-            "$ref": "#/$defs/entity"
+      "anyOf": [
+        {
+          "properties": {
+            "entities": {
+              "items": {
+                "$ref": "#/$defs/entity"
+              },
+              "type": "array"
+            },
+            "relations": {
+              "items": {
+                "$ref": "#/$defs/entityEdge"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
           },
-          "type": "array"
+          "required": [
+            "entities"
+          ],
+          "type": "object"
         },
-        "relations": {
-          "items": {
-            "$ref": "#/$defs/entityEdge"
+        {
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/BoundaryMode"
+            },
+            "proposals": {
+              "items": {
+                "$ref": "#/$defs/BoundaryProposal"
+              },
+              "type": "array"
+            }
           },
-          "type": [
-            "array",
-            "null"
-          ]
+          "required": [
+            "mode",
+            "proposals"
+          ],
+          "type": "object"
         }
-      },
-      "required": [
-        "entities"
-      ],
-      "type": "object"
+      ]
     },
     "recognizeAnswer": {
       "properties": {
@@ -7641,7 +7872,7 @@
     "recognizeDetails": {
       "properties": {
         "answer": {
-          "$ref": "#/$defs/recognizeAnswer"
+          "$ref": "#/$defs/RecognitionOdds"
         },
         "input": {},
         "meta": {

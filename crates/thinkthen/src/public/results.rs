@@ -24,7 +24,9 @@ mod complete_find;
 pub use complete_facts::CompleteFacts;
 mod complete_recognize;
 mod source_recognition;
-pub use source_recognition::{SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation};
+pub use source_recognition::{
+    SourceBoundaryProposal, SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation,
+};
 mod complete_relate;
 pub(crate) mod source_relation;
 pub use complete_relate::{CompleteRelated, CompleteRelationMember};

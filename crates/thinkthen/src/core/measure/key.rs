@@ -158,7 +158,16 @@ impl Key {
         Ok(match (answer.verb, value) {
             (_, Json::Null) => None,
             (Verb::Recognize | Verb::Relate, _) => Some(Want::Items(
-                items::key(entry.line, answer.verb, value, &answer.options)?,
+                items::key(
+                    entry.line,
+                    answer.verb,
+                    value,
+                    &answer.options,
+                    answer
+                        .items
+                        .as_ref()
+                        .map_or(crate::core::RecognitionMode::Whole, |items| items.mode),
+                )?,
                 self.1,
             )),
             (Verb::Tag, Json::Array(items)) => {
