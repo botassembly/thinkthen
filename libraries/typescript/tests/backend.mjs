@@ -1,5 +1,5 @@
 // One loopback backend per test, and child Node processes that reach it.
-// Each child gets PATH, a fresh cache, a scratch XDG_CACHE_HOME, and a fake
+// Each child gets PATH, owned home folders, a fresh cache, and a fake
 // key only beside a 127.0.0.1 address, and nothing else (ticket 0127). No test changes
 // its own environment, because the default engine reads it once.
 import { spawn } from 'node:child_process';
@@ -66,23 +66,23 @@ export async function startBackend(t, markers = {}) {
 }
 
 /** The child's whole environment: PATH, the fake key, and the loopback address. */
-export function childEnv(backend, arm = 'generic', extra = {}) {
+export function childEnv(backend, arm = 'generic', extra = {}, home) {
   const url = extra.THINKTHEN_BASE_URL ?? backend.base(arm);
   if (new URL(url).hostname !== '127.0.0.1') throw new Error(`refusing a backend that is not loopback: ${url}`);
   const cache = mkdtempSync(join(backend.folder, 'cache-'));
-  return cleanEnv({ values: { THINKTHEN_API_KEY: FAKE_KEY, THINKTHEN_BASE_URL: url, THINKTHEN_CACHE: cache, XDG_CACHE_HOME: cache, ...extra } });
+  return cleanEnv({ home: home ?? cache, values: { THINKTHEN_API_KEY: FAKE_KEY, THINKTHEN_BASE_URL: url, THINKTHEN_CACHE: cache, ...extra } });
 }
 
 /** Start a child running BODY as the body of an async function with `tt`
  * in scope. It prints the returned value, or the error, as one JSON line. */
-export function child(backend, body, { arm = 'generic', env = {}, stdin = false } = {}) {
+export function child(backend, body, { arm = 'generic', env = {}, home, stdin = false } = {}) {
   const code = `import * as tt from ${JSON.stringify(INDEX)};
 const line = (value) => process.stdout.write(JSON.stringify(value === undefined ? null : value) + '\\n');
 globalThis.line = line;
 try { line({ value: await (async () => { ${body} })() }); }
 catch (error) { line({ error: { name: error.name, kind: error.kind, message: error.message, retryable: error.retryable, text: String(error), facts: error.facts, details: error.details } }); }`;
   const proc = spawn(process.execPath, ['--input-type=module', '-e', code], {
-    env: childEnv(backend, arm, env),
+    env: childEnv(backend, arm, env, home),
     stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'inherit'],
   });
   const lines = [];

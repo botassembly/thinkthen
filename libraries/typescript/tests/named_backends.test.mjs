@@ -44,15 +44,15 @@ test('constructor backend errors remain usage failures without sends', async (t)
 test('explicit backend selects configured routing over captured address and keeps setup limits', async (t) => {
   const backend = await startBackend(t, { local:'fake-local' });
   const folder = join(backend.folder, 'config');
-  const config = join(folder, process.platform === 'darwin' ? 'Library/Application Support/thinkthen' : 'thinkthen');
+  const config = join(folder, process.platform === 'darwin' ? 'Library/Application Support/thinkthen' : 'config/thinkthen');
   mkdirSync(config, {recursive:true});
   writeFileSync(join(config, 'config.json'), JSON.stringify({schema:'thinkthen.config/1', backends:{local:{
     url:backend.base('arm/full/capture'), model:'setup', key_env:'LOCAL_KEY', path:'judgements/v2/decide',
     usd_per_million_input:'1', usd_per_million_output:'2',
     profile:{schema:'thinkthen.backend-profile/1',name:'small',max_evidence_bytes:3},
   }}}));
-  const env = {HOME:folder,XDG_CONFIG_HOME:folder,LOCAL_KEY:'fake-local'};
-  const refused = await ask(backend, `return await new tt.Engine({backend:'local',cache:false}).decide('attention?', 'refund');`, {env});
+  const options = { home: folder, env: { LOCAL_KEY: 'fake-local' } };
+  const refused = await ask(backend, `return await new tt.Engine({backend:'local',cache:false}).decide('attention?', 'refund');`, options);
   assert.equal(refused.error.kind, 'usage');
   assert.match(refused.error.message, /profile small/);
   assert.equal(await backend.count(), 0);
@@ -62,7 +62,7 @@ test('explicit backend selects configured routing over captured address and keep
     const engine = new tt.Engine({backend:'local',model:'override',profile:${JSON.stringify(profile)},cache:false});
     process.env.LOCAL_KEY='fake-later';
     return await engine.decide('attention?', 'refund');
-  `, {env});
+  `, options);
   assert.equal(got.value.value, true);
   assert.equal(got.value.facts.estimated_cost_usd, '0.000003');
   assert.equal(await backend.count(), 1);

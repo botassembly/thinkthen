@@ -59,11 +59,13 @@ OWNED_HOME_CALLERS = {
     "libraries/python/tests/test_backend_setups.py", "libraries/python/tests/examples.py",
     "libraries/ruby/tests/backend.rb", "libraries/ruby/tests/test_package.rb",
     "libraries/ruby/tests/test_public_names.rb",
+    "libraries/typescript/tests/backend.mjs", "libraries/typescript/tests/named_backends.test.mjs",
+    "libraries/typescript/tests/shapes.test.mjs", "libraries/typescript/tests/examples.test.mjs",
 }
 DIRECT_FOLDER = re.compile(
     r'''\.env\(\s*["'](?:XDG_\w+|APPDATA|LOCALAPPDATA)["']|'''
     r'''["'](?:XDG_\w+|APPDATA|LOCALAPPDATA)["']\s*(?:\]\s*=|:)|'''
-    r'''\b(?:XDG_\w+|APPDATA|LOCALAPPDATA)\s*=''')
+    r'''\b(?:XDG_\w+|APPDATA|LOCALAPPDATA)\s*(?:=|:)''')
 FOLDERS = "set product child folders through the shared owned-home helper"
 
 SPAWNS = {
@@ -243,6 +245,10 @@ def rust_msg(path, number):
 
 
 CASES = [
+    ("libraries/typescript/tests/backend.mjs", 'const env = { XDG_CONFIG_HOME: folder };\n',
+     [f"children: libraries/typescript/tests/backend.mjs:1: {FOLDERS}"]),
+    ("libraries/typescript/tests/named_backends.test.mjs", 'const env = childEnv({ home: folder });\n', []),
+    ("libraries/typescript/tests/settings.test.mjs", 'const env = { XDG_STATE_HOME: folder };\n', []),
     ("libraries/ruby/tests/backend.rb", 'env = Children.env("XDG_CONFIG_HOME" => folder)\n',
      [f"children: libraries/ruby/tests/backend.rb:1: {FOLDERS}"]),
     ("libraries/mcp/installed.py", 'env = {"XDG_CONFIG_HOME": folder}\n',
