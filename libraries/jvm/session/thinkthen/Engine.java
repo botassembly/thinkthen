@@ -1,0 +1,122 @@
+package thinkthen;
+
+import java.lang.foreign.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
+
+/** Ten named asynchronous calls over one shared owned native session boundary. */
+public final class Engine implements AutoCloseable {
+    private MemorySegment pointer;
+    private static final ScheduledExecutorService POLLER = Executors.newScheduledThreadPool(2, runnable -> {
+        Thread thread = new Thread(runnable, "thinkthen-session"); thread.setDaemon(true); return thread;
+    });
+    public Engine(Map<String,?> settings) {
+        try (Arena arguments = Arena.ofConfined()) {
+            byte[] bytes = NativeSession.utf8(Json.write(settings));
+            var text = arguments.allocate(bytes.length + 1L);
+            MemorySegment.copy(bytes, 0, text, ValueLayout.JAVA_BYTE, 0, bytes.length);
+            pointer = (MemorySegment)NativeSession.call("thinkthen_engine_new_with", ValueLayout.ADDRESS,
+                new MemoryLayout[]{ValueLayout.ADDRESS}, text);
+            if (pointer.equals(MemorySegment.NULL)) throw engineFailure();
+        }
+    }
+    public Engine() { this(Map.of()); }
+    private NativeFailure engineFailure() {
+        var args = new MemoryLayout[]{ValueLayout.ADDRESS};
+        int code = (int)NativeSession.call("thinkthen_error_code", ValueLayout.JAVA_INT, args, pointer);
+        boolean retryable = (int)NativeSession.call("thinkthen_error_retryable", ValueLayout.JAVA_INT, args, pointer) != 0;
+        var text = (MemorySegment)NativeSession.call("thinkthen_error_message", ValueLayout.ADDRESS, args, pointer);
+        var facts = (MemorySegment)NativeSession.call("thinkthen_error_facts_json", ValueLayout.ADDRESS, args, pointer);
+        return new NativeFailure(code, retryable, text.reinterpret(Long.MAX_VALUE).getString(0),
+            facts.equals(MemorySegment.NULL) ? null : Json.parse(facts.reinterpret(Long.MAX_VALUE).getString(0)));
+    }
+    private void live() { if (pointer.equals(MemorySegment.NULL)) throw new IllegalStateException("Engine is closed"); }
+    public synchronized OwnedSession startSession(Map<String,?> request) {
+        live();
+        try (Arena arguments = Arena.ofConfined()) {
+            var bytes = NativeSession.bytes(arguments, request);
+            var output = arguments.allocate(ValueLayout.ADDRESS);
+            NativeSession.check((int)NativeSession.call("thinkthen_session_new", ValueLayout.JAVA_INT,
+                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), output));
+            return new OwnedSession(output.get(ValueLayout.ADDRESS, 0));
+        }
+    }
+    public synchronized Results.Plan plan(Map<String,?> request) {
+        live();
+        try (Arena arguments = Arena.ofConfined()) {
+            var bytes = NativeSession.bytes(arguments, request);
+            var output = arguments.allocate(ValueLayout.ADDRESS);
+            var length = arguments.allocate(NativeSession.SIZE);
+            NativeSession.check((int)NativeSession.call("thinkthen_request_plan_json", ValueLayout.JAVA_INT,
+                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), output, length));
+            var json = output.get(ValueLayout.ADDRESS, 0);
+            try { return new Results.Plan(NativeSession.copied(json, length.get(NativeSession.SIZE, 0))); }
+            finally { NativeSession.free("thinkthen_free_string", json); }
+        }
+    }
+    public record OwnedCall(List<Results.SessionPacket> packets, Results.SessionPacketTerminal terminal) {
+        public OwnedCall { packets = List.copyOf(packets); Objects.requireNonNull(terminal); }
+    }
+    public static final class SessionFailure extends RuntimeException {
+        private final OwnedCall call;
+        SessionFailure(OwnedCall call) { super(call.terminal().failure().value().error().message()); this.call = call; }
+        public OwnedCall call() { return call; }
+        public Results.CallError failure() { return call.terminal().failure().value(); }
+    }
+    /** Future cancellation stops the native session and releases its owner promptly. */
+    public CompletableFuture<OwnedCall> execute(Map<String,?> request) {
+        var result = new CompletableFuture<OwnedCall>();
+        final OwnedSession session;
+        try {
+            session = startSession(request);
+            try { session.finish(); } catch (RuntimeException error) { session.close(); throw error; }
+        }
+        catch (RuntimeException error) { result.completeExceptionally(error); return result; }
+        var scheduled = new AtomicReference<ScheduledFuture<?>>();
+        result.whenComplete((value,error) -> {
+            var pending = scheduled.get(); if (pending != null) pending.cancel(false);
+            session.close();
+        });
+        var packets = new ArrayList<Results.SessionPacket>();
+        var terminal = new AtomicReference<Results.SessionPacketTerminal>();
+        Runnable read = () -> {
+            if (result.isDone()) return;
+            try {
+                // One bounded native read per turn lets other sessions progress.
+                var next = session.tryRead();
+                if (next.packet() != null) {
+                    packets.add(next.packet());
+                    if (next.packet() instanceof Results.SessionPacketTerminal done) terminal.set(done);
+                }
+                if (next.ended()) {
+                    var call = new OwnedCall(packets, terminal.get());
+                    if (call.terminal().failure().state() == Presence.State.VALUE) result.completeExceptionally(new SessionFailure(call));
+                    else result.complete(call);
+                }
+            } catch (RuntimeException error) { result.completeExceptionally(error); }
+        };
+        scheduled.set(POLLER.scheduleWithFixedDelay(read, 0, 10, TimeUnit.MILLISECONDS));
+        if (result.isDone()) scheduled.get().cancel(false);
+        return result;
+    }
+    private CompletableFuture<OwnedCall> call(String function, Map<String,?> question, Map<String,?> input, Map<String,?> options) {
+        var call = new LinkedHashMap<String,Object>();
+        call.put("function", function); call.put("question", question); call.put("input", input);
+        if (options != null) call.put("options", options);
+        return execute(Map.of("schema", RequestVersion.VALUE, "call", call));
+    }
+    public CompletableFuture<OwnedCall> decide(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("decide", question, input, options); }
+    public CompletableFuture<OwnedCall> choose(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("choose", question, input, options); }
+    public CompletableFuture<OwnedCall> tag(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("tag", question, input, options); }
+    public CompletableFuture<OwnedCall> score(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("score", question, input, options); }
+    public CompletableFuture<OwnedCall> filter(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("filter", question, input, options); }
+    public CompletableFuture<OwnedCall> rank(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("rank", question, input, options); }
+    public CompletableFuture<OwnedCall> find(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("find", question, input, options); }
+    public CompletableFuture<OwnedCall> annotate(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("annotate", question, input, options); }
+    public CompletableFuture<OwnedCall> recognize(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("recognize", question, input, options); }
+    public CompletableFuture<OwnedCall> relate(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("relate", question, input, options); }
+    @Override public synchronized void close() {
+        if (!pointer.equals(MemorySegment.NULL)) { NativeSession.free("thinkthen_engine_free", pointer); pointer = MemorySegment.NULL; }
+    }
+}

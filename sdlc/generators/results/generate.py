@@ -329,9 +329,35 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "jvm":
+        if args.inputs or args.bridge:
+            parser.error("JVM target generates owned results only")
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import jvm
+        result = jvm.render(prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS)))
+        if args.output == OUTPUT:
+            args.output = ROOT / "libraries/jvm/session/thinkthen/Results.java"
+        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
+        version_source = ('// Generated from request.schema.json. Do not edit.\npackage thinkthen;\n'
+                          'final class RequestVersion { static final String VALUE = ' + json.dumps(version) + '; private RequestVersion() {} }\n')
+        version_output = ROOT / "libraries/jvm/session/thinkthen/RequestVersion.java"
+        if args.check and (not version_output.exists() or version_output.read_text() != version_source):
+            print("generated JVM request version differs", file=sys.stderr)
+            return 1
+        if not args.check:
+            version_output.parent.mkdir(parents=True, exist_ok=True)
+            version_output.write_text(version_source)
+        if args.check:
+            if not args.output.exists() or args.output.read_text() != result:
+                print("generated JVM results differ", file=sys.stderr)
+                return 1
+        else:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(result)
+        return 0
     if args.target == "zig":
         if args.bridge:
             parser.error("Zig reads the generated C header directly")

@@ -18,7 +18,9 @@ public final class Json {
         private final String text;
         private int at;
         private int depth;
-        Reader(String text) { this.text = text; }
+        private final int maxDepth;
+        Reader(String text) { this(text, 64); }
+        Reader(String text, int maxDepth) { this.text = text; this.maxDepth = maxDepth; }
         private void space() {
             while (at < text.length() && " \t\r\n".indexOf(text.charAt(at)) >= 0) at++;
         }
@@ -112,7 +114,7 @@ public final class Json {
             return parsed;
         }
         private Map<String, Object> object() {
-            if (++depth > 64) throw new IllegalStateException("JSON nesting limit");
+            if (++depth > maxDepth) throw new IllegalStateException("JSON nesting limit");
             need('{');
             Map<String, Object> members = new LinkedHashMap<>();
             if (!take('}')) {
@@ -128,7 +130,7 @@ public final class Json {
             return members;
         }
         private List<Object> array() {
-            if (++depth > 64) throw new IllegalStateException("JSON nesting limit");
+            if (++depth > maxDepth) throw new IllegalStateException("JSON nesting limit");
             need('[');
             List<Object> elements = new ArrayList<>();
             if (!take(']')) {
@@ -143,6 +145,15 @@ public final class Json {
     /** Read one JSON text. Text past the value is an error. */
     public static Object parse(String json) {
         Reader reader = new Reader(json);
+        Object result = reader.value();
+        reader.space();
+        if (reader.at != json.length()) throw new IllegalStateException("text after the JSON value");
+        return result;
+    }
+
+    // Native output has already passed the native reader. Do not add a host policy limit.
+    static Object parseOwned(String json) {
+        Reader reader = new Reader(json, Integer.MAX_VALUE);
         Object result = reader.value();
         reader.space();
         if (reader.at != json.length()) throw new IllegalStateException("text after the JSON value");
