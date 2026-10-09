@@ -127,9 +127,10 @@ fn normalize_member_observations(member: &mut serde_json::Map<String, Value>) {
     }
 }
 
-/// Replay retains member facts and identities while changing retrieval origin.
+/// Retrieval retains member facts and identities while changing the actual origin.
 #[cfg(test)]
-pub(crate) fn replayed_members(mut members: Value) -> Value {
+pub(crate) fn retrieved_members(mut members: Value, origin: &str) -> Value {
+    assert!(matches!(origin, "replay" | "cache"));
     let entries: Vec<&mut Value> = match &mut members {
         Value::Object(map) => map.values_mut().collect(),
         Value::Array(array) => array.iter_mut().collect(),
@@ -138,7 +139,7 @@ pub(crate) fn replayed_members(mut members: Value) -> Value {
     for member in entries {
         for source in member["question_sources"].as_array_mut().unwrap() {
             assert_eq!(source["origin"], "live");
-            source["origin"] = "replay".into();
+            source["origin"] = origin.into();
         }
     }
     members

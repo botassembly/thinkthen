@@ -36,7 +36,7 @@ fn find_none_replays_the_actual_raw_pick_and_partial_usage_without_a_second_send
     assert_eq!(live["answer"]["pick"], "u001");
     assert_eq!(
         live["question"],
-        json!({"verb":"find","text":"Which?","none":true,"name":"unit-choice","wording_version":3,"item_schema":{"type":"string"}})
+        json!({"verb":"find","text":"Which?","none":true,"name":"unit-choice","wording_version":3,"item_schema":{"type":"string"},"on":["/body"]})
     );
     assert_eq!(live["meta"]["usage"], json!({"input_tokens":887}));
     complete_sources(&live, 1);

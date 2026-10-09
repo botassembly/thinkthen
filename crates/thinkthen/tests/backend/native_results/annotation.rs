@@ -75,7 +75,7 @@ fn complete_annotation_replays_coalesced_observations_and_retains_declared_readi
     );
     assert_eq!(
         live[0]["answers"]["first"]["question"],
-        json!({"verb":"decide","text":"First?","name":"first-contract","wording_version":2,"item_schema":{"type":"string"}})
+        json!({"verb":"decide","text":"First?","name":"first-contract","wording_version":2,"item_schema":{"type":"string"},"on":["/body"]})
     );
     assert_eq!(live[0]["value"], json!({"first":true,"second":false}));
     assert_eq!(live[0]["meta"]["usage"], json!({"input_tokens":887}));
@@ -95,7 +95,7 @@ fn complete_annotation_replays_coalesced_observations_and_retains_declared_readi
         assert_eq!(held["answer_id"], live["answer_id"]);
         assert_eq!(
             held["answers"],
-            compatibility::replayed_members(live["answers"].clone())
+            compatibility::retrieved_members(live["answers"].clone(), "replay")
         );
         assert_eq!(held["meta"]["origin"], "replay");
         assert_eq!(held["meta"]["requests_sent"], 0);

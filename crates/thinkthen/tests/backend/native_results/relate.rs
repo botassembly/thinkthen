@@ -81,9 +81,11 @@ fn located_relation_duplicates_replay_one_observation_with_actual_filenames_and_
     assert_eq!(live["value"].as_array().unwrap().len(), 2);
     assert_eq!(
         live["value"][0]["source"],
-        json!({"name":"Ada","kind":"*","record":"Ada","file":input.to_str().unwrap(),"first_line":1,"last_line":1})
+        json!({"name":"Ada","kind":"*","record":"Ada","file":input.to_str().unwrap(),"first_line":1,"last_line":1,"ordinal":0})
     );
     assert_eq!(live["value"][1]["source"]["first_line"], 3);
+    assert_eq!(live["value"][1]["source"]["ordinal"], 2);
+    assert_eq!(live["value"][0]["target"]["ordinal"], 1);
     assert_eq!(live["value"][0]["target"]["first_line"], 2);
     assert_eq!(live["meta"]["usage"], json!({"input_tokens":887}));
     complete_sources(&live, 1);
@@ -104,7 +106,7 @@ fn located_relation_duplicates_replay_one_observation_with_actual_filenames_and_
     assert_eq!(held["value"], live["value"]);
     let mut expected_answer = live["answer"].clone();
     expected_answer["questions"] =
-        compatibility::replayed_members(expected_answer["questions"].clone());
+        compatibility::retrieved_members(expected_answer["questions"].clone(), "replay");
     assert_eq!(held["answer"], expected_answer);
     assert_eq!(held["meta"]["attempts"], json!([]));
     assert_eq!(held["meta"]["question_sources"][0]["batch_size"], 1);
