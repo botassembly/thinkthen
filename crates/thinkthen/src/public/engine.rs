@@ -198,6 +198,20 @@ impl Engine {
             .and_then(|prices| prices.estimate(input_tokens, output_tokens))
     }
 
+    /// Observe count persistence without waiting for a write or touching inherited
+    /// state in a forked child. Written covers only this engine's current deltas.
+    #[must_use]
+    pub fn usage_persistence(&self) -> crate::public::UsagePersistence {
+        self.inner.usage_persistence()
+    }
+
+    /// Drain current deltas and report persistence. Only usage-lock acquisition
+    /// has the existing one-second deadline; other filesystem work can take longer.
+    #[must_use]
+    pub fn finish_usage_status(&self) -> crate::public::UsagePersistence {
+        self.inner.finish_usage_status()
+    }
+
     /// Write this process's pending usage totals before the process exits,
     /// for a host that never drops its engine. Dropping the last clone does
     /// the same. Only the wait for the usage lock is bounded, by one second.

@@ -11,8 +11,8 @@ use crate::engine::error::Error;
 use crate::engine::http::{Client, Exchange, Key};
 
 use super::{
-    CREATION_PAUSE, Counters, Counts, FAILURE, INITIAL_SYNC, Shared, Stage, month_now, read,
-    recognized_month, year_month,
+    CREATION_PAUSE, Counters, Counts, FAILURE, INITIAL_SYNC, Shared, Stage, UsagePersistence,
+    month_now, read, recognized_month, year_month,
 };
 
 static FOLDERS: AtomicU64 = AtomicU64::new(0);
@@ -293,11 +293,17 @@ fn every_update_stage_warns_once_and_disables_later_persistence() {
         FAILURE.with(|failure| failure.set(Some(stage)));
         counters.request_sent();
         assert!(counters.finish(), "{stage:?}");
+        assert_eq!(counters.persistence(), UsagePersistence::Failed);
+        let held = counters.hold_queue();
+        assert_eq!(counters.persistence(), UsagePersistence::Failed);
+        drop(held);
         let after_failure = read(&folder, "2026-09")
             .map(|totals| totals.month.requests_sent)
             .unwrap_or(0);
         counters.request_sent();
         counters.finish();
+        assert_eq!(counters.persistence(), UsagePersistence::Failed);
+        assert_eq!(counters.snapshot().requests_sent, 2);
         let after_disabled = read(&folder, "2026-09")
             .map(|totals| totals.month.requests_sent)
             .unwrap_or(0);
@@ -421,7 +427,18 @@ fn a_held_lock_is_busy_after_one_second_and_the_send_check_passes() {
             folder.join(".lock").display()
         )
     );
-    assert!(Counters::new(Some(folder)).check_readable().is_ok());
+    let counters = Counters::new(Some(folder));
+    assert_eq!(counters.persistence(), UsagePersistence::Written);
+    assert!(counters.check_readable().is_ok());
+    counters.request_sent();
+    assert_eq!(counters.persistence(), UsagePersistence::Pending);
+    let held = counters.hold_queue();
+    assert_eq!(counters.persistence(), UsagePersistence::Pending);
+    drop(held);
+    drop(holder);
+    assert!(!counters.finish());
+    assert_eq!(counters.persistence(), UsagePersistence::Written);
+    assert_eq!(counters.snapshot().requests_sent, 1);
 }
 
 /// The check keeps its result, so a repaired file does not resume counting

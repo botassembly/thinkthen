@@ -31,6 +31,28 @@ SDK and SQL callers can discover failed persistence of usage counts without expo
 - Existing fork regression seam: `crates/thinkthen/src/engine/facade/fork_tests.rs`. Prove status and finalization avoid an inherited held queue and write only the child's owned deltas, using the existing busy-parent fixture.
 - Defers: No monthly spending policy, ledger change, telemetry, new durable store or proof framework. Release management remains held.
 
+### Added public declarations
+
+```text
+enum UsagePersistence
+UsagePersistence::Disabled
+UsagePersistence::Pending
+UsagePersistence::Written
+UsagePersistence::Failed
+const fn UsagePersistence::advice(self) -> Option<&'static str>
+fn Engine::usage_persistence(&self) -> UsagePersistence
+fn Engine::finish_usage_status(&self) -> UsagePersistence
+const fn Facts::usage_persistence(&self) -> Option<UsagePersistence>
+impl Serialize for UsagePersistence
+```
+
+## What the build taught us
+
+The existing writer failure latch belongs to shared counters. An atomic latch lets observation report a known failure even while another thread holds the queue. A nonblocking queue observation reports Pending during contention and never waits for filesystem work. The existing finalizer retains its usage-lock deadline and leaves other filesystem operations unbounded.
+
+Complete invocation facts freeze the engine's persistence state when facts are snapshotted. A Pending snapshot remains Pending after a later finalizer reports Failed or Written. Aggregate tallies carry no persistence observation. Legacy count-only facts retain their serialized shape. The shared facade state door attaches counters to call facts across call families without duplicating host logic.
+
+The existing held-writer, stage-failure and inherited-parent queue fixtures exercise the contract. A loopback consumer preserves the valid answer, reported tokens and exact request counts after failure. Only fixed advice reaches complete facts. Host engines, the C status request and three SQL status functions require the remaining adoption slices before the ticket's full outcome is met.
 
 ## Progress
 

@@ -72,6 +72,7 @@ mod recognize_question;
 pub use recognize_question::RecognizeQuestionFile;
 mod relate;
 mod results;
+pub use results::UsagePersistence;
 mod set;
 mod settings;
 

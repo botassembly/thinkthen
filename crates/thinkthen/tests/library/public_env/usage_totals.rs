@@ -6,9 +6,96 @@ use super::*;
 use crate::child::ChildEnvironment as _;
 use crate::child::Folder;
 
+fn hold_usage_writer(case: &str, argument: &str) -> Option<fs::File> {
+    (case == "usage-held").then(|| {
+        let usage = Path::new(argument);
+        fs::create_dir_all(usage).expect("usage folder");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            fs::set_permissions(usage, fs::Permissions::from_mode(0o700)).expect("private folder");
+        }
+        let lock = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(usage.join(".lock"))
+            .expect("usage lock");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            lock.set_permissions(fs::Permissions::from_mode(0o600))
+                .expect("private lock");
+        }
+        lock.lock().expect("hold writer");
+        lock
+    })
+}
+
+fn assert_usage_persistence(
+    engine: &Engine,
+    case: &str,
+    argument: &str,
+    call: &thinkthen::Call<thinkthen::Answer>,
+    question: &thinkthen::Question,
+) {
+    let observed = call
+        .facts()
+        .usage_persistence()
+        .expect("engine facts observation");
+    let complete: serde_json::Value =
+        serde_json::to_value(call.facts().complete().expect("complete facts")).expect("facts JSON");
+    assert_eq!(
+        complete["usage_persistence"]["observed_at"],
+        "facts_snapshot"
+    );
+    let legacy = serde_json::to_value(call.facts()).expect("legacy facts");
+    assert!(legacy.get("usage_persistence").is_none());
+    let status = engine.finish_usage_status();
+    if case == "usage-held" {
+        assert_eq!(observed, thinkthen::UsagePersistence::Pending);
+        assert_eq!(complete["usage_persistence"]["state"], "pending");
+        assert_eq!(status, thinkthen::UsagePersistence::Failed);
+        assert_eq!(engine.usage_persistence(), status);
+        assert_eq!(
+            status.advice(),
+            Some("check the usage folder permissions and free space")
+        );
+        assert_eq!(call.facts().usage_persistence(), Some(observed));
+        assert_eq!(engine.usage().requests_sent(), 1);
+        let next = engine
+            .decide(question, EVIDENCE)
+            .expect("answer after writer failure");
+        assert_eq!(next.facts().requests_sent(), 1);
+        assert_eq!(next.facts().input_tokens(), call.facts().input_tokens());
+        let failed =
+            serde_json::to_value(next.facts().complete().expect("failed persistence facts"))
+                .expect("JSON");
+        assert_eq!(
+            failed["usage_persistence"],
+            serde_json::json!({"state":"failed", "observed_at":"facts_snapshot", "advice":"check the usage folder permissions and free space"})
+        );
+        assert!(!failed.to_string().contains(argument));
+        assert_eq!(engine.usage().requests_sent(), 2);
+        assert_eq!(engine.finish_usage_status(), status);
+    } else {
+        assert_eq!(
+            status,
+            if case == "usage-builder" {
+                thinkthen::UsagePersistence::Disabled
+            } else {
+                thinkthen::UsagePersistence::Written
+            }
+        );
+        assert!(status.advice().is_none());
+    }
+    engine.finish_usage();
+}
+
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     let engine = match case {
-        "usage-seeded" => EngineBuilder::from_env().and_then(|seed| seed.no_cache().build()),
+        "usage-seeded" | "usage-held" => {
+            EngineBuilder::from_env().and_then(|seed| seed.no_cache().build())
+        }
         "usage-cached" => EngineBuilder::from_env().and_then(EngineBuilder::build),
         "usage-refused" => {
             let engine = EngineBuilder::from_env()
@@ -30,10 +117,13 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
         _ => panic!("no child case {case}"),
     }
     .expect("the engine");
+    let held = hold_usage_writer(case, argument);
     let question = Question::decide("asks for a refund")
         .expect("a question")
         .cut();
     let call = engine.decide(&question, EVIDENCE).expect("an answer");
+    assert_usage_persistence(&engine, case, argument, &call, &question);
+    drop(held);
     vec![format!(
         "{:?} sent {} cached {}",
         call.value(),
@@ -216,4 +306,23 @@ fn an_unreadable_usage_folder_refuses_every_send_and_names_no_path() {
             assert_eq!(fs::read(usage.join("2026-08.json")).expect("month"), bytes);
         }
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn failed_finalization_preserves_a_good_answer_and_its_pending_facts() {
+    let listener = listener();
+    let home = folder("usage-held-sdk");
+    let state = Folder::Usage.variable(&home);
+    let usage = Folder::Usage.under(&home);
+    let result = in_child(
+        "usage-held",
+        &[
+            (state.0, state.1.as_str()),
+            ("THINKTHEN_BASE_URL", listener.base()),
+            (ARGUMENT, usage.to_str().expect("usage path")),
+        ],
+    );
+    assert_eq!(result, "Yes sent 1 cached 0");
+    assert_eq!(listener.count(), 2);
 }

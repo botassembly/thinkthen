@@ -262,11 +262,16 @@ impl Engine {
     /// counters before anything inherited is touched.
     pub(super) fn state(&self, cancel: &Cancel) -> Result<Arc<State>, Error> {
         let pid = std::process::id();
-        self.state
+        let state = self
+            .state
             .current(pid, crate::engine::limits::rebuild_wait(cancel), || {
                 let usage = Arc::new(Counters::new(self.usage_path.clone()));
                 self.fresh(pid, usage, cancel)
-            })
+            })?;
+        if let Some(facts) = &cancel.facts {
+            facts.with_usage(Arc::clone(&state.usage));
+        }
+        Ok(state)
     }
 
     /// The same engine asking another model. It shares this engine's state:

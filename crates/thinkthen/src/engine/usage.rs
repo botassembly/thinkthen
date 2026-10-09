@@ -3,7 +3,8 @@
 use std::io;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, Mutex, PoisonError, TryLockError};
 use std::thread::{self, JoinHandle};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -24,6 +25,37 @@ mod storage;
 pub(crate) use storage::read;
 use storage::{ReadFailure, update};
 
+/// Persistence of this engine's current count-only deltas.
+/// Written does not describe future calls or other engines and processes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeUsagePersistence")
+)]
+pub enum UsagePersistence {
+    /// No usage storage was selected.
+    Disabled,
+    /// Deltas are queued, being written, or momentarily unavailable to observe.
+    Pending,
+    /// This engine's current deltas have drained successfully.
+    Written,
+    /// A writer or queue failure was latched; durable totals are incomplete.
+    Failed,
+}
+
+impl UsagePersistence {
+    /// Fixed safe advice, present only after a persistence failure.
+    #[must_use]
+    pub const fn advice(self) -> Option<&'static str> {
+        match self {
+            Self::Failed => Some("check the usage folder permissions and free space"),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct Counters {
     path: Option<PathBuf>,
@@ -38,6 +70,8 @@ pub(crate) struct Counters {
 #[derive(Debug, Default)]
 struct Shared {
     queue: Mutex<Queue>,
+    /// The single failure latch, readable without waiting for the queue.
+    failed: AtomicBool,
     changed: Condvar,
     http: timing::Timeline,
 }
@@ -50,8 +84,6 @@ struct Queue {
     /// Deltas not yet written, one sum for each month they were counted in.
     pending: Vec<(String, Counts)>,
     writing: bool,
-    /// Set by the first failure. Nothing is written after it.
-    failed: bool,
     failed_file: Option<(String, &'static str)>,
     closing: bool,
     /// One deadline for every lock acquisition left after finalization starts.
@@ -122,7 +154,34 @@ impl Counters {
             self.shared.changed.notify_all();
             self.shared.changed.wait_while(queue, busy)
         });
-        settled.map_or(true, |queue| queue.failed)
+        if settled.is_err() {
+            self.shared.failed.store(true, Ordering::Release);
+        }
+        self.shared.failed.load(Ordering::Acquire)
+    }
+
+    /// Observe without waiting for the writer, filesystem, or queue mutex.
+    pub(crate) fn persistence(&self) -> UsagePersistence {
+        if self.shared.failed.load(Ordering::Acquire) {
+            return UsagePersistence::Failed;
+        }
+        if self.path.is_none() {
+            return UsagePersistence::Disabled;
+        }
+        let observed = match self.shared.queue.try_lock() {
+            Ok(queue) if queue.writing || !queue.pending.is_empty() => UsagePersistence::Pending,
+            Ok(_) => UsagePersistence::Written,
+            Err(TryLockError::WouldBlock) => UsagePersistence::Pending,
+            Err(TryLockError::Poisoned(_)) => {
+                self.shared.failed.store(true, Ordering::Release);
+                UsagePersistence::Failed
+            }
+        };
+        if self.shared.failed.load(Ordering::Acquire) {
+            UsagePersistence::Failed
+        } else {
+            observed
+        }
     }
 
     /// Hold the queue lock, as a parent thread may hold it when its process forks.
@@ -162,14 +221,18 @@ impl Counters {
                 Some(())
             }
         };
-        if queue.writer.is_none() && !queue.failed {
+        if queue.writer.is_none() && !self.shared.failed.load(Ordering::Acquire) {
             let (path, shared, carried) = (path.to_path_buf(), Arc::clone(&self.shared), carried());
             let writer =
                 thread::Builder::new().spawn(move || write_behind(&path, &shared, carried));
             queue.writer = writer.ok();
         }
-        if totals.is_none() || queued.is_none() || queue.failed || queue.writer.is_none() {
-            queue.failed = true;
+        if totals.is_none()
+            || queued.is_none()
+            || self.shared.failed.load(Ordering::Acquire)
+            || queue.writer.is_none()
+        {
+            self.shared.failed.store(true, Ordering::Release);
             queue.pending.clear();
             return;
         }
@@ -219,11 +282,13 @@ fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
         let written = matches!(result, Ok(Ok(())));
         queue = shared.queue.lock().map(|mut held| {
             held.writing = false;
-            held.failed |= !written;
+            if !written {
+                shared.failed.store(true, Ordering::Release);
+            }
             if held.failed_file.is_none() {
                 held.failed_file = failed_file;
             }
-            if held.failed {
+            if shared.failed.load(Ordering::Acquire) {
                 held.pending.clear();
             }
             shared.changed.notify_all();
