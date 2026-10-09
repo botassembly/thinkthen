@@ -199,3 +199,5 @@ pub use declaration::{
 pub(crate) use result::complete as complete_documents;
 
 pub(crate) use result::complete::wire::RankMemberDocument;
+
+pub(crate) use crate::core::result::complete::wire::IndexedSource as CompleteIndexedSource;

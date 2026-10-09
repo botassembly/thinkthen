@@ -87,6 +87,61 @@ fn equal_source_entities_share_wire_questions_and_expand_original_occurrences_af
     );
 }
 #[test]
+fn source_inventory_survives_rejected_edges_and_zero_relation_questions() {
+    for same_entity in [false, true] {
+        let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.1},"q2":{"type":"noul","noul":0.1}}}"#)).unwrap();
+        let engine = engine(&listener);
+        let call = engine
+            .relate_records_complete_with(
+                &ask(),
+                [
+                    item("Ada", 1, "sources.jsonl", "false"),
+                    item(
+                        if same_entity { "Ada" } else { "Grace" },
+                        3,
+                        "sources.jsonl",
+                        "null",
+                    ),
+                    item("Ada", 5, "sources.jsonl", "[1,2]"),
+                ],
+                CallOptions::new(),
+            )
+            .unwrap();
+        let inventory = call
+            .value()
+            .result()
+            .input_sources()
+            .unwrap()
+            .collect::<Vec<_>>();
+        assert_eq!(inventory.len(), 3);
+        for (index, (ordinal, source)) in inventory.iter().enumerate() {
+            assert_eq!(*ordinal, index);
+            assert_eq!(source.file(), "sources.jsonl");
+            assert_eq!(source.first_line(), Some(1 + index * 2));
+        }
+        let document = serde_json::to_value(call.value()).unwrap();
+        assert_eq!(document["value"], json!([]));
+        assert_eq!(
+            document["input_sources"],
+            json!([
+                {"index":0,"source":{"file":"sources.jsonl","first_line":1,"last_line":1}},
+                {"index":1,"source":{"file":"sources.jsonl","first_line":3,"last_line":3}},
+                {"index":2,"source":{"file":"sources.jsonl","first_line":5,"last_line":5}}
+            ])
+        );
+        assert_eq!(document["input"][1]["private"], Value::Null);
+        assert_eq!(listener.count(), usize::from(!same_entity));
+        assert_eq!(
+            call.value().result().members().len(),
+            if same_entity { 0 } else { 2 }
+        );
+        assert_eq!(
+            call.value().result().identity().observations().len(),
+            if same_entity { 0 } else { 2 }
+        );
+    }
+}
+#[test]
 fn source_relations_keep_nonserializable_nonclone_originals_and_refuse_mixed_sources_before_sending()
  {
     struct Original {
@@ -197,6 +252,14 @@ fn assert_expansion(
     assert_eq!(edges[1].source().location().first_line(), Some(5));
     assert_eq!(edges[1].source().location().file(), "renamed.jsonl");
     let written = serde_json::to_value(held.value()).unwrap();
+    assert_eq!(
+        written["input_sources"],
+        json!([
+            {"index":0,"source":{"file":"renamed.jsonl","first_line":1,"last_line":1}},
+            {"index":1,"source":{"file":"renamed.jsonl","first_line":3,"last_line":3}},
+            {"index":2,"source":{"file":"renamed.jsonl","first_line":5,"last_line":5}}
+        ])
+    );
     assert_eq!(written["value"][0]["source"]["record"]["private"], false);
     assert_eq!(
         written["value"][1]["source"]["record"]["private"],

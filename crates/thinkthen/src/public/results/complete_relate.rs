@@ -12,6 +12,7 @@ use std::fmt;
 pub struct CompleteRelated {
     pub(crate) canonical: core::CompleteRelation,
     pub(crate) value: Vec<Edge>,
+    pub(crate) input_sources: Option<Vec<core::CompleteIndexedSource>>,
     pub(crate) source_edges: Option<Vec<super::SourceRelationEdge>>,
 }
 
@@ -52,6 +53,20 @@ impl CompleteRelated {
         self.source_edges.as_deref()
     }
 
+    /// Ordered physical input occurrences, present only for located native records.
+    pub fn input_sources(
+        &self,
+    ) -> Option<impl ExactSizeIterator<Item = (usize, crate::public::SourceLocation)> + '_> {
+        self.input_sources.as_ref().map(|sources| {
+            sources.iter().map(|entry| {
+                (
+                    entry.index,
+                    crate::public::SourceLocation::from_native(&entry.source),
+                )
+            })
+        })
+    }
+
     pub(crate) fn serialize_input<S: Serializer, T: Serialize>(
         &self,
         input: Option<&T>,
@@ -66,13 +81,20 @@ impl CompleteRelated {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         match &self.source_edges {
-            Some(edges) => self
-                .canonical
-                .serialize_occurrence(input, edges, index, serializer),
-            None => {
-                self.canonical
-                    .serialize_occurrence(input, &self.canonical.value, index, serializer)
-            }
+            Some(edges) => self.canonical.serialize_sources(
+                input,
+                edges,
+                index,
+                self.input_sources.as_deref(),
+                serializer,
+            ),
+            None => self.canonical.serialize_sources(
+                input,
+                &self.canonical.value,
+                index,
+                self.input_sources.as_deref(),
+                serializer,
+            ),
         }
     }
 

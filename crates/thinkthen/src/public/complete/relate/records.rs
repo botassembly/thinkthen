@@ -54,6 +54,17 @@ impl Engine {
         self.relate_admitted_complete(ask, entities, options, lines, &inputs)?
             .try_map(|mut result| {
                 if located {
+                    result.input_sources = Some(
+                        inputs
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(index, input)| {
+                                super::super::physical_source(input).map(|source| {
+                                    crate::core::CompleteIndexedSource { index, source }
+                                })
+                            })
+                            .collect(),
+                    );
                     result.source_edges = Some(crate::public::results::source_relation::expand(
                         &result.value,
                         &inputs,

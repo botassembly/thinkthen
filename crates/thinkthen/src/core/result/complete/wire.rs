@@ -84,3 +84,15 @@ pub(crate) struct RankMemberDocument<'a> {
     )]
     pub(crate) result: &'a super::Atomic,
 }
+
+/// One physical occurrence in an ordered native input set.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "sessionInputSource")
+)]
+pub(crate) struct IndexedSource {
+    pub(crate) index: usize,
+    pub(crate) source: PhysicalSource,
+}

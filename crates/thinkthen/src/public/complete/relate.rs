@@ -97,6 +97,7 @@ impl Engine {
                 .map_err(|_| super::wrong())?,
                 value,
                 source_edges: None,
+                input_sources: None,
             })
         })
     }

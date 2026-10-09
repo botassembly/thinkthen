@@ -72,6 +72,13 @@ pub struct SourceLocation {
     last_line: Option<usize>,
 }
 impl SourceLocation {
+    pub(crate) fn from_native(source: &core::CompletePhysicalSource) -> Self {
+        Self {
+            file: source.file.clone(),
+            first_line: source.first_line,
+            last_line: source.last_line,
+        }
+    }
     pub(crate) fn image(file: String) -> Self {
         Self {
             file,
