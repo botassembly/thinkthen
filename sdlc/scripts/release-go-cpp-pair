@@ -113,6 +113,7 @@ if [ "$mode" = swift-zig ]; then
 	done
 	zig_version=$(tar -xOzf "$dir/$second" ./build.zig.zon | sed -n 's/^[[:space:]]*\.version = "\([^"]*\)",$/\1/p')
 	[ "$zig_version" = "$version" ] || fail 'Zig package version differs'
+	python3 "$repo/libraries/zig/Tests/guard.py" "$dir/$second" || fail 'Zig archive contains private bytes'
 fi
 check_dart_archive() {
 	name=$1

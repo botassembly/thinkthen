@@ -260,7 +260,9 @@ def generated(schema, language="csharp"):
         spec.loader.exec_module(target)
         return subprocess.run(["rustfmt", "--edition", "2024", "--emit", "stdout"],
                               input=target.render(prepare(graph(schema, target.ROOTS))),
-                              text=True, capture_output=True, check=True).stdout
+                              text=True, capture_output=True, check=True,
+                              env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'),
+                                            CARGO_NET_OFFLINE='true')).stdout
     if language == "c":
         path = Path(__file__).parent / "templates/c.py"
         spec = importlib.util.spec_from_file_location("result_c", path)
