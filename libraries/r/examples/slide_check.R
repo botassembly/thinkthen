@@ -11,4 +11,7 @@ check("the team and urgency columns", identical(drawn$team, rep("billing", 3L)) 
 # filter() drops them all.
 banded <- complaints(tickets, options = list(threshold = "0.2:0.95"))
 check("filter drops the not-sure rows", identical(nrow(banded), 0L))
-finish("slide", 3L)
+missing <- complaints(data.frame(body = c("alpha", NA_character_, "beta")))
+check("missing evidence preserves the remaining rows and columns", identical(missing$body, c("alpha", "beta")) &&
+      identical(missing$team, rep("billing", 2L)) && isTRUE(all.equal(missing$urgency, rep(0.15, 2L))))
+finish("slide", 6L)

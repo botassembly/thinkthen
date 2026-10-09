@@ -6,10 +6,10 @@ teams <- c("billing", "shipping", "account")
 levels <- c("Routine.", "Soon.", "Immediate.")
 complaints <- function(tickets, options = list()) {
   tickets |>
-  filter(vapply(tt_decide("Is this a complaint?", body, options = options)$results, function(row) isTRUE(row$value), TRUE)) |>
+  filter(vapply(tt_decide("Is this a complaint?", body, options = options)$value, isTRUE, TRUE)) |>
   mutate(
-    team = vapply(tt_choose(list(choose = "Which team owns this?", options = teams), body)$results, `[[`, "", "value"),
-    urgency = vapply(tt_score(list(score = "How urgent is this?", levels = levels), body)$results, `[[`, 0, "value")
+    team = tt_choose(list(choose = "Which team owns this?", options = teams), body)$value,
+    urgency = tt_score(list(score = "How urgent is this?", levels = levels), body)$value
   ) |>
   arrange(desc(urgency))
 }
