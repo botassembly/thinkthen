@@ -11,12 +11,12 @@ call$facts$requests_sent
 choice <- tt_choose(list(choose = "Which category?", options = c("refund", "other")),
                     "Please refund my order.")
 choice$results[[1]]$value
-ranked <- tt_rank("Which message most clearly asks for a refund?",
+prioritized_messages <- tt_rank("Which message most clearly asks for a refund?",
                   c("Please refund my order.", "When will it arrive?"))
-ranked$results[[1]]$index
+prioritized_messages$results[[1]]$index
 ```
 
-A scalar character input is literal text. Other scalar or structured inputs become JSON evidence. Record functions take a vector, list, or data frame of original records; data frames convert by row. Character vectors also supply records to primitive calls. Missing R values serialize to JSON null and receive native admission; no row is silently removed. JSON null, an absent generated field, and R `NA` remain distinct values.
+An ordinary `NULL` input supplies an empty record collection. `tt_input("json", value = NULL)` retains explicit JSON null. A scalar character input is literal text. Other scalar or structured inputs become JSON evidence. Record functions take a vector, list, or data frame of original records; data frames convert by row. Character vectors also supply records to primitive calls. Ordinary atomic R columns retain missing slots separately from native evidence. Primitive calls and recognition submit only present values; `filter`, `rank`, `find`, `annotate` and `relate` refuse missing atomic records. Nested missing fields in structured JSON evidence retain JSON null. JSON null, an absent generated field, and R `NA` remain distinct values.
 
 A question string is literal wording, including strings beginning with `@`. An authored question is an ordinary named list. Explicit authority uses `tt_question(file = "question.json")`, `tt_question(name = "support.refund")`, or `tt_question(reference = "@support.refund")`. `tt_files(paths, unit = "line", window = NULL, media = "text")` selects native file reading. See the [canonical request schema](../../specification/request.schema.json) for accepted selector fields and options. Rust rejects incompatible options before sending or reading selected sources.
 
@@ -30,7 +30,7 @@ input <- tt_input("records", items = list(list(
 call <- tt_decide(list(decide = "Does this ask for a refund?", on = "/body"), input)
 ```
 
-Calls have class `thinkthen_Call` and contain `$results` and `$facts`. Result classes include `thinkthen_DecideResult`, `thinkthen_ChooseResult`, and the other generated result classes. Their fields support ordinary R `$`, `[[`, indexing, and comparison. Native indexes and span offsets stay zero-based; add one to a span start for `substr`. Generated optional fields use `thinkthen_absent` when missing and `NULL` when explicitly null. Results, inputs, identities, plans, and questions print summaries that withhold content. Retained values survive garbage collection.
+Calls have class `thinkthen_Call` and contain `$results` and `$facts`. Result classes include `thinkthen_DecideResult`, `thinkthen_ChooseResult`, and the other generated result classes. Their fields support ordinary R `$`, `[[`, indexing, and comparison. Native indexes and span offsets stay zero-based. Ordinary atomic columns carry `$positions`, which maps compact native record indexes to original zero-based R slots, and `$length`, which retains the full column length. For `c("alpha", NA_character_, "beta")`, the map is `c(0, 2)` and the length is three; the two generated results retain native indexes zero and one and their original answer identities. Scalar primitive `$value` and decision/choice `$probability` views fill skipped slots with typed missing values; tag views retain empty character vectors for missing slots. Plans and batches retain the same map beside native plans or rows. These presentation positions do not rewrite native identities or represent completed missing records. Add one to a span start for `substr`. Generated optional fields use `thinkthen_absent` when missing and `NULL` when explicitly null. Results, inputs, identities, plans, and questions print summaries that withhold content. Retained values survive garbage collection.
 
 A native failure raises a `thinkthen_error` condition with `$kind`, `$retryable`, `$complete`, and native facts when available. A joined streamed failure also carries its actual completed prefix in `$completed`. Pre-invocation refusals have no invented facts. R interruption cancels native work and raises R's interrupt condition. `tt_completion()` and `tt_completion_read()` retain asynchronous settlement evidence after the synchronous caller is interrupted.
 

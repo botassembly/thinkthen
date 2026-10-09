@@ -5,21 +5,39 @@ use extendr_api::prelude::*;
 use thinkthen::{AdmittedRequest, Request, RequestEnvironment, RequestOutcome, RequestSession};
 
 #[derive(Debug)]
-struct NativeRequest(AdmittedRequest);
+struct NativeRequest {
+    admitted: AdmittedRequest,
+    column: Option<crate::request::ColumnMap>,
+}
+
+struct NativeSession {
+    session: RequestSession,
+    column: Option<crate::request::ColumnMap>,
+}
+
+#[extendr]
+fn tt_request_column(values: Robj, function_name: Robj) -> Crossed<Robj> {
+    crate::request::column(values, &text_of(&function_name, "function")?)
+}
 
 #[extendr]
 fn tt_request_admit(request: Robj) -> Crossed<Robj> {
+    let column = crate::request::ColumnMap::from_request(&request);
     let request = Request::from_json(&text_of(&request, "request")?)
         .and_then(Request::admit)
         .map_err(|error| crate::carry(&error))?;
-    Ok(ExternalPtr::new(NativeRequest(request)).into())
+    Ok(ExternalPtr::new(NativeRequest {
+        admitted: request,
+        column,
+    })
+    .into())
 }
 
 #[extendr]
 fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed<Robj> {
     let request = ExternalPtr::<NativeRequest>::try_from(request)
         .map_err(|_| crate::usage("an admitted request is required"))?;
-    let admitted = request.0.clone();
+    let admitted = request.admitted.clone();
     let function = admitted.request().call.function();
     let done = calls::call_owned(
         deadline_of(&deadline)?,
@@ -55,7 +73,11 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
             crate::request::written(&outcome)
         },
     )?;
-    crate::native_results::request_packet(&done.result?, function)
+    let value = crate::native_results::request_packet(&done.result?, function)?;
+    match &request.column {
+        Some(column) => column.attach(value),
+        None => Ok(value),
+    }
 }
 
 #[extendr]
@@ -64,22 +86,27 @@ fn tt_request_plan(request: Robj) -> Crossed<Robj> {
         .map_err(|_| crate::usage("an admitted request is required"))?;
     let plan = crate::engine()?
         .plan_request(
-            &request.0,
+            &request.admitted,
             RequestEnvironment {
                 controls: thinkthen::CallOptions::new().surface(thinkthen::Surface::R),
                 feed: None,
             },
         )
         .map_err(|error| crate::carry(&error))?;
-    crate::native_results::tagged(
+    let value = crate::native_results::tagged(
         crate::plan::render(plan)?.into(),
         "Plan",
         "thinkthen_complete",
-    )
+    )?;
+    match &request.column {
+        Some(column) => column.attach(value),
+        None => Ok(value),
+    }
 }
 
 #[extendr]
 fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
+    let column = crate::request::ColumnMap::from_request(&request);
     let request =
         Request::from_json(&text_of(&request, "request")?).map_err(|error| crate::carry(&error))?;
     // Header admission precedes engine selection. The session retains its own request.
@@ -90,18 +117,27 @@ fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
     let session = crate::engine()?
         .request_session_with_surface(request, thinkthen::Surface::R)
         .map_err(|error| crate::carry(&error))?;
-    Ok(ExternalPtr::new(session).into())
+    let mut pointer: Robj = ExternalPtr::new(NativeSession { session, column }).into();
+    let native = ExternalPtr::<NativeSession>::try_from(pointer.clone())
+        .map_err(|_| crate::defect("native session pointer could not be retained"))?;
+    if let Some(column) = &native.column {
+        pointer
+            .set_attrib("positions", column.positions.clone())
+            .and_then(|value| value.set_attrib("length", column.length))
+            .map_err(|_| crate::defect("native column map could not be retained"))?;
+    }
+    Ok(pointer)
 }
 
 #[extendr]
 fn tt_request_batch_poll(batch: Robj) -> Crossed<Robj> {
-    let session = ExternalPtr::<RequestSession>::try_from(batch)
+    let session = ExternalPtr::<NativeSession>::try_from(batch)
         .map_err(|_| crate::usage("a native request session is required"))?;
     if interrupt_pending() {
-        session.cancel();
+        session.session.cancel();
         return Err(crate::interrupted());
     }
-    match session.try_read() {
+    match session.session.try_read() {
         thinkthen::RequestSessionRead::Result(packet) => {
             let text = packet.to_json().map_err(|error| crate::carry(&error))?;
             crate::native_results::request_event(&text)
@@ -113,14 +149,15 @@ fn tt_request_batch_poll(batch: Robj) -> Crossed<Robj> {
 
 #[extendr]
 fn tt_request_batch_cancel(batch: Robj) -> Crossed<()> {
-    let session = ExternalPtr::<RequestSession>::try_from(batch)
+    let session = ExternalPtr::<NativeSession>::try_from(batch)
         .map_err(|_| crate::usage("a native request session is required"))?;
-    session.cancel();
+    session.session.cancel();
     Ok(())
 }
 
 extendr_module! {
     mod request;
+    fn tt_request_column;
     fn tt_request_admit;
     fn tt_request_native;
     fn tt_request_plan;

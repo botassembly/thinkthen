@@ -164,12 +164,9 @@ tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completi
 .tt_json <- function(value) {
   utf8 <- function(text) {
     if (!is.character(text) || !length(text)) return(text)
-    native <- Encoding(text) == "unknown" & !is.na(text)
-    if (any(native & !validUTF8(text))) {
-      .tt_usage("a text carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first")
-    }
-    Encoding(text)[native] <- "UTF-8"
-    enc2utf8(text)
+    present <- !is.na(text)
+    text[present] <- .tt_call(tt_text_utf8(text[present]))
+    text
   }
   held <- rapply(list(value), utf8, classes = "ANY", how = "replace")[[1L]]
   tryCatch(as.character(jsonlite::toJSON(held, auto_unbox = TRUE, digits = NA,

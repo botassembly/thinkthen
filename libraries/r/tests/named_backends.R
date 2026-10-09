@@ -23,8 +23,8 @@ for (i in seq_len(nrow(rows))) {
   out <- child(c(
     sprintf('tt_engine(backend = "%s", base_url = "%s", cache = FALSE)', row$name, arm("arm/full/capture/v1")),
     sprintf('Sys.setenv(%s = "fake-named-r-later")', row$key),
-    'q <- tt_question(decide = "Does it need attention?", true = list(what = "yes", examples = list("refund")))',
-    'stopifnot(isTRUE(tt_decide(q, "refund")$value))',
+    'q <- list(decide = "Does it need attention?", true = list(what = "yes", examples = list("refund")))',
+    'value <- tt_decide(q, "refund")$results[[1]]$value; stopifnot(identical(value$what, q$true$what), identical(value$examples, q$true$examples))',
     sprintf('stopifnot(is.null(tt_engine(backend = "%s", base_url = "%s", cache = FALSE)))', row$name, arm("arm/full/capture/v1")),
     'message <- tryCatch(tt_engine(backend = "nowhere"), thinkthen_usage = function(e) conditionMessage(e))',
     sprintf('stopifnot(grepl(\'backend = "%s"\', message, fixed = TRUE), grepl("start a new R session", message, fixed = TRUE))', row$name),

@@ -11,6 +11,11 @@ for (call in list(
   function() tt_decide(list(decide = "Q?", item_schema = list(type = "string")), list(n = 1))
 )) check("canonical admission refuses invalid values", identical(kind_of(call()), "usage"))
 check("invalid request sends nothing", backend_count() == arrivals)
+empty <- tt_decide("No records?", NULL)
+check("ordinary NULL supplies no records and sends nothing", length(empty$results) == 0L &&
+  empty$facts$requests_sent == 0 && backend_count() == arrivals)
+null_plan <- tt_plan("Explicit null?", tt_input("json", value = NULL))
+check("explicit JSON null remains one original", null_plan$records == 1 && backend_count() == arrivals)
 plan <- tt_plan("Plan question?", c("first", "second"))
 check("native preview sends nothing", plan$records == 2 && backend_count() == arrivals)
 check("plan prints safely", identical(capture.output(print(plan)), "<complete carrier: content withheld>"))
@@ -25,6 +30,38 @@ questions <- list(
   recognize = list(version = 1L, recognize = list(kinds = list(person = NULL, organization = NULL))),
   relate = list(version = 1L, relate = list(relations = list(list(name = "knows", source = "person", target = "person"))))
 )
+mixed <- tt_decide("Missing columns?", c("alpha", NA_character_, "beta"))
+check("missing columns retain separate native and presentation indexes",
+  identical(mixed$positions, c(0, 2)) && mixed$length == 3 && length(mixed$results) == 2L &&
+  identical(vapply(mixed$results, `[[`, 0, "index"), c(0, 1)) &&
+  identical(mixed$value, c(TRUE, NA, TRUE)) && identical(mixed$probability, c(0.9, NA_real_, 0.9)))
+arrivals <- backend_count()
+for (verb in c("decide", "choose", "tag", "score", "recognize")) {
+  absent <- get(paste0("tt_", verb))(questions[[verb]], c(NA_character_, NA_character_))
+  check(paste(verb, "missing column uses actual native no-work"), absent$length == 2 &&
+    length(absent$positions) == 0L && length(absent$results) == 0L && absent$facts$requests_sent == 0)
+}
+for (verb in c("filter", "rank", "find", "annotate", "relate")) {
+  check(paste(verb, "retains missing-column refusal"),
+    identical(kind_of(get(paste0("tt_", verb))(questions[[verb]], c("alpha", NA_character_))), "usage"))
+}
+check("missing refusals and no-work calls send nothing", backend_count() == arrivals)
+missing_plan <- tt_plan("Missing plan?", c("alpha", NA_character_, "beta"))
+check("plan retains original column map without admitting a missing record",
+  missing_plan$records == 2 && identical(missing_plan$positions, c(0, 2)) &&
+  missing_plan$length == 3 && backend_count() == arrivals)
+choice <- tt_choose(questions$choose, c("alpha", NA_character_, "beta"))
+check("choice view retains typed missing values and selected probabilities",
+  identical(choice$value, c("first", NA_character_, "first")) &&
+  identical(choice$probability, c(0.9, NA_real_, 0.9)) && length(choice$results) == 2L)
+missing_batch <- tt_batch("decide", "Missing batch?", c("alpha", NA_character_, "beta"))
+check("batch retains the same original map beside native rows",
+  identical(missing_batch$positions, c(0, 2)) && missing_batch$length == 3 &&
+  identical(c(missing_batch$next_result()$index, missing_batch$next_result()$index), c(0, 1)))
+check("batch settles only the actual present records", is.null(missing_batch$next_result()) &&
+  missing_batch$facts()$requests_sent == 2)
+missing_batch$close()
+
 for (verb in names(questions)) {
   input <- switch(verb, relate = list(list(name = "Maria Chen", kind = "person"), list(name = "Alex", kind = "person")),
     find = c("first candidate", "second candidate"), annotate = data.frame(body = "annotation text"),
@@ -67,4 +104,4 @@ failed_batch <- tt_batch("decide", "Session deadline?", "not sent", list(deadlin
 failure <- tryCatch(failed_batch$next_result(), error = identity)
 check("native session failures retain their condition", inherits(failure, "thinkthen_error") && failure$kind == "deadline" && inherits(failure$complete, "thinkthen_CallError"))
 failed_batch$close()
-finish("canonical requests", 21L)
+finish("canonical requests", 27L)

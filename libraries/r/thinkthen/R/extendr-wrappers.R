@@ -14,6 +14,9 @@ NULL
 #' @useDynLib thinkthen, .registration = TRUE
 NULL
 
+#' Convert host character values with the one native encoding crossing.
+tt_text_utf8 <- function(value) .Call(wrap__tt_text_utf8, value)
+
 #' Check a question file and name its kind.
 tt_question_check <- function(body) .Call(wrap__tt_question_check, body)
 
@@ -73,6 +76,8 @@ tt_complete_batch_poll <- function(batch, advance) .Call(wrap__tt_complete_batch
 tt_complete_batch_close <- function(batch) .Call(wrap__tt_complete_batch_close, batch)
 
 tt_complete_batch_cancel <- function(batch) .Call(wrap__tt_complete_batch_cancel, batch)
+
+tt_request_column <- function(values, function_name) .Call(wrap__tt_request_column, values, function_name)
 
 tt_request_admit <- function(request) .Call(wrap__tt_request_admit, request)
 

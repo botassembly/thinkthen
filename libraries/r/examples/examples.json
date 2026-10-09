@@ -4,48 +4,51 @@
  "language": "r",
  "install": "install.packages(\"thinkthen\", repos = NULL, type = \"source\")",
  "examples": {
-  "plan": {"r": "judge <- tt_decide(\"Is this a complaint?\"); preview <- tt_plan(judge, c(\"one\", \"two\")); cat(preview$records, preview$requests, \"\\n\")", "expected": "2 2"},
+  "plan": {
+   "r": "preview <- tt_plan(\"Is this a complaint?\", c(\"one\", \"two\")); cat(preview$records, preview$requests, \"\\n\")",
+   "expected": "2 2"
+  },
   "decide": {
-   "r": "cat(tt_decide(\"Is this a complaint?\", \"I demand a refund today\")$value, \"\\n\")",
+   "r": "cat(tt_decide(\"Is this a complaint?\", \"I demand a refund today\")$results[[1]]$value, \"\\n\")",
    "expected": "TRUE"
   },
   "choose": {
-   "r": "cat(tt_choose(\"Which team owns this?\", \"please route this ticket\", options = c(\"the refund desk\", \"the maybe desk\", \"anywhere else\"))$value, \"\\n\")",
+   "r": "cat(tt_choose(list(choose = \"Which team owns this?\", options = c(\"the refund desk\", \"the maybe desk\", \"anywhere else\")), \"please route this ticket\")$results[[1]]$value, \"\\n\")",
    "expected": "the refund desk"
   },
   "tag": {
-   "r": "cat(tt_tag(\"Which words appear?\", \"the refund and the shipping\", labels = c(\"refund\", \"shipping\"))$value[[1]], \"\\n\")",
+   "r": "cat(unlist(tt_tag(list(tag = \"Which words appear?\", labels = c(\"refund\", \"shipping\")), \"the refund and the shipping\")$results[[1]]$value), \"\\n\")",
    "expected": "refund shipping"
   },
   "score": {
-   "r": "cat(tt_score(\"How urgent is this?\", \"maybe later\", levels = c(\"Routine.\", \"Soon.\", \"Immediate.\"))$value, \"\\n\")",
+   "r": "cat(tt_score(list(score = \"How urgent is this?\", levels = c(\"Routine.\", \"Soon.\", \"Immediate.\")), \"maybe later\")$results[[1]]$value, \"\\n\")",
    "expected": "0.15"
   },
   "filter": {
-   "r": "cat(tt_filter(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\"))$value, \"\\n\")",
+   "r": "out <- tt_filter(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\"))$results; cat(vapply(out, `[[`, \"\", \"input\"), \"\\n\")",
    "expected": "good morning I demand a refund today"
   },
   "rank": {
-   "r": "cat(tt_rank(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\"))$value$record, \"\\n\")",
+   "r": "out <- tt_rank(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\"))$results; cat(vapply(out, `[[`, \"\", \"input\"), \"\\n\")",
    "expected": "good morning I demand a refund today"
   },
   "find": {
-   "r": "cat(tt_find(\"Which line asks for money back?\", c(\"good morning\", \"I want a refund\"))$value$unit, \"\\n\")",
+   "r": "cat(tt_find(\"Which line asks for money back?\", c(\"good morning\", \"I want a refund\"))$results[[1]]$value, \"\\n\")",
    "expected": "good morning"
   },
   "annotate": {
    "files": {
     "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
    },
-   "r": "out <- tt_annotate(\"form.json\", data.frame(body = \"I demand a refund today\"), on = \"body\")$value; cat(out$refund, out$complaint, \"\\n\")",
+   "r": "out <- tt_annotate(tt_question(file = \"form.json\"), data.frame(body = \"I demand a refund today\"), options = list(field = list(\"/body\")))$results[[1]]$value; cat(out$refund, out$complaint, \"\\n\")",
    "expected": "TRUE TRUE"
   },
   "recognize": {
-   "r": "found <- tt_recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds = c(\"person\", \"organization\", \"place\"))$value[[1]]; cat(paste(found$text, found$kind, found$start, found$end, sep = \"|\"), \"\\n\")",
-   "expected": "Maria Chen|person|1|10 spring.|person|53|59"
+   "r": "question <- list(version = 1, recognize = list(kinds = list(person = NULL, organization = NULL, place = NULL))); found <- tt_recognize(question, \"Maria Chen joined Northwind Freight in Chicago last spring.\")$results[[1]]$value$entities; cat(vapply(found, function(row) paste(row$text, row$kind, row$start, row$end, sep = \"|\"), \"\"), \"\\n\")",
+   "expected": "Maria Chen|person|0|10 spring.|person|52|59"
   },
   "relate": {
-   "r": "alerts <- data.frame(name = c(\"Checkout returns 500 at the payment step.\", \"The payments database ran out of disk space.\"), kind = \"alert\"); edges <- tt_relate(alerts, relations = \"caused_by\")$value; cat(edges$relation, edges$probability, \"\\n\")",
+   "r": "alerts <- data.frame(name = c(\"Checkout returns 500 at the payment step.\", \"The payments database ran out of disk space.\"), kind = \"alert\"); question <- list(version = 1, relate = list(relations = list(list(name = \"caused_by\", source = \"alert\", target = \"alert\")))); edges <- tt_relate(question, alerts)$results[[1]]$value; cat(vapply(edges, `[[`, \"\", \"relation\"), vapply(edges, `[[`, 0, \"probability\"), \"\\n\")",
    "expected": "caused_by caused_by 0.9 0.9"
   }
  }

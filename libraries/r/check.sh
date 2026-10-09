@@ -70,7 +70,7 @@ if [ "$profile" = smoke ]; then
   cd "$scratch"
   R_LIBS="$scratch:$libs" THINKTHEN_API_KEY=sk-smoke-loopback Rscript -e 'library(thinkthen)
     stopifnot(startsWith(find.package("thinkthen"), commandArgs(TRUE)[1]))
-    value <- tt_decide(Sys.getenv("THINKTHEN_TEST_SMOKE_QUESTION"), Sys.getenv("THINKTHEN_TEST_SMOKE_TEXT"))$value
+    value <- tt_decide(Sys.getenv("THINKTHEN_TEST_SMOKE_QUESTION"), Sys.getenv("THINKTHEN_TEST_SMOKE_TEXT"))$results[[1]]$value
     cat(sprintf("smoke: %s\n", if (is.null(value) || is.na(value)) "null" else tolower(value)))' "$scratch"
   # Ticket 0439: reuse the installed public consumer for the guide's strict replay.
   mkdir -p "$scratch/sample/recording" "$scratch/home" "$scratch/config" "$scratch/cache"
@@ -170,7 +170,7 @@ RUSTUP_TOOLCHAIN=$pinned CARGO_HOME="$scratch/cargo" CARGO_NET_OFFLINE=true R CM
   { cat "$scratch/tarball.log" >&2; exit 1; }
 cat >"$scratch/answer.R" <<'EOF'
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
-check("the tarball install answers", isTRUE(tt_decide("Is this a complaint?", "I want a refund")$value))
+check("the tarball install answers", isTRUE(tt_decide("Is this a complaint?", "I want a refund")$results[[1]]$value))
 finish("tarball", 1L)
 EOF
 R_LIBS="$scratch/lib:$libs" bash tests/with-backend.sh "$backend" "$scratch/answer.R"
