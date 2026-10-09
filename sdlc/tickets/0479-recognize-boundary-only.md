@@ -27,6 +27,42 @@ Design and implement a caller-requested step-1-only recognition mode with caller
 - Additional named seams from ADR 0126: `crates/thinkthen/src/core/recognition_result.rs`, `crates/thinkthen/src/core/result/complete/recognize.rs`, `crates/thinkthen/src/result_json/complete/recognize.rs`, `crates/thinkthen/src/schema_tests.rs`, `crates/thinkthen/src/schema_tests/complete.rs`, `crates/thinkthen/src/public/results/complete_recognize.rs`, `crates/thinkthen/src/public/results/source_recognition.rs`, `crates/thinkthen/src/public/results.rs`, `crates/thinkthen/src/public/mod.rs`, `crates/thinkthen/src/core/mod.rs` and `crates/thinkthen/src/core/result/complete/tests/aggregate.rs`. Request mode belongs to `public/request/options.rs`; the independent deadline repair owns `public/options.rs`.
 - Defers: Stage-specific model policy, automatic routing, and the dropped kind-only filter.
 - Further individually named implementation seams: `crates/thinkthen/src/public/recognize/proposals.rs`, `crates/thinkthen/tests/native_complete.rs` and `crates/thinkthen/tests/backend/recognize.rs`. Preserve implicit versus authored relation thresholds in RequestDefinition wire encoding under ADR 0126; retain default whole complete output and identity.
+- Offline reading seams: `crates/thinkthen/src/core/measure/items.rs`, `crates/thinkthen/src/core/measure/key.rs`, `crates/thinkthen/src/cli/audit/cases.rs` and `specification/audit.md`. Read and compare unclassified proposal offsets and probabilities under the resolved mode; retain the existing run-cut floor and Whole decoding. Exercise audit and diff through the existing recognition boundary tests.
+
+### Added public declarations
+
+```text
+enum RecognitionMode
+RecognitionMode::Whole
+RecognitionMode::BoundaryOnly
+RequestOptions::mode: Option<RecognitionMode>
+RequestOptions::relation_threshold: Option<RequestThreshold>
+fn Recognize::with_mode(self, RecognitionMode) -> Recognize
+const fn RecognizeBuilder::mode(self, RecognitionMode) -> RecognizeBuilder
+struct BoundaryProposal
+fn BoundaryProposal::text(&self) -> &str
+const fn BoundaryProposal::start(&self) -> usize
+const fn BoundaryProposal::end(&self) -> usize
+const fn BoundaryProposal::length(&self) -> usize
+const fn BoundaryProposal::probability(&self) -> f64
+enum RecognitionValue
+RecognitionValue::Whole::entities: &'a [RecognizedEntity]
+RecognitionValue::Whole::relations: Option<&'a [Relation]>
+RecognitionValue::BoundaryOnly(&'a [BoundaryProposal])
+const fn Recognized::mode(&self) -> RecognitionMode
+fn Recognized::proposals(&self) -> Option<&[BoundaryProposal]>
+fn Recognized::value(&self) -> RecognitionValue<'_>
+const fn RecognitionReading::mode(&self) -> RecognitionMode
+fn RecognitionProbabilities::proposals(&self) -> Option<Vec<BoundaryProposal>>
+struct SourceBoundaryProposal
+const fn SourceBoundaryProposal::proposal(&self) -> &BoundaryProposal
+const fn SourceBoundaryProposal::location(&self) -> &SourceLocation
+const fn SourceRecognition::mode(&self) -> RecognitionMode
+fn SourceRecognition::proposals(&self) -> Option<&[SourceBoundaryProposal]>
+impl Default for RecognitionMode
+impl Deserialize<'de> for RecognitionMode
+impl Serialize for RecognitionMode
+```
 
 ## Progress
 
