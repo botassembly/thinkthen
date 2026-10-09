@@ -1,12 +1,14 @@
 # 0520 — complete-facts-reader-compatibility
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision e94ab9b5c63ba851e308b1f0b3744371f1e1d4a8, accept
 
 Reviews: revision 2f814ce58ace6337cf270e738520a64f4a41059b, accept
+
+Landed: 9863246
 
 ## Outcome
 
