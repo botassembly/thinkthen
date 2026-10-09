@@ -289,16 +289,15 @@ fn decoded_proposals_preserve_punctuation_and_actual_source_lines_without_edge_a
             .map(|(name, q)| {
                 let labels = q["criteria"].as_object().unwrap();
                 let words = q["instructions"].as_str().unwrap();
-                let picked = if labels.contains_key("SINGLE") {
-                    if words.contains("[[Ada]]") {
-                        "BEGIN"
-                    } else if words.contains("[[.]]") {
-                        "END"
-                    } else {
-                        "OUT"
-                    }
-                } else {
-                    "Ada"
+                let picked = match (
+                    labels.contains_key("SINGLE"),
+                    words.contains("[[Ada]]"),
+                    words.contains("[[.]]"),
+                ) {
+                    (false, _, _) => "Ada",
+                    (true, true, _) => "BEGIN",
+                    (true, _, true) => "END",
+                    _ => "OUT",
                 };
                 assert!(labels.contains_key(picked));
                 let probabilities: serde_json::Map<String, Value> = labels
@@ -370,4 +369,77 @@ fn decoded_proposals_preserve_punctuation_and_actual_source_lines_without_edge_a
     assert_eq!(json["value"]["proposals"][0]["file"], "example.txt");
     assert_eq!(json["value"]["proposals"][0]["first_line"], 41);
     std::fs::remove_dir_all(cache).unwrap();
+}
+
+#[test]
+fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundary() {
+    use thinkthen::{RequestSource, RequestThreshold};
+    let listener = Listener::answering(uncertain).unwrap();
+    let engine = engine(&listener);
+    let root = folder();
+    let saved = root.join("saved.json");
+    let request = |options| {
+        Request::new(RequestCall::Recognize(RequestArguments {
+            question: RequestQuestion::File {
+                path: saved.clone(),
+            },
+            input: RequestInput::Source {
+                source: RequestSource {
+                    paths: vec![root.join("missing-evidence")],
+                    reading: thinkthen::ReaderOptions::default(),
+                    media: thinkthen::ReaderMedia::Text,
+                },
+            },
+            options,
+        }))
+    };
+    for declaration in [
+        r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[]}}"#,
+        r#"{"version":1,"recognize":{"mode":"boundary_only"},"relation_threshold":0.5}"#,
+        r#"{"version":1,"recognize":{"mode":"boundary_only","stage_context":{"kind_edge":""}}}"#,
+        r#"{"version":1,"recognize":{"mode":"boundary_only","stage_context":{"relation":""}}}"#,
+    ] {
+        std::fs::write(&saved, declaration).unwrap();
+        let admitted = request(RequestOptions::default()).admit().unwrap();
+        let refused = engine
+            .execute_request(&admitted, RequestEnvironment::default())
+            .unwrap_err();
+        assert_eq!(refused.kind(), ErrorKind::Local);
+        assert_eq!(
+            refused.detail().message(),
+            "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"
+        );
+    }
+    assert_eq!(listener.count(), 0);
+    std::fs::write(&saved,r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[],"stage_context":{"kind_edge":"","relation":""}},"relation_threshold":0.5}"#).unwrap();
+    let request = Request::new(RequestCall::Recognize(RequestArguments {
+        question: RequestQuestion::File { path: saved },
+        input: RequestInput::Text {
+            text: "lowercase".into(),
+            images: Vec::new(),
+        },
+        options: RequestOptions {
+            mode: Some(RecognitionMode::Whole),
+            relation_threshold: Some(RequestThreshold::Cut(0.6)),
+            ..RequestOptions::default()
+        },
+    }))
+    .admit()
+    .unwrap();
+    let RequestOutcome::Complete(call) = engine
+        .execute_request(&request, RequestEnvironment::default())
+        .unwrap()
+    else {
+        panic!("call failed");
+    };
+    let RequestValue::Recognized(rows) = call.value() else {
+        panic!("wrong typed value");
+    };
+    assert_eq!(rows[0].result().value().mode(), RecognitionMode::Whole);
+    assert_eq!(
+        rows[0].result().question().relation_threshold(),
+        thinkthen::ResolvedThreshold::Cut(0.6)
+    );
+    assert_eq!(listener.count(), 1);
+    std::fs::remove_dir_all(root).unwrap();
 }

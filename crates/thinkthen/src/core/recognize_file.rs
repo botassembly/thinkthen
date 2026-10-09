@@ -121,9 +121,7 @@ pub(crate) enum RecognizeConfigError {
     Reference,
     #[error("recognize thresholds are single cuts above zero and at most one")]
     Threshold,
-    #[error(
-        "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"
-    )]
+    #[error("{}", crate::core::RecognitionMode::BOUNDARY_USAGE)]
     BoundaryControls,
 }
 

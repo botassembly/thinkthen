@@ -17,6 +17,7 @@ pub enum RecognitionMode {
     BoundaryOnly,
 }
 impl RecognitionMode {
+    pub(crate) const BOUNDARY_USAGE: &'static str = "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context";
     pub(crate) const USAGE: &'static str = "recognize mode is whole or boundary_only";
     pub(crate) fn parse(text: &str) -> Option<Self> {
         match text {

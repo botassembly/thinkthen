@@ -336,7 +336,8 @@ pub(crate) fn step_one_context(
     limit: usize,
     context: Option<&crate::core::Json>,
 ) -> Result<StepOne, Error> {
-    spec.validate_mode().map_err(|_| Error::Usage("boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"))?;
+    spec.validate_mode()
+        .map_err(|_| Error::Usage(crate::core::RecognitionMode::BOUNDARY_USAGE))?;
     let examples =
         crate::core::render_examples(spec, &spec.examples).map_err(Error::RecognitionExamples)?;
     if text.len() > limit {
