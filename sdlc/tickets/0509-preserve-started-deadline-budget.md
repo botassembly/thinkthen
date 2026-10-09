@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 4bd15dd4a, accept
+
 ## Outcome
 
 Composed Request calls preserve the caller's configured deadline budget in errors while enforcing one unchanged absolute deadline.
