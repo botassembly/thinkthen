@@ -38,3 +38,4 @@ The initial shared slice claims `crates/thinkthen/src/schema_tests.rs`, `crates/
 
 - 2026-10-09 started
 - 2026-10-09 landed aa49e3b32; next: The reviewed C# facts generation slice is landed; run combined qualification with shared admission. Finish authoritative function variants and observations before generating all results and adopting installed bindings.
+- 2026-10-09 landed 0d3a61857cbea36661bf4a48b57858fb4ae1cf6d; next: Facts and selected typed answer, error, observation and map generation are landed after fixing schema-derived identity dispatch. Focused checks and branch lint pass. Complete function carriers, Rust presentation gaps, session packet generation and installed language adoption remain open.
