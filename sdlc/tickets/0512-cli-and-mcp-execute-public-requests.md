@@ -40,3 +40,4 @@ The CLI and MCP admit and execute every judgment call through the same public Re
 
 - 2026-10-09 started
 - 2026-10-09 landed 760ff5b25; next: MCP now admits controls through Request owners and its installed shared cases pass. Migrate CLI judgment execution next; preserve output, pipe interruption and exit codes.
+- 2026-10-09 landed 8144acf6424d9cc8fd27568b5c1dd47e66569c0b; next: Find executes admitted native Requests and retains saved-file diagnostics, deadlines, interruption, original JSON and accounting. Migrate the remaining nine CLI judgment commands and finish combined checks before whole closure.
