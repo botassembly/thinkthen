@@ -30,7 +30,6 @@ env = {
     'NUGET_PACKAGES': str(root / 'target/scratch/nuget'),
     'DOTNET_CLI_TELEMETRY_OPTOUT': '1', 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE': '1',
     'DOTNET_NOLOGO': '1', 'DOTNET_MULTILEVEL_LOOKUP': '0',
-    'LD_LIBRARY_PATH': str(root / 'target/scratch/lib'),
     'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1',
     'THINKTHEN_API_KEY': 'tt-canary-290', 'THINKTHEN_CACHE': str(home / 'cache'),
     'TT_BARRIER_DIR': str(barrier),

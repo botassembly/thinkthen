@@ -10,6 +10,7 @@ V=re.search(r'<Version>([^<]+)</Version>',(R/'ThinkThen.csproj').read_text())[1]
 dotnet=resolve_dotnet()
 mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
 release_package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
+package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
 release_c=os.environ.get('THINKTHEN_RELEASE_C_DIR')
 if bool(release_package) != bool(release_c): raise AssertionError('installed release needs both package paths')
 package=pathlib.Path(release_package) if release_package else R/f'target/scratch/managed/Botassembly.ThinkThen.{V}.nupkg'
@@ -21,36 +22,21 @@ if release_package:
  with zipfile.ZipFile(package) as bundle:
   names=set(bundle.namelist())
   assert {'Botassembly.ThinkThen.nuspec','lib/net8.0/ThinkThen.dll','README.md','LICENSE'} <= names,names
-  assert not any(name.endswith(('.so','.a','.dylib')) for name in names),names
+  assert 'runtimes/linux-x64/native/libthinkthen.so' in names,names
   assert not any(token in bundle.read(name) for name in names for token in (b'/home/', b'/Users/',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
   metadata=ET.fromstring(bundle.read('Botassembly.ThinkThen.nuspec'))
   fields={node.tag.rsplit('}',1)[-1]:(node.text or '').strip() for node in metadata.iter()}
   assert fields['id']=='Botassembly.ThinkThen' and fields['version']==V,fields
-archive_path=pathlib.Path(release_c) if release_c else R/f'target/artifacts/thinkthen-c-{V}-x86_64-linux-gnu.tar.gz'
 work.mkdir()
-install=work/'install with spaces';install.mkdir();home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget';nuget.mkdir()
-if release_c:
- for name in ('include/thinkthen.h','lib/libthinkthen.so','lib/libthinkthen.a'):
-  source=archive_path/name
-  assert source.is_file(),source
-  destination=install/'native'/name
-  destination.parent.mkdir(parents=True,exist_ok=True)
-  shutil.copyfile(source,destination)
-  assert source != destination and source.read_bytes()==destination.read_bytes(),name
- (install/'native/lib/libthinkthen.so.0').symlink_to('libthinkthen.so')
-else:
- with tarfile.open(archive_path) as archive:
-  for member in archive:
-   dest=install/'native'/member.name;dest.parent.mkdir(parents=True,exist_ok=True)
-   if member.issym():dest.symlink_to(member.linkname)
-   elif member.isfile():dest.write_bytes(archive.extractfile(member).read())
+home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget';nuget.mkdir()
 local=work/'feed';local.mkdir();shutil.copyfile(package,local/f'Botassembly.ThinkThen.{V}.nupkg')
 # Only consumer source and package feed are visible; compiler and original source are absent.
-shutil.copyfile(R/'tests/source/Installed.cs',work/'Installed.cs');shutil.copyfile(R/'tests/Installed.csproj',work/'Installed.csproj')
+shutil.copyfile(R/'tests/source/SessionChecks.cs',work/'SessionChecks.cs');shutil.copyfile(R/'tests/source/Installed.cs',work/'Installed.cs');shutil.copyfile(R/'tests/Installed.csproj',work/'Installed.csproj')
 barrier=work/'barrier';barrier.mkdir();server=Backend(barrier)
 cmd=['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--dir','/usr','--dir','/usr/bin','--dir','/opt','--ro-bind',str(dotnet.parent),'/opt/dotnet','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/usr/share','/usr/share','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind','/etc/passwd','/etc/passwd','--ro-bind','/etc/group','/etc/group','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--','/opt/dotnet/dotnet','run','--project','/work/Installed.csproj','--configuration','Release','-p:RestoreSources=/work/feed','-p:RestoreIgnoreFailedSources=true']
-env={'PATH':'/usr/bin:/bin','HOME':'/work/home','XDG_CONFIG_HOME':'/work/home','XDG_CACHE_HOME':'/work/home','DOTNET_CLI_HOME':'/work/home','NUGET_PACKAGES':'/work/nuget','DOTNET_CLI_TELEMETRY_OPTOUT':'1','DOTNET_SKIP_FIRST_TIME_EXPERIENCE':'1','DOTNET_NOLOGO':'1','DOTNET_MULTILEVEL_LOOKUP':'0','LD_LIBRARY_PATH':'/work/install with spaces/native/lib','THINKTHEN_CACHE':'/work/cache','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1','THINKTHEN_API_KEY':'tt-canary-290'}
+env={'PATH':'/usr/bin:/bin','HOME':'/work/home','XDG_CONFIG_HOME':'/work/home','XDG_CACHE_HOME':'/work/home','DOTNET_CLI_HOME':'/work/home','NUGET_PACKAGES':'/work/nuget','DOTNET_CLI_TELEMETRY_OPTOUT':'1','DOTNET_SKIP_FIRST_TIME_EXPERIENCE':'1','DOTNET_NOLOGO':'1','DOTNET_MULTILEVEL_LOOKUP':'0','THINKTHEN_CACHE':'/work/cache','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1','THINKTHEN_API_KEY':'tt-canary-290'}
 if mode=='portable': env['TT_PORTABLE_BATCH']='1'
+if mode=='sessions': env['TT_SESSIONS']='1'
 try:
  result=run(cmd,timeout=100,env=env)
  (work/'consumer.log').write_bytes(result.stdout+result.stderr)
@@ -58,7 +44,15 @@ try:
  (work/'receipt.json').write_text(json.dumps(counted,indent=2)+'\n')
  assert result.exit==0,(result.exit,result.stdout[-1500:],result.stderr[-1500:])
  bodies=(barrier/'wire-requests.jsonl').read_bytes().splitlines()
- if mode=='portable':
+ if mode=='sessions':
+  assert b'INSTALLED_CSHARP_SESSION_PASS' in result.stdout,result.stdout
+  required=collections.Counter(['session-owned','hold-session-task','hold-session-drain'])
+  actual=collections.Counter(server.arrivals)
+  admitted=collections.Counter((barrier/'admitted-feed').read_text().splitlines())
+  assert required <= actual and actual <= required + admitted,counted
+  assert server.attempts==server.connections==len(server.arrivals),counted
+  print('installed C# owned sessions, bounded Full/Closed, held cancellation, explicit drain, ownership and presence PASS',flush=True)
+ elif mode=='portable':
   fixture=R.parents[1]/'specification/fixtures/batching'
   corpus=json.loads((fixture/'portable-records.json').read_text())
   assert b'PORTABLE_BATCH_CSHARP_PASS' in result.stdout,result.stdout

@@ -7,12 +7,18 @@
     <PackageId>Botassembly.ThinkThen</PackageId>
     <Version>0.2.0</Version>
     <Authors>ThinkThen contributors</Authors>
-    <Description>Linux C ABI facade; install matching native archive separately</Description>
+    <Description>Owned native sessions and typed judging calls</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>false</IncludeSymbols>
     <DebugType>none</DebugType>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <ItemGroup><Compile Include="src/*.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README.md" Pack="true" PackagePath="/"/></ItemGroup>
+  <ItemGroup><Compile Include="src/*.cs"/><Compile Include="../../sdlc/generators/results/csharp/CompleteFacts.g.cs" Link="CompleteFacts.g.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README.md" Pack="true" PackagePath="/"/></ItemGroup>
+  <ItemGroup Condition="'$(ThinkThenNativeAsset)' != ''">
+    <None Include="$(ThinkThenNativeAsset)" Pack="true" PackagePath="runtimes/$(ThinkThenNativeRid)/native/$(ThinkThenNativeName)" Link="$(ThinkThenNativeName)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="RequireNativeAsset" BeforeTargets="Pack">
+    <Error Condition="'$(ThinkThenNativeAsset)' == '' or '$(ThinkThenNativeRid)' == '' or '$(ThinkThenNativeName)' == '' or !Exists('$(ThinkThenNativeAsset)')" Text="Pack requires a built version-matched native asset, RID and native name." />
+  </Target>
 </Project>

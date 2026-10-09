@@ -84,10 +84,12 @@ public sealed partial class Engine : IDisposable
 {
     private readonly ReaderWriterLockSlim lifetime = new();
     private IntPtr engine;
+    private readonly EngineHandle ownedEngine;
     private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
-    private Engine(IntPtr engine) => this.engine = engine;
+    private Engine(IntPtr engine) { this.engine = engine; ownedEngine = new(engine); }
     public static Engine Open(string? settingsJson = null)
     {
+        NativeLoader.Initialize();
         IntPtr ptr = settingsJson is null ? Native.thinkthen_engine_new() : Native.thinkthen_engine_new_with(CString(settingsJson));
         if (ptr == IntPtr.Zero) throw ReadFailure(ptr, Native.thinkthen_error_code(ptr));
         return new Engine(ptr);
@@ -125,12 +127,18 @@ public sealed partial class Engine : IDisposable
     private TResult Live<TResult>(Func<IntPtr, TResult> body)
     {
         lifetime.EnterReadLock();
+        bool pinned = false;
         try
         {
             if (engine == IntPtr.Zero) throw new ObjectDisposedException(nameof(Engine));
+            ownedEngine.DangerousAddRef(ref pinned);
             return body(engine);
         }
-        finally { lifetime.ExitReadLock(); }
+        finally
+        {
+            if (pinned) ownedEngine.DangerousRelease();
+            lifetime.ExitReadLock();
+        }
     }
     private TResult Invoke<TResult>(TimeSpan? budget, CancellationToken cancellation, Func<IntPtr, long, IntPtr, TResult> body) => Live(ptr =>
     {
@@ -311,7 +319,7 @@ public sealed partial class Engine : IDisposable
     public void Dispose()
     {
         lifetime.EnterWriteLock();
-        try { if (engine != IntPtr.Zero) { Native.thinkthen_engine_free(engine); engine = IntPtr.Zero; } }
+        try { if (engine != IntPtr.Zero) { ownedEngine.Dispose(); engine = IntPtr.Zero; } }
         finally { lifetime.ExitWriteLock(); }
     }
 }

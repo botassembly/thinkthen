@@ -40,7 +40,7 @@ def inspect(header, package, native, expected=None):
     with zipfile.ZipFile(io.BytesIO(package)) as bundle:
         members = set(bundle.namelist())
         assert {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE"} <= members
-        assert not any(name.endswith((".so", ".dylib")) for name in members)
+        assert bundle.read('runtimes/linux-x64/native/libthinkthen.so') == NATIVE.read_bytes(), 'tampered packaged native asset'
         assert b"<id>Botassembly.ThinkThen</id>" in bundle.read("Botassembly.ThinkThen.nuspec")
         assert bundle.read("README.md") == (ROOT / "README.md").read_bytes(), "stale package README"
         for name in members:
@@ -111,7 +111,11 @@ def abi_check(header, package):
                'thinkthen_decide_with_facts', 'thinkthen_image_view', 'thinkthen_question_author', 'thinkthen_question_file',
                'thinkthen_recognize', 'thinkthen_recognize_with_facts', 'thinkthen_relate', 'thinkthen_relate_with_facts', 'thinkthen_result_row'}
     constant_names = {n for n in native['constants'] if n.endswith('_V1') and not n.startswith(('THINKTHEN_PROBABILITIES_', 'THINKTHEN_RESULT_'))} | {n for n in native['constants'] if n.startswith('THINKTHEN_E') and not n.endswith('_V1')} | {'THINKTHEN_YES', 'THINKTHEN_NO', 'THINKTHEN_UNSURE'}
-    expected = abi.represented_abi(native, native['records'], set(native['functions']) - omitted, constant_names)
+    required_imports = set(native['functions']) - omitted
+    assert required_imports <= actual['functions'].keys(), 'missing required compatibility imports'
+    session_imports = {name for name in native['functions'] if name.startswith('thinkthen_session_')}
+    assert session_imports <= actual['functions'].keys(), 'missing owned session imports'
+    expected = abi.represented_abi(native, native['records'], set(actual['functions']), constant_names - {name for name in constant_names if name.startswith('THINKTHEN_SESSION_')})
     for name, prototype in actual['functions'].items():
         pointees = prototype.pop('argument_pointees')
         for parameter, represented in zip(native['functions'][name]['arguments'], pointees):
@@ -134,6 +138,8 @@ def abi_plants(header):
             (source / original.name).write_bytes(original.read_bytes())
         project = scratch / 'ThinkThen.csproj'
         project.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
+        generated = ROOT.parents[1] / 'sdlc/generators/results/csharp/CompleteFacts.g.cs'
+        (source / generated.name).write_bytes(generated.read_bytes())
         config = scratch / 'NuGet.Config'
         config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
         env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
@@ -170,9 +176,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 class Probe {
  static string Name(Type t) => "thinkthen_" + Regex.Replace(t.Name,"(?<!^)(?=[A-Z])","_").ToLowerInvariant();
- static int Width(Type t) => t==typeof(void)?0:t.IsByRef||t.IsArray||t==typeof(IntPtr)||t==typeof(UIntPtr)?IntPtr.Size:Marshal.SizeOf(t);
+ static int Width(Type t) => t==typeof(void)?0:t.IsByRef||t.IsArray||typeof(SafeHandle).IsAssignableFrom(t)||t==typeof(IntPtr)||t==typeof(UIntPtr)?IntPtr.Size:Marshal.SizeOf(t);
  static string Kind(Type t) {
-  if(t.IsByRef||t.IsArray||t==typeof(IntPtr))return "pointer";
+  if(t.IsByRef||t.IsArray||typeof(SafeHandle).IsAssignableFrom(t)||t==typeof(IntPtr))return "pointer";
   if(t==typeof(UIntPtr))return "unsigned"+(IntPtr.Size*8);
   if(t==typeof(void))return "void";
   if(t.Name.EndsWith("V1Data"))return "union";

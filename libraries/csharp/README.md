@@ -1,28 +1,45 @@
 # ThinkThen C# binding
 
-`Botassembly.ThinkThen` is the .NET 8 wrapper package on NuGet. It calls the separately installed ThinkThen C library. This wrapper does not ship, download, or install that library. Take the library from `thinkthen-c-0.1.2-x86_64-unknown-linux-gnu.tar.gz` on the same GitHub release. `Botassembly.ThinkThen.C` is reserved for a native package and is not published.
+`Botassembly.ThinkThen` provides a .NET 8 API and carries the matching native asset. The loader accepts the installed assembly's native asset by absolute path. A missing asset fails without consulting library-path variables or downloading code. Local package checks qualify Linux x64. Other operating systems require their own native build and qualification.
 
-Run `sh libraries/csharp/check.sh` from a source checkout with .NET 8, Rust and an offline Cargo cache. The .NET SDK resolves from `dotnet` on `PATH`, or `THINKTHEN_DOTNET` can name its executable. The check builds the C library from the same checkout, compares its exports with the current C header, packs the wrapper into a local NuGet feed, and runs the exact backend matrix, two isolated installed NuGet consumers, and the J1 public-binding type corpus. Generated artifacts and receipts stay under `libraries/csharp/target/`.
-
-For an application on Linux x86_64, install the matching native C library separately, then install the wrapper package:
+Install the package from a local feed and use native typed inputs:
 
 ```sh
-dotnet add path/to/App.csproj package Botassembly.ThinkThen --version 0.1.2
-LD_LIBRARY_PATH=path/to/native/lib dotnet run --project path/to/App.csproj
+dotnet add path/to/App.csproj package Botassembly.ThinkThen --version 0.2.0 --source path/to/feed
+dotnet run --project path/to/App.csproj
 ```
 
-The native library must match the header and ABI used to build the wrapper. The local gate checks the current header-derived symbol set. Set the supported backend URL and credentials as described in the repository documentation. The package makes no compatibility promise for another platform. To install without NuGet, unpack the release's `thinkthen-csharp-0.1.2-x86_64-unknown-linux-gnu.tar.gz` and pass its folder to `dotnet add` as `--source`.
+```csharp
+using ThinkThen;
+using ThinkThen.Inputs;
+using ThinkThen.Results;
 
-`Engine` owns its native handle. Dispose it after active calls finish. The wrapper locks its lifetime against close during a call, and cancellation tokens are one-shot. C-string arguments reject interior NUL; counted UTF-8 evidence preserves it. Native result and error data, including borrowed error facts, are copied on the native calling thread before freeing native memory. `Decide`, `DecideMany`, `Recognize`, `Relate` and `CallTyped` return `TypedResult<T>`: `.Value` is the call's value and `.Facts` is that call's facts object as a `JsonElement`, as `specification/result.schema.json` describes it. `Recognize`, `Relate` and `CallTyped` values are `JsonElement` too. A reader ignores members it does not know. `AnnotatedField.Read` reads one member of an annotate row as `Unresolved` (JSON null), `Answered` with its value, or `Failed` with its kind and cause. `Engine.Plan(verb, question, input, settingsJson)` previews a decide, choose, score or tag call through `thinkthen_plan_json` and returns the plan object; it needs no key and sends nothing. Every call that sends takes an optional `TimeSpan` budget; `RelateWithOptions` carries it for `Relate`. `max_requests_total` and other engine settings pass through `Engine.Open(settingsJson)`. `Answer.OutcomeKind` and `Failure.Kind` expose named outcomes and errors while the raw integer fields retain ABI layout. A failure's copied `FactsJson` is distinct from a successful result's facts. The public API covers the six named native error classes, including cancellation. See the local check for exact request and type-contract evidence.
+using var engine = Engine.Open();
+OwnedCall call = await engine.DecideAsync(
+    new InputRequestQuestionText { Text = "Does this answer the question?" },
+    new InputRequestInputText { Text = "The supplied evidence." },
+    cancellation: cancellationToken);
+foreach (SessionPacket packet in call.Packets)
+    if (packet is SessionPacketDecideRow row) Console.WriteLine(row.ToJsonString());
+SessionPacketTerminal terminal = call.Terminal;
+```
 
-Linux x86_64 is the installed-consumer proof host. The release ships a checksummed `thinkthen-csharp-<version>-<target>.tar.gz` beside the matching `thinkthen-c-<version>-<target>.tar.gz`; the managed archive contains the nupkg and a fixed input manifest, while the C archive supplies the native library. The two-file installed check reads only those unpacked product bytes. Other hosts remain separate work.
+The ten named `*Async` methods admit generated Request inputs and return owned generated row, aggregate, observation and terminal packets. `SessionFailure` retains the native typed failure and completed packet prefix. Immediate admission errors use `Failure`. Host cancellation throws `OperationCanceledException` promptly and releases session ownership. The native provider can still be settling after that exception.
 
-`Engine.Open(settingsJson)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
+`Engine.StartSession` exposes `OwnedSession.ReadAsync`, `PushAsync`, `Finish`, `Cancel` and disposal. A read returns null only at native End. Push retries the same descriptor after Full; false means Closed and the producer must stop advancing its reader. One reader and one producer can run concurrently. `ExecuteAsync` runs an asynchronous feed and drain together, which prevents either bounded queue from blocking the other. An arbitrary asynchronous iterator must honor its cancellation token; the binding cannot interrupt foreign iterator code.
 
-Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+Read and push wait through cancellable timer delays after Pending or Full. Each session has at most one pending delay in each direction and no host worker thread. Disposal signals cancellation and closes ownership without joining the native worker. SafeHandle pins protect native operations and packet byte copies. Generated result values survive engine and session disposal and retain unknown nested members and missing versus explicit null fields.
 
-`Engine` implements `ICompleteEngine`. Its ten `*Complete` methods call the native counted constructors and complete result readers, returning typed rows, details, author declarations, probabilities, observations, identities and final facts. `QuestionInput.SavedQuestion`, `NamedQuestion` and `QuestionReference` use explicit native grammar roles. Record originals may remain JSON; known engine output has typed accessors. File sources include text lines/windows/files, image files and JSONL.
+An explicit `Cancel` retains the output receiver. Call `ReadAsync` with a fresh token to drain completed packets and eventual native terminal facts. Disposal relinquishes unread output; it does not promise that settlement has finished. A named convenience call disposes its session when cancelled.
 
-The six `*Batch` methods use the native lazy scheduler on a dedicated creating thread. Always dispose the batch before its engine. `Next` returns null at the end; `Facts` supplies joined final facts, including a typed error after a started failure. Copied rows remain valid after disposal. `Failure.Complete` retains typed stops and facts. Compatibility methods retain their signatures. The existing family gate executes all 247 required shared cases through these typed methods, including all 24 image-admission recipes, with counted loopback sends and zero-send replay checks. Whole-family review and landing remain with [ticket 0427](../../sdlc/tickets/0427-go-csharp-jvm-typed-parity.md).
+The existing synchronous, complete and batch APIs remain available while consumers migrate. `Decide` maps to `DecideAsync`, the other named judgments map to their `*Async` counterparts, and `Call` maps to typed `ExecuteAsync` or `StartSession`. JSON settings and `Engine.Plan` remain compatibility APIs until the native shared settings decoder and canonical Request preview support their typed replacements. Their behavior remains part of the migration contract.
 
-Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+To pack locally, supply an already-built native asset, portable RID and native filename:
+
+```sh
+dotnet pack libraries/csharp/ThinkThen.csproj -c Release -o path/to/feed \
+  -p:ThinkThenNativeAsset=/absolute/path/to/libthinkthen_c.so \
+  -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so
+```
+
+The existing package checker compares native bytes and reflected imports against the generated C header. `tests/isolated_consumer.py` restores the local package into an isolated application with no separate native archive or library-path override. Its `sessions` mode covers owned packets, held-provider cancellation, concurrent Task progress, Full and Closed, explicit drain, disposal races and presence semantics. `sh libraries/csharp/check.sh` also exercises the compatibility matrix. The SDK executable resolves from `dotnet` or `THINKTHEN_DOTNET`.

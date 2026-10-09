@@ -306,3 +306,118 @@ def render_union(kind, variants, definitions):
     chunks.append('        return result ?? throw new JsonException("Unknown result variant.");\n'
                   '    }\n}\n\n')
     return ''.join(chunks)
+
+
+def render_inputs(schema):
+    """Generate writable values from the native Request graph, including authored unions."""
+    definitions = dict(schema['$defs'])
+    definitions['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
+    nodes = {}
+    def cname(key):
+        return 'Input' + name(key)
+    def cs_type(value, path):
+        if isinstance(value, bool):
+            return 'JsonElement'
+        if '$ref' in value:
+            return cname(value['$ref'].removeprefix('#/$defs/'))
+        if 'const' in value:
+            return type_of_literal(value['const'])
+        if 'oneOf' in value or 'anyOf' in value:
+            nodes.setdefault(path, value)
+            return cname(path)
+        kind = value.get('type')
+        if isinstance(kind, list):
+            nodes.setdefault(path, {'anyOf': [{'type': k} for k in kind]})
+            return cname(path)
+        if kind == 'array':
+            return 'IReadOnlyList<' + cs_type(value.get('items', {}), path + '_Item') + '>'
+        if kind == 'object' and 'properties' in value:
+            nodes.setdefault(path, value)
+            return cname(path)
+        if kind == 'object' and isinstance(value.get('additionalProperties'), dict):
+            return 'IReadOnlyDictionary<string, ' + cs_type(value['additionalProperties'], path + '_Entry') + '>'
+        return {'string': 'string', 'boolean': 'bool', 'integer': 'long',
+                'number': 'double'}.get(kind, 'JsonElement') if kind != 'integer' else {'uint64':'ulong', 'uint32':'uint', 'uint':'ulong'}.get(value.get('format'), 'long')
+    def type_of_literal(value):
+        return 'string' if isinstance(value, str) else 'bool' if isinstance(value, bool) else 'long'
+    def emit(value, expr, path):
+        typ = cs_type(value, path)
+        if typ.startswith('Input'):
+            return expr + '.Write(writer);'
+        if typ.startswith('IReadOnlyList'):
+            return 'writer.WriteStartArray(); foreach (var item in ' + expr + ') { ' + emit(value.get('items', {}), 'item', path + '_Item') + ' } writer.WriteEndArray();'
+        if typ.startswith('IReadOnlyDictionary'):
+            return 'writer.WriteStartObject(); foreach (var entry in ' + expr + ') { writer.WritePropertyName(entry.Key); ' + emit(value['additionalProperties'], 'entry.Value', path + '_Entry') + ' } writer.WriteEndObject();'
+        return {'string': 'writer.WriteStringValue(' + expr + ');',
+                'bool': 'writer.WriteBooleanValue(' + expr + ');',
+                'long': 'writer.WriteNumberValue(' + expr + ');',
+                'ulong': 'writer.WriteNumberValue(' + expr + ');',
+                'uint': 'writer.WriteNumberValue(' + expr + ');',
+                'double': 'writer.WriteNumberValue(' + expr + ');'}.get(typ, expr + '.WriteTo(writer);')
+    header = '''// Generated from the Rust-derived Request schema; do not edit.
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+namespace ThinkThen.Inputs;
+public readonly struct InputPresence<T> {
+    public bool IsPresent { get; }
+    public T Value { get; }
+    private InputPresence(T value) { Value = value; IsPresent = true; }
+    public static implicit operator InputPresence<T>(T value) => new(value);
+}
+public abstract class InputDocument {
+    public abstract void Write(Utf8JsonWriter writer);
+    internal byte[] ToBytes() { using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream)) Write(writer); return stream.ToArray(); }
+}
+'''
+    nodes.update(definitions)
+    output = []
+    completed = set()
+    while nodes.keys() - completed:
+        key = sorted(nodes.keys() - completed)[0]
+        completed.add(key)
+        value = nodes[key]
+        typ = cname(key)
+        alternatives = value.get('oneOf', value.get('anyOf'))
+        if alternatives and 'properties' not in value:
+            output.append('public abstract class ' + typ + ' : InputDocument { private protected ' + typ + '() {} }')
+            for index, alt in enumerate(alternatives):
+                tag = next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
+                child = key + '_' + (tag if tag else 'Alternative' + str(index))
+                nodes[child] = {**alt, '_base': typ}
+            continue
+        base = value.get('_base', 'InputDocument')
+        lines = ['public sealed class ' + typ + ' : ' + base + ' {']
+        properties = value.get('properties')
+        if properties is not None:
+            required = value.get('required', [])
+            writes = ['writer.WriteStartObject();']
+            for member, prop in properties.items():
+                if isinstance(prop, bool):
+                    prop = {}
+                if 'const' in prop:
+                    writes += ['writer.WritePropertyName(' + quote(member) + ');', emit(prop, quote(prop['const']) if isinstance(prop['const'], str) else str(prop['const']).lower(), key + '_' + member)]
+                    continue
+                ptype = cs_type(prop, key + '_' + member)
+                pname = name(member)
+                mandatory = member in required
+                lines.append('public ' + ('required ' + ptype if mandatory else 'InputPresence<' + ptype + '>') + ' ' + pname + ' { get; init; }')
+                body = 'writer.WritePropertyName(' + quote(member) + '); ' + emit(prop, pname if mandatory else pname + '.Value', key + '_' + member)
+                writes.append(body if mandatory else 'if (' + pname + '.IsPresent) { ' + body + ' }')
+            writes.append('writer.WriteEndObject();')
+        elif value.get('type') == 'null':
+            writes = ['writer.WriteNullValue();']
+        elif 'const' in value:
+            literal = value['const']
+            writes = [emit(value, quote(literal) if isinstance(literal, str) else str(literal).lower(), key + '_Value')]
+        else:
+            stripped = {k: v for k, v in value.items() if k != '_base'}
+            ptype = cs_type(stripped, key + '_Value')
+            lines.append('public required ' + ptype + ' Value { get; init; }')
+            writes = [emit(stripped, 'Value', key + '_Value')]
+        lines.append('public override void Write(Utf8JsonWriter writer) { ' + ' '.join(writes) + ' }')
+        lines.append('}')
+        output.append('\n'.join(lines))
+    return header + '\n\n'.join(output) + '\n'
