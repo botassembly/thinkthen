@@ -201,14 +201,7 @@ impl AdmittedRequest {
         environment: RequestEnvironment<'a>,
         limit: usize,
     ) -> Result<crate::public::complete::recognize::RecognitionPreview, Error> {
-        feed_projection(self, environment.feed.as_ref())?;
-        let options = &self.request.call.arguments().options;
-        let controls = controls(options, environment.controls)?.started()?;
-        controls.admission()?;
-        let mut definition = self.resolve_question()?;
-        self.admit_inline(&definition)?;
-        let reading = definition.clone();
-        apply(&mut definition, options)?;
+        let (definition, rows, controls) = route_preview(self, environment)?;
         let ask = match &definition {
             RequestDefinition::Recognition(ask) => ask,
             RequestDefinition::Recognize(file) => file.question(),
@@ -218,14 +211,6 @@ impl AdmittedRequest {
                 ));
             }
         };
-        let rows = self.records(&reading, environment, controls, None)?;
-        let rows = rows.enumerate().map(|(at, row)| {
-            controls.admission()?;
-            let row = row?;
-            super::inline::validate_composed(&reading, options, &row)
-                .map_err(|error| error.at_record(at))?;
-            Ok(row)
-        });
         crate::public::complete::recognize::preview_recognition(
             backend,
             profile,
@@ -235,4 +220,46 @@ impl AdmittedRequest {
             limit,
         )
     }
+    pub(crate) fn plan_relations<'a>(
+        &'a self,
+        backend: &crate::core::Backend,
+        profile: Option<&crate::core::BackendProfile>,
+        environment: RequestEnvironment<'a>,
+    ) -> Result<crate::public::complete::relate::RelationPreview, Error> {
+        let (definition, rows, controls) = route_preview(self, environment)?;
+        let RequestDefinition::Relate(ask) = definition else {
+            return Err(Error::usage("relate plan requires a relation question"));
+        };
+        crate::public::complete::relate::preview_relations(backend, profile, &ask, rows, &controls)
+    }
+}
+
+fn route_preview<'a>(
+    request: &'a AdmittedRequest,
+    environment: RequestEnvironment<'a>,
+) -> Result<
+    (
+        RequestDefinition,
+        super::composition::Inputs<'a>,
+        crate::CallOptions<'a>,
+    ),
+    Error,
+> {
+    feed_projection(request, environment.feed.as_ref())?;
+    let options = &request.request.call.arguments().options;
+    let controls = controls(options, environment.controls)?.started()?;
+    controls.admission()?;
+    let mut definition = request.resolve_question()?;
+    request.admit_inline(&definition)?;
+    let reading = definition.clone();
+    apply(&mut definition, options)?;
+    let rows = request.records(&reading, environment, controls, None)?;
+    let rows = rows.enumerate().map(move |(at, row)| {
+        controls.admission()?;
+        let row = row?;
+        super::inline::validate_composed(&reading, options, &row)
+            .map_err(|error| error.at_record(at))?;
+        Ok(row)
+    });
+    Ok((definition, Box::new(rows), controls))
 }

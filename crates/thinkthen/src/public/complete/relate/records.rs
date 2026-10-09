@@ -43,47 +43,14 @@ impl Engine {
     {
         let options = options.started()?;
         options.admission()?;
-        let mut pairs = Vec::new();
-        let mut inputs = Vec::new();
-        let mut originals = Vec::new();
-        let mut lines = None;
-        let mut bytes = 0usize;
-        let records = self.try_within_admission(
-            records
-                .into_iter()
-                .take(256)
-                .enumerate()
-                .map(|(at, record)| {
-                    record
-                        .and_then(|record| prepare(ask, record, (&mut lines, &mut bytes)))
-                        .map_err(|error| error.at_record(at))
-                }),
-            &options,
-        )?;
-        for (original, input, pair) in records {
-            pairs.push(pair);
-            inputs.push(input);
-            originals.push(original);
-        }
-        let lines = lines.unwrap_or(false);
-        if lines {
-            ask.0.check_lines().map_err(Error::refused)?;
-        }
-        let located = inputs.iter().any(|input| matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some()));
-        if located && !inputs.iter().all(|input| matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some())) {
-            return Err(Error::usage("source relate takes a source for every record"));
-        }
-        if located && pairs.len() > 255 {
-            return Err(Error::usage(
-                "source relate takes at most 255 source records",
-            ));
-        }
-        let distinct = if located {
-            unique(&pairs)
-        } else {
-            pairs.clone()
-        };
-        let entities = ask.0.admit(&distinct).map_err(Error::refused)?;
+        let Admitted {
+            pairs,
+            inputs,
+            originals,
+            lines,
+            located,
+            entities,
+        } = collect(ask, records, &options, |at| self.check_record_limit(at))?;
         self.relate_admitted_complete(ask, entities, options, lines, &inputs)?
             .try_map(|mut result| {
                 if located {
@@ -101,6 +68,73 @@ impl Engine {
             })
     }
 }
+pub(super) struct Admitted<T> {
+    pub(super) pairs: Vec<(String, String)>,
+    pub(super) inputs: Vec<Arc<QuestionInput>>,
+    pub(super) originals: Vec<T>,
+    pub(super) lines: bool,
+    pub(super) located: bool,
+    pub(super) entities: Vec<crate::core::RelationEntity>,
+}
+pub(super) fn collect<T: InputEvidence, I>(
+    ask: &Relate,
+    records: I,
+    options: &CallOptions<'_>,
+    mut check: impl FnMut(usize) -> Result<(), Error>,
+) -> Result<Admitted<T>, Error>
+where
+    I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
+{
+    let mut pairs = Vec::new();
+    let mut inputs = Vec::new();
+    let mut originals = Vec::new();
+    let mut lines = None;
+    let mut bytes = 0usize;
+    let mut records = records.into_iter().take(256).enumerate();
+    loop {
+        options.admission()?;
+        let Some((at, record)) = records.next() else {
+            break;
+        };
+        let row = record
+            .and_then(|record| prepare(ask, record, (&mut lines, &mut bytes)))
+            .map_err(|error| error.at_record(at));
+        options.admission()?;
+        let (original, input, pair) = row?;
+        check(at)?;
+        pairs.push(pair);
+        inputs.push(input);
+        originals.push(original);
+    }
+    let lines = lines.unwrap_or(false);
+    if lines {
+        ask.0.check_lines().map_err(Error::refused)?;
+    }
+    let located = inputs.iter().any(|input| matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some()));
+    if located && !inputs.iter().all(|input| matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some())) {
+            return Err(Error::usage("source relate takes a source for every record"));
+        }
+    if located && pairs.len() > 255 {
+        return Err(Error::usage(
+            "source relate takes at most 255 source records",
+        ));
+    }
+    let distinct = if located {
+        unique(&pairs)
+    } else {
+        pairs.clone()
+    };
+    let entities = ask.0.admit(&distinct).map_err(Error::refused)?;
+    Ok(Admitted {
+        pairs,
+        inputs,
+        originals,
+        lines,
+        located,
+        entities,
+    })
+}
+
 type Prepared<T> = (T, Arc<QuestionInput>, (String, String));
 fn prepare<T: InputEvidence>(
     ask: &Relate,

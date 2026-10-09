@@ -52,17 +52,15 @@ pub(crate) fn run(
             framing: settled.framing,
             spec: &settled.spec,
             from: settled.from,
-            entity_count: entities.len(),
             key_env: environment.key_variable(),
             shared_context: shared_context.as_deref(),
         };
-        let prepared = facade::relations(
-            &entities,
-            &settled.spec,
-            &backend,
-            selected_profile.as_ref(),
+        dry_run::write(
+            &mut writer,
+            context,
+            admitted,
+            (&originals, sources.as_ref()),
         )?;
-        dry_run::write(&mut writer, context, &prepared)?;
         return Ok(ExitCode::SUCCESS);
     }
     let mismatch = profile::Mismatch::new(settled.spec.profile.as_ref(), selected_profile.as_ref());
@@ -109,15 +107,7 @@ fn execute(
     environment: &Environment,
     details: bool,
 ) -> Result<crate::CompleteRelated, Failure> {
-    let composition = crate::RecordReading::new(&[], None, None).map_err(Failure::from)?;
-    let records = originals.iter().enumerate().map(|(ordinal, original)| {
-        let mut row =
-            composition.compose(crate::RawRecord(std::sync::Arc::new(original.clone())))?;
-        if let Some(sources) = sources {
-            row.original = row.original.with_location(sources.location(ordinal)?);
-        }
-        Ok(row.map_original(crate::QuestionInput::Record))
-    });
+    let records = records(originals, sources)?;
     let request = admitted
         .retain_cli_definition(crate::Relate(spec.clone()).into())
         .map_err(Failure::from)?
@@ -159,4 +149,25 @@ fn execute(
         return Err(Failure::Defect("relate returned a different function"));
     };
     Ok(row.result)
+}
+
+fn records<'a>(
+    originals: &'a [crate::core::Record],
+    sources: Option<&'a source::Sources>,
+) -> Result<
+    impl Iterator<Item = Result<crate::RecordInput<crate::QuestionInput>, crate::Error>> + 'a,
+    Failure,
+> {
+    let composition = crate::RecordReading::new(&[], None, None).map_err(Failure::from)?;
+    Ok(originals
+        .iter()
+        .enumerate()
+        .map(move |(ordinal, original)| {
+            let mut row =
+                composition.compose(crate::RawRecord(std::sync::Arc::new(original.clone())))?;
+            if let Some(sources) = sources {
+                row.original = row.original.with_location(sources.location(ordinal)?);
+            }
+            Ok(row.map_original(crate::QuestionInput::Record))
+        }))
 }

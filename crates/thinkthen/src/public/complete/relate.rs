@@ -115,3 +115,7 @@ fn admitted(
     ask.validate_pairs(&pairs)?;
     Ok(entities)
 }
+
+mod preview;
+pub(crate) use preview::Preview as RelationPreview;
+pub(in crate::public) use preview::prepare as preview_relations;

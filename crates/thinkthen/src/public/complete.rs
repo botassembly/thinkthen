@@ -7,7 +7,7 @@ mod rank;
 mod rank_set;
 pub(crate) mod recognize;
 pub(in crate::public) mod records;
-mod relate;
+pub(crate) mod relate;
 mod streaming;
 use crate::core::{self, Value};
 use crate::public::engine::only;
