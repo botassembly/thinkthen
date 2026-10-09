@@ -77,7 +77,6 @@ pub(crate) use crate::core::backend::named::{self, Named};
 pub(crate) use crate::core::backend::{
     Backend, BackendError, KEY_IN_ADDRESS, KEY_VAR, MAX_PER_MINUTE,
 };
-#[cfg(any(test, feature = "cli"))]
 pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
