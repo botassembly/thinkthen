@@ -28,8 +28,9 @@ A TypeScript or JavaScript caller installs the npm package, imports it as Common
   - conversion of JavaScript values into the shared Request, with no restated checks;
   - typed errors carrying Rust error kinds and facts;
   - Promise and async-stream execution, cancellation and close;
-  - the package README, with a short old-to-new call mapping;
+  - the npm packaging slice under 0517's design: build the `win32-x64` addon beside the existing addons, accept it in `loader.js` and `package.json`, add a Windows Node pin, derive the addon list from 0501's inventory, and turn the `check.sh` `win32` refusal into a load case;
+  - the package README, with a short old-to-new call mapping and Windows named as supported;
   - removal of the old public names and copied readers after installed parity.
   One public API is one coherent family of named typed calls. Claim `libraries/typescript/**` and its installed typed consumer cases, narrowed per slice before coding.
 - Proof: The full shared cases run through the installed package in both module forms, including files and images, context and options, original positions, facts, failures and invalid input with zero sends. One installed held-provider case keeps the event loop responsive and shows cancellation or close stopping further reads and submissions before the provider is released. Pending final facts stay pending. Declarations or a Promise return type alone do not count, and neither does raw JSON pass-through. Record handwritten code removed and added, counting generator templates, in the landing record.
-- Defers: The Windows addon goes to 0383. The proxy and platform ruling changes need no 0.2 ticket.
+- Defers: Native Windows qualification goes to 0383 at the first authorized candidate. Final assembly goes to 0530. The proxy and platform ruling changes need no 0.2 ticket.

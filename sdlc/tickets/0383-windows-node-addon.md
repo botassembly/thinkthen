@@ -1,4 +1,4 @@
-# 0383: Ship the Node addon for Windows x86-64
+# 0383: Qualify the Node package on Windows x86-64
 
 Status: OPEN.
 
@@ -13,12 +13,12 @@ Reviews: revision a087f6dc3, accept
 
 ## Outcome
 
-The final npm package carries a `win32-x64` addon beside the existing platform addons. On Windows a caller installs the package and makes a real call with no library-path setting. Linux and macOS installs behave as before. The TypeScript README names Windows as supported.
+On a real Windows host, a caller installs the final npm package and makes a real call with no library-path setting. 0498 builds the `win32-x64` addon and its loader changes, and 0530 assembles the final package. This ticket proves them on Windows at the first authorized candidate.
 
 ## Evidence
 
 - Starts from: Windows stage 0 (0373) did not build the addon. `loader.js` refuses `win32`, its `SHIPPED` list names four platforms, `package.json` limits `os` and `files`, and `check.sh` pins the `win32` refusal. One npm package carries every platform's addon, so a packing mistake breaks every platform. The [2026-10-09 decision](../decisions/2026-10-09-thin-first-class-bindings.md) brings Windows into 0.2; the [0521 assessment](../records/0521-surface-contract-assessment.md) replaced the earlier deferral.
 - Keeps: Each existing platform's addon name and bytes. The refusal sentence for a platform the package does not ship.
-- Changes: The release workflow builds the `win32-x64` addon. `loader.js` and `package.json` accept it. Add a Windows Node pin. Derive the addon list from the 0501 inventory, keeping no second literal addon count. The `check.sh` refusal case becomes a load case on the runner. Declare any native runtime dependency in the package design from 0517. Claim `libraries/typescript/**` package files, `sdlc/scripts/npm-assemble` and `.github/workflows/windows.yml`, coordinating with 0498, 0501 and 0530.
+- Changes: Run 0498's Windows load case against 0530's final npm artifact on the Windows runner. Record whether the addon needs the MSVC runtime beside it, and add any such dependency to 0517's package design. Claim `.github/workflows/windows.yml`.
 - Proof: Install the final npm artifact assembled by 0530 on `windows-2025` with no user library-path override or source-tree fallback, make one call and count its loopback requests. The packed listing holds every inventoried addon. Linux and macOS TypeScript checks stay green. Windows execution is owed to the first authorized candidate, and the ticket stays open until it passes.
-- Defers: Whether the addon needs the MSVC runtime beside it. The builder checks on a clean runner and records the answer in the README. Candidate dispatch and publication wait for Ian's permission.
+- Defers: Building the addon belongs to 0498 and assembly to 0530. Candidate dispatch and publication wait for Ian's permission.

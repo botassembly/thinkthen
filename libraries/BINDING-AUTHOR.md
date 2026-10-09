@@ -18,7 +18,7 @@ C, Zig, Ada and COBOL use fixed layouts generated from Rust. Other C-interface l
 
 ## Caller acceptance and code ownership
 
-The [native package design](../sdlc/decisions/2026-10-09-native-package-design.md) fixes platform pairs, runtime floors, native layout and automatic loading. Its pub build-time asset exception awaits a PM ruling before the affected implementation.
+The [native package design](../sdlc/decisions/2026-10-09-native-package-design.md) fixes platform pairs, runtime floors, native layout and automatic loading. The PM approved its pub build-time asset route in [the pub ruling](../sdlc/decisions/2026-10-09-pub-build-time-native-asset.md).
 
 An ordinary caller installs a package, supplies native host values to a named function, reads a native answer or complete result, handles a typed failure, cancels work where the host supports it, and releases resources through the host's normal idiom. The caller does not build transport JSON, decode result JSON or find a native library by hand. Structured JSON supplied as evidence remains valid data. Internal JSON transport does not determine the public interface.
 
