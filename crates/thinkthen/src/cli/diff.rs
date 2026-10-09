@@ -287,6 +287,7 @@ fn item_rows(out: &mut String, change: &ItemChange, name: &str) {
     {
         let (label, member, digits) = match item.member("relation") {
             Some(_) => ("p", "probability", 2),
+            None if item.member("probability").is_some() => ("p", "probability", 4),
             None => ("strength", "strength", 4),
         };
         let score = places(number(item.member(member)).map(rounded), digits);
@@ -317,6 +318,9 @@ fn item_text(item: &Json) -> String {
             end("source"),
             end("target")
         ),
+        None if item.member("kind").is_none() && item.member("probability").is_some() => {
+            format!("{words} [{start},{end_at})")
+        }
         None => format!("{words} [{start},{end_at}) {kind}"),
     }
 }

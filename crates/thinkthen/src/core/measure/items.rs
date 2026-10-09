@@ -4,7 +4,7 @@ use crate::core::json::Json;
 use crate::core::measure::MeasureError;
 use crate::core::measure::answer::{Rule, Verb};
 use crate::core::probability::Probability;
-use crate::core::recognize::ENTITY;
+use crate::core::recognize::{ENTITY, RecognitionMode};
 
 /// How a said name matches a key name.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -21,6 +21,8 @@ pub(crate) enum Matching {
 pub(crate) enum What {
     /// A name: its kind, start, and exclusive end.
     Name(String, u64, u64),
+    /// A decoded boundary with no classified kind.
+    Span(u64, u64),
     /// An edge: its relation, and its source and target as name and kind.
     Edge(String, [(String, String); 2]),
 }
@@ -42,6 +44,8 @@ pub(crate) struct Items {
     said: Vec<Item>,
     /// The line's `question.threshold`.
     pub(crate) cut: f64,
+    /// The recognition value shape, including empty proposal lists.
+    pub(crate) mode: RecognitionMode,
 }
 
 impl Items {
@@ -86,6 +90,15 @@ pub(crate) fn read(
     let question = entry.member("question").ok_or(ungradable)?;
     let cut = number(question.member("threshold")).ok_or(ungradable)?;
     let relate = verb == Verb::Relate;
+    let mode = if relate {
+        RecognitionMode::Whole
+    } else {
+        mode(question).ok_or(ungradable)?
+    };
+    let value = entry.member("value").ok_or(ungradable)?;
+    if !relate && self::mode(value) != Some(mode) {
+        return Err(ungradable);
+    }
     let (names, either): (Vec<String>, Vec<&Json>) =
         match question.member(if relate { "relations" } else { "kinds" }) {
             Some(Json::Array(rules)) if relate => (
@@ -106,17 +119,20 @@ pub(crate) fn read(
             ),
             _ => return Err(ungradable),
         };
-    let said = entry
-        .member("value")
-        .and_then(|value| list(verb, value))
-        .ok_or(ungradable)?;
+    let said = list(verb, mode, value).ok_or(ungradable)?;
     let mut items = Vec::new();
     for (place, held) in said.iter().enumerate() {
-        let what = entity_rule(verb, &names, what(verb, held).ok_or(ungradable)?);
-        let score = number(held.member(if relate { "probability" } else { "strength" }))
-            .and_then(|p| Probability::new(p).ok())
-            .ok_or(MeasureError::Probability(line))?
-            .as_f64();
+        let what = entity_rule(verb, &names, what(verb, mode, held).ok_or(ungradable)?);
+        let score = number(
+            held.member(if relate || mode == RecognitionMode::BoundaryOnly {
+                "probability"
+            } else {
+                "strength"
+            }),
+        )
+        .and_then(|p| Probability::new(p).ok())
+        .ok_or(MeasureError::Probability(line))?
+        .as_f64();
         let loose = matches!(&what, What::Edge(relation, _) if either.iter().any(|name| name.as_str() == Some(relation)));
         let printed = held.clone();
         items.push(Item {
@@ -131,15 +147,39 @@ pub(crate) fn read(
     let meta = entry.member("meta");
     let lost = number(meta.and_then(|meta| meta.member("failed_questions")));
     let partial = lost.is_some_and(|lost| lost > 0.0);
-    Ok((Items { said: items, cut }, names, partial))
+    Ok((
+        Items {
+            said: items,
+            cut,
+            mode,
+        },
+        names,
+        partial,
+    ))
 }
 
 /// The list of edges a `relate` value is, or of names under a `recognize` value's `entities`.
-fn list(verb: Verb, value: &Json) -> Option<&Vec<Json>> {
+fn list(verb: Verb, mode: RecognitionMode, value: &Json) -> Option<&Vec<Json>> {
     match (verb, value) {
         (Verb::Relate, Json::Array(list)) => Some(list),
         (Verb::Relate, _) => None,
-        _ => list(Verb::Relate, value.member("entities")?),
+        _ => list(
+            Verb::Relate,
+            mode,
+            value.member(if mode == RecognitionMode::BoundaryOnly {
+                "proposals"
+            } else {
+                "entities"
+            })?,
+        ),
+    }
+}
+
+fn mode(value: &Json) -> Option<RecognitionMode> {
+    match value.member("mode") {
+        None => Some(RecognitionMode::Whole),
+        Some(Json::String(mode)) => RecognitionMode::parse(mode),
+        _ => None,
     }
 }
 
@@ -148,7 +188,7 @@ fn text(value: Option<&Json>) -> Option<String> {
 }
 
 /// A name or an edge read from one object of the command's value; other members are ignored.
-fn what(verb: Verb, held: &Json) -> Option<What> {
+fn what(verb: Verb, mode: RecognitionMode, held: &Json) -> Option<What> {
     if verb == Verb::Relate {
         let end = |side: &Json| Some((text(side.member("name"))?, text(side.member("kind"))?));
         let ends = [end(held.member("source")?)?, end(held.member("target")?)?];
@@ -158,6 +198,9 @@ fn what(verb: Verb, held: &Json) -> Option<What> {
         Json::Number(number) => number.as_u64(),
         _ => None,
     };
+    if mode == RecognitionMode::BoundaryOnly {
+        return Some(What::Span(place("start")?, place("end")?));
+    }
     Some(What::Name(
         text(held.member("kind"))?,
         place("start")?,
@@ -176,15 +219,23 @@ pub(crate) fn key(
     verb: Verb,
     value: &Json,
     names: &[String],
+    mode: RecognitionMode,
 ) -> Result<Vec<What>, MeasureError> {
-    list(verb, value)
+    if verb == Verb::Recognize && self::mode(value) != Some(mode) {
+        return Err(MeasureError::KeyItems(line));
+    }
+    list(verb, mode, value)
         .ok_or(MeasureError::KeyItems(line))?
         .iter()
         .map(|held| {
-            let what = what(verb, held).ok_or(MeasureError::KeyItems(line))?;
+            let what = what(verb, mode, held).ok_or(MeasureError::KeyItems(line))?;
             let what = entity_rule(verb, names, what);
-            let (What::Name(named, ..) | What::Edge(named, _)) = &what;
-            let known = names.contains(named) || (verb == Verb::Recognize && names.is_empty());
+            let known = match &what {
+                What::Span(..) => true,
+                What::Name(named, ..) | What::Edge(named, _) => {
+                    names.contains(named) || (verb == Verb::Recognize && names.is_empty())
+                }
+            };
             known.then_some(what).ok_or(MeasureError::KeyUnknown(line))
         })
         .collect()
@@ -254,6 +305,10 @@ pub(crate) fn matches(item: &Item, want: &What, matching: Matching) -> bool {
                     Matching::Overlap => start < key_end && key_start < end,
                 }
         }
+        (What::Span(start, end), What::Span(key_start, key_end)) => match matching {
+            Matching::Strict => (start, end) == (key_start, key_end),
+            Matching::Overlap => start < key_end && key_start < end,
+        },
         (What::Edge(relation, [source, target]), What::Edge(key_relation, [from, to])) => {
             relation == key_relation
                 && ((source, target) == (from, to)

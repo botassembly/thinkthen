@@ -220,3 +220,105 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
     assert_eq!(listener.count(), 0);
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn saved_boundary_proposals_rescore_offline_without_classified_kinds() {
+    let listener = Listener::answering(automatic).unwrap();
+    let complete = local(
+        &listener,
+        &[
+            "person",
+            "--mode",
+            "boundary_only",
+            "--details",
+            "--no-cache",
+        ],
+        Some("fake"),
+        b"Ada",
+    );
+    assert_eq!(complete.status.code(), Some(0));
+    let mut row = json(&complete);
+    row["value"]["proposals"][0]["probability"] = json!(0.75);
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("boundary-audit-{}", std::process::id()));
+    fs::create_dir_all(&root).unwrap();
+    let results = root.join("results.jsonl");
+    let key = root.join("key.jsonl");
+    fs::write(&results, format!("{row}\n")).unwrap();
+    fs::write(
+        &key,
+        format!(
+            "{}\n",
+            json!({"id":"1", "value":{"mode":"boundary_only", "proposals":[{"start":0,"end":3}]}})
+        ),
+    )
+    .unwrap();
+    let results = results.to_str().unwrap();
+    let key = key.to_str().unwrap();
+    for (cut, count) in [("0.5", 1), ("0.8", 0)] {
+        let output = spawn(
+            &["runs", "audit", results, key, "--cases", "--threshold", cut],
+            &[],
+            b"",
+        )
+        .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let case = json(&output);
+        assert_eq!(case["said"]["mode"], "boundary_only");
+        assert_eq!(case["said"]["proposals"].as_array().unwrap().len(), count);
+        assert_eq!(case["item_counts"]["matched"], count);
+    }
+    let below = spawn(
+        &["runs", "audit", results, key, "--threshold", "0.4"],
+        &[],
+        b"",
+    )
+    .unwrap();
+    assert_ne!(below.status.code(), Some(0));
+    let diff = spawn(
+        &[
+            "runs",
+            "diff",
+            results,
+            "--compare-threshold",
+            "0.8",
+            "--key",
+            key,
+        ],
+        &[],
+        b"",
+    )
+    .unwrap();
+    assert_eq!(
+        diff.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&diff.stderr)
+    );
+    let changed: Value =
+        serde_json::from_slice(diff.stdout.split(|byte| *byte == b'\n').next().unwrap()).unwrap();
+    assert_eq!(changed["lost"], row["value"]["proposals"]);
+    assert_eq!(changed["changed_kind"], json!([]));
+    let table = spawn(
+        &[
+            "runs",
+            "diff",
+            results,
+            "--compare-threshold",
+            "0.8",
+            "--table",
+        ],
+        &[],
+        b"",
+    )
+    .unwrap();
+    assert_eq!(table.status.code(), Some(0));
+    assert!(String::from_utf8_lossy(&table.stdout).contains("- Ada [0,3) p 0.7500"));
+    assert_eq!(listener.count(), 1);
+    fs::remove_dir_all(root).unwrap();
+}
