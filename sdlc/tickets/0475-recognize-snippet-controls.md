@@ -26,7 +26,7 @@ Let each recognize question choose the number of context pieces shown on either 
 
 ### Added public declarations
 
-```rust
+```text
 const fn RecognizeBuilder::snippet_pieces(self, u32) -> RecognizeBuilder
 fn Recognize::with_snippet_pieces(self, u32) -> Result<Recognize, Error>
 fn RecognitionReading::snippet_pieces(&self) -> u32
