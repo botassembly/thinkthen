@@ -2,7 +2,10 @@
 #[cfg(feature = "cli")]
 use super::{AdmittedRequest, RequestFeed, RequestItem, RequestSource};
 use super::{RequestImage, RequestInput};
-use crate::Error;
+use crate::{
+    Error, ImageMedia, ObjectContext, RawRecord, RecordContext, RecordOption, RecordOptions,
+};
+use serde_json::{Value, value::RawValue};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct TransportAttachmentLimit(usize);
@@ -160,4 +163,142 @@ pub(crate) fn source_records<'a>(
 
 fn rank_budget_error() -> Error {
     Error::usage("source rank reads at most 16 MiB across all input records")
+}
+
+/// Decode the existing complete-call record envelope at the public Request edge.
+/// File authority and terminal reader errors belong to the caller.
+/// Duplicate fields refuse; ordered JSON originals retain their authored form.
+pub(super) fn record_descriptor(source: &str) -> Result<super::RequestItem, Error> {
+    match crate::Settings::parse(&format!("{{\"sql_descriptor\":{source}}}")) {
+        Ok(_) | Err(crate::SettingsError::UnknownKey(_)) => {}
+        Err(error) => return Err(Error::usage(error.to_string())),
+    }
+    let fields: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
+        serde_json::from_str(source)
+            .map_err(|_| Error::usage("descriptor is one object with unique fields"))?;
+    if fields.keys().any(|k| {
+        !(matches!(
+            k.as_str(),
+            "text" | "document" | "json_text" | "json" | "context" | "options" | "images"
+        ) || matches!(k.as_str(), "examples" | "seed_spans"))
+    }) || ["text", "json", "document", "json_text"]
+        .iter()
+        .filter(|key| fields.contains_key(**key))
+        .count()
+        > 1
+    {
+        return Err(Error::usage("invalid complete record descriptor"));
+    }
+    let images = fields
+        .get("images")
+        .map(|v| descriptor_images(v.get()))
+        .transpose()?
+        .unwrap_or_default();
+    let original = if let Some(json) = fields.get("json_text") {
+        let text = serde_json::from_str::<String>(json.get())
+            .map_err(|_| Error::usage("JSON text is text"))?;
+        Some(RawRecord::json(&text)?)
+    } else if let Some(document) = fields.get("document") {
+        let text = serde_json::from_str::<String>(document.get())
+            .map_err(|_| Error::usage("document is text"))?;
+        Some(RawRecord::json(&text).or_else(|_| RawRecord::text(&text))?)
+    } else {
+        match (fields.get("text"), fields.get("json")) {
+            (Some(text), None) => Some(RawRecord::text(
+                &serde_json::from_str::<String>(text.get())
+                    .map_err(|_| Error::usage("record text is literal text"))?,
+            )?),
+            (None, Some(json)) => Some(RawRecord::json(json.get())?),
+            (None, None) => None,
+            _ => return Err(Error::usage("one original per record")),
+        }
+    };
+
+    if images.is_empty() && (original.is_none() || fields.contains_key("images")) {
+        crate::ImageEvidence::new(None, Vec::new())?;
+    }
+    let original = original.map(|value| match value.literal() {
+        Some(text) => super::RequestOriginal::Text {
+            text: text.to_owned(),
+        },
+        None => super::RequestOriginal::Json { value },
+    });
+    Ok(super::RequestItem {
+        original,
+        images,
+        context: fields.get("context").map(|v| context(v)).transpose()?,
+        options: fields.get("options").map(|v| options(v)).transpose()?,
+        seed_spans: fields
+            .get("seed_spans")
+            .map(|v| {
+                serde_json::from_str(v.get())
+                    .map_err(|_| Error::usage("seed spans is an ordered array"))
+            })
+            .transpose()?,
+        examples: fields
+            .get("examples")
+            .map(|v| {
+                serde_json::from_str(v.get())
+                    .map_err(|_| Error::usage("examples is an ordered array"))
+            })
+            .transpose()?,
+    })
+}
+fn descriptor_images(source: &str) -> Result<Vec<RequestImage>, Error> {
+    let images: Vec<Value> = serde_json::from_str(source)
+        .map_err(|_| Error::usage("images is an explicit ordered array"))?;
+    images
+        .into_iter()
+        .map(|value| {
+            let media = match value.get("media").and_then(Value::as_str) {
+                Some("image/png") => ImageMedia::Png,
+                Some("image/jpeg") => ImageMedia::Jpeg,
+                _ => return Err(Error::usage("image media is image/png or image/jpeg")),
+            };
+            let bytes = serde_json::from_value::<Vec<u8>>(
+                value
+                    .get("bytes")
+                    .cloned()
+                    .ok_or_else(|| Error::usage("image requires compressed bytes"))?,
+            )
+            .map_err(|_| Error::usage("image bytes is an integer array"))?;
+            Ok(RequestImage::Bytes { media, bytes })
+        })
+        .collect()
+}
+
+fn context(context: &RawValue) -> Result<RecordContext, Error> {
+    let value: Value = serde_json::from_str(context.get())
+        .map_err(|_| Error::usage("invalid per-record context"))?;
+    Ok(match value {
+        Value::String(text) => RecordContext::Text(text),
+        Value::Object(_) => {
+            RecordContext::Object(ObjectContext::new(&RawRecord::json(context.get())?)?)
+        }
+        _ => RecordContext::Object(ObjectContext::new(&RawRecord::json(context.get())?)?),
+    })
+}
+fn options(options: &RawValue) -> Result<RecordOptions, Error> {
+    let values: Vec<Value> = serde_json::from_str(options.get())
+        .map_err(|_| Error::usage("options is an ordered array"))?;
+    let options = values
+        .into_iter()
+        .map(|v| {
+            let (name, description) = if let Some(name) = v.as_str() {
+                (name.to_owned(), None)
+            } else {
+                (
+                    v.get("name")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| Error::usage("option requires a name"))?
+                        .to_owned(),
+                    v.get("description")
+                        .map(|v| crate::Description::from_json(&v.to_string()))
+                        .transpose()?,
+                )
+            };
+            Ok(RecordOption { name, description })
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+    RecordOptions::new(options)
 }

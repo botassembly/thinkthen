@@ -222,3 +222,144 @@ fn annotation_declarations_use_each_members_selected_evidence() {
         RequestOutcome::Complete(_)
     ));
 }
+
+#[test]
+fn record_descriptors_keep_legacy_originals_and_shortlist_replacement() {
+    let reading = RecordReading::new(&["/body"], Some("/context"), Some("/options")).unwrap();
+    let descriptor = RequestItem::from_record_descriptor(
+        r#"{"json":{"body":"Alpha.","context":"fallback","options":["old","fallback"]},"context":"","options":["new",{"name":"other","description":null}]}"#,
+    ).unwrap();
+    let row = descriptor.compose_record(&reading).unwrap();
+    assert!(matches!(row.context, Some(RecordContext::Text(ref text)) if text.is_empty()));
+    let options = row.options.unwrap();
+    assert_eq!(
+        options
+            .options()
+            .iter()
+            .map(|v| v.name.as_str())
+            .collect::<Vec<_>>(),
+        ["new", "other"]
+    );
+    assert_eq!(
+        options
+            .options()
+            .get(1)
+            .unwrap()
+            .description
+            .as_ref()
+            .unwrap()
+            .as_json(),
+        "null"
+    );
+    for (source, literal) in [
+        (r#"{"text":"null"}"#, true),
+        (r#"{"document":"null"}"#, false),
+        (r#"{"document":"literal text"}"#, true),
+        (r#"{"json_text":"null"}"#, false),
+        (r#"{"json":null}"#, false),
+    ] {
+        let item = RequestItem::from_record_descriptor(source).unwrap();
+        assert_eq!(
+            matches!(item.original, Some(RequestOriginal::Text { .. })),
+            literal
+        );
+        item.compose_record(&RecordReading::new(&[], None, None).unwrap())
+            .unwrap();
+    }
+}
+
+#[test]
+fn record_descriptor_refusals_keep_usage_diagnostics() {
+    for (source, message) in [
+        (r#"{"text":4}"#, "record text is literal text"),
+        (r#"{"document":4}"#, "document is text"),
+        (r#"{"json_text":4}"#, "JSON text is text"),
+        (
+            r#"{"text":"Alpha.","json":null}"#,
+            "invalid complete record descriptor",
+        ),
+        (
+            r#"{"text":"Alpha.","extra":true}"#,
+            "invalid complete record descriptor",
+        ),
+        (
+            r#"{"text":"Alpha.","options":4}"#,
+            "options is an ordered array",
+        ),
+        (
+            r#"{"text":"Alpha.","options":[{}]}"#,
+            "option requires a name",
+        ),
+        (
+            r#"{"text":"Alpha.","images":4}"#,
+            "images is an explicit ordered array",
+        ),
+        (
+            r#"{"text":"Alpha.","images":[{}]}"#,
+            "image media is image/png or image/jpeg",
+        ),
+    ] {
+        let error = RequestItem::from_record_descriptor(source).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(error.to_string(), message);
+    }
+    for source in [
+        r#"{"text":"Alpha.","text":"Beta."}"#,
+        r#"{"json":{"a":1,"a":2}}"#,
+        r#"{"text":"Alpha.","images":[]}"#,
+    ] {
+        assert_eq!(
+            RequestItem::from_record_descriptor(source)
+                .unwrap_err()
+                .kind(),
+            ErrorKind::Usage
+        );
+    }
+}
+
+#[test]
+fn record_descriptor_limit_matches_request_admission() {
+    let text = "x".repeat(16 * 1024 * 1024 + 1);
+    let descriptor = serde_json::to_string(&json!({"text": text})).unwrap();
+    let converted = RequestItem::from_record_descriptor(&descriptor).unwrap_err();
+    let canonical = Request::new(RequestCall::Decide(args(
+        Question::decide("Fits?").unwrap().cut().into(),
+        RequestInput::Text {
+            text,
+            images: vec![],
+        },
+    )))
+    .admit()
+    .unwrap_err();
+    assert_eq!(converted.kind(), ErrorKind::Usage);
+    assert_eq!(converted.kind(), canonical.kind());
+    assert_eq!(converted.to_string(), canonical.to_string());
+}
+
+#[test]
+fn record_descriptors_compose_ordered_images_with_native_validation() {
+    let bytes = include_bytes!("../../../../specification/fixtures/images/red.png");
+    let reading = RecordReading::new(&["/ignored"], None, None).unwrap();
+    let source = json!({"images": [
+        {"media": "image/png", "bytes": bytes.as_slice()},
+        {"media": "image/png", "bytes": bytes.as_slice()}
+    ]})
+    .to_string();
+    let item = RequestItem::from_record_descriptor(&source).unwrap();
+    let row = item.compose_record(&reading).unwrap();
+    let QuestionInput::Images(images) = row.original else {
+        panic!("image-only record")
+    };
+    assert_eq!(images.images().len(), 2);
+    assert!(images.images().iter().all(|image| image.bytes() == bytes));
+    let item = RequestItem::from_record_descriptor(
+        r#"{"text":"Alpha.","images":[{"media":"image/png","bytes":[1,2]}]}"#,
+    )
+    .unwrap();
+    let converted = item
+        .compose_record(&RecordReading::new(&[], None, None).unwrap())
+        .unwrap_err();
+    let native = ImageInput::new(ImageMedia::Png, vec![1, 2]).unwrap_err();
+    assert_eq!(converted.kind(), native.kind());
+    assert_eq!(converted.to_string(), native.to_string());
+}

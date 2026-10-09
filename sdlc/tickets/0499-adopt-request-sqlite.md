@@ -40,6 +40,16 @@ SQLite runs every judgment through the shared Request contract and reads generat
 
 ## Progress
 
+### Added public declarations
+
+```text
+fn RequestFeed::from_records(impl Into<String>, impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a) -> RequestFeed<'a>
+fn RequestFeed::eager(self) -> RequestFeed<'a>
+fn RequestFeed::with_image_inputs(self) -> RequestFeed<'a>
+fn RequestFeed::with_all_filter_results(self) -> RequestFeed<'a>
+fn AdmittedRequest::record_reading(&self) -> Result<RecordReading, Error>
+```
+
 - 2026-10-08 started
 - 2026-10-08 landed 1499da2eae04b0db9ab71dc4172c01daea1ef651; next: Partial slice A moves all ten complete SQLite functions onto Request. Installed 255 cases, four counted regressions, root tests and specifications pass; corrected inventory completes the final lint stage. Keep 0499 open for legacy scalar, many, table, rank-set, image, document and keyed routes, plus saved-selector admission. PostgreSQL may now reuse the reviewed bridge; shared Request ownership transfers to 0493.
 - 2026-10-08 landed 6f6e5f96e; next: Slice B moves the remaining legacy SQLite judgment routes through Request. Installed legacy cases, 255 shared SQL cases and owning facts pass after shared deadline repair 0509. Keep 0499 open for canonical saved-selector admission; DuckDB dispatcher removal belongs to 0495.
