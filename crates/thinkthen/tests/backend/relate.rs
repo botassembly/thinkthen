@@ -456,7 +456,8 @@ fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
 
 /// A large pair set stays under the shared 400-question request bound.
 #[test]
-fn a_relation_of_180_names_sends_bounded_requests() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_a_relation_of_180_names_sends_bounded_requests() {
     let backend = conformance_backend::Backend::start().expect("backend");
     let base = format!("{}/generic/v1", backend.origin());
     let names = (0..180)
