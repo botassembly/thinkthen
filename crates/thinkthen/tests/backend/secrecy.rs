@@ -384,28 +384,24 @@ fn cases(route: &Route) -> Vec<Case> {
     cases
 }
 
-/// Drive every case of one route.
-///
-/// Each route is its own test, so the runner spreads the 518 spawns across its
-/// threads.
-fn sweep_route(named: &str) -> io::Result<()> {
+/// Drive one command's cases on one route.
+fn sweep_route(named: &str, command: &str) -> io::Result<()> {
     let route = PATHS
         .iter()
         .find(|route| route.named == named)
         .ok_or_else(|| io::Error::other("the route left the matrix"))?;
     for (verb, view, framing) in cases(route) {
-        sweep(route, verb, view, framing)?;
+        if verb.0 == command {
+            sweep(route, verb, view, framing)?;
+        }
     }
     Ok(())
 }
 
 macro_rules! sweep_tests {
-    ($($test:ident => $named:literal,)*) => {
+    ($($test:ident => $named:literal $([$($command:ident),+])?,)*) => {
         $(
-            #[test]
-            fn $test() {
-                sweep_route($named).expect("the compiled binary runs");
-            }
+            sweep_tests!(@route $test => $named [decide, choose, tag, score, recognize, relate $(, $($command),+)?]);
         )*
 
         /// A route added to the matrix without its own test fails here.
@@ -420,9 +416,24 @@ macro_rules! sweep_tests {
             assert_eq!(total, 518, "the sweep drives 518 cases");
         }
     };
+    (@route $test:ident => $named:literal [$($command:ident),+]) => {
+        mod $test {
+            use super::sweep_route;
+
+            $(
+                #[test]
+                fn $command() {
+                    sweep_route($named, stringify!($command))
+                        .expect("the compiled binary runs");
+                }
+            )+
+        }
+    };
 }
 
 // No command on any backend path writes the key or quotes the evidence.
+// Each command owns its framings and views, keeping repeated child startups
+// within the routine boundary even when priming and conversion are needed.
 sweep_tests! {
     no_leak_on_a_success => "a success",
     no_leak_on_a_plan => "a plan",
@@ -430,7 +441,7 @@ sweep_tests! {
     no_leak_on_a_cache => "a cache",
     no_leak_on_a_replay => "a replay",
     no_leak_on_a_damaged_entry => "a damaged entry",
-    no_leak_on_a_hostile_entry => "a hostile entry",
+    no_leak_on_a_hostile_entry => "a hostile entry" [filter, rank],
     no_leak_on_a_replay_miss => "a replay miss",
     no_leak_on_a_refused_address => "a refused address",
     no_leak_on_a_failed_request => "a failed request",
