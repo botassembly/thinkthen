@@ -218,7 +218,9 @@ def main():
     spec = importlib.util.spec_from_file_location("package_inventory", ROOT.parents[1] / "sdlc/scripts/package-inventory.py")
     inventory = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(inventory)
-    for name, filename in inventory.jvm_inventory()['jars'].items():
+    definition = inventory.jvm_inventory(TARGET)
+    assert json.loads((TARGET / 'jars/product-inventory.json').read_text()) == definition, 'stale generated JVM inventory'
+    for name, filename in definition['jars'].items():
         jar = TARGET / "jars" / filename
         source = jar.read_bytes()
         receipt[name] = inspect(name, source)

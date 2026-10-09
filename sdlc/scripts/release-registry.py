@@ -174,7 +174,7 @@ def pack(platform, out, sha):
     for kind, filename in definition['jars'].items():
         suffix = '' if kind == 'door' else '-' + kind
         (base / f"{stem}{suffix}.jar").write_bytes(jvm[filename])
-    sources = sorted(p for folder in ("door", "kotlin", "scala")
+    sources = sorted(p for folder in definition["jars"]
                      for p in (REPO / "libraries/jvm" / folder).rglob("*")
                      if p.suffix in (".java", ".kt", ".scala") and p.is_file())
     require(sources, "no JVM sources to pack")
