@@ -25,6 +25,9 @@ mod texts;
 #[path = "ffi/typed_facts/ffi.rs"]
 mod typed_facts;
 
+#[path = "ffi/session/ffi.rs"]
+pub mod session;
+
 use thinkthen::CancelToken;
 
 use crate::failures::{self, DEFECT, Failure, Held, NO_MESSAGE, OK, USAGE, guard};
