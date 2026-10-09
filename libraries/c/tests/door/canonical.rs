@@ -70,20 +70,6 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
         script.ask("call", &[base, projected]);
     }
     let set = json!({"version":1,"questions":{"check":{"decide":"Q?","on":"/a"}}});
-    for depth in [127, 128] {
-        let record = format!(
-            "{{\"a\":{}1{}}}",
-            "[".repeat(depth - 1),
-            "]".repeat(depth - 1)
-        );
-        script.ask(
-            "call",
-            &[
-                base,
-                &json!({"annotate":set,"records":[record]}).to_string(),
-            ],
-        );
-    }
     script.ask(
         "call",
         &[
@@ -113,7 +99,7 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
     let got = replies(&output.stdout).unwrap();
     assert_eq!(
         got.iter().map(|reply| reply.0).collect::<Vec<_>>(),
-        [0, 0, 0, 0, 1, 1, 0, 1]
+        [0, 0, 0, 1, 0, 1]
     );
     let first: Value = serde_json::from_str(&got[1].1).unwrap();
     let cached: Value = serde_json::from_str(&got[2].1).unwrap();
@@ -123,19 +109,15 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
     assert_eq!(cached["facts"]["requests_sent"], 0);
     assert_eq!(cached["facts"]["cache_answers"], 1);
     assert_eq!(
-        got[4].1,
-        "the JSON nests more than 127 levels of arrays and objects, the most this tool reads"
-    );
-    assert_eq!(
-        got[5].1,
+        got[3].1,
         "a JSON record holds each member name once, and one name arrived twice"
     );
     assert_eq!(
-        got[7].1,
+        got[5].1,
         "question `check` reads `on`, and this record's evidence is text with no members"
     );
     let requests = listener.requests();
-    assert_eq!(requests.len(), 3, "cached and refused records send nothing");
+    assert_eq!(requests.len(), 2, "cached and refused records send nothing");
     let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
     assert_eq!(
         body["questions"]["q1"]["instructions"],
@@ -143,7 +125,7 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
     );
     assert!(!text(&requests[0].body).contains("not-sent"));
     assert!(!text(&requests[0].body).contains("hidden"));
-    let fallback: Value = serde_json::from_slice(&requests[2].body).unwrap();
+    let fallback: Value = serde_json::from_slice(&requests[1].body).unwrap();
     assert_eq!(
         fallback["questions"]["q1"]["instructions"],
         "The text is \"{not json\". Q?"

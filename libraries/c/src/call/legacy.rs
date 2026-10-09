@@ -38,28 +38,7 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
                 serde_json::from_str::<Vec<String>>(raw)
             })?
             .into_iter()
-            .map(|text| {
-                let original = if request.verb == "annotate" {
-                    let QuestionInput::Record(record) = QuestionInput::annotation_document(&text)?
-                    else {
-                        return Err(Failure::defect(
-                            "an annotation document has no original record",
-                        ));
-                    };
-                    let value = record.original();
-                    value.literal().map_or_else(
-                        || RequestOriginal::Json {
-                            value: value.clone(),
-                        },
-                        |text| RequestOriginal::Text {
-                            text: text.to_owned(),
-                        },
-                    )
-                } else {
-                    RequestOriginal::Text { text }
-                };
-                Ok(item(original))
-            })
+            .map(|text| string_record(text, request.verb == "annotate"))
             .collect::<Result<Vec<_>, Failure>>()?
         };
         if request.verb == "relate" {
@@ -113,6 +92,24 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
         _ => RequestCall::Relate(args),
     };
     Ok(Request::new(call).admit()?)
+}
+fn string_record(text: String, annotate: bool) -> Result<RequestItem, Failure> {
+    if !annotate {
+        return Ok(item(RequestOriginal::Text { text }));
+    }
+    let QuestionInput::Record(record) = QuestionInput::annotation_document(&text)? else {
+        return Err(Failure::defect(
+            "an annotation document has no original record",
+        ));
+    };
+    let value = record.original();
+    Ok(item(if value.literal().is_some() {
+        RequestOriginal::Text { text }
+    } else {
+        RequestOriginal::Json {
+            value: value.clone(),
+        }
+    }))
 }
 fn item(original: RequestOriginal) -> RequestItem {
     RequestItem {
