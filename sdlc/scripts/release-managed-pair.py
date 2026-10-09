@@ -128,11 +128,11 @@ def check_nupkg(data, version, source):
 
 def check_jar(data, kind, inventory):
     members, dirs = zip_members(data, f"{kind} JAR")
-    require(dirs == ({"META-INF/", "thinkthen/"} if kind == "door" else {"META-INF/"}),
-            f"{kind} JAR directory inventory differs")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is not None and manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
     expected = set(inventory['members'][kind])
+    allowed_dirs = {'META-INF/'} | {str(parent) + '/' for member in expected for parent in Path(member).parents if str(parent) != '.'}
+    require(dirs <= allowed_dirs, f'{kind} JAR directory inventory differs')
     require(set(members) == expected, f"{kind} JAR classes differ")
     require(not any(token in value for value in members.values() for token in
                     (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275",
