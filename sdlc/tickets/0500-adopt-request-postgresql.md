@@ -26,6 +26,8 @@ The reviewed design at `9d6e7798c077c88fd48e69591c409c4c605167e8` adds shared le
 
 This ticket owns the narrow conversion files `crates/thinkthen/src/public/results.rs`, `crates/thinkthen/src/public/results/legacy.rs`, `crates/thinkthen/src/public/results/complete_annotation.rs`, `crates/thinkthen/src/public/results/member.rs`, internal accessors in `crates/thinkthen/src/core/result.rs`, `crates/thinkthen/tests/request_legacy_projection.rs`, the existing Rust API specification and measured ratchet. It owns no Request executor or admission file. Keep exact public declarations with their implementation; publish no future export inventory ahead of code. Compare native batch scalar metadata with the corresponding batch oracle, rather than claiming it matches a non-batched call.
 
+The reviewed metadata repair also owns `crates/thinkthen/src/public/complete.rs`. Its batch-run metadata and existing native member Details share one crate-private batch-warning helper in the result module. Preserve explicit saved batch tuning and effective threshold tuning, including default-max tag warnings. Keep opt-in attempt receipts accepted by the existing result/1 schema; the old batch Details omission is corrected rather than copied.
+
 ### Added public declarations
 
 ```text

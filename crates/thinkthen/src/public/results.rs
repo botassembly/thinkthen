@@ -54,6 +54,7 @@ pub use tally::{Tally, TallyStart};
 mod legacy;
 mod member;
 pub(crate) use member::Member;
+pub(crate) use member::batch_warning;
 mod observation;
 mod owned_observation;
 #[cfg(test)]

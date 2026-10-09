@@ -80,12 +80,7 @@ fn all_four_record_and_scalar_projections_match_corresponding_native_batch() {
     ];
     for raw in questions {
         let loaded = Question::from_json(raw).unwrap();
-        let controls =
-            CallOptions::new()
-                .context("Separate context.")
-                .batch(BatchSetting::Records(
-                    std::num::NonZeroUsize::new(1).unwrap(),
-                ));
+        let controls = CallOptions::new().context("Separate context.");
         let before = listener.count();
         let (record_details, scalar_details) = match &loaded {
             LoadedQuestion::Banded(q) => {
@@ -254,4 +249,45 @@ fn request_originals_and_cache_metadata_survive_owning_projections() {
         "same selected evidence reuses the cache"
     );
     std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+fn explicit_saved_batch_tuning_and_opt_in_attempts_survive_native_projection() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let loaded =
+        Question::from_json(r#"{"score":"Grade?","levels":["low","high"],"batch":2}"#).unwrap();
+    let LoadedQuestion::Question(q) = &loaded else {
+        panic!("score")
+    };
+    let controls = CallOptions::new().batch(BatchSetting::Max);
+    let complete = engine
+        .score_records_complete_with(q, [record()], controls)
+        .unwrap();
+    let details = complete.value()[0].legacy_details().unwrap();
+    let original = record().original;
+    let native = engine
+        .try_details_input_many_with(&loaded, [Ok(original)], controls)
+        .next()
+        .unwrap()
+        .unwrap();
+    assert_eq!(documents(&details), documents(native.value()));
+    assert_eq!(
+        documents(&details).0["meta"]["batch_warning"],
+        json!({"running":"max","tuned_for":2})
+    );
+    let q = Question::decide("Fits?").unwrap().cut();
+    let call = engine
+        .decide_records_complete_with(&q, [record()], controls.attempts(true))
+        .unwrap();
+    let before = listener.count();
+    let scalar = call.value()[0].result().legacy_details().unwrap();
+    assert_eq!(
+        documents(&scalar).0["meta"]["attempts"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(listener.count(), before);
 }

@@ -1,6 +1,7 @@
 """Installed PostgreSQL typed fields retain shared Request admission and prefixes."""
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -10,6 +11,7 @@ sys.path.insert(0, str(ROOT / 'databases/sqlite/tests/complete'))
 from parity import Backend, execute
 from postgresql_host import PostgresqlHost
 from c_parity import ERRORS
+from project import project
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 
@@ -24,14 +26,22 @@ def main():
         base = f'http://127.0.0.1:{backend.port}/generic/v1'
         try:
             host.start({**env, 'THINKTHEN_BASE_URL': base})
-            def call(verb, question, inputs, sends):
+            def call(verb, question, inputs, sends, client_read=True):
                 before = int(backend.read('count'))
                 frame = {'verb': verb, 'question': json.dumps(question),
                          'inputs': inputs, 'controls': {}, 'held_cancel': False,
                          'engine_settings': {'base_url': base, 'cache': False,
                                              'model': 'jev-1.13.0', 'batch': 1,
                                              'max_retries': 0}}
-                got = execute('postgresql', frame, env, home, backend)
+                if client_read:
+                    got = execute('postgresql', frame, env, home, backend)
+                else:
+                    child = subprocess.run(
+                        [sys.executable, str(ROOT / 'databases/sqlite/tests/complete/postgresql_child.py'), host.socket],
+                        input=json.dumps(frame) + '\n', env=env, cwd=home,
+                        text=True, capture_output=True, timeout=120, check=True)
+                    assert not child.stderr, child.stderr
+                    got = project(json.loads(child.stdout), verb)
                 assert int(backend.read('count')) - before == sends, got
                 assert got.get('requests_sent', 0) == sends, got
                 return got
@@ -78,8 +88,11 @@ def main():
                     assert len(rows) == 1 and rows[0]['value'] is (threshold == 0.5), got
                     assert rows[0]['index'] == 0 and rows[0]['input'] == 'Alpha.', got
 
-            for inputs in ({'files': {'paths': ['/unreadable-server-evidence']}},
-                           {'records': [], 'incremental': None},
+            got = call('decide', {'decide': 'Fits?'},
+                       {'files': {'paths': ['/unreadable-server-evidence']}}, 0, client_read=False)
+            assert got['code'] == ERRORS['usage'] and 'facts' not in got, got
+            assert 'client-read records' in got['message'], got
+            for inputs in ({'records': [], 'incremental': None},
                            {'records': [], 'unknown': True}):
                 got = call('decide', {'decide': 'Fits?'}, inputs, 0)
                 assert got['code'] == ERRORS['usage'] and 'facts' not in got, got

@@ -293,8 +293,9 @@ p=json.loads(sys.argv[1]); expected="{\"state\":\"Each question quotes the text 
 assert p["records"] == 1 and p["requests"] == 1, p
 assert p["estimated_bytes"] == 182 and p["estimated_input_tokens"] == {"lower":93,"upper":166}, p
 assert p["upper_bound"] is False and p["first_body_utf8"] == expected, p
-text = "{\"records\": 1, \"requests\": 1, \"upper_bound\": false, \"estimated_bytes\": 182, \"first_body_utf8\": " + json.dumps(expected) + ", \"estimated_input_tokens\": {\"lower\": 93, \"upper\": 166}}"
-assert sys.argv[1] == text, (sys.argv[1], text)' "$out"
+assert p["largest_request_bytes"] == 182, p
+assert p["largest_request_estimated_input_tokens"] == 166, p
+assert p["token_estimate_method"] == "encoded-body-bytes-908-v1", p' "$out"
 	same "$(bcount)" 0
 	for sql in \
 		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"bogus\":1}'::json)" \
@@ -1550,15 +1551,22 @@ check an_update_cannot_grant_public
 client_reader_validates_file_formats() { python3 tests/read_inputs.py; }
 check client_reader_validates_file_formats
 
-complete_cases() {
+complete_environment() {
     pg_stop
     [ -z "${BPID:-}" ] || backend_stop
     export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
+}
+complete_cases() {
+    complete_environment
     sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
     sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
-    sh "$LIMIT" 300 python3 tests/complete_request_cases.py
 }
 check complete_cases
+complete_request_contract_cases() {
+    complete_environment
+    sh "$LIMIT" 300 python3 tests/complete_request_cases.py
+}
+check complete_request_contract_cases
 
 echo "== conformance"
 # Each case on its own server, backend, and cache folder. Every case counts

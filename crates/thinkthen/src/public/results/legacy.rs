@@ -72,3 +72,63 @@ legacy!(
     CompleteTags,
     CompleteScore
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::public::{CallOptions, CompleteRecord, Engine, ErrorKind, Question};
+    use conformance_backend::{Canned, Listener};
+
+    #[test]
+    fn actual_cached_flag_survives_absent_complete_sources_and_refused_originals_stay_safe() {
+        let listener = Listener::answering(|_| {
+            Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+        })
+        .unwrap();
+        let folder = std::env::temp_dir().join(format!("legacy-cache-{}", std::process::id()));
+        std::fs::create_dir(&folder).unwrap();
+        let engine = Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("projection-private")
+            .unwrap()
+            .cache_at(&folder)
+            .unwrap()
+            .max_retries(0)
+            .build()
+            .unwrap();
+        let question = Question::decide("Fits?").unwrap().cut();
+        engine
+            .decide_complete_with(&question, "Original.", CallOptions::new())
+            .unwrap();
+        let call = engine
+            .decide_complete_with(&question, "Original.", CallOptions::new())
+            .unwrap();
+        let mut result = call.value().clone();
+        result.canonical.identity =
+            core::ResultIdentity::resolved(result.answer_id().clone(), None, vec![], vec![], None);
+        let details = result.legacy_details().unwrap();
+        assert!(details.cached());
+        assert!(result.identity().question_sources().is_empty());
+        assert!(details.to_json().contains(r#""cached":true"#));
+        struct Refuses;
+        impl Serialize for Refuses {
+            fn serialize<S: serde::Serializer>(&self, _: S) -> Result<S::Ok, S::Error> {
+                Err(serde::ser::Error::custom("sensitive original"))
+            }
+        }
+        let row = CompleteRecord {
+            original: Refuses,
+            ordinal: 0,
+            result,
+        };
+        let error = row.legacy_details().unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(error.to_string(), "a record cannot be written as JSON");
+        assert_eq!(listener.count(), 1);
+        drop(engine);
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+}
