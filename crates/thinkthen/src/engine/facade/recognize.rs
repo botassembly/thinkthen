@@ -140,9 +140,6 @@ impl Engine {
             .map(|(piece, row)| PieceOdds::new(piece, row))
             .collect();
         let mut stretches = found_names(&rows);
-        stretches.extend(crate::core::seed_stretches(spec, &pieces).map_err(Error::Usage)?);
-        stretches.sort_unstable();
-        stretches.dedup();
         if !spec.mode.is_whole() {
             let proposals =
                 crate::core::BoundaryProposal::decoded(text, &pieces, &rows, &stretches);
@@ -167,6 +164,9 @@ impl Engine {
                 meta,
             });
         }
+        stretches.extend(crate::core::seed_stretches(spec, &pieces).map_err(Error::Usage)?);
+        stretches.sort_unstable();
+        stretches.dedup();
         let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
         let answers = self.recognition_stage(spec, "kind").execute(
             &asks,

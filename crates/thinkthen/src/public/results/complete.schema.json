@@ -502,6 +502,72 @@
       "type": "object",
       "unevaluatedProperties": false
     },
+    "completeBoundaryMode": {
+      "enum": [
+        "boundary_only"
+      ],
+      "type": "string"
+    },
+    "completeBoundaryOdds": {
+      "properties": {
+        "pieces": {
+          "items": {
+            "$ref": "#/$defs/completepieceOdds"
+          },
+          "type": "array"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/completeBoundaryProposal"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pieces",
+        "proposals"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeBoundaryProposal": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "length": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "start": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "length",
+        "probability"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completeCall": {
       "anyOf": [
         {
@@ -2802,6 +2868,9 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "mode": {
+          "$ref": "#/$defs/completeRecognitionMode"
+        },
         "name": {
           "anyOf": [
             {
@@ -2815,7 +2884,11 @@
           ]
         },
         "relation_threshold": {
-          "$ref": "#/$defs/completethreshold"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            }
+          ]
         },
         "relations": {
           "items": {
@@ -2845,8 +2918,7 @@
       "required": [
         "verb",
         "kinds",
-        "threshold",
-        "relation_threshold"
+        "threshold"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -2921,7 +2993,7 @@
     "completeRecognition": {
       "properties": {
         "answer": {
-          "$ref": "#/$defs/completerecognizeAnswer"
+          "$ref": "#/$defs/completeRecognitionOdds"
         },
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
@@ -2990,6 +3062,28 @@
       ],
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completeRecognitionMode": {
+      "oneOf": [
+        {
+          "const": "whole",
+          "type": "string"
+        },
+        {
+          "const": "boundary_only",
+          "type": "string"
+        }
+      ]
+    },
+    "completeRecognitionOdds": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completerecognizeAnswer"
+        },
+        {
+          "$ref": "#/$defs/completeBoundaryOdds"
+        }
+      ]
     },
     "completeRecognitionStageContext": {
       "additionalProperties": false,
@@ -4548,27 +4642,50 @@
       "unevaluatedProperties": false
     },
     "completerecognize": {
-      "properties": {
-        "entities": {
-          "items": {
-            "$ref": "#/$defs/completeentity"
+      "anyOf": [
+        {
+          "properties": {
+            "entities": {
+              "items": {
+                "$ref": "#/$defs/completeentity"
+              },
+              "type": "array"
+            },
+            "relations": {
+              "items": {
+                "$ref": "#/$defs/completeentityEdge"
+              },
+              "type": [
+                "array"
+              ]
+            }
           },
-          "type": "array"
+          "required": [
+            "entities"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
         },
-        "relations": {
-          "items": {
-            "$ref": "#/$defs/completeentityEdge"
+        {
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/completeBoundaryMode"
+            },
+            "proposals": {
+              "items": {
+                "$ref": "#/$defs/completeBoundaryProposal"
+              },
+              "type": "array"
+            }
           },
-          "type": [
-            "array"
-          ]
+          "required": [
+            "mode",
+            "proposals"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
         }
-      },
-      "required": [
-        "entities"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
+      ]
     },
     "completerecognizeAnswer": {
       "properties": {

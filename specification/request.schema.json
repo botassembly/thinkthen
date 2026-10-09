@@ -773,6 +773,21 @@
         "entities"
       ]
     },
+    "RecognitionMode": {
+      "description": "The recognition stages selected by the caller.",
+      "oneOf": [
+        {
+          "description": "Decode boundaries, classify kinds and edges, then judge declared relations.",
+          "type": "string",
+          "const": "whole"
+        },
+        {
+          "description": "Return decoded proposals without asking any later stage.",
+          "type": "string",
+          "const": "boundary_only"
+        }
+      ]
+    },
     "RecognitionSeedSpan": {
       "description": "An unconfirmed proposal in zero-based Unicode scalar `[start, end)` offsets.\nBoth edges must exactly match recognition piece edges; admission never rounds.",
       "type": "object",
@@ -1237,6 +1252,9 @@
                     "$ref": "#/$defs/Authored_description"
                   },
                   "maxProperties": 20
+                },
+                "mode": {
+                  "$ref": "#/$defs/RecognitionMode"
                 },
                 "relations": {
                   "type": "array",
@@ -1817,6 +1835,10 @@
           "format": "uint64",
           "minimum": 0
         },
+        "mode": {
+          "description": "Explicit recognition stage selection; omission retains the saved mode.",
+          "$ref": "#/$defs/RecognitionMode"
+        },
         "model": {
           "description": "Explicit model on the engine's configured route.",
           "type": "string"
@@ -1829,6 +1851,10 @@
         "options_field": {
           "description": "Per-item ordered choose shortlist projection.",
           "type": "string"
+        },
+        "relation_threshold": {
+          "description": "Authored relation cut, applicable only to whole recognition.",
+          "$ref": "#/$defs/RequestThreshold"
         },
         "seed_spans": {
           "description": "Unconfirmed recognition proposals using exact Unicode scalar piece edges.",
