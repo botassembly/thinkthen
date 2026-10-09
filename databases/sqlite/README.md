@@ -269,7 +269,7 @@ Annotation declarations validate each member's selected evidence. Complete filte
 calls retain both passing and rejected observations and their original ordinals,
 including completed rows before an incremental failure. Ordinary native Request
 filtering retains its passing-row behavior; SQL explicitly selects all results.
-Top-level input descriptors validate before SQL resolves a saved question. SQLite retains its authorized file reader. Its legacy scalar and table judgments also execute through Request. PostgreSQL imports the shared SQL preparation and Request helpers; DuckDB retains the compatibility dispatcher until its Request migration.
+Top-level input descriptors validate before SQL resolves a saved question. Request admits the canonical saved selector before SQLite runs its authorized file reader. SQLite supplies the resolved native definition for Request admission without granting Request filesystem permission. Its legacy scalar and table judgments also execute through Request. PostgreSQL imports the shared SQL preparation and Request helpers; DuckDB retains the compatibility dispatcher until its Request migration.
 
 The existing surface checks execute all applicable shared cases through these
 named calls against counted owned loopback, check known JSON fields using SQL

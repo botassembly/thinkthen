@@ -74,8 +74,8 @@ pub(super) fn run(
     crate::complete_native::carrier(native, Value::Array(events))
 }
 
-pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
-    let definition = match prepared {
+pub(super) fn definition(prepared: &Prepared) -> RequestDefinition {
+    match prepared {
         Prepared::Atomic(q) => RequestDefinition::Atomic(q.clone()),
         Prepared::Dynamic(q) => RequestDefinition::DynamicChoose(q.clone()),
         Prepared::Filter(q) | Prepared::Find(q, _) => q.clone().into(),
@@ -84,7 +84,11 @@ pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
         Prepared::Annotate(q) => q.clone().into(),
         Prepared::Recognize(q, _) => q.clone().into(),
         Prepared::Relate(q) => q.clone().into(),
-    };
+    }
+}
+
+pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
+    let definition = definition(prepared);
     let args = RequestArguments {
         question: RequestQuestion::Definition { value: definition },
         input: RequestInput::Feed {

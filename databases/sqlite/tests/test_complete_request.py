@@ -59,7 +59,7 @@ def test_complete_annotation_validates_member_projection_before_schema():
     got = child('''
 db=connect()
 db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1})])
-question={'version':1,'questions':{'body':{'decide':'Fits?','on':'/body','item_schema':{'type':'string'}}}}
+question={'version':1,'questions':{'body':{'decide':'Fits?','on':['/body'],'item_schema':{'type':'string'}}}}
 for invalid in (False, True):
     records=[{'json':{'body':'Alpha.'}}]
     if invalid: records.append({'json':{'body':42}})
@@ -92,6 +92,37 @@ say(ok=True)
 ''', environment(backend))
     expect(got['ok'], True, 'complete filter retains rejected observations and their ordinals')
     expect(backend.close(), 4, 'each true or false complete filter call sends once')
+
+
+def test_saved_selectors_keep_projection_locations_and_refuse_conflicting_collections():
+    backend = Backend()
+    got = child('''
+from pathlib import Path
+folder=Path(os.environ['XDG_CONFIG_HOME'])/'thinkthen/questions'
+folder.mkdir(parents=True)
+question=folder/'saved.json'
+question.write_text(json.dumps({'decide':'Fits?','on':['/body'],'item_schema':{'type':'string'}}))
+db=connect()
+db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1})])
+for selector in ('@@saved', '@'+str(question)):
+    inputs={'records':[{'json':{'body':'Alpha.','private':'excluded'},'source':{'file':'source.jsonl','first_line':4,'last_line':4}}]}
+    document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?,?)',
+        [selector,json.dumps(inputs),json.dumps({'threshold':0.95})]).fetchone()[0])
+    assert document['native']['value'][0]['value'] is False, document
+    assert document['ordinals']==[0] and document['native']['facts']['requests_sent']==1, document
+    assert document['observations'][0]['inputs'][0]['source']=={'file':'source.jsonl','first_line':4,'last_line':4}, document
+question.write_text(json.dumps({'decide':'Fits?','threshold':0.5}))
+document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?,?)',
+    ['@@saved',json.dumps({'records':[{'text':'Alpha.'}]}),json.dumps({'threshold':0.95})]).fetchone()[0])
+assert document['native']['error']['kind']=='usage' and 'facts' not in document['native'], document
+for inputs in ({'records':[], 'files':{'paths':['missing']}}, {}, {'records':[], 'incremental':None}):
+    document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',
+        ['@missing-saved-question.json',json.dumps(inputs)]).fetchone()[0])
+    assert document['native']['error']['kind']=='usage' and 'facts' not in document['native'], document
+say(ok=True)
+''', environment(backend))
+    expect(got['ok'], True, 'saved selectors preserve caller controls and located projection')
+    expect(backend.close(), 2, 'invalid input collections refuse before saved resolution and sends')
 
 
 if __name__ == '__main__':

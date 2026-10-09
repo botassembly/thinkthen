@@ -106,6 +106,45 @@ impl AdmittedRequest {
         Ok(definition)
     }
 
+    /// Retain a saved definition read and parsed by an authorized host.
+    ///
+    /// The host owns file permission, reading, saved grammar and caller-setting
+    /// error classification. Request retains the original selector and admits
+    /// the supplied definition before evidence readers or execution.
+    /// # Errors
+    /// Returns Usage for an inline or already resolved request, or when the
+    /// definition violates the selected function, controls or input bounds.
+    pub fn with_resolved_definition(
+        mut self,
+        definition: RequestDefinition,
+    ) -> Result<Self, Error> {
+        if self.definition.is_some()
+            || !matches!(
+                self.request.call.arguments().question,
+                RequestQuestion::File { .. }
+                    | RequestQuestion::Name { .. }
+                    | RequestQuestion::Reference { .. }
+            )
+        {
+            return Err(Error::usage(
+                "only an unresolved saved selector accepts a host definition",
+            ));
+        }
+        let function = self.request.call.function();
+        let mut arguments = self.request.call.arguments().clone();
+        arguments.question = RequestQuestion::Definition { value: definition };
+        super::native_controls(&mut arguments, function);
+        let RequestQuestion::Definition { value: definition } = arguments.question else {
+            return Err(Error::defect("host definition lost its preparation"));
+        };
+        self.request.call.arguments_mut().options = arguments.options;
+        let definition = admit_definition(function, definition)?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
+        self.admit_inline(&definition)?;
+        self.definition = Some(definition);
+        Ok(self)
+    }
+
     /// Borrow the admitted typed header.
     #[must_use]
     pub const fn request(&self) -> &Request {

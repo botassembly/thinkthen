@@ -48,6 +48,7 @@ fn RequestFeed::eager(self) -> RequestFeed<'a>
 fn RequestFeed::with_image_inputs(self) -> RequestFeed<'a>
 fn RequestFeed::with_all_filter_results(self) -> RequestFeed<'a>
 fn AdmittedRequest::record_reading(&self) -> Result<RecordReading, Error>
+fn AdmittedRequest::with_resolved_definition(self, RequestDefinition) -> Result<AdmittedRequest, Error>
 ```
 
 - 2026-10-08 started
