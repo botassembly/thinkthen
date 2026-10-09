@@ -6,17 +6,16 @@ use serde::Serialize;
 
 use crate::args::Common;
 use crate::cli::intake::{Data, Intake};
-use crate::core::{Framing, Reading, Record, RelateSpec, RelationEntity, RelationEntityView};
+use crate::core::{Framing, Reading, Record, RelateSpec};
 use crate::failure::Failure;
 
 pub(super) struct Sources {
-    pub(super) entities: Vec<RelationEntity>,
-    occurrences: Vec<(RelationEntity, Occurrence)>,
+    occurrences: Vec<Occurrence>,
 }
 
 impl Sources {
     pub(super) fn location(&self, ordinal: usize) -> Result<crate::SourceLocation, crate::Error> {
-        let (_, source) = self
+        let source = self
             .occurrences
             .get(ordinal)
             .ok_or_else(|| crate::Error::defect("relate lost an occurrence"))?;
@@ -28,7 +27,7 @@ impl Sources {
     }
 }
 
-type Selection = (Vec<RelationEntity>, Option<Sources>, Vec<Record>);
+type Selection = (Option<Sources>, Vec<Record>);
 
 pub(super) fn selection(
     common: &Common,
@@ -37,18 +36,18 @@ pub(super) fn selection(
     spec: &RelateSpec,
 ) -> Result<Selection, Failure> {
     if common.located() || common.input.len() > 1 {
-        let sources = read(common, input, framing, spec)?;
+        let sources = read(common, input, framing)?;
         let inputs = sources
             .occurrences
             .iter()
-            .map(|(_, occurrence)| occurrence.record.clone())
+            .map(|occurrence| occurrence.record.clone())
             .collect();
-        Ok((sources.entities.clone(), Some(sources), inputs))
+        Ok((Some(sources), inputs))
     } else {
         let source =
             crate::edge::source(common.input.first().map(std::path::PathBuf::as_path), input)?;
-        let (entities, inputs) = super::input::read(source, framing, spec)?;
-        Ok((entities, None, inputs))
+        let inputs = super::input::read(source, framing, spec)?;
+        Ok((None, inputs))
     }
 }
 
@@ -56,16 +55,9 @@ pub(super) fn read(
     common: &Common,
     input: impl Read + Send + 'static,
     framing: Framing,
-    spec: &RelateSpec,
 ) -> Result<Sources, Failure> {
-    let text = matches!(framing, Framing::Lines | Framing::Document);
-    if text {
-        spec.check_lines()
-            .map_err(|error| Failure::Relate(crate::failure::relate::Error::Entities(error)))?;
-    }
     let reading = Reading::new(framing, Vec::new())?;
     let intake = Intake::new(common, &reading, input, false)?;
-    let mut pairs = Vec::new();
     let mut occurrences = Vec::new();
     let mut evidence_bytes = 0usize;
     for item in intake {
@@ -86,42 +78,18 @@ pub(super) fn read(
             .filter(|&bytes| bytes <= crate::core::MAX_RECORD_BYTES)
             .ok_or(Failure::Usage("source relate input exceeds 16 MiB"))?;
         let record = reading.record(&bytes).map_err(Failure::from)?;
-        record.validate_item(spec.metadata.item_schema.as_ref())?;
-        let (name, kind) = if text {
-            (reading.as_it_arrived(&bytes)?, "*")
-        } else {
-            (
-                super::input::name_of(&record, spec)?,
-                record.entity_text(spec.kind_field())?,
-            )
-        };
-        let entity = RelationEntity::new(name, kind)
-            .map_err(|_| Failure::Usage("relate source names and kinds must be nonblank"))?;
-        let pair = (name.to_owned(), kind.to_owned());
-        if !pairs.contains(&pair) {
-            pairs.push(pair);
-            if pairs.len() > 255 {
-                super::input::admitted(spec, &pairs)?;
-            }
-        }
         let position = item
             .position
             .ok_or(Failure::Defect("relate source has no position"))?;
-        occurrences.push((
-            entity,
-            Occurrence {
-                ordinal: occurrences.len(),
-                record,
-                file: position.file,
-                first_line: position.first,
-                last_line: position.last,
-            },
-        ));
+        occurrences.push(Occurrence {
+            ordinal: occurrences.len(),
+            record,
+            file: position.file,
+            first_line: position.first,
+            last_line: position.last,
+        });
     }
-    Ok(Sources {
-        entities: super::input::admitted(spec, &pairs)?,
-        occurrences,
-    })
+    Ok(Sources { occurrences })
 }
 
 #[derive(Serialize)]
@@ -162,57 +130,39 @@ struct Edge<'a> {
 pub(super) fn write(
     writer: &mut dyn Write,
     details: bool,
-    canonical: &crate::core::CompleteRelation,
+    result: &crate::CompleteRelated,
     sources: &Sources,
 ) -> Result<(), Failure> {
-    let mut edges = Vec::new();
+    let canonical = &result.canonical;
+    let edges = result
+        .source_edges()
+        .ok_or(Failure::Defect("relate lost its source edges"))?;
     let mut budget = crate::result_json::bounded::OutputBudget(
         crate::core::MAX_RECORD_BYTES - usize::from(details) * 2,
     );
-    for edge in &canonical.value {
-        for source in sources
-            .occurrences
-            .iter()
-            .filter(|(entity, _)| entity == &edge.source)
-        {
-            for target in sources
-                .occurrences
-                .iter()
-                .filter(|(entity, _)| entity == &edge.target)
-            {
-                let located = Edge {
-                    relation: &edge.relation,
-                    source: Endpoint {
-                        name: source.0.name(),
-                        kind: source.0.kind(),
-                        source: &source.1,
-                    },
-                    target: Endpoint {
-                        name: target.0.name(),
-                        kind: target.0.kind(),
-                        source: &target.1,
-                    },
-                    probability: edge.probability,
-                    either: edge.either,
-                };
-                // Count escaped JSON bytes using borrowed evidence before retaining
-                // the Cartesian expansion or writing any part of this complete set.
-                budget
-                    .admit(&located, !details || !edges.is_empty())
-                    .map_err(|()| Failure::Usage("source relate output exceeds 16 MiB"))?;
-                edges.push(located);
-            }
-        }
-    }
+    let edges = edges
+        .iter()
+        .enumerate()
+        .map(|(at, edge)| {
+            let located = Edge {
+                relation: edge.edge().relation(),
+                source: endpoint(edge.source(), sources)?,
+                target: endpoint(edge.target(), sources)?,
+                probability: edge.edge().probability(),
+                either: edge.edge().either(),
+            };
+            // The CLI spells an absent filename as null, so measure its rendered shape.
+            budget
+                .admit(&located, !details || at > 0)
+                .map_err(|()| Failure::Usage("source relate output exceeds 16 MiB"))?;
+            Ok(located)
+        })
+        .collect::<Result<Vec<_>, Failure>>()?;
     if details {
         let located = Complete {
             canonical,
             value: &edges,
-            originals: sources
-                .occurrences
-                .iter()
-                .map(|(_, occurrence)| occurrence)
-                .collect(),
+            originals: sources.occurrences.iter().collect(),
         };
         crate::edge::write_line(writer, &crate::core::json_line(&located)?)?;
     } else {
@@ -223,6 +173,20 @@ pub(super) fn write(
         }
     }
     Ok(())
+}
+
+fn endpoint<'a>(
+    endpoint: &'a crate::SourceRelationEndpoint,
+    sources: &'a Sources,
+) -> Result<Endpoint<'a>, Failure> {
+    Ok(Endpoint {
+        name: endpoint.entity().name(),
+        kind: endpoint.entity().kind(),
+        source: sources
+            .occurrences
+            .get(endpoint.ordinal())
+            .ok_or(Failure::Defect("relate lost an occurrence"))?,
+    })
 }
 
 struct Complete<'a> {

@@ -167,6 +167,9 @@ impl From<crate::Error> for Failure {
                 profile,
             }),
             Some(Diagnostic::CliInput(cause)) => *cause,
+            Some(Diagnostic::RelationEntityCount(count)) => {
+                Self::Relate(super::relate::Error::TooMany { count })
+            }
             Some(Diagnostic::Model(cause)) => Self::Usage(match cause {
                 crate::core::BlankTextError::ModelControl => {
                     "--model holds no control character or white space but a plain space"
@@ -211,6 +214,28 @@ fn refusal(mut cause: Box<dyn std::any::Any + Send + Sync>, error: crate::Error)
                 error: *error,
             });
         }
+        Err(cause) => cause,
+    };
+    cause = match cause.downcast::<crate::core::RelateConfigError>() {
+        Ok(cause) => {
+            return Failure::Relate(super::relate::Error::Config {
+                file: error.kind() == crate::ErrorKind::Local,
+                error: *cause,
+            });
+        }
+        Err(cause) => cause,
+    };
+    cause = match cause.downcast::<crate::core::RecognizeConfigError>() {
+        Ok(cause) => {
+            return Failure::Recognize(super::recognize::Error::Config {
+                file: error.kind() == crate::ErrorKind::Local,
+                error: *cause,
+            });
+        }
+        Err(cause) => cause,
+    };
+    cause = match cause.downcast::<crate::core::EntitySetError>() {
+        Ok(cause) => return Failure::Relate(super::relate::Error::Entities(*cause)),
         Err(cause) => cause,
     };
     take!(crate::core::QuestionFileError);

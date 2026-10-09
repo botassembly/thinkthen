@@ -23,6 +23,7 @@ pub(crate) enum Diagnostic {
     #[cfg(feature = "cli")]
     CliInput(Box<crate::cli::failure::Failure>),
     Refusal(Box<dyn Any + Send + Sync>),
+    RelationEntityCount(usize),
     Model(crate::core::BlankTextError),
     Pointer(&'static str, String, crate::core::PointerError),
     Batch,

@@ -60,7 +60,7 @@ struct Running<'a> {
 pub(crate) fn request_definition(
     arguments: &crate::args::RecognizeArguments,
 ) -> Result<crate::Recognize, Failure> {
-    config::settle(arguments).map(crate::Recognize)
+    config::settle(arguments, None).map(crate::Recognize)
 }
 
 #[expect(
@@ -70,7 +70,7 @@ pub(crate) fn request_definition(
 pub(crate) fn run(
     arguments: &RecognizeArguments,
     environment: &Environment,
-    admitted: crate::AdmittedRequest,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -93,7 +93,7 @@ pub(crate) fn run(
             ));
         }
     }
-    let mut spec = config::settle(arguments)?;
+    let mut spec = config::settle(arguments, Some(&mut admitted))?;
     let context = asking::context::shared(arguments.context.as_deref())?;
     examples::shared(arguments.examples.as_deref(), &mut spec)?;
     crate::public::RecordReading::new(&[], arguments.context_field.as_deref(), None)
@@ -113,6 +113,7 @@ pub(crate) fn run(
     if let Some(model) = arguments.common.model.as_deref() {
         spec.model = Some(edge::model_flag(model)?);
     }
+    *admitted.cli_definition().map_err(Failure::from)? = crate::Recognize(spec.clone()).into();
     let framing = if arguments.common.input.len() > 1
         && arguments.common.unit.is_none()
         && arguments.common.framing() == crate::core::Framing::Document

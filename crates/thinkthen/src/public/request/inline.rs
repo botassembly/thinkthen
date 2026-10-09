@@ -4,6 +4,20 @@ use super::{AdmittedRequest, RequestDefinition, RequestInput, RequestOriginal};
 use crate::Error;
 impl AdmittedRequest {
     pub(super) fn admit_inline(&self, definition: &RequestDefinition) -> Result<(), Error> {
+        if let RequestDefinition::Relate(ask) = definition
+            && (matches!(
+                self.request.call.arguments().input,
+                RequestInput::Feed {
+                    framing: super::RequestFraming::Lines,
+                    ..
+                }
+            ) || (matches!(
+                self.request.call.arguments().input,
+                RequestInput::Source { .. }
+            ) && self.request.call.arguments().options.field.is_none()))
+        {
+            ask.0.check_lines().map_err(Error::refused)?;
+        }
         let options = &self.request.call.arguments().options;
         let reading = reading(definition, options)?;
         let schema = context_schema(definition);

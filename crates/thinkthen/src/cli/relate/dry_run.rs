@@ -62,10 +62,7 @@ pub(super) fn write(
     admitted: crate::AdmittedRequest,
     (originals, sources): (&[crate::core::Record], Option<&super::source::Sources>),
 ) -> Result<(), Failure> {
-    let request = admitted
-        .retain_cli_definition(crate::Relate(context.spec.clone()).into())
-        .map_err(Failure::from)?
-        .with_composed_feed("cli-relate-plan");
+    let request = admitted.with_composed_feed("cli-relate-plan");
     let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
     if let Some(shared) = context.shared_context {
         controls = controls.context(shared);

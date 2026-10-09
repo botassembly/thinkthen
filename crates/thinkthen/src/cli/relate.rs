@@ -18,13 +18,14 @@ pub(crate) mod source;
 pub(crate) fn run(
     arguments: &RelateArguments,
     environment: &Environment,
-    admitted: crate::AdmittedRequest,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     arguments.common.check_plan_name()?;
     let shared_context = asking::context::shared(arguments.context.as_deref())?;
-    let settled = config::settle(arguments)?;
+    let settled = config::settle(arguments, &mut admitted)?;
+    *admitted.cli_definition().map_err(Failure::from)? = crate::Relate(settled.spec.clone()).into();
     let configured = settled.spec.model.as_ref().map(ModelName::as_str);
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
     let backend = environment
@@ -36,9 +37,9 @@ pub(crate) fn run(
         .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common, environment, &backend)?;
-    let (entities, sources, originals) =
+    let (sources, originals) =
         source::selection(&arguments.common, input, settled.framing, &settled.spec)?;
-    if entities.is_empty() {
+    if originals.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
     let folders = Folders::of(&arguments.common, environment)?;
@@ -75,7 +76,7 @@ pub(crate) fn run(
     .with_aggregate_context(shared_context.clone());
     let result = execute(
         admitted,
-        (&settled.spec, shared_context.as_deref()),
+        shared_context.as_deref(),
         (&originals, sources.as_ref()),
         &engine,
         environment,
@@ -87,7 +88,7 @@ pub(crate) fn run(
         .iter()
         .any(|member| matches!(member.identity, crate::core::MemberIdentity::Failed(_)));
     if let Some(sources) = &sources {
-        source::write(&mut writer, arguments.common.details, canonical, sources)?;
+        source::write(&mut writer, arguments.common.details, &result, sources)?;
     } else {
         result::write(&mut writer, arguments.common.details, canonical, &originals)?;
     }
@@ -101,17 +102,14 @@ pub(crate) fn run(
 
 fn execute(
     admitted: crate::AdmittedRequest,
-    (spec, context): (&crate::core::RelateSpec, Option<&str>),
+    context: Option<&str>,
     (originals, sources): (&[crate::core::Record], Option<&source::Sources>),
     engine: &facade::Engine,
     environment: &Environment,
     details: bool,
 ) -> Result<crate::CompleteRelated, Failure> {
     let records = records(originals, sources)?;
-    let request = admitted
-        .retain_cli_definition(crate::Relate(spec.clone()).into())
-        .map_err(Failure::from)?
-        .with_composed_feed("cli-relate");
+    let request = admitted.with_composed_feed("cli-relate");
     let native = crate::Engine::from_cli(engine.clone(), environment.config().prices());
     let token = crate::CancelToken::new();
     let signal = || environment.cancel().fired();

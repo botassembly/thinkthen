@@ -169,10 +169,7 @@ pub(super) fn run(
     let release = |ordinal| {
         held.borrow_mut().remove(&ordinal);
     };
-    let request = admitted
-        .retain_cli_definition(crate::Recognize(spec.clone()).into())
-        .map_err(Failure::from)?
-        .with_composed_feed("cli-recognize");
+    let request = admitted.with_composed_feed("cli-recognize");
     let engine = crate::Engine::from_cli(
         running.engine.clone(),
         running.environment.config().prices(),

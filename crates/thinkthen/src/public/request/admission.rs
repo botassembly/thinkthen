@@ -87,8 +87,21 @@ impl AdmittedRequest {
         self
     }
 
+    #[cfg(feature = "cli")]
+    pub(crate) fn cli_definition(&mut self) -> Result<&mut RequestDefinition, Error> {
+        if self.definition.is_none() {
+            self.resolve_once()?;
+        }
+        self.definition
+            .as_mut()
+            .ok_or_else(|| Error::defect("admitted question lost its definition"))
+    }
+
     pub(crate) fn resolve_once(&mut self) -> Result<RequestDefinition, Error> {
         let definition = self.resolve_question_for(Some(self.request.call.function()))?;
+        if self.definition.is_none() {
+            self.admit_inline(&definition)?;
+        }
         self.definition = Some(definition.clone());
         Ok(definition)
     }
@@ -110,8 +123,12 @@ impl AdmittedRequest {
         }
         let text = selector_text(&self.request.call.arguments().question)?;
         // A retained host call already names its function. Use the native saved
-        // find parser directly so its typed file cause survives resolution.
-        let value = if expected == Some(Function::Find) {
+        // function parser directly so its typed file cause survives resolution.
+        let value = if expected == Some(Function::Recognize) {
+            crate::RecognizeQuestionFile::from_json(&text).map(RequestDefinition::Recognize)
+        } else if expected == Some(Function::Relate) {
+            crate::Relate::from_records_json(&text).map(RequestDefinition::Relate)
+        } else if expected == Some(Function::Find) {
             crate::FindQuestionFile::from_json(&text).map(RequestDefinition::Find)
         } else {
             RequestDefinition::from_authored_json(&text)

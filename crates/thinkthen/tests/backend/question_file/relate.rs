@@ -127,3 +127,123 @@ fn invalid_unreadable_and_wrong_verb_files_keep_their_ruled_exit_codes() {
         assert!(output.stdout.is_empty());
     }
 }
+
+#[test]
+#[cfg(unix)]
+fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_sends() {
+    let root = crate::input_sources::folder("named-aggregate-admission").expect("folder");
+    let questions = root.join("thinkthen/questions");
+    std::fs::create_dir_all(&questions).expect("questions");
+    for (verb, name, definition, valid, invalid, flags) in [
+        (
+            "recognize",
+            "names-native",
+            r#"{"version":1,"recognize":{"kinds":{"person":null}},"on":"/body","name":"names-native","wording_version":3,"item_schema":{"type":"string"}}"#,
+            br#"{"body":"Ada met Grace."}"#.as_slice(),
+            br#"{"body":7}"#.as_slice(),
+            vec!["--jsonl"],
+        ),
+        (
+            "relate",
+            "links-native",
+            r#"{"version":1,"relate":{"fields":{"name":"/title","kind":"/type"},"relations":[{"name":"met","source":"person","target":"person"}]},"name":"links-native","wording_version":4,"item_schema":{"type":"object","properties":{"title":{"type":"string"},"type":{"type":"string"}}}}"#,
+            br#"[{"title":"Ada","type":"person"},{"title":"Grace","type":"person"}]"#.as_slice(),
+            br#"[{"title":7,"type":"person"}]"#.as_slice(),
+            vec![],
+        ),
+    ] {
+        let path = questions.join(format!("{name}.json"));
+        std::fs::write(&path, definition).expect("saved question");
+        let listener = crate::harness::Listener::serving(Vec::new()).expect("listener");
+        let named = format!("@{name}");
+        let file = format!("@{}", path.display());
+        let run = |selector: &str, evidence: &[u8]| {
+            let mut args = vec![
+                verb,
+                selector,
+                "--plan",
+                "--url",
+                listener.base(),
+                "--no-cache",
+            ];
+            args.extend(&flags);
+            crate::harness::spawn(
+                &args,
+                &[("XDG_CONFIG_HOME", root.to_str().expect("path"))],
+                evidence,
+            )
+            .expect("command")
+        };
+        let direct = run(&file, valid);
+        let lookup = run(&named, valid);
+        assert_eq!(
+            direct.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&direct.stderr)
+        );
+        assert_eq!(
+            lookup.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&lookup.stderr)
+        );
+        assert_eq!(lookup.stdout, direct.stdout);
+        let rejected = run(&named, invalid);
+        assert_eq!(
+            rejected.status.code(),
+            Some(2),
+            "{}",
+            String::from_utf8_lossy(&rejected.stderr)
+        );
+        assert!(rejected.stdout.is_empty());
+        assert_eq!(listener.connections(), 0);
+    }
+}
+
+#[test]
+fn native_relation_admission_keeps_the_cli_complete_set_count_sentence() {
+    let listener = crate::harness::Listener::serving(Vec::new()).expect("listener");
+    let entities = (0..256)
+        .map(|at| format!("entity-{at}\n"))
+        .collect::<String>();
+    let output = crate::harness::spawn(
+        &[
+            "relate",
+            "met",
+            "--lines",
+            "--plan",
+            "--url",
+            listener.base(),
+        ],
+        &[],
+        entities.as_bytes(),
+    )
+    .expect("command");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: relate takes at most 255 entities; this set has 256. If all 256 were distinct, an unordered all-kind rule would have 32640 candidate pairs; split the set or narrow by kind\n"
+    );
+    let empty = crate::harness::spawn(
+        &[
+            "relate",
+            "met=person:person",
+            "--lines",
+            "--plan",
+            "--url",
+            listener.base(),
+        ],
+        &[],
+        b"",
+    )
+    .expect("command");
+    assert_eq!(empty.status.code(), Some(2));
+    assert_eq!(
+        String::from_utf8_lossy(&empty.stderr),
+        "thinkthen: --lines takes only bare relation names or NAME=*:*\n"
+    );
+    assert!(empty.stdout.is_empty());
+    assert_eq!(listener.connections(), 0);
+}

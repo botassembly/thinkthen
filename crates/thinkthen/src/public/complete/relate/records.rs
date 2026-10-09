@@ -124,7 +124,15 @@ where
     } else {
         pairs.clone()
     };
-    let entities = ask.0.admit(&distinct).map_err(Error::refused)?;
+    let entities = ask.0.admit(&distinct).map_err(|cause| {
+        if cause == crate::core::EntitySetError::TooMany {
+            Error::refused(cause).with_diagnostic(
+                crate::public::error::diagnostic::Diagnostic::RelationEntityCount(distinct.len()),
+            )
+        } else {
+            Error::refused(cause)
+        }
+    })?;
     Ok(Admitted {
         pairs,
         inputs,

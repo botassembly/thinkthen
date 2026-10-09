@@ -131,12 +131,7 @@ pub(super) fn run(
                 )
             })
         });
-    let admitted = admitted
-        .retain_cli_definition(crate::RequestDefinition::Recognition(crate::Recognize(
-            (*spec).clone(),
-        )))
-        .map_err(Failure::from)?
-        .with_composed_feed("cli-recognize-plan");
+    let admitted = admitted.with_composed_feed("cli-recognize-plan");
     let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
     if let Some(context) = *context {
         controls = controls.context(context);
