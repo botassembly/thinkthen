@@ -246,6 +246,15 @@ fn details_carry_every_probability_and_request_metadata() {
     let row: Value = serde_json::from_str(&stdout(&output)).unwrap();
     crate::native_results::validate(&[("completeRecognition".into(), row.clone())]);
     let mut retained = crate::native_results::compatibility::judgment(row);
+    // The complete schema above validates the additive proposal carrier.
+    assert!(
+        retained["answer"]
+            .as_object_mut()
+            .unwrap()
+            .remove("proposals")
+            .unwrap()
+            .is_array()
+    );
     retained["schema"] = "thinkthen.result/1".into();
     assert_eq!(retained, serde_json::from_str::<Value>(&expected).unwrap());
 }

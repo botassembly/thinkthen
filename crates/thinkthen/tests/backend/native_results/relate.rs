@@ -102,7 +102,10 @@ fn located_relation_duplicates_replay_one_observation_with_actual_filenames_and_
     let held: Value = serde_json::from_slice(&held.stdout).unwrap();
     assert_eq!(held["answer_id"], live["answer_id"]);
     assert_eq!(held["value"], live["value"]);
-    assert_eq!(held["answer"], live["answer"]);
+    let mut expected_answer = live["answer"].clone();
+    expected_answer["questions"] =
+        compatibility::replayed_members(expected_answer["questions"].clone());
+    assert_eq!(held["answer"], expected_answer);
     assert_eq!(held["meta"]["attempts"], json!([]));
     assert_eq!(held["meta"]["question_sources"][0]["batch_size"], 1);
     assert_eq!(listener.count(), 1);

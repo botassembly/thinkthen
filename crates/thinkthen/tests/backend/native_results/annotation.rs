@@ -93,7 +93,10 @@ fn complete_annotation_replays_coalesced_observations_and_retains_declared_readi
     let replayed = rows(&replayed);
     for (live, held) in live.iter().zip(&replayed) {
         assert_eq!(held["answer_id"], live["answer_id"]);
-        assert_eq!(held["answers"], live["answers"]);
+        assert_eq!(
+            held["answers"],
+            compatibility::replayed_members(live["answers"].clone())
+        );
         assert_eq!(held["meta"]["origin"], "replay");
         assert_eq!(held["meta"]["requests_sent"], 0);
         assert_eq!(held["meta"]["attempts"], json!([]));

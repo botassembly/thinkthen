@@ -85,7 +85,7 @@ fn split_relations_print_what_one_job_prints() {
         assert!(!one.stdout.is_empty());
         if details {
             let judgment = |output: &Output| {
-                crate::native_results::compatibility::judgment(
+                crate::native_results::compatibility::judgment_with_member_facts(
                     serde_json::from_slice(&output.stdout).unwrap(),
                 )
             };
