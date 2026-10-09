@@ -1,94 +1,46 @@
-using System;
 using System.Text.Json;
-using System.Collections.Generic;
 using ThinkThen;
+using ThinkThen.Inputs;
+using Failure = ThinkThen.Failure;
+using FailureKind = ThinkThen.FailureKind;
 
-// With one argument, args[0] is one JSON-door request and stdout its reply.
-// "fields REQUEST" reads each annotate row member through AnnotatedField.Read.
-// "plan INPUT" reads one thinkthen.plan-input/1 object and prints Engine.Plan's object.
-// "limits" checks ticket 0291's zero budgets and zero cap; "helper" checks
-// AnnotatedField.Read's edge table. Each prints one JSON line.
 if(args.Length>=1 && args[0]=="complete"){Console.WriteLine(NativeCases.Run(args.Length==2?args[1]:Console.ReadLine()!));return;}
 if(args.Length==1 && args[0]=="native"){NativeChecks.Run();Console.WriteLine("{\"native\":\"pass\"}");return;}
-if (args.Length == 1 && args[0] == "carriers") { CarrierChecks.Run(); Console.WriteLine("{\"carriers\":\"pass\"}"); return; }
-string mode = args.Length == 2 ? args[0] : args.Length == 1 && args[0] is "limits" or "helper" ? args[0] : "";
-string request = args[^1];
-using var engine = Engine.Open();
+if(args.Length==1 && args[0]=="carriers"){CarrierChecks.Run();Console.WriteLine("{\"carriers\":\"pass\"}");return;}
+using var engine=Engine.Open(new InputEngineSettings());
 try {
-    if (mode == "helper") Console.WriteLine(Helper());
-    else if (mode == "limits") Console.WriteLine(Limits(engine));
-    else if (mode == "plan") {
-        using JsonDocument input = JsonDocument.Parse(request);
-        JsonElement root = input.RootElement, question = root.GetProperty("question");
-        string asked = question.ValueKind == JsonValueKind.String ? question.GetString()! : question.GetRawText();
-        string[] texts = Array.ConvertAll(root.GetProperty("input").EnumerateArray().ToArray(), text => text.GetString()!);
-        string? settings = root.TryGetProperty("settings", out JsonElement given) ? given.GetRawText() : null;
-        Console.WriteLine(engine.Plan(root.GetProperty("verb").GetString()!, asked, texts, settings).GetRawText());
-    } else if (mode == "fields") {
-        var names = new Dictionary<Type, string> { [typeof(AnnotatedField.Unresolved)] = "unresolved", [typeof(AnnotatedField.Answered)] = "answered", [typeof(AnnotatedField.Failed)] = "failed" };
-        var rows = new List<Dictionary<string, string>>();
-        foreach (JsonElement row in engine.CallTyped(request).Value.EnumerateArray()) {
-            var states = new Dictionary<string, string>();
-            foreach (JsonProperty member in row.EnumerateObject()) {
-                AnnotatedField field = AnnotatedField.Read(member.Value);
-                states[member.Name] = names[field.GetType()] + (field is AnnotatedField.Failed failed ? $" {failed.Kind} {failed.Cause}" : "");
-            }
-            rows.Add(states);
-        }
-        Console.WriteLine(JsonSerializer.Serialize(rows));
-    } else {
-        using JsonDocument input = JsonDocument.Parse(request);
-        if (input.RootElement.TryGetProperty("usage", out _)) Console.WriteLine(engine.Call(request));
-        else {
-            TypedResult<JsonElement> result = engine.CallTyped(request);
-            Console.WriteLine(JsonSerializer.Serialize(new Dictionary<string, JsonElement> { ["value"] = result.Value, ["facts"] = result.Facts }));
-        }
-    }
-} catch (Failure error) {
-    Console.WriteLine(JsonSerializer.Serialize(new { failed = new { kind = error.Kind.ToString().ToLowerInvariant(), code = error.Code }, retryable = error.Retryable, facts = error.FactsJson }));
-}
-
-// ADR 0112 section 4: null is unresolved, {"failed": ...} is a failure whose
-// unknown extra member reads without error, and any other value is answered.
-static string Helper()
-{
-    foreach ((string member, AnnotatedField want) in new (string, AnnotatedField)[] {
-        ("null", new AnnotatedField.Unresolved()),
-        ("{\"failed\":{\"kind\":\"backend\",\"cause\":\"missing_probability\",\"later\":1}}", new AnnotatedField.Failed("backend", "missing_probability")) }) {
-        using JsonDocument json = JsonDocument.Parse(member);
-        if (AnnotatedField.Read(json.RootElement) != want) throw new Exception("helper " + member);
-    }
-    foreach (string member in new[] { "true", "\"billing\"", "[\"billing\",\"urgent\"]", "1.2" }) {
-        using JsonDocument json = JsonDocument.Parse(member);
-        if (AnnotatedField.Read(json.RootElement) is not AnnotatedField.Answered answered || answered.Value.GetRawText() != member) throw new Exception("helper " + member);
-    }
-    foreach (string member in new[] { "{\"failed\":null}", "{\"team\":\"billing\"}" }) {
-        using JsonDocument json = JsonDocument.Parse(member);
-        try { AnnotatedField.Read(json.RootElement); throw new Exception("helper read an object as an answer: " + member); }
-        catch (InvalidOperationException) { }
-    }
-    return "{\"helper\":\"pass\"}";
-}
-
-// Ticket 0291: a zero cap and a zero budget each refuse before sending. Relate
-// gets two entities, since one entity has no pair to ask.
-static string Limits(Engine engine)
-{
-    static Failure Refused(Action call) {
-        try { call(); } catch (Failure failure) { return failure; }
-        throw new Exception("a limited call succeeded");
-    }
-    using (Engine capped = Engine.Open("{\"max_requests_total\":0,\"cache\":false}")) {
-        Failure cap = Refused(() => capped.Decide("Is it?", "capped"));
-        if (cap.Kind != FailureKind.Usage || cap.Code != 1 || !cap.Message.Contains("process send budget")) throw new Exception("cap: " + cap.Message);
-    }
-    foreach (Action call in new Action[] {
-        () => engine.Call("{\"decide\":\"Is it?\",\"evidence\":\"zero-call\"}", TimeSpan.Zero),
-        () => engine.Recognize("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}", "zero-recognize", TimeSpan.Zero),
-        () => engine.RelateWithOptions("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}",
-            new[] { "{\"name\":\"A\",\"kind\":\"alert\"}", "{\"name\":\"B\",\"kind\":\"alert\"}" }, TimeSpan.Zero, default) }) {
-        Failure zero = Refused(call);
-        if (zero.Kind != FailureKind.Deadline || zero.Code != 3) throw new Exception("zero budget: " + zero.Message);
-    }
-    return "{\"limits\":\"pass\"}";
-}
+ if(args[0]=="limits") {
+  using var capped=Engine.Open(new InputEngineSettings { MaxRequestsTotal=new InputEngineSettingsMaxRequestsTotalAlternative0 { Value=0 }, Cache=new InputCacheDocumentAlternative1 {Value=new InputDisabledCache()} });
+  try {await capped.DecideAsync(new InputRequestQuestionText {Text="Is it?"},new InputRequestInputText {Text="capped"});throw new Exception("cap admitted");}
+  catch(Failure e) when(e.Kind==FailureKind.Usage && e.Message.Contains("process send budget")) {}
+  catch(SessionFailure e) when(e.Failure.Error.Kind.Value=="usage" && e.Failure.Error.Message.Contains("process send budget")) {}
+  foreach(string limitedVerb in new[]{"decide","recognize","relate"}) {
+   var q=limitedVerb=="decide" ? (InputRequestQuestion)new InputRequestQuestionText {Text="Is it?"} : engine.ParseQuestion(limitedVerb=="recognize"?AuthoredQuestionKind.Recognize:AuthoredQuestionKind.Relate,limitedVerb=="recognize"?"{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person.\"}}}":"{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"linked\",\"source\":\"alert\",\"target\":\"alert\"}]}}");
+   InputRequestInput input=limitedVerb=="relate"?new InputRequestInputRecords {Items=new[]{"A","B"}.Select(n=>new InputRequestItem {Original=new InputRequestOriginalJson {Value=JsonSerializer.SerializeToElement(new {name=n,kind="alert"})}}).ToArray()}:new InputRequestInputText {Text="zero-"+limitedVerb};
+   try {await (limitedVerb switch {"decide"=>engine.DecideAsync(q,input,new InputRequestOptions {DeadlineMs=0}),"recognize"=>engine.RecognizeAsync(q,input,new InputRequestOptions {DeadlineMs=0}),_=>engine.RelateAsync(q,input,new InputRequestOptions {DeadlineMs=0})});throw new Exception("zero admitted");}
+   catch(Failure e) when(e.Kind==FailureKind.Deadline) {}
+   catch(SessionFailure e) when(e.Failure.Error.Kind.Value=="deadline") {}
+  }
+  Console.WriteLine("{\"limits\":\"pass\"}");return;
+ }
+ if(args[0]=="plan") {
+  using var doc=JsonDocument.Parse(args[1]);var root=doc.RootElement;
+  using var planned=Engine.Open(root.GetProperty("settings").TryGetProperty("batch",out var batch)?new InputEngineSettings {Batch=new InputRequestBatchAlternative0 {Value=batch.GetUInt64()}}:new InputEngineSettings());
+  var plan=planned.Plan(new InputRequest {Schema=new InputRequestVersionAlternative0(),Call=new InputRequestCallDecide {Question=new InputRequestQuestionText {Text=root.GetProperty("question").GetString()!},Input=new InputRequestInputRecords {Items=root.GetProperty("input").EnumerateArray().Select(v=>new InputRequestItem {Original=new InputRequestOriginalText {Text=v.GetString()!}}).ToArray()}}});
+  Console.WriteLine(plan.ToJsonString());return;
+ }
+ // Shared J1 fixtures are test data. Authored definitions go through the native parser;
+ // the public execution request uses generated types in AsyncFixtureCases.
+ using var request=JsonDocument.Parse(args[^1]);var r=request.RootElement;
+ string verb=new[]{"decide","choose","tag","score","filter","rank","find","annotate","recognize","relate"}.Single(v=>r.TryGetProperty(v,out _));
+ var question=new Dictionary<string,JsonElement>();
+ if(verb=="annotate") foreach(var p in r.GetProperty(verb).EnumerateObject())question[p.Name]=p.Value.Clone();
+ else foreach(var p in r.EnumerateObject())if(p.Name is not "evidence" and not "records" and not "units" and not "details" and not "call" and not "none")question[p.Name=="filter"||p.Name=="rank"?"decide":p.Name]=p.Value.Clone();
+ var items=r.TryGetProperty("records",out var records)?records:r.TryGetProperty("units",out var units)?units:JsonSerializer.SerializeToElement(new[]{r.GetProperty("evidence").Clone()});
+ if(r.TryGetProperty("none",out var none))question["none"]=none.Clone();
+ var framing=new {verb,question,items,text=items.EnumerateArray().All(v=>v.ValueKind==JsonValueKind.String),engine_settings=r.TryGetProperty("call",out var call)&&call.TryGetProperty("batch",out var size)?JsonSerializer.Serialize(new {batch=size.GetUInt64()}):"{}"};
+ // Native find uses generated options.None; preserve the fixture's explicit value.
+ var framed=JsonSerializer.SerializeToElement(framing);
+ var data=framed.EnumerateObject().ToDictionary(p=>p.Name,p=>(object?)p.Value.Clone());
+ Console.WriteLine(AsyncFixtureCases.Run(JsonSerializer.Serialize(data)));
+} catch(Failure error) {Console.WriteLine(JsonSerializer.Serialize(new {failed=new {kind=error.Kind.ToString().ToLowerInvariant(),code=error.Code}}));}

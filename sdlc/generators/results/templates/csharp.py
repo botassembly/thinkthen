@@ -352,8 +352,8 @@ def render_inputs(schema):
         if typ.startswith('IReadOnlyList'):
             return 'writer.WriteStartArray(); foreach (var item in ' + expr + ') { ' + emit(value.get('items', {}), 'item', path + '_Item') + ' } writer.WriteEndArray();'
         if typ.startswith('IReadOnlyDictionary'):
-            return 'writer.WriteStartObject(); foreach (var entry in ' + expr + ') { writer.WritePropertyName(entry.Key); ' + emit(value['additionalProperties'], 'entry.Value', path + '_Entry') + ' } writer.WriteEndObject();'
-        return {'string': 'writer.WriteStringValue(' + expr + ');',
+            return 'writer.WriteStartObject(); foreach (var entry in ' + expr + ') { WriteName(writer, entry.Key); ' + emit(value['additionalProperties'], 'entry.Value', path + '_Entry') + ' } writer.WriteEndObject();'
+        return {'string': 'WriteText(writer, ' + expr + ');',
                 'bool': 'writer.WriteBooleanValue(' + expr + ');',
                 'long': 'writer.WriteNumberValue(' + expr + ');',
                 'ulong': 'writer.WriteNumberValue(' + expr + ');',
@@ -436,6 +436,9 @@ public readonly struct InputPresence<T> {
     public static implicit operator InputPresence<T>(T value) => new(value);
 }
 public abstract class InputDocument {
+    private static readonly System.Text.Encoding StrictUtf8 = new System.Text.UTF8Encoding(false, true);
+    protected static void WriteText(Utf8JsonWriter writer, string? value) { if (value is not null) _ = StrictUtf8.GetByteCount(value); writer.WriteStringValue(value); }
+    protected static void WriteName(Utf8JsonWriter writer, string value) { _ = StrictUtf8.GetByteCount(value); writer.WritePropertyName(value); }
     protected JsonElement? ParsedDocument { get; init; }
     public abstract void Write(Utf8JsonWriter writer);
     internal byte[] ToBytes() { using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream)) Write(writer); return stream.ToArray(); }
