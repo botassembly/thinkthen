@@ -35,3 +35,4 @@ One reviewed package design says, for each language package, which platform and 
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed 278e6f58a5dd16bf1207c85dca55074f76514b57; next: Reviewed native package design is landed. PM must rule on the Dart and Flutter build-time pinned-asset exception before that migration; COBOL stable compiler compatibility belongs to0529. This design supplies no platform qualification.
