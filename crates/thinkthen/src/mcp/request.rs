@@ -92,8 +92,7 @@ impl Invocation {
                 }
             } else {
                 RequestQuestion::Definition {
-                    value: serde_json::from_str(raw.get())
-                        .map_err(|_| Error::usage("invalid question"))?,
+                    value: crate::RequestDefinition::from_authored_json(raw.get())?,
                 }
             }
         })

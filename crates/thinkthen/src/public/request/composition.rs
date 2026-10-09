@@ -14,6 +14,14 @@ pub(super) type Inputs<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
 
 impl AdmittedRequest {
+    pub(super) fn annotation_document(&self, definition: &RequestDefinition) -> bool {
+        matches!(definition, RequestDefinition::Annotate(_))
+            && matches!(
+                self.request.call.arguments().input,
+                RequestInput::Text { .. }
+            )
+            && !explicit_projection(&self.request.call.arguments().options)
+    }
     /// Obtain typed projection for a caller composing native records.
     /// This reads only admitted inline preparation and never opens a saved selector.
     /// # Errors
@@ -33,11 +41,7 @@ impl AdmittedRequest {
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.request.call.arguments().options;
         let mut budget = AttachmentBudget::new(self.attachment_limit);
-        let explicit = options.field.is_some()
-            || options.context_field.is_some()
-            || options.options_field.is_some()
-            || options.examples_field.is_some()
-            || options.seed_spans_field.is_some();
+        let explicit = explicit_projection(options);
         let reading = reading(definition, options)?;
         let context = context_schema(definition).cloned();
         let reading = context.clone().map_or(reading.clone(), |schema| {
@@ -62,6 +66,7 @@ impl AdmittedRequest {
                 &reading,
                 context.as_ref(),
                 &mut budget,
+                self.annotation_document(definition),
             ),
             RequestInput::Json { value, images } => singleton(
                 RequestOriginal::Json {
@@ -71,6 +76,7 @@ impl AdmittedRequest {
                 &reading,
                 context.as_ref(),
                 &mut budget,
+                false,
             ),
             RequestInput::Source { source } => {
                 controls.admission()?;
@@ -125,7 +131,14 @@ fn singleton(
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
     budget: &mut AttachmentBudget,
+    annotation_document: bool,
 ) -> Result<Inputs<'static>, Error> {
+    if annotation_document
+        && images.is_empty()
+        && let RequestOriginal::Text { text } = &original
+    {
+        return Ok(Box::new(std::iter::once(document_row(reading, text, true))));
+    }
     if !images.is_empty()
         && let RequestOriginal::Text { text } = &original
     {
@@ -229,6 +242,22 @@ pub(super) fn compose_original(
         seed_spans: row.seed_spans,
     })
 }
+pub(super) fn document_row(
+    reading: &RecordReading,
+    text: &str,
+    annotation_document: bool,
+) -> Result<RecordInput<QuestionInput>, Error> {
+    if !annotation_document {
+        return compose_original(reading, RawRecord::text(text)?);
+    }
+    Ok(RecordInput {
+        original: QuestionInput::Text(text.to_owned()),
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans: None,
+    })
+}
 fn read_image(image: &RequestImage, budget: &mut AttachmentBudget) -> Result<ImageInput, Error> {
     match image {
         RequestImage::Bytes { media, bytes } => {
@@ -324,11 +353,7 @@ pub(super) fn reading(
         .flatten()
         .map(String::as_str)
         .collect::<Vec<_>>();
-    let explicit = options.field.is_some()
-        || options.context_field.is_some()
-        || options.options_field.is_some()
-        || options.examples_field.is_some()
-        || options.seed_spans_field.is_some();
+    let explicit = explicit_projection(options);
     let reading = if explicit {
         RecordReading::new(
             &fields,
@@ -349,6 +374,13 @@ pub(super) fn reading(
         reading
     };
     Ok(reading)
+}
+fn explicit_projection(options: &super::RequestOptions) -> bool {
+    options.field.is_some()
+        || options.context_field.is_some()
+        || options.options_field.is_some()
+        || options.examples_field.is_some()
+        || options.seed_spans_field.is_some()
 }
 
 pub(super) fn source_row(

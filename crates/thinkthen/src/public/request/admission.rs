@@ -53,8 +53,8 @@ impl AdmittedRequest {
                 ));
             }
         };
-        let value: RequestDefinition = serde_json::from_str(&text)
-            .map_err(|_| Error::local("the saved question is invalid"))?;
+        let value = RequestDefinition::from_authored_json(&text)
+            .map_err(|error| Error::local(error.detail().message()))?;
         admit_definition(self.request.call.function(), value)
             .map_err(|e| Error::local(e.detail().message()))
     }
