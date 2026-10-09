@@ -24,6 +24,9 @@ fi
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 sh "$REPO/sdlc/scripts/test"
 cd -- "$REPO"
+. sdlc/scripts/scratch.sh
+usage_guard
+config_home
 # The name prefix selects release boundaries without running subprocess helpers
 # or the independent ignored load and timing campaigns.
 cargo test --locked --offline --workspace --all-targets release_only_ -- --ignored
