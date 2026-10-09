@@ -107,6 +107,7 @@ static class AsyncFixtureCases
                 Media = unit == 4 || Yes(data,"image_reader") ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputReaderMedia>)new ThinkThen.Inputs.InputReaderMediaAlternative1() : default
             } };
         }
+        if (Text(data,"verb")=="annotate" && Yes(data,"text") && Get(data,"items").GetArrayLength()==1 && Get(data,"items")[0].ValueKind==JsonValueKind.String && !Yes(data,"context_present") && !(Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0)) return new ThinkThen.Inputs.InputRequestInputText { Text = Get(data,"items")[0].GetString()! };
         var images = new List<ThinkThen.Inputs.InputRequestImage>();
         var imagePaths = Get(data,"image_paths");
         if (imagePaths.ValueKind == JsonValueKind.Array) foreach(var path in imagePaths.EnumerateArray()) images.Add(new ThinkThen.Inputs.InputRequestImageBytes {

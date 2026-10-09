@@ -32,7 +32,20 @@ Read and push wait through cancellable timer delays after Pending or Full. Each 
 
 An explicit `Cancel` retains the output receiver. Call `ReadAsync` with a fresh token to drain completed packets and eventual native terminal facts. Disposal relinquishes unread output; it does not promise that settlement has finished. A named convenience call disposes its session when cancelled.
 
-The existing synchronous, complete and batch APIs remain available while consumers migrate. `Decide` maps to `DecideAsync`, the other named judgments map to their `*Async` counterparts, and `Call` maps to typed `ExecuteAsync` or `StartSession`. `Engine.Open(InputEngineSettings)` writes the native settings document through generated types. Missing settings retain native defaults; nullable budget alternatives preserve explicit null. `Engine.Plan(InputRequest)` returns the generated owned `Plan` with unsigned token bounds and explicit nullable body presence. It forwards native canonical Request preview for decide, choose, tag and score without key reads, cache reads or sends. Native admission refuses unsupported functions. The string settings overload and older Plan overload remain compatibility APIs until their consumers migrate. Their behavior remains part of the migration contract.
+Use `Engine.Open(InputEngineSettings)` for native defaults and typed settings. Nullable budget alternatives preserve explicit null. `Engine.Plan(InputRequest)` returns the generated owned `Plan` with unsigned token bounds and explicit nullable body presence. It forwards native canonical Request preview for decide, choose, tag and score without key reads, cache reads or sends. Native admission refuses unsupported functions.
+
+The migration maps earlier callers to these public doors:
+
+| Earlier API | Typed API |
+| --- | --- |
+| `Engine.Open(settingsJson)` | `Engine.Open(InputEngineSettings)` |
+| `Decide`, `DecideComplete` and the other named judgments | The corresponding named `*Async` method with generated question and input objects |
+| Named batch readers | The named `*Async` overload accepting `IAsyncEnumerable<InputRequestSessionDescriptor>` |
+| `Call`, `CallTyped` | A named function; use `ExecuteAsync(InputRequest)` or `StartSession(InputRequest)` for explicit session control |
+| `Plan(verb, question, texts, settings)` | `Plan(InputRequest)` |
+| Compatibility result readers and native layouts | Owned generated `ThinkThen.Results` classes and packet variants |
+
+Question file, saved-name and reference selectors are generated input objects. Authored questions and ordered options also have generated types. User records and original result inputs retain arbitrary JSON data; the caller does not build transport JSON. A streamed producer owns its descriptors and supplies optional source locations. The native engine owns question admission, selection, framing and judgment semantics.
 
 To pack locally, supply an already-built native asset, portable RID and native filename:
 
