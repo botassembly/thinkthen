@@ -1,7 +1,7 @@
 //! Pure complete-header admission precedes selectors, readers and engines.
 use super::{
     Request, RequestDefinition, RequestFunction as Function, RequestImage, RequestInput,
-    RequestOptions, RequestQuestion,
+    RequestOptions, RequestQuestion, RequestThreshold,
 };
 use crate::{Error, LoadedQuestion, Question, QuestionKind};
 
@@ -57,7 +57,7 @@ impl AdmittedRequest {
             .map_err(|error| Error::local(error.detail().message()))?;
         let value = admit_definition(self.request.call.function(), value)
             .map_err(|e| Error::local(e.detail().message()))?;
-        admit_recognition_controls(&value, &self.request.call.arguments().options)
+        admit_definition_controls(&value, &self.request.call.arguments().options)
             .map_err(|e| Error::local(e.detail().message()))?;
         Ok(value)
     }
@@ -107,7 +107,7 @@ fn admit_header(
         attachment_limit,
     };
     if let Some(definition) = &admitted.definition {
-        admit_recognition_controls(definition, &admitted.request.call.arguments().options)?;
+        admit_definition_controls(definition, &admitted.request.call.arguments().options)?;
         admitted.admit_inline(definition)?;
     }
     Ok(admitted)
@@ -132,7 +132,7 @@ fn admit_definition(
         RequestDefinition::Atomic(LoadedQuestion::Question(mut q))
             if function == Function::Rank =>
         {
-            if q.authored_threshold
+            if (q.authored_threshold && q.kind() != QuestionKind::Decide)
                 || !matches!(
                     q.kind(),
                     QuestionKind::Decide | QuestionKind::Score | QuestionKind::Rank
@@ -142,11 +142,17 @@ fn admit_definition(
                     "rank takes a decide or score question without an authored threshold",
                 ));
             }
-            q.threshold = None;
+            if !q.authored_threshold {
+                q.threshold = None;
+            }
             if q.kind() == QuestionKind::Decide {
                 q.kind = crate::public::NativeQuestionKind::Rank;
             }
             RequestDefinition::Rank(q)
+        }
+        RequestDefinition::Atomic(LoadedQuestion::Banded(mut q)) if function == Function::Rank => {
+            q.0.kind = crate::public::NativeQuestionKind::Rank;
+            RequestDefinition::Rank(q.0)
         }
         RequestDefinition::DecodedSet { annotation, rank } => match function {
             Function::Annotate => RequestDefinition::Annotate(annotation),
@@ -441,10 +447,31 @@ pub(super) fn admit_item(
     Ok(())
 }
 
-fn admit_recognition_controls(
+fn admit_definition_controls(
     definition: &RequestDefinition,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    match definition {
+        RequestDefinition::Rank(q) => {
+            let rule = options
+                .threshold
+                .as_ref()
+                .map(RequestThreshold::native)
+                .transpose()?
+                .or(q.threshold);
+            if rule.is_some_and(|rule| !rule.is_cut())
+                || (q.kind() == QuestionKind::Score && rule.is_some())
+            {
+                return Err(Error::usage(
+                    "rank cutoff requires a decide probability and never a band",
+                ));
+            }
+        }
+        RequestDefinition::RankSet(_) if options.threshold.is_some() => {
+            return Err(Error::usage("rank question sets take no command threshold"));
+        }
+        _ => {}
+    }
     let ask = match definition {
         RequestDefinition::Recognition(q) => q,
         RequestDefinition::Recognize(q) => q.question(),

@@ -62,7 +62,7 @@ impl Engine {
                         _ => Err(super::wrong()),
                     })
                     .collect::<Result<Vec<_>, Error>>()?;
-                let order = core::ranking(&weights, None);
+                let order = core::ranking_under(&weights, None, question.threshold);
                 let mut rows: Vec<_> = rows.into_iter().map(Some).collect();
                 order
                     .into_iter()

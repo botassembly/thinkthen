@@ -15,6 +15,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision ac60aee9d21141d4961ab7ee9027da2fc031ebdf, accept
+
 ## Outcome
 
 Callers can use `rank --threshold P` to keep records whose yes probability is at least P, in the existing ranked order. The shared Request carries the same optional cutoff, so the Rust API, MCP and every migrated language get it without their own cutoff logic. Omitting it preserves current rank behavior. The cutoff reads stored probabilities and makes no extra model call.
@@ -29,6 +31,7 @@ Callers can use `rank --threshold P` to keep records whose yes probability is at
   - MCP: `crates/thinkthen/src/mcp/request.rs`, `crates/thinkthen/src/mcp/tests/execution.rs`.
   - Tests and documents: `crates/thinkthen/tests/backend/keeping/rank_top.rs`, `crates/thinkthen/tests/backend/native_results/rank.rs`, `crates/thinkthen/tests/public_batches/ranks.rs`, `crates/thinkthen/tests/native_complete/aggregates.rs`, `specification/rank.md`, `specification/threshold.md`, `sdlc/planning/adr/0007-flat-verbs-bare-values-and-one-threshold.md`.
   Confirm the smallest public reading seam before coding, and change claims if it needs other files.
+  Review confirms these additional owning paths: `crates/thinkthen/src/cli/args/command.rs`, `crates/thinkthen/src/cli/judge.rs`, `crates/thinkthen/src/core/mod.rs`, `crates/thinkthen/src/core/question_file/resolve.rs`, `crates/thinkthen/src/public/complete.rs`, `crates/thinkthen/src/public/question.rs`, `crates/thinkthen/src/public/rank_question.rs`, `crates/thinkthen/tests/backend/keeping/graded_rank.rs`, `crates/thinkthen/tests/backend/rank_set.rs`, `crates/thinkthen/tests/backend/refused.rs`, `crates/thinkthen/tests/backend/threshold_args.rs`, `crates/thinkthen/tests/native_rank_question.rs`, `demos/06-top-search-hits/README.md`, `demos/13-pick-a-threshold/README.md`, `sdlc/ratchet.json`, `specification/question-file.md` and `specification/settings.md`.
 - Proof: Outside-in CLI, Rust and MCP cases keep an exactly-at-cut record, drop below-cut records, preserve probability order and stable ties, compose with top, and reject invalid cutoffs and refused routes before sends. Run plain rank first, then the cut reading against the same cache or recording, and count zero extra model requests with the same question and cache identities. With no cutoff, existing literal output and error cases stay unchanged.
 - Defers: A new function, a grep alias, calibration, extra model calls and proxy business policy need no ticket. Release management stays with Ian.
 

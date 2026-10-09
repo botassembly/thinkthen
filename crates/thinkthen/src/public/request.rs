@@ -64,6 +64,7 @@ impl Request {
     /// Construct the current request from typed arguments.
     #[must_use]
     pub fn new(mut call: RequestCall) -> Self {
+        let function = call.function();
         let arguments = match &mut call {
             RequestCall::Decide(a)
             | RequestCall::Choose(a)
@@ -76,7 +77,7 @@ impl Request {
             | RequestCall::Recognize(a)
             | RequestCall::Relate(a) => a,
         };
-        native_controls(arguments);
+        native_controls(arguments, function);
         Self {
             schema: RequestVersion::V1,
             call,
@@ -147,7 +148,12 @@ impl RequestFunction {
         match name {
             "threshold" => matches!(
                 self,
-                Self::Decide | Self::Choose | Self::Tag | Self::Filter | Self::Recognize
+                Self::Decide
+                    | Self::Choose
+                    | Self::Tag
+                    | Self::Filter
+                    | Self::Rank
+                    | Self::Recognize
             ),
             "options_field" => self == Self::Choose,
             "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context"
@@ -315,7 +321,7 @@ impl std::fmt::Debug for RequestArguments {
     }
 }
 
-fn native_controls(arguments: &mut RequestArguments) {
+fn native_controls(arguments: &mut RequestArguments, function: RequestFunction) {
     let RequestQuestion::Definition { value } = &arguments.question else {
         return;
     };
@@ -339,7 +345,10 @@ fn native_controls(arguments: &mut RequestArguments) {
     if q.kind == crate::public::NativeQuestionKind::FindNone {
         arguments.options.none = true;
     }
-    if !q.authored_threshold && arguments.options.threshold.is_none() {
+    if function != RequestFunction::Rank
+        && !q.authored_threshold
+        && arguments.options.threshold.is_none()
+    {
         arguments.options.threshold = q.threshold.map(|rule| {
             if rule.is_cut() {
                 RequestThreshold::Cut(rule.bounds().0)

@@ -213,3 +213,7 @@ The specification and the demos are rewritten to this surface before any code ch
 ## Amendment, 2026-09-26: ADR 0048 batches records
 
 ADR 0048 makes records of one batch share one request, so they see each other. By default each request fills to the backend's limits. `--batch 1` sends one record a request, as line 103 and the clarification at line 153 say. By default `annotate` sends one request per batch for each distinct `on`, and every other record command one request per batch. Ian can overturn this.
+
+## Amendment, 2026-10-09: optional rank probability cutoff
+
+Ian approved `rank --threshold P` for plain and saved decide rank. The single inclusive cut follows [the threshold contract](../../../specification/threshold.md) and removes below-cut records before `--top`. An omitted cutoff preserves the full order. Saved score and question-set routes refuse authored or supplied cutoffs before sending. The reading uses stored yes probabilities and changes no model question, cache key or replay probability. The ten functions remain unchanged.

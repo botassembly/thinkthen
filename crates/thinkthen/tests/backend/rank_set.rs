@@ -279,6 +279,7 @@ fn set_owned_meanings_and_existing_display_conflicts_fail_without_sends() -> io:
         vec!["--details", "--scores"],
         vec!["--window", "2", "--field", "/body"],
         vec!["--top", "0"],
+        vec!["--threshold", "0.8"],
         vec!["--quiet"],
         vec!["--raw"],
     ] {

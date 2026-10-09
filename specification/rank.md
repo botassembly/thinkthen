@@ -5,7 +5,7 @@ Status: **Settled** for version one, by ADR 0007.
 Prints records in order of the probability of yes, or of the weighted value from a saved `score` question.
 
 ```text
-thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER] [--details] [-n] [--scores] [--around N] [BACKEND]
+thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--threshold P] [--field POINTER] [--details] [-n] [--scores] [--around N] [BACKEND]
 ```
 
 ## What it reads
@@ -68,13 +68,15 @@ SQL question sets remain separate work in ticket 0417 for 0.2. C and language bi
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
-`rank` takes no `--threshold`, no `--quiet`, and no `--raw`. Each is refused by name, and the message says which command carries it. A rule is refused in both homes, so a question file holding a `threshold` is refused too, at exit 5.
+`rank --threshold P` keeps plain and saved decide records whose yes probability is at least P. The optional cutoff accepts `0 < P <= 1` and refuses bands. A saved decide question may author the same cutoff under `threshold`; the command flag replaces it. An omitted cutoff keeps every record. Selection removes below-cut records before `--top`, retains stable ties, original records and original positions, and never changes probabilities, model questions, cache keys or replay answers. Every record is still judged. The existing result reading digest includes the cutoff; model request, cache and replay identities remain unchanged.
+
+Saved score questions and question sets refuse supplied or authored cutoffs before sending. Weighted score values are not probabilities. Their uncut ordering remains unchanged. `rank` takes no `--quiet` or `--raw`; each is refused by name.
 
 `--top N` takes a whole number of 1 or more. `--top 0` prints nothing and is a usage error.
 
 A line or JSONL record is written back as it arrived: nothing is re-encoded, and the line ending is written as a line feed. A CSV or TSV row is written as a compact JSON object in header order. A run that stops at a failed record has printed nothing at all, and the line on standard error says so.
 
-For a yes/no question, the request and answer are those of `decide`; a recording made by `decide` over the same records and request settings replays here. Its result/2 detailed rows have `question.verb: decide`, `answer.kind: yes_no`, `threshold: null`, and a one-based final position under `value`. The probability used for ordering is under `answer`. For a saved `score` question, the request is the same as `score` over the same records at equal framing and batch settings. Its detailed rows have `question.verb: score`, `answer.kind: score`, the final numeric position under `value`, and `threshold: null`. The full score answer retains the level/probability distribution used to compute the ordering value. The original record remains under `input` in either form.
+For a yes/no question, the request and answer are those of `decide`; a recording made by `decide` over the same records and request settings replays here. Its result/2 detailed rows have `question.verb: decide`, `answer.kind: yes_no`, `threshold: null` without a cutoff or the supplied cut with one, and a one-based final position under `value`. The probability used for ordering is under `answer`. For a saved `score` question, the request is the same as `score` over the same records at equal framing and batch settings. Its detailed rows have `question.verb: score`, `answer.kind: score`, the final numeric position under `value`, and `threshold: null`. The full score answer retains the level/probability distribution used to compute the ordering value. The original record remains under `input` in either form.
 
 ## Text display
 
@@ -146,4 +148,4 @@ When a run spans batches, `rank` compares reported yes probabilities or weighted
 
 `rank` takes no typed rubric. A saved `score` file supplies the levels for graded ordering. Yes/no ordering follows the vendor's own reranking method.
 
-`rank` orders and never selects. A user who wants a floor runs `filter` first, as the second example shows.
+`rank --threshold P` reads a probability floor directly for plain and saved decide questions. The optional floor precedes `--top` and requires no extra model call. The shared Request carries this reading in `options.threshold`; Rust, MCP and migrated language callers use native admission and selection.

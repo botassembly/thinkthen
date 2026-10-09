@@ -61,9 +61,9 @@ jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits
 {"path":"runbooks/backup.md","p":0.02,"value":6,"threshold":null}'
 ```
 
-`value` gives each row’s place in the order, starting at 1. `threshold` stays `null` because `rank` applies no cutoff. A ranked list is a suggestion about reading order and not a claim about any page. The backup runbook still has a place in the order, and nothing in the run says it answers anything.
+`value` gives each row’s place in the order, starting at 1. `threshold` stays `null` because this example supplies no cutoff. A ranked list is a suggestion about reading order and not a claim about any page. The backup runbook still has a place in the order, and nothing in the run says it answers anything.
 
-`rank` orders and never selects, so a floor is a separate command in front of it. [How-to 03](../03-grep-for-meaning/) is that command.
+Development 0.2 accepts `rank --threshold P` to apply a probability floor before `--top`. [How-to 03](../03-grep-for-meaning/) shows a separate filter for callers who need that stage.
 
 ## What can go wrong
 

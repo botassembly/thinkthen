@@ -23,10 +23,6 @@ fn homes() -> [(&'static [&'static str], &'static str); 7] {
 
 fn expected(name: &str, value: &str) -> &'static str {
     match name {
-        "rank" => concat!(
-            "thinkthen: --threshold: `rank` orders and never selects, ",
-            "so put a cut in `filter --threshold`\n"
-        ),
         "score" => concat!(
             "thinkthen: --threshold: `score` takes no rule, ",
             "so cut on the number with `jq -e`\n"

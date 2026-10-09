@@ -7,7 +7,7 @@ use super::{Description, Error, Question};
 use crate::core::{Cutting, QuestionFile, Typed, Verb, resolve};
 
 impl Question {
-    /// Rank by a described yes/no criterion, without an authored cut or band.
+    /// Rank by a described yes/no criterion, with no cutoff by default.
     ///
     /// # Errors
     /// Returns a usage error for blank text or a meaning outside the decide grammar.
@@ -28,14 +28,14 @@ impl Question {
     /// Admit a saved described decide or score question for ranking.
     ///
     /// # Errors
-    /// Returns a usage error for authored thresholds, another verb or invalid evidence pointers.
+    /// Returns a usage error for bands, score thresholds, another verb or invalid evidence pointers.
     pub fn rank_from_json(text: &str) -> Result<Self, Error> {
         let (file, batch) = QuestionFile::parse_top(text).map_err(Error::refused)?;
         if !matches!(file.verb(), Verb::Decide | Verb::Score) {
             return Err(Error::usage("rank takes a decide or score question"));
         }
         let typed = Typed {
-            cutting: Cutting::NoRule,
+            cutting: Cutting::RankCut,
             ..Typed::default()
         };
         let resolved = resolve(file.verb(), None, Some(&file), &typed).map_err(Error::refused)?;
@@ -45,8 +45,8 @@ impl Question {
                 .question()
                 .cloned()
                 .ok_or_else(|| Error::defect("a rank question file resolved no question"))?,
-            threshold: None,
-            authored_threshold: false,
+            threshold: resolved.threshold(),
+            authored_threshold: file.has_threshold(),
             model: (!resolved.sources().model_is_default()).then(|| resolved.model().clone()),
             profile: resolved.profile().cloned(),
             batch,

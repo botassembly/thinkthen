@@ -31,9 +31,8 @@ fn saved_score_rank_keeps_ordered_levels_and_descriptions() {
 }
 
 #[test]
-fn rank_rejects_authored_thresholds_and_other_functions() {
+fn rank_rejects_bands_score_thresholds_and_other_functions() {
     for json in [
-        r#"{"decide":"Relevant?","threshold":0.5}"#,
         r#"{"decide":"Relevant?","threshold":"0.2:0.8"}"#,
         r#"{"score":"Relevant?","levels":["low","high"],"threshold":0.5}"#,
         r#"{"score":"Relevant?","levels":["low","high"],"true":"meaning"}"#,

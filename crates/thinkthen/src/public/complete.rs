@@ -160,6 +160,14 @@ fn admitted(function: InputFunction, question: &Question) -> Result<(), Error> {
         InputFunction::Rank => &[Kind::Rank, Kind::Score],
         _ => return Err(Error::defect("a set function entered atomic admission")),
     };
+    if function == InputFunction::Rank
+        && (question.threshold.is_some_and(|rule| !rule.is_cut())
+            || (question.kind == Kind::Score && question.threshold.is_some()))
+    {
+        return Err(Error::usage(
+            "rank cutoff requires a decide probability and never a band",
+        ));
+    }
     only(question, kinds, function.name())
 }
 

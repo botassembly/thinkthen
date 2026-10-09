@@ -47,7 +47,7 @@ Each cut belongs to one question, model, output signal, labeled population, and 
 | `tag` | Complete detailed rows plus one human-label pointer | each label's probability independently; existing cuts 0.05 through 0.95 |
 | `score` | Complete detailed rows with trusted numeric levels | `value`; integer boundaries 1 through K minus 1 |
 | `filter` | Full labeled input joined to one recording-backed output per tested cut | output membership at each explicit tested cut; never infer records omitted at a lower cut |
-| `rank` | Complete detailed ranked rows | `answer.probability`; cuts 0.05 through 0.95 as a downstream review policy, not a command threshold |
+| `rank` | Complete detailed ranked rows | `answer.probability`; cuts 0.05 through 0.95 as a downstream review policy |
 | `find` | One complete detailed result and trusted winner per labeled set | winning option probability; cuts 0.05 through 0.95 as a downstream coverage policy, not a command threshold |
 | `annotate` | Complete detailed rows and mapped truth | existing mapped decide, choose, and tag support; project a named score to ordinary score rows before integer boundaries 1 through K minus 1 |
 | `recognize` | Complete labeled name candidates, or one recording-backed rerun per tested cut | entity `strength`; explicit tested cuts only, never reconstruct omitted names |
