@@ -38,3 +38,4 @@ Callers can use `rank --threshold P` to keep records whose yes probability is at
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed 1cc856481d5383afe888d385a4d14f914f213363; next: Inclusive rank cutoff is reviewed and landed. Run combined functional checks before closing; cache reuse and refused routes pass focused CLI, native and MCP cases.
