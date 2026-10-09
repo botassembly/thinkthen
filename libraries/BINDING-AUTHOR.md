@@ -14,7 +14,7 @@ C, Zig, Ada and COBOL use fixed layouts generated from Rust. Other C-interface l
 
 [0515](../sdlc/tickets/0515-one-public-api-per-language.md) keeps one obvious public API per language and removes the 0.1 JSON-string calls and duplicate APIs. Frozen 0.1 C symbols remain for C compatibility and are documented as deprecated. Their accepted legacy grammar and behavior remain protected by ADR 0125; this exception does not create a second host-language API.
 
-[0517](../sdlc/tickets/0517-prebuilt-native-libraries-in-every-package.md) requires each package to carry its prebuilt native library for supported platforms. Installation and the first call require no manual library path. Follow the language package's normal install command; package inventories come from the shared generated definition. Public installation text continues to describe the published release until 0.2 ships.
+[0517](../sdlc/tickets/0517-prebuilt-native-libraries-in-every-package.md) requires each package to carry its prebuilt native library for supported platforms. Installation and the first call require no manual library path. The [native package design](../sdlc/decisions/2026-10-09-native-package-design.md) fixes target pairs, runtime floors, package layout and loading, including the explicit pub exception that requires a PM ruling. Follow the language package's normal install command; package inventories come from the shared generated definition. Public installation text continues to describe the published release until 0.2 ships.
 
 ## Caller acceptance and code ownership
 
@@ -28,7 +28,7 @@ Minimize maintained logic across the engine, generator, templates and host glue 
 
 For an async host, a Task, Future or Promise type alone proves little. The installed held-provider case must show unrelated host work progressing and caller cancellation/cleanup returning before the provider is released. Native settlement may follow later; pending final facts stay pending. 0516 establishes the waiting and cancellation pattern; each migration proves its language's idiom without duplicating the native session test matrix. Synchronous hosts retain their normal execution model.
 
-Packaging design precedes the affected host migration. 0516 proves the first local NuGet install; 0517 owns other native assets and final distribution assembly, using 0501's common inventory. Supported targets and runtime floors come from that design, not from a language name alone. Install the final consumer artifact; a development archive, source import or generated declaration does not prove the shipped package.
+Packaging design precedes the affected host migration. 0517 records the package design; each host migration implements and proves its native assets. 0516 proves the first local NuGet install. 0501 owns the common inventory and final distribution assembly. Supported targets and runtime floors come from that design, not from a language name alone. Install the final consumer artifact; a development archive, source import or generated declaration does not prove the shipped package.
 
 ## Ten first-class items by language
 
