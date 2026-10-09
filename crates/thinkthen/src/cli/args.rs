@@ -521,6 +521,15 @@ impl std::fmt::Debug for RecognizeArguments {
 /// Everything `recognize` was asked before its input is read.
 #[derive(Args)]
 pub(crate) struct RecognizeArguments {
+    /// Literal boundary context; empty text clears fallback.
+    #[arg(long, value_name = "TEXT")]
+    pub(crate) boundary_context: Option<String>,
+    /// Literal context shared by kind and edge questions.
+    #[arg(long, value_name = "TEXT")]
+    pub(crate) kind_edge_context: Option<String>,
+    /// Literal relation context.
+    #[arg(long, value_name = "TEXT")]
+    pub(crate) relation_context: Option<String>,
     /// Teach boundary questions with bracket or JSON Lines examples from FILE.
     #[arg(long, value_name = "FILE", hide_short_help = true)]
     pub(crate) examples: Option<PathBuf>,

@@ -66,6 +66,7 @@ pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
 pub use crate::core::{
     RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionSeedSpan,
+    RecognitionStageContext,
 };
 mod recognize_question;
 pub use recognize_question::RecognizeQuestionFile;

@@ -43,6 +43,12 @@ impl ResolvedRelationRule<'_> {
 #[derive(Clone, Copy)]
 pub struct RecognitionReading<'a>(pub(crate) &'a core::RecognizeSpec);
 impl RecognitionReading<'_> {
+    /// Resolved literal stage overrides, including explicit empty strings.
+    #[must_use]
+    pub fn stage_context(&self) -> &crate::RecognitionStageContext {
+        &self.0.stage_context
+    }
+
     /// Caller task wording, absent for the compatibility default.
     #[must_use]
     pub fn instructions(&self) -> Option<&str> {

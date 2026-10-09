@@ -137,6 +137,12 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
             options.context_field = a.context_field.clone();
             options.examples_field = a.examples_field.clone();
             options.seed_spans_field = a.seed_spans_field.clone();
+            options.stage_context = Some(crate::RecognitionStageContext {
+                boundary: a.boundary_context.clone(),
+                kind_edge: a.kind_edge_context.clone(),
+                relation: a.relation_context.clone(),
+            })
+            .filter(|c| !c.is_empty());
             RequestCall::Recognize(arguments(&mut a.common.clone(), question, options)?)
         }
         Command::Relate(a) => {

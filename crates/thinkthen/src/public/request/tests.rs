@@ -115,3 +115,49 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn stage_context_is_closed_strict_and_recognition_only() {
+    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"version":1,"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":{"stage_context":CONTROL}}}"#;
+    for control in [
+        r#"{"boundary":"","kind_edge":"two\nlines","relation":"r"}"#,
+        "{}",
+    ] {
+        let text = request.replace("CONTROL", control);
+        Request::from_json(&text).unwrap().admit().unwrap();
+    }
+    for control in [
+        "null",
+        r#"{"boundary":null}"#,
+        r#"{"boundary":1}"#,
+        r#"{"other":"x"}"#,
+        r#"{"boundary":"x","boundary":"y"}"#,
+    ] {
+        assert!(Request::from_json(&request.replace("CONTROL", control)).is_err());
+    }
+    let saved = r#"{"version":1,"recognize":{"stage_context":CONTROL}}"#;
+    for control in [
+        "null",
+        r#"{"relation":null}"#,
+        r#"{"other":"x"}"#,
+        r#"{"relation":"x","relation":"y"}"#,
+    ] {
+        assert!(
+            crate::RecognizeQuestionFile::from_json(&saved.replace("CONTROL", control)).is_err()
+        );
+    }
+    let question = crate::RecognizeQuestionFile::from_json(
+        &saved.replace("CONTROL", r#"{"boundary":"saved","relation":"retained"}"#),
+    )
+    .unwrap();
+    let prepared = question
+        .question()
+        .clone()
+        .with_stage_context(crate::RecognitionStageContext {
+            boundary: Some("".into()),
+            ..crate::RecognitionStageContext::default()
+        });
+    let encoded = serde_json::to_string(&RequestDefinition::from(prepared)).unwrap();
+    assert!(encoded.contains(r#""stage_context":{"boundary":"","relation":"retained"}"#));
+    assert!(!format!("{:?}", question).contains("retained"));
+}
