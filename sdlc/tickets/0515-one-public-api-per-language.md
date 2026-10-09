@@ -12,6 +12,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
 Reviews: revision ec618605c3dc8027da68bd7da9a200224702b8b3, accept
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 The review amendment below preserves frozen C compatibility independently of whether a current caller is visible.
@@ -31,6 +33,10 @@ Each language has one obvious entry point. The 0.1 JSON-string calls, duplicate 
 Preserve every frozen 0.1 C symbol, signature, layout, error code and accepted legacy JSON-door behavior under ADRs 0101 and 0125. Document compatibility exports separately from the recommended 0.2 API. Remove legacy host-language APIs under Ian's ruling only after replacement installed parity. C preservation does not depend on finding a current caller.
 
 The first slice removes shipped demo entry points from `libraries/jvm/kotlin/KotlinCaller.kt` and `libraries/jvm/scala/ScalaCaller.scala`, updates `libraries/jvm/tests/package_check.py`, and names any affected installed example before editing. Later API-removal slices follow their language migration and name exact files. Public symbol checks compare against the declared contract, not a list derived only from the implementation.
+
+## Surface assessment amendment
+
+One API is one coherent family of named typed calls, not one generic JSON entry point. Preserve useful bare/complete views and host-appropriate sync/async forms within that family. Each removal slice names the replacement calls and includes a short upgrade mapping in its existing README. Documentation cleanup 0467 consolidates that guidance; it does not postpone explaining a removed API. Count maintained generator/template code as well as host code when reporting the change. Keep the existing dead-code slice independent; later removals follow the corresponding installed migration.
 
 ## Progress
 

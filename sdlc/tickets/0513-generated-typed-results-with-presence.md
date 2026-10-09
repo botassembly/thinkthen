@@ -18,6 +18,8 @@ Reviews: revision 7a1f13950217a608f2d54830a7b53ddad7f846c1, accept
 
 Reviews: revision af05f73ad0f67267cf9d58174449e53689ddb823, accept
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 Rust owns the result types. A generator emits each language's typed results from them, with explicit presence wherever missing and explicit null differ. Hand-copied result schemas and readers go.
@@ -35,6 +37,14 @@ Rust owns the result types. A generator emits each language's typed results from
 Extend the existing Rust-derived schema pipeline; do not create another schema framework or runtime validator. Keep both complete schemas generated together and reuse `sdlc/scripts/generate-c-header.py`; constrained layouts derive from that header. Preserve missing, null, failures, every known observation and unknown JSON members through ordinary conversion or round trip. Unknown members never activate proxy behavior.
 
 The initial shared slice claims `crates/thinkthen/src/schema_tests.rs`, `crates/thinkthen/src/schema_tests/complete.rs`, `crates/thinkthen/src/public/results/complete_facts.rs`, `specification/result.schema.json`, `crates/thinkthen/src/public/results/complete.schema.json`, and new `sdlc/generators/results/generate.py` with target templates under `sdlc/generators/results/templates/`. Name each template and existing gate entry before implementing that target. Host outputs belong to their migration slices. Amend ADR 0112 sections 4 and 6 under Ian's ruling to replace the typed-host prohibition while retaining schema ownership, versioning and tolerant reading; claim `sdlc/planning/adr/0112-rust-owns-the-result-schema.md`.
+
+## Surface assessment amendment
+
+This amendment assigns completion boundaries. 0513 owns the complete Rust presentation and schema graph, shared generation mechanics, and the generated C# reference needed by 0516. It does not wait for every installed language to migrate. The remaining target templates, generated host outputs and installed adoption belong to 0494, 0496–0498, 0504, 0505 and 0518. They extend this generator and its common graph, with distinct target paths. Python async and cleanup belong to 0496; other host scheduling belongs to the corresponding migration. This supersedes the broader all-language completion and async deferral wording above without dropping any target or shared conformance requirement.
+
+Complete the native presentation repairs identified in the 0513 record before claiming complete generation. In particular, claim the actual annotation and relation serializers under `crates/thinkthen/src/core/result/complete/` and the question presentation paths before that slice. Preserve native sources, observations, partial usage, failed-member thresholds, described labels, authored readings and located ordinals. Use the request or session function to select an atomic result type; an unrestricted object shape cannot identify the function. Extend existing native-to-generated cases for these losses. A schema round trip alone cannot prove information that its serializer omitted.
+
+0513 supplies the complete semantic graph to 0505. 0505 owns additive C session views and their mapping before generating constrained-language declarations; a regenerated old C header cannot establish completeness. Keep this work off the C# pilot's prerequisites. The shared generator checks staleness and refuses unsupported known forms; it does not become a second runtime validator. Retain unknown members through the existing conversion contract.
 
 ## Progress
 

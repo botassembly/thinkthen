@@ -4,12 +4,16 @@ Status: OPEN. The review confirmed that file descriptors accumulate before nativ
 
 Milestone: 0.2
 
+Depends on: 0503
+
 Owner: builder.
 Severity: medium resource correctness.
 
 Reviews: revision caddaecbc, accept
 
 Reviews: revision 56af78e68, accept
+
+Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
@@ -23,3 +27,7 @@ DuckDB complete-file calls bound descriptor staging before native admission, so 
   Claim `databases/duckdb/**`, `crates/thinkthen/src/public/**` and `libraries/c/src/**`. Coordinate session ownership with 0503.
 - Proof: Fresh design/ticket and code reviews, with High review for unsafe ownership changes. Existing reader/complete/cancellation fixtures plus a deterministic bounded-admission case that fails on the accumulator path. No memory-exhaustion campaign, paid calls, hosted workflow or new proof framework.
 - Defers: No DuckDB feature redesign, provider limit tuning or release management. Process exhaustion is inferred and must remain labeled that way. Changes to generic rank or total result-memory contracts require a separate reviewed design, not an arbitrary cap in this adapter.
+
+## Surface assessment amendment
+
+0503 and ADR 0129 own the shared session, C handles, queues and sink dispatch. Consume that interface here; do not build a second one. This supersedes this ticket's broad public/C implementation claim. Claim the actual DuckDB calling-thread producer, native bridge and existing file/cancellation tests in the implementation slice. Apply ADR 0129's precise read-ahead rule: runtime closure may race one already-read unaccepted descriptor; after Closed, advance no further. Static declaration refusals still precede file opens and reads. 0495 follows this bounded feed for its Request migration.
