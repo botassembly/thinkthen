@@ -16,9 +16,45 @@ fn image_sources_charge_ordered_duplicates_and_stop_before_the_tail() {
     std::fs::write(&image, &bytes).unwrap();
     let tail = folder.join("invalid-tail.png");
     std::fs::write(&tail, b"not an image").unwrap();
+    let options = InputReaderOptions {
+        reading: ReaderOptions {
+            unit: SourceUnit::File,
+            window: None,
+        },
+        media: ReaderMedia::Image,
+    };
+    for (limit, successes) in [(bytes.len() * 2, 2), (bytes.len() * 2 - 1, 1)] {
+        let mut source = SourceItems::bounded_images([&image, &image], options, limit).unwrap();
+        for _ in 0..successes {
+            assert!(source.next().unwrap().is_ok());
+        }
+        if successes == 1 {
+            assert_eq!(
+                source.next().unwrap().unwrap_err().detail().message(),
+                "retained attachments exceed the input byte ceiling"
+            );
+        }
+        assert!(source.next().is_none());
+    }
+    std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "large-input boundary runs in the release suite"]
+fn release_only_native_image_sources_retain_their_default_byte_ceiling() {
+    let folder = std::env::temp_dir().join(format!(
+        "thinkthen-mcp-native-image-budget-{}",
+        std::process::id()
+    ));
+    std::fs::create_dir(&folder).unwrap();
+    let image = folder.join("original.png");
+    let bytes = std::fs::read(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../specification/fixtures/images/above-spike.png"),
+    )
+    .unwrap();
+    std::fs::write(&image, &bytes).unwrap();
     let admitted = MAX_MESSAGE / bytes.len();
-    let mut paths = vec![image.clone(); admitted + 1];
-    paths.push(tail);
     let options = InputReaderOptions {
         reading: ReaderOptions {
             unit: SourceUnit::File,
@@ -35,19 +71,6 @@ fn image_sources_charge_ordered_duplicates_and_stop_before_the_tail() {
             .len(),
         admitted + 1
     );
-    for (limit, successes) in [(bytes.len() * 2, 2), (bytes.len() * 2 - 1, 1)] {
-        let mut source = SourceItems::bounded_images([&image, &image], options, limit).unwrap();
-        for _ in 0..successes {
-            assert!(source.next().unwrap().is_ok());
-        }
-        if successes == 1 {
-            assert_eq!(
-                source.next().unwrap().unwrap_err().detail().message(),
-                "retained attachments exceed the input byte ceiling"
-            );
-        }
-        assert!(source.next().is_none());
-    }
     std::fs::remove_dir_all(folder).unwrap();
 }
 

@@ -472,7 +472,8 @@ mod tests {
     /// it. Without the bound a stream with no line feed would be read into
     /// memory whole, however long it ran.
     #[test]
-    fn a_record_is_read_no_further_than_two_bytes_past_the_limit() {
+    #[ignore = "large-input boundary runs in the release suite"]
+    fn release_only_a_record_is_read_no_further_than_two_bytes_past_the_limit() {
         let endless = crate::core::MAX_RECORD_BYTES * 4;
         for streams in [true, false] {
             let reader = std::io::BufReader::new(std::io::repeat(b'x').take(endless as u64));
@@ -485,7 +486,8 @@ mod tests {
 
     /// A record of exactly the limit still arrives whole, however it was ended.
     #[test]
-    fn a_record_of_exactly_the_limit_arrives_whole_with_its_ending() {
+    #[ignore = "large-input boundary runs in the release suite"]
+    fn release_only_a_record_of_exactly_the_limit_arrives_whole_with_its_ending() {
         let limit = crate::core::MAX_RECORD_BYTES;
         for (ending, expected) in [("", limit), ("\n", limit + 1), ("\r\n", limit + 2)] {
             let mut bytes = vec![b'x'; limit];

@@ -67,7 +67,9 @@ fn record_projection_with_model_override_sends_only_selected_fields_and_native_m
 }
 
 #[test]
-fn source_rank_charges_original_utf8_bytes_before_projection_and_never_reads_the_tail() {
+#[ignore = "large-input boundary runs in the release suite"]
+fn release_only_source_rank_charges_original_utf8_bytes_before_projection_and_never_reads_the_tail()
+{
     use crate::{CallOptions, RecordReading, SourceItem, SourceRecord};
     use std::cell::Cell;
     let envelope = r#"{"public":"x","private":""}"#;
