@@ -58,10 +58,10 @@ refuses <- function(expr) {
   stopifnot(inherits(error, "error"), conditionMessage(error) == "invalid complete result")
 }
 for (id in c(paste(rep("A",64),collapse=""), paste(rep("a",63),collapse=""), "0")) refuses(.tt_complete_decode("AnswerId", id))
-for (change in list(list(schema="thinkthen.result/1"), list(value=0), list(answer=list(kind="yes_no",probability=TRUE)), list(proxy=NULL), list(position=list(file="x",first=4)))) {
+for (change in list(list(schema="thinkthen.result/1"), list(value=0), list(answer=list(kind="yes_no",probability=TRUE)), list(position=list(file="x",first=4)))) {
   row <- f$results[[1L]]$result
   row[names(change)] <- change
-  refuses(.tt_complete_decode("DecideResult", row))
+  refuses(.tt_complete_decode("DecideResult", row, TRUE))
 }
 for (change in list(list(origin="proxy"),list(cached=FALSE),list(answered_by="invented"),list(observations=list()),list(failed_questions=1))) {
   meta <- f$results[[1L]]$result$meta
@@ -141,3 +141,22 @@ for (raw in f$observed_facts) {
     same_json(.tt_complete_plain(facts$usage_persistence), raw$usage_persistence),
     same_json(.tt_complete_plain(facts), raw))
 }
+
+extension <- list(null=NULL, false=FALSE, zero=0L, array=list(NULL,FALSE,0L), object=list(nested=list()))
+for (fixture in c(f$results,f$native_members)) {
+  raw <- fixture$result
+  raw["proxy"] <- list(NULL); raw$extension <- extension; raw$meta$extension <- extension
+  if (fixture$type == "AnnotateResult") raw$answers <- lapply(raw$answers,function(entry) { entry$extension <- extension; entry })
+  if (fixture$type == "RelateResult") raw$answer$questions <- lapply(raw$answer$questions,function(entry) { entry$extension <- extension; entry })
+  result <- .tt_complete_decode(fixture$type,raw,TRUE)
+  stopifnot(same_json(jsonlite::fromJSON(.tt_complete_json_text(result),simplifyVector=FALSE),raw),inherits(result$answer_id,"thinkthen_AnswerId"))
+  raw$extension$array <- c(raw$extension$array,list("mutated"))
+  stopifnot(same_json(result$extension,extension),!any(grepl("extension",capture.output(print(result)))))
+}
+for (case in list(list(kind="AnnotationEntry",entry=f$results[[8L]]$result$answers$ok),list(kind="RelationEntry",entry=f$results[[10L]]$result$answer$questions[[1L]]))) {
+  case$entry$failure_id <- paste(rep("b",64),collapse="")
+  refuses(.tt_complete_decode(case$kind,case$entry,TRUE))
+}
+refuses(.tt_complete_decode("DecideSpec",list(decide="Q",proxy=NULL)))
+raw <- f$results[[1L]]$result; raw$answer <- list(kind="new",probability=.5)
+refuses(.tt_complete_decode("DecideResult",raw,TRUE))

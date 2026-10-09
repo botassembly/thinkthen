@@ -60,8 +60,8 @@ test('facts and terminal errors retain reported values and reject fabricated fie
   for (const id of ['A'.repeat(64), 'a'.repeat(63), 0]) assert.throws(() => AnswerId(id), /invalid complete result/);
   for (const change of [
     { schema: 'thinkthen.result/1' }, { answer_id: 'a'.repeat(63) }, { value: 0 },
-    { answer: { kind: 'yes_no', probability: true } }, { position: { file: 'x', first: 4 } }, { proxy: null },
-  ]) assert.throws(() => decode('DecideResult', { ...fixture.results[0].result, ...change }), /invalid complete result/);
+    { answer: { kind: 'yes_no', probability: true } }, { position: { file: 'x', first: 4 } },
+  ]) assert.throws(() => decode('DecideResult', { ...fixture.results[0].result, ...change },true), /invalid complete result/);
   for (const change of [{ origin: 'proxy' }, { cached: false }, { answered_by: 'invented' }, { observations: [] }, { failed_questions: 1 }]) {
     assert.throws(() => decode('Meta', { ...fixture.results[0].result.meta, ...change }), /invalid complete result/);
   }
@@ -150,4 +150,24 @@ test('current facts preserve request measurements and persistence', () => {
     assert.deepEqual(facts.usage_persistence, raw.usage_persistence);
     assert.deepEqual(JSON.parse(JSON.stringify(facts)), raw);
   }
+});
+
+test('output extensions round trip owned JSON while requests and alternative identities stay strict', () => {
+  const extension = {null:null,false:false,zero:0,array:[null,false,0],object:JSON.parse('{"nested":[],"__proto__":{"inert":true}}')};
+  for (const fixtureRow of [...fixture.results,...fixture.native_members]) {
+    const raw = structuredClone(fixtureRow.result);
+    raw.proxy = null; raw.extension = structuredClone(extension); raw.meta.extension = structuredClone(extension);
+    if (fixtureRow.type === 'AnnotateResult') for (const entry of Object.values(raw.answers)) entry.extension = structuredClone(extension);
+    if (fixtureRow.type === 'RelateResult') for (const entry of raw.answer.questions) entry.extension = structuredClone(extension);
+    const result = decode(fixtureRow.type, raw, true);
+    assert.deepEqual(JSON.parse(JSON.stringify(result)), raw);
+    raw.extension.array.push('mutated');
+    assert.deepEqual(result.extension, extension);
+    assert.equal(inspect(result).includes('extension'), false);
+  }
+  for (const [kind, entry] of [['AnnotationEntry',fixture.results[7].result.answers.ok],['RelationEntry',fixture.results[9].result.answer.questions[0]]]) {
+    assert.throws(() => decode(kind,{...entry,failure_id:'b'.repeat(64)},true),/invalid/);
+  }
+  assert.throws(() => decode('DecideSpec',{decide:'Q',proxy:null}),/invalid/);
+  assert.throws(() => decode('DecideResult',{...fixture.results[0].result,answer:{kind:'new',probability:.5}},true),/invalid/);
 });

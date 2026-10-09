@@ -1178,4 +1178,335 @@
       }
     }
   ]
+,
+  "native_members": [
+  {
+    "type": "AnnotateResult",
+    "result": {
+      "answer_id": "75a9e9da3e4eb77c568981b0b548adfd4fe840fa0a8af45d448641990a7c52cd",
+      "answers": {
+        "failed": {
+          "failure": {
+            "cause": "wrong_kind",
+            "kind": "backend"
+          },
+          "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c",
+          "observations": [
+            {
+              "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+            }
+          ],
+          "question": {
+            "text": "Fails?",
+            "verb": "decide"
+          },
+          "question_sources": [
+            {
+              "answered_by": "fixed",
+              "batch_size": 3,
+              "origin": "live"
+            }
+          ],
+          "request": "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+          "threshold": 0.5,
+          "usage": {
+            "input_tokens": 3
+          }
+        },
+        "good": {
+          "answer": {
+            "kind": "yes_no",
+            "probability": 0.9
+          },
+          "answer_id": "3a32013889fcdffbd93b1abf698b1d28a56ba898f213a860549df141680561a4",
+          "observations": [
+            {
+              "observation_id": "0c3f35035feb2c37f311700e366e8d19ea2b3569a4f834f642f6a0f8168c187e"
+            }
+          ],
+          "question": {
+            "text": "Good?",
+            "verb": "decide"
+          },
+          "question_sources": [
+            {
+              "answered_by": "fixed",
+              "batch_size": 3,
+              "origin": "live"
+            }
+          ],
+          "request": "82b36d84c1dc927ebacdc9165705812bfdd0ad4154f6e5c5e707475a1b4f4fae",
+          "threshold": 0.5,
+          "usage": {
+            "input_tokens": 3
+          },
+          "value": true
+        },
+        "unsure": {
+          "answer": {
+            "kind": "yes_no",
+            "probability": 0.5
+          },
+          "answer_id": "b215b287ecbb02b723680723b9e0e23fcaebcc307b2bc206449eacfa051302fc",
+          "observations": [
+            {
+              "observation_id": "1c9c73fe4c1b6542e990d9712e6232fbe395bd40cd2c627a8996558bcedd7a58"
+            }
+          ],
+          "question": {
+            "text": "Sure?",
+            "verb": "decide"
+          },
+          "question_sources": [
+            {
+              "answered_by": "fixed",
+              "batch_size": 3,
+              "origin": "live"
+            }
+          ],
+          "request": "ef4b341b471f7ba45e41d6f0e71a23121c91bec10bf958a5bea19d96a038df9d",
+          "threshold": "0.1:0.9",
+          "usage": {
+            "input_tokens": 3
+          },
+          "value": null
+        }
+      },
+      "input": "Original.",
+      "meta": {
+        "answered_by": "fixed",
+        "attempts": [
+          {
+            "ordinal": 1,
+            "outcome": "ok",
+            "request_sha256": "20fb6e40b08780cd3e08296d14952f5da7ac0356cbc88150d4d5b0291047d919",
+            "sdk_request_id": "dd78a5622c69c09eaf593cfa96072a461e4ef7a5f8d31d05e2aa89f9722635c2",
+            "status": 200,
+            "wall_ms": 4
+          }
+        ],
+        "cached": false,
+        "context_sha256": "609f08a01dc1bc6e6144d7e2148be83b56b1c628548fbe35670083e8b583eec2",
+        "failed_questions": 1,
+        "model": "fixed",
+        "observations": [
+          {
+            "observation_id": "0c3f35035feb2c37f311700e366e8d19ea2b3569a4f834f642f6a0f8168c187e"
+          },
+          {
+            "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+          },
+          {
+            "observation_id": "1c9c73fe4c1b6542e990d9712e6232fbe395bd40cd2c627a8996558bcedd7a58"
+          }
+        ],
+        "origin": "live",
+        "question_sources": [
+          {
+            "answered_by": "fixed",
+            "batch_size": 3,
+            "origin": "live"
+          },
+          {
+            "answered_by": "fixed",
+            "batch_size": 3,
+            "origin": "live"
+          },
+          {
+            "answered_by": "fixed",
+            "batch_size": 3,
+            "origin": "live"
+          }
+        ],
+        "questions_sha256": "607d560a705c50d8d490275dbc74d375e0ae7daa72e8c1294d4df5382962542a",
+        "requests": [
+          "82b36d84c1dc927ebacdc9165705812bfdd0ad4154f6e5c5e707475a1b4f4fae",
+          "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+          "ef4b341b471f7ba45e41d6f0e71a23121c91bec10bf958a5bea19d96a038df9d"
+        ],
+        "requests_sent": 1,
+        "tool": "thinkthen 0.2.0",
+        "url": "http://127.0.0.1:37965/v1/systemone",
+        "usage": {
+          "input_tokens": 9
+        }
+      },
+      "schema": "thinkthen.result/2",
+      "value": {
+        "failed": {
+          "failed": {
+            "cause": "wrong_kind",
+            "kind": "backend"
+          }
+        },
+        "good": true,
+        "unsure": null
+      }
+    }
+  },
+  {
+    "type": "RelateResult",
+    "result": {
+      "answer": {
+        "questions": [
+          {
+            "accepted": true,
+            "answer": {
+              "kind": "yes_no",
+              "probability": 0.9
+            },
+            "answer_id": "97dfdd60ac3e38c59b453901188f429f854bd459df9550f73499f096413e86c3",
+            "direction": "source_to_target",
+            "method": "yes_no",
+            "observations": [
+              {
+                "observation_id": "ce2f6901b75fc72ca510589b09610cb5437d700814a874946c8f6a1dd9c58ec1"
+              }
+            ],
+            "probability": 0.9,
+            "question": {
+              "text": "Is it true that i1 follows i2?",
+              "verb": "decide"
+            },
+            "question_sources": [
+              {
+                "answered_by": "fixed",
+                "batch_size": 2,
+                "origin": "live"
+              }
+            ],
+            "reads": "follows",
+            "relation": "follows",
+            "request": "32e4bc3e7caf208cb1722fa46e1fc2f67bcea16ee5ba637e3ed5f93317bc022f",
+            "source": {
+              "kind": "person",
+              "name": "Ada"
+            },
+            "target": {
+              "kind": "person",
+              "name": "Grace"
+            },
+            "threshold": 0.5
+          },
+          {
+            "direction": "source_to_target",
+            "failure": {
+              "cause": "wrong_kind",
+              "kind": "backend"
+            },
+            "failure_id": "85ff50fe5ced4811653921beec04b6fe1f1b04cccfc02cc8566cdc432cb9c890",
+            "method": "yes_no",
+            "observations": [
+              {
+                "failure_id": "85ff50fe5ced4811653921beec04b6fe1f1b04cccfc02cc8566cdc432cb9c890"
+              }
+            ],
+            "question": {
+              "text": "Is it true that i2 follows i1?",
+              "verb": "decide"
+            },
+            "question_sources": [
+              {
+                "answered_by": "fixed",
+                "batch_size": 2,
+                "origin": "live"
+              }
+            ],
+            "reads": "follows",
+            "relation": "follows",
+            "request": "619ce1bb8bb67ccebf25b39248d227429bbafe2b55e0810cbfe956a0756467a2",
+            "source": {
+              "kind": "person",
+              "name": "Grace"
+            },
+            "target": {
+              "kind": "person",
+              "name": "Ada"
+            },
+            "threshold": 0.5
+          }
+        ]
+      },
+      "answer_id": "c3f44e9594dac1a4a3b86bc5691a6b1fb8782675a85059a3b8b2285db44fdf4f",
+      "meta": {
+        "answered_by": "fixed",
+        "attempts": [
+          {
+            "ordinal": 1,
+            "outcome": "ok",
+            "request_sha256": "0784b7e949d3ec353d8cc34b54c433554ca90bdee9deede4a08965428a9db03f",
+            "sdk_request_id": "6c6a58920ea810b45418262f0fb69da2fc570e4d5cf8693f826ee25aad240c34",
+            "status": 200,
+            "wall_ms": 4
+          }
+        ],
+        "cached": false,
+        "context_sha256": "609f08a01dc1bc6e6144d7e2148be83b56b1c628548fbe35670083e8b583eec2",
+        "failed_questions": 1,
+        "model": "fixed",
+        "observations": [
+          {
+            "observation_id": "ce2f6901b75fc72ca510589b09610cb5437d700814a874946c8f6a1dd9c58ec1"
+          },
+          {
+            "failure_id": "85ff50fe5ced4811653921beec04b6fe1f1b04cccfc02cc8566cdc432cb9c890"
+          }
+        ],
+        "origin": "live",
+        "question_sha256": "84d926ac48cc54a9d62eb397cd0aa57366fe3942331098aedb4781dfd9675d8d",
+        "question_sources": [
+          {
+            "answered_by": "fixed",
+            "batch_size": 2,
+            "origin": "live"
+          },
+          {
+            "answered_by": "fixed",
+            "batch_size": 2,
+            "origin": "live"
+          }
+        ],
+        "requests": [
+          "32e4bc3e7caf208cb1722fa46e1fc2f67bcea16ee5ba637e3ed5f93317bc022f",
+          "619ce1bb8bb67ccebf25b39248d227429bbafe2b55e0810cbfe956a0756467a2"
+        ],
+        "requests_sent": 1,
+        "tool": "thinkthen 0.2.0",
+        "url": "http://127.0.0.1:42885/v1/systemone"
+      },
+      "question": {
+        "fields": {
+          "kind": "/kind",
+          "name": "/name"
+        },
+        "relations": [
+          {
+            "either": false,
+            "name": "follows",
+            "reads": "follows",
+            "source": "person",
+            "target": "person"
+          }
+        ],
+        "threshold": 0.5,
+        "verb": "relate"
+      },
+      "schema": "thinkthen.result/2",
+      "value": [
+        {
+          "probability": 0.9,
+          "relation": "follows",
+          "source": {
+            "kind": "person",
+            "name": "Ada"
+          },
+          "target": {
+            "kind": "person",
+            "name": "Grace"
+          }
+        }
+      ]
+    }
+  }
+]
 }

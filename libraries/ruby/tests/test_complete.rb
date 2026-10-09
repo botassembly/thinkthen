@@ -85,9 +85,9 @@ class CompleteCarrierTest < Minitest::Test
     assert_instance_of C::SdkRequestId, failed.attempts.first.sdk_request_id
     ["A" * 64, "a" * 63, 0].each { |id| assert_raises(ArgumentError) { C::AnswerId.new(id) } }
     [{"schema" => "thinkthen.result/1"}, {"answer_id" => "a" * 63}, {"value" => 0},
-     {"answer" => {"kind" => "yes_no", "probability" => true}}, {"proxy" => nil},
+     {"answer" => {"kind" => "yes_no", "probability" => true}},
      {"position" => {"file" => "x", "first" => 4}}].each do |change|
-      assert_raises(ArgumentError) { C.decode("DecideResult", FIXTURE["results"][0]["result"].merge(change)) }
+      assert_raises(ArgumentError) { C.decode("DecideResult", FIXTURE["results"][0]["result"].merge(change), preserve_unknown: true) }
     end
     [{"origin" => "proxy"}, {"cached" => false}, {"answered_by" => "invented"},
      {"observations" => []}, {"failed_questions" => 1}].each do |change|
@@ -155,4 +155,28 @@ class CompleteCarrierTest < Minitest::Test
     end
   end
 
+end
+
+class CompleteCarrierTest
+  def test_output_extensions_keep_owned_json_and_strict_request_and_identity_boundaries
+    extension = {"null"=>nil,"false"=>false,"zero"=>0,"array"=>[nil,false,0],"object"=>{"nested"=>[]}}
+    (FIXTURE["results"] + FIXTURE["native_members"]).each do |fixture|
+      raw = Marshal.load(Marshal.dump(fixture["result"]))
+      raw["proxy"] = nil; raw["extension"] = Marshal.load(Marshal.dump(extension)); raw["meta"]["extension"] = extension
+      entries = fixture["type"] == "AnnotateResult" ? raw["answers"].values : fixture["type"] == "RelateResult" ? raw["answer"]["questions"] : []
+      entries.each { |entry| entry["extension"] = extension }
+      result = C.decode(fixture["type"], raw, preserve_unknown: true)
+      assert_equal raw, C.to_json_value(result)
+      raw["extension"]["array"] << "mutated"
+      assert_equal extension, C.to_json_value(result)["extension"]
+      assert_instance_of C::AnswerId, result.answer_id
+      refute_includes result.inspect, "extension"
+    end
+    [["AnnotationEntry",FIXTURE["results"][7]["result"]["answers"]["ok"]],
+     ["RelationEntry",FIXTURE["results"][9]["result"]["answer"]["questions"][0]]].each do |kind, entry|
+      assert_raises(ArgumentError) { C.decode(kind,entry.merge("failure_id"=>"b"*64),preserve_unknown: true) }
+    end
+    assert_raises(ArgumentError) { C.decode("DecideSpec",{"decide"=>"Q","proxy"=>nil}) }
+    assert_raises(ArgumentError) { C.decode("DecideResult",FIXTURE["results"][0]["result"].merge("answer"=>{"kind"=>"new","probability"=>0.5}),preserve_unknown: true) }
+  end
 end
