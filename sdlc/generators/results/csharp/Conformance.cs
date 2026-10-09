@@ -224,6 +224,25 @@ static class Conformance
         var missingReading = member["question"]!.DeepClone().AsObject();
         missingReading.Remove("true");
         Check(((QuestionDecide)Read(missingReading, Question.Read)).True.State == PresenceState.Missing, "missing authored reading differs from null");
+        if (args.Length > 1)
+        {
+            var native = JsonNode.Parse(File.ReadAllText(args[1]))!["results"]!.AsArray();
+            var nativeRelation = native.Single(row => row!["type"]!.GetValue<string>() == "RelateResult")!["result"]!;
+            foreach (var source in nativeRelation["answer"]!["questions"]!.AsArray())
+            {
+                var nativeMember = Read(source!, RelationMember.Read);
+                var sources = nativeMember is RelationMemberAnswerId success ? success.QuestionSources : ((RelationMemberFailureId)nativeMember).QuestionSources;
+                var nativeObservations = nativeMember is RelationMemberAnswerId answered ? answered.Observations : ((RelationMemberFailureId)nativeMember).Observations;
+                var reading = nativeMember is RelationMemberAnswerId answer ? answer.Question : ((RelationMemberFailureId)nativeMember).Question;
+                var rule = nativeMember is RelationMemberAnswerId accepted ? accepted.Threshold : ((RelationMemberFailureId)nativeMember).Threshold;
+                Check(sources.Single().AnsweredBy == "fixed" && sources.Single().BatchSize.Value == 2, "generated member retains actual native batch source");
+                Check(nativeObservations.Count == 1, "generated member retains actual native observation");
+                Retains(source!["observations"]![0]!, nativeObservations.Single());
+                Check(((QuestionDecide)reading).Text.GetString() == source!["question"]!["text"]!.GetValue<string>(), "generated member retains actual native question");
+                Check(rule is ThresholdNumber numeric && numeric.Value == 0.5, "generated member retains actual native threshold");
+                Retains(source!, nativeMember);
+            }
+        }
         Variants(fixture);
         RoundTrip(fixture["facts"]!);
         // Final failure facts use exactly the same generated carrier.
