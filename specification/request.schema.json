@@ -1262,10 +1262,10 @@
                   }
                 },
                 "snippet_pieces": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "title": "uint32",
+                  "description": "Recognition tokenizer pieces on each side; omission retains the saved width.",
                   "type": "integer",
                   "format": "uint32",
+                  "maximum": 4294967295,
                   "minimum": 0
                 },
                 "stage_context": {
@@ -1877,6 +1877,7 @@
           "description": "Recognition tokenizer pieces on each side; omission retains the saved width.",
           "type": "integer",
           "format": "uint32",
+          "maximum": 4294967295,
           "minimum": 0
         },
         "stage_context": {

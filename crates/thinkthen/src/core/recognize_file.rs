@@ -50,6 +50,7 @@ pub(crate) struct QuestionDocument<'a> {
     #[serde(skip_serializing_if = "crate::core::RecognitionStageContext::is_empty")]
     stage_context: &'a crate::core::RecognitionStageContext,
     #[serde(skip_serializing_if = "default_snippet")]
+    #[cfg_attr(test, schemars(range(max = u32::MAX)))]
     snippet_pieces: u32,
     kinds: Kinds<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]

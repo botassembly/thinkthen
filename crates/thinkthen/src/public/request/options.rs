@@ -78,7 +78,7 @@ pub struct RequestOptions {
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(test, schemars(with = "u32"))]
+    #[cfg_attr(test, schemars(with = "u32", range(max = u32::MAX)))]
     pub snippet_pieces: Option<u32>,
     /// Authored relation cut, applicable only to whole recognition.
     #[serde(

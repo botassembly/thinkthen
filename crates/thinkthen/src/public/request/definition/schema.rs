@@ -84,7 +84,7 @@ fn recognize(
             "relations":{"type":"array","items":reference("relation")},
             "instructions":reference("questionText"),
             "entity_definition":reference("questionText"),
-            "snippet_pieces": schemars::schema_for!(u32),
+            "snippet_pieces": schemars::schema_for!(crate::RequestOptions).to_value()["properties"]["snippet_pieces"].clone(),
             "stage_context":stage_context,
             "mode": mode
         }}),

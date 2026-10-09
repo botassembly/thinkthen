@@ -61,6 +61,9 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
             &serde_json::json!({"kind":"definition","value":value}).to_string(),
         )
     };
+    let kinds: serde_json::Map<_, _> = (0..256)
+        .map(|n| (format!("kind{n}"), serde_json::Value::Null))
+        .collect();
     let texts = [
         valid.to_owned(),
         definition(serde_json::json!({"decide":"Fits?","true":null,"false":{"label":"no"}})),
@@ -70,6 +73,12 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         definition(serde_json::json!({"score":"Grade?","levels":["low","high"]})),
         definition(serde_json::json!({"find":"Which?"})),
         definition(serde_json::json!({"version":1,"recognize":{"kinds":{"person":null}}})),
+        definition(serde_json::json!({"version":1,"recognize":{"kinds":kinds}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":0}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":4294967295u32}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":4294967296u64}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":1.5}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":-1}})),
         definition(serde_json::json!({"version":1,"recognize":{"mode":"boundary_only"}})),
         definition(serde_json::json!({"version":1,"recognize":{"mode":"whole"}})),
         definition(serde_json::json!({"version":1,"recognize":{"mode":null}})),
