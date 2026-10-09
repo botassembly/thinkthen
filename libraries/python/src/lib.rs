@@ -15,8 +15,10 @@ mod engine;
 mod files;
 mod frame;
 mod input;
+mod native_result;
 mod request;
 mod result;
+mod results_generated;
 mod stream;
 mod tally;
 mod worker;
@@ -178,6 +180,11 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<stream::PyStream>()?;
     module.add_class::<complete_stream::CompleteStream>()?;
     module.add_class::<request::Session>()?;
+    module.add_class::<native_result::NativeResult>()?;
+    module.add_function(wrap_pyfunction!(
+        native_result::_restore_native_result,
+        module
+    )?)?;
     module.add_class::<worker::Token>()?;
     module.add_class::<worker::Receipt>()?;
     module.add_class::<worker::Completion>()?;

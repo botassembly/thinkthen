@@ -149,3 +149,11 @@ Each `FrameCompleted` exposes `native`, the unchanged complete native call, and 
 After `import thinkthen.pandas`, `series.tt.complete(engine=engine).decide(question_source)` selects the same complete facade. All ten accessor methods share it. Row-wise `decide_batch`, `choose_batch`, `tag_batch`, `score_batch`, `filter_batch` and `annotate_batch` keep native pull behavior. `FrameBatch.position(row)` returns the original nullable frame position; its `facts` remains absent until the native batch ends.
 
 Frame calls select native `pandas` or `python-polars` Surface identity for the actual selected column, including eager results and lazy batch creation. The shared ordinary engine retains its Python identity. Ranked frame values expose the native ordered `members` with typed member results, authored questions, identities, optional usage and physical sources. Use call facts for invocation totals because parent and member usage overlap.
+
+### Private generated result seam
+
+The development native `_RequestSession._poll_typed()` method returns `None` while pending, an owned generated object for an actual packet, and `{"kind": "end"}` after exhaustion. `_poll()` retains the serialized compatibility bridge. These private methods prepare the canonical named API; they do not replace the existing public call family.
+
+Generated classes in `thinkthen._native_results` inherit a frozen native carrier. Rust owns each object's JSON independently of the session and engine. Known fields have generated typed attributes and nested objects; indexing also retains unknown fields. Use `"field" in result` to check presence. An absent attribute raises `AttributeError`, an absent key raises `KeyError`, and a present JSON null returns `None`. `to_dict()` makes a mutable copy. Equality, `dict(result)` and pickle round trips preserve values and presence. Printing shows the schema type without printing input values or error messages. A result with a value follows that value's ordinary truth behavior; a failure or a carrier without a value raises `TypeError`.
+
+Regenerate the native dispatch, classes and editor declarations with `python3 sdlc/generators/results/generate.py --target python`; append `--check` to check them against the shared Rust result graph.
