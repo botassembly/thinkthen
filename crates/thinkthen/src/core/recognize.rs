@@ -14,8 +14,10 @@ mod categories;
 mod examples;
 mod pieces;
 mod seeds;
+mod stage_context;
 pub use seeds::RecognitionSeedSpan;
 pub(crate) use seeds::{seed_stretches, selected_seeds};
+pub use stage_context::RecognitionStageContext;
 mod questions;
 
 use bilou::best_of;

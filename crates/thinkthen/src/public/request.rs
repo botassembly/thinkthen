@@ -137,7 +137,7 @@ impl RequestFunction {
         match name {
             "threshold" => matches!(self, Self::Decide | Self::Choose | Self::Tag | Self::Filter),
             "options_field" => self == Self::Choose,
-            "examples" | "examples_field" | "seed_spans" | "seed_spans_field" => {
+            "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context" => {
                 self == Self::Recognize
             }
             "none" => self == Self::Find,

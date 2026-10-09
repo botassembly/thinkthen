@@ -16,6 +16,7 @@ pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[cfg_attr(test, schemars(inline, with = "crate::core::Json"))]
 pub(crate) struct RecognizeSpec {
+    pub(crate) stage_context: crate::core::RecognitionStageContext,
     pub(crate) examples: Vec<crate::core::RecognitionExample>,
     pub(crate) seed_spans: Vec<crate::core::RecognitionSeedSpan>,
     pub(crate) metadata: crate::core::declaration::QuestionMetadata,
@@ -40,6 +41,8 @@ enum Verb {
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub(crate) struct QuestionDocument<'a> {
     verb: Verb,
+    #[serde(skip_serializing_if = "crate::core::RecognitionStageContext::is_empty")]
+    stage_context: &'a crate::core::RecognitionStageContext,
     kinds: Kinds<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     instructions: Option<&'a QuestionText>,
@@ -56,6 +59,7 @@ impl RecognizeSpec {
     pub(crate) fn document(&self) -> QuestionDocument<'_> {
         QuestionDocument {
             verb: Verb::Recognize,
+            stage_context: &self.stage_context,
             kinds: Kinds(&self.kinds),
             instructions: self.instructions.as_ref(),
             entity_definition: self.entity_definition.as_ref(),
@@ -115,6 +119,7 @@ impl RecognizeSpec {
         validate_kinds(&kinds)?;
         validate_relations(&kinds, &relations)?;
         Ok(Self {
+            stage_context: crate::core::RecognitionStageContext::default(),
             examples: Vec::new(),
             seed_spans: Vec::new(),
             metadata: crate::core::declaration::QuestionMetadata::default(),
@@ -157,7 +162,14 @@ impl RecognizeSpec {
             return Err(RecognizeConfigError::Shape);
         };
         if recognize.iter().any(|(name, _)| {
-            !["kinds", "relations", "instructions", "entity_definition"].contains(&name.as_str())
+            ![
+                "kinds",
+                "relations",
+                "instructions",
+                "entity_definition",
+                "stage_context",
+            ]
+            .contains(&name.as_str())
         }) {
             return Err(RecognizeConfigError::Shape);
         }
@@ -172,8 +184,21 @@ impl RecognizeSpec {
                 .and_then(|held| held.member("relations")),
         )?;
         validate_relations(&kinds, &relations)?;
+        let stage_context = value
+            .member("recognize")
+            .and_then(|v| v.member("stage_context"))
+            .map(|v| {
+                crate::core::json_line(v)
+                    .map_err(|_| RecognizeConfigError::Shape)
+                    .and_then(|text| {
+                        serde_json::from_str(&text).map_err(|_| RecognizeConfigError::Shape)
+                    })
+            })
+            .transpose()?
+            .unwrap_or_default();
         Ok(Self {
             metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
+            stage_context,
             examples: Vec::new(),
             seed_spans: Vec::new(),
             kinds,
@@ -393,7 +418,9 @@ fn parse_on(value: Option<&Json>) -> Result<Vec<Pointer>, RecognizeConfigError> 
 }
 
 pub(crate) fn recognize_sha256(spec: &RecognizeSpec) -> Result<String, crate::core::RenderError> {
-    let canonical = crate::core::json_line(spec)?;
+    let mut reading = spec.clone();
+    reading.stage_context = crate::core::RecognitionStageContext::default();
+    let canonical = crate::core::json_line(&reading)?;
     let mut hasher = Sha256::new();
     hasher.update(canonical.as_bytes());
     Ok(crate::core::digest::hex(&hasher.finalize()))
@@ -427,6 +454,18 @@ mod tests {
             recognize_sha256(&compact).expect("digest"),
             "0ad7c0a7f97a1e1a4f609448e61f95e69d448121cfcc6ec8c940627c170e201c"
         );
+        let mut contextual = compact.clone();
+        contextual.stage_context.boundary = Some("private boundary".to_owned());
+        assert_eq!(
+            recognize_sha256(&compact).unwrap(),
+            recognize_sha256(&contextual).unwrap()
+        );
+        assert!(
+            crate::core::json_line(&contextual)
+                .unwrap()
+                .contains("private boundary")
+        );
+        assert!(!format!("{contextual:?}").contains("private boundary"));
         let complete = RecognizeSpec::parse(r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}]},"threshold":0.6,"relation_threshold":0.7,"model":"ignored","profile":"measured-profile","on":"/body"}"#).unwrap();
         assert_eq!(
             crate::core::json_line(&complete).unwrap(),

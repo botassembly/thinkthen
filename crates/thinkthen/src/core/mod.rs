@@ -47,6 +47,7 @@ mod recognize;
 pub(crate) use recognize::{ExamplesError, example_file, render_examples, selected_examples};
 pub use recognize::{
     RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionSeedSpan,
+    RecognitionStageContext,
 };
 pub(crate) use recognize::{seed_stretches, selected_seeds};
 mod surface;

@@ -166,3 +166,127 @@ fn saved_record_context_exchanges_keep_jobs_eight_separation_and_zero_send_repla
         }
     }
 }
+
+#[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one counted saved, CLI, record and replay exchange protects precedence without duplicating its oracle"
+)]
+fn stage_context_saved_call_record_precedence_matches_exact_exchanges_and_replay() {
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../../../conformance/recognition-context.json"
+    ))
+    .unwrap();
+    let mut exchanges = fixture["rows"][0]["exchanges"].as_array().unwrap().clone();
+    for (exchange, context) in
+        exchanges
+            .iter_mut()
+            .zip([Some("call boundary"), None, Some("saved relation")])
+    {
+        let mut body: Value = serde_json::from_str(exchange["request"].as_str().unwrap()).unwrap();
+        let evidence = body["state"]["evidence"].clone();
+        body["state"] = context.map_or(
+            evidence.clone(),
+            |context| json!({"context":context,"evidence":evidence}),
+        );
+        exchange["request"] = serde_json::to_string(&body).unwrap().into();
+    }
+    let listener = Listener::answering(move |bytes| {
+        let body: Value = serde_json::from_slice(bytes).unwrap();
+        let expected = exchanges
+            .iter()
+            .find(|exchange| {
+                let request: Value =
+                    serde_json::from_str(exchange["request"].as_str().unwrap()).unwrap();
+                body == request
+            })
+            .unwrap_or_else(|| panic!("unexpected stage request {body}"));
+        Canned::ok(&expected["response"].to_string())
+    })
+    .unwrap();
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("recognition-stage-context-{}", std::process::id()));
+    fs::create_dir_all(&root).unwrap();
+    let path = root.join("question.json");
+    let question = fixture["question_json"].as_str().unwrap().replacen(
+        "\"recognize\":{",
+        r#""recognize":{"stage_context":{"boundary":"saved boundary","kind_edge":"saved kind","relation":"saved relation"},"#,
+        1,
+    );
+    fs::write(&path, question).unwrap();
+    let operand = format!("@{}", path.display());
+    let recording = root.join("recording");
+    let recording = recording.to_str().unwrap();
+    let input = format!(
+        "{}\n{}\n",
+        json!({"body":fixture["text"],"context":"first"}),
+        json!({"body":fixture["text"],"context":"second"})
+    );
+    let args = [
+        "recognize",
+        &operand,
+        "--url",
+        listener.base(),
+        "--model",
+        "jev-1.13.0",
+        "--jsonl",
+        "--field",
+        "/body",
+        "--context-field",
+        "/context",
+        "--boundary-context",
+        "call boundary",
+        "--kind-edge-context",
+        "",
+        "--jobs",
+        "8",
+        "--no-cache",
+        "--details",
+    ];
+    let output = spawn(
+        &[&args[..], &["--record", recording]].concat(),
+        &[("THINKTHEN_API_KEY", "fake")],
+        input.as_bytes(),
+    )
+    .unwrap();
+    let rows: Vec<Value> = stdout(&output)
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(listener.count(), 6);
+    for row in rows {
+        assert_eq!(
+            row["question"]["stage_context"],
+            json!({"boundary":"call boundary","kind_edge":"","relation":"saved relation"})
+        );
+    }
+    let output = spawn(
+        &[&args[..], &["--replay", recording]].concat(),
+        &[],
+        input.as_bytes(),
+    )
+    .unwrap();
+    assert_eq!(stdout(&output).lines().count(), 2);
+    assert_eq!(listener.count(), 6);
+    for context in [
+        Value::Null,
+        json!(false),
+        json!({"x":"private invalid context"}),
+    ] {
+        let input = format!("{}\n", json!({"body":fixture["text"],"context":context}));
+        let output = spawn(&args, &[("THINKTHEN_API_KEY", "fake")], input.as_bytes()).unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(!String::from_utf8_lossy(&output.stderr).contains("private invalid context"));
+        assert_eq!(listener.count(), 6);
+    }
+    let output = spawn(
+        &[&args[..], &["--boundary-context", "duplicate"]].concat(),
+        &[("THINKTHEN_API_KEY", "fake")],
+        input.as_bytes(),
+    )
+    .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(listener.count(), 6);
+    fs::remove_dir_all(root).unwrap();
+}

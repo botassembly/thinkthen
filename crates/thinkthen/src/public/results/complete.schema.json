@@ -2825,6 +2825,9 @@
             "array"
           ]
         },
+        "stage_context": {
+          "$ref": "#/$defs/completeRecognitionStageContext"
+        },
         "threshold": {
           "$ref": "#/$defs/completethreshold"
         },
@@ -2985,6 +2988,22 @@
         "answer",
         "meta"
       ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRecognitionStageContext": {
+      "additionalProperties": false,
+      "properties": {
+        "boundary": {
+          "type": "string"
+        },
+        "kind_edge": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        }
+      },
       "type": "object",
       "unevaluatedProperties": false
     },

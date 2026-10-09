@@ -116,6 +116,7 @@ impl Engine {
         }
         let stages = vec!["boundary"; asks.len()];
         let answers = self.execute(
+            spec,
             &asks,
             Bound::RECOGNITION,
             &stages,
@@ -134,6 +135,7 @@ impl Engine {
         stretches.dedup();
         let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
         let answers = self.execute(
+            spec,
             &asks,
             Bound::RECOGNITION,
             &stages,
@@ -231,7 +233,7 @@ impl Engine {
         asks.add(&self.backend, &plan)?;
         let (meta, details, observe) = held;
         let stages = vec!["relation"; asks.len()];
-        let answers = self.execute(&asks, bound, &stages, (meta, observe), cancel)?;
+        let answers = self.execute(spec, &asks, bound, &stages, (meta, observe), cancel)?;
         let cut = spec.relation_threshold.cut_value().unwrap_or(0.5);
         for (pair, answer) in planned.pairs.iter().zip(&answers) {
             let (Some(rule), Some(source), Some(target)) = (
@@ -260,6 +262,7 @@ impl Engine {
     /// Ask one step's questions; one failed question fails the text.
     fn execute(
         &self,
+        spec: &RecognizeSpec,
         asks: &Asks,
         bound: Bound,
         stages: &[&'static str],
@@ -273,7 +276,12 @@ impl Engine {
             return Err(Error::RecognizeLogical);
         }
         let mut answers = Vec::with_capacity(asks.len());
-        self.ask_each(asks, bound, cancel, |place, answered| {
+        let mut engine = self.clone();
+        engine.aggregate_context = spec.stage_context.effective(
+            stages.first().copied().unwrap_or("boundary"),
+            self.aggregate_context.as_ref(),
+        );
+        engine.ask_each(asks, bound, cancel, |place, answered| {
             let (Some(stage), Some(question)) = (stages.get(place), asks.questions().get(place))
             else {
                 return Err(Error::RecognizeLogical);
@@ -351,7 +359,14 @@ pub(crate) fn step_one_context(
             backend,
             &window_plan(backend, (text, &pieces), (0, 0), vec![probe])?,
         )?;
-        contextual_requests(&alone, backend, profile, context, Bound::RECOGNITION)?;
+        let selected = spec.stage_context.effective("kind", context);
+        contextual_requests(
+            &alone,
+            backend,
+            profile,
+            selected.as_ref(),
+            Bound::RECOGNITION,
+        )?;
     }
     let mut asks = Asks::default();
     for group in step_one_groups(pieces.len()) {
@@ -364,7 +379,14 @@ pub(crate) fn step_one_context(
         )?;
     }
     let asks = asks.with_examples(backend, &examples)?;
-    let requests = contextual_requests(&asks, backend, profile, context, Bound::RECOGNITION)?;
+    let selected = spec.stage_context.effective("boundary", context);
+    let requests = contextual_requests(
+        &asks,
+        backend,
+        profile,
+        selected.as_ref(),
+        Bound::RECOGNITION,
+    )?;
     if !examples.is_empty()
         && requests
             .iter()

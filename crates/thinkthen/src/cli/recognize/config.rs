@@ -63,6 +63,11 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
     if let Some(value) = &arguments.entity_definition {
         spec.entity_definition = Some(wording(value)?);
     }
+    spec.stage_context.overlay(&crate::RecognitionStageContext {
+        boundary: arguments.boundary_context.clone(),
+        kind_edge: arguments.kind_edge_context.clone(),
+        relation: arguments.relation_context.clone(),
+    });
     Ok(spec)
 }
 
