@@ -112,6 +112,12 @@ The unchanged held-call assertion expects `the deadline of 200 ms passed before 
 
 The installed `python3 databases/sqlite/tests/complete/facts.py sqlite` passed exact owning costs, incomplete usage, overflow, cache/replay, started facts and terminal-reader boundaries. Log: `target/0499-legacy-facts.log`.
 
+### Slice B integration qualification
+
+Fresh read-only review accepted the legacy source at `c0565d2c5`, with the explicit condition that shared deadline repair 0509 lands first. Saved-selector admission remains outside this slice and keeps 0499 open. The coordinator integrated the reviewed stage-context main and the separately reviewed shared deadline repair at `c98d15d13`, rebuilt the release library and loaded its copied installed path. The 12 existing legacy modules all passed, including the unchanged held-call 200 ms assertion. All 255 required shared SQL cases and the owning-facts checks also passed. Logs are `target/0499-integration-legacy-schema-host.log`, `target/0499-integration-parity-schema-host.log` and `target/0499-integration-facts-schema-host.log`.
+
+The coordinator first selected the cached Python wheel interpreter, which lacked jsonschema and linked SQLite 3.49.1 despite the selected dynamic host. Those invocations failed before valid qualification. The coordinator stopped its own Python process by PID, confirmed its scope was inactive, and reran with the schema-capable system interpreter and pinned dynamic SQLite 3.50.0 host. The extension and assertions stayed unchanged. This repeats the earlier lesson: select the actual installed consumer's interpreter and database library together. A Python wheel toolchain does not qualify SQLite's consumer.
+
 ## What the remaining legacy build taught us
 
 The native legacy projections from 0500 let SQL preserve existing result documents while moving judgment execution to Request. SQL still owns authority and projection: file resolution, read-only selected queries, NULL propagation, keyed reuse, shape and selected-index output stay at the host boundary. Native selected originals are typed `QuestionInput`, so projections must read retained literal text and native ordinals rather than restore an adapter evidence wrapper.
