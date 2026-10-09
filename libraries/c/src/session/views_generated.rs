@@ -8208,6 +8208,35 @@ pub struct thinkthen_complete_relation_field_input_presence_v1 {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_relation_field_input_sources_v1 {
+    pub data: *const *const thinkthen_complete_session_input_source_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_relation_field_input_sources_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_relation_field_input_sources_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_session_input_source_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_relation_field_input_sources_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_relation_field_input_sources_presence_v1 {
+    pub presence: u32,
+    pub value: thinkthen_complete_relation_field_input_sources_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_relation_field_last_line_presence_v1 {
     pub presence: u32,
     pub value: u64,
@@ -8251,6 +8280,7 @@ pub struct thinkthen_complete_relation_v1 {
     pub first_line: thinkthen_complete_relation_field_first_line_presence_v1,
     pub index: thinkthen_complete_relation_field_index_presence_v1,
     pub input: thinkthen_complete_relation_field_input_presence_v1,
+    pub input_sources: thinkthen_complete_relation_field_input_sources_presence_v1,
     pub last_line: thinkthen_complete_relation_field_last_line_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_relation_field_position_presence_v1,
@@ -8316,6 +8346,19 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
             )?;
             thinkthen_complete_relation_field_input_presence_v1 { presence, value }
         },
+        input_sources: {
+            let (presence, value) = read_presence(
+                node.member("input_sources"),
+                false,
+                thinkthen_complete_relation_field_input_sources_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_relation_field_input_sources_v1,
+                store,
+            )?;
+            thinkthen_complete_relation_field_input_sources_presence_v1 { presence, value }
+        },
         last_line: {
             let (presence, value) = read_presence(
                 node.member("last_line"),
@@ -8364,6 +8407,7 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
                 "first_line",
                 "index",
                 "input",
+                "input_sources",
                 "last_line",
                 "meta",
                 "position",

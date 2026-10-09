@@ -187,6 +187,8 @@ pub(crate) struct Document<'a, T: Serialize, V: Serialize = Vec<RelationEdge<Rel
     input: Option<&'a T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input_sources: Option<&'a [super::wire::IndexedSource]>,
     question: crate::core::declaration::SemanticReadableQuestion<
         'a,
         crate::core::relate_file::RelateQuestion<'a>,
@@ -218,7 +220,18 @@ impl Relation {
         index: Option<usize>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_sources(input, value, index, None, serializer)
+    }
+    pub(crate) fn serialize_sources<S: Serializer, T: Serialize, V: Serialize>(
+        &self,
+        input: Option<&T>,
+        value: &V,
+        index: Option<usize>,
+        input_sources: Option<&[super::wire::IndexedSource]>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         Document {
+            input_sources,
             index,
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),

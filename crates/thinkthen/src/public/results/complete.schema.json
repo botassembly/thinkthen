@@ -4009,6 +4009,14 @@
           ]
         },
         "input": true,
+        "input_sources": {
+          "items": {
+            "$ref": "#/$defs/completesessionInputSource"
+          },
+          "type": [
+            "array"
+          ]
+        },
         "last_line": {
           "format": "uint",
           "maximum": 18446744073709551615,

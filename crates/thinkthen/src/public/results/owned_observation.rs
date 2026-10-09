@@ -420,17 +420,7 @@ pub(crate) struct SessionQuestionDetailDocument<'a> {
     inputs: Vec<&'a QuestionInput>,
     #[serde(skip_serializing_if = "Option::is_none")]
     input_source: Option<core::CompletePhysicalSource>,
-    input_sources: Vec<SessionInputSourceDocument>,
-}
-#[derive(serde::Serialize)]
-#[cfg_attr(
-    test,
-    derive(schemars::JsonSchema),
-    schemars(rename = "sessionInputSource")
-)]
-struct SessionInputSourceDocument {
-    index: usize,
-    source: core::CompletePhysicalSource,
+    input_sources: Vec<core::CompleteIndexedSource>,
 }
 impl<'a> SessionQuestionDetailDocument<'a> {
     fn of(detail: QuestionDetail<'a>) -> Self {
@@ -479,7 +469,7 @@ impl<'a> SessionQuestionDetailDocument<'a> {
                 .enumerate()
                 .filter_map(|(index, input)| {
                     crate::public::complete::physical_source(input)
-                        .map(|source| SessionInputSourceDocument { index, source })
+                        .map(|source| core::CompleteIndexedSource { index, source })
                 })
                 .collect(),
             inputs: held

@@ -561,3 +561,53 @@ fn empty_find_refuses_before_sending_or_inventing_a_none_answer() {
     assert!(error.facts().is_none());
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn located_relation_session_retains_duplicate_sources_without_question_observations() {
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("request-relate-source-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let path = folder.join("entities.jsonl");
+    std::fs::write(&path, "Ada\n\n").unwrap();
+    let listener = Listener::answering(response).unwrap();
+    let session = engine(&listener).request_session(Request::new(RequestCall::Relate(args(
+        Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),
+        RequestInput::Source { source: RequestSource {
+            paths: vec![path.clone(), path.clone()],
+            reading: ReaderOptions { unit: SourceUnit::Line, window: None },
+            media: ReaderMedia::Text,
+        } },
+    )))).unwrap();
+    let mut documents = vec![];
+    loop {
+        match session.try_read() {
+            RequestSessionRead::Result(packet) => {
+                documents.push(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
+            }
+            RequestSessionRead::End => break,
+            RequestSessionRead::Pending => std::thread::yield_now(),
+        }
+    }
+    let value = &documents
+        .iter()
+        .find(|packet| packet["kind"] == "aggregate")
+        .unwrap()["value"];
+    assert_eq!(value["input"], json!(["Ada", "Ada"]));
+    assert_eq!(
+        value["input_sources"],
+        json!([
+            {"index":0,"source":{"file":path.to_str().unwrap(),"first_line":1,"last_line":1}},
+            {"index":1,"source":{"file":path.to_str().unwrap(),"first_line":1,"last_line":1}}
+        ])
+    );
+    assert_eq!(value["value"], json!([]));
+    assert_eq!(value["answer"]["questions"], json!([]));
+    assert_eq!(value["meta"]["observations"], json!([]));
+    assert!(
+        !documents
+            .iter()
+            .any(|packet| packet["value"]["kind"] == "question")
+    );
+    assert_eq!(listener.count(), 0);
+    std::fs::remove_dir_all(folder).unwrap();
+}

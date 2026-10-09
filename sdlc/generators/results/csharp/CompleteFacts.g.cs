@@ -976,6 +976,7 @@ public sealed class Relation : ResultObject
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
+    public Presence<IReadOnlyList<SessionInputSource>> InputSources => Optional<IReadOnlyList<SessionInputSource>>("input_sources", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new SessionInputSource(item0)).ToArray()));
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));

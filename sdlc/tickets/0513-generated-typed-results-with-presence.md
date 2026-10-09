@@ -59,6 +59,7 @@ RequestSessionResult::Observation
 RequestSessionResult::Observation::function: RequestFunction
 RequestSessionResult::Observation::value: OwnedRecordObservation
 fn RequestSessionResult::to_json(&self) -> Result<String, Error>
+fn CompleteRelated::input_sources(&self) -> Option<impl ExactSizeIterator<Item = (usize, SourceLocation)> + '_>
 ```
 
 ## Evidence

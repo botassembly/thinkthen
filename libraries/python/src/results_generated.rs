@@ -1913,6 +1913,9 @@ pub(crate) fn field(
         ("completeRelation", "first_line") => plain(py, value),
         ("completeRelation", "index") => plain(py, value),
         ("completeRelation", "input") => plain(py, value),
+        ("completeRelation", "input_sources") => array(py, value, |value| {
+            convert(py, "completesessionInputSource", value)
+        }),
         ("completeRelation", "last_line") => plain(py, value),
         ("completeRelation", "meta") => convert(py, "completeMeta", value),
         ("completeRelation", "position") => convert(py, "completePosition", value),
