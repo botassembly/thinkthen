@@ -104,3 +104,4 @@ The later before-and-after model evaluation uses identical frozen generic texts,
 
 - 2026-10-08 started
 - 2026-10-08 landed 09a07f102a636bd7407a674544f9e2a7c36b7895; next: Partial slice B admits complete recognition menus under strict encoded-byte limits and reports prepared/sent request maxima. Workspace, consumer, binding, lint, specification and affected integration checks pass; R accepts current facts and older snapshots. Guaranteed local model-window refusal remains unresolved under the recorded assumption. Keep the ticket open for the PM ruling; continue independent approved controls before binding migration.
+- 2026-10-09 landed 09a07f102a636bd7407a674544f9e2a7c36b7895; next: The PM settled the unknown-window ruling: retain routes under byte limits, report the window as unknown, and let provider refusal stand. No model-fit guarantee is claimed. Verify the remaining ticket outcomes before closing; this ruling no longer blocks snippet controls.
