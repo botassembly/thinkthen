@@ -25,3 +25,7 @@ Rust owns the result types. A generator emits each language's typed results from
 Extend the existing Rust-derived schema pipeline; do not create another schema framework or runtime validator. Keep both complete schemas generated together and reuse `sdlc/scripts/generate-c-header.py`; constrained layouts derive from that header. Preserve missing, null, failures, every known observation and unknown JSON members through ordinary conversion or round trip. Unknown members never activate proxy behavior.
 
 The initial shared slice claims `crates/thinkthen/src/schema_tests.rs`, `crates/thinkthen/src/schema_tests/complete.rs`, `crates/thinkthen/src/public/results/complete_facts.rs`, `specification/result.schema.json`, `crates/thinkthen/src/public/results/complete.schema.json`, and new `sdlc/generators/results/generate.py` with target templates under `sdlc/generators/results/templates/`. Name each template and existing gate entry before implementing that target. Host outputs belong to their migration slices. Amend ADR 0112 sections 4 and 6 under Ian's ruling to replace the typed-host prohibition while retaining schema ownership, versioning and tolerant reading; claim `sdlc/planning/adr/0112-rust-owns-the-result-schema.md`.
+
+## Progress
+
+- 2026-10-09 started
