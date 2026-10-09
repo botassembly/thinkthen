@@ -8,6 +8,7 @@ mod inline;
 mod input;
 mod native_feed;
 mod options;
+mod preview;
 mod result;
 mod session;
 mod session_queue;

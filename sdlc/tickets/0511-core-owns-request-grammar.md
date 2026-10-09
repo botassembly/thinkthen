@@ -46,7 +46,8 @@ The first slice adds these public Request-edge methods for the separate SQL crat
 fn RequestItem::from_record_descriptor(&str) -> Result<RequestItem, Error>
 fn RequestItem::compose_record(&self, &RecordReading) -> Result<RecordInput<QuestionInput>, Error>
 fn RequestItem::with_options_descriptor(self, &str) -> Result<RequestItem, Error>
-fn EngineBuilder::from_settings_json(&str) -> Result<Self, Error>
+fn EngineBuilder::from_settings_json(&str) -> Result<EngineBuilder, Error>
+fn Engine::plan_request<'a>(&self, &'a AdmittedRequest, RequestEnvironment<'a>) -> Result<PlanEstimate, Error>
 ```
 
 ## Progress

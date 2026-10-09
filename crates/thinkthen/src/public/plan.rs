@@ -161,74 +161,87 @@ impl Engine {
             .transpose()?;
         let engine = self.asking(question)?;
         let asker = Decisions::new(&engine, question, context.clone());
-        let too_large = || Error::usage("the planned input is too large to count");
-        let model = pack::model_json(engine.backend().model().as_str())
-            .map_err(|_| Error::defect("a model could not be written as JSON"))?;
-        let mut packer = Packer::new(
-            engine.pack_limits(pull::packing(setting, context.is_some(), false)),
-            model,
-        );
-        if let Some(context) = &context {
-            let state = pack::state(context)
-                .map_err(|_| Error::defect("a context could not be written as JSON"))?
-                .with_api(engine.backend().api_type());
-            packer.check_state(&state).map_err(packed)?;
-        }
-        let mut summary = PlanSummary::new(false);
-        let mut occurrences = 0_usize;
-        let mut closed = Vec::new();
-        for (at, item) in records.into_iter().enumerate() {
+        let asks = records.into_iter().enumerate().map(|(at, item)| {
             let item = item?;
             self.check_record_limit(at)?;
             let text = Text {
                 at,
                 input: crate::public::QuestionInput::Text(item.evidence().to_owned()),
             };
-            let asks = asker.asks(&text).map_err(|miss| match miss {
+            asker.asks(&text).map_err(|miss| match miss {
                 Miss::Refused(error) => error,
                 Miss::Failed(_) => Error::defect("a plan read an answer"),
-            })?;
-            summary.record().map_err(|_| too_large())?;
-            let entries: Vec<_> = asks
-                .into_iter()
-                .map(|ask| Entry {
-                    options: pipeline::options(&ask),
-                    state: ask.state,
-                    question: ask.question,
-                    item: (),
-                })
-                .collect();
-            occurrences = occurrences
-                .checked_add(entries.len())
-                .ok_or_else(too_large)?;
-            packer.add(entries, &mut closed).map_err(packed)?;
-            for request in closed.drain(..) {
-                summary.request(&request.body).map_err(|_| too_large())?;
-            }
-        }
-        if let Some(request) = packer.close() {
+            })
+        });
+        estimate(&engine, setting, context, asks)
+    }
+}
+
+/// Accumulate prepared native questions through the one preview packer.
+pub(super) fn estimate(
+    engine: &crate::engine::facade::Engine,
+    setting: crate::core::Setting,
+    context: Option<crate::core::Evidence>,
+    asks: impl Iterator<Item = Result<Vec<pack::Ask>, Error>>,
+) -> Result<PlanEstimate, Error> {
+    let too_large = || Error::usage("the planned input is too large to count");
+    let model = pack::model_json(engine.backend().model().as_str())
+        .map_err(|_| Error::defect("a model could not be written as JSON"))?;
+    let mut packer = Packer::new(
+        engine.pack_limits(pull::packing(setting, context.is_some(), false)),
+        model,
+    );
+    if let Some(context) = &context {
+        let state = pack::state(context)
+            .map_err(|_| Error::defect("a context could not be written as JSON"))?
+            .with_api(engine.backend().api_type());
+        packer.check_state(&state).map_err(packed)?;
+    }
+    let mut summary = PlanSummary::new(false);
+    let mut occurrences = 0_usize;
+    let mut closed = Vec::new();
+    for asks in asks {
+        let asks = asks?;
+        summary.record().map_err(|_| too_large())?;
+        let entries: Vec<_> = asks
+            .into_iter()
+            .map(|ask| Entry {
+                options: pipeline::options(&ask),
+                state: ask.state,
+                question: ask.question,
+                item: (),
+            })
+            .collect();
+        occurrences = occurrences
+            .checked_add(entries.len())
+            .ok_or_else(too_large)?;
+        packer.add(entries, &mut closed).map_err(packed)?;
+        for request in closed.drain(..) {
             summary.request(&request.body).map_err(|_| too_large())?;
         }
-        summary.bound_requests(occurrences);
-        let counts = summary.counts().map_err(|_| too_large())?;
-        let first_body = summary
-            .first_body()
-            .map(|body| String::from_utf8(body.to_vec()))
-            .transpose()
-            .map_err(|_| Error::defect("a planned body was not UTF-8"))?;
-        Ok(PlanEstimate {
-            records: counts.records,
-            requests: counts.requests,
-            estimated_bytes: counts.estimated_bytes,
-            largest_request_bytes: counts.largest_request_bytes,
-            largest_request_estimated_input_tokens: counts.largest_request_estimated_input_tokens,
-            token_estimate_method: counts.token_estimate_method,
-            estimated_input_tokens: TokenBand {
-                lower: counts.estimated_input_tokens.lower,
-                upper: counts.estimated_input_tokens.upper,
-            },
-            upper_bound: counts.upper_bound,
-            first_body,
-        })
     }
+    if let Some(request) = packer.close() {
+        summary.request(&request.body).map_err(|_| too_large())?;
+    }
+    summary.bound_requests(occurrences);
+    let counts = summary.counts().map_err(|_| too_large())?;
+    let first_body = summary
+        .first_body()
+        .map(|body| String::from_utf8(body.to_vec()))
+        .transpose()
+        .map_err(|_| Error::defect("a planned body was not UTF-8"))?;
+    Ok(PlanEstimate {
+        records: counts.records,
+        requests: counts.requests,
+        estimated_bytes: counts.estimated_bytes,
+        largest_request_bytes: counts.largest_request_bytes,
+        largest_request_estimated_input_tokens: counts.largest_request_estimated_input_tokens,
+        token_estimate_method: counts.token_estimate_method,
+        estimated_input_tokens: TokenBand {
+            lower: counts.estimated_input_tokens.lower,
+            upper: counts.estimated_input_tokens.upper,
+        },
+        upper_bound: counts.upper_bound,
+        first_body,
+    })
 }

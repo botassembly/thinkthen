@@ -37,3 +37,27 @@ fn p1_plans_with_no_key_and_no_send_and_refusals_keep_the_outputs() {
     assert_eq!(text(&output.stdout), format!("{expected}\n"));
     assert_eq!(backend.count(), 0, "a plan sent a request");
 }
+
+#[test]
+fn canonical_request_preview_owns_bytes_and_sends_nothing() {
+    let backend = Backend::start().expect("a loopback backend");
+    let output = Command::new(compile(&crate_dir().join("tests/c/request_preview.c")))
+        .clear_environment()
+        .env(
+            "THINKTHEN_BASE_URL",
+            format!("{}/generic/v1", backend.origin()),
+        )
+        .env("THINKTHEN_CACHE", scratch("canonical-preview-cache"))
+        .env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0")
+        .output()
+        .expect("the canonical preview program ran");
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    let plan: serde_json::Value = serde_json::from_slice(&output.stdout).expect("native plan JSON");
+    assert_eq!(plan["records"], 1);
+    assert_eq!(plan["requests"], 1);
+    assert_eq!(plan["first_body_utf8"], BODY);
+    assert_eq!(backend.count(), 0, "canonical preview sends nothing");
+}

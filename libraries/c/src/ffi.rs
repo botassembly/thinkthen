@@ -25,6 +25,8 @@ mod texts;
 #[path = "ffi/typed_facts/ffi.rs"]
 mod typed_facts;
 
+#[path = "ffi/request_preview/ffi.rs"]
+mod request_preview;
 #[path = "ffi/session/ffi.rs"]
 pub mod session;
 

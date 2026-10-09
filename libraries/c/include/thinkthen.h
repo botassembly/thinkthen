@@ -4120,6 +4120,23 @@ int thinkthen_relate_with_facts_opts(const struct thinkthen_engine *engine,
                                      size_t *facts_len);
 
 /*
+ Preview canonical Request JSON without reading a key or cache or sending.
+ Supports decide, choose, tag and score. Explicit sources retain native authority.
+ Success owns NUL-terminated plan JSON in out and its byte length in out_len;
+ free once with thinkthen_free_string. Refusal leaves both outputs unchanged
+ and records the safe calling-thread thinkthen_session_error_message.
+ # Safety
+ engine is live; request_json points to request_len readable bytes (NULL
+ requires zero); out and out_len are nonnull writable, nonoverlapping slots.
+ Extents fit Rust slices. The engine remains live until this call returns.
+ */
+int thinkthen_request_plan_json(const struct thinkthen_engine *engine,
+                                const char *request_json,
+                                size_t request_len,
+                                char **out,
+                                size_t *out_len);
+
+/*
  Borrow one complete row; wrong functions and out-of-range ordinals return Usage.
  # Safety
  Owner and output obey the header's lifetime/storage contract.
