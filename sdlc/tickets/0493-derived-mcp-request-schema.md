@@ -1,6 +1,6 @@
 # 0493: Derive MCP schemas from the shared request contract
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 Reviews: revision 236db58831f6a81d8baef4b50f7d9a97e76417d6, accept
 
 Reviews: revision 777975c097e13192c0fcbfd3de50ce66d609194b, accept
+
+Landed: 9b61b3f
 
 ## Outcome
 
