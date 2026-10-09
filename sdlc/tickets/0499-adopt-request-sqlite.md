@@ -12,6 +12,8 @@ Reviews: revision 83e9c8a21fc757d2903ba170f35e206d35d9393e, reject
 
 Reviews: revision 7714682107b4202d5faf796f2f9dc9c66ed4c186, reject
 
+Reviews: revision 8a67f22504a9adf6986c3c14009efe283e2371d8, accept
+
 ## Outcome
 
 Adopt shared Request and generated results in SQLite through named typed public calls.
@@ -30,6 +32,16 @@ SQLite's existing composed records retain file and line locations and distinguis
 
 Already-composed feeds must preserve selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. Document which combinations are supported and refuse incompatible combinations before sending. Keep SQLite's new execution path separate from the compatibility module PostgreSQL imports; remove that compatibility copy when 0500 migrates. This changes native composition, not the canonical request schema or SQL authority.
 
+### Added public declarations
+
+```text
+fn RequestFeed::from_records(impl Into<String>, impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a) -> RequestFeed<'a>
+fn RequestFeed::eager(self) -> RequestFeed<'a>
+fn RequestFeed::with_image_inputs(self) -> RequestFeed<'a>
+fn RequestFeed::with_all_filter_results(self) -> RequestFeed<'a>
+fn AdmittedRequest::record_reading(&self) -> Result<RecordReading, Error>
+```
+
 ### Reviewed API scope
 
 The reviewed branch declares `RequestFeed::from_records`, `RequestFeed::eager`, `RequestFeed::with_image_inputs` and `AdmittedRequest::record_reading`. Keep their exact inventory declarations with the implementation when it lands. Publishing those declarations ahead of the code makes independent main-based inventory checks fail; this paragraph retains design approval without claiming shipped exports.
@@ -37,3 +49,4 @@ The reviewed branch declares `RequestFeed::from_records`, `RequestFeed::eager`, 
 ## Progress
 
 - 2026-10-08 started
+- 2026-10-08 landed 1499da2eae04b0db9ab71dc4172c01daea1ef651; next: Partial slice A moves all ten complete SQLite functions onto Request. Installed 255 cases, four counted regressions, root tests and specifications pass; corrected inventory completes the final lint stage. Keep 0499 open for legacy scalar, many, table, rank-set, image, document and keyed routes, plus saved-selector admission. PostgreSQL may now reuse the reviewed bridge; shared Request ownership transfers to 0493.
