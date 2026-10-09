@@ -11,6 +11,7 @@ mod examples;
 mod rules;
 mod seeds;
 mod sized;
+mod snippets;
 mod stores;
 mod unicode;
 

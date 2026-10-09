@@ -157,6 +157,14 @@ pub(super) use crate::public::question::model_of as model;
 pub struct Recognize(pub(crate) RecognizeSpec);
 
 impl Recognize {
+    /// Override snippet width while retaining the saved declaration.
+    /// # Errors
+    /// Refuses a width that the host cannot represent as a piece index.
+    pub fn with_snippet_pieces(mut self, value: u32) -> Result<Self, Error> {
+        self.0.snippet_pieces = value;
+        self.0.validate_mode().map_err(Error::refused)?;
+        Ok(self)
+    }
     /// Select recognition stages while retaining the caller declaration.
     #[must_use]
     pub fn with_mode(mut self, mode: crate::RecognitionMode) -> Self {
@@ -225,6 +233,7 @@ impl Recognize {
             kinds: Vec::new(),
             instructions: None,
             entity_definition: None,
+            snippet_pieces: 6,
             relations: Vec::new(),
             threshold: None,
             relation_threshold: None,
@@ -267,6 +276,7 @@ pub struct RecognizeBuilder {
     kinds: Vec<Kind>,
     instructions: Option<core::QuestionText>,
     entity_definition: Option<core::QuestionText>,
+    snippet_pieces: u32,
     relations: Vec<core::RelationRule>,
     threshold: Option<f64>,
     relation_threshold: Option<f64>,
@@ -274,6 +284,12 @@ pub struct RecognizeBuilder {
 }
 
 impl RecognizeBuilder {
+    /// Choose tokenizer pieces on each side of a token or span; six by default.
+    #[must_use]
+    pub const fn snippet_pieces(mut self, value: u32) -> Self {
+        self.snippet_pieces = value;
+        self
+    }
     /// Select whole recognition or boundary proposals.
     #[must_use]
     pub const fn mode(mut self, mode: crate::RecognitionMode) -> Self {
@@ -372,6 +388,7 @@ impl RecognizeBuilder {
             written(self.relation_threshold).as_deref(),
         )
         .map_err(Error::refused)?;
+        spec.snippet_pieces = self.snippet_pieces;
         spec.mode = self.mode;
         spec.validate_mode().map_err(Error::refused)?;
         spec.model = self.model;

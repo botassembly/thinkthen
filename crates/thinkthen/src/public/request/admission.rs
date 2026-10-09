@@ -196,6 +196,9 @@ fn admit_options(
     {
         return Err(Error::usage("relation threshold is a recognize single cut"));
     }
+    if let Some(value) = options.snippet_pieces {
+        spec.snippet_pieces = value;
+    }
     if let Some(mode) = options.mode {
         mode.validate_controls(
             false,
@@ -217,6 +220,9 @@ fn admit_options(
         && !function.allows_option("examples")
     {
         return Err(Error::usage("examples apply only to recognize"));
+    }
+    if options.snippet_pieces.is_some() && function != Function::Recognize {
+        return Err(Error::usage("snippet pieces belong to recognize"));
     }
     if options.stage_context.is_some() && function != Function::Recognize {
         return Err(Error::usage("stage context belongs to recognize"));
@@ -437,6 +443,9 @@ pub(super) fn apply_recognition(
     spec: &mut crate::core::RecognizeSpec,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    if let Some(value) = options.snippet_pieces {
+        spec.snippet_pieces = value;
+    }
     if let Some(mode) = options.mode {
         spec.mode = mode;
     }

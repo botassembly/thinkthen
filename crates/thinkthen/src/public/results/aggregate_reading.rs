@@ -62,7 +62,12 @@ impl RecognitionReading<'_> {
             .as_ref()
             .and_then(|v| v.as_json().as_str())
     }
-    /// Caller definition of the literal entity spans.
+    /// Tokenizer pieces shown on each side of a token or span.
+    #[must_use]
+    pub fn snippet_pieces(&self) -> u32 {
+        self.0.snippet_pieces
+    }
+    /// Borrow the authored entity definition.
     #[must_use]
     pub fn entity_definition(&self) -> Option<&str> {
         self.0

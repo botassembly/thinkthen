@@ -270,3 +270,35 @@ fn recognition_mode_and_cuts_have_closed_safe_admission() {
         );
     }
 }
+
+#[test]
+fn snippet_width_is_unsigned_strict_and_recognition_only() {
+    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"version":1,"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":WIDTH}}}"#;
+    for width in ["0", "6", "4294967295"] {
+        Request::from_json(&request.replace("WIDTH", width))
+            .unwrap()
+            .admit()
+            .unwrap();
+        let saved = format!(r#"{{"version":1,"recognize":{{"snippet_pieces":{width}}}}}"#);
+        assert_eq!(
+            crate::Recognize::from_json(&saved)
+                .unwrap()
+                .reading()
+                .snippet_pieces(),
+            width.parse::<u32>().unwrap()
+        );
+    }
+    for width in ["null", "-1", "1.5", "4294967296", r#""6""#] {
+        assert!(Request::from_json(&request.replace("WIDTH", width)).is_err());
+        let saved = format!(r#"{{"version":1,"recognize":{{"snippet_pieces":{width}}}}}"#);
+        assert!(crate::Recognize::from_json(&saved).is_err());
+    }
+    let default = crate::Recognize::builder().build().unwrap();
+    let six = crate::Recognize::builder()
+        .snippet_pieces(6)
+        .build()
+        .unwrap();
+    assert_eq!(default, six);
+    let decide = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":0}}}"#;
+    assert!(Request::from_json(decide).unwrap().admit().is_err());
+}

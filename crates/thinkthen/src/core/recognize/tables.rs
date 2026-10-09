@@ -284,17 +284,17 @@ fn requests_hold_forty_pieces_and_show_six_each_side() {
     let (short, long) = (pieces(&forty), pieces(&forty_one));
     assert_eq!(forty.len(), 79);
     assert_eq!(step_one_groups(40), std::slice::from_ref(&(0..40)));
-    assert_eq!(evidence(&short, 0, 39), 0..79);
+    assert_eq!(evidence(&short, 0, 39, 6), 0..79);
     assert_eq!(step_one_groups(41), [0..40, 40..41]);
-    assert_eq!(evidence(&long, 0, 39), 0..81);
-    assert_eq!(evidence(&long, 40, 40), 68..81);
+    assert_eq!(evidence(&long, 0, 39, 6), 0..81);
+    assert_eq!(evidence(&long, 40, 40, 6), 68..81);
     let named = |pieces: &[super::Piece], names: &[(usize, usize)]| {
         name_groups(names)
             .into_iter()
             .map(|group| {
                 let first = names[group.start].0;
                 let last = names[group.end - 1].1;
-                (group, evidence(pieces, first, last))
+                (group, evidence(pieces, first, last, 6))
             })
             .collect::<Vec<_>>()
     };

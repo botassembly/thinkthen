@@ -60,6 +60,9 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
     if let Some(value) = &arguments.instructions {
         spec.instructions = Some(wording(value)?);
     }
+    if let Some(value) = arguments.snippet_pieces {
+        spec.snippet_pieces = value;
+    }
     if let Some(value) = &arguments.entity_definition {
         spec.entity_definition = Some(wording(value)?);
     }

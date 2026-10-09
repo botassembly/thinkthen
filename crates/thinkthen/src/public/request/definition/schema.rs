@@ -76,15 +76,19 @@ fn recognize(
     for name in ["threshold", "relation_threshold"] {
         properties.insert(name.into(), reference("cut"));
     }
-    properties.insert("recognize".into(), json!({"type":"object","additionalProperties":false,
+    properties.insert(
+        "recognize".into(),
+        json!({"type":"object","additionalProperties":false,
         "properties":{
-            "kinds":{"type":"object","maxProperties":20,"additionalProperties":reference("description")},
+            "kinds":{"type":"object","additionalProperties":reference("description")},
             "relations":{"type":"array","items":reference("relation")},
             "instructions":reference("questionText"),
             "entity_definition":reference("questionText"),
+            "snippet_pieces": schemars::schema_for!(u32),
             "stage_context":stage_context,
             "mode": mode
-        }}));
+        }}),
+    );
     json!({"type":"object","required":["version","recognize"],
         "additionalProperties":false,"properties":properties})
 }

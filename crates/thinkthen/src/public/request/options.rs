@@ -72,6 +72,14 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "crate::RecognitionMode"))]
     pub mode: Option<crate::RecognitionMode>,
+    /// Recognition tokenizer pieces on each side; omission retains the saved width.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "u32"))]
+    pub snippet_pieces: Option<u32>,
     /// Authored relation cut, applicable only to whole recognition.
     #[serde(
         default,
