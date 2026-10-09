@@ -12,6 +12,10 @@ The rebuilt package passes its member, metadata, private-byte and native ABI che
 
 The full JVM check stops in the unchanged Java `Matrix.requests[11]` fixture at `Matrix.java:77`. It supplies an encoded object as a text record to an annotate question with `on: /body`. The native engine rejects it: ``question `check` reads `on`, and this record's evidence is text with no members``. A focused call using the unmodified fixture reproduces that refusal. The baseline and current Matrix source share Git object `0110a72ae40d4d6a56ae08070f3caa302a29eb74`. This slice changes no native admission behavior or Java request handling and does not repair that fixture.
 
+The full native parity portion of `public_types.py` was stopped by the coordinator after the affected installed and J1 checks passed. Its Java rows passed through the observed image cases; the full native parity matrix did not complete. Final installed parity belongs to integration after the language migrations.
+
+The existing local `build.sh` retains stale compiled classes. This task removed only the demo class and Scala metadata outputs it created during its baseline build before rebuilding. The package check rejects retained demo outputs. Release builds require an empty `THINKTHEN_JVM_OUT`, so they do not retain these classes.
+
 The unchanged failing request is:
 
 ```json
