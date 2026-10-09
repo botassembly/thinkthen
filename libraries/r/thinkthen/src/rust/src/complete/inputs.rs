@@ -118,7 +118,12 @@ fn compose(
         }
         ContentKind::Json => {
             let value = item.content.value;
-            descriptor.insert("json", value.clone());
+            // Transport objects must not consume the original's nesting budget.
+            descriptor.insert(
+                "json_text",
+                serde_json::value::to_raw_value(value.get())
+                    .map_err(|_| super::usage("invalid JSON text"))?,
+            );
             (value, None)
         }
         ContentKind::Images if !item.images.is_empty() => (null(), None),
