@@ -16,7 +16,12 @@ public sealed class OwnedSession : IDisposable
         try { NativeSession.thinkthen_session_cancel(handle); }
         catch (ObjectDisposedException) { }
     }
-    public void Finish() { ThrowIfDisposed(); NativeSession.Check(NativeSession.thinkthen_session_finish(handle, IntPtr.Zero, 0)); }
+    public void Finish(InputRequestReaderFailure? failure = null)
+    {
+        ThrowIfDisposed();
+        byte[]? bytes = failure?.ToBytes();
+        NativeSession.Check(NativeSession.thinkthen_session_finish(handle, bytes, (nuint)(bytes?.Length ?? 0)));
+    }
     private void ThrowIfDisposed() { if (Volatile.Read(ref closed) != 0) throw new ObjectDisposedException(nameof(OwnedSession)); }
     /// <summary>Return null only after native End. A fresh token can drain after Cancel.</summary>
     public async Task<SessionPacket?> ReadAsync(CancellationToken cancellation = default)

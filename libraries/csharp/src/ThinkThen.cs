@@ -94,6 +94,16 @@ public sealed partial class Engine : IDisposable
         if (ptr == IntPtr.Zero) throw ReadFailure(ptr, Native.thinkthen_error_code(ptr));
         return new Engine(ptr);
     }
+    public static Engine Open(ThinkThen.Inputs.InputEngineSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        NativeLoader.Initialize();
+        byte[] bytes = settings.ToBytes();
+        Array.Resize(ref bytes, bytes.Length + 1);
+        IntPtr ptr = Native.thinkthen_engine_new_with(bytes);
+        if (ptr == IntPtr.Zero) throw ReadFailure(ptr, Native.thinkthen_error_code(ptr));
+        return new Engine(ptr);
+    }
     public static byte[] CString(string value)
     {
         ArgumentNullException.ThrowIfNull(value);

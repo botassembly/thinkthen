@@ -6,7 +6,7 @@ internal static class NativeSession
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_new(EngineHandle engine, byte[] request, nuint length, out IntPtr session);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_try_push(SessionHandle session, byte[] descriptor, nuint length, out uint status);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_try_read(SessionHandle session, out uint status, out IntPtr packet);
-    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_finish(SessionHandle session, IntPtr failure, nuint length);
+    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_finish(SessionHandle session, byte[]? failure, nuint length);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_session_cancel(SessionHandle session);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_session_free(IntPtr session);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_session_result_free(IntPtr packet);

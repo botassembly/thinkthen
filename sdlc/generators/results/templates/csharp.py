@@ -327,7 +327,7 @@ def render_inputs(schema):
             return cname(path)
         kind = value.get('type')
         if isinstance(kind, list):
-            nodes.setdefault(path, {'anyOf': [{'type': k} for k in kind]})
+            nodes.setdefault(path, {'anyOf': [{**value, 'type': k} for k in kind]})
             return cname(path)
         if kind == 'array':
             return 'IReadOnlyList<' + cs_type(value.get('items', {}), path + '_Item') + '>'
@@ -343,7 +343,7 @@ def render_inputs(schema):
     def emit(value, expr, path):
         typ = cs_type(value, path)
         if typ.startswith('Input'):
-            return expr + '.Write(writer);'
+            return 'if (' + expr + ' is null) writer.WriteNullValue(); else ' + expr + '.Write(writer);'
         if typ.startswith('IReadOnlyList'):
             return 'writer.WriteStartArray(); foreach (var item in ' + expr + ') { ' + emit(value.get('items', {}), 'item', path + '_Item') + ' } writer.WriteEndArray();'
         if typ.startswith('IReadOnlyDictionary'):

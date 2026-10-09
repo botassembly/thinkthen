@@ -76,6 +76,7 @@ ln -sf libthinkthen.so "$here/target/artifacts/native/lib/libthinkthen.so.0"
 tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -C "$here/target/artifacts/native" .
 "$dotnet" pack "$here/ThinkThen.csproj" -p:ThinkThenNativeAsset="$root/libraries/c/target/debug/libthinkthen_c.so" -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
 test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
+python3 "$root/sdlc/scripts/package-inventory.py" csharp --out "$here/obj/Release" --check "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg" > /dev/null
 python3 "$here/tests/package_check.py"
 python3 "$here/tests/named_backends.py"
 python3 "$here/tests/run_matrix.py"
