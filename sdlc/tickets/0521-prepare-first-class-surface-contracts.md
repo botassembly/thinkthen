@@ -1,10 +1,12 @@
 # 0521 — prepare-first-class-surface-contracts
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 4d59e7c6a, accept
+
+Landed: 51d3b6f
 
 ## Outcome
 
