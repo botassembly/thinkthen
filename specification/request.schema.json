@@ -2055,6 +2055,58 @@
       },
       "additionalProperties": false
     },
+    "RequestReaderFailure": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "io"
+            },
+            "location": {
+              "$ref": "#/$defs/SessionSourceLocation"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "utf8"
+            },
+            "location": {
+              "$ref": "#/$defs/SessionSourceLocation"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "invalid_input"
+            },
+            "location": {
+              "$ref": "#/$defs/SessionSourceLocation"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        }
+      ]
+    },
     "RequestSessionDescriptor": {
       "type": "object",
       "properties": {
