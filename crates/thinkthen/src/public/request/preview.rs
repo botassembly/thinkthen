@@ -4,7 +4,7 @@ use super::{AdmittedRequest, RequestDefinition, RequestEnvironment, RequestFunct
 use crate::{Engine, Error, InputFunction, LoadedQuestion, PlanEstimate};
 
 impl Engine {
-    /// Preview an admitted decide, choose, tag or score request without sending.
+    /// Preview an admitted atomic or single-question rank request without sending.
     /// Explicit sources and feeds use the same composition and admission as execution.
     /// No key, cache or answer is read. Unsupported functions refuse before input advances.
     /// # Errors
@@ -19,7 +19,9 @@ impl Engine {
             RequestFunction::Choose => InputFunction::Choose,
             RequestFunction::Tag => InputFunction::Tag,
             RequestFunction::Score => InputFunction::Score,
-            _ => return Err(Error::usage("plan takes decide, choose, tag or score")),
+            RequestFunction::Filter => InputFunction::Filter,
+            RequestFunction::Rank => InputFunction::Rank,
+            _ => return Err(Error::usage("plan requires an atomic or rank question")),
         };
         feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
@@ -30,12 +32,16 @@ impl Engine {
         let reading_definition = definition.clone();
         apply(&mut definition, options)?;
         controls.admission()?;
-        let RequestDefinition::Atomic(loaded) = &definition else {
-            return Err(Error::usage("plan requires a fixed atomic question"));
-        };
-        let question = match loaded {
-            LoadedQuestion::Question(q) => q,
-            LoadedQuestion::Banded(q) => &q.0,
+        let question = match &definition {
+            RequestDefinition::Atomic(LoadedQuestion::Question(q)) | RequestDefinition::Rank(q) => {
+                q
+            }
+            RequestDefinition::Atomic(LoadedQuestion::Banded(q)) => &q.0,
+            _ => {
+                return Err(Error::usage(
+                    "plan requires a fixed atomic or rank question",
+                ));
+            }
         };
         let engine = self.asking(question)?;
         let image_refusal = image_route(self, &definition)

@@ -305,7 +305,13 @@ fn run(
             input,
             writer,
         ),
-        Some(Command::Rank(arguments)) => judge::rank(arguments, environment, input, writer),
+        Some(Command::Rank(arguments)) => judge::rank(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("rank has no admitted request"))?,
+            input,
+            writer,
+        ),
         Some(Command::Find(arguments)) => find::run(
             arguments,
             environment,

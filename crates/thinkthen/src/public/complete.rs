@@ -211,6 +211,17 @@ fn batch_run<'a>(
     profile: Option<&'a core::BackendProfile>,
     setting: core::Setting,
 ) -> Run<'a> {
+    let text = match &question.core {
+        core::Question::Decide { text, .. }
+        | core::Question::Choose { text, .. }
+        | core::Question::Tag { text, .. }
+        | core::Question::Score { text, .. } => text,
+    };
+    let setting = if text.as_json().as_str().is_some() {
+        setting
+    } else {
+        core::Setting::Records(std::num::NonZeroUsize::MIN)
+    };
     let mut result = run(engine, question, profile);
     result.batch_setting = Some(setting.into());
     result.batch_warning = super::results::batch_warning(question, setting);

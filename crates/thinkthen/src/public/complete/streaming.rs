@@ -129,7 +129,7 @@ impl Engine {
         ))
     }
 
-    fn complete_stream<'a, I, T, R: 'a>(
+    pub(super) fn complete_stream<'a, I, T, R: 'a>(
         &'a self,
         function: InputFunction,
         question: &'a Question,

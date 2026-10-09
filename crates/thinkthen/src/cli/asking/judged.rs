@@ -3,22 +3,17 @@
 //! on each ask, and each row comes back in input order.
 
 use std::process::ExitCode;
-use std::sync::mpsc::Receiver;
-use std::thread;
 
-use super::{Asks, Judging, JudgingInput, RowContext};
+use super::{Asks, JudgingInput};
 use crate::core::pack::{self, Ask, PackError};
 use crate::core::{
     AnswerOutcome, BackendProfile, BatchError, Descriptions, Evidence, ModelName, Plan, Reading,
     Record, Setting, Url, quoted_plan, quoted_plan_of,
 };
-use crate::edge;
-use crate::engine::facade::Judgment;
-use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Input, Packing, Port};
 use crate::failure::Failure;
 use crate::failure::context::Limits;
 use crate::judge::Keeping;
-use crate::schedule::{Judged, Output, Placed};
+use crate::schedule::{Output, Placed};
 
 /// One framed record, and the bytes it arrived as when it arrived as a line.
 pub(super) struct Held {
@@ -223,124 +218,7 @@ impl Planner<'_> {
     }
 }
 
-pub(super) struct JudgeAsker<'a> {
-    pub(super) judging: &'a Judging<'a>,
-    planner: Planner<'a>,
-    url: Url,
-    downstream: edge::Downstream,
-}
-
-impl Asker for JudgeAsker<'_> {
-    type Input = Held;
-    type Row = Vec<Judged>;
-    type Error = Placed;
-
-    fn validates_batches(&self) -> bool {
-        self.planner.reading.declares_item() || self.judging.declarations.context_schema.is_some()
-    }
-
-    fn label(&self, held: &Held) -> usize {
-        held.at
-    }
-
-    fn asks(&self, held: &Held) -> Result<Vec<Ask>, Placed> {
-        self.planner
-            .asks(self.judging.engine.backend().api_type(), &self.url, held)
-            .map_err(|error| Placed::at(error, held.at))
-    }
-
-    fn row(&self, held: Held, answers: Vec<Answered>) -> Result<Vec<Judged>, Placed> {
-        let at = held.at;
-        self.judged(held, &answers)
-            .map_err(|error| Placed::at(error, at))
-    }
-
-    fn gone(&self) -> bool {
-        self.downstream.gone()
-    }
-}
-
-impl JudgeAsker<'_> {
-    fn judged(&self, held: Held, answers: &[Answered]) -> Result<Vec<Judged>, Failure> {
-        super::rank_set::rows(self, held, answers)
-    }
-
-    pub(super) fn one(
-        &self,
-        held: &Held,
-        question: crate::core::Question,
-        answers: &[Answered],
-    ) -> Result<Judged, Failure> {
-        let outcomes = pipeline::read(&question, answers)
-            .map_err(|error| Failure::from(crate::engine::error::Error::from(error)))?;
-        let [AnswerOutcome::Answered(answer)] = outcomes.as_slice() else {
-            let failed = answers.iter().find_map(|answered| {
-                answered
-                    .answer
-                    .as_ref()
-                    .err()
-                    .map(|error| (error, answered.span))
-            });
-            // One document's failed answer refuses the reply, as a request
-            // for one record always has.
-            return Err(match failed {
-                Some((error, _)) if !self.planner.reading.streams() => {
-                    Failure::Reply(error.clone())
-                }
-                Some((_, (first, last))) => Failure::PartialReply { first, last },
-                None => Failure::PartialReply {
-                    first: held.at,
-                    last: held.at,
-                },
-            });
-        };
-        let answer = answer.clone();
-        let (value, outcome) = answer.read(self.judging.threshold);
-        let judgment = Judgment {
-            answered: pipeline::receipt(answers, outcomes).map_err(Failure::from)?,
-            answer,
-            value,
-            outcome,
-        };
-        let mut attempts: Vec<_> = answers
-            .iter()
-            .flat_map(|answered| answered.attempts.iter().cloned())
-            .collect();
-        attempts.sort_by_key(crate::public::AttemptObservation::ordinal);
-        attempts.dedup_by_key(|event| event.ordinal());
-        let mut judged = self.judging.row_of(
-            self.planner.reading,
-            held.record.clone(),
-            question,
-            &judgment,
-            RowContext {
-                record: held.ordinal,
-                arrived: held.arrived.as_deref(),
-                requests: answers.iter().map(|answered| answered.key.hex()).collect(),
-                attempts,
-                position: held.position.as_ref(),
-                images: held.images.as_ref(),
-                context_sha256: self
-                    .planner
-                    .context_for(held)?
-                    .as_ref()
-                    .map(|context| {
-                        context
-                            .as_text()
-                            .map(|text| crate::core::bytes_sha256(text.as_bytes()))
-                    })
-                    .transpose()
-                    .map_err(Failure::from)?,
-            },
-        )?;
-        if judgment.answered.replayed {
-            judged.model = None;
-        }
-        Ok(judged)
-    }
-}
-
-/// Answer every record and print its row, or print the plan.
+/// Frame host input, then execute the retained native request.
 pub(super) fn run(
     mut configuration: JudgingInput<'_>,
     reading: &Reading,
@@ -349,194 +227,20 @@ pub(super) fn run(
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let records = records(&configuration, reading, source)?;
-    let streams = reading.streams();
-    let context = configuration.context.as_ref().map(super::Context::evidence);
-    let inputs = if !streams {
-        Some(1)
-    } else {
-        setting.and_then(|setting| match setting {
-            Setting::Records(most) => Some(most.get()),
-            Setting::Max => None,
-        })
-    };
     if configuration.common.dry_run {
+        let context = configuration.context.as_ref().map(super::Context::evidence);
+        let inputs = if !reading.streams() {
+            Some(1)
+        } else {
+            setting.and_then(|setting| match setting {
+                Setting::Records(most) => Some(most.get()),
+                Setting::Max => None,
+            })
+        };
         return super::plan::packed(&configuration, reading, records, context, inputs, output);
     }
-    if let Some(admitted) = configuration.admitted.take() {
-        return super::native::run(configuration, admitted, reading, records, setting, output);
-    }
-    if matches!(configuration.keeping, Keeping::Passing | Keeping::Ordered) {
-        output.guard_models();
-    }
-    let per_record_context = configuration.context_field.is_some();
-    let judging = Judging::new(configuration)?;
-    let downstream = edge::Downstream::default();
-    let asker = JudgeAsker {
-        planner: Planner {
-            asks: &judging.asks,
-            reading,
-            asked: judging.engine.backend().asked(),
-            context,
-            profile: judging.engine.profile(),
-            limits: Limits::new(judging.engine.profile()),
-            route: judging.engine.backend().image_route(),
-        },
-        url: judging.engine.backend().url().clone(),
-        judging: &judging,
-        downstream: downstream.clone(),
-    };
-    let packing = Packing {
-        questions: None,
-        sized: true,
-        inputs,
-        strict_singleton: false,
-        context: asker.planner.context.is_some() || per_record_context,
-        detailed: judging.view.details,
-        continues: false,
-    };
-    super::plan::check_context(&asker.planner, judging.engine.backend(), packing)?;
-    let reader_downstream = downstream.clone();
-    let mut ended = Ended::default();
-    judging
-        .engine
-        .ask_all(
-            &asker,
-            packing,
-            pipeline::reader(
-                judging.environment.input_pause(),
-                move |asks, port| {
-                    thread::spawn(move || feed(records, &asks, &port, &reader_downstream));
-                },
-                |_, result| ended.take(result, &asker.planner, output),
-            ),
-            judging.environment.cancel(),
-        )
-        .map_err(Failure::from)?;
-    if downstream.latched() || ended.closed {
-        return Ok(ExitCode::SUCCESS);
-    }
-    match ended.stop {
-        // A stop after one document's row changes nothing it printed.
-        Some(_) if !streams && !judging.documents && ended.finished > 0 => Ok(super::exit_code(
-            ended.outcome.unwrap_or(crate::core::Outcome::Unresolved),
-        )),
-        Some(stop) if !streams => Err(stop
-            .cause
-            .with_replay_context(crate::failure::ReplayContext::Document(judging.asks.verb()))),
-        Some(stop) => Err(Failure::Stopped {
-            at: stop.at.unwrap_or(ended.finished + 1),
-            finished: ended.finished,
-            replayed: ended.replayed,
-            recording: judging.engine.recording(),
-            held: matches!(judging.keeping, Keeping::Ordered),
-            cause: Box::new(stop.cause),
-        }),
-        None if !streams && !judging.documents => Ok(super::exit_code(
-            ended.outcome.unwrap_or(crate::core::Outcome::Unresolved),
-        )),
-        None => {
-            output.ended()?;
-            Ok(ExitCode::SUCCESS)
-        }
-    }
-}
-
-/// What the rows the host took add up to.
-#[derive(Default)]
-struct Ended {
-    finished: usize,
-    replayed: usize,
-    outcome: Option<crate::core::Outcome>,
-    stop: Option<Placed>,
-    closed: bool,
-}
-
-impl Ended {
-    fn take(
-        &mut self,
-        result: Result<Vec<Judged>, Failed<Placed>>,
-        planner: &Planner<'_>,
-        output: &mut Output<'_>,
-    ) -> Flow {
-        let judged = match result {
-            Ok(judged) => judged,
-            Err(failed) => {
-                self.stop = Some(placed(failed, planner));
-                return Flow::Stop;
-            }
-        };
-        let replayed = judged.iter().all(|row| row.replayed);
-        let outcome = judged
-            .first()
-            .map_or(crate::core::Outcome::Unresolved, |row| row.outcome);
-        match output.take_members(judged, self.finished) {
-            Ok(true) => {
-                self.finished += 1;
-                self.replayed += usize::from(replayed);
-                self.outcome = Some(outcome);
-                Flow::Continue
-            }
-            Ok(false) => {
-                self.closed = true;
-                Flow::Stop
-            }
-            Err(error) => {
-                self.stop = Some(Placed::from(error));
-                Flow::Stop
-            }
-        }
-    }
-}
-
-/// The command's failure for one input with no row.
-pub(super) fn placed(failed: Failed<Placed>, planner: &Planner<'_>) -> Placed {
-    match failed {
-        Failed::Asker(placed) => placed,
-        Failed::Pack { error, at } => Placed::at(planner.refused(error), at),
-        Failed::Engine { error, first, last } => {
-            Placed::at(ranged(error.into(), first, last), first)
-        }
-        Failed::Stopped(error) => Placed::from(error),
-    }
-}
-
-/// A request or a whole reply that failed two or more records names their
-/// range on one line. Every other cause stays as it is.
-fn ranged(cause: Failure, first: usize, last: usize) -> Failure {
-    match cause {
-        Failure::Transport(_) | Failure::Status(_) | Failure::TokenLimit | Failure::Reply(_)
-            if last > first =>
-        {
-            Failure::BatchFailed {
-                last,
-                cause: Box::new(cause),
-            }
-        }
-        other => other,
-    }
-}
-
-/// Frame one record per ask, and stop after the first refusal or once the
-/// output is gone.
-pub(super) fn feed<T>(
-    mut records: impl Iterator<Item = Result<T, Placed>>,
-    asks: &Receiver<()>,
-    port: &Port<T, Placed>,
-    downstream: &edge::Downstream,
-) {
-    while asks.recv().is_ok() {
-        let next = if downstream.gone() {
-            Input::End
-        } else {
-            match records.next() {
-                None => Input::End,
-                Some(Ok(record)) => Input::Item(record),
-                Some(Err(error)) => Input::Failed(error),
-            }
-        };
-        let last = !matches!(next, Input::Item(_));
-        if port.send(next).is_err() || last {
-            return;
-        }
-    }
+    let admitted = configuration.admitted.take().ok_or(Failure::Defect(
+        "judgment execution has no admitted request",
+    ))?;
+    super::native::run(configuration, admitted, reading, records, setting, output)
 }

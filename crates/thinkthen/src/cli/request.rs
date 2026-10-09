@@ -66,7 +66,16 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
         Command::Rank(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
             let question = selector(&a.question, || {
-                definition(asked::rank(a)?.0, crate::public::NativeQuestionKind::Rank)
+                let (resolved, tier, rank_set) = asked::rank(a, None)?;
+                let prepared = crate::cli_atomic::Prepared {
+                    resolved,
+                    batch: tier.batch,
+                    tuned: tier.tuned,
+                    rank_set,
+                };
+                let definition = crate::cli_atomic::definition(&prepared).map_err(native)?;
+                atomic = Some(prepared);
+                Ok(definition)
             })?;
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
             options.details = false;
@@ -193,6 +202,7 @@ fn atomic_definition(
         resolved,
         batch: tier.batch,
         tuned: tier.tuned,
+        rank_set: None,
     };
     let definition = crate::cli_atomic::definition(&prepared).map_err(native)?;
     *retained = Some(prepared);
@@ -209,34 +219,6 @@ fn selector(
     } else {
         inline().map(|value| RequestQuestion::Definition { value })
     }
-}
-fn definition(
-    resolved: crate::core::Resolved,
-    mut kind: crate::public::NativeQuestionKind,
-) -> Result<RequestDefinition, Failure> {
-    let core = resolved
-        .question()
-        .cloned()
-        .ok_or(Failure::Defect("inline preparation has no question"))?;
-    let threshold = resolved.threshold();
-    if kind == crate::public::NativeQuestionKind::Decide && threshold.is_some_and(|v| !v.is_cut()) {
-        kind = crate::public::NativeQuestionKind::Banded;
-    }
-    let q = crate::Question {
-        metadata: resolved.metadata().clone(),
-        core,
-        threshold,
-        authored_threshold: false,
-        model: (!resolved.sources().model_is_default()).then(|| resolved.model().clone()),
-        profile: resolved.profile().cloned(),
-        batch: None,
-        kind,
-    };
-    Ok(if kind == crate::public::NativeQuestionKind::Banded {
-        RequestDefinition::Atomic(crate::LoadedQuestion::Banded(crate::BandedQuestion(q)))
-    } else {
-        q.into()
-    })
 }
 fn source_common(common: &Common, extra: &[std::ffi::OsString]) -> Result<Common, Failure> {
     let mut common = common.clone();

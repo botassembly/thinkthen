@@ -502,7 +502,7 @@ fn dispatch<'a>(
         RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager, sink),
         RequestDefinition::Rank(q) => Ok(complete(
             engine
-                .try_rank_records_complete_with(q, rows, controls)?
+                .request_rank_records_complete_with(q, rows, controls)?
                 .map(|mut rows| {
                     if let Some(n) = options.top {
                         rows.truncate(n);
@@ -512,7 +512,7 @@ fn dispatch<'a>(
         )),
         RequestDefinition::RankSet(q) => Ok(complete(
             engine
-                .try_rank_set_records_complete_with(q, rows, controls)?
+                .request_rank_set_records_complete_with(q, rows, controls)?
                 .map(|mut rows| {
                     if let Some(n) = options.top {
                         rows.truncate(n);
@@ -598,7 +598,9 @@ pub(super) fn image_descriptors(input: &RequestInput) -> bool {
 }
 pub(super) fn image_route(engine: &Engine, definition: &RequestDefinition) -> Result<(), Error> {
     let configured = match definition {
-        RequestDefinition::Atomic(LoadedQuestion::Question(q)) => engine.asking(q)?,
+        RequestDefinition::Atomic(LoadedQuestion::Question(q)) | RequestDefinition::Rank(q) => {
+            engine.asking(q)?
+        }
         RequestDefinition::Atomic(LoadedQuestion::Banded(q)) => engine.asking(&q.0)?,
         RequestDefinition::DynamicChoose(q) => engine.for_model(q.model.as_ref())?,
         _ => return Err(Error::usage("this function takes text only")),

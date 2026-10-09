@@ -27,25 +27,11 @@ mod judged;
 mod native;
 mod native_reader;
 mod plan;
-mod rank_set;
 mod reading;
-mod row;
 
 use context::Context;
 pub(crate) use folders::Folders;
 use reading::read_by;
-
-/// What one row shows beside its answer: the line it arrived as, the keys
-/// of its questions, and its requests' attempts.
-struct RowContext<'a> {
-    record: usize,
-    arrived: Option<&'a [u8]>,
-    requests: Vec<String>,
-    attempts: Vec<AttemptObservation>,
-    position: Option<&'a crate::cli::intake::Position>,
-    images: Option<&'a crate::public::ImageEvidence>,
-    context_sha256: Option<String>,
-}
 
 /// Build the one engine a command calls, from what the command resolved.
 ///
@@ -312,21 +298,6 @@ pub(crate) fn run(
     judged::run(configuration, &reading, source, batch, output)
 }
 
-/// One question over one engine, asked of every record in turn.
-struct Judging<'a> {
-    declarations: crate::core::declaration::QuestionMetadata,
-    environment: &'a Environment,
-    engine: Engine,
-    asks: Asks,
-    threshold: Option<Threshold>,
-    view: View,
-    keeping: Keeping,
-    streams: bool,
-    documents: bool,
-    text_view: bool,
-    mismatch: Mismatch,
-}
-
 struct JudgingInput<'a> {
     admitted: Option<crate::AdmittedRequest>,
     declarations: crate::core::declaration::QuestionMetadata,
@@ -346,44 +317,6 @@ struct JudgingInput<'a> {
     mismatch: Mismatch,
     context: Option<Context>,
     context_field: Option<String>,
-}
-
-impl Judging<'_> {
-    fn new(input: JudgingInput<'_>) -> Result<Judging<'_>, Failure> {
-        let JudgingInput {
-            admitted: _,
-            declarations,
-            common,
-            environment,
-            folders,
-            backend,
-            asks,
-            threshold,
-            view,
-            keeping,
-            streams,
-            documents,
-            text_view,
-            sources: _,
-            profile,
-            mismatch,
-            context: _,
-            context_field: _,
-        } = input;
-        Ok(Judging {
-            declarations,
-            environment,
-            engine: engine(common, environment, folders, backend, profile, common.jobs)?,
-            asks,
-            threshold,
-            view,
-            keeping,
-            streams,
-            documents,
-            text_view,
-            mismatch,
-        })
-    }
 }
 
 /// Turn the outcome into the exit code `specification/channels.md` fixes.

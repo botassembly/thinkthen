@@ -251,6 +251,22 @@ impl Output<'_> {
         result
     }
 
+    /// Emit an occurrence already ordered and numbered by native rank.
+    pub(crate) fn take_ranked(&mut self, judged: Judged) -> Result<bool, Failure> {
+        self.check_model(&judged)?;
+        if let Some(mismatch) = &judged.profile_mismatch {
+            mismatch.print_once()?;
+        }
+        let writer = match &mut self.mode {
+            Mode::Streaming(writer) | Mode::Ordered { writer, .. } => &mut **writer,
+        };
+        let result = self.display.emit(writer, &judged);
+        if result.is_ok() {
+            self.usage.record_done();
+        }
+        result
+    }
+
     pub(crate) fn ended(&mut self) -> Result<(), Failure> {
         if !self.members.is_empty() {
             return self.end_members();

@@ -73,6 +73,8 @@ pub(super) fn run(
     }
     if configuration.keeping == crate::judge::Keeping::Passing {
         feed = feed.with_all_filter_results();
+    }
+    if configuration.keeping != crate::judge::Keeping::Answers {
         output.guard_models();
     }
     let rendering = Renderer {
@@ -102,6 +104,19 @@ pub(super) fn run(
         },
         &sink,
     );
+    let result = if configuration.keeping == crate::judge::Keeping::Ordered {
+        result.map(|outcome| match outcome {
+            crate::RequestOutcome::Complete(call) => {
+                crate::RequestOutcome::Complete(call.map(|value| {
+                    sink(value);
+                    crate::RequestValue::Ranked(Vec::new())
+                }))
+            }
+            stopped => stopped,
+        })
+    } else {
+        result
+    };
     rendering.finish(
         environment,
         result,
@@ -330,6 +345,52 @@ fn take(
         crate::RequestValue::Tags(v) => rows!(v),
         crate::RequestValue::Scores(v) => rows!(v),
         crate::RequestValue::Filtered(v) => rows!(v),
+        crate::RequestValue::Ranked(v) => {
+            for row in v {
+                let unit = held
+                    .borrow_mut()
+                    .remove(&row.ordinal())
+                    .ok_or(Failure::Defect("native rank lost its host occurrence"))?;
+                let judged = rendering.row(reading, unit, row.result().canonical.clone())?;
+                if output.take_ranked(judged)? {
+                    ended.finished += 1;
+                } else {
+                    ended.closed = true;
+                    break;
+                }
+            }
+        }
+        crate::RequestValue::SetRanked(v) => {
+            for row in v {
+                let unit = held
+                    .borrow_mut()
+                    .remove(&row.ordinal())
+                    .ok_or(Failure::Defect("native set rank lost its host occurrence"))?;
+                let mut judged =
+                    rendering.row(reading, unit, row.result().result().canonical.clone())?;
+                if rendering.view.details {
+                    let original = row.original();
+                    judged.printed = Some(json_line(&RankMembers {
+                        canonical: &row.result().result().canonical,
+                        original,
+                        index: row.ordinal(),
+                        name: row.result().question_name(),
+                        members: row.result().members(),
+                    })?);
+                    crate::cli::intake::locate(&mut judged.printed, judged.position.as_ref())?;
+                    crate::cli::intake::source_members(
+                        &mut judged.printed,
+                        judged.position.as_ref(),
+                    )?;
+                }
+                if output.take_ranked(judged)? {
+                    ended.finished += 1;
+                } else {
+                    ended.closed = true;
+                    break;
+                }
+            }
+        }
         _ => return Err(Failure::Defect("atomic request returned another function")),
     }
     Ok(())
@@ -369,10 +430,14 @@ impl Renderer {
         } else if self.view.details {
             Some(json_line(&Details {
                 canonical: &canonical,
-                original: (self.streams || passing).then_some(&unit.record),
-                index: passing.then_some(unit.ordinal),
+                original: (self.streams
+                    || passing
+                    || self.keeping == crate::judge::Keeping::Ordered)
+                    .then_some(&unit.record),
+                index: (passing || self.keeping == crate::judge::Keeping::Ordered)
+                    .then_some(unit.ordinal),
             })?)
-        } else if passing {
+        } else if self.keeping.streams_only() {
             Some(match &unit.arrived {
                 Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
                 None => json_line(&unit.record)?,
@@ -446,7 +511,11 @@ impl Renderer {
             return Ok(());
         };
         let original = json_line(&unit.record)?;
-        let shown = if passing { &original } else { &*line };
+        let shown = if self.keeping.streams_only() {
+            &original
+        } else {
+            &*line
+        };
         *line = crate::cli::intake::source_value(&unit.record, shown, position)?;
         Ok(())
     }
@@ -455,6 +524,32 @@ struct Details<'a> {
     canonical: &'a crate::core::CompleteAtomic,
     original: Option<&'a crate::core::Record>,
     index: Option<usize>,
+}
+struct RankMembers<'a> {
+    canonical: &'a crate::core::CompleteAtomic,
+    original: &'a crate::QuestionInput,
+    index: usize,
+    name: &'a str,
+    members: &'a [crate::CompleteRankMember],
+}
+impl serde::Serialize for RankMembers<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.canonical.serialize_occurrence_members(
+            Some(self.original),
+            Some(self.name),
+            Some(self.index),
+            Some(
+                self.members
+                    .iter()
+                    .map(|member| crate::core::RankMemberDocument {
+                        name: member.name(),
+                        result: &member.result().canonical,
+                    })
+                    .collect(),
+            ),
+            serializer,
+        )
+    }
 }
 impl serde::Serialize for Details<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

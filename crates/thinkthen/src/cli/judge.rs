@@ -221,6 +221,7 @@ pub(crate) fn filter(
 pub(crate) fn rank(
     arguments: &RankArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -236,9 +237,9 @@ pub(crate) fn rank(
                 .ok_or(Failure::TopIsZero)
         })
         .transpose()?;
-    let (settled, file, set) = asked::rank(arguments)?;
+    let (settled, file, set) = asked::rank(arguments, Some(&mut admitted))?;
     over_kept(
-        None,
+        Some(admitted),
         Keeping::Ordered,
         &arguments.common,
         &arguments.display,

@@ -12,20 +12,10 @@ use crate::args::{
 };
 use crate::failure::Failure;
 
-/// The path the first argument names, when it is `@` and a path.
-fn path_of(question: &str) -> Option<&str> {
-    question.strip_prefix('@')
-}
-
 /// The raw file batch tier and whether that file carries a tuned threshold.
 pub(crate) struct FileTier {
     pub(crate) batch: Option<Json>,
     pub(crate) tuned: bool,
-}
-
-/// The question text the command line carries, or `None` when a file holds it.
-const fn typed_text(question: &str, from_file: bool) -> Option<&str> {
-    if from_file { None } else { Some(question) }
 }
 
 /// The pointers `--field` named, or `None` when it named none.

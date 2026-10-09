@@ -61,6 +61,93 @@ struct Held<T> {
 type Admission<T> = (Vec<Held<T>>, Vec<Input>);
 
 impl Engine {
+    pub(crate) fn request_rank_set_records_complete_with<'a, I, T>(
+        &'a self,
+        set: &'a RankSet,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteSetRank>>>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+        T: InputEvidence + 'a,
+    {
+        #[cfg(feature = "cli")]
+        if options.cli_reader.is_some() {
+            return self.live_rank_set(set, records, options);
+        }
+        self.try_rank_set_records_complete_with(set, records, options)
+    }
+    #[cfg(feature = "cli")]
+    fn live_rank_set<'a, I, T>(
+        &'a self,
+        set: &'a RankSet,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteSetRank>>>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+        T: InputEvidence + 'a,
+    {
+        let questions = questions(&set.0);
+        let setting = crate::public::bulk::selected_set_batch(&set.0, &options, self.batch)?;
+        let engine = Arc::clone(&self.inner);
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        let captured = stop.facts().attempts().is_some();
+        let mut packing = pull::packing(setting, false, false);
+        packing.detailed = captured;
+        let prepared = SetRecords {
+            records: Records(Arc::clone(&engine), false),
+            questions: questions.clone(),
+        };
+        let own_questions = questions.clone();
+        let records = records.into_iter().enumerate().map(move |(at, row)| {
+            let (held, input) = prepare_one(&own_questions, row?, &options, at)?;
+            prepared.asks(&input).map_err(pipeline_failure)?;
+            Ok((held, input))
+        });
+        let observed_engine = Arc::clone(&engine);
+        let observed_questions = questions.clone();
+        let batch = pull::try_start_prepared(
+            pull::Call {
+                engine: Arc::clone(&engine),
+                stop,
+                packing,
+                most: self.most,
+            },
+            SetRecords {
+                records: Records(Arc::clone(&engine), false),
+                questions: questions.clone(),
+            },
+            records,
+            Box::new(|_, original: &(Held<T>, Input)| {
+                Ok(Input {
+                    at: original.1.at,
+                    members: original.1.members.iter().map(Prepared::duplicate).collect(),
+                })
+            }),
+            Box::new(move |stop, at, original, row| {
+                let row = row.map_err(crate::public::asking::failure)?;
+                let values = crate::public::rank_set::observed_judgments(
+                    &set.0,
+                    &observed_questions,
+                    observed_engine.backend(),
+                    stop,
+                    at,
+                    row,
+                )?;
+                let (held, _) =
+                    original.ok_or_else(|| Error::defect("set rank lost its original"))?;
+                Ok(Some((held, values)))
+            }),
+        );
+        batch.into_call()?.try_map(|rows| {
+            let (held, values) = rows.into_iter().unzip();
+            render::ranked(
+                self, &engine, &set.0, &questions, setting, held, values, captured,
+            )
+        })
+    }
+
     /// Complete saved decide-set rank, retaining all member observations and originals.
     /// Per-item context uses the existing record composition; images/options are refused.
     /// # Errors
@@ -199,42 +286,9 @@ fn prepare<T: InputEvidence>(
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
-        options.admission()?;
-        if record.examples.is_some() {
-            return Err(
-                Error::usage("record examples are admitted only for recognize").at_record(at),
-            );
-        }
-        if record.options.is_some() {
-            return Err(Error::usage("rank accepts no per-item options").at_record(at));
-        }
-        let input = record.original.question_input();
-        options.admission()?;
-        let mut members = Vec::with_capacity(questions.len());
-        let mut context_sha256 = None;
-        for question in questions {
-            let (item, prepared) = prepare_record(
-                InputFunction::Rank,
-                question,
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: input.clone(),
-                    context: record.context.clone(),
-                    options: None,
-                },
-                options.context_text(),
-                at,
-            )?;
-            context_sha256 = item.context_sha256;
-            members.push(prepared);
-        }
-        held.push(Held {
-            source: super::physical_source(&input),
-            original: record.original,
-            context_sha256,
-        });
-        inputs.push(Input { at, members });
+        let (original, prepared) = prepare_one(questions, record, options, at)?;
+        held.push(original);
+        inputs.push(prepared);
     }
     Ok((held, inputs))
 }
@@ -273,4 +327,46 @@ impl Rows<'_, '_> {
             }
         }
     }
+}
+
+fn prepare_one<T: InputEvidence>(
+    questions: &[Question],
+    record: RecordInput<T>,
+    options: &CallOptions<'_>,
+    at: usize,
+) -> Result<(Held<T>, Input), Error> {
+    options.admission()?;
+    if record.examples.is_some() {
+        return Err(Error::usage("record examples are admitted only for recognize").at_record(at));
+    }
+    if record.options.is_some() {
+        return Err(Error::usage("rank accepts no per-item options").at_record(at));
+    }
+    let input = record.original.question_input();
+    options.admission()?;
+    let mut members = Vec::with_capacity(questions.len());
+    let mut context_sha256 = None;
+    for question in questions {
+        let (item, prepared) = prepare_record(
+            InputFunction::Rank,
+            question,
+            RecordInput {
+                examples: None,
+                seed_spans: None,
+                original: input.clone(),
+                context: record.context.clone(),
+                options: None,
+            },
+            options.context_text(),
+            at,
+        )?;
+        context_sha256 = item.context_sha256;
+        members.push(prepared);
+    }
+    let held = Held {
+        source: super::physical_source(&input),
+        original: record.original,
+        context_sha256,
+    };
+    Ok((held, Input { at, members }))
 }

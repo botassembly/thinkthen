@@ -42,6 +42,25 @@ impl AdmittedRequest {
         self.cli_atomic = Some(prepared.clone());
         Ok(prepared)
     }
+    #[cfg(feature = "cli")]
+    pub(crate) fn resolve_cli_rank(
+        &mut self,
+        typed: &crate::core::Typed,
+    ) -> Result<super::cli_atomic::Prepared, Error> {
+        if let Some(prepared) = &self.cli_atomic {
+            return Ok(prepared.clone());
+        }
+        let text = selector_text(&self.request.call.arguments().question)?;
+        let prepared = super::cli_atomic::rank(&text, true, typed)?;
+        let definition = admit_definition(
+            self.request.call.function(),
+            super::cli_atomic::definition(&prepared)?,
+        )?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
+        self.definition = Some(definition);
+        self.cli_atomic = Some(prepared.clone());
+        Ok(prepared)
+    }
     pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
         let args = self.request.call.arguments_mut();
         args.input = RequestInput::Feed {
