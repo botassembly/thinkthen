@@ -17,3 +17,7 @@ Derive MCP tool input schemas and ordinary admission from the shared Request con
 - Changes: Map Request variants into advertised tools and native admission. Depends on0491; coordinate0464,0481,0488. Claim `crates/thinkthen/src/mcp/**` and installed MCP fixtures.
 - Proof: Schema combinations match runtime refusals and valid typed calls; malformed input sends nothing; existing installed MCP suite remains green.
 - Defers: HTTP services and new tools. Size: medium surface migration.
+
+## Progress
+
+- 2026-10-08 started
