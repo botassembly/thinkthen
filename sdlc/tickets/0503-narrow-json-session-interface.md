@@ -22,6 +22,8 @@ Reviews: revision a1cc320d9b69b91a33e0b17944602ccae432ea6d, reject
 
 Reviews: revision 5512fd7a6022e08d6ff719844dba191baee03836, accept
 
+Reviews: revision ee94000bf616d835693bd8b938e1437dda6a9696, accept
+
 ## Outcome
 
 C-interface languages call one owned, bounded engine session. A caller declares a call once, feeds descriptors without staging the whole input, reads results, and finishes, cancels or frees the session. Cancel and free return promptly without waiting for a blocked provider. Final facts stay truthful and arrive only when the work actually settles.
