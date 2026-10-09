@@ -56,12 +56,16 @@ class Installed(unittest.TestCase):
             self.assertTrue(Draft202012Validator(schemas['choose']).is_valid(dynamic))
             result = client.choose(**dynamic)
             self.assertEqual(list(result['value'][0]['answer']['probabilities']), ['zebra', 'alpha'])
+            ranked = {'question': 'Q?', 'records': ['x'], 'options': {'threshold': 0.5}}
+            self.assertTrue(Draft202012Validator(schemas['rank']).is_valid(ranked))
+            ranked_result = client.rank(**ranked)
+            self.assertEqual([row['input'] for row in ranked_result['value']], ['x'])
             before = self.count()
             for name, arguments in (
                     ('choose', {'question': {'choose': 'Which?', 'unknown': True}, 'inputs': dynamic['inputs']}),
                     ('choose', {'question': {'choose': 'Which?'}, 'inputs': [{'text': 'x', 'options': ['only'] }]}),
                     ('decide', {'question': 'Q?', 'evidence': 'x', 'options': {'top': 1}}),
-                    ('rank', {'question': 'Q?', 'records': ['x'], 'options': {'threshold': 0.5}}),
+                    ('rank', {'question': 'Q?', 'records': ['x'], 'options': {'none': True}}),
                     ('decide', {'question': 'Q?', 'evidence': 'x', 'records': ['x']})):
                 self.assertFalse(Draft202012Validator(schemas[name]).is_valid(arguments), (name, arguments))
                 with self.assertRaises(ToolError) as refusal:
