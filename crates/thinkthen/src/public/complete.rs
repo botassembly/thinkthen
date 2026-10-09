@@ -21,6 +21,22 @@ use crate::result_json::{
     complete::{AtomicSpec, atomic},
 };
 
+/// Prepare a preview through the same original/context/shortlist admission as execution.
+pub(in crate::public) fn preview_asks(
+    engine: &std::sync::Arc<crate::engine::facade::Engine>,
+    function: InputFunction,
+    question: &Question,
+    record: crate::RecordInput<QuestionInput>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<Vec<crate::core::pack::Ask>, Error> {
+    use crate::engine::pipeline::Asker as _;
+    let (_, input) = records::prepare_record(function, question, record, fallback, at)?;
+    records::Records(std::sync::Arc::clone(engine), false)
+        .asks(&input)
+        .map_err(records::pipeline_failure)
+}
+
 impl Engine {
     /// Complete yes/no result with identity and every probability.
     ///

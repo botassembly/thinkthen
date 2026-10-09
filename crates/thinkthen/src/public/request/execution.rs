@@ -207,7 +207,7 @@ impl Engine {
         })
     }
 }
-fn feed_projection(
+pub(super) fn feed_projection(
     request: &AdmittedRequest,
     feed: Option<&RequestFeed<'_>>,
 ) -> Result<bool, Error> {
@@ -231,7 +231,7 @@ fn feed_projection(
     }
     Ok(all)
 }
-fn controls<'a>(
+pub(super) fn controls<'a>(
     options: &'a RequestOptions,
     mut controls: CallOptions<'a>,
 ) -> Result<CallOptions<'a>, Error> {
@@ -359,7 +359,10 @@ fn plain(q: &LoadedQuestion) -> Result<&Question, Error> {
         _ => Err(Error::usage("this function takes no band")),
     }
 }
-fn apply(definition: &mut RequestDefinition, options: &RequestOptions) -> Result<(), Error> {
+pub(super) fn apply(
+    definition: &mut RequestDefinition,
+    options: &RequestOptions,
+) -> Result<(), Error> {
     match definition {
         RequestDefinition::Atomic(q) => match q {
             LoadedQuestion::Question(q) => apply_question(q, options)?,
@@ -568,7 +571,7 @@ fn dispatch<'a>(
     Ok(outcome)
 }
 
-fn image_descriptors(input: &RequestInput) -> bool {
+pub(super) fn image_descriptors(input: &RequestInput) -> bool {
     match input {
         RequestInput::Text { images, .. }
         | RequestInput::Json { images, .. }
@@ -579,7 +582,7 @@ fn image_descriptors(input: &RequestInput) -> bool {
         RequestInput::Source { source } => source.media == crate::ReaderMedia::Image,
     }
 }
-fn image_route(engine: &Engine, definition: &RequestDefinition) -> Result<(), Error> {
+pub(super) fn image_route(engine: &Engine, definition: &RequestDefinition) -> Result<(), Error> {
     let configured = match definition {
         RequestDefinition::Atomic(LoadedQuestion::Question(q)) => engine.asking(q)?,
         RequestDefinition::Atomic(LoadedQuestion::Banded(q)) => engine.asking(&q.0)?,
