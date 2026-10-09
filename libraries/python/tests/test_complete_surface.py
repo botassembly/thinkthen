@@ -148,6 +148,8 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
         document = row.to_dict()
         for value in (None, False, 0, [], {}, {'nested': [False, None, 18446744073709551615]}):
             document['value']['value'] = value
+            document['value']['error'] = None
+            document['value']['failure'] = {'value': True}
             document['extension'] = {'secret': 'do-not-print', 'json': [False, None]}
             document['value'].pop('question_name', None)
             typed = native._restore_native_result('completesessionPacket', json.dumps(document))
@@ -168,7 +170,7 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
             copied['extension']['json'].append(True)
             assert typed.to_dict() == document
         failed = native._restore_native_result('completeAnnotationValue', json.dumps({
-            'kind': 'failed', 'value': {'kind': 'backend', 'cause': 'missing_answer'},
+            'kind': 'failed', 'value': {'kind': 'backend', 'cause': 'missing_answer', 'value': False},
         }))
         assert failed.value.kind == 'backend'
         assert failed.value.cause == 'missing_answer'
@@ -176,6 +178,12 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
         try: bool(failed)
         except TypeError: pass
         else: raise AssertionError('embedded failure became an answer')
+        decision = native._restore_native_result('completeAnnotationValue', json.dumps({
+            'kind': 'decision', 'value': False, 'error': None, 'failure': {'value': True},
+        }))
+        assert bool(decision) is False
+        assert decision.to_dict()['error'] is None
+        assert pickle.loads(pickle.dumps(decision)) == decision
         print('owned')
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ['owned']

@@ -69,10 +69,8 @@ impl NativeResult {
     }
 
     fn __bool__(&self, py: Python<'_>) -> PyResult<bool> {
-        if self.value.get("error").is_some() || self.value.get("failure").is_some() {
-            return Err(PyTypeError::new_err(
-                "a failed native result has no truth value",
-            ));
+        if !crate::results_generated::has_value(&self.kind) {
+            return Err(PyTypeError::new_err("this native result has no value"));
         }
         match self.value.get("value") {
             Some(value) => crate::results_generated::field(py, &self.kind, "value", value)?

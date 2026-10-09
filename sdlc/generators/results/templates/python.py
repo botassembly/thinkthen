@@ -71,7 +71,11 @@ def render(definitions):
     for key, source in definitions.items():
         for member, field in source.get('properties', {}).items():
             lines.append(f'({json.dumps(key)}, {json.dumps(member)}) => {expression(field)},')
-    lines += ['_ => plain(py, value),', '}', '}']
+    lines += ['_ => plain(py, value),', '}', '}',
+              'pub(crate) fn has_value(kind: &str) -> bool {', 'matches!(kind,']
+    lines.append(' | '.join(json.dumps(key) for key, source in definitions.items()
+                           if 'value' in source.get('properties', {})))
+    lines += [')', '}']
     return '\n'.join(lines) + '\n'
 
 
