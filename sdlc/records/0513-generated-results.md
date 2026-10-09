@@ -81,6 +81,8 @@ Focused Python, Ruby, R and JavaScript carrier checks, strict TypeScript carrier
 
 ## Installed complete consumers
 
+Combined landing lint exposed three complexity-limit failures in the existing native presentation tests. Repair `fa5650ccbd36675954b1d6b0594ff817610732e3` extracts their member-document assertions into typed helpers without changing assertions, expectations or product code. Fresh review accepted that repair. Workspace all-targets Clippy and the supported library-only profile pass, along with the existing serializer and aggregate cases. The first combined lint stopped before tests; its output is not a full-suite pass. The source ceiling grows only for these shared assertion helpers, avoiding duplicated loops or relaxed limits.
+
 Fresh review accepted the combined source at `8d5666d4541279b9cebf396666981f661ca3ec18` after the installed consumer checks. The focused review confirmed that the explicit Python absence-type export preserves runtime identity and missing versus null. Earlier native presentation and output-preservation reviews remain applicable to their unchanged source.
 
 The combined producer and preservation bridge exposed an existing installed Python typing failure. The existing native consumer rejects sixteen references to public `complete.Absent` because its stub imports that name through two wildcard paths. The same pinned checker against the cached tool environment reproduces the failure. The stub now explicitly reexports the existing absence type. Runtime decoding, requests and native behavior remain unchanged.

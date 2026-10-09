@@ -188,26 +188,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
     };
     assert_eq!(successful.value(), Some(&Value::YesNo(None)));
     assert_eq!(failed.value(), None);
-    let success_json = json_line(&successful).unwrap();
-    assert!(success_json.starts_with(&format!(
-        r#"{{"answer_id":"{}","value":null,"question":"#,
-        "c".repeat(64)
-    )));
-    assert!(!success_json.contains("failure"));
-    let success: serde_json::Value = serde_json::from_str(&success_json).unwrap();
-    assert_eq!(
-        success["question_sources"],
-        serde_json::json!([
-            {"origin":"replay","answered_by":"actual","batch_size":13}
-        ])
-    );
-    assert_eq!(
-        success["observations"],
-        serde_json::json!([
-            {"observation_id":"b".repeat(64)}
-        ])
-    );
-    assert_eq!(success["usage"], serde_json::json!({"input_tokens":0}));
+    annotation_success_document(&successful);
     let failure_json = json_line(&failed).unwrap();
     assert_eq!(
         failure_json,
@@ -235,4 +216,27 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         reported_usage: failed.reported_usage,
     };
     assert!(json_line(&mismatched).is_err());
+}
+
+fn annotation_success_document(successful: &super::AnnotationMember) {
+    let success_json = json_line(successful).unwrap();
+    assert!(success_json.starts_with(&format!(
+        r#"{{"answer_id":"{}","value":null,"question":"#,
+        "c".repeat(64)
+    )));
+    assert!(!success_json.contains("failure"));
+    let success: serde_json::Value = serde_json::from_str(&success_json).unwrap();
+    assert_eq!(
+        success["question_sources"],
+        serde_json::json!([
+            {"origin":"replay","answered_by":"actual","batch_size":13}
+        ])
+    );
+    assert_eq!(
+        success["observations"],
+        serde_json::json!([
+            {"observation_id":"b".repeat(64)}
+        ])
+    );
+    assert_eq!(success["usage"], serde_json::json!({"input_tokens":0}));
 }
