@@ -9,6 +9,8 @@ Depends on: 0517
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 36382970a, accept
+
 ## Outcome
 
 Dart and Flutter callers install one package, call the ten functions with Dart values, await `Future` and `Stream` results as generated presence-aware Dart classes, and handle typed exceptions. Cancellation is explicit and cleanup is deterministic, with a finalizer as a backstop. Flutter ships as a real FFI plugin with its platform libraries. Hand-copied layouts, readers and old public names are gone.

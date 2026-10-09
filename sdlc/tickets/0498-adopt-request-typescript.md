@@ -16,6 +16,8 @@ Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 36382970a, accept
+
 ## Outcome
 
 A TypeScript or JavaScript caller installs the npm package, imports it as CommonJS or ES modules, calls the ten functions by name with ordinary values, and gets typed results at runtime and in the editor. Async calls keep the event loop responsive and cancel cleanly. Rust owns every rule and observation; the addon keeps only naming, conversion, streams, cancellation and cleanup.

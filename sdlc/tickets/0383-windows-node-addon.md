@@ -11,6 +11,8 @@ Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 36382970a, accept
+
 ## Outcome
 
 On a real Windows host, a caller installs the final npm package and makes a real call with no library-path setting. 0498 builds the `win32-x64` addon and its loader changes, and 0530 assembles the final package. This ticket proves them on Windows at the first authorized candidate.
