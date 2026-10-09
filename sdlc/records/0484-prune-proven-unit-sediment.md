@@ -9,3 +9,5 @@ Slice A preserves every claim and removes no test. Counting literal `#[test]` at
 ## What the build taught us
 
 A size boundary can share a test with small negative cases. Moving the whole test hides those routine claims. Splitting only the large construction preserves them. A common ignored-test name selects release boundaries without selecting unrelated ignored subprocess and load tests. The ordinary cargo-test fallback cannot enforce nextest's routine timeout, so the runner now refuses it.
+
+The release runner's direct cargo tests need their own isolated usage and configuration folders. The routine child runner's guard cannot protect its parent after the child exits. The parent now uses the existing scratch helpers, which clean up only the folders that invocation creates.
