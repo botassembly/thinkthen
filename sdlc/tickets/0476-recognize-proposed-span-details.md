@@ -20,9 +20,9 @@ PM approved these borrowed API details within the canonical-result outcome on 20
 ```text
 struct RecognitionProposal<'a>
 fn RecognitionProbabilities::judged_proposals(&self) -> impl ExactSizeIterator<Item = RecognitionProposal<'a>>
-fn RecognitionProposal::range(&self) -> std::ops::Range<usize>
+fn RecognitionProposal::range(&self) -> Range<usize>
 const fn RecognitionProposal::span_probability(&self) -> f64
-fn RecognitionProposal::selected(&self) -> Option<std::ops::Range<usize>>
+fn RecognitionProposal::selected(&self) -> Option<Range<usize>>
 fn RecognitionProposal::kind(&self) -> Option<&str>
 const fn RecognitionProposal::strength(&self) -> Option<f64>
 const fn RecognitionProposal::kept(&self) -> bool
