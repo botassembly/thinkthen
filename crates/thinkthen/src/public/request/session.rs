@@ -303,7 +303,8 @@ fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>, surface: Su
             .observe(&observer),
         feed,
     };
-    let terminal = match engine.execute_request_sink(&request, environment, Some(&sink), None) {
+    let terminal = match engine.execute_request_sink(&request, environment, Some(&sink), None, None)
+    {
         Ok(RequestOutcome::Complete(call)) => {
             let facts = call.facts().clone();
             publish_rows(queue, call.into_value(), files_only, &files);

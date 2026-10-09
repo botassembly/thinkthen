@@ -21,6 +21,8 @@ use crate::engine::{AttemptSink, CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
 use crate::public::results::{AttemptObservation, Call, Facts, RecordObservation};
 
+pub(crate) type AnnotationRecovery<'a> = Option<&'a dyn Fn(usize, &str) -> bool>;
+
 type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
 type AttemptObserver<'a> = &'a (dyn Fn(AttemptObservation) + Send + Sync);
 

@@ -33,12 +33,13 @@ enum Event<A: Asker> {
 }
 
 /// The coordinator's side: each ask and each row goes to the calling thread.
-struct Bridge<A: Asker> {
+struct Bridge<'a, A: Asker> {
+    asker: &'a A,
     events: Sender<Event<A>>,
     pause: Option<Duration>,
 }
 
-impl<A: Asker> Host<A> for Bridge<A> {
+impl<A: Asker> Host<A> for Bridge<'_, A> {
     fn pause(&self) -> Duration {
         self.pause.unwrap_or(TICK)
     }
@@ -47,7 +48,11 @@ impl<A: Asker> Host<A> for Bridge<A> {
     }
 
     fn row(&mut self, _place: usize, result: Row<A>) -> Flow {
-        let failed = result.is_err();
+        let failed = match &result {
+            Err(Failed::Asker(error)) => !self.asker.recovers(error),
+            Err(_) => true,
+            Ok(_) => false,
+        };
         if self.events.send(Event::Row(result)).is_err() || failed {
             Flow::Stop
         } else {
@@ -154,6 +159,7 @@ where
                     |port| {
                         let _sent = events.send(Event::Port(port));
                         Bridge {
+                            asker: &asker,
                             events: events.clone(),
                             pause,
                         }

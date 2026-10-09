@@ -125,7 +125,7 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, None, None)
+        self.execute_request_sink(request, environment, None, None, None)
     }
     #[cfg(feature = "cli")]
     pub(crate) fn execute_cli_request<'a>(
@@ -134,8 +134,9 @@ impl Engine {
         environment: RequestEnvironment<'a>,
         sink: &dyn Fn(RequestValue),
         release: &dyn Fn(usize),
+        recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, Some(sink), Some(release))
+        self.execute_request_sink(request, environment, Some(sink), Some(release), recover)
     }
     pub(super) fn execute_request_sink<'a>(
         &self,
@@ -143,6 +144,7 @@ impl Engine {
         environment: RequestEnvironment<'a>,
         sink: Option<&dyn Fn(RequestValue)>,
         release: Option<&dyn Fn(usize)>,
+        recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<RequestOutcome, Error> {
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
@@ -216,6 +218,7 @@ impl Engine {
             options,
             sink,
             release,
+            recover,
         )?;
         Ok(if all_filter_results {
             outcome
@@ -501,6 +504,7 @@ fn dispatch<'a>(
     options: &RequestOptions,
     sink: Option<&dyn Fn(RequestValue)>,
     release: Option<&dyn Fn(usize)>,
+    recover: crate::public::options::AnnotationRecovery<'a>,
 ) -> Result<RequestOutcome, Error> {
     let outcome = match definition {
         RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager, sink),
@@ -542,7 +546,7 @@ fn dispatch<'a>(
                 ))
             } else {
                 Ok(stream(
-                    engine.try_annotate_records_complete_with(set, rows, controls),
+                    engine.request_annotate_stream(set, rows, controls, recover),
                     RequestValue::Annotations,
                     sink,
                 ))

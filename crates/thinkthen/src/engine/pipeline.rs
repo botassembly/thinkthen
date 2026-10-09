@@ -6,6 +6,7 @@
 //! workers, stores each reply's good answers, and emits rows in input order.
 
 use std::sync::Arc;
+#[cfg(test)]
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -57,6 +58,11 @@ pub(crate) trait Asker: Sync {
 
     /// Declared inputs admit a bounded packed batch before any lookup.
     fn validates_batches(&self) -> bool {
+        false
+    }
+
+    /// A host may recover this specific refused row without stopping its call.
+    fn recovers(&self, _error: &Self::Error) -> bool {
         false
     }
 
@@ -154,6 +160,7 @@ pub(crate) trait Host<A: Asker> {
 
 /// A host whose reader runs on its own thread and answers each ask sent
 /// down `asks`, and whose rows go to `emit`.
+#[cfg(test)]
 pub(crate) struct Reader<F> {
     asks: mpsc::Sender<()>,
     emit: F,
@@ -161,6 +168,7 @@ pub(crate) struct Reader<F> {
     pause: Option<Duration>,
 }
 
+#[cfg(test)]
 impl<A: Asker, F: FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow> Host<A> for Reader<F> {
     fn ask(&mut self) -> bool {
         self.asks.send(()).is_ok()
@@ -177,6 +185,7 @@ impl<A: Asker, F: FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow> Host<A
 
 /// Start a reader thread with `start_reader` and emit each row through
 /// `emit`. A `pause` replaces the engine's pause; only tests set one.
+#[cfg(test)]
 pub(crate) fn reader<I, E, F>(
     pause: Option<Duration>,
     start_reader: impl FnOnce(mpsc::Receiver<()>, Port<I, E>),

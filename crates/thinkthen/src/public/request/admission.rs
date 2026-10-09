@@ -61,6 +61,16 @@ impl AdmittedRequest {
         self.cli_atomic = Some(prepared.clone());
         Ok(prepared)
     }
+    #[cfg(feature = "cli")]
+    pub(crate) fn retain_cli_definition(
+        mut self,
+        definition: RequestDefinition,
+    ) -> Result<Self, Error> {
+        let definition = admit_definition(self.request.call.function(), definition)?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
+        self.definition = Some(definition);
+        Ok(self)
+    }
     pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
         let args = self.request.call.arguments_mut();
         args.input = RequestInput::Feed {

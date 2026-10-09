@@ -24,6 +24,8 @@ struct Held<T> {
     context: Option<core::Evidence>,
 }
 struct Annotations {
+    recover_missing: bool,
+    cli_groups: bool,
     engine: Arc<facade::Engine>,
     set: core::QuestionSet,
 }
@@ -31,6 +33,12 @@ impl Asker for Annotations {
     type Input = Prepared;
     type Row = facade::Annotation;
     type Error = Error;
+    fn recovers(&self, error: &Error) -> bool {
+        self.recover_missing && error.missed_pointer().is_some()
+    }
+    fn refuses_batch(&self, error: &Error) -> bool {
+        !self.cli_groups || error.missed_pointer().is_none()
+    }
     fn validates_batches(&self) -> bool {
         self.set.questions().iter().any(|member| {
             member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
@@ -53,7 +61,9 @@ impl Asker for Annotations {
         input: Prepared,
         answers: Vec<pipeline::Answered>,
     ) -> Result<facade::Annotation, Error> {
-        Annotating::new(&self.engine, self.set.clone()).row(input.text, answers)
+        Annotating::new(&self.engine, self.set.clone())
+            .require_usable_groups(self.cli_groups)
+            .row(input.text, answers)
     }
 }
 impl Engine {
@@ -84,6 +94,8 @@ impl Engine {
         )?;
         let engine = Arc::clone(&self.inner);
         let asker = Annotations {
+            recover_missing: false,
+            cli_groups: false,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -180,10 +192,14 @@ fn prepare<T: InputEvidence>(
 fn failed(row: pipeline::Failed<Error>) -> Error {
     match row {
         pipeline::Failed::Asker(error) => error,
-        pipeline::Failed::Pack { error, .. } => crate::public::asking::packed(error),
-        pipeline::Failed::Engine { error, .. } | pipeline::Failed::Stopped(error) => {
-            Error::from(error)
-        }
+        pipeline::Failed::Pack { error, at } => crate::public::asking::packed(error).at_record(at),
+        pipeline::Failed::Engine { error, first, last } => Error::from(error.clone())
+            .with_diagnostic(crate::public::error::diagnostic::Diagnostic::EngineRange {
+                cause: error,
+                first,
+                last,
+            }),
+        pipeline::Failed::Stopped(error) => Error::from(error),
     }
 }
 

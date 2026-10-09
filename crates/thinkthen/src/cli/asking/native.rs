@@ -111,6 +111,7 @@ pub(super) fn run(
         },
         &sink,
         &release,
+        None,
     );
     let result = if configuration.keeping == crate::judge::Keeping::Ordered {
         result.map(|outcome| match outcome {

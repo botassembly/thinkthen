@@ -244,6 +244,10 @@ fn report_early(
     ExitCode::from(code)
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one dispatch gives every input verb its admitted request"
+)]
 fn run(
     cli: &Cli,
     environment: &Environment,
@@ -319,7 +323,13 @@ fn run(
             input,
             writer,
         ),
-        Some(Command::Annotate(arguments)) => annotate::run(arguments, environment, input, writer),
+        Some(Command::Annotate(arguments)) => annotate::run(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("annotate has no admitted request"))?,
+            input,
+            writer,
+        ),
         Some(Command::Recognize(arguments)) => {
             recognize::run(arguments, environment, input, writer)
         }

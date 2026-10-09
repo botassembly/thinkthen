@@ -115,7 +115,15 @@ fn dispatch(
             input,
             &mut output,
         ),
-        Some(Verb::Annotate(held)) => crate::annotate::run(held, environment, input, &mut output),
+        Some(Verb::Annotate(held)) => crate::cli::annotate::run(
+            held,
+            environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("annotate request"),
+            input,
+            &mut output,
+        ),
         Some(Verb::Find(held)) => {
             let admitted = crate::cli::request::admit(cli.command.as_ref().expect("command"))
                 .expect("native header")

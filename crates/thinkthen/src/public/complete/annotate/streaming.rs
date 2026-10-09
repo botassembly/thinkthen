@@ -26,7 +26,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.annotate_stream(questions, records, options))
+        Batch::of(self.annotate_stream(questions, records, options, None))
+    }
+
+    pub(crate) fn request_annotate_stream<'a, I, T>(
+        &'a self,
+        questions: &'a QuestionSet,
+        records: I,
+        options: CallOptions<'a>,
+        recover: crate::public::options::AnnotationRecovery<'a>,
+    ) -> Batch<'a, CompleteRecord<T, CompleteAnnotated>>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+        T: InputEvidence + 'a,
+    {
+        Batch::of(self.annotate_stream(questions, records, options, recover))
     }
 
     fn annotate_stream<'a, I, T>(
@@ -34,6 +48,7 @@ impl Engine {
         questions: &'a QuestionSet,
         records: I,
         options: CallOptions<'a>,
+        recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<Batch<'a, CompleteRecord<T, CompleteAnnotated>>, Error>
     where
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
@@ -45,6 +60,8 @@ impl Engine {
         let mut packing = pull::packing(setting, false, false);
         packing.detailed = stop.facts().attempts().is_some();
         let preparing = Annotations {
+            recover_missing: false,
+            cli_groups: false,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -52,13 +69,17 @@ impl Engine {
             let (held, prepared) = record
                 .and_then(|record| prepare_record(&questions.0, record, options.context_text(), at))
                 .map_err(|error| error.at_record(at))?;
-            preparing
-                .asks(&prepared)
-                .map_err(|error| error.at_record(at))?;
+            if options.cli_reader.is_none() {
+                preparing
+                    .asks(&prepared)
+                    .map_err(|error| error.at_record(at))?;
+            }
             Ok(Original { held, prepared })
         });
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
+            recover_missing: recover.is_some(),
+            cli_groups: options.cli_reader.is_some(),
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -94,6 +115,13 @@ impl Engine {
                             .at_record(at));
                     }
                 };
+                if let Err(crate::engine::pipeline::Failed::Asker(error)) = &row
+                    && let Some(pointer) = error.missed_pointer()
+                    && let Some(recover) = recover
+                    && recover(at, pointer)
+                {
+                    return Ok(None);
+                }
                 let result = complete_row(&engine, &questions.0, stop, &original.held, at, row)
                     .map_err(|error| error.at_record(at))?;
                 Ok(Some(CompleteRecord {

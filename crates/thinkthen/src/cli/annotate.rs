@@ -16,14 +16,12 @@ use crate::edge::Environment;
 use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::profile::{self, Mismatch};
-use crate::schedule::{Judged, Output};
+use crate::schedule::Output;
 
-mod aggregation;
 mod asker;
 pub(crate) mod error_row;
+mod native;
 mod plan;
-
-pub(crate) use crate::engine::facade::GroupAnswer;
 
 pub(crate) enum PrepareError {
     MissingOn(String),
@@ -42,6 +40,7 @@ impl PrepareError {
 pub(crate) fn run(
     arguments: &AnnotateArguments,
     environment: &Environment,
+    admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -102,20 +101,20 @@ pub(crate) fn run(
         Setting::Records(most) => Some(most.get()),
         Setting::Max => None,
     });
-    let engine = asking::engine(
+    let engine = crate::cli::construction::engine(
         &arguments.common,
         environment,
         folders,
-        backend,
-        profile,
+        (backend, profile),
         arguments.common.jobs,
+        false,
     )?;
     let judging = Judging::new(arguments, environment, engine, set, mismatch)?;
     if arguments.common.dry_run {
         return plan::dry_run(&judging, &reading, inputs, inputs_cap, &mut writer);
     }
     let mut output = Output::streaming(&mut writer, environment.usage());
-    asker::run(&judging, &reading, inputs, inputs_cap, &mut output)
+    native::run(&judging, admitted, &reading, inputs, setting, &mut output)
 }
 
 fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
@@ -290,15 +289,6 @@ impl<'a> Judging<'a> {
 
     pub(crate) const fn continue_missing(&self) -> bool {
         self.continue_missing
-    }
-
-    pub(crate) fn finish(
-        &self,
-        record: Record,
-        ordinal: usize,
-        answered: Vec<GroupAnswer>,
-    ) -> Result<Judged, Failure> {
-        aggregation::finish(self, record, ordinal, answered)
     }
 }
 

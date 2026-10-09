@@ -1,39 +1,43 @@
 //! One framed item per outstanding native input demand.
-use super::judged::{Held, Records};
 use crate::public::cli_reader::Wake;
 use crate::schedule::Placed;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 
-#[derive(Default)]
-struct State {
+struct State<T> {
     demand: bool,
     busy: bool,
     stopped: bool,
-    item: Option<Option<Result<Held, Placed>>>,
+    item: Option<Option<Result<T, Placed>>>,
     wake: Option<Wake>,
 }
-struct Shared {
-    state: Mutex<State>,
+struct Shared<T> {
+    state: Mutex<State<T>>,
     changed: Condvar,
 }
-pub(super) struct Reader(Arc<Shared>);
-impl Reader {
-    pub(super) fn new(records: Records) -> Self {
+pub(crate) struct Reader<T>(Arc<Shared<T>>);
+impl<T: Send + 'static> Reader<T> {
+    pub(crate) fn new(records: impl Iterator<Item = Result<T, Placed>> + Send + 'static) -> Self {
         let shared = Arc::new(Shared {
-            state: Mutex::new(State::default()),
+            state: Mutex::new(State {
+                demand: false,
+                busy: false,
+                stopped: false,
+                item: None,
+                wake: None,
+            }),
             changed: Condvar::new(),
         });
         let worker = shared.clone();
         thread::spawn(move || feed(records, worker));
         Self(shared)
     }
-    pub(super) fn wake(&self, wake: Wake) {
+    pub(crate) fn wake(&self, wake: Wake) {
         if let Ok(mut state) = self.0.state.lock() {
             state.wake = Some(wake);
         }
     }
-    pub(super) fn ready(&self) -> bool {
+    pub(crate) fn ready(&self) -> bool {
         let Ok(mut state) = self.0.state.lock() else {
             return false;
         };
@@ -47,14 +51,14 @@ impl Reader {
         }
         false
     }
-    pub(super) fn next(&self) -> Option<Result<Held, Placed>> {
+    pub(crate) fn next(&self) -> Option<Result<T, Placed>> {
         let mut state = self.0.state.lock().ok()?;
         let item = state.item.take()?;
         state.busy = false;
         item
     }
 }
-impl Drop for Reader {
+impl<T> Drop for Reader<T> {
     fn drop(&mut self) {
         if let Ok(mut state) = self.0.state.lock() {
             state.stopped = true;
@@ -65,7 +69,7 @@ impl Drop for Reader {
     }
 }
 
-fn feed(mut records: Records, worker: Arc<Shared>) {
+fn feed<T>(mut records: impl Iterator<Item = Result<T, Placed>>, worker: Arc<Shared<T>>) {
     loop {
         let Ok(state) = worker.state.lock() else {
             return;

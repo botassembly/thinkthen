@@ -20,6 +20,7 @@ use crate::public::set::QuestionSet;
 
 /// What one question set needs of each text beside the text.
 pub(crate) struct Annotating {
+    require_usable_groups: bool,
     set: core::QuestionSet,
     groups: Vec<Vec<usize>>,
     backend: core::Backend,
@@ -62,12 +63,18 @@ impl Annotating {
 
     pub(crate) fn new(engine: &facade::Engine, set: core::QuestionSet) -> Self {
         Self {
+            require_usable_groups: false,
             groups: set.groups(),
             set,
             backend: engine.backend().clone(),
             profile: engine.profile().cloned(),
             context: None,
         }
+    }
+
+    pub(crate) const fn require_usable_groups(mut self, required: bool) -> Self {
+        self.require_usable_groups = required;
+        self
     }
 
     fn question(&self, place: usize) -> Result<core::Question, Error> {
@@ -169,18 +176,48 @@ impl Asker for Annotating {
         let mut groups = Vec::with_capacity(self.groups.len());
         for places in &self.groups {
             let mut questions = Vec::with_capacity(places.len());
+            let mut usable = false;
+            let mut failed = None;
             for &place in places {
                 let question = self.question(place)?;
                 let (own, after) = rest
                     .split_at_checked(pack::wire_count(&question))
                     .ok_or_else(|| Error::defect("an annotate question lost its answers"))?;
                 rest = after;
-                questions.push(QuestionAnswer::read(place, question, own).map_err(Error::from)?);
+                let answer = QuestionAnswer::read(place, question, own).map_err(Error::from)?;
+                usable |= matches!(answer.reply.outcomes(), [core::AnswerOutcome::Answered(_)]);
+                failed = failed.or_else(|| first_failure(own));
+                questions.push(answer);
+            }
+            if self.require_usable_groups && !usable {
+                let (cause, (first, last)) = match failed {
+                    Some((cause, span)) => (Some(cause), span),
+                    None => (None, (0, 0)),
+                };
+                return Err(crate::public::asking::backend_failed().with_diagnostic(
+                    crate::public::error::diagnostic::Diagnostic::PartialReply {
+                        cause,
+                        first,
+                        last,
+                    },
+                ));
             }
             groups.push(GroupAnswer::of_questions(questions));
         }
         facade::assemble(&self.set, groups, self.backend.model()).map_err(Error::from)
     }
+}
+
+fn first_failure(
+    own: &[Answered],
+) -> Option<(core::adapters::built_in::DecodeError, (usize, usize))> {
+    own.iter().find_map(|answered| {
+        answered
+            .answer
+            .as_ref()
+            .err()
+            .map(|cause| (cause.clone(), answered.span))
+    })
 }
 
 /// The public error for one annotate row with no annotation.

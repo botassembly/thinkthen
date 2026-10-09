@@ -24,7 +24,7 @@ pub(crate) mod context;
 mod folders;
 mod judged;
 mod native;
-mod native_reader;
+pub(crate) mod native_reader;
 mod plan;
 mod reading;
 

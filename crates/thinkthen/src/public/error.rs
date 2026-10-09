@@ -236,6 +236,16 @@ impl Error {
         self
     }
 
+    pub(crate) fn missed_pointer(&self) -> Option<&str> {
+        let diagnostic::Diagnostic::Refusal(cause) = self.detail().diagnostic.as_deref()? else {
+            return None;
+        };
+        match cause.downcast_ref::<crate::core::RecordError>()? {
+            crate::core::RecordError::Missed(pointer) => Some(pointer),
+            _ => None,
+        }
+    }
+
     pub(crate) fn take_diagnostic(&mut self) -> Option<diagnostic::Diagnostic> {
         self.detail_mut().diagnostic.take().map(|cause| *cause)
     }

@@ -69,9 +69,15 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
                 .expect("find request");
             crate::cli::find::run(held, &environment, admitted, input, &mut output)
         }
-        Some(Command::Annotate(held)) => {
-            crate::cli::annotate::run(held, &environment, input, &mut output)
-        }
+        Some(Command::Annotate(held)) => crate::cli::annotate::run(
+            held,
+            &environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("annotate request"),
+            input,
+            &mut output,
+        ),
         Some(Command::Recognize(held)) => {
             crate::cli::recognize::run(held, &environment, input, &mut output)
         }
