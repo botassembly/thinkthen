@@ -60,6 +60,8 @@ tt_completion_settle_early <- function(value, kind) .Call(wrap__tt_completion_se
 
 tt_engine_set <- function(base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend, refresh_cache) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend, refresh_cache)
 
+tt_complete_error_native <- function(error) .Call(wrap__tt_complete_error_native, error)
+
 tt_complete_native <- function(request, deadline, completion) .Call(wrap__tt_complete_native, request, deadline, completion)
 
 tt_complete_batch_start <- function(request, deadline) .Call(wrap__tt_complete_batch_start, request, deadline)

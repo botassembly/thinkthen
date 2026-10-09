@@ -125,7 +125,7 @@ tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completi
   structure(
     class = c(paste0("thinkthen_", parts[[1]]), "thinkthen_error", "error", "condition"),
     list(message = parts[[3]], kind = parts[[1]], retryable = identical(parts[[2]], "true"),
-         complete = if (length(parts)==4L) .tt_complete_decode("CallError",jsonlite::fromJSON(parts[[4L]],simplifyVector=FALSE), TRUE) else NULL,
+         complete = if (length(parts)==4L) tt_complete_error_native(parts[[4L]]) else NULL,
          call = NULL)
   )
 }

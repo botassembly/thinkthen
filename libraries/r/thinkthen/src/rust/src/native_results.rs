@@ -95,10 +95,8 @@ fn input(value: &Value) -> Crossed<Robj> {
     )
 }
 
-pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
-    let value: Value = serde_json::from_str(text)
-        .map_err(|_| crate::defect("native complete result could not be decoded"))?;
-    let kind = match verb {
+fn result_kind(verb: &str) -> Crossed<&'static str> {
+    Ok(match verb {
         "decide" => "completeAtomic_DecideValue",
         "choose" => "completeAtomic_Nullable_string",
         "tag" => "completeAtomic_Array_of_string",
@@ -110,7 +108,75 @@ pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
         "recognize" => "completeRecognition",
         "relate" => "completeRelation",
         _ => return Err(crate::defect("native result has no named function")),
+    })
+}
+
+fn decoded(text: &str) -> Crossed<Value> {
+    serde_json::from_str(text)
+        .map_err(|_| crate::defect("native complete result could not be decoded"))
+}
+
+// R conditions retain their flat complete-error carrier. The shared graph's
+// error and facts converters own each nested field; only R's layout differs.
+fn failed(value: &Value) -> Crossed<Robj> {
+    let error = List::try_from(convert("completeError", value)?)
+        .map_err(|_| crate::defect("native error is not an R list"))?;
+    let mut fields = error
+        .iter()
+        .filter(|(key, _)| *key != "facts")
+        .collect::<Vec<_>>();
+    let facts = match value.get("facts") {
+        Some(facts) => convert("completeFacts", facts)?,
+        None => tagged(List::new(0).into(), "absent", "thinkthen_absent")?,
     };
+    fields.push(("facts", facts));
+    tagged(
+        List::from_pairs(fields).into(),
+        "CallError",
+        "thinkthen_complete",
+    )
+}
+
+pub(crate) fn failure(text: &str) -> Crossed<Robj> {
+    failed(&decoded(text)?)
+}
+
+// Worker packets cross as owned bytes. Only this main-thread representation
+// seam touches R; shared generated converters retain nested facts and values.
+pub(crate) fn event(text: &str, verb: &str) -> Crossed<Robj> {
+    let value = decoded(text)?;
+    let mut fields = Vec::new();
+    if let Some(row) = value.get("row") {
+        fields.push(("row", convert(result_kind(verb)?, row)?));
+        fields.push((
+            "ordinal",
+            plain(
+                value
+                    .get("ordinal")
+                    .ok_or_else(|| crate::defect("native batch row has no ordinal"))?,
+            )?,
+        ));
+        fields.push((
+            "input",
+            input(
+                value
+                    .get("input")
+                    .ok_or_else(|| crate::defect("native batch row has no input"))?,
+            )?,
+        ));
+    }
+    if let Some(error) = value.get("error") {
+        fields.push(("error", failed(error)?));
+    }
+    if let Some(facts) = value.get("facts") {
+        fields.push(("facts", convert("completeFacts", facts)?));
+    }
+    Ok(List::from_pairs(fields).into())
+}
+
+pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
+    let value = decoded(text)?;
+    let kind = result_kind(verb)?;
     let member = |name: &str| {
         value
             .get(name)

@@ -21,7 +21,6 @@ print.thinkthen_complete_call <- function(x, ...) { cat('<CompleteCall: content 
   request <- .tt_json(list(verb=verb,question=question,input=input,attempts=attempts,cancel=cancel,context=context))
   native <- .tt_call(tt_complete_batch_start(request,deadline_ms))
   state <- new.env(parent=emptyenv());state$facts<-NULL;state$ended<-FALSE;state$pending<-FALSE
-  kind<-paste0(toupper(substr(verb,1L,1L)),substr(verb,2L,nchar(verb)),"Result")
   close<-function() {state$ended<-TRUE;.tt_call(tt_complete_batch_close(native));invisible(NULL)}
   poll<-function() {
     if(state$ended) return(NULL)
@@ -29,15 +28,14 @@ print.thinkthen_complete_call <- function(x, ...) { cat('<CompleteCall: content 
     state$pending <- TRUE
     if (is.null(event)) return(NULL)
     state$pending <- FALSE
-    event <- jsonlite::fromJSON(event,simplifyVector=FALSE)
-    if(!is.null(event$row)) return(structure(list(result=.tt_complete_decode(kind,event$row, TRUE),ordinal=event$ordinal,input=.tt_complete_decode("NativeInput",event$input, TRUE)),class="thinkthen_complete_row"))
+    if(!is.null(event$row)) return(structure(list(result=event$row,ordinal=event$ordinal,input=event$input),class="thinkthen_complete_row"))
     close()
     if(!is.null(event$error)) {
-      complete<-.tt_complete_decode("CallError",event$error, TRUE)
+      complete<-event$error
       state$facts<-complete$facts
       stop(structure(list(message=event$error$message,kind=event$error$kind,retryable=event$error$retryable,complete=complete,call=NULL),class=c(paste0("thinkthen_",event$error$kind),"thinkthen_error","error","condition")))
     }
-    state$facts<-.tt_complete_decode("Facts",event$facts, TRUE);NULL
+    state$facts<-event$facts;NULL
   }
   pull <- function() {
     repeat {
