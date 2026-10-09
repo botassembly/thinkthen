@@ -8,6 +8,8 @@ import sys
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'conformance/children'))
+from children import CARGO, child_env
 SCHEMA = ROOT / 'crates/thinkthen/src/public/results/complete.schema.json'
 OUTPUT = Path(__file__).parent / 'csharp/CompleteFacts.g.cs'
 
@@ -265,7 +267,9 @@ def generated(schema, language="csharp"):
             pending.extend(child for child, _ in source.get("variants", []))
         return subprocess.run(["rustfmt", "--edition", "2024", "--emit", "stdout"],
                               input=target.render(dict(sorted(selected.items()))),
-                              text=True, capture_output=True, check=True).stdout
+                              text=True, capture_output=True, check=True,
+                              env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'),
+                                            CARGO_NET_OFFLINE='true')).stdout
     path = Path(__file__).parent / 'templates/csharp.py'
     spec = importlib.util.spec_from_file_location('result_csharp', path)
     target = importlib.util.module_from_spec(spec)

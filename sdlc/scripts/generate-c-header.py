@@ -31,7 +31,7 @@ def check_tool():
 
 def generate(root=ROOT, replacements=None):
     subprocess.run([sys.executable, str(root / "sdlc/generators/results/generate.py"),
-                    "--target", "c", "--check"], check=True)
+                    "--target", "c", "--check"], check=True, env=tool_environment())
     check_tool()
     crate = root / 'libraries/c'
     env = tool_environment()
