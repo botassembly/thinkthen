@@ -110,3 +110,181 @@ fn a_malformed_month_refuses_the_c_call_before_any_send() {
     assert!(!said[1].1.contains(&home.display().to_string()), "{said:?}");
     assert_eq!(backend.count(), 0);
 }
+
+#[test]
+fn status_utilities_reject_invalid_flags_without_sending() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let mut script = Script::default();
+    for flag in ["usage_status", "finish_usage_status"] {
+        for value in ["false", "null", "1", "\"private-evidence\""] {
+            script.ask("call", &[&base, &format!(r#"{{"{flag}":{value}}}"#)]);
+        }
+        for extra in [
+            r#""usage":true"#,
+            r#""decide":"private-evidence","evidence":"private-evidence""#,
+            r#""usage_status":true,"finish_usage_status":true"#,
+        ] {
+            script.ask("call", &[&base, &format!(r#"{{"{flag}":true,{extra}}}"#)]);
+        }
+    }
+    script.ask(
+        "call",
+        &[
+            &base,
+            r#"{"schema":"thinkthen.request/1","usage_status":true}"#,
+        ],
+    );
+    let output = run(&driver, &base, &script.0);
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let said = replies(&output.stdout).expect("replies");
+    assert_eq!(said.len(), 15);
+    for (code, message) in said {
+        assert_eq!(code, 1, "{message}");
+        assert!(!message.contains("private-evidence"), "{message}");
+        assert!(!message.contains(KEY), "{message}");
+    }
+    assert_eq!(backend.count(), 0);
+}
+
+#[test]
+fn explicit_status_finalization_preserves_answers_and_direct_totals() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let home = scratch("usage-status-home");
+    let mut script = Script::default();
+    script.ask("settings", &[&base, r#"{"cache":false}"#]);
+    for request in [
+        r#"{"usage_status":true}"#,
+        r#"{"decide":"asks for a refund","evidence":"Refund me."}"#,
+        r#"{"finish_usage_status":true}"#,
+        r#"{"usage_status":true}"#,
+        r#"{"usage":true}"#,
+    ] {
+        script.ask("call", &[&base, request]);
+    }
+    let variable = child::Folder::Usage.variable(&home);
+    let output = run_with(
+        &driver,
+        &base,
+        &script.0,
+        &[(variable.0, Path::new(&variable.1))],
+    );
+    let said = replies(&output.stdout).expect("replies");
+    assert!(said.iter().all(|reply| reply.0 == 0), "{said:?}");
+    for index in [1, 3, 4] {
+        assert_eq!(said[index].1, r#"{"state":"written"}"#);
+    }
+    let answer: serde_json::Value = serde_json::from_str(&said[2].1).expect("answer");
+    assert_eq!(answer["value"], true);
+    assert!(
+        answer["facts"].get("usage_persistence").is_none(),
+        "legacy facts"
+    );
+    let totals: serde_json::Value = serde_json::from_str(&said[5].1).expect("totals");
+    assert_eq!(totals["requests_sent"], 1);
+    assert!(totals.get("state").is_none());
+    assert_eq!(month_counts(&home)["requests_sent"], 1);
+    assert_eq!(backend.count(), 1);
+}
+
+#[cfg(unix)]
+#[test]
+fn held_writer_reports_pending_then_latched_safe_failure_without_losing_answer() {
+    use std::os::unix::fs::PermissionsExt as _;
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let home = scratch("usage-held-private-home");
+    let usage = usage_folder(&home);
+    std::fs::create_dir_all(&usage).expect("usage folder");
+    std::fs::set_permissions(&usage, std::fs::Permissions::from_mode(0o700))
+        .expect("private folder");
+    let lock = File::options()
+        .write(true)
+        .create_new(true)
+        .open(usage.join(".lock"))
+        .expect("lock");
+    lock.set_permissions(std::fs::Permissions::from_mode(0o600))
+        .expect("private lock");
+    lock.lock().expect("hold writer");
+    let mut script = Script::default();
+    script.ask("settings", &[&base, r#"{"cache":false}"#]);
+    for request in [
+        r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"asks for a refund"},"input":{"kind":"text","text":"Refund me."}}}"#,
+        r#"{"usage_status":true}"#,
+        r#"{"finish_usage_status":true}"#,
+        r#"{"usage_status":true}"#,
+        r#"{"usage":true}"#,
+    ] {
+        script.ask("call", &[&base, request]);
+    }
+    let variable = child::Folder::Usage.variable(&home);
+    let output = run_with(
+        &driver,
+        &base,
+        &script.0,
+        &[(variable.0, Path::new(&variable.1))],
+    );
+    let said = replies(&output.stdout).expect("replies");
+    assert!(said.iter().all(|reply| reply.0 == 0), "{said:?}");
+    assert_eq!(said[2].1, r#"{"state":"pending"}"#);
+    let failure =
+        r#"{"state":"failed","advice":"check the usage folder permissions and free space"}"#;
+    assert_eq!(said[3].1, failure);
+    assert_eq!(said[4].1, failure);
+    let answer: serde_json::Value = serde_json::from_str(&said[1].1).expect("answer");
+    assert_eq!(answer["facts"]["usage_persistence"]["state"], "pending");
+    assert_eq!(
+        answer["facts"]["usage_persistence"]["observed_at"],
+        "facts_snapshot"
+    );
+    let totals: serde_json::Value = serde_json::from_str(&said[5].1).expect("totals");
+    assert_eq!(totals["requests_sent"], 1);
+    for index in [2, 3, 4] {
+        assert!(!said[index].1.contains(&home.display().to_string()));
+        assert!(!said[index].1.contains("Refund me."));
+        assert!(!said[index].1.contains(KEY));
+    }
+    assert_eq!(backend.count(), 1);
+}
+
+#[test]
+fn replay_status_utilities_add_no_model_send() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let home = scratch("usage-status-replay-home");
+    let record = scratch("usage-status-record");
+    for mode in ["record", "replay"] {
+        let settings = serde_json::json!({"cache":false, mode:record}).to_string();
+        let mut script = Script::default();
+        script.ask("settings", &[&base, &settings]);
+        for request in [
+            r#"{"decide":"asks for a refund","evidence":"Refund me."}"#,
+            r#"{"usage_status":true}"#,
+            r#"{"finish_usage_status":true}"#,
+            r#"{"usage_status":true}"#,
+            r#"{"usage":true}"#,
+        ] {
+            script.ask("call", &[&base, request]);
+        }
+        let variable = child::Folder::Usage.variable(&home);
+        let output = run_with(
+            &driver,
+            &base,
+            &script.0,
+            &[(variable.0, Path::new(&variable.1))],
+        );
+        let said = replies(&output.stdout).expect("replies");
+        assert!(said.iter().all(|reply| reply.0 == 0), "{said:?}");
+        assert_eq!(said[3].1, r#"{"state":"written"}"#);
+        assert_eq!(said[4].1, said[3].1);
+        let totals: serde_json::Value = serde_json::from_str(&said[5].1).expect("totals");
+        assert_eq!(totals["requests_sent"], u64::from(mode == "record"));
+    }
+    assert_eq!(backend.count(), 1);
+    assert_eq!(month_counts(&home)["requests_sent"], 1);
+}
