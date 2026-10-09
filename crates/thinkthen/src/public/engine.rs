@@ -141,6 +141,17 @@ impl Engine {
         Ok(())
     }
 
+    #[cfg(feature = "cli")]
+    pub(crate) fn from_cli(inner: facade::Engine, prices: Option<Prices>) -> Self {
+        Self {
+            profile: inner.profile().cloned(),
+            inner: Arc::new(inner),
+            most: None,
+            batch: None,
+            prices,
+        }
+    }
+
     /// Reuse resolved settings for backend compatibility calls with no storage.
     #[cfg(feature = "cli")]
     pub(crate) fn for_check(inner: &facade::Engine) -> Self {

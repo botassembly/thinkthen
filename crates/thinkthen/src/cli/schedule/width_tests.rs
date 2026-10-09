@@ -103,7 +103,12 @@ fn dispatch(
         Some(Verb::Decide(held)) => crate::judge::decide(held, environment, input, &mut output),
         Some(Verb::Choose(held)) => crate::judge::choose(held, environment, input, &mut output),
         Some(Verb::Annotate(held)) => crate::annotate::run(held, environment, input, &mut output),
-        Some(Verb::Find(held)) => crate::cli::find::run(held, environment, input, &mut output),
+        Some(Verb::Find(held)) => {
+            let admitted = crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("find request");
+            crate::cli::find::run(held, environment, admitted, input, &mut output)
+        }
         Some(Verb::Recognize(held)) => {
             crate::cli::recognize::run(held, environment, input, &mut output)
         }

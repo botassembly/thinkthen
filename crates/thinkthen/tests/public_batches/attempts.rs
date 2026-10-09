@@ -211,14 +211,13 @@ fn dropping_a_lazy_batch_drains_attempts_and_resumes_panic_after_join() {
         rows.next().expect("first row").expect("answer").input(),
         &"alpha"
     );
+    let began = Instant::now();
+    while listener.count() < 2 && began.elapsed() < Duration::from_secs(30) {
+        thread::sleep(Duration::from_millis(5));
+    }
+    assert_eq!(listener.count(), 2, "later attempt was already sent");
     let caught = thread::scope(|scope| {
-        let listener = &listener;
         scope.spawn(|| {
-            let began = Instant::now();
-            while listener.count() < 2 && began.elapsed() < Duration::from_secs(30) {
-                thread::sleep(Duration::from_millis(5));
-            }
-            assert_eq!(listener.count(), 2, "later attempt was already sent");
             assert!(held.wait(), "release later reply during drop");
         });
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(rows)))

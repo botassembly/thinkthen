@@ -7,6 +7,7 @@ pub(crate) mod asking;
 mod audit;
 pub(crate) mod cache;
 mod check;
+mod construction;
 mod diff;
 pub(crate) mod display;
 pub(crate) mod edge;
@@ -81,9 +82,10 @@ pub fn entry() -> ExitCode {
     {
         return report_offline(diff::run(arguments, stdout.lock()), stderr.lock());
     }
-    if let Some(code) = request_admission(&cli, wants_facts, started, accepted, stderr.lock()) {
-        return code;
-    }
+    let admitted = match request_admission(&cli, wants_facts, started, accepted, stderr.lock()) {
+        Ok(admitted) => admitted,
+        Err(code) => return code,
+    };
     // Every command that reads input may write a recording or a cache entry.
     if cli.command.as_ref().is_some_and(Command::reads_input)
         && let Err(failure) = file_size::claim()
@@ -103,7 +105,7 @@ pub fn entry() -> ExitCode {
             return report_early(&failure, wants_facts, (started, accepted), stderr.lock());
         }
     };
-    let result = run(&cli, &environment, stdout.lock());
+    let result = run(&cli, &environment, admitted, stdout.lock());
     let (code, stopped) = match result {
         Ok(code) => (code, None),
         Err(failure) => {
@@ -116,27 +118,46 @@ pub fn entry() -> ExitCode {
     warn_held_model_mismatch(&environment, stderr.lock());
     finish_usage(&environment);
     if wants_facts {
-        let snapshot = environment.usage().run_snapshot();
-        let elapsed = started.elapsed();
-        let writer = stderr.lock();
-        let stopped = if activation.cancelled() {
-            Some(failure::facts::Stopped::of(&Failure::Cancelled, 130))
-        } else {
-            stopped
-        };
-        facts::write(
-            writer,
-            snapshot,
-            elapsed,
-            accepted.elapsed(),
+        write_run_facts(
+            &environment,
+            started,
+            accepted,
             stopped,
-            environment.cancel().call_id(),
+            activation.cancelled(),
         );
     }
     match activation.finish(code) {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
     }
+}
+
+fn write_run_facts(
+    environment: &Environment,
+    started: Instant,
+    accepted: Instant,
+    stopped: Option<failure::facts::Stopped>,
+    cancelled: bool,
+) {
+    let stderr = io::stderr();
+    let snapshot = environment.usage().run_snapshot();
+    let elapsed = started.elapsed();
+    let writer = stderr.lock();
+    let stopped = if cancelled {
+        Some(failure::facts::Stopped::of(&Failure::Cancelled, 130))
+    } else {
+        stopped
+    };
+    facts::write(
+        writer,
+        snapshot,
+        elapsed,
+        accepted.elapsed(),
+        stopped,
+        environment
+            .native_call_id()
+            .or_else(|| environment.cancel().call_id()),
+    );
 }
 
 fn mcp_entry(arguments: &crate::mcp::startup::Arguments) -> ExitCode {
@@ -223,7 +244,12 @@ fn report_early(
     ExitCode::from(code)
 }
 
-fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitCode, Failure> {
+fn run(
+    cli: &Cli,
+    environment: &Environment,
+    admitted: Option<crate::AdmittedRequest>,
+    writer: impl Write,
+) -> Result<ExitCode, Failure> {
     // A day bounds the timeout, because the HTTP client adds it to the clock
     // and a larger number can overflow there.
     if cli
@@ -250,7 +276,13 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
         Some(Command::Score(arguments)) => judge::score(arguments, environment, input, writer),
         Some(Command::Filter(arguments)) => judge::filter(arguments, environment, input, writer),
         Some(Command::Rank(arguments)) => judge::rank(arguments, environment, input, writer),
-        Some(Command::Find(arguments)) => find::run(arguments, environment, input, writer),
+        Some(Command::Find(arguments)) => find::run(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("find has no admitted request"))?,
+            input,
+            writer,
+        ),
         Some(Command::Annotate(arguments)) => annotate::run(arguments, environment, input, writer),
         Some(Command::Recognize(arguments)) => {
             recognize::run(arguments, environment, input, writer)
@@ -352,12 +384,14 @@ fn report_offline(result: Result<(), Failure>, writer: impl Write) -> ExitCode {
 fn request_admission(
     cli: &Cli,
     wants_facts: bool,
-    started: std::time::Instant,
-    accepted: std::time::Instant,
-    writer: impl std::io::Write,
-) -> Option<ExitCode> {
-    let command = cli.command.as_ref()?;
-    request::admit(command)
-        .err()
-        .map(|failure| report_early(&failure, wants_facts, (started, accepted), writer))
+    started: Instant,
+    accepted: Instant,
+    writer: impl Write,
+) -> Result<Option<crate::AdmittedRequest>, ExitCode> {
+    cli.command
+        .as_ref()
+        .map(request::admit)
+        .transpose()
+        .map(Option::flatten)
+        .map_err(|failure| report_early(&failure, wants_facts, (started, accepted), writer))
 }

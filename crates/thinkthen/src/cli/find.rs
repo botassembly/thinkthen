@@ -25,6 +25,7 @@ mod result;
 pub(crate) fn run(
     arguments: &FindArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -34,7 +35,7 @@ pub(crate) fn run(
         question,
         profile: saved_profile,
         sources,
-    } = question::Prepared::new(arguments)?;
+    } = question::Prepared::new(arguments, &mut admitted)?;
     let common = &common;
     let context = asking::context::shared(arguments.common.context.as_deref())?;
     let mut display = display(arguments, common)?;
@@ -61,7 +62,6 @@ pub(crate) fn run(
         folders,
         backend.clone(),
         profile.clone(),
-        context.clone(),
     )?;
     let most = if arguments.none { 254 } else { 255 };
     let units = input_units(
@@ -79,12 +79,11 @@ pub(crate) fn run(
             none: arguments.none,
         });
     }
-    let evidence: Vec<_> = units.iter().map(|unit| unit.evidence.clone()).collect();
-    let resolved = question::resolved(&question);
-    let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
-        .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?
-        .with_profile(saved_profile);
     if common.dry_run {
+        let evidence: Vec<_> = units.iter().map(|unit| unit.evidence.clone()).collect();
+        let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
+            .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?
+            .with_profile(saved_profile);
         return planned(
             &find,
             (&backend, environment.key_variable()),
@@ -95,18 +94,15 @@ pub(crate) fn run(
         );
     }
     let engine = engine.ok_or(Failure::Defect("a live find run has no engine"))?;
-    let cancel = environment.cancel().with_captured_attempts(common.details);
-    let found = engine.find(&find, &cancel).map_err(|error| {
-        Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
-    })?;
-    let rendered = result::rendered(
+    let found = execute(
+        admitted,
+        engine,
         common,
-        &find,
-        &engine,
-        (&reading, context.as_deref()),
+        environment,
         &units,
-        (found, metadata, resolved),
+        context.as_deref(),
     )?;
+    let rendered = result::rendered(common, &reading, &units, &found, &metadata)?;
     display.emit_row(
         &mut writer,
         rendered.line.as_deref(),
@@ -117,18 +113,81 @@ pub(crate) fn run(
     Ok(ExitCode::from(if rendered.resolved { 0 } else { 3 }))
 }
 
+fn execute(
+    admitted: crate::AdmittedRequest,
+    engine: facade::Engine,
+    common: &Common,
+    environment: &Environment,
+    units: &[Unit],
+    context: Option<&str>,
+) -> Result<crate::CompleteFound<crate::QuestionInput>, Failure> {
+    let engine = crate::Engine::from_cli(engine, environment.config().prices());
+    let fields = common.field.iter().map(String::as_str).collect::<Vec<_>>();
+    let composition = crate::RecordReading::new(&fields, None, None).map_err(Failure::from)?;
+    let rows = units.iter().map(|unit| {
+        let mut record =
+            composition.compose(crate::RawRecord(std::sync::Arc::new(unit.record.clone())))?;
+        if unit.position.located
+            && let Some(file) = &unit.position.file
+        {
+            record.original = record.original.with_location(crate::SourceLocation::new(
+                file.clone(),
+                unit.position.first,
+                unit.position.last,
+            )?);
+        }
+        Ok(record.map_original(crate::QuestionInput::Record))
+    });
+    let token = crate::CancelToken::from_flag(environment.cancel().flag());
+    let mut controls = crate::CallOptions::new()
+        .cli_cancel(&token, environment.cancel().deadline())
+        .surface(crate::Surface::Cli)
+        .attempts(common.details);
+    if let Some(context) = context {
+        controls = controls.context(context);
+    }
+    let admitted = admitted.with_composed_feed("cli-find");
+    let outcome = engine
+        .execute_request(
+            &admitted,
+            crate::RequestEnvironment {
+                controls,
+                feed: Some(crate::RequestFeed::from_records("cli-find", rows)),
+            },
+        )
+        .map_err(|error| {
+            if let Some(facts) = error.facts() {
+                environment.settle_native(facts);
+            }
+            Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
+        })?;
+    let crate::RequestOutcome::Complete(call) = outcome else {
+        return Err(Failure::Defect("whole-set find returned a stream failure"));
+    };
+    environment.settle_native(call.facts());
+    let crate::RequestValue::Found(found) = call.into_value() else {
+        return Err(Failure::Defect("find returned another native result"));
+    };
+    Ok(found)
+}
+
 fn live_engine(
     common: &Common,
     environment: &Environment,
     folders: Folders,
     backend: Backend,
     profile: Option<crate::core::BackendProfile>,
-    context: Option<String>,
 ) -> Result<Option<facade::Engine>, Failure> {
     (!common.dry_run)
         .then(|| {
-            asking::engine(common, environment, folders, backend, profile, None)
-                .map(|engine| engine.with_aggregate_context(context))
+            crate::cli::construction::engine(
+                common,
+                environment,
+                folders,
+                (backend, profile),
+                None,
+                false,
+            )
         })
         .transpose()
 }

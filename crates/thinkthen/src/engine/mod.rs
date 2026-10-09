@@ -213,6 +213,11 @@ impl<'a> Cancel<'a> {
         dead_code,
         reason = "the command passes no deadline; tickets 0084 through 0086 expose it"
     )]
+    #[cfg(feature = "cli")]
+    pub(crate) const fn deadline(&self) -> Option<Deadline> {
+        self.deadline
+    }
+
     pub(crate) fn with_deadline(&self, deadline: Option<Deadline>) -> Self {
         Self {
             deadline,

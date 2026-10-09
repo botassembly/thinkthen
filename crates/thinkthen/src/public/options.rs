@@ -62,6 +62,10 @@ fn shown(value: f64) -> String {
 pub struct CancelToken(Arc<AtomicBool>);
 
 impl CancelToken {
+    pub(crate) fn from_flag(flag: Arc<AtomicBool>) -> Self {
+        Self(flag)
+    }
+
     /// A token that has not fired.
     #[must_use]
     pub fn new() -> Self {
@@ -113,6 +117,7 @@ pub struct CallOptions<'a> {
     observer: Option<Observer<'a>>,
     attempt_observer: Option<AttemptObserver<'a>>,
     capture_attempts: bool,
+    settle_success_on_cancel: bool,
     proxy: Option<&'a crate::public::ProxyActivation>,
     surface: Option<crate::public::Surface>,
 }
@@ -161,6 +166,7 @@ impl<'a> CallOptions<'a> {
             observer: None,
             attempt_observer: None,
             capture_attempts: false,
+            settle_success_on_cancel: false,
             proxy: None,
             surface: None,
         }
@@ -170,6 +176,22 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn cancel(mut self, value: &'a CancelToken) -> Self {
         self.cancel = Some(value);
+        self
+    }
+
+    // CLI signals retain an earned whole-set answer before the process exits.
+    // Public caller cancellation remains dominant unless this private bridge is selected.
+    pub(crate) const fn cli_cancel(
+        mut self,
+        value: &'a CancelToken,
+        deadline: Option<Deadline>,
+    ) -> Self {
+        self.cancel = Some(value);
+        self.due = match deadline {
+            Some(deadline) => Some(Due::Started(deadline)),
+            None => None,
+        };
+        self.settle_success_on_cancel = true;
         self
     }
 
@@ -385,6 +407,7 @@ pub(crate) struct Stop<'a> {
     facts: CallFacts,
     prices: Option<Prices>,
     token: Option<&'a CancelToken>,
+    settle_success_on_cancel: bool,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     observer: Option<Observer<'a>>,
     attempt_observer: Option<AttemptObserver<'a>>,
@@ -429,6 +452,7 @@ impl<'a> Stop<'a> {
             facts,
             prices: None,
             token: options.cancel,
+            settle_success_on_cancel: options.settle_success_on_cancel,
             check: options.check,
             observer: options.observer,
             attempt_observer: options.attempt_observer,
@@ -521,7 +545,9 @@ impl<'a> Stop<'a> {
         if let Some(payload) = held {
             resume_unwind(payload);
         }
-        if self.token.is_some_and(CancelToken::is_cancelled) {
+        if self.token.is_some_and(CancelToken::is_cancelled)
+            && !(self.settle_success_on_cancel && result.is_ok())
+        {
             return Err(Error::cancelled());
         }
         result

@@ -34,6 +34,7 @@ const UNNAMED: &str = "defect: a usage error with no sentence";
 /// What stopped the command.
 #[derive(Debug)]
 pub(crate) enum Failure {
+    Native(crate::ErrorKind, String),
     /// A safe native named-question loading refusal.
     NamedQuestion(String),
     /// The flags and the environment name no backend.
@@ -325,7 +326,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
 }
 
 fn special_failure(failure: &Failure) -> Option<(u8, String)> {
-    if let Some(message) = relate::message(failure).or_else(|| context::message(failure)) {
+    if let Some(message) = native_failure(failure)
+        .or_else(|| relate::message(failure))
+        .or_else(|| context::message(failure))
+    {
         return Some(message);
     }
     Some(match failure {
@@ -504,4 +508,21 @@ fn profile_open_message(path: &std::path::Path, error: &io::Error) -> (u8, Strin
             path.display()
         ),
     )
+}
+
+fn native_failure(failure: &Failure) -> Option<(u8, String)> {
+    let Failure::Native(kind, message) = failure else {
+        return None;
+    };
+    Some((
+        match kind {
+            crate::ErrorKind::Usage => 2,
+            crate::ErrorKind::Backend => 4,
+            crate::ErrorKind::Local => 5,
+            crate::ErrorKind::Cancelled => 130,
+            crate::ErrorKind::Deadline => 4,
+            crate::ErrorKind::Defect => 70,
+        },
+        message.clone(),
+    ))
 }
