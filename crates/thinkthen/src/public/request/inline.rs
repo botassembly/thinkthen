@@ -26,6 +26,7 @@ impl AdmittedRequest {
             q.clone().with_examples(examples.clone())?;
         }
         let validator = Inline {
+            definition,
             reading: &reading,
             metadata: &metadata,
             recognize: recognize.as_ref(),
@@ -67,6 +68,7 @@ impl AdmittedRequest {
 }
 
 struct Inline<'a> {
+    definition: &'a RequestDefinition,
     reading: &'a crate::RecordReading,
     metadata: &'a [&'a crate::core::declaration::QuestionMetadata],
     recognize: Option<&'a crate::Recognize>,
@@ -110,7 +112,14 @@ impl Inline<'_> {
             RequestOriginal::Json { value } => value.clone(),
         };
         let row = compose_original(self.reading, raw)?;
-        validate_row(self.metadata, self.recognize, &row, has_images, seeds)?;
+        validate_row(
+            self.definition,
+            self.metadata,
+            self.recognize,
+            &row,
+            has_images,
+            seeds,
+        )?;
 
         Ok(())
     }
@@ -137,6 +146,7 @@ fn metadata(
 }
 
 fn validate_row(
+    definition: &RequestDefinition,
     metadata: &[&crate::core::declaration::QuestionMetadata],
     recognize: Option<&crate::Recognize>,
     row: &crate::RecordInput<crate::QuestionInput>,
@@ -144,8 +154,23 @@ fn validate_row(
     seeds: Option<&Vec<crate::RecognitionSeedSpan>>,
 ) -> Result<(), Error> {
     if !has_images {
-        for metadata in metadata {
-            metadata.validate_item(&row.original)?;
+        if let RequestDefinition::Annotate(set) = definition {
+            let record = match &row.original {
+                crate::QuestionInput::Record(record) => record.batch_record(),
+                crate::QuestionInput::Text(text) => {
+                    crate::public::bulk::annotation::record(&set.0, text)?
+                }
+                crate::QuestionInput::Images(_) => {
+                    return Err(Error::usage(
+                        "annotate accepts text only; images are unsupported",
+                    ));
+                }
+            };
+            crate::public::bulk::annotation::admit_declarations(&set.0, &record)?;
+        } else {
+            for metadata in metadata {
+                metadata.validate_item(&row.original)?;
+            }
         }
     }
     if let Some(context) = &row.context {
@@ -196,5 +221,12 @@ pub(super) fn validate_composed(
         crate::QuestionInput::Images(images) => !images.images().is_empty(),
         crate::QuestionInput::Text(_) => false,
     };
-    validate_row(&metadata, recognize.as_ref(), row, has_images, None)
+    validate_row(
+        definition,
+        &metadata,
+        recognize.as_ref(),
+        row,
+        has_images,
+        None,
+    )
 }

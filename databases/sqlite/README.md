@@ -254,6 +254,10 @@ every row before sending; incremental input retains its actual completed prefix.
 Caller-known image descriptors require route and function admission before reader
 access. An omitted image declaration never waives validation of actual image rows.
 Authored projections use the admitted native reading before declaration validation.
+Annotation declarations validate each member's selected evidence. Complete filter
+calls retain both passing and rejected observations and their original ordinals,
+including completed rows before an incremental failure. Ordinary native Request
+filtering retains its passing-row behavior; SQL explicitly selects all results.
 Top-level input descriptors validate before SQL resolves a saved question. SQL still
 resolves saved selectors through its own authorized file reader; canonical selector
 translation and the legacy scalar/table execution paths remain later migration work.

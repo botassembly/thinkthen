@@ -43,6 +43,11 @@ pub(super) fn run(
         let reading = request.record_reading()?;
         let records = inputs.deferred_records(prepared.reading().or(Some(&reading)));
         let feed = RequestFeed::from_records("sqlite", records);
+        let feed = if matches!(prepared, Prepared::Filter(_)) {
+            feed.with_all_filter_results()
+        } else {
+            feed
+        };
         let feed = if inputs.image_inputs()? {
             feed.with_image_inputs()
         } else {

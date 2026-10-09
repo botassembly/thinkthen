@@ -4,6 +4,8 @@ use serde_json::{Value, json};
 use thinkthen::*;
 #[path = "request_contract/native_feed.rs"]
 mod native_feed;
+#[path = "request_contract/projections.rs"]
+mod projections;
 
 #[allow(
     clippy::unwrap_used,

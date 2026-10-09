@@ -53,5 +53,45 @@ say(ok=True)
     expect(backend.close(), 3, 'one send per incremental prefix and no eager sends')
 
 
+def test_complete_annotation_validates_member_projection_before_schema():
+    backend = Backend()
+    got = child('''
+db=connect()
+db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1})])
+question={'version':1,'questions':{'body':{'decide':'Fits?','on':'/body','item_schema':{'type':'string'}}}}
+for invalid in (False, True):
+    records=[{'json':{'body':'Alpha.'}}]
+    if invalid: records.append({'json':{'body':42}})
+    document=json.loads(db.execute('SELECT thinkthen_annotate_complete(?,?)',
+        [json.dumps(question),json.dumps({'records':records})]).fetchone()[0])
+    if invalid: assert document['native']['error']['kind']=='usage', document
+    else: assert len(document['native']['value'])==1 and document['ordinals']==[0], document
+say(ok=True)
+''', environment(backend))
+    expect(got['ok'], True, 'annotation admits each member selected evidence')
+    expect(backend.close(), 1, 'valid annotation sends once and invalid eager rows send nothing')
+
+
+def test_complete_filter_retains_true_false_and_incremental_terminal_prefix():
+    backend = Backend()
+    got = child('''
+db=connect()
+db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1})])
+for threshold in (0.5, 0.95):
+    for incremental in (False, True):
+        records=[{'text':'Alpha.'}]
+        if incremental: records.append({'text':'Beta.','images':None})
+        document=json.loads(db.execute('SELECT thinkthen_filter_complete(?,?)',
+            [json.dumps({'decide':'Fits?','threshold':threshold}),json.dumps({'records':records,'incremental':incremental})]).fetchone()[0])
+        if incremental: assert document['native']['error']['kind']=='usage', document
+        rows=document['completed'] if incremental else document['native']['value']
+        assert len(rows)==1 and rows[0]['value']==(threshold==0.5) and document['ordinals']==[0], document
+        assert document['native']['facts']['requests_sent']==1, document
+say(ok=True)
+''', environment(backend))
+    expect(got['ok'], True, 'complete filter retains rejected observations and their ordinals')
+    expect(backend.close(), 4, 'each true or false complete filter call sends once')
+
+
 if __name__ == '__main__':
     raise SystemExit(main(globals()))

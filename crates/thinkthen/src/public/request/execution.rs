@@ -11,6 +11,7 @@ pub struct RequestFeed<'a> {
     pub(super) contents: FeedContents<'a>,
     pub(super) eager: bool,
     pub(super) image_inputs: bool,
+    all_filter_results: bool,
 }
 pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
@@ -33,6 +34,7 @@ impl<'a> RequestFeed<'a> {
             contents: FeedContents::Items(Box::new(items)),
             eager: false,
             image_inputs: false,
+            all_filter_results: false,
         }
     }
     /// Supply already composed native records, retaining original locations and images.
@@ -49,6 +51,7 @@ impl<'a> RequestFeed<'a> {
             contents: FeedContents::Records(Box::new(records)),
             eager: false,
             image_inputs: false,
+            all_filter_results: false,
         }
     }
     /// Admit the entire supplied feed before any sends, using native eager execution.
@@ -63,6 +66,15 @@ impl<'a> RequestFeed<'a> {
     #[must_use]
     pub fn with_image_inputs(mut self) -> Self {
         self.image_inputs = true;
+        self
+    }
+    /// Retain passing and rejected filter occurrences in the complete native result.
+    /// Only a composed-record feed executing filter admits this projection;
+    /// invalid combinations refuse before advancement. Ordinary Request filtering
+    /// remains unchanged, including file-only selection.
+    #[must_use]
+    pub fn with_all_filter_results(mut self) -> Self {
+        self.all_filter_results = true;
         self
     }
 }
@@ -84,16 +96,7 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        if let RequestInput::Feed { name, .. } = &request.request.call.arguments().input
-            && environment
-                .feed
-                .as_ref()
-                .is_none_or(|feed| &feed.name != name)
-        {
-            return Err(Error::usage(
-                "the request requires its named caller-supplied feed",
-            ));
-        }
+        let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
         let controls = controls(options, environment.controls)?.started()?;
         controls.admission()?;
@@ -156,8 +159,36 @@ impl Engine {
             eager,
             options,
         )?;
-        Ok(select_filter(outcome, options.files_only))
+        Ok(if all_filter_results {
+            outcome
+        } else {
+            select_filter(outcome, options.files_only)
+        })
     }
+}
+fn feed_projection(
+    request: &AdmittedRequest,
+    feed: Option<&RequestFeed<'_>>,
+) -> Result<bool, Error> {
+    let args = request.request.call.arguments();
+    if let RequestInput::Feed { name, .. } = &args.input
+        && feed.is_none_or(|feed| &feed.name != name)
+    {
+        return Err(Error::usage(
+            "the request requires its named caller-supplied feed",
+        ));
+    }
+    let all = feed.is_some_and(|feed| feed.all_filter_results);
+    if all
+        && (request.request.call.function() != Function::Filter
+            || !matches!(args.input, RequestInput::Feed { .. })
+            || feed.is_none_or(|feed| !matches!(feed.contents, FeedContents::Records(_))))
+    {
+        return Err(Error::usage(
+            "all filter results require a native composed filter feed",
+        ));
+    }
+    Ok(all)
 }
 fn controls<'a>(
     options: &'a RequestOptions,
