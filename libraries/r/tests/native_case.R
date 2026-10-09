@@ -27,13 +27,16 @@ tryCatch({
   stopifnot(inherits(done, "thinkthen_complete_call"))
   for (result in done$results) {
     stopifnot(inherits(result, "thinkthen_complete"), inherits(result$answer_id, "thinkthen_AnswerId"))
+    stopifnot("value" %in% names(plain(result)))
     retained <- result$value
     gc()
     stopifnot(identical(result[["value"]], retained),
-              identical(capture.output(print(result)), "<complete carrier: content withheld>")))
+              identical(capture.output(print(result)), "<complete carrier: content withheld>"))
   }
   facts <- done$facts
   encoded <- plain(facts)
+  absent <- names(facts)[vapply(facts, inherits, TRUE, "thinkthen_absent")]
+  stopifnot(!any(absent %in% names(encoded)))
   stopifnot(is.numeric(facts$largest_request_bytes), is.null(facts$largest_request_estimated_input_tokens) || is.numeric(facts$largest_request_estimated_input_tokens), is.character(facts$token_estimate_method))
   for (key in c("largest_request_bytes","largest_request_estimated_input_tokens","token_estimate_method")) stopifnot(key %in% names(encoded), identical(encoded[[key]],facts[[key]]))
   if (!inherits(facts$usage_persistence,"thinkthen_absent")) {

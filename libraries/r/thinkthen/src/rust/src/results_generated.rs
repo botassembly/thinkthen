@@ -3,6 +3,10 @@ use super::native_results::{array, mapping, object, plain, tagged};
 use crate::calls::Crossed;
 use extendr_api::prelude::*;
 use serde_json::Value;
+#[expect(
+    clippy::too_many_lines,
+    reason = "mechanical dispatch generated from the shared result graph"
+)]
 pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
     match kind {
         "completeAnnotation" => object(
@@ -15,11 +19,11 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("answers", true, |value| {
                     mapping(value, |value| convert("completeAnnotationMember", value))
                 }),
-                ("file", false, |value| plain(value)),
-                ("first_line", false, |value| plain(value)),
-                ("index", false, |value| plain(value)),
-                ("input", true, |value| plain(value)),
-                ("last_line", false, |value| plain(value)),
+                ("file", false, plain),
+                ("first_line", false, plain),
+                ("index", false, plain),
+                ("input", true, plain),
+                ("last_line", false, plain),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("position", false, |value| {
                     convert("completePosition", value)
@@ -63,7 +67,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
                 }),
-                ("request", true, |value| plain(value)),
+                ("request", true, plain),
                 ("threshold", true, |value| {
                     if value.is_null() {
                         plain(value)
@@ -98,7 +102,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
                 }),
-                ("request", true, |value| plain(value)),
+                ("request", true, plain),
                 ("threshold", true, |value| {
                     if value.is_null() {
                         plain(value)
@@ -134,8 +138,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("images", false, |value| {
                     array(value, |value| convert("completeImage", value))
                 }),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
+                ("index", false, plain),
+                ("input", false, plain),
                 ("members", false, |value| {
                     array(value, |value| convert("completeRankMember", value))
                 }),
@@ -143,7 +147,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completeReadableQuestion", value)
                 }),
-                ("question_name", false, |value| plain(value)),
+                ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
                     if value.is_null() {
@@ -159,7 +163,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completethreshold", value)
                     }
                 }),
-                ("value", true, |value| array(value, |value| plain(value))),
+                ("value", true, |value| array(value, plain)),
             ],
         ),
         "completeAtomic_DecideValue" => object(
@@ -173,8 +177,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("images", false, |value| {
                     array(value, |value| convert("completeImage", value))
                 }),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
+                ("index", false, plain),
+                ("input", false, plain),
                 ("members", false, |value| {
                     array(value, |value| convert("completeRankMember", value))
                 }),
@@ -182,7 +186,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completeReadableQuestion", value)
                 }),
-                ("question_name", false, |value| plain(value)),
+                ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
                     if value.is_null() {
@@ -212,8 +216,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("images", false, |value| {
                     array(value, |value| convert("completeImage", value))
                 }),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
+                ("index", false, plain),
+                ("input", false, plain),
                 ("members", false, |value| {
                     array(value, |value| convert("completeRankMember", value))
                 }),
@@ -221,7 +225,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completeReadableQuestion", value)
                 }),
-                ("question_name", false, |value| plain(value)),
+                ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
                     if value.is_null() {
@@ -237,7 +241,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completethreshold", value)
                     }
                 }),
-                ("value", true, |value| plain(value)),
+                ("value", true, plain),
             ],
         ),
         "completeAtomic_Nullable_string" => object(
@@ -251,8 +255,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("images", false, |value| {
                     array(value, |value| convert("completeImage", value))
                 }),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
+                ("index", false, plain),
+                ("input", false, plain),
                 ("members", false, |value| {
                     array(value, |value| convert("completeRankMember", value))
                 }),
@@ -260,7 +264,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completeReadableQuestion", value)
                 }),
-                ("question_name", false, |value| plain(value)),
+                ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
                     if value.is_null() {
@@ -276,7 +280,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completethreshold", value)
                     }
                 }),
-                ("value", true, |value| plain(value)),
+                ("value", true, plain),
             ],
         ),
         "completeAtomic_boolean" => object(
@@ -290,8 +294,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("images", false, |value| {
                     array(value, |value| convert("completeImage", value))
                 }),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
+                ("index", false, plain),
+                ("input", false, plain),
                 ("members", false, |value| {
                     array(value, |value| convert("completeRankMember", value))
                 }),
@@ -299,7 +303,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completeReadableQuestion", value)
                 }),
-                ("question_name", false, |value| plain(value)),
+                ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
                     if value.is_null() {
@@ -315,7 +319,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completethreshold", value)
                     }
                 }),
-                ("value", true, |value| plain(value)),
+                ("value", true, plain),
             ],
         ),
         "completeAtomic_double" => object(
@@ -329,8 +333,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("images", false, |value| {
                     array(value, |value| convert("completeImage", value))
                 }),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
+                ("index", false, plain),
+                ("input", false, plain),
                 ("members", false, |value| {
                     array(value, |value| convert("completeRankMember", value))
                 }),
@@ -338,7 +342,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completeReadableQuestion", value)
                 }),
-                ("question_name", false, |value| plain(value)),
+                ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
                     if value.is_null() {
@@ -354,25 +358,25 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completethreshold", value)
                     }
                 }),
-                ("value", true, |value| plain(value)),
+                ("value", true, plain),
             ],
         ),
         "completeAttempt" => object(
             value,
             "Attempt",
             &[
-                ("ordinal", true, |value| plain(value)),
+                ("ordinal", true, plain),
                 ("outcome", true, |value| {
                     convert("completeattemptOutcome", value)
                 }),
-                ("request_id", false, |value| plain(value)),
-                ("request_sha256", true, |value| plain(value)),
+                ("request_id", false, plain),
+                ("request_sha256", true, plain),
                 ("sdk_request_id", true, |value| {
                     convert("completeSdkRequestId", value)
                 }),
-                ("server_ms", false, |value| plain(value)),
-                ("status", false, |value| plain(value)),
-                ("wall_ms", true, |value| plain(value)),
+                ("server_ms", false, plain),
+                ("status", false, plain),
+                ("wall_ms", true, plain),
             ],
         ),
         "completeBatch" => plain(value),
@@ -393,11 +397,11 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "BoundaryProposal",
             &[
-                ("end", true, |value| plain(value)),
-                ("length", true, |value| plain(value)),
-                ("probability", true, |value| plain(value)),
-                ("start", true, |value| plain(value)),
-                ("text", true, |value| plain(value)),
+                ("end", true, plain),
+                ("length", true, plain),
+                ("probability", true, plain),
+                ("start", true, plain),
+                ("text", true, plain),
             ],
         ),
         "completeCallError" => object(
@@ -428,8 +432,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     }
                 }),
                 ("kind", true, |value| convert("completefailureKind", value)),
-                ("message", true, |value| plain(value)),
-                ("retryable", true, |value| plain(value)),
+                ("message", true, plain),
+                ("retryable", true, plain),
                 ("send_budget_denial", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -455,26 +459,20 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         "completeEstimatedInputDenial_additional_request" => object(
             value,
             "EstimatedInputDenial_additional_request",
-            &[
-                ("kind", true, |value| plain(value)),
-                ("limit", true, |value| plain(value)),
-            ],
+            &[("kind", true, plain), ("limit", true, plain)],
         ),
         "completeEstimatedInputDenial_initial_request" => object(
             value,
             "EstimatedInputDenial_initial_request",
-            &[
-                ("kind", true, |value| plain(value)),
-                ("limit", true, |value| plain(value)),
-            ],
+            &[("kind", true, plain), ("limit", true, plain)],
         ),
         "completeEstimatedInputDenial_retry" => object(
             value,
             "EstimatedInputDenial_retry",
             &[
-                ("kind", true, |value| plain(value)),
-                ("last_status", true, |value| plain(value)),
-                ("limit", true, |value| plain(value)),
+                ("kind", true, plain),
+                ("last_status", true, plain),
+                ("limit", true, plain),
             ],
         ),
         "completeFacts" => object(
@@ -484,21 +482,19 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("attempts", false, |value| {
                     array(value, |value| convert("completeAttempt", value))
                 }),
-                ("cache_answers", true, |value| plain(value)),
+                ("cache_answers", true, plain),
                 ("call_id", true, |value| convert("completeCallId", value)),
-                ("estimated_cost_usd", false, |value| plain(value)),
-                ("held_model_mismatch", false, |value| plain(value)),
-                ("input_tokens", false, |value| plain(value)),
-                ("largest_request_bytes", true, |value| plain(value)),
-                ("largest_request_estimated_input_tokens", true, |value| {
-                    plain(value)
-                }),
-                ("model", false, |value| plain(value)),
-                ("output_tokens", false, |value| plain(value)),
-                ("records", true, |value| plain(value)),
-                ("requests_sent", true, |value| plain(value)),
-                ("seconds", true, |value| plain(value)),
-                ("token_estimate_method", true, |value| plain(value)),
+                ("estimated_cost_usd", false, plain),
+                ("held_model_mismatch", false, plain),
+                ("input_tokens", false, plain),
+                ("largest_request_bytes", true, plain),
+                ("largest_request_estimated_input_tokens", true, plain),
+                ("model", false, plain),
+                ("output_tokens", false, plain),
+                ("records", true, plain),
+                ("requests_sent", true, plain),
+                ("seconds", true, plain),
+                ("token_estimate_method", true, plain),
                 ("usage_persistence", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -520,10 +516,10 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("candidates", false, |value| {
                     array(value, |value| convert("completeFindCandidate", value))
                 }),
-                ("file", false, |value| plain(value)),
-                ("first_line", false, |value| plain(value)),
-                ("index", true, |value| plain(value)),
-                ("last_line", false, |value| plain(value)),
+                ("file", false, plain),
+                ("first_line", false, plain),
+                ("index", true, plain),
+                ("last_line", false, plain),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("position", false, |value| {
                     convert("completePosition", value)
@@ -532,17 +528,17 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completeReadableQuestion2", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
-                ("threshold", true, |value| plain(value)),
-                ("value", true, |value| plain(value)),
+                ("threshold", true, plain),
+                ("value", true, plain),
             ],
         ),
         "completeFindCandidate" => object(
             value,
             "FindCandidate",
             &[
-                ("index", true, |value| plain(value)),
-                ("input", true, |value| plain(value)),
-                ("probability", true, |value| plain(value)),
+                ("index", true, plain),
+                ("input", true, plain),
+                ("probability", true, plain),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -556,10 +552,10 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "Image",
             &[
-                ("base64", true, |value| plain(value)),
-                ("height", true, |value| plain(value)),
+                ("base64", true, plain),
+                ("height", true, plain),
                 ("media", true, |value| convert("completeImageMedia", value)),
-                ("width", true, |value| plain(value)),
+                ("width", true, plain),
             ],
         ),
         "completeImageMedia" => plain(value),
@@ -579,9 +575,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("properties", true, |value| {
                     mapping(value, |value| convert("completeInputPropertyType", value))
                 }),
-                ("required", false, |value| {
-                    array(value, |value| plain(value))
-                }),
+                ("required", false, |value| array(value, plain)),
                 ("type", true, |value| convert("completeObjectType", value)),
             ],
         ),
@@ -610,37 +604,28 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             "InputPropertyType_array",
             &[
                 ("items", true, |value| convert("completeStringRoot", value)),
-                ("type", true, |value| plain(value)),
+                ("type", true, plain),
             ],
         ),
-        "completeInputPropertyType_boolean" => object(
-            value,
-            "InputPropertyType_boolean",
-            &[("type", true, |value| plain(value))],
-        ),
-        "completeInputPropertyType_number" => object(
-            value,
-            "InputPropertyType_number",
-            &[("type", true, |value| plain(value))],
-        ),
-        "completeInputPropertyType_string" => object(
-            value,
-            "InputPropertyType_string",
-            &[("type", true, |value| plain(value))],
-        ),
+        "completeInputPropertyType_boolean" => {
+            object(value, "InputPropertyType_boolean", &[("type", true, plain)])
+        }
+        "completeInputPropertyType_number" => {
+            object(value, "InputPropertyType_number", &[("type", true, plain)])
+        }
+        "completeInputPropertyType_string" => {
+            object(value, "InputPropertyType_string", &[("type", true, plain)])
+        }
         "completeLabel" => object(
             value,
             "Label",
-            &[
-                ("description", false, |value| plain(value)),
-                ("name", true, |value| plain(value)),
-            ],
+            &[("description", false, plain), ("name", true, plain)],
         ),
         "completeMeta" => object(
             value,
             "Meta",
             &[
-                ("answered_by", false, |value| plain(value)),
+                ("answered_by", false, plain),
                 ("attempts", false, |value| {
                     array(value, |value| convert("completeAttempt", value))
                 }),
@@ -658,10 +643,10 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completebatchWarning", value)
                     }
                 }),
-                ("cached", true, |value| plain(value)),
-                ("context_sha256", false, |value| plain(value)),
-                ("failed_questions", true, |value| plain(value)),
-                ("model", true, |value| plain(value)),
+                ("cached", true, plain),
+                ("context_sha256", false, plain),
+                ("failed_questions", true, plain),
+                ("model", true, plain),
                 ("observations", true, |value| {
                     array(value, |value| convert("completeObservation", value))
                 }),
@@ -679,15 +664,15 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeprofileWarning", value)
                     }
                 }),
-                ("question_sha256", false, |value| plain(value)),
+                ("question_sha256", false, plain),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
                 }),
-                ("questions_sha256", false, |value| plain(value)),
-                ("requests", true, |value| array(value, |value| plain(value))),
-                ("requests_sent", true, |value| plain(value)),
-                ("tool", true, |value| plain(value)),
-                ("url", true, |value| plain(value)),
+                ("questions_sha256", false, plain),
+                ("requests", true, |value| array(value, plain)),
+                ("requests_sent", true, plain),
+                ("tool", true, plain),
+                ("url", true, plain),
                 ("usage", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -704,9 +689,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("properties", true, |value| {
                     mapping(value, |value| convert("completeInputPropertyType", value))
                 }),
-                ("required", false, |value| {
-                    array(value, |value| plain(value))
-                }),
+                ("required", false, |value| array(value, plain)),
                 ("type", true, |value| convert("completeObjectType", value)),
             ],
         ),
@@ -740,8 +723,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "PersistenceObservation",
             &[
-                ("advice", false, |value| plain(value)),
-                ("observed_at", true, |value| plain(value)),
+                ("advice", false, plain),
+                ("observed_at", true, plain),
                 ("state", true, |value| {
                     convert("completeUsagePersistence", value)
                 }),
@@ -751,19 +734,19 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "PhysicalSource",
             &[
-                ("file", true, |value| plain(value)),
-                ("first_line", false, |value| plain(value)),
-                ("last_line", false, |value| plain(value)),
+                ("file", true, plain),
+                ("first_line", false, plain),
+                ("last_line", false, plain),
             ],
         ),
         "completePosition" => object(
             value,
             "Position",
             &[
-                ("file", true, |value| plain(value)),
-                ("first", false, |value| plain(value)),
-                ("images", false, |value| array(value, |value| plain(value))),
-                ("last", false, |value| plain(value)),
+                ("file", true, plain),
+                ("first", false, plain),
+                ("images", false, |value| array(value, plain)),
+                ("last", false, plain),
             ],
         ),
         "completeQuestionName" => plain(value),
@@ -771,8 +754,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "QuestionSource",
             &[
-                ("answered_by", true, |value| plain(value)),
-                ("batch_size", false, |value| plain(value)),
+                ("answered_by", true, plain),
+                ("batch_size", false, plain),
                 ("origin", true, |value| convert("completeOrigin", value)),
             ],
         ),
@@ -780,7 +763,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "RankMember",
             &[
-                ("name", true, |value| plain(value)),
+                ("name", true, plain),
                 ("result", true, |value| {
                     convert("completeRankMemberResult", value)
                 }),
@@ -809,8 +792,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completePhysicalSource", value)
                     }
                 }),
-                ("threshold", true, |value| plain(value)),
-                ("value", true, |value| plain(value)),
+                ("threshold", true, plain),
+                ("value", true, plain),
             ],
         ),
         "completeReadableQuestion" => {
@@ -856,7 +839,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("label_details", false, |value| {
                     array(value, |value| convert("completeLabel", value))
                 }),
-                ("model", false, |value| plain(value)),
+                ("model", false, plain),
                 ("name", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -864,11 +847,11 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeQuestionName", value)
                     }
                 }),
-                ("none", true, |value| plain(value)),
-                ("on", false, |value| array(value, |value| plain(value))),
-                ("profile", false, |value| plain(value)),
-                ("text", true, |value| plain(value)),
-                ("verb", true, |value| plain(value)),
+                ("none", true, plain),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("text", true, plain),
+                ("verb", true, plain),
                 ("wording_version", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -896,8 +879,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeInputDeclaration", value)
                     }
                 }),
-                ("entity_definition", false, |value| plain(value)),
-                ("instructions", false, |value| plain(value)),
+                ("entity_definition", false, plain),
+                ("instructions", false, plain),
                 ("item_schema", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -905,14 +888,14 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeInputDeclaration", value)
                     }
                 }),
-                ("kinds", true, |value| mapping(value, |value| plain(value))),
+                ("kinds", true, |value| mapping(value, plain)),
                 ("label_details", false, |value| {
                     array(value, |value| convert("completeLabel", value))
                 }),
                 ("mode", false, |value| {
                     convert("completeRecognitionMode", value)
                 }),
-                ("model", false, |value| plain(value)),
+                ("model", false, plain),
                 ("name", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -920,8 +903,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeQuestionName", value)
                     }
                 }),
-                ("on", false, |value| array(value, |value| plain(value))),
-                ("profile", false, |value| plain(value)),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
                 ("relation_threshold", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -932,7 +915,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("relations", false, |value| {
                     array(value, |value| convert("completerelationRule", value))
                 }),
-                ("snippet_pieces", false, |value| plain(value)),
+                ("snippet_pieces", false, plain),
                 ("stage_context", false, |value| {
                     convert("completeRecognitionStageContext", value)
                 }),
@@ -984,7 +967,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("label_details", false, |value| {
                     array(value, |value| convert("completeLabel", value))
                 }),
-                ("model", false, |value| plain(value)),
+                ("model", false, plain),
                 ("name", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -992,15 +975,15 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeQuestionName", value)
                     }
                 }),
-                ("on", false, |value| array(value, |value| plain(value))),
-                ("profile", false, |value| plain(value)),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
                 ("relations", true, |value| {
                     array(value, |value| convert("completerelationRule", value))
                 }),
                 ("threshold", true, |value| {
                     convert("completethreshold", value)
                 }),
-                ("verb", true, |value| plain(value)),
+                ("verb", true, plain),
                 ("wording_version", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1038,7 +1021,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("label_details", false, |value| {
                     array(value, |value| convert("completeLabel", value))
                 }),
-                ("model", false, |value| plain(value)),
+                ("model", false, plain),
                 ("name", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1046,8 +1029,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeQuestionName", value)
                     }
                 }),
-                ("on", false, |value| array(value, |value| plain(value))),
-                ("profile", false, |value| plain(value)),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
                 ("wording_version", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1055,9 +1038,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeWordingVersion", value)
                     }
                 }),
-                ("options", true, |value| array(value, |value| plain(value))),
-                ("text", true, |value| plain(value)),
-                ("verb", true, |value| plain(value)),
+                ("options", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
             ],
         ),
         "completeReadableQuestion_decide" => object(
@@ -1088,7 +1071,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("label_details", false, |value| {
                     array(value, |value| convert("completeLabel", value))
                 }),
-                ("model", false, |value| plain(value)),
+                ("model", false, plain),
                 ("name", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1096,8 +1079,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeQuestionName", value)
                     }
                 }),
-                ("on", false, |value| array(value, |value| plain(value))),
-                ("profile", false, |value| plain(value)),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
                 ("wording_version", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1105,10 +1088,10 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeWordingVersion", value)
                     }
                 }),
-                ("false", false, |value| plain(value)),
-                ("text", true, |value| plain(value)),
-                ("true", false, |value| plain(value)),
-                ("verb", true, |value| plain(value)),
+                ("false", false, plain),
+                ("text", true, plain),
+                ("true", false, plain),
+                ("verb", true, plain),
             ],
         ),
         "completeReadableQuestion_score" => object(
@@ -1139,7 +1122,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("label_details", false, |value| {
                     array(value, |value| convert("completeLabel", value))
                 }),
-                ("model", false, |value| plain(value)),
+                ("model", false, plain),
                 ("name", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1147,8 +1130,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeQuestionName", value)
                     }
                 }),
-                ("on", false, |value| array(value, |value| plain(value))),
-                ("profile", false, |value| plain(value)),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
                 ("wording_version", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1156,9 +1139,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeWordingVersion", value)
                     }
                 }),
-                ("levels", true, |value| array(value, |value| plain(value))),
-                ("text", true, |value| plain(value)),
-                ("verb", true, |value| plain(value)),
+                ("levels", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
             ],
         ),
         "completeReadableQuestion_tag" => object(
@@ -1189,7 +1172,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("label_details", false, |value| {
                     array(value, |value| convert("completeLabel", value))
                 }),
-                ("model", false, |value| plain(value)),
+                ("model", false, plain),
                 ("name", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1197,8 +1180,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeQuestionName", value)
                     }
                 }),
-                ("on", false, |value| array(value, |value| plain(value))),
-                ("profile", false, |value| plain(value)),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
                 ("wording_version", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1206,9 +1189,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeWordingVersion", value)
                     }
                 }),
-                ("labels", true, |value| array(value, |value| plain(value))),
-                ("text", true, |value| plain(value)),
-                ("verb", true, |value| plain(value)),
+                ("labels", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
             ],
         ),
         "completeRecognition" => object(
@@ -1221,11 +1204,11 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("answer_id", true, |value| {
                     convert("completeAnswerId", value)
                 }),
-                ("file", false, |value| plain(value)),
-                ("first_line", false, |value| plain(value)),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
-                ("last_line", false, |value| plain(value)),
+                ("file", false, plain),
+                ("first_line", false, plain),
+                ("index", false, plain),
+                ("input", false, plain),
+                ("last_line", false, plain),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("position", false, |value| {
                     convert("completePosition", value)
@@ -1299,9 +1282,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "RecognitionProposal",
             &[
-                ("end", true, |value| plain(value)),
-                ("kept", true, |value| plain(value)),
-                ("kind", false, |value| plain(value)),
+                ("end", true, plain),
+                ("kept", true, plain),
+                ("kind", false, plain),
                 ("selected", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1309,18 +1292,18 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeplace", value)
                     }
                 }),
-                ("span_probability", true, |value| plain(value)),
-                ("start", true, |value| plain(value)),
-                ("strength", false, |value| plain(value)),
+                ("span_probability", true, plain),
+                ("start", true, plain),
+                ("strength", false, plain),
             ],
         ),
         "completeRecognitionStageContext" => object(
             value,
             "RecognitionStageContext",
             &[
-                ("boundary", false, |value| plain(value)),
-                ("kind_edge", false, |value| plain(value)),
-                ("relation", false, |value| plain(value)),
+                ("boundary", false, plain),
+                ("kind_edge", false, plain),
+                ("relation", false, plain),
             ],
         ),
         "completeRelation" => object(
@@ -1331,11 +1314,11 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("answer_id", true, |value| {
                     convert("completeAnswerId", value)
                 }),
-                ("file", false, |value| plain(value)),
-                ("first_line", false, |value| plain(value)),
-                ("index", false, |value| plain(value)),
-                ("input", false, |value| plain(value)),
-                ("last_line", false, |value| plain(value)),
+                ("file", false, plain),
+                ("first_line", false, plain),
+                ("index", false, plain),
+                ("input", false, plain),
+                ("last_line", false, plain),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("position", false, |value| {
                     convert("completePosition", value)
@@ -1378,9 +1361,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
                 }),
-                ("reads", true, |value| plain(value)),
-                ("relation", true, |value| plain(value)),
-                ("request", true, |value| plain(value)),
+                ("reads", true, plain),
+                ("relation", true, plain),
+                ("request", true, plain),
                 ("source", true, |value| {
                     convert("completerelatedEntity", value)
                 }),
@@ -1401,12 +1384,12 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeUsage", value)
                     }
                 }),
-                ("accepted", true, |value| plain(value)),
+                ("accepted", true, plain),
                 ("answer", true, |value| convert("completeanswer", value)),
                 ("answer_id", true, |value| {
                     convert("completeAnswerId", value)
                 }),
-                ("probability", true, |value| plain(value)),
+                ("probability", true, plain),
             ],
         ),
         "completeRelationMember_failure_id" => object(
@@ -1428,9 +1411,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
                 }),
-                ("reads", true, |value| plain(value)),
-                ("relation", true, |value| plain(value)),
-                ("request", true, |value| plain(value)),
+                ("reads", true, plain),
+                ("relation", true, plain),
+                ("request", true, plain),
                 ("source", true, |value| {
                     convert("completerelatedEntity", value)
                 }),
@@ -1474,30 +1457,27 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         "completeSendBudgetDenial_before_additional_send" => object(
             value,
             "SendBudgetDenial_before_additional_send",
-            &[("kind", true, |value| plain(value))],
+            &[("kind", true, plain)],
         ),
         "completeSendBudgetDenial_before_first_send" => object(
             value,
             "SendBudgetDenial_before_first_send",
-            &[("kind", true, |value| plain(value))],
+            &[("kind", true, plain)],
         ),
         "completeSendBudgetDenial_before_retry" => object(
             value,
             "SendBudgetDenial_before_retry",
-            &[
-                ("kind", true, |value| plain(value)),
-                ("last_status", true, |value| plain(value)),
-            ],
+            &[("kind", true, plain), ("last_status", true, plain)],
         ),
         "completeStopCause" => plain(value),
         "completeStopped" => object(
             value,
             "Stopped",
             &[
-                ("at", false, |value| plain(value)),
+                ("at", false, plain),
                 ("cause", true, |value| convert("completeStopCause", value)),
-                ("retryable", true, |value| plain(value)),
-                ("status", false, |value| plain(value)),
+                ("retryable", true, plain),
+                ("status", false, plain),
             ],
         ),
         "completeStringRoot" => object(
@@ -1510,8 +1490,8 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "Usage",
             &[
-                ("input_tokens", false, |value| plain(value)),
-                ("output_tokens", false, |value| plain(value)),
+                ("input_tokens", false, plain),
+                ("output_tokens", false, plain),
             ],
         ),
         "completeUsagePersistence" => plain(value),
@@ -1545,43 +1525,34 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "Choice",
             &[
-                ("confidence", false, |value| plain(value)),
-                ("kind", true, |value| plain(value)),
-                ("pick", true, |value| plain(value)),
-                ("probabilities", true, |value| {
-                    mapping(value, |value| plain(value))
-                }),
+                ("confidence", false, plain),
+                ("kind", true, plain),
+                ("pick", true, plain),
+                ("probabilities", true, |value| mapping(value, plain)),
             ],
         ),
         "completeanswer_score" => object(
             value,
             "Score",
             &[
-                ("confidence", false, |value| plain(value)),
-                ("kind", true, |value| plain(value)),
-                ("level", true, |value| plain(value)),
-                ("probabilities", true, |value| {
-                    mapping(value, |value| plain(value))
-                }),
+                ("confidence", false, plain),
+                ("kind", true, plain),
+                ("level", true, plain),
+                ("probabilities", true, |value| mapping(value, plain)),
             ],
         ),
         "completeanswer_tag" => object(
             value,
             "Tags",
             &[
-                ("kind", true, |value| plain(value)),
-                ("probabilities", true, |value| {
-                    mapping(value, |value| plain(value))
-                }),
+                ("kind", true, plain),
+                ("probabilities", true, |value| mapping(value, plain)),
             ],
         ),
         "completeanswer_yes_no" => object(
             value,
             "YesNo",
-            &[
-                ("kind", true, |value| plain(value)),
-                ("probability", true, |value| plain(value)),
-            ],
+            &[("kind", true, plain), ("probability", true, plain)],
         ),
         "completeattemptOutcome" => plain(value),
         "completebatchSetting" => plain(value),
@@ -1601,24 +1572,24 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "Entity",
             &[
-                ("end", true, |value| plain(value)),
-                ("file", false, |value| plain(value)),
-                ("first_line", false, |value| plain(value)),
-                ("kind", true, |value| plain(value)),
-                ("last_line", false, |value| plain(value)),
-                ("length", true, |value| plain(value)),
-                ("start", true, |value| plain(value)),
-                ("strength", true, |value| plain(value)),
-                ("text", true, |value| plain(value)),
+                ("end", true, plain),
+                ("file", false, plain),
+                ("first_line", false, plain),
+                ("kind", true, plain),
+                ("last_line", false, plain),
+                ("length", true, plain),
+                ("start", true, plain),
+                ("strength", true, plain),
+                ("text", true, plain),
             ],
         ),
         "completeentityEdge" => object(
             value,
             "EntityEdge",
             &[
-                ("either", false, |value| plain(value)),
-                ("probability", true, |value| plain(value)),
-                ("relation", true, |value| plain(value)),
+                ("either", false, plain),
+                ("probability", true, plain),
+                ("relation", true, plain),
                 ("source", true, |value| convert("completeentity", value)),
                 ("target", true, |value| convert("completeentity", value)),
             ],
@@ -1635,7 +1606,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("cause", true, |value| {
                     convert("completefailureCause", value)
                 }),
-                ("kind", true, |value| plain(value)),
+                ("kind", true, plain),
             ],
         ),
         "completefailureCause" => plain(value),
@@ -1644,30 +1615,28 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "FindAnswer",
             &[
-                ("confidence", false, |value| plain(value)),
-                ("kind", true, |value| plain(value)),
-                ("pick", true, |value| plain(value)),
-                ("probabilities", true, |value| {
-                    mapping(value, |value| plain(value))
-                }),
+                ("confidence", false, plain),
+                ("kind", true, plain),
+                ("pick", true, plain),
+                ("probabilities", true, |value| mapping(value, plain)),
             ],
         ),
         "completenameOdds" => object(
             value,
             "NameOdds",
             &[
-                ("edges", true, |value| mapping(value, |value| plain(value))),
-                ("end", true, |value| plain(value)),
-                ("kinds", true, |value| mapping(value, |value| plain(value))),
-                ("start", true, |value| plain(value)),
+                ("edges", true, |value| mapping(value, plain)),
+                ("end", true, plain),
+                ("kinds", true, |value| mapping(value, plain)),
+                ("start", true, plain),
             ],
         ),
         "completepairOdds" => object(
             value,
             "PairOdds",
             &[
-                ("probability", true, |value| plain(value)),
-                ("relation", true, |value| plain(value)),
+                ("probability", true, plain),
+                ("relation", true, plain),
                 ("source", true, |value| convert("completeplace", value)),
                 ("target", true, |value| convert("completeplace", value)),
             ],
@@ -1676,26 +1645,20 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "PieceOdds",
             &[
-                ("end", true, |value| plain(value)),
-                ("start", true, |value| plain(value)),
-                ("tags", true, |value| mapping(value, |value| plain(value))),
+                ("end", true, plain),
+                ("start", true, plain),
+                ("tags", true, |value| mapping(value, plain)),
             ],
         ),
         "completeplace" => object(
             value,
             "Place",
-            &[
-                ("end", true, |value| plain(value)),
-                ("start", true, |value| plain(value)),
-            ],
+            &[("end", true, plain), ("start", true, plain)],
         ),
         "completeprofileWarning" => object(
             value,
             "ProfileWarning",
-            &[
-                ("running", true, |value| plain(value)),
-                ("tuned_for", true, |value| plain(value)),
-            ],
+            &[("running", true, plain), ("tuned_for", true, plain)],
         ),
         "completerecognize" => {
             if value.get("entities").is_some()
@@ -1755,26 +1718,20 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         "completerelateFields" => object(
             value,
             "RelateFields",
-            &[
-                ("kind", true, |value| plain(value)),
-                ("name", true, |value| plain(value)),
-            ],
+            &[("kind", true, plain), ("name", true, plain)],
         ),
         "completerelatedEntity" => object(
             value,
             "RelatedEntity",
-            &[
-                ("kind", true, |value| plain(value)),
-                ("name", true, |value| plain(value)),
-            ],
+            &[("kind", true, plain), ("name", true, plain)],
         ),
         "completerelatedEntityEdge" => object(
             value,
             "RelatedEntityEdge",
             &[
-                ("either", false, |value| plain(value)),
-                ("probability", true, |value| plain(value)),
-                ("relation", true, |value| plain(value)),
+                ("either", false, plain),
+                ("probability", true, plain),
+                ("relation", true, plain),
                 ("source", true, |value| {
                     convert("completerelatedEntityEdge_properties_source", value)
                 }),
@@ -1813,47 +1770,44 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 value,
                 "RelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
                 &[
-                    ("file", true, |value| plain(value)),
-                    ("first_line", false, |value| plain(value)),
-                    ("kind", true, |value| plain(value)),
-                    ("last_line", false, |value| plain(value)),
-                    ("name", true, |value| plain(value)),
-                    ("ordinal", true, |value| plain(value)),
-                    ("record", true, |value| plain(value)),
+                    ("file", true, plain),
+                    ("first_line", false, plain),
+                    ("kind", true, plain),
+                    ("last_line", false, plain),
+                    ("name", true, plain),
+                    ("ordinal", true, plain),
+                    ("record", true, plain),
                 ],
             )
         }
         "completerelatedEntityEdge_properties_source_fields_kind_name" => object(
             value,
             "RelatedEntityEdge_properties_source_fields_kind_name",
-            &[
-                ("kind", true, |value| plain(value)),
-                ("name", true, |value| plain(value)),
-            ],
+            &[("kind", true, plain), ("name", true, plain)],
         ),
         "completerelationRule" => object(
             value,
             "RelationRule",
             &[
-                ("either", true, |value| plain(value)),
-                ("name", true, |value| plain(value)),
-                ("reads", true, |value| plain(value)),
-                ("single", false, |value| plain(value)),
-                ("source", true, |value| plain(value)),
-                ("target", true, |value| plain(value)),
+                ("either", true, plain),
+                ("name", true, plain),
+                ("reads", true, plain),
+                ("single", false, plain),
+                ("source", true, plain),
+                ("target", true, plain),
             ],
         ),
         "completesourceRelationEndpoint" => object(
             value,
             "SourceRelationEndpoint",
             &[
-                ("file", true, |value| plain(value)),
-                ("first_line", false, |value| plain(value)),
-                ("kind", true, |value| plain(value)),
-                ("last_line", false, |value| plain(value)),
-                ("name", true, |value| plain(value)),
-                ("ordinal", true, |value| plain(value)),
-                ("record", true, |value| plain(value)),
+                ("file", true, plain),
+                ("first_line", false, plain),
+                ("kind", true, plain),
+                ("last_line", false, plain),
+                ("name", true, plain),
+                ("ordinal", true, plain),
+                ("record", true, plain),
             ],
         ),
         "completethreshold" => plain(value),

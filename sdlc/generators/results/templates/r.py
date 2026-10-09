@@ -70,6 +70,7 @@ def render(definitions):
              'use extendr_api::prelude::*;', 'use serde_json::Value;',
              'use super::native_results::{array, mapping, object, plain, tagged};',
              'use crate::calls::Crossed;',
+             '#[expect(clippy::too_many_lines, reason = "mechanical dispatch generated from the shared result graph")]',
              'pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {',
              'match kind {']
     for key, source in definitions.items():
@@ -94,4 +95,4 @@ def render(definitions):
             lines.append(expression(source))
         lines.append('},')
     lines += ['_ => Err(crate::defect("unknown generated R result type")),', '}', '}']
-    return '\n'.join(lines) + '\n'
+    return ('\n'.join(lines) + '\n').replace('|value| plain(value)', 'plain')

@@ -92,7 +92,12 @@ pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
         "relate" => "completeRelation",
         _ => return Err(crate::defect("native result has no named function")),
     };
-    let rows = &value["results"];
+    let member = |name: &str| {
+        value
+            .get(name)
+            .ok_or_else(|| crate::defect("native complete packet has no required member"))
+    };
+    let rows = member("results")?;
     let results = if matches!(verb, "find" | "relate") {
         List::from_values([convert(kind, rows)?]).into()
     } else {
@@ -100,9 +105,9 @@ pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
     };
     let packet: Robj = list!(
         results = results,
-        facts = convert("completeFacts", &value["facts"])?,
-        ordinals = plain(&value["ordinals"])?,
-        inputs = plain(&value["inputs"])?
+        facts = convert("completeFacts", member("facts")?)?,
+        ordinals = plain(member("ordinals")?)?,
+        inputs = plain(member("inputs")?)?
     )
     .into();
     let mut packet = packet;

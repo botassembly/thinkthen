@@ -95,6 +95,9 @@ PYCONSUMER
   exit
 fi
 
+echo "== r: generated native result conversions"
+python3 "$root/sdlc/generators/results/generate.py" --target r --check
+
 echo "== r: script and source counts"
 # R4-19: every cargo call that resolves crates is locked and offline.
 calls=$(grep -nE '(^|[;&|(]|then|do) *cargo (build|test|clippy|run|vendor|package|fetch)' \
