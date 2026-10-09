@@ -34,3 +34,9 @@ An R caller installs the package, calls the ten functions by name with ordinary 
   One public API is one coherent family of named typed calls. Claim `libraries/r/**` and its installed typed consumer cases, narrowed to the actual files per slice before coding.
 - Proof: The full shared cases run through the installed package's typed interface. They cover files and images where supported, context and options, original positions, facts, failures, invalid input with zero sends, interruption, printing and field access. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
 - Defers: The proxy and any platform ruling change without evidence. Neither needs a ticket in 0.2.
+
+### Added public declarations
+
+```text
+fn Engine::request_session_with_surface(&self, Request, Surface) -> Result<RequestSession, Error>
+```
