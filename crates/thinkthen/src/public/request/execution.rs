@@ -127,6 +127,15 @@ impl Engine {
     ) -> Result<RequestOutcome, Error> {
         self.execute_request_sink(request, environment, None)
     }
+    #[cfg(feature = "cli")]
+    pub(crate) fn execute_cli_request<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        environment: RequestEnvironment<'a>,
+        sink: &dyn Fn(RequestValue),
+    ) -> Result<RequestOutcome, Error> {
+        self.execute_request_sink(request, environment, Some(sink))
+    }
     pub(super) fn execute_request_sink<'a>(
         &self,
         request: &'a AdmittedRequest,

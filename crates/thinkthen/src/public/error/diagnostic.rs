@@ -3,6 +3,8 @@ use std::any::Any;
 
 pub(crate) enum Diagnostic {
     Engine(crate::engine::error::Error),
+    #[cfg(feature = "cli")]
+    CliInput(Box<crate::cli::failure::Failure>),
     Refusal(Box<dyn Any + Send + Sync>),
     Model(crate::core::BlankTextError),
     Pointer(&'static str, String, crate::core::PointerError),

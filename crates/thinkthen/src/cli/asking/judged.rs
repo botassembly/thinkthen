@@ -342,7 +342,7 @@ impl JudgeAsker<'_> {
 
 /// Answer every record and print its row, or print the plan.
 pub(super) fn run(
-    configuration: JudgingInput<'_>,
+    mut configuration: JudgingInput<'_>,
     reading: &Reading,
     source: crate::cli::intake::Intake,
     setting: Option<Setting>,
@@ -362,6 +362,9 @@ pub(super) fn run(
     };
     if configuration.common.dry_run {
         return super::plan::packed(&configuration, reading, records, context, inputs, output);
+    }
+    if let Some(admitted) = configuration.admitted.take() {
+        return super::native::run(configuration, admitted, reading, records, setting, output);
     }
     if matches!(configuration.keeping, Keeping::Passing | Keeping::Ordered) {
         output.guard_models();

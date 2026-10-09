@@ -270,11 +270,11 @@ fn run(
     let input = io::stdin();
     match &cli.command {
         Some(Command::Mcp(_)) => Err(Failure::Defect("MCP command bypassed startup")),
-        Some(Command::Decide(arguments)) => judge::decide(arguments, environment, input, writer),
-        Some(Command::Choose(arguments)) => judge::choose(arguments, environment, input, writer),
-        Some(Command::Tag(arguments)) => judge::tag(arguments, environment, input, writer),
-        Some(Command::Score(arguments)) => judge::score(arguments, environment, input, writer),
-        Some(Command::Filter(arguments)) => judge::filter(arguments, environment, input, writer),
+        Some(Command::Decide(arguments)) => judge::decide(arguments, environment, admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?, input, writer),
+        Some(Command::Choose(arguments)) => judge::choose(arguments, environment, admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?, input, writer),
+        Some(Command::Tag(arguments)) => judge::tag(arguments, environment, admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?, input, writer),
+        Some(Command::Score(arguments)) => judge::score(arguments, environment, admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?, input, writer),
+        Some(Command::Filter(arguments)) => judge::filter(arguments, environment, admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?, input, writer),
         Some(Command::Rank(arguments)) => judge::rank(arguments, environment, input, writer),
         Some(Command::Find(arguments)) => find::run(
             arguments,

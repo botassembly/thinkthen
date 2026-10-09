@@ -15,27 +15,19 @@ use std::path::PathBuf;
     reason = "one ten-function adapter makes CLI transport choices reviewable together"
 )]
 pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>, Failure> {
+    let mut atomic = None;
     let call = match command {
         Command::Decide(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
             let options = options(&common, Some(&a.batching), a.threshold.as_ref());
             let question = selector(&a.question, || {
-                definition(
-                    asked::decide(a)?.0,
-                    crate::public::NativeQuestionKind::Decide,
-                )
+                atomic_definition(asked::decide(a, None)?, &mut atomic)
             })?;
             RequestCall::Decide(arguments(&mut common, question, options)?)
         }
         Command::Choose(a) => {
             let question = selector(&a.question, || {
-                let resolved = asked::choose(a)?.0;
-                if resolved.question().is_none() {
-                    return Ok(crate::Question::choose_records(&a.question)
-                        .map_err(native)?
-                        .into());
-                }
-                definition(resolved, crate::public::NativeQuestionKind::Choose)
+                atomic_definition(asked::choose(a, None)?, &mut atomic)
             })?;
             let mut options = options(&a.common, Some(&a.batching), a.threshold.as_ref());
             options.options_field = a.options_pointer.clone();
@@ -43,7 +35,7 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
         }
         Command::Tag(a) => {
             let question = selector(&a.question, || {
-                definition(asked::tag(a)?.0, crate::public::NativeQuestionKind::Tag)
+                atomic_definition(asked::tag(a, None)?, &mut atomic)
             })?;
             RequestCall::Tag(arguments(
                 &mut a.common.clone(),
@@ -53,7 +45,7 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
         }
         Command::Score(a) => {
             let question = selector(&a.question, || {
-                definition(asked::score(a)?.0, crate::public::NativeQuestionKind::Score)
+                atomic_definition(asked::score(a, None)?, &mut atomic)
             })?;
             RequestCall::Score(arguments(
                 &mut a.common.clone(),
@@ -64,10 +56,7 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
         Command::Filter(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
             let question = selector(&a.question, || {
-                definition(
-                    asked::filter(a)?.0,
-                    crate::public::NativeQuestionKind::Decide,
-                )
+                atomic_definition(asked::filter(a, None)?, &mut atomic)
             })?;
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
             options.details = false;
@@ -191,7 +180,13 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
         }
         _ => return Ok(None),
     };
-    Request::new(call).admit().map(Some).map_err(native)
+    Request::new(call).admit().map(|admitted| Some(admitted.retain_cli_atomic(atomic))).map_err(native)
+}
+fn atomic_definition((resolved, tier): (crate::core::Resolved, asked::FileTier), retained: &mut Option<crate::public::request::cli_atomic::Prepared>) -> Result<RequestDefinition, Failure> {
+    let prepared = crate::public::request::cli_atomic::Prepared { resolved, batch: tier.batch, tuned: tier.tuned };
+    let definition = crate::public::request::cli_atomic::definition(&prepared).map_err(native)?;
+    *retained = Some(prepared);
+    Ok(definition)
 }
 fn selector(
     text: &str,

@@ -24,6 +24,8 @@ use crate::schedule::{self, Output};
 pub(crate) mod context;
 mod folders;
 mod judged;
+mod native;
+mod native_reader;
 mod plan;
 mod rank_set;
 mod reading;
@@ -176,6 +178,7 @@ pub(crate) fn run(
         view,
         keeping,
         batch,
+        admitted,
     } = asked;
     common.check_plan_name()?;
     if common.media.as_deref() == Some("image") && !settled.on().is_empty() {
@@ -278,6 +281,7 @@ pub(crate) fn run(
     )?;
     output.snapshot(snapshot);
     let configuration = JudgingInput {
+        admitted,
         declarations: settled.metadata().clone(),
         common,
         environment,
@@ -324,6 +328,7 @@ struct Judging<'a> {
 }
 
 struct JudgingInput<'a> {
+    admitted: Option<crate::AdmittedRequest>,
     declarations: crate::core::declaration::QuestionMetadata,
     common: &'a Common,
     environment: &'a Environment,
@@ -346,6 +351,7 @@ struct JudgingInput<'a> {
 impl Judging<'_> {
     fn new(input: JudgingInput<'_>) -> Result<Judging<'_>, Failure> {
         let JudgingInput {
+            admitted: _,
             declarations,
             common,
             environment,

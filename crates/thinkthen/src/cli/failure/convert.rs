@@ -135,6 +135,7 @@ impl From<crate::Error> for Failure {
         use crate::public::error::diagnostic::Diagnostic;
         match error.take_diagnostic() {
             Some(Diagnostic::Engine(cause)) => Self::from(cause),
+            Some(Diagnostic::CliInput(cause)) => *cause,
             Some(Diagnostic::Model(cause)) => Self::Usage(match cause {
                 crate::core::BlankTextError::ModelControl => {
                     "--model holds no control character or white space but a plain space"

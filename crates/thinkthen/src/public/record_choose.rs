@@ -37,6 +37,19 @@ impl Question {
     }
 }
 impl RecordChooseQuestion {
+    #[cfg(feature = "cli")]
+    pub(crate) fn from_cli_resolved(resolved: &core::Resolved, batch: Option<core::Json>, authored_threshold: bool) -> Self {
+        Self {
+            metadata: resolved.metadata().clone(),
+            text: resolved.text().clone(),
+            threshold: resolved.threshold(),
+            authored_threshold,
+            model: (!resolved.sources().model_is_default()).then(|| resolved.model().clone()),
+            profile: resolved.profile().cloned(),
+            batch,
+        }
+    }
+
     /// Admit ordinary saved choose text, rules, model, profile and batch.
     /// Record candidates replace the entire saved list, when one was authored.
     /// # Errors

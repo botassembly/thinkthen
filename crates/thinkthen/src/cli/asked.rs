@@ -6,7 +6,7 @@
 
 use std::path::Path;
 
-use crate::core::{Cutting, Description, Json, QuestionFile, Resolved, Typed, Verb, resolve};
+use crate::core::{Cutting, Description, Json, QuestionFile, Resolved, Typed, Verb};
 
 use crate::args::{
     ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, ScoreArguments,
@@ -63,9 +63,8 @@ fn yes_no(
     threshold: Option<&String>,
     cutting: Cutting,
     common: &Common,
+    admitted: Option<&mut crate::AdmittedRequest>,
 ) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(question)?;
-    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
     let typed = Typed {
         threshold: threshold.cloned(),
         yes: meanings.yes.clone(),
@@ -75,26 +74,15 @@ fn yes_no(
         cutting,
         ..Typed::default()
     };
-    resolve(
-        Verb::Decide,
-        typed_text(question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )
+    atomic(Verb::Decide, question, &typed, admitted)
     .map_err(|error| match error {
-        crate::core::QuestionFileError::VerbMismatch { held, .. } if caller != "decide" => {
-            Failure::QuestionKind {
-                command: caller,
-                held: held.word(),
-            }
-        }
-        other => Failure::Question(other),
+        Failure::Question(crate::core::QuestionFileError::VerbMismatch { held, .. }) if caller != "decide" => Failure::QuestionKind { command: caller, held: held.word() },
+        other => other,
     })
-    .map(|resolved| (resolved, FileTier { batch, tuned }))
 }
 
 /// Settle everything `decide` was asked.
-pub(crate) fn decide(arguments: &DecideArguments) -> Result<(Resolved, FileTier), Failure> {
+pub(crate) fn decide(arguments: &DecideArguments, admitted: Option<&mut crate::AdmittedRequest>) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
         "decide",
         &arguments.question,
@@ -102,11 +90,12 @@ pub(crate) fn decide(arguments: &DecideArguments) -> Result<(Resolved, FileTier)
         arguments.threshold.as_ref(),
         Cutting::AsTheVerbAllows,
         &arguments.common,
+        admitted,
     )
 }
 
 /// Settle everything `filter` was asked, which takes a single cut alone.
-pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, FileTier), Failure> {
+pub(crate) fn filter(arguments: &FilterArguments, admitted: Option<&mut crate::AdmittedRequest>) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
         "filter",
         &arguments.question,
@@ -114,6 +103,7 @@ pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, FileTier)
         arguments.threshold.as_ref(),
         Cutting::OneCut,
         &arguments.common,
+        admitted,
     )
 }
 
@@ -121,9 +111,7 @@ mod rank;
 pub(crate) use rank::rank;
 
 /// Settle everything `choose` was asked.
-pub(crate) fn choose(arguments: &ChooseArguments) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(&arguments.question)?;
-    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
+pub(crate) fn choose(arguments: &ChooseArguments, admitted: Option<&mut crate::AdmittedRequest>) -> Result<(Resolved, FileTier), Failure> {
     let listed = !arguments.options.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -159,19 +147,11 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<(Resolved, FileTier)
         options_from_record: arguments.options_pointer.is_some(),
         ..Typed::default()
     };
-    let settled = resolve(
-        Verb::Choose,
-        typed_text(&arguments.question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )?;
-    Ok((settled, FileTier { batch, tuned }))
+    atomic(Verb::Choose, &arguments.question, &typed, admitted)
 }
 
 /// Settle everything `tag` was asked.
-pub(crate) fn tag(arguments: &TagArguments) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(&arguments.question)?;
-    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
+pub(crate) fn tag(arguments: &TagArguments, admitted: Option<&mut crate::AdmittedRequest>) -> Result<(Resolved, FileTier), Failure> {
     let listed = !arguments.labels.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -204,18 +184,11 @@ pub(crate) fn tag(arguments: &TagArguments) -> Result<(Resolved, FileTier), Fail
         on: fields(&arguments.common),
         ..Typed::default()
     };
-    let settled = resolve(
-        Verb::Tag,
-        typed_text(&arguments.question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )?;
-    Ok((settled, FileTier { batch, tuned }))
+    atomic(Verb::Tag, &arguments.question, &typed, admitted)
 }
 
 /// Settle everything `score` was asked.
-pub(crate) fn score(arguments: &ScoreArguments) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(&arguments.question)?;
+pub(crate) fn score(arguments: &ScoreArguments, admitted: Option<&mut crate::AdmittedRequest>) -> Result<(Resolved, FileTier), Failure> {
     let typed = Typed {
         // `score` takes no rule, and the core writes that refusal, so the
         // value reaches it rather than being refused twice.
@@ -231,19 +204,16 @@ pub(crate) fn score(arguments: &ScoreArguments) -> Result<(Resolved, FileTier), 
         on: fields(&arguments.common),
         ..Typed::default()
     };
-    let settled = resolve(
-        Verb::Score,
-        typed_text(&arguments.question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )?;
-    Ok((
-        settled,
-        FileTier {
-            batch,
-            tuned: false,
-        },
-    ))
+    atomic(Verb::Score, &arguments.question, &typed, admitted)
+}
+
+fn atomic(verb: Verb, question: &str, typed: &Typed, admitted: Option<&mut crate::AdmittedRequest>) -> Result<(Resolved, FileTier), Failure> {
+    let prepared = if let Some(admitted) = admitted {
+        admitted.resolve_cli_atomic(verb, typed)
+    } else {
+        crate::public::request::cli_atomic::inline(verb, question, typed)
+    }.map_err(Failure::from)?;
+    Ok((prepared.resolved, FileTier { batch: prepared.batch, tuned: prepared.tuned }))
 }
 
 /// Split one `--option` entry at its first `=`.
