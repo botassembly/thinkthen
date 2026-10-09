@@ -25,3 +25,7 @@ Design caller-supplied context separately for recognize stages so a caller can g
   Claim `crates/thinkthen/src/core/recognize_file.rs`, `crates/thinkthen/src/core/recognize/questions.rs`, `crates/thinkthen/src/public/recognize.rs`, `crates/thinkthen/src/public/recognize_question.rs`, `crates/thinkthen/src/public/request/options.rs`, `crates/thinkthen/src/public/complete/recognize/**`, `crates/thinkthen/src/engine/facade/recognize.rs`, `crates/thinkthen/src/cli/recognize.rs`, `crates/thinkthen/src/cli/recognize/**`, `crates/thinkthen/src/result_json/complete/recognize.rs`, `specification/recognize.md` and `specification/request.schema.json`. Add individually named paths when implementation requires them; do not claim the whole public API or conformance tree.
 - Proof: Offline exact-request and replay tests show context reaches only selected stages, omitted controls preserve existing bodies, changed context changes affected identities, and invalid combinations send nothing.
 - Defers: Proxy configuration policy and model selection by stage.
+
+## Progress
+
+- 2026-10-08 started
