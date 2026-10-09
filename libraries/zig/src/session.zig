@@ -4,7 +4,7 @@ const tt = @import("thinkthen.zig");
 const c = tt.c;
 pub const Function = enum { decide, choose, tag, score, filter, rank, find, annotate, recognize, relate };
 pub const Error = error{ Usage, Backend, Deadline, Local, Cancelled, Defect };
-fn checked(code: c_int) Error!void {
+pub fn checked(code: c_int) Error!void {
     switch (code) {
         c.THINKTHEN_OK => {},
         c.THINKTHEN_EUSAGE => return error.Usage,
@@ -62,8 +62,8 @@ pub const Session = struct {
     pub fn cancel(self: Session) void {
         c.thinkthen_session_cancel(self.raw);
     }
-    pub fn push(self: Session, allocator: std.mem.Allocator, item: anytype) !enum { accepted, full, closed } {
-        const json = try std.json.Stringify.valueAlloc(allocator, item, .{});
+    pub fn push(self: Session, allocator: std.mem.Allocator, item: tt.authored.inputs.RequestItem) !enum { accepted, full, closed } {
+        const json = try std.json.Stringify.valueAlloc(allocator, item, .{ .emit_null_optional_fields = false });
         defer allocator.free(json);
         var status: u32 = undefined;
         try checked(c.thinkthen_session_try_push(self.raw, json.ptr, json.len, &status));
@@ -94,41 +94,53 @@ pub const Session = struct {
         }
     }
 };
-fn start(engine: *tt.Engine, function: Function, question: anytype, input: anytype) !Session {
-    const request = .{ .schema = "thinkthen.request/1", .call = .{ .function = @tagName(function), .question = question, .input = input } };
-    const json = try std.json.Stringify.valueAlloc(engine.allocator, request, .{});
-    defer engine.allocator.free(json);
-    var raw: ?*c.thinkthen_session = null;
-    try checked(c.thinkthen_session_new(engine.raw, json.ptr, json.len, &raw));
-    return .{ .raw = raw orelse return error.Defect };
+pub fn decide(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallDecide) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .decide = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn decide(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .decide, question, input);
+pub fn choose(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallChoose) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .choose = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn choose(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .choose, question, input);
+pub fn tag(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallTag) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .tag = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn tag(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .tag, question, input);
+pub fn score(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallScore) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .score = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn score(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .score, question, input);
+pub fn filter(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallFilter) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .filter = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn filter(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .filter, question, input);
+pub fn rank(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallRank) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .rank = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn rank(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .rank, question, input);
+pub fn find(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallFind) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .find = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn find(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .find, question, input);
+pub fn annotate(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallAnnotate) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .annotate = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn annotate(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .annotate, question, input);
+pub fn recognize(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallRecognize) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .recognize = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
-pub fn recognize(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .recognize, question, input);
-}
-pub fn relate(engine: *tt.Engine, question: anytype, input: anytype) !Session {
-    return start(engine, .relate, question, input);
+pub fn relate(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallRelate) !Session {
+    const request = try tt.authored.Request.init(engine.allocator, .{ .relate = arguments });
+    defer request.deinit();
+    return request.start(engine);
 }
