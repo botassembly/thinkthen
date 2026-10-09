@@ -29,7 +29,8 @@
         held$cond$details <- envelope$details
       }
     } else {
-      held$value <- structure(list(value = envelope$value, probability = envelope$probability,
+      typed <- held$value$tt_complete_value
+      held$value <- structure(list(value = if (is.null(typed)) envelope$value else typed, probability = envelope$probability,
                                    facts = envelope$facts,
                                    details = envelope$details), class = "thinkthen_call")
     }

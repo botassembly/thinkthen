@@ -17,8 +17,10 @@ pub mod ffi;
 mod calls;
 mod complete;
 mod files;
+mod native_results;
 mod plan;
 mod relate;
+mod results_generated;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 

@@ -24,8 +24,31 @@ tryCatch({
   } else done <- method(document$question, document$input, attempts = TRUE, deadline_ms = document$deadline_ms,cancel=isTRUE(document$cancel),context=document$shared_context)
   stopifnot(inherits(done$facts$call_id,"thinkthen_CallId"))
   plain <- get(".tt_complete_plain",asNamespace("thinkthen"))
+  if (!isTRUE(document$incremental) && !isTRUE(document$held_cancel)) stopifnot(inherits(done, "thinkthen_complete_call"))
+  for (result in done$results) {
+    stopifnot(inherits(result, "thinkthen_complete"), inherits(result$answer_id, "thinkthen_AnswerId"))
+    stopifnot("value" %in% names(plain(result)))
+    for (key in c("question_sha256", "questions_sha256", "context_sha256")) {
+      digest <- result$meta[[key]]
+      if (!inherits(digest, "thinkthen_absent")) stopifnot(inherits(digest, "thinkthen_Digest"),
+        identical(capture.output(print(digest)), "<complete identity>"))
+    }
+    stopifnot(all(vapply(result$meta$requests, inherits, TRUE, "thinkthen_Digest")))
+    retained <- result$value
+    gc()
+    stopifnot(identical(result[["value"]], retained),
+              identical(capture.output(print(result)), "<complete carrier: content withheld>"))
+  }
+  for (input in done$inputs) {
+    stopifnot(inherits(input, "thinkthen_NativeInput"), inherits(input, "thinkthen_complete"),
+      identical(capture.output(print(input)), "<complete carrier: content withheld>"))
+    if (inherits(input$location, "thinkthen_absent")) stopifnot(!"location" %in% names(plain(input)))
+    else stopifnot(inherits(input$location, "thinkthen_PhysicalSource"))
+  }
   facts <- done$facts
   encoded <- plain(facts)
+  absent <- names(facts)[vapply(facts, inherits, TRUE, "thinkthen_absent")]
+  stopifnot(!any(absent %in% names(encoded)))
   stopifnot(is.numeric(facts$largest_request_bytes), is.null(facts$largest_request_estimated_input_tokens) || is.numeric(facts$largest_request_estimated_input_tokens), is.character(facts$token_estimate_method))
   for (key in c("largest_request_bytes","largest_request_estimated_input_tokens","token_estimate_method")) stopifnot(key %in% names(encoded), identical(encoded[[key]],facts[[key]]))
   if (!inherits(facts$usage_persistence,"thinkthen_absent")) {
