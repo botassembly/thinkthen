@@ -90,6 +90,7 @@ impl CancelToken {
 enum Due {
     At(Instant),
     After(Duration),
+    Started(Deadline),
 }
 
 /// The caller controls one call carries: a cancel token, a deadline, and an
@@ -269,10 +270,9 @@ impl<'a> CallOptions<'a> {
     /// Returns [`Error::Usage`] when the clock cannot name the deadline.
     pub fn started(mut self) -> Result<Self, Error> {
         if let Some(Due::After(budget)) = self.due {
-            let at = Instant::now()
-                .checked_add(budget)
+            let deadline = Deadline::after(budget)
                 .ok_or_else(|| Error::usage("the clock cannot name a deadline this far away"))?;
-            self.due = Some(Due::At(at));
+            self.due = Some(Due::Started(deadline));
         }
         Ok(self)
     }
@@ -368,6 +368,7 @@ impl<'a> CallOptions<'a> {
             None => return Ok(None),
             Some(Due::After(budget)) => budget,
             Some(Due::At(at)) => at.saturating_duration_since(Instant::now()),
+            Some(Due::Started(deadline)) => return Ok(Some(deadline)),
         };
         Deadline::after(budget)
             .map(Some)

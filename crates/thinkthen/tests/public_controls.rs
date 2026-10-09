@@ -160,6 +160,9 @@ fn deadline_options_clear_and_spend_without_extra_sends() {
         none.deadline_ms(0),
         none.deadline_millis(0),
         none.deadline_seconds(0.0),
+        none.deadline_ms(0).and_then(CallOptions::started),
+        Ok(none.deadline_at(Instant::now())),
+        none.deadline_at(Instant::now()).started(),
         none.deadline_ms(30_000).and_then(|o| o.deadline_ms(0)),
         none.deadline_after(BOUND).and_then(|o| o.deadline_ms(0)),
     ];
@@ -175,6 +178,9 @@ fn deadline_options_clear_and_spend_without_extra_sends() {
     }
     let live = [
         none.deadline_ms(0).and_then(|o| o.deadline_ms(-1)),
+        none.deadline_ms(0)
+            .and_then(CallOptions::started)
+            .and_then(|o| o.deadline_ms(-1)),
         none.deadline_millis(0).and_then(|o| o.deadline_millis(-1)),
         none.deadline_seconds(0.0)
             .and_then(|o| o.deadline_seconds(-1.0)),
@@ -184,6 +190,22 @@ fn deadline_options_clear_and_spend_without_extra_sends() {
         let (result, sent) = decided(options.expect("options"));
         assert_eq!((result.ok(), sent), (Some(Answer::Yes), 1));
     }
+}
+
+#[test]
+fn started_deadlines_keep_the_configured_budget_without_restarting() {
+    let options = CallOptions::new()
+        .deadline_ms(200)
+        .and_then(CallOptions::started)
+        .expect("started deadline");
+    thread::sleep(Duration::from_millis(250));
+    let (result, sent) = decided(options.started().expect("repeated start"));
+    assert_eq!(kind(&result), Some(ErrorKind::Deadline));
+    assert_eq!(sent, 0, "the original deadline has already passed");
+    assert_eq!(
+        message(result),
+        "the deadline of 200 ms passed before the call answered"
+    );
 }
 
 #[test]
