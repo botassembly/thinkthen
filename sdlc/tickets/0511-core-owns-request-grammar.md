@@ -24,6 +24,8 @@ Reviews: revision 2da0d0ecf6fe6df5dc53280d710b80823bc8e402, accept
 
 Reviews: revision 4b505569df6b3e8fded623df2ad8edd4203ec619, accept
 
+Reviews: revision a4c93ae43c5ef2263698dc91aa1361b1ed3569d4, accept
+
 ## Outcome
 
 One public Request edge admits every request through shared Rust grammar, limits, defaults and validation. Every surface calls it, and core refusals reach the caller. No binding, extension or host package restates an engine rule.
@@ -57,3 +59,6 @@ fn Engine::plan_request<'a>(&self, &'a AdmittedRequest, RequestEnvironment<'a>) 
 - 2026-10-09 landed 48363919e; next: SQL and shared binding record descriptors now delegate original/image composition to Request. Preserve the documented legacy tagged-context and ordered-description translations until canonical grammar expresses them; finish remaining consumer grammar and cross-crate includes.
 - 2026-10-09 landed 75544b8f7bf62d904b9aaf061a090245a03e599e; next: Ordered shortlist admission is shared. Finish typed engine settings, canonical plan preview and retained context translation before host migrations.
 - 2026-10-09 landed 13f861f58bf0e7af5719fdd6c85587937ebd1117; next: Typed native settings now own validation and C construction. Finish canonical Request planning and remaining consumer translations.
+- 2026-10-09 landed 0ac45ca65cda6e240b8dabb32ed1c098991cafc5; next: Canonical Request planning is landed. Fix the authored rank structural schema gap exposed by generated C# inputs; finish combined checks and consumer translations.
+- 2026-10-09 landed 0ac45ca65cda6e240b8dabb32ed1c098991cafc5; next: Canonical planning and typed settings are landed. Source inspection confirms rank uses existing decide/score authored shapes and rank sets use questions; no new rank grammar is needed. Finish combined checks and remaining consumer translations.
+- 2026-10-09 landed 46e331cea5aa378fcf5f404af14b22055fb392fb; next: Reserved proxy settings now preserve presence and refuse safely before environment capture. Finish combined checks and remaining consumer translations before whole closure.

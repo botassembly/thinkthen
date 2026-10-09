@@ -46,8 +46,8 @@ pub struct Judgment {
 /// Error messages and failure facts are borrowed; never free their pointers.
 /// See thinkthen_error_message for engine and NULL-engine pointer lifetimes.
 /// Nonzero returns leave all outputs unchanged. Eager calls have no partial
-/// rows; lazy batches retain completed prefixes. Prefer *_with_facts forms.
-/// Version 0.1.0 names, layouts, argument types and return codes stay frozen.
+/// rows; lazy batches retain completed prefixes. Bare typed, *_with_facts, collecting JSON, complete and batch forms retain their compatibility contracts. Frozen 0.1 exports keep names, layouts, signatures, codes and legacy JSON.
+/// Recommended 0.2 judgments use the owned thinkthen_session_* interface and its adjacent independent session/packet contracts. Shared engine construction and cleanup also serve it.
 /// Reference: https://github.com/botassembly/thinkthen/blob/main/libraries/c/DESIGN.md
 /// DESIGN.md references below name this online reference; archives retain
 /// their header/library contents.

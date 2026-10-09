@@ -83,8 +83,8 @@ fn a_band_is_refused_by_filter_in_either_home_and_names_the_way_to_three_piles()
     assert_eq!(
         said(&output),
         concat!(
-            "thinkthen: the question file's `threshold`: `rank` orders and never ",
-            "selects, so put a cut in `filter --threshold`\n",
+            "thinkthen: the question file's `threshold`: `rank` takes a single cut ",
+            "and never a band\n",
         )
     );
     Ok(())

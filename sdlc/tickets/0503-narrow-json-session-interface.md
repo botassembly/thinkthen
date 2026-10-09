@@ -105,3 +105,4 @@ struct RequestSession
 - 2026-10-09 landed 80f468ba6; next: Native owned sessions are landed; implement C exports and serialize the complete result packet graph before host adoption.
 - 2026-10-09 landed 8c834929a8a3120a8a6398a41f41bf09b7541ea1; next: Owned native and C sessions expose canonical result bytes with reviewed lifetimes and cancellation. Finish generated constrained-language views and remaining contract consumers before closing.
 - 2026-10-09 landed 13f861f58bf0e7af5719fdd6c85587937ebd1117; next: Reader failures derive from their actual admitted decoder. Finish canonical Request preview forwarding; fixed C views belong to 0505.
+- 2026-10-09 landed 0ac45ca65cda6e240b8dabb32ed1c098991cafc5; next: Native and C owned sessions, typed reader failures and canonical Request preview are landed. Finish combined checks before closure; fixed C views belong to 0505.

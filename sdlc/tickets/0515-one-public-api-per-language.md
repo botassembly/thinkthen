@@ -16,6 +16,8 @@ Reviews: revision a087f6dc3, accept
 
 Reviews: revision 6a41b91cb431b41dc3de2f5212476ececa1fdcb1, accept
 
+Reviews: revision 88cb91582492daf8129a23704040d42f7ff01d8d, accept
+
 ## Outcome
 
 Packages ship no dead, unshipped or demo code. The frozen 0.1 C symbols stay and are documented as compatibility exports, separate from the recommended 0.2 API.
@@ -36,3 +38,4 @@ Packages ship no dead, unshipped or demo code. The frozen 0.1 C symbols stay and
 - 2026-10-09 started
 - 2026-10-09 landed 2ca061f5172e01e924f6aeec0c73649b4e6a4e1f; next: Kotlin and Scala demos now live only in installed tests; facade APIs remain. Affected package, installed consumer and cancellation checks pass. Full JVM Matrix exposed a separate frozen legacy annotation admission defect now being repaired; broader API removals follow language migrations.
 - 2026-10-09 landed 9aa16733898cc247d28db7b0e7f7098b172658e7; next: JVM demos and proven unshipped PHP readers are removed. Keep reachable readers until their owning migrations; finish remaining dead-code audit and frozen C documentation.
+- 2026-10-09 landed aeb48278c; next: Frozen C compatibility documentation is reviewed and landed with unchanged declarations. Keep reachable readers until owning migrations and finish the remaining dead-code audit.

@@ -88,7 +88,7 @@ unsafe fn run<T>(
 /// Call `thinkthen_decide_with_facts_opts` without a deadline or cancellation token.
 /// # Safety
 /// All pointers obey the corresponding options form's contract.
-/// Preferred typed forms: each successful call owns final facts JSON beside
+/// Compatibility typed forms: each successful call owns final facts JSON beside
 /// its result. The facts object contains records, requests_sent, cache_answers,
 /// seconds, and optional input_tokens, output_tokens, and model. Free each
 /// returned JSON string with thinkthen_free_string. The original decide, decide_many, recognize and relate

@@ -14,6 +14,8 @@ Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision e90ea2c2ad34616f3f1a7221ec9e07c8e76cf476, accept
+
 ## Outcome
 
 The CLI and MCP admit and execute every judgment call through the same public Request path as the libraries. Their private judgment pipelines and duplicate semantic admission go. Callers see the same output, exit codes and protocol behavior.
@@ -27,3 +29,8 @@ The CLI and MCP admit and execute every judgment call through the same public Re
   - CLI: convert transport arguments into Request and use public execution for judgments. Derive CLI exit codes from public error kinds, keeping today's codes. Name the actual CLI files before each slice.
 - Proof: Existing CLI and MCP outside-in cases pass unchanged. A check fails when production judgment execution or semantic admission in `cli/` or `mcp/` imports a private engine module. The check excludes the maintenance paths in `cli/cache.rs` and `cli/status.rs`.
 - Defers: A machine-readable CLI error output is not part of this ticket and needs no ticket under the scope freeze. New public maintenance APIs are not needed. Shell completions go to an idea.
+
+## Progress
+
+- 2026-10-09 started
+- 2026-10-09 landed 760ff5b25; next: MCP now admits controls through Request owners and its installed shared cases pass. Migrate CLI judgment execution next; preserve output, pipe interruption and exit codes.
