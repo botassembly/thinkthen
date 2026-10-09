@@ -27,6 +27,21 @@ SDK and SQL callers can discover failed persistence of usage counts without expo
 - Additional exact seams: `crates/thinkthen/src/engine/facade/state.rs`, `crates/thinkthen/src/public/results/tally.rs`, `crates/thinkthen/src/public/results/complete.schema.json` and `sdlc/ratchet.json`. Bind call facts to their owned counters at shared state construction, derive the complete schema from its serializer and measure actual source growth.
 - Defers: No monthly spending policy, ledger change, telemetry, new durable store or proof framework. Release management remains held.
 
+### Added public declarations
+
+```text
+enum UsagePersistence
+UsagePersistence::Disabled
+UsagePersistence::Pending
+UsagePersistence::Written
+UsagePersistence::Failed
+const fn UsagePersistence::advice(self) -> Option<&'static str>
+fn Engine::usage_persistence(&self) -> UsagePersistence
+fn Engine::finish_usage_status(&self) -> UsagePersistence
+const fn Facts::usage_persistence(&self) -> Option<UsagePersistence>
+impl Serialize for UsagePersistence
+```
+
 ## Progress
 
 - 2026-10-09 started
