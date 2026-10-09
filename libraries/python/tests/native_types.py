@@ -12,6 +12,14 @@ def retained_judge(judge: tt.Judge[bool | None], files: tt.FileSelection) -> Non
     with stream as entered:
         assert_type(entered, tt.Stream[bool | None])
 
+def direct_files(engine: tt.Engine, files: tt.FileSelection) -> None:
+    assert_type(engine.decide('Late?', files).value, list[bool | None])
+    assert_type(tt.decide('Late?', files).value, list[bool | None])
+    detailed = engine.decide('Late?', files, details=True).value[0]
+    first_line: int = detailed.source.first_line
+    module_detail = tt.decide('Late?', files, details=True).value[0]
+    file: str = module_detail.source.file
+
 def known(engine:c.Engine, question:c.QuestionSource, inputs:c.Records|c.Files)->None:
     decision=engine.decide(question,inputs)
     yes:float=decision.results[0].answer.probability

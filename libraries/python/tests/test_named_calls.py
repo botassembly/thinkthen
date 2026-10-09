@@ -53,7 +53,10 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             source = c.Files(paths=(str(__import__('pathlib').Path(__import__('os').environ['XDG_CONFIG_HOME']) / 'source.txt'),), unit='line')
             __import__('pathlib').Path(source.paths[0]).parent.mkdir(parents=True, exist_ok=True)
             __import__('pathlib').Path(source.paths[0]).write_text('\\nfirst\\nsecond\\n')
-            located = engine.decide('Late?', source, details=True)
+            selection = tt.read_files(source.paths, unit='line')
+            assert engine.decide('Late?', selection).value == [True, True]
+            located = engine.decide('Late?', selection, details=True)
+            assert located.value[0] is located.results[0]
             assert located.results[0].source.first_line == 2
             assert located.results[1].source.first_line == 3
             assert [row.index for row in located.results] == [0, 1]
