@@ -162,7 +162,8 @@ mod tests {
         }
     }
     #[test]
-    fn outgoing_frame_counts_its_newline_and_refuses_excess_without_partial_output() {
+    #[ignore = "large-input boundary runs in the release suite"]
+    fn release_only_outgoing_frame_counts_its_newline_and_refuses_excess_without_partial_output() {
         let limit = 192 * 1024 * 1024;
         let count = Arc::new(AtomicUsize::new(0));
         let output = Output::new(Count(Arc::clone(&count)));
