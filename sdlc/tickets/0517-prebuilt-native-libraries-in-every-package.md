@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 4cd756859, reject
+
 ## Outcome
 
 Every language package installs with its prebuilt native library for the supported platforms. No caller sets a library path by hand. Java runs on current JDKs without preview features. Flutter ships as a real FFI plugin.

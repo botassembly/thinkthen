@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0511
 
+Reviews: revision 4cd756859, reject
+
 ## Outcome
 
 The CLI and MCP admit and execute every call through the same public request path as the libraries. Their private pipelines and their own argument types go.

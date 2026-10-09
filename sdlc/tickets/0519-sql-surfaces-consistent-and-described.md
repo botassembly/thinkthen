@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0511
 
+Reviews: revision 4cd756859, reject
+
 ## Outcome
 
 DuckDB, SQLite and PostgreSQL treat NULL one way, take images as binary values, return native JSON types where results are JSON, and describe every function inside the database.

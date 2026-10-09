@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0516
 
+Reviews: revision 4cd756859, reject
+
 ## Outcome
 
 Objective-C uses Foundation: `NSError`, ARC, blocks for async and cancellation, nullability annotations and Foundation collections.

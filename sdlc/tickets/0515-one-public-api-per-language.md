@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0511
 
+Reviews: revision 4cd756859, reject
+
 ## Outcome
 
 Each language has one obvious entry point. The 0.1 JSON-string calls, duplicate APIs, unused code and demo programs are removed.

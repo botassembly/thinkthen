@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 4cd756859, accept
+
 ## Outcome
 
 `libraries/BINDING-AUTHOR.md` states the 2026-10-09 rule: Rust owns every rule, each language owns only its idiom. It lists the ten first-class items with each language's expected form, and the checks that enforce them.

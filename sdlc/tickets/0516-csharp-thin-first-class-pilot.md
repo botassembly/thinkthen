@@ -9,6 +9,8 @@ Depends on: 0511
 Depends on: 0513
 Depends on: 0514
 
+Reviews: revision 4cd756859, reject
+
 ## Outcome
 
 C# is thin and first-class end to end: the JSON session interface, generated typed results, `Task` with `CancellationToken`, `SafeHandle` cleanup, nullable reference types, typed exceptions and one entry point. Its measured result sets the pattern for 0504.

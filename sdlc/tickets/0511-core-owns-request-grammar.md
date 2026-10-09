@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 4cd756859, reject
+
 ## Outcome
 
 One public core module admits every request: inputs, question files, label descriptions, limits, defaults and validation. Every surface calls it. No binding, extension or host package restates a rule.
