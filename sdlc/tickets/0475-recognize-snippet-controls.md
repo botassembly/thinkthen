@@ -12,6 +12,8 @@ Review: accept. Fresh read-only Sol review accepted the design after the signoff
 
 Reviews: revision b6970338e, accept
 
+Reviews: revision 3edc055784c41e389c067c17bbd67a0e0d087145, accept
+
 ## Outcome
 
 Let each recognize question choose the number of context pieces shown on either side of a token or name. Keep six when omitted. The PM's later ruling keeps this ticket to one snippet-width option and drops the optional batch-size control.
