@@ -2055,6 +2055,21 @@
       },
       "additionalProperties": false
     },
+    "RequestSessionDescriptor": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/RequestItem"
+        },
+        "location": {
+          "$ref": "#/$defs/SessionSourceLocation"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "item"
+      ]
+    },
     "RequestSource": {
       "description": "Explicit source paths and physical-unit controls.",
       "type": "object",
@@ -2106,6 +2121,38 @@
           "type": "string",
           "const": "thinkthen.request/1"
         }
+      ]
+    },
+    "SessionSourceLocation": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "first_line": {
+          "type": "integer",
+          "format": "uint",
+          "default": null,
+          "minimum": 1
+        },
+        "last_line": {
+          "type": "integer",
+          "format": "uint",
+          "default": null,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "dependentRequired": {
+        "first_line": [
+          "last_line"
+        ],
+        "last_line": [
+          "first_line"
+        ]
+      },
+      "required": [
+        "file"
       ]
     },
     "SourceUnit": {

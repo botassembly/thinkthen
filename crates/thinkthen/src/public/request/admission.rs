@@ -66,10 +66,20 @@ pub(super) fn admit(
     request: Request,
     attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 ) -> Result<AdmittedRequest, Error> {
+    admit_header(request, attachment_limit, false)
+}
+pub(super) fn admit_session(request: Request) -> Result<AdmittedRequest, Error> {
+    admit_header(request, None, true)
+}
+fn admit_header(
+    request: Request,
+    attachment_limit: Option<super::transport::TransportAttachmentLimit>,
+    located_feed: bool,
+) -> Result<AdmittedRequest, Error> {
     super::transport::preflight_input(&request.call.arguments().input, attachment_limit)?;
     let function = request.call.function();
     let args = request.call.arguments();
-    admit_options(function, &args.input, &args.options)?;
+    admit_options(function, &args.input, &args.options, located_feed)?;
     admit_input(function, &args.input, &args.options)?;
     let definition = match &args.question {
         RequestQuestion::Definition { value } => Some(admit_definition(function, value.clone())?),
@@ -184,6 +194,7 @@ fn admit_options(
     function: Function,
     input: &RequestInput,
     options: &RequestOptions,
+    located_feed: bool,
 ) -> Result<(), Error> {
     if let Some(model) = &options.model {
         crate::core::ModelName::new(model).map_err(|_| Error::usage("invalid model name"))?;
@@ -243,7 +254,9 @@ fn admit_options(
         return Err(Error::usage("top applies only to rank"));
     }
     if options.files_only
-        && (!function.allows_option("files_only") || !matches!(input, RequestInput::Source { .. }))
+        && (!function.allows_option("files_only")
+            || !(matches!(input, RequestInput::Source { .. })
+                || located_feed && matches!(input, RequestInput::Feed { .. })))
     {
         return Err(Error::usage("files_only requires filter source input"));
     }

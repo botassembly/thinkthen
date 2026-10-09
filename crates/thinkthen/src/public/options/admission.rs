@@ -2,6 +2,14 @@
 use super::{CallOptions, CancelToken};
 use crate::public::{Engine, Error};
 impl CallOptions<'_> {
+    pub(crate) fn reader_admission(&self) -> Result<(), Error> {
+        self.admission()?;
+        crate::engine::Cancel::default()
+            .with_deadline(self.deadline()?)
+            .remaining_without_check()
+            .map(|_| ())
+            .map_err(Error::from)
+    }
     pub(crate) fn admission(&self) -> Result<(), Error> {
         if self.proxy.is_some() {
             return Err(Error::usage(

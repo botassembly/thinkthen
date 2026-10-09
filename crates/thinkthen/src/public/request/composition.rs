@@ -106,6 +106,9 @@ impl AdmittedRequest {
                         controls,
                     );
                 }
+                if let super::execution::FeedContents::Session(queue) = feed.contents {
+                    return self.session_records(definition, queue, controls, image_refusal);
+                }
                 let super::execution::FeedContents::Items(items) = feed.contents else {
                     return super::native_feed::records(
                         self,
@@ -124,6 +127,58 @@ impl AdmittedRequest {
             }
         }
     }
+}
+impl AdmittedRequest {
+    fn session_records<'a>(
+        &'a self,
+        definition: &RequestDefinition,
+        queue: std::sync::Arc<super::session_queue::Queue>,
+        controls: CallOptions<'a>,
+        image_refusal: Option<String>,
+    ) -> Result<Inputs<'a>, Error> {
+        let options = &self.request.call.arguments().options;
+        let reading = reading(definition, options)?;
+        let schema = context_schema(definition).cloned();
+        let reading = schema.clone().map_or(reading.clone(), |schema| {
+            reading.with_context_schema(schema)
+        });
+        let annotate =
+            matches!(definition, RequestDefinition::Annotate(_)) && !explicit_projection(options);
+        let RequestInput::Feed { images, .. } = &self.request.call.arguments().input else {
+            return Err(Error::defect("session feed lost its declaration"));
+        };
+        let mut budget = AttachmentBudget::new(self.attachment_limit);
+        let items = std::iter::from_fn(move || queue.next(controls));
+        Ok(Box::new(items.map(move |descriptor| {
+            let descriptor = descriptor?;
+            if options.files_only && descriptor.location.is_none() {
+                return Err(Error::usage(
+                    "file selection requires a source location on every session descriptor",
+                ));
+            }
+            let item = attach_shared(descriptor.item, images)?;
+            super::admission::admit_item(self.request.call.function(), &item, options)?;
+            admit_image_route(&item, image_refusal.as_deref())?;
+            let mut row = compose_item(&item, &reading, schema.as_ref(), &mut budget)?;
+            if annotate
+                && item.images.is_empty()
+                && let Some(RequestOriginal::Text { text }) = &item.original
+            {
+                row.original = QuestionInput::annotation_document(text)?;
+            }
+            if let Some(location) = descriptor.location {
+                row.original = located(row.original, location)?;
+            }
+            Ok(row)
+        })))
+    }
+}
+fn located(input: QuestionInput, location: crate::SourceLocation) -> Result<QuestionInput, Error> {
+    Ok(match input {
+        QuestionInput::Record(record) => QuestionInput::Record(record.with_location(location)),
+        QuestionInput::Text(text) => QuestionInput::annotation_text(&text, location)?,
+        QuestionInput::Images(images) => QuestionInput::Images(images.with_location(location)),
+    })
 }
 fn singleton(
     original: RequestOriginal,

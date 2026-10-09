@@ -9,6 +9,9 @@ mod input;
 mod native_feed;
 mod options;
 mod result;
+mod session;
+mod session_queue;
+mod session_result;
 #[cfg(test)]
 mod tests;
 pub(crate) mod transport;
@@ -22,6 +25,11 @@ pub use input::{
 pub use options::{RequestBatch, RequestOptions, RequestThreshold};
 pub use result::{RequestOutcome, RequestValue};
 use serde::{Deserialize, Serialize};
+pub use session::{
+    RequestReaderFailure, RequestSession, RequestSessionDescriptor, RequestSessionPush,
+    RequestSessionRead,
+};
+pub use session_result::{RequestSessionResult, RequestSessionRow, RequestSessionTerminal};
 use std::path::PathBuf;
 
 /// The admitted wire version; other versions are refused.

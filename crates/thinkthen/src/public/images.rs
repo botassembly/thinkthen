@@ -119,6 +119,10 @@ impl ImageEvidence {
     pub const fn location(&self) -> Option<&super::SourceLocation> {
         self.location.as_ref()
     }
+    pub(crate) fn with_location(mut self, location: super::SourceLocation) -> Self {
+        self.location = Some(location);
+        self
+    }
 
     pub(crate) fn located(mut self, file: String) -> Self {
         self.location = Some(super::SourceLocation::image(file));
