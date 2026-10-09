@@ -70,6 +70,10 @@ public sealed partial class Engine
                 }
                 session.Finish();
             }
+            catch (IOException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureIo()); }
+            catch (System.Text.DecoderFallbackException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureUtf8()); }
+            catch (System.Text.Json.JsonException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureInvalidInput()); }
+            catch (InvalidDataException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureInvalidInput()); }
             catch { session.Cancel(); stop.Cancel(); throw; }
         }
     }

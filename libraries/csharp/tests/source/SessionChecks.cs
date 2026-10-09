@@ -12,17 +12,77 @@ static class SessionChecks
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         while (!File.Exists("barrier/arrived-" + name)) await Task.Delay(10, timeout.Token);
     }
+    static async IAsyncEnumerable<InputRequestSessionDescriptor> FailedFeed(Exception failure)
+    {
+        await Task.Yield();
+        yield return failure is null ? Item("unreachable") : throw failure;
+    }
     public static async Task Run()
     {
-        using var engine = Engine.Open();
+        using var engine = Engine.Open(new InputEngineSettings {
+            Cache = new InputCacheDocumentAlternative1 { Value = new InputDisabledCache() },
+            Batch = new InputRequestBatchAlternative0 { Value = 1 }, MaxRetries = 0,
+            MaxRequests = new InputEngineSettingsMaxRequestsAlternative1(),
+            MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative1(),
+            MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative1()
+        });
+        foreach (var invalid in new[] { new InputEngineSettings { Throttle = 0 }, new InputEngineSettings { Backend = "unknown-backend" }, new InputEngineSettings { Model = (string)null! } })
+        {
+            try { using var refused = Engine.Open(invalid); throw new Exception("invalid typed settings admitted"); }
+            catch (ThinkThen.Failure error) when (error.Kind == ThinkThen.FailureKind.Usage && error.FactsJson is null) { }
+        }
+        foreach (InputRequestReaderFailure failure in new InputRequestReaderFailure[] {
+            new InputRequestReaderFailureIo(),
+            new InputRequestReaderFailureUtf8 { Location = new InputSessionSourceLocation { File = "private-file", FirstLine = 1, LastLine = 2 } },
+            new InputRequestReaderFailureInvalidInput { Location = new InputSessionSourceLocation { File = "private-file" } }
+        })
+        {
+            using var reader = engine.StartSession(Request(new InputRequestInputFeed { Name = "reader" }));
+            reader.Finish(failure);
+            SessionPacketTerminal? terminal = null;
+            while (await reader.ReadAsync() is { } packet) if (packet is SessionPacketTerminal done) terminal = done;
+            if (terminal is null || terminal.Failure.State != PresenceState.Value || terminal.Failure.Value.Error.Kind.Value != (failure is InputRequestReaderFailureIo ? "local" : "usage")) throw new Exception("typed reader failure kind");
+        }
+        using (var reader = engine.StartSession(Request(new InputRequestInputFeed { Name = "invalid-location" })))
+        {
+            try { reader.Finish(new InputRequestReaderFailureIo { Location = (InputSessionSourceLocation)null! }); throw new Exception("explicit null location admitted"); }
+            catch (ThinkThen.Failure error) when (error.Kind == ThinkThen.FailureKind.Usage && error.FactsJson is null) { }
+            try { reader.Finish(new InputRequestReaderFailureUtf8 { Location = new InputSessionSourceLocation { File = "private-file", FirstLine = 1 } }); throw new Exception("half location admitted"); }
+            catch (ThinkThen.Failure error) when (error.Kind == ThinkThen.FailureKind.Usage && error.FactsJson is null) { }
+            reader.Finish();
+        }
+        foreach (Exception problem in new Exception[] { new IOException("host-secret"), new System.Text.DecoderFallbackException("host-secret"), new JsonException("host-secret"), new InvalidDataException("host-secret") })
+        {
+            try { await engine.ExecuteAsync(Request(new InputRequestInputFeed { Name = "failed-reader" }), FailedFeed(problem)); throw new Exception("reader failure returned success"); }
+            catch (SessionFailure error)
+            {
+                if (error.Call.Terminal.Failure.State != PresenceState.Value || error.Call.Terminal.ToJsonString().Contains("host-secret") || error.Failure.Error.Kind.Value != (problem is IOException ? "local" : "usage")) throw new Exception("reader diagnostics leaked");
+            }
+        }
+        using (var limits = Engine.Open(new InputEngineSettings { MaxRequests = new InputEngineSettingsMaxRequestsAlternative0 { Value = ulong.MaxValue }, MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative0 { Value = ulong.MaxValue }, MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative0 { Value = ulong.MaxValue } })) { }
         OwnedCall call = await engine.DecideAsync(Question, new InputRequestInputText { Text = "session-owned" });
         if (!call.Packets.Any(p => p is SessionPacketDecideRow) || call.Terminal.Facts.State != PresenceState.Value || call.Terminal.Failure.State != PresenceState.Missing) throw new Exception("owned row or terminal");
         string owned = call.Packets.First(p => p is SessionPacketDecideRow).ToJsonString();
         using (var spent = new CancellationTokenSource())
         {
             spent.Cancel();
-            try { await engine.DecideAsync(Question, new InputRequestInputText { Text = "never-send" }, cancellation: spent.Token); throw new Exception("spent token admitted"); }
-            catch (OperationCanceledException) { }
+            var input = new InputRequestInputText { Text = "never-send" };
+            foreach (Func<Task<OwnedCall>> named in new Func<Task<OwnedCall>>[] {
+                () => engine.DecideAsync(Question, input, cancellation: spent.Token),
+                () => engine.ChooseAsync(Question, input, cancellation: spent.Token),
+                () => engine.TagAsync(Question, input, cancellation: spent.Token),
+                () => engine.ScoreAsync(Question, input, cancellation: spent.Token),
+                () => engine.FilterAsync(Question, input, cancellation: spent.Token),
+                () => engine.RankAsync(Question, input, cancellation: spent.Token),
+                () => engine.FindAsync(Question, input, cancellation: spent.Token),
+                () => engine.AnnotateAsync(Question, input, cancellation: spent.Token),
+                () => engine.RecognizeAsync(Question, input, cancellation: spent.Token),
+                () => engine.RelateAsync(Question, input, cancellation: spent.Token)
+            })
+            {
+                try { await named(); throw new Exception("spent token admitted"); }
+                catch (OperationCanceledException) { }
+            }
         }
         using (var cancel = new CancellationTokenSource())
         {
