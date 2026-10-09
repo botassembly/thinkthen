@@ -121,7 +121,7 @@ impl Serialize for CompleteRecognized {
 /// Borrowed probability tables in their original stage order.
 pub struct RecognitionProbabilities<'a>(&'a core::RecognitionOdds);
 
-impl RecognitionProbabilities<'_> {
+impl<'a> RecognitionProbabilities<'a> {
     /// Every decoded proposal before the probability cut; absent for whole recognition.
     #[must_use]
     pub fn proposals(&self) -> Option<Vec<crate::BoundaryProposal>> {
@@ -135,6 +135,15 @@ impl RecognitionProbabilities<'_> {
                     .collect(),
             ),
         }
+    }
+    /// Every whole-mode judged proposal, including seeds and proposals that were dropped.
+    /// Boundary-only recognition has no kind judgment and returns an empty iterator.
+    pub fn judged_proposals(&self) -> impl ExactSizeIterator<Item = RecognitionProposal<'a>> {
+        let proposals = match self.0 {
+            core::RecognitionOdds::Whole(odds) => odds.proposals.as_slice(),
+            core::RecognitionOdds::BoundaryOnly(_) => &[],
+        };
+        proposals.iter().map(RecognitionProposal)
     }
     /// Every input piece's boundary tag distribution.
     pub fn pieces(&self) -> impl ExactSizeIterator<Item = PieceProbabilities<'_>> {
@@ -259,3 +268,40 @@ withheld!(
     NameProbabilities,
     PairProbability
 );
+
+/// A proposal's original bounds and facts captured during kind and edge settlement.
+#[derive(Debug)]
+pub struct RecognitionProposal<'a>(&'a core::RecognitionProposal);
+
+impl RecognitionProposal<'_> {
+    /// Original half-open Unicode scalar range, before edge selection.
+    #[must_use]
+    pub fn range(&self) -> std::ops::Range<usize> {
+        self.0.start..self.0.end
+    }
+    /// Unrounded probability of the original span across valid floored BILOU paths.
+    #[must_use]
+    pub const fn span_probability(&self) -> f64 {
+        self.0.span_probability
+    }
+    /// Selected scalar bounds, absent when no kind was selected.
+    #[must_use]
+    pub fn selected(&self) -> Option<std::ops::Range<usize>> {
+        self.0.selected.as_ref().map(|place| place.start..place.end)
+    }
+    /// Selected kind, absent for a declined kind.
+    #[must_use]
+    pub fn kind(&self) -> Option<&str> {
+        self.0.kind.as_deref()
+    }
+    /// Actually computed four-place product of kind and original span probabilities.
+    #[must_use]
+    pub const fn strength(&self) -> Option<f64> {
+        self.0.strength
+    }
+    /// Whether this proposal supplies a final entity after deduplication and the cut.
+    #[must_use]
+    pub const fn kept(&self) -> bool {
+        self.0.kept
+    }
+}

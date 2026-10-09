@@ -124,3 +124,5 @@ mod recognize_boundary;
 mod recognize_context;
 #[path = "native_complete/recognize_examples.rs"]
 mod recognize_examples;
+#[path = "native_complete/recognize_proposals.rs"]
+mod recognize_proposals;

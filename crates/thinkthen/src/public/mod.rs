@@ -127,7 +127,7 @@ pub use results::{
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
-    RecognitionProbabilities,
+    RecognitionProbabilities, RecognitionProposal,
 };
 pub use results::{
     CompleteRelated, CompleteRelationMember, SourceRelationEdge, SourceRelationEndpoint,

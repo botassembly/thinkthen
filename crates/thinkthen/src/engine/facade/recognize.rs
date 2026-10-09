@@ -161,7 +161,8 @@ impl Engine {
             settled.push((held, odds));
         }
         let cut = spec.threshold.cut_value().unwrap_or(0.5);
-        let entities = settle_names(text, &pieces, &rows, &stretches, &settled, cut);
+        let (entities, proposals) = settle_names(text, &pieces, &rows, &stretches, &settled, cut);
+        details.proposals = proposals;
         let relations = self.relations(
             spec,
             text,

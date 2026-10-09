@@ -70,6 +70,7 @@ pub(crate) struct BoundaryOdds {
 pub(crate) struct WholeRecognitionOdds {
     pub(crate) pieces: Vec<PieceOdds>,
     pub(crate) names: Vec<NameOdds>,
+    pub(crate) proposals: Vec<RecognitionProposal>,
     pub(crate) pairs: Vec<PairOdds>,
 }
 
@@ -126,4 +127,20 @@ impl BoundaryProposal {
         proposals.sort_by_key(|proposal| (proposal.start, proposal.end));
         proposals
     }
+}
+
+/// One judged stretch, including declined, duplicate and under-cut proposals.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub(crate) struct RecognitionProposal {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) span_probability: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) selected: Option<Place>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) strength: Option<f64>,
+    pub(crate) kept: bool,
 }
