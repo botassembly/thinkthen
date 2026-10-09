@@ -1,12 +1,9 @@
 //! Explicit finite descriptors reuse native composition and authorized readers.
-use super::admission::{Options, Source};
-use crate::{
-    Error, ImageInput, ImageMedia, InputEvidence, QuestionInput, RawRecord, RecordInput,
-    RecordReading,
-};
+use super::admission::Source;
+use crate::ImageMedia;
 use serde::Deserialize;
 use serde_json::value::RawValue;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -35,148 +32,17 @@ pub(super) struct DeclaredImage {
     media: ImageMedia,
 }
 impl Attachment {
-    fn path(&self) -> &Path {
+    pub(super) fn native(&self) -> crate::RequestImage {
         match self {
-            Self::Path(path) => path,
-            Self::Declared(image) => &image.path,
-        }
-    }
-    fn read(&self, remaining: &mut usize) -> Result<ImageInput, Error> {
-        let options = crate::InputReaderOptions {
-            reading: crate::ReaderOptions {
-                unit: crate::SourceUnit::File,
-                window: None,
+            Self::Path(path) => crate::RequestImage::File {
+                path: path.clone(),
+                media: None,
             },
-            media: crate::ReaderMedia::Image,
-        };
-        let mut source = crate::SourceItems::bounded_images([self.path()], options, *remaining)?;
-        let Some(crate::SourceItem::Image(image)) = source.next().transpose()? else {
-            return Err(Error::usage("an attachment requires one image file"));
-        };
-        if source.next().transpose()?.is_some() {
-            return Err(Error::usage("an attachment requires one image file"));
+            Self::Declared(image) => crate::RequestImage::File {
+                path: image.path.clone(),
+                media: Some(image.media),
+            },
         }
-        *remaining = source.image_bytes_remaining();
-        match self {
-            Self::Path(_) => Ok(image.record),
-            Self::Declared(declared) => {
-                ImageInput::new(declared.media, image.record.0.bytes.clone())
-            }
-        }
-    }
-}
-impl Descriptor {
-    /// Header conflicts and unsupported media are refused before any file is opened.
-    pub(super) fn admit(&self, tool: super::tools::Tool, options: &Options) -> Result<(), Error> {
-        let originals = usize::from(self.text.is_some())
-            + usize::from(self.json.is_some())
-            + usize::from(self.source.is_some());
-        if originals > 1 || (originals == 0 && self.images.is_empty()) {
-            return Err(Error::usage(
-                "an input requires one of text, json or source, or images",
-            ));
-        }
-        if self.images.len() > crate::MAX_IMAGES {
-            return Err(Error::usage("image evidence requires 1 to 8 images"));
-        }
-        if !self.images.is_empty() && !tool.images() {
-            return Err(Error::usage("this function takes text only"));
-        }
-        if self
-            .images
-            .iter()
-            .any(|image| image.path().as_os_str().is_empty())
-        {
-            return Err(Error::usage("explicit file paths must not be empty"));
-        }
-        if let Some(source) = &self.source {
-            source.options().validate()?;
-            if source.paths.is_empty()
-                || source.paths.iter().any(|path| path.as_os_str().is_empty())
-                || source.media != crate::ReaderMedia::Text
-                || source.reading.unit != crate::SourceUnit::File
-            {
-                return Err(Error::usage(
-                    "an input source requires explicit whole text files",
-                ));
-            }
-        }
-        if (self.context.is_some() && options.context_field.is_some())
-            || (self.options.is_some() && options.options_field.is_some())
-        {
-            return Err(Error::usage(
-                "explicit input context/options conflict with projection pointers",
-            ));
-        }
-        if self.options.is_some() && tool != super::tools::Tool::Choose {
-            return Err(Error::usage("input options apply only to choose"));
-        }
-        Ok(())
-    }
-    pub(super) fn compose(
-        &self,
-        reading: &RecordReading,
-        schema: Option<&crate::InputDeclaration>,
-        remaining: &mut usize,
-    ) -> Result<RecordInput<QuestionInput>, Error> {
-        if self.text.is_none() && self.json.is_none() && self.source.is_none() {
-            reading.admit_images()?;
-        }
-        let images = self
-            .images
-            .iter()
-            .map(|image| image.read(remaining))
-            .collect::<Result<Vec<_>, _>>()?;
-        let mut row = if let Some(source) = &self.source {
-            let mut items = crate::read_inputs(&source.paths, source.options())?;
-            let item = items
-                .next()
-                .transpose()?
-                .ok_or_else(|| Error::usage("an input source requires exactly one item"))?;
-            if items.next().transpose()?.is_some() {
-                return Err(Error::usage("an input source requires exactly one item"));
-            }
-            reading.compose_source(item)?
-        } else if let Some(json) = &self.json {
-            let row = reading.compose(RawRecord::json(json.get())?)?;
-            RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: row.original.question_input(),
-                context: row.context,
-                options: row.options,
-            }
-        } else if let Some(text) = &self.text {
-            let row = reading.compose(RawRecord::text(text)?)?;
-            RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: row.original.question_input(),
-                context: row.context,
-                options: row.options,
-            }
-        } else {
-            RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: QuestionInput::Images(crate::ImageEvidence::new(None, images.clone())?),
-                context: None,
-                options: None,
-            }
-        };
-        if !images.is_empty()
-            && let QuestionInput::Record(record) = row.original
-        {
-            row.original = QuestionInput::Record(record.with_images(images)?);
-        }
-        if let Some(context) = &self.context {
-            let value = crate::core::Json::parse(context.get()).map_err(Error::refused)?;
-            row.context = Some(crate::RecordContext::selected(&value, schema)?);
-        }
-        if let Some(options) = &self.options {
-            row.options = Some(crate::RecordOptions::project(options.get(), "")?);
-        }
-        Ok(row)
     }
 }
 fn raw<'de, D: serde::Deserializer<'de>>(de: D) -> Result<Option<Box<RawValue>>, D::Error> {

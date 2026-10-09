@@ -1,7 +1,7 @@
 //! Available inline originals and declarations validate without reading image files.
-use super::composition::{compose_original, context_schema, reading};
+use super::composition::{compose_original, context_schema, document_row, reading};
 use super::{AdmittedRequest, RequestDefinition, RequestInput, RequestOriginal};
-use crate::{Error, RawRecord};
+use crate::Error;
 impl AdmittedRequest {
     pub(super) fn admit_inline(&self, definition: &RequestDefinition) -> Result<(), Error> {
         let options = &self.request.call.arguments().options;
@@ -30,19 +30,22 @@ impl AdmittedRequest {
             reading: &reading,
             metadata: &metadata,
             recognize: recognize.as_ref(),
+            annotation_document: self.annotation_document(definition),
         };
         match &self.request.call.arguments().input {
             RequestInput::Records { items }
             | RequestInput::Units { items }
             | RequestInput::Entities { items } => {
-                for item in items {
-                    validator.validate(
-                        !item.images.is_empty(),
-                        item.original.as_ref(),
-                        item.context.as_ref(),
-                        item.examples.as_ref(),
-                        item.seed_spans.as_ref(),
-                    )?;
+                for (at, item) in items.iter().enumerate() {
+                    validator
+                        .validate(
+                            !item.images.is_empty(),
+                            item.original.as_ref(),
+                            item.context.as_ref(),
+                            item.examples.as_ref(),
+                            item.seed_spans.as_ref(),
+                        )
+                        .map_err(|error| error.at_record(at))?;
                 }
             }
             RequestInput::Text { text, images } => validator.validate(
@@ -68,6 +71,7 @@ impl AdmittedRequest {
 }
 
 struct Inline<'a> {
+    annotation_document: bool,
     definition: &'a RequestDefinition,
     reading: &'a crate::RecordReading,
     metadata: &'a [&'a crate::core::declaration::QuestionMetadata],
@@ -107,11 +111,12 @@ impl Inline<'_> {
             }
             return Ok(());
         }
-        let raw = match original {
-            RequestOriginal::Text { text } => RawRecord::text(text)?,
-            RequestOriginal::Json { value } => value.clone(),
+        let row = match original {
+            RequestOriginal::Text { text } => {
+                document_row(self.reading, text, self.annotation_document && !has_images)?
+            }
+            RequestOriginal::Json { value } => compose_original(self.reading, value.clone())?,
         };
-        let row = compose_original(self.reading, raw)?;
         validate_row(
             self.definition,
             self.metadata,

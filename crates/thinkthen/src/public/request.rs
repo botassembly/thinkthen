@@ -11,6 +11,7 @@ mod options;
 mod result;
 #[cfg(test)]
 mod tests;
+pub(crate) mod transport;
 use super::{Error, LoadedQuestion};
 pub use admission::AdmittedRequest;
 pub use definition::RequestDefinition;
@@ -71,6 +72,13 @@ impl Request {
             call,
         }
     }
+    #[cfg(feature = "cli")]
+    pub(crate) fn admit_for_transport(
+        self,
+        limit: transport::TransportAttachmentLimit,
+    ) -> Result<AdmittedRequest, Error> {
+        admission::admit(self, Some(limit))
+    }
     /// Decode original canonical bytes without erasing repeated members.
     /// # Errors
     /// Refuses malformed, unknown, duplicate or null request controls.
@@ -81,7 +89,7 @@ impl Request {
     /// # Errors
     /// Refuses incompatible selectors, descriptors and controls.
     pub fn admit(self) -> Result<AdmittedRequest, Error> {
-        admission::admit(self)
+        admission::admit(self, None)
     }
 }
 
@@ -112,7 +120,34 @@ pub enum RequestFunction {
     Relate,
 }
 impl RequestFunction {
-    pub(super) const fn name(self) -> &'static str {
+    #[cfg(feature = "cli")]
+    pub(crate) const ALL: [Self; 10] = [
+        Self::Decide,
+        Self::Choose,
+        Self::Tag,
+        Self::Score,
+        Self::Filter,
+        Self::Rank,
+        Self::Find,
+        Self::Annotate,
+        Self::Recognize,
+        Self::Relate,
+    ];
+    pub(crate) fn allows_option(self, name: &str) -> bool {
+        match name {
+            "threshold" => matches!(self, Self::Decide | Self::Choose | Self::Tag | Self::Filter),
+            "options_field" => self == Self::Choose,
+            "examples" | "examples_field" | "seed_spans" | "seed_spans_field" => {
+                self == Self::Recognize
+            }
+            "none" => self == Self::Find,
+            "top" => self == Self::Rank,
+            "files_only" => self == Self::Filter,
+            "details" => matches!(self, Self::Decide | Self::Choose | Self::Tag | Self::Score),
+            _ => true,
+        }
+    }
+    pub(crate) const fn name(self) -> &'static str {
         match self {
             Self::Decide => "decide",
             Self::Choose => "choose",
@@ -126,7 +161,7 @@ impl RequestFunction {
             Self::Relate => "relate",
         }
     }
-    pub(super) const fn images(self) -> bool {
+    pub(crate) const fn images(self) -> bool {
         matches!(self, Self::Decide | Self::Choose | Self::Score)
     }
 }

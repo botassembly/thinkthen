@@ -10,6 +10,7 @@ use crate::{Error, LoadedQuestion, Question, QuestionKind};
 pub struct AdmittedRequest {
     pub(super) request: Request,
     pub(super) definition: Option<RequestDefinition>,
+    pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
     /// Borrow the admitted typed header.
@@ -26,8 +27,14 @@ impl AdmittedRequest {
         }
         let question = &self.request.call.arguments().question;
         let text = match question {
-            RequestQuestion::File { path } => crate::read_question_file(path)
-                .map_err(|_| Error::local("the question file could not be read"))?,
+            RequestQuestion::File { path } => {
+                crate::read_question_file(path).map_err(|reason| match reason {
+                    crate::QuestionFileError::TooLarge => {
+                        Error::local("the question file is too large")
+                    }
+                    _ => Error::local("the question file could not be read"),
+                })?
+            }
             RequestQuestion::Name { name } => crate::public::named_question::named_text(name)?,
             RequestQuestion::Reference { reference } => {
                 match crate::public::named_question::Reference::resolve(reference)? {
@@ -46,13 +53,17 @@ impl AdmittedRequest {
                 ));
             }
         };
-        let value: RequestDefinition = serde_json::from_str(&text)
-            .map_err(|_| Error::local("the saved question is invalid"))?;
+        let value = RequestDefinition::from_authored_json(&text)
+            .map_err(|error| Error::local(error.detail().message()))?;
         admit_definition(self.request.call.function(), value)
             .map_err(|e| Error::local(e.detail().message()))
     }
 }
-pub(super) fn admit(request: Request) -> Result<AdmittedRequest, Error> {
+pub(super) fn admit(
+    request: Request,
+    attachment_limit: Option<super::transport::TransportAttachmentLimit>,
+) -> Result<AdmittedRequest, Error> {
+    super::transport::preflight_input(&request.call.arguments().input, attachment_limit)?;
     let function = request.call.function();
     let args = request.call.arguments();
     admit_options(function, &args.input, &args.options)?;
@@ -80,6 +91,7 @@ pub(super) fn admit(request: Request) -> Result<AdmittedRequest, Error> {
     let admitted = AdmittedRequest {
         request,
         definition,
+        attachment_limit,
     };
     if let Some(definition) = &admitted.definition {
         admitted.admit_inline(definition)?;
@@ -173,10 +185,7 @@ fn admit_options(
         crate::core::ModelName::new(model).map_err(|_| Error::usage("invalid model name"))?;
     }
     if let Some(rule) = &options.threshold {
-        if !matches!(
-            function,
-            Function::Decide | Function::Choose | Function::Tag | Function::Filter
-        ) {
+        if !function.allows_option("threshold") {
             return Err(Error::usage("this function does not accept this threshold"));
         }
         let rule = rule.native()?;
@@ -185,35 +194,30 @@ fn admit_options(
         }
     }
     if (options.examples.is_some() || options.examples_field.is_some())
-        && function != Function::Recognize
+        && !function.allows_option("examples")
     {
         return Err(Error::usage("examples apply only to recognize"));
     }
     if (options.seed_spans.is_some() || options.seed_spans_field.is_some())
-        && function != Function::Recognize
+        && !function.allows_option("seed_spans")
     {
         return Err(Error::usage("seed spans apply only to recognize"));
     }
-    if options.options_field.is_some() && function != Function::Choose {
+    if options.options_field.is_some() && !function.allows_option("options_field") {
         return Err(Error::usage("options_field applies only to choose"));
     }
-    if options.none && function != Function::Find {
+    if options.none && !function.allows_option("none") {
         return Err(Error::usage("none applies only to find"));
     }
-    if options.top.is_some() && function != Function::Rank {
+    if options.top.is_some() && !function.allows_option("top") {
         return Err(Error::usage("top applies only to rank"));
     }
     if options.files_only
-        && (function != Function::Filter || !matches!(input, RequestInput::Source { .. }))
+        && (!function.allows_option("files_only") || !matches!(input, RequestInput::Source { .. }))
     {
         return Err(Error::usage("files_only requires filter source input"));
     }
-    if options.details
-        && !matches!(
-            function,
-            Function::Decide | Function::Choose | Function::Score | Function::Tag
-        )
-    {
+    if options.details && !function.allows_option("details") {
         return Err(Error::usage("details applies only to primitive judgments"));
     }
     if let Some(batch) = &options.batch {
