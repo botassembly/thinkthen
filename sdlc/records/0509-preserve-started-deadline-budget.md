@@ -19,3 +19,15 @@ The rebuilt migrated SQLite extension reproduced the unchanged held-call regress
 ## Lessons
 
 Preserve the complete deadline value across composition. A remaining duration is a transport limit, not the caller's configured budget. Verify a rebuilt installed extension with the pinned host; a warm library can hide a source change.
+
+## Evidence
+
+On repair revision `c2a037b11`, `cargo fmt --all --check`, `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`, and `node sdlc/scripts/ratchet.mjs` passed. Policy reports the existing large-file warnings; the extended public-controls file owns the counted control boundary cases.
+
+`cargo test --locked --offline -p thinkthen --test public_controls deadline -- --nocapture` passed all three selected native deadline cases. `cargo clippy --locked --offline -p thinkthen --lib --test public_controls -- -D warnings` passed.
+
+The repaired source plus the isolated SQLite migration rebuilt with `cargo build --locked --offline --release --manifest-path databases/sqlite/Cargo.toml` and the existing home-path remap. A copy at `target/0509-installed/libthinkthen0.so` passed all three unchanged `databases/sqlite/tests/test_deadline.py` cases with the pinned SQLite 3.50.0 host. Its SHA-256 is `0f02310a72964ed54b375d3f802a533e39a851338ddbae69f1e08d222cbf7af9`.
+
+Heavy runs used user scopes with an 8 GiB memory cap, a 1 GiB swap cap and two build jobs. Lane output totals remained below 40 GiB. Every launched job completed and was reaped.
+
+The full repository gates and fresh independent review belong to the coordinator. This repair changes no engine module, SQL error mapping, SQLite test, dependency lock, credential file or release operation.
