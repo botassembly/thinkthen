@@ -38,6 +38,8 @@ Integration with the rewritten ticket plan retained the accepted source. The 16 
 
 ## What the build taught us
 
+Fresh read-only review accepted generated proxy input repair `22a58d373187f746d2999220e945f8c1ef71ea42` and its one-line C# source increase, from 3368 to 3369. Both generator freshness checks passed independently. No findings remained; full combined checks continue after integration.
+
 Combined lint found that the Python test-source ceiling omitted the newly retained context and nesting boundary regressions. The existing source tool measures 7912 non-blank lines, and the ceiling now matches it. All other library and database source ceilings were checked together and pass. This metadata repair adds no test or product behavior; the stopped lint had not reached the full test gate.
 
 Fresh review accepted the repaired binding descriptor slice at `9e9721d83f74690ba8c1768d8f104f0f162c6d5d`. Its existing installed native consumer checks cover the changed adapter, including the original JSON nesting boundary. The shared tagged-context and ordered-description translations remain named follow-up work; this slice does not complete grammar centralization.
@@ -116,3 +118,7 @@ The retained native settings boundary table covers duplicate and malformed proxy
 Focused checks pass three native settings tests, three native proxy tests, all ten C settings tests and all ten native Request boundary/schema tests. The schema writer intentionally returns a mismatch failure after rewriting its artifact; the subsequent schema equality run passes. Root and C library/test Clippy pass with warnings denied. Policy passes, and formatting and whitespace checks pass. Runs use cleared environments, offline locked Cargo, two jobs and systemd scopes capped at 8 GiB memory and 1 GiB swap. Warm artifacts remain within the 40 GiB lane allowance across target, libraries and databases.
 
 Fresh review accepted `a4c93ae43c5ef2263698dc91aa1361b1ed3569d4`, including 44 additional nonblank Rust lines and 12 C consumer lines. The ceilings were approved before the source merge at 180663 and 3004. The growth supplies one reserved field, the extracted shared refusal and caller boundary cases. The duplicate build refusal was removed; no parser inventory or proxy decoder was introduced. Combined gates and C# regeneration remain separate qualification work.
+
+## What the build taught us
+
+The reserved proxy landing regenerated the native Request schema but missed its committed C# input consumer. The combined result-schema test also checks input generation and caught that stale file. Running the unchanged `sdlc/generators/results/generate.py --inputs` derives `InputPresence<JsonElement> Proxy` and its presence-guarded writer from the native schema. The writer retains explicit null and omits an absent property. Regenerate affected consumers with their schema source before landing; later generator changes must regenerate this field alongside their own output.

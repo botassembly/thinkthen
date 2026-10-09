@@ -14,6 +14,40 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
         (output.status.code(), text(&output.stderr)),
         (Some(0), String::new())
     );
+    for (schema, item) in [
+        (
+            "context_schema",
+            serde_json::json!({"original":{"kind":"text","text":"private-evidence"},"context":"private-context"}),
+        ),
+        (
+            "item_schema",
+            serde_json::json!({"original":{"kind":"json","value":"private-evidence"}}),
+        ),
+    ] {
+        let json = serde_json::json!({
+            "schema":"thinkthen.request/1",
+            "call":{"function":"decide","question":{"kind":"definition","value":{
+                "decide":"Does it pass?",schema:{"type":"object","required":["body"],"properties":{"body":{"type":"string"}}}
+            }},"input":{"kind":"records","items":[item]}}
+        }).to_string();
+        let error = thinkthen::Request::from_json(&json)
+            .expect("valid authored request")
+            .admit()
+            .expect_err("native schema refusal");
+        assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
+        let output = run_with(
+            &compile(&crate_dir().join("tests/c/session.c")),
+            &format!("{}/generic/v1", backend.origin()),
+            b"",
+            &[("SESSION_ADMISSION", Path::new(&json))],
+        );
+        assert_eq!(
+            (output.status.code(), text(&output.stderr)),
+            (Some(0), String::new())
+        );
+        assert_eq!(text(&output.stdout), format!("{error}\n"));
+        assert!(!text(&output.stdout).contains("private-"));
+    }
     assert_eq!(backend.count(), 0, "malformed controls send nothing");
 }
 

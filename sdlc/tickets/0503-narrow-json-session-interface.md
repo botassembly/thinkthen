@@ -28,6 +28,8 @@ Reviews: revision 3e4e08051025cbf5e1f6cf801d5db5001558ca0e, accept
 
 Reviews: revision 104d7f398c447b17a8a2fa129d4f87236c24aea6, accept
 
+Reviews: revision 82d28962252b6c433abfcafa1fcddaad4aed62af, accept
+
 ## Outcome
 
 C-interface languages call one owned, bounded engine session. A caller declares a call once, feeds descriptors without staging the whole input, reads results, and finishes, cancels or frees the session. Cancel and free return promptly without waiting for a blocked provider. Final facts stay truthful and arrive only when the work actually settles.
@@ -106,3 +108,4 @@ struct RequestSession
 - 2026-10-09 landed 8c834929a8a3120a8a6398a41f41bf09b7541ea1; next: Owned native and C sessions expose canonical result bytes with reviewed lifetimes and cancellation. Finish generated constrained-language views and remaining contract consumers before closing.
 - 2026-10-09 landed 13f861f58bf0e7af5719fdd6c85587937ebd1117; next: Reader failures derive from their actual admitted decoder. Finish canonical Request preview forwarding; fixed C views belong to 0505.
 - 2026-10-09 landed 0ac45ca65cda6e240b8dabb32ed1c098991cafc5; next: Native and C owned sessions, typed reader failures and canonical Request preview are landed. Finish combined checks before closure; fixed C views belong to 0505.
+- 2026-10-09 landed f350ab3cb; next: Native session validation messages now reach C callers safely; finish combined checks and installed generated SDK adoption.

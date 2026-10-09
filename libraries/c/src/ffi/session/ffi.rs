@@ -46,7 +46,7 @@ pub unsafe extern "C" fn thinkthen_session_new(
     request_len: usize,
     out: *mut *mut SessionHandle,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    errors::native_call(|| {
         required(out)?;
         // SAFETY: the caller keeps its engine live until this call returns.
         let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn thinkthen_session_new(
             .0
             .engine
             .request_session(request)
-            .map_err(|error| error.kind())?;
+            .map_err(errors::Failure::Native)?;
         let owner = Box::into_raw(Box::new(SessionHandle(session)));
         // SAFETY: required checked nonnull and the caller promises writable storage.
         unsafe {
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn thinkthen_session_free(session: *mut SessionHandle) {
     });
 }
 
-/// Borrow a fixed safe UTF-8 immediate diagnostic, never NULL. Success preserves
+/// Borrow a safe UTF-8 immediate diagnostic, never NULL. Success preserves
 /// it; the next immediate session failure or thread exit ends its validity.
 /// Execution failures arrive as terminal packets and never change this slot.
 #[unsafe(no_mangle)]

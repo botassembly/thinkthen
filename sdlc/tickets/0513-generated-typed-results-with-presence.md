@@ -40,6 +40,8 @@ Reviews: revision 0f7315aa0f9992b01e9a6508ceba1816cde77a57, accept
 
 Reviews: revision 3fc130cfe891200d18c3a29608bda5c74667ba92, accept
 
+Reviews: revision e585a5b3a042afc4aca3637938dbe5c885630a57, accept
+
 ## Outcome
 
 Rust owns the result types, and its serializers emit every fact the native values hold. One in-repo generator turns that complete semantic graph into typed results, with explicit presence wherever missing and explicit null differ. This ticket delivers the shared graph, the generator mechanics and the generated C# reference that 0516 needs. Each host migration adds its own target template and adopts the output.
@@ -86,3 +88,4 @@ fn RequestSessionResult::to_json(&self) -> Result<String, Error>
 - 2026-10-09 landed 68294b7f22961d7828a3bd37b60cf1c6b9222c6a; next: Complete native facts and authored question sweeps are repaired. Full lint and default tests pass; repair the CLI test feature guard and finish combined functional checks before closure.
 - 2026-10-09 landed f2f5b9ff8f108b0b5f4e09793f1f25aa4593adb5; next: Complete Plan facts derive from the native estimate. Finish combined checks after native rank schema repair and current consumer adoption.
 - 2026-10-09 landed f2f5b9ff8f108b0b5f4e09793f1f25aa4593adb5; next: Native result graph, generated C# reference and complete Plan facts are landed. Finish combined gates before closing the shared result contract; installed host adoption belongs to the migrations.
+- 2026-10-09 landed 5577fbeca; next: Native question observations retain physical input locations, including rejected filter rows. Generated schemas and reference are reviewed; finish combined gates and installed host adoption before closure.

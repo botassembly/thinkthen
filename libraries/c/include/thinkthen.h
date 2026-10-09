@@ -4405,7 +4405,7 @@ int thinkthen_score_complete(const struct thinkthen_engine *engine,
 void thinkthen_session_cancel(struct thinkthen_session *session);
 
 /*
- Borrow a fixed safe UTF-8 immediate diagnostic, never NULL. Success preserves
+ Borrow a safe UTF-8 immediate diagnostic, never NULL. Success preserves
  it; the next immediate session failure or thread exit ends its validity.
  Execution failures arrive as terminal packets and never change this slot.
  */
