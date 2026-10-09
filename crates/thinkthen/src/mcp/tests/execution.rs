@@ -90,7 +90,7 @@ fn source_rank_charges_original_utf8_bytes_before_projection_and_never_reads_the
             last_line: at + 1,
         }))
     });
-    let mut records = super::super::composition::source_records(
+    let mut records = crate::transport::source_records(
         RecordReading::new(&["/public"], None, None).unwrap(),
         source,
         CallOptions::new(),
@@ -134,7 +134,13 @@ fn recognition_context_selectors_refuse_missing_null_and_nontext_before_dispatch
         }}))
         .unwrap();
         let failure = executor
-            .execute(Invocation::admit(params).unwrap(), &CancelToken::new())
+            .execute(
+                Invocation {
+                    tool: params.name,
+                    arguments: params.arguments,
+                },
+                &CancelToken::new(),
+            )
             .err()
             .expect("context selector refusal");
         assert_eq!(failure.kind(), crate::ErrorKind::Usage);

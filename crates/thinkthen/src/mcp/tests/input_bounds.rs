@@ -1,13 +1,6 @@
 //! Retained original admission through current native MCP carriers.
-use super::super::{
-    admission::{CallParams, Invocation},
-    protocol::MAX_MESSAGE,
-};
-use crate::{
-    CallOptions, InputReaderOptions, QuestionInput, ReaderMedia, ReaderOptions, SourceItems,
-    SourceUnit,
-};
-use serde_json::json;
+use super::super::protocol::MAX_MESSAGE;
+use crate::{InputReaderOptions, ReaderMedia, ReaderOptions, SourceItems, SourceUnit};
 
 #[test]
 fn image_sources_charge_ordered_duplicates_and_stop_before_the_tail() {
@@ -26,26 +19,6 @@ fn image_sources_charge_ordered_duplicates_and_stop_before_the_tail() {
     let admitted = MAX_MESSAGE / bytes.len();
     let mut paths = vec![image.clone(); admitted + 1];
     paths.push(tail);
-    let params: CallParams = serde_json::from_value(json!({"name":"decide","arguments":{
-        "question":"q", "source":{"paths":paths,"unit":"file","media":"image"}
-    }}))
-    .unwrap();
-    let invocation = Invocation::admit(params).unwrap();
-    let prepared = invocation.question().unwrap();
-    let mut records = invocation.records(&prepared, CallOptions::new()).unwrap();
-    for _ in 0..admitted {
-        let QuestionInput::Images(original) = records.next().unwrap().unwrap().original else {
-            panic!("image source original");
-        };
-        assert_eq!(original.images()[0].bytes(), bytes);
-    }
-    assert_eq!(
-        records.next().unwrap().unwrap_err().detail().message(),
-        "retained attachments exceed the input byte ceiling"
-    );
-    assert!(records.next().is_none());
-    assert!(records.next().is_none());
-
     let options = InputReaderOptions {
         reading: ReaderOptions {
             unit: SourceUnit::File,
@@ -74,6 +47,149 @@ fn image_sources_charge_ordered_duplicates_and_stop_before_the_tail() {
             );
         }
         assert!(source.next().is_none());
+    }
+    std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+fn transport_inline_preflight_precedes_validation_and_native_defaults_stay_unchanged() {
+    use crate::transport::TransportAttachmentLimit;
+    let request = || {
+        crate::Request::new(crate::RequestCall::Decide(crate::RequestArguments {
+            question: crate::RequestQuestion::Text { text: "q".into() },
+            input: crate::RequestInput::Records {
+                items: vec![crate::RequestItem {
+                    original: None,
+                    context: None,
+                    options: None,
+                    seed_spans: None,
+                    examples: None,
+                    images: vec![
+                        crate::RequestImage::Bytes {
+                            media: crate::ImageMedia::Png,
+                            bytes: vec![0; 6]
+                        };
+                        2
+                    ],
+                }],
+            },
+            options: crate::RequestOptions::default(),
+        }))
+    };
+    assert_eq!(
+        request()
+            .admit_for_transport(TransportAttachmentLimit::new(11).unwrap())
+            .unwrap_err()
+            .detail()
+            .message(),
+        "retained attachments exceed the input byte ceiling"
+    );
+    let ordinary = request().admit().unwrap_err();
+    assert_ne!(
+        ordinary.detail().message(),
+        "retained attachments exceed the input byte ceiling"
+    );
+}
+
+#[test]
+fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
+    use crate::transport::{TransportAttachmentLimit, TransportDescriptor};
+    use conformance_backend::{Canned, Listener};
+    let listener = Listener::answering(|_| {
+        Canned::ok(include_str!(
+            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
+        ))
+    })
+    .unwrap();
+    let engine = crate::Engine::builder()
+        .backend("liquid")
+        .unwrap()
+        .model("d1")
+        .unwrap()
+        .base_url(listener.base())
+        .unwrap()
+        .api_key("fake-image-key")
+        .unwrap()
+        .no_cache()
+        .max_retries(0)
+        .build()
+        .unwrap();
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../specification/fixtures/images/red.png");
+    let bytes = std::fs::read(&fixture).unwrap();
+    let folder =
+        std::env::temp_dir().join(format!("thinkthen-mcp-descriptors-{}", std::process::id()));
+    std::fs::create_dir(&folder).unwrap();
+    let evidence = folder.join("evidence.txt");
+    std::fs::write(&evidence, "caption").unwrap();
+    for (limit, missing) in [(bytes.len() * 2, false), (bytes.len() * 2 - 1, true)] {
+        let request = crate::Request::new(crate::RequestCall::Decide(crate::RequestArguments {
+            question: crate::RequestQuestion::Text { text: "q".into() },
+            input: crate::RequestInput::Feed {
+                name: "owned".into(),
+                framing: crate::RequestFraming::Document,
+                reading: crate::ReaderOptions::default(),
+                images: Vec::new(),
+            },
+            options: crate::RequestOptions::default(),
+        }))
+        .admit_for_transport(TransportAttachmentLimit::new(limit).unwrap())
+        .unwrap();
+        let descriptor = TransportDescriptor {
+            item: crate::RequestItem {
+                original: None,
+                context: None,
+                options: None,
+                examples: None,
+                seed_spans: None,
+                images: vec![
+                    crate::RequestImage::Bytes {
+                        media: crate::ImageMedia::Png,
+                        bytes: bytes.clone(),
+                    },
+                    crate::RequestImage::File {
+                        path: fixture.clone(),
+                        media: Some(crate::ImageMedia::Png),
+                    },
+                ],
+            },
+            source: Some(crate::RequestSource {
+                paths: vec![if missing {
+                    folder.join("absent.txt")
+                } else {
+                    evidence.clone()
+                }],
+                reading: crate::ReaderOptions {
+                    unit: crate::SourceUnit::File,
+                    window: None,
+                },
+                media: crate::ReaderMedia::Text,
+            }),
+        };
+        let feed = request
+            .admit_descriptor_feed("owned".into(), vec![descriptor])
+            .unwrap();
+        let before = listener.count();
+        let outcome = engine.execute_request(
+            &request,
+            crate::RequestEnvironment {
+                feed: Some(feed),
+                controls: crate::CallOptions::new(),
+            },
+        );
+        if missing {
+            assert_eq!(
+                outcome.unwrap_err().detail().message(),
+                "retained attachments exceed the input byte ceiling"
+            );
+            assert_eq!(listener.count(), before);
+        } else {
+            assert!(matches!(
+                outcome.unwrap(),
+                crate::RequestOutcome::Complete(_)
+            ));
+            assert_eq!(listener.count(), before + 1);
+        }
     }
     std::fs::remove_dir_all(folder).unwrap();
 }

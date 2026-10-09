@@ -1,4 +1,5 @@
 //! One typed composition path resolves sources only after complete header admission.
+use super::transport::{AttachmentBudget, TransportDescriptor};
 use super::{
     AdmittedRequest, RequestDefinition, RequestEnvironment, RequestImage, RequestInput,
     RequestItem, RequestOriginal,
@@ -29,6 +30,7 @@ impl AdmittedRequest {
         image_refusal: Option<String>,
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.request.call.arguments().options;
+        let mut budget = AttachmentBudget::new(self.attachment_limit);
         let explicit = options.field.is_some()
             || options.context_field.is_some()
             || options.options_field.is_some()
@@ -47,7 +49,7 @@ impl AdmittedRequest {
                     .iter()
                     .map(|item| {
                         controls.admission()?;
-                        compose_item(item, &reading, context.as_ref())
+                        compose_item(item, &reading, context.as_ref(), &mut budget)
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Box::new(rows.into_iter().map(Ok)))
@@ -57,6 +59,7 @@ impl AdmittedRequest {
                 images,
                 &reading,
                 context.as_ref(),
+                &mut budget,
             ),
             RequestInput::Json { value, images } => singleton(
                 RequestOriginal::Json {
@@ -65,25 +68,25 @@ impl AdmittedRequest {
                 images,
                 &reading,
                 context.as_ref(),
+                &mut budget,
             ),
             RequestInput::Source { source } => {
                 controls.admission()?;
-                let items = crate::read_inputs(
-                    &source.paths,
-                    crate::InputReaderOptions {
-                        reading: source.reading,
-                        media: source.media,
-                    },
-                )?;
+                let options = crate::InputReaderOptions {
+                    reading: source.reading,
+                    media: source.media,
+                };
+                let items = match budget.remaining() {
+                    Some(remaining) => {
+                        crate::SourceItems::bounded_images(&source.paths, options, remaining)?
+                    }
+                    None => crate::read_inputs(&source.paths, options)?,
+                };
                 let annotate = matches!(definition, RequestDefinition::Annotate(_)) && !explicit;
                 let rank = self.request.call.function() == super::RequestFunction::Rank;
-                let mut remaining = crate::core::MAX_RECORD_BYTES;
-                Ok(Box::new(items.map(move |item| {
-                    controls.admission()?;
-                    let item = item?;
-                    charge_source(rank, &item, &mut remaining)?;
-                    source_row(item, annotate, &reading)
-                })))
+                Ok(super::transport::source_records(
+                    reading, items, controls, annotate, rank,
+                ))
             }
             RequestInput::Feed { name, images, .. } => {
                 let feed = environment
@@ -93,6 +96,18 @@ impl AdmittedRequest {
                     return Err(Error::usage(
                         "the supplied feed does not match the requested name",
                     ));
+                }
+                if let super::execution::FeedContents::Descriptors(descriptors) = feed.contents {
+                    let rows = descriptors
+                        .iter()
+                        .enumerate()
+                        .map(|(at, descriptor)| {
+                            controls.admission()?;
+                            compose_descriptor(descriptor, &reading, context.as_ref(), &mut budget)
+                                .map_err(|error| error.at_record(at))
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    return Ok(Box::new(rows.into_iter().map(Ok)));
                 }
                 let super::execution::FeedContents::Items(items) = feed.contents else {
                     return super::native_feed::records(
@@ -107,7 +122,7 @@ impl AdmittedRequest {
                     let item = attach_shared(item?, images)?;
                     super::admission::admit_item(self.request.call.function(), &item, options)?;
                     admit_image_route(&item, image_refusal.as_deref())?;
-                    compose_item(&item, &reading, context.as_ref())
+                    compose_item(&item, &reading, context.as_ref(), &mut budget)
                 })))
             }
         }
@@ -118,7 +133,25 @@ fn singleton(
     images: &[RequestImage],
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
+    budget: &mut AttachmentBudget,
 ) -> Result<Inputs<'static>, Error> {
+    if !images.is_empty()
+        && let RequestOriginal::Text { text } = &original
+    {
+        reading.admit_images()?;
+        let images = images
+            .iter()
+            .map(|image| read_image(image, budget))
+            .collect::<Result<Vec<_>, _>>()?;
+        let row = RecordInput {
+            original: QuestionInput::Images(crate::ImageEvidence::new(Some(text.clone()), images)?),
+            context: None,
+            options: None,
+            examples: None,
+            seed_spans: None,
+        };
+        return Ok(Box::new(std::iter::once(Ok(row))));
+    }
     let item = RequestItem {
         original: Some(original),
         context: None,
@@ -127,14 +160,20 @@ fn singleton(
         seed_spans: None,
         images: images.to_vec(),
     };
-    let row = compose_item(&item, reading, schema)?;
+    let row = compose_item(&item, reading, schema, budget)?;
     Ok(Box::new(std::iter::once(Ok(row))))
 }
-fn compose_item(
+pub(super) fn compose_item(
     item: &RequestItem,
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
+    budget: &mut AttachmentBudget,
 ) -> Result<RecordInput<QuestionInput>, Error> {
+    let images = item
+        .images
+        .iter()
+        .map(|image| read_image(image, budget))
+        .collect::<Result<Vec<_>, _>>()?;
     let mut row = match &item.original {
         Some(RequestOriginal::Text { text }) if text.trim().is_empty() => {
             reading.admit_images()?;
@@ -172,11 +211,6 @@ fn compose_item(
     if let Some(examples) = &item.examples {
         row.examples = Some(examples.clone());
     }
-    let images = item
-        .images
-        .iter()
-        .map(read_image)
-        .collect::<Result<Vec<_>, _>>()?;
     if !images.is_empty() {
         row.original = match row.original {
             QuestionInput::Record(record) => QuestionInput::Record(record.with_images(images)?),
@@ -204,9 +238,12 @@ pub(super) fn compose_original(
         seed_spans: row.seed_spans,
     })
 }
-fn read_image(image: &RequestImage) -> Result<ImageInput, Error> {
+fn read_image(image: &RequestImage, budget: &mut AttachmentBudget) -> Result<ImageInput, Error> {
     match image {
-        RequestImage::Bytes { media, bytes } => ImageInput::new(*media, bytes.clone()),
+        RequestImage::Bytes { media, bytes } => {
+            budget.charge(bytes.len())?;
+            ImageInput::new(*media, bytes.clone())
+        }
         RequestImage::File { path, media } => {
             let options = crate::InputReaderOptions {
                 reading: crate::ReaderOptions {
@@ -215,15 +252,19 @@ fn read_image(image: &RequestImage) -> Result<ImageInput, Error> {
                 },
                 media: crate::ReaderMedia::Image,
             };
-            let mut items = crate::read_inputs([path], options)?;
+            let mut items = match budget.remaining() {
+                Some(remaining) => crate::SourceItems::bounded_images([path], options, remaining)?,
+                None => crate::read_inputs([path], options)?,
+            };
             let Some(crate::SourceItem::Image(image)) = items.next().transpose()? else {
                 return Err(Error::usage("an attachment requires one image file"));
             };
             if items.next().transpose()?.is_some() {
                 return Err(Error::usage("an attachment requires one image file"));
             }
+            budget.charge(image.record.bytes().len())?;
             match media {
-                Some(media) => ImageInput::new(*media, image.record.bytes()),
+                Some(media) => ImageInput::new(*media, image.record.0.bytes.clone()),
                 None => Ok(image.record),
             }
         }
@@ -319,7 +360,7 @@ pub(super) fn reading(
     Ok(reading)
 }
 
-fn source_row(
+pub(super) fn source_row(
     item: crate::SourceItem,
     annotate: bool,
     reading: &RecordReading,
@@ -351,15 +392,6 @@ fn attach_shared(mut item: RequestItem, images: &[RequestImage]) -> Result<Reque
     Ok(item)
 }
 
-fn charge_source(rank: bool, item: &crate::SourceItem, remaining: &mut usize) -> Result<(), Error> {
-    if rank && let crate::SourceItem::Text(text) = item {
-        *remaining = remaining.checked_sub(text.record.len()).ok_or_else(|| {
-            Error::usage("source rank reads at most 16 MiB across all input records")
-        })?;
-    }
-    Ok(())
-}
-
 fn admit_image_route(item: &RequestItem, refusal: Option<&str>) -> Result<(), Error> {
     if !item.images.is_empty()
         && let Some(message) = refusal
@@ -367,4 +399,47 @@ fn admit_image_route(item: &RequestItem, refusal: Option<&str>) -> Result<(), Er
         return Err(Error::usage(message));
     }
     Ok(())
+}
+
+fn compose_descriptor(
+    descriptor: &TransportDescriptor,
+    reading: &RecordReading,
+    schema: Option<&crate::InputDeclaration>,
+    budget: &mut AttachmentBudget,
+) -> Result<RecordInput<QuestionInput>, Error> {
+    let Some(source) = &descriptor.source else {
+        return compose_item(&descriptor.item, reading, schema, budget);
+    };
+    let images = descriptor
+        .item
+        .images
+        .iter()
+        .map(|image| read_image(image, budget))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut items = crate::read_inputs(
+        &source.paths,
+        crate::InputReaderOptions {
+            reading: source.reading,
+            media: source.media,
+        },
+    )?;
+    let original = items
+        .next()
+        .transpose()?
+        .ok_or_else(|| Error::usage("an input source requires exactly one item"))?;
+    if items.next().transpose()?.is_some() {
+        return Err(Error::usage("an input source requires exactly one item"));
+    }
+    let mut row = reading.compose_source(original)?;
+    if let QuestionInput::Record(record) = row.original {
+        row.original = QuestionInput::Record(record.with_images(images)?);
+    }
+    if let Some(context) = &descriptor.item.context {
+        context.validate(schema)?;
+        row.context = Some(context.clone());
+    }
+    if let Some(options) = &descriptor.item.options {
+        row.options = Some(options.clone());
+    }
+    Ok(row)
 }

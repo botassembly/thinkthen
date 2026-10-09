@@ -16,6 +16,7 @@ pub struct RequestFeed<'a> {
 pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
     Records(super::composition::Inputs<'a>),
+    Descriptors(Vec<super::transport::TransportDescriptor>),
 }
 impl std::fmt::Debug for RequestFeed<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -23,6 +24,19 @@ impl std::fmt::Debug for RequestFeed<'_> {
     }
 }
 impl<'a> RequestFeed<'a> {
+    pub(super) fn descriptors(
+        name: String,
+        descriptors: Vec<super::transport::TransportDescriptor>,
+    ) -> Self {
+        let image_inputs = descriptors.iter().any(|d| !d.item.images.is_empty());
+        Self {
+            name,
+            contents: FeedContents::Descriptors(descriptors),
+            eager: true,
+            image_inputs,
+            all_filter_results: false,
+        }
+    }
     /// Supply native item descriptors without collecting or serializing the feed.
     #[must_use]
     pub fn new(
@@ -125,11 +139,12 @@ impl Engine {
         let image_refusal = image_route(&engine, &definition)
             .err()
             .map(|error| error.detail().message().to_owned());
-        if (image_descriptors(&request.request.call.arguments().input)
-            || environment
-                .feed
-                .as_ref()
-                .is_some_and(|feed| feed.image_inputs))
+        if request.attachment_limit.is_none()
+            && (image_descriptors(&request.request.call.arguments().input)
+                || environment
+                    .feed
+                    .as_ref()
+                    .is_some_and(|feed| feed.image_inputs))
             && let Some(message) = &image_refusal
         {
             return Err(Error::usage(message.clone()));

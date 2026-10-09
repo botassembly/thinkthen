@@ -32,7 +32,21 @@ impl Tool {
         Self::Relate,
     ];
     pub(super) const fn images(self) -> bool {
-        matches!(self, Self::Decide | Self::Choose | Self::Score)
+        self.function().images()
+    }
+    pub(super) const fn function(self) -> crate::RequestFunction {
+        match self {
+            Self::Decide => crate::RequestFunction::Decide,
+            Self::Choose => crate::RequestFunction::Choose,
+            Self::Tag => crate::RequestFunction::Tag,
+            Self::Score => crate::RequestFunction::Score,
+            Self::Filter => crate::RequestFunction::Filter,
+            Self::Rank => crate::RequestFunction::Rank,
+            Self::Find => crate::RequestFunction::Find,
+            Self::Annotate => crate::RequestFunction::Annotate,
+            Self::Recognize => crate::RequestFunction::Recognize,
+            Self::Relate => crate::RequestFunction::Relate,
+        }
     }
     fn description(self) -> &'static str {
         match self {
@@ -67,55 +81,46 @@ pub(super) fn list(output_schema: &Value) -> Value {
 }
 
 fn input_schema(tool: Tool) -> Value {
+    let canonical: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../specification/request.schema.json"
+    )))
+    .unwrap_or_else(|_| json!({}));
+    let mut options = canonical
+        .pointer("/$defs/RequestOptions")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    if let Some(map) = options.get_mut("properties").and_then(Value::as_object_mut) {
+        map.retain(|name, _| {
+            tool.function().allows_option(name)
+                && !matches!(
+                    name.as_str(),
+                    "details" | "examples" | "examples_field" | "seed_spans" | "seed_spans_field"
+                )
+        });
+        let field = map.get("field").cloned().unwrap_or_else(|| json!({}));
+        map.insert("field".into(), json!({"oneOf":[{"type":"string"},field]}));
+        map.insert(
+            "cancelled".into(),
+            json!({"type":"boolean","default":false}),
+        );
+        map.insert(
+            "proxy".into(),
+            json!({"description":"Reserved activation; native admission always refuses it."}),
+        );
+    }
     let mut properties = json!({
-        "question":{"oneOf":[{"type":"string"},{"type":"object"}],
-            "description":"Literal text or the ordinary native question/set/plan JSON grammar; @ stays text."},
+        "question":{"oneOf":[{"type":"string"},{"$ref":"#/$defs/RequestDefinition"}]},
         "question_file":{"type":"string","minLength":1},
         "question_name":{"type":"string","minLength":1},
-        "question_reference":{"type":"string","minLength":1,"description":"Explicit native @ reference with working-directory path precedence."},
+        "question_reference":{"type":"string","minLength":1},
         "evidence":{"type":"string"},"records":{"type":"array"},
-        "source":source_schema(false, tool.images()),
-        "options":{"type":"object","additionalProperties":false,"properties":{
-            "cancelled":{"type":"boolean","default":false,"description":"Initial native call cancellation state; true cancels before admission."},
-            "deadline_ms":{"type":"integer","minimum":-1,"maximum":4294967295000u64},
-            "max_requests_total":{"type":"integer","minimum":0},
-            "batch":{"oneOf":[{"type":"integer","minimum":1},{"const":"max"}]},"context":{"type":"string"},
-            "field":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]},"context_field":{"type":"string"},"options_field":{"type":"string"},
-            "proxy":{"description":"Reserved activation; native admission always refuses it."},
-            "model":{"type":"string"},"attempts":{"type":"boolean"},
-            "threshold":{"oneOf":[{"type":"number"},{"type":"string"}]},"top":{"type":"integer","minimum":0},"files_only":{"type":"boolean"},"none":{"type":"boolean"}}}
+        "source":source_schema(false, tool.images()),"options":options
     });
     if !matches!(tool, Tool::Decide | Tool::Filter | Tool::Rank | Tool::Find)
         && let Some(question) = properties.get_mut("question")
     {
-        *question = json!({"type":"object","description":"The ordinary native question, set or plan JSON grammar."});
-    }
-    if let Some(options) = properties
-        .get_mut("options")
-        .and_then(|value| value.get_mut("properties"))
-        .and_then(Value::as_object_mut)
-    {
-        if !matches!(tool, Tool::Decide | Tool::Choose | Tool::Tag | Tool::Filter) {
-            options.remove("threshold");
-        }
-        if tool != Tool::Choose {
-            options.remove("options_field");
-        }
-        if tool != Tool::Rank {
-            options.remove("top");
-        }
-        if tool != Tool::Filter {
-            options.remove("files_only");
-        }
-        if tool != Tool::Find {
-            options.remove("none");
-        }
-    }
-    if matches!(tool, Tool::Recognize)
-        && let Some(map) = properties.as_object_mut()
-    {
-        map.insert("question".into(), json!({"type":"object","description":"Version-one recognition declaration. recognize accepts kinds with descriptions, instructions and entity_definition. Omitted customization retains proper-name defaults.",
-            "properties":{"recognize":{"type":"object","properties":{"instructions":{"type":"string","minLength":1},"entity_definition":{"type":"string","minLength":1},"kinds":{"type":"object"},"relations":{"type":"array"}},"additionalProperties":false}}}));
+        *question = json!({"$ref":"#/$defs/RequestDefinition"});
     }
     if tool.images()
         && let Some(map) = properties.as_object_mut()
@@ -126,7 +131,7 @@ fn input_schema(tool: Tool) -> Value {
     if let Some(map) = properties.as_object_mut() {
         map.insert(
             "inputs".into(),
-            json!({"type":"array","items":descriptor_schema(tool)}),
+            json!({"type":"array","items":descriptor_schema(tool, &canonical)}),
         );
     }
     let questions = [
@@ -142,19 +147,19 @@ fn input_schema(tool: Tool) -> Value {
         json!({"required":[name],"not":{"anyOf":others.map(|other| json!({"required":[other]})).collect::<Vec<_>>()}})
     }).collect::<Vec<_>>();
     json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
-        "additionalProperties":false,"properties":properties,
+        "additionalProperties":false,"properties":properties,"$defs":canonical.get("$defs"),
         "allOf":[{"oneOf":question_choices},{"oneOf":input_choices}]})
 }
 
-fn descriptor_schema(tool: Tool) -> Value {
+fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
     let mut descriptor = json!({"type":"object","additionalProperties":false,"properties":{
         "text":{"type":"string"},"json":{},"source":source_schema(true, false),
-        "context":{"oneOf":[{"type":"string"},{"type":"object"}]},
-        "options":{"oneOf":[{"type":"array"},{"type":"object"}]},
+        "context":canonical.pointer("/$defs/RequestItem/properties/context"),
+        "options":{"$ref":"#/$defs/Authored_options"},
         "images":{"type":"array","maxItems":crate::MAX_IMAGES,"items":{"oneOf":[
             {"type":"string","minLength":1},
             {"type":"object","additionalProperties":false,"required":["path","media"],"properties":{
-                "path":{"type":"string","minLength":1},"media":{"enum":["image/jpeg","image/png"]}}}
+                "path":{"type":"string","minLength":1},"media":{"$ref":"#/$defs/ImageMedia"}}}
         ]}}
     },"oneOf":[
         {"required":["text"],"not":{"anyOf":[{"required":["json"]},{"required":["source"]}]}},
@@ -169,7 +174,7 @@ fn descriptor_schema(tool: Tool) -> Value {
         if !tool.images() {
             map.remove("images");
         }
-        if tool != Tool::Choose {
+        if !tool.function().allows_option("options_field") {
             map.remove("options");
         }
     }

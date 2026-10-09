@@ -35,14 +35,16 @@ impl AdmittedRequest {
             RequestInput::Records { items }
             | RequestInput::Units { items }
             | RequestInput::Entities { items } => {
-                for item in items {
-                    validator.validate(
-                        !item.images.is_empty(),
-                        item.original.as_ref(),
-                        item.context.as_ref(),
-                        item.examples.as_ref(),
-                        item.seed_spans.as_ref(),
-                    )?;
+                for (at, item) in items.iter().enumerate() {
+                    validator
+                        .validate(
+                            !item.images.is_empty(),
+                            item.original.as_ref(),
+                            item.context.as_ref(),
+                            item.examples.as_ref(),
+                            item.seed_spans.as_ref(),
+                        )
+                        .map_err(|error| error.at_record(at))?;
                 }
             }
             RequestInput::Text { text, images } => validator.validate(

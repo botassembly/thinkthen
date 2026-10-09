@@ -443,7 +443,7 @@ class Installed(unittest.TestCase):
                 with self.assertRaises(ToolError) as failure:
                     method(**arguments(case, self.home, {'batch': 1}))
                 result = failure.exception.result
-                self.assertEqual(result['error']['kind'], 'backend')
+                self.assertEqual(result['error']['kind'], 'backend', (name, result))
                 self.assertGreater(result['facts']['requests_sent'], 0)
                 self.assertNotIn('sk-mcp-loopback-only', json.dumps(result))
             for name in ('tag', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate'):
