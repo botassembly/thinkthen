@@ -225,6 +225,85 @@ static class Conformance
         }
     }
 
+    static void NativeSessionPackets(string path)
+    {
+        var packets = File.ReadLines(path).SelectMany(line => JsonNode.Parse(line)!.AsArray()).ToArray();
+        var sawMissing = false;
+        var sawNull = false;
+        var sawPartial = false;
+        var sawWhole = false;
+        var sawBoundary = false;
+        foreach (var source in packets)
+        {
+            var packet = Read(source!, SessionPacket.Read);
+            Retains(source!, packet);
+            var extended = source!.DeepClone().AsObject();
+            extended["future"] = JsonNode.Parse("{\"nested\":[null,false,0]}");
+            Retains(extended, Read(extended, SessionPacket.Read));
+            if (packet is SessionPacketObservation observed && observed.Value is SessionObservationQuestion question)
+            {
+                var original = source["value"]!["detail"]!;
+                var detail = question.Detail;
+                Retains(original, detail);
+                Retains(original["question"]!, detail.Question);
+                var expected = original.AsObject();
+                var value = expected["value"];
+                var state = !expected.ContainsKey("value") ? PresenceState.Missing : value is null ? PresenceState.Null : PresenceState.Value;
+                Check(detail.Value.State == state, "actual native detail value retains missing and unresolved null");
+                sawMissing |= state == PresenceState.Missing;
+                sawNull |= state == PresenceState.Null;
+                if (state == PresenceState.Value)
+                    Check(JsonNode.DeepEquals(value, detail.Value.Value.ToPlain()), "native primitive judgment survives typed conversion");
+                if (detail.ReportedUsage.State == PresenceState.Value)
+                {
+                    var usage = detail.ReportedUsage.Value;
+                    Retains(original["reported_usage"]!, usage);
+                    sawPartial |= usage.InputTokens.State == PresenceState.Missing || usage.OutputTokens.State == PresenceState.Missing;
+                }
+                var future = original.DeepClone().AsObject();
+                future["future"] = JsonNode.Parse("{\"owned\":[null,false,0]}");
+                future["question"]!["future"] = JsonNode.Parse("{\"inside\":[0,null]}");
+                var owned = Read(future, node => new SessionQuestionDetail(node));
+                Retains(future, owned);
+                Retains(future["question"]!, owned.Question);
+                future["future"] = null;
+                Check(owned.ToPlain()["future"] is JsonObject, "caller mutation leaves the owned event intact");
+            }
+            if (packet is SessionPacketRecognizeAggregate recognized)
+            {
+                var result = recognized.Value.Single();
+                var original = source["value"]![0]!;
+                Retains(original, result);
+                Retains(original["answer"]!, result.Answer);
+                Retains(original["value"]!, result.Value);
+                sawWhole |= result.Answer is RecognitionOddsFieldsNamesPairsPiecesProposals;
+                sawBoundary |= result.Answer is RecognitionOddsFieldsPiecesProposals;
+                var future = original["answer"]!.DeepClone().AsObject();
+                future["future"] = JsonNode.Parse("{\"owned\":[null,false,0]}");
+                Retains(future, Read(future, RecognitionOdds.Read));
+                if (future.ContainsKey("names"))
+                {
+                    future.Remove("pairs");
+                    try { Read(future, RecognitionOdds.Read); throw new Exception("partial known recognition alternative accepted"); }
+                    catch (JsonException) { }
+                }
+                else
+                {
+                    future["names"] = new JsonArray();
+                    try { Read(future, RecognitionOdds.Read); throw new Exception("partial whole recognition extension accepted"); }
+                    catch (JsonException) { }
+                }
+            }
+        }
+        Check(sawMissing && sawNull && sawPartial && sawWhole && sawBoundary, "actual native packets cover failure, null, partial usage and both recognition modes");
+        foreach (var malformed in new[] { "{\"kind\":\"future\"}", "{\"kind\":\"row\",\"function\":null}", "{\"kind\":\"row\",\"function\":\"future\"}" })
+        {
+            using var document = JsonDocument.Parse(malformed);
+            try { SessionPacket.Read(document.RootElement); throw new Exception("unknown packet tag accepted"); }
+            catch (JsonException) { }
+        }
+    }
+
     public static void Main(string[] args)
     {
         var fixture = JsonNode.Parse(File.ReadAllText(args[0]))!.AsObject();
@@ -269,6 +348,7 @@ static class Conformance
                 Retains(source!, nativeMember);
             }
         }
+        if (args.Length > 2) NativeSessionPackets(args[2]);
         NativePresentation(fixture);
         Variants(fixture);
         RoundTrip(fixture["facts"]!);

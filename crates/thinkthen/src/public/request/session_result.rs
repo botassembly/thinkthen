@@ -77,6 +77,10 @@ impl RequestSessionResult {
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "sessionPacket"))]
 #[serde(tag = "kind", rename_all = "lowercase")]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "one short-lived borrowed document keeps serialization stack-local without another allocation"
+)]
 pub(crate) enum SessionPacketDocument<'a> {
     Row(SessionRowDocument<'a>),
     Aggregate(SessionAggregateDocument<'a>),

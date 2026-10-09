@@ -171,7 +171,7 @@ enum ProbabilitiesJson<'a> {
     Named(Vec<(&'a str, f64)>),
 }
 
-fn bare(value: &Judgment) -> core::Value {
+pub(super) fn bare(value: &Judgment) -> core::Value {
     match value {
         Judgment::Decision(Answer::Yes) => core::Value::YesNo(Some(true)),
         Judgment::Decision(Answer::No) => core::Value::YesNo(Some(false)),

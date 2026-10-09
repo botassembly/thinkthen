@@ -321,7 +321,7 @@ impl fmt::Debug for OwnedRecordObservation {
 }
 
 mod row;
-use row::{JudgmentDocument, ProbabilitiesDocument, SessionObservedRowDocument};
+use row::{ProbabilitiesDocument, SessionObservedRowDocument};
 
 /// Borrowed serialization of one actual owned native event.
 #[derive(Serialize)]
@@ -331,6 +331,10 @@ use row::{JudgmentDocument, ProbabilitiesDocument, SessionObservedRowDocument};
     schemars(rename = "sessionObservation")
 )]
 #[serde(tag = "kind", rename_all = "lowercase")]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "one short-lived borrowed document keeps serialization stack-local without another allocation"
+)]
 pub(crate) enum SessionObservationDocument<'a> {
     Question {
         index: usize,
@@ -380,7 +384,7 @@ impl<'a> SessionObservationDocument<'a> {
 pub(crate) struct SessionQuestionDetailDocument<'a> {
     question_sha256: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    value: Option<JudgmentDocument<'a>>,
+    value: Option<core::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     failure: Option<core::BackendFailure>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -420,7 +424,7 @@ impl<'a> SessionQuestionDetailDocument<'a> {
         let held = detail.0;
         Self {
             question_sha256: &held.question_sha256,
-            value: held.value.as_ref().map(JudgmentDocument::of),
+            value: held.value.as_ref().map(super::observation::bare),
             failure: held.failure,
             probabilities: held.probabilities.as_ref().map(ProbabilitiesDocument::of),
             confidence: detail.confidence(),

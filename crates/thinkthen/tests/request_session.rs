@@ -177,41 +177,15 @@ fn free_returns_while_the_provider_is_held_and_the_engine_owner_is_gone() {
     assert!(release.wait());
 }
 
-#[test]
-fn reader_failure_follows_owned_completed_rows_and_observations() {
-    let listener = Listener::answering(response).unwrap();
-    let session = engine(&listener).request_session(request(feed())).unwrap();
-    let mut item = descriptor("first");
-    item.location =
-        Some(SourceLocation::new("private-source-name".into(), Some(3), Some(4)).unwrap());
-    session.try_push(item).unwrap();
-    session
-        .finish(Some(RequestReaderFailure::Io {
-            location: Some(SourceLocation::new("secret-failure-path".into(), None, None).unwrap()),
-        }))
-        .unwrap();
-    let packets = drain(&session);
-    assert!(matches!(
-        &packets[0],
-        RequestSessionResult::Observation {
-            value: OwnedRecordObservation::Question { .. },
-            ..
-        }
-    ));
-    assert!(matches!(
-        &packets[1],
-        RequestSessionResult::Observation {
-            value: OwnedRecordObservation::Row { .. },
-            ..
-        }
-    ));
-    let RequestSessionResult::Row(RequestSessionRow::Decision(row)) = &packets[2] else {
-        panic!("completed decision prefix")
-    };
-    let QuestionInput::Record(original) = row.original() else {
-        panic!("located original")
-    };
-    assert_eq!(original.location().unwrap().first_line(), Some(3));
+#[allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    reason = "the isolated native fixture must retain its exact ordered packets and serializable values"
+)]
+fn assert_reader_failure_packets(
+    packets: &[RequestSessionResult],
+    row: &CompleteRecord<QuestionInput, CompleteDecision>,
+) {
     let documents = packets
         .iter()
         .map(|packet| serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
@@ -247,6 +221,44 @@ fn reader_failure_follows_owned_completed_rows_and_observations() {
     assert_eq!(documents[2]["value"], serde_json::to_value(row).unwrap());
     assert_eq!(documents[3]["kind"], "terminal");
     assert!(documents[3].as_object().unwrap().contains_key("failure"));
+}
+
+#[test]
+fn reader_failure_follows_owned_completed_rows_and_observations() {
+    let listener = Listener::answering(response).unwrap();
+    let session = engine(&listener).request_session(request(feed())).unwrap();
+    let mut item = descriptor("first");
+    item.location =
+        Some(SourceLocation::new("private-source-name".into(), Some(3), Some(4)).unwrap());
+    session.try_push(item).unwrap();
+    session
+        .finish(Some(RequestReaderFailure::Io {
+            location: Some(SourceLocation::new("secret-failure-path".into(), None, None).unwrap()),
+        }))
+        .unwrap();
+    let packets = drain(&session);
+    assert!(matches!(
+        &packets[0],
+        RequestSessionResult::Observation {
+            value: OwnedRecordObservation::Question { .. },
+            ..
+        }
+    ));
+    assert!(matches!(
+        &packets[1],
+        RequestSessionResult::Observation {
+            value: OwnedRecordObservation::Row { .. },
+            ..
+        }
+    ));
+    let RequestSessionResult::Row(RequestSessionRow::Decision(row)) = &packets[2] else {
+        panic!("completed decision prefix")
+    };
+    let QuestionInput::Record(original) = row.original() else {
+        panic!("located original")
+    };
+    assert_eq!(original.location().unwrap().first_line(), Some(3));
+    assert_reader_failure_packets(&packets, row);
 
     let RequestSessionResult::Terminal(terminal) = &packets[3] else {
         panic!("joined terminal")
@@ -685,4 +697,214 @@ fn inline_sessions_refuse_feed_controls_and_own_their_engine() {
     drop(engine);
     session.cancel();
     drop(session);
+}
+
+#[test]
+fn question_packets_preserve_unresolved_null_authored_readings_and_partial_usage() {
+    for (answer, usage, primitive, expected_usage) in [
+        (
+            json!({"type":"noul","noul":0.5}),
+            Value::Null,
+            Value::Null,
+            None,
+        ),
+        (
+            json!({"type":"noul","noul":0.9}),
+            json!({"input_tokens":0}),
+            json!(true),
+            Some(json!({"input_tokens":0})),
+        ),
+        (
+            json!({"type":"noul","noul":0.5}),
+            json!({"output_tokens":0}),
+            Value::Null,
+            Some(json!({"output_tokens":0})),
+        ),
+    ] {
+        let listener = Listener::answering(move |_| {
+            let mut reply = json!({"model":"fixed","answers":{"q1":answer}});
+            if usage != Value::Null {
+                reply["usage"] = usage.clone();
+            }
+            Canned::ok(&reply.to_string())
+        })
+        .unwrap();
+        let question = Question::from_json(r#"{"decide":"Does it pass?","true":null,"false":{"reading":"no"},"threshold":"0.2:0.8","name":"gate","wording_version":4,"model":"fixed","batch":1}"#).unwrap();
+        let session = engine(&listener)
+            .request_session(Request::new(RequestCall::Decide(RequestArguments {
+                question: RequestQuestion::Definition {
+                    value: question.into(),
+                },
+                input: RequestInput::Records {
+                    items: vec![descriptor("first").item],
+                },
+                options: RequestOptions::default(),
+            })))
+            .unwrap();
+        let packets = drain(&session);
+        let event = packets
+            .iter()
+            .find(|packet| {
+                matches!(
+                    packet,
+                    RequestSessionResult::Observation {
+                        value: OwnedRecordObservation::Question { .. },
+                        ..
+                    }
+                )
+            })
+            .unwrap();
+        let document: Value = serde_json::from_str(&event.to_json().unwrap()).unwrap();
+        let detail = &document["value"]["detail"];
+        assert_eq!(detail["question"]["true"], Value::Null);
+        assert!(detail["question"].as_object().unwrap().contains_key("true"));
+        assert_eq!(detail["question"]["false"], json!({"reading":"no"}));
+        assert_eq!(detail["question"]["name"], "gate");
+        assert_eq!(detail["question"]["wording_version"], 4);
+        assert_eq!(detail["question"]["model"], "fixed");
+        assert_eq!(detail["question"]["batch"], 1);
+        assert_eq!(detail["threshold"], "0.2:0.8");
+        assert!(detail.as_object().unwrap().contains_key("value"));
+        assert!(!detail.as_object().unwrap().contains_key("failure"));
+        assert!(!detail.as_object().unwrap().contains_key("failure_id"));
+        assert_eq!(detail["value"], primitive);
+        assert!(!detail.as_object().unwrap().contains_key("usage"));
+        assert_eq!(detail.get("reported_usage"), expected_usage.as_ref());
+    }
+}
+
+#[test]
+fn annotation_question_packets_preserve_actual_failed_members() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1.0}},"q3":{"type":"noul","noul":0.5}},"usage":{"output_tokens":0}}"#)).unwrap();
+    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Fails?","threshold":0.7},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
+    let session = engine(&listener)
+        .request_session(Request::new(RequestCall::Annotate(RequestArguments {
+            question: RequestQuestion::Definition { value: set.into() },
+            input: RequestInput::Records {
+                items: vec![descriptor("original").item],
+            },
+            options: RequestOptions::default(),
+        })))
+        .unwrap();
+    let packets = drain(&session);
+    let detail = packets
+        .iter()
+        .find_map(|packet| match packet {
+            RequestSessionResult::Observation {
+                value:
+                    OwnedRecordObservation::Question {
+                        member: Some(member),
+                        ..
+                    },
+                ..
+            } if member == "failed" => {
+                Some(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
+            }
+            _ => None,
+        })
+        .unwrap();
+    let detail = &detail["value"]["detail"];
+    assert!(!detail.as_object().unwrap().contains_key("value"));
+    assert!(!detail.as_object().unwrap().contains_key("answer_id"));
+    assert!(detail["failure_id"].is_string());
+    assert_eq!(
+        detail["failure"],
+        json!({"kind":"backend","cause":"wrong_kind"})
+    );
+    assert_eq!(detail["threshold"], 0.7);
+    assert_eq!(detail["reported_usage"], json!({"output_tokens":0}));
+    assert_eq!(detail["observations"].as_array().unwrap().len(), 1);
+    let event = packets
+        .iter()
+        .find_map(|packet| match packet {
+            RequestSessionResult::Observation {
+                value: OwnedRecordObservation::Row { .. },
+                ..
+            } => Some(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(event["value"]["value"]["kind"], "annotated");
+    assert_eq!(
+        event["value"]["value"]["value"][1]["value"]["kind"],
+        "failed"
+    );
+}
+
+#[test]
+fn recognition_packets_keep_native_whole_and_boundary_alternatives() {
+    for mode in [RecognitionMode::Whole, RecognitionMode::BoundaryOnly] {
+        let listener = Listener::answering(|body| {
+            let request: Value = serde_json::from_slice(body).unwrap();
+            let answers = request["questions"]
+                .as_object()
+                .unwrap()
+                .iter()
+                .map(|(name, question)| {
+                    let labels = question["criteria"].as_object().unwrap();
+                    let probabilities = labels
+                        .keys()
+                        .map(|label| (label.clone(), json!(u8::from(label == "OUT"))))
+                        .collect::<serde_json::Map<_, _>>();
+                    (
+                        name.clone(),
+                        json!({"type":"choice","probabilities":probabilities}),
+                    )
+                })
+                .collect::<serde_json::Map<_, _>>();
+            Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
+        })
+        .unwrap();
+        let ask = Recognize::builder()
+            .kind(Kind::new("person", None).unwrap())
+            .unwrap()
+            .build()
+            .unwrap()
+            .with_mode(mode);
+        let session = engine(&listener)
+            .request_session(Request::new(RequestCall::Recognize(RequestArguments {
+                question: RequestQuestion::Definition { value: ask.into() },
+                input: RequestInput::Records {
+                    items: vec![descriptor("Ada").item],
+                },
+                options: RequestOptions::default(),
+            })))
+            .unwrap();
+        let packets = drain(&session);
+        let document = packets
+            .iter()
+            .find_map(|packet| match packet {
+                RequestSessionResult::Aggregate(_) => {
+                    Some(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
+                }
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(document["function"], "recognize");
+        let result = &document["value"][0];
+        assert_eq!(
+            result["answer"].as_object().unwrap().contains_key("names"),
+            mode == RecognitionMode::Whole
+        );
+        assert_eq!(
+            result["answer"].as_object().unwrap().contains_key("pairs"),
+            mode == RecognitionMode::Whole
+        );
+        assert!(result["answer"]["pieces"].is_array());
+        let event = packets
+            .iter()
+            .find_map(|packet| match packet {
+                RequestSessionResult::Observation {
+                    value: OwnedRecordObservation::Row { .. },
+                    ..
+                } => Some(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap()),
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(event["value"]["value"]["kind"], "recognized");
+        assert_eq!(
+            event["value"]["value"]["value"]["mode"],
+            serde_json::to_value(mode).unwrap()
+        );
+    }
 }
