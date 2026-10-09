@@ -63,14 +63,11 @@ for index, lang in enumerate(("java", "kotlin", "scala")):
     names = ("consumer-run.py", "backend.py", "process_group.py")
     if RELEASE: names += (f"Installed{lang.capitalize()}.{dict(java='java',kotlin='kt',scala='scala')[lang]}",)
     else: names += ("Matrix.java", "Direct.java", "StrictScalar.java", "Concurrent.java",
-                   "BoundedString.java", "JsonTest.java")
+                   "BoundedString.java", "JsonTest.java", "KotlinConsumer.kt", "ScalaConsumer.scala")
     for name in names:
         shutil.copyfile(ROOT / "tests" / name, trial / "project" / name)
     if not RELEASE:
         shutil.copyfile(ROOT / "tests/thinkthen/ProbeDoor.java", trial / "project/thinkthen/ProbeDoor.java")
-        for name in ("KotlinCaller.kt", "ScalaCaller.scala"):
-            source = ROOT / ("kotlin" if name.endswith("kt") else "scala") / name
-            shutil.copyfile(source, trial / "project" / name)
     command = ["/usr/bin/bwrap", "--clearenv", "--unshare-user", "--unshare-pid", "--unshare-net", "--die-with-parent",
                "--dir", "/usr", "--dir", "/usr/bin", "--dir", "/opt", "--ro-bind", "/etc", "/etc",
                "--ro-bind", "/usr/lib", "/usr/lib", "--ro-bind", "/usr/libexec", "/usr/libexec", "--ro-bind", "/usr/share", "/usr/share",

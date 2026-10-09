@@ -160,11 +160,11 @@ def check_jar(data, kind):
             "Requests$QuestionInput Requests$QuestionRole "
         ).split(),
         "kotlin": (
-            "KotlinCallerKt KotlinComplete KotlinFacade KotlinFacade$RunningDecision KotlinRequests "
+            "KotlinComplete KotlinFacade KotlinFacade$RunningDecision KotlinRequests "
         ).split(),
         "scala": (
-            "ScalaCaller$package ScalaCaller$package$ ScalaComplete ScalaComplete$ ScalaFacade "
-            "ScalaFacade$RunningDecision ScalaRequests ScalaRequests$ scalaCaller "
+            "ScalaComplete ScalaComplete$ ScalaFacade "
+            "ScalaFacade$RunningDecision ScalaRequests ScalaRequests$ "
         ).split(),
     }[kind]
     expected = {("thinkthen/" if kind == "door" else "") + name + ".class" for name in classes}
@@ -172,7 +172,7 @@ def check_jar(data, kind):
         expected.add("META-INF/main.kotlin_module")
     if kind == "scala":
         expected.update(name + ".tasty" for name in
-                        ("ScalaCaller$package", "ScalaComplete", "ScalaFacade", "ScalaRequests", "scalaCaller"))
+                        ("ScalaComplete", "ScalaFacade", "ScalaRequests"))
     require(set(members) == expected, f"{kind} JAR classes differ")
     require(not any(token in value for value in members.values() for token in
                     (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275",

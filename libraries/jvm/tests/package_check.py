@@ -23,6 +23,10 @@ def inspect(name, source):
     with zipfile.ZipFile(io.BytesIO(source)) as bundle:
         members = {item.filename: bundle.read(item) for item in bundle.infolist() if not item.is_dir()}
     assert members, f"empty {name} JAR"
+    demo_classes = {"KotlinCallerKt.class", "ScalaCaller$package.class",
+                    "ScalaCaller$package$.class", "scalaCaller.class",
+                    "ScalaCaller$package.tasty", "scalaCaller.tasty"}
+    assert not demo_classes.intersection(members), "demo entrypoint escaped product JAR"
     expected = {path.relative_to(TARGET / "classes" / name).as_posix(): path.read_bytes()
                 for path in (TARGET / "classes" / name).rglob("*") if path.is_file()}
     assert members.pop("META-INF/MANIFEST.MF").startswith(b"Manifest-Version: 1.0"), "bad JAR manifest"
