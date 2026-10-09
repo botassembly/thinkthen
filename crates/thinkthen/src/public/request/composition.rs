@@ -506,7 +506,8 @@ impl RequestItem {
     /// Compose a decoded record through the shared Request projection path.
     /// The caller retains source identity and supplies its admitted reading controls.
     /// # Errors
-    /// Refuses invalid originals, projections, context or image evidence.
+    /// Refuses invalid originals, projections or image evidence.
+    /// Request execution admits explicit context against the question declaration.
     pub fn compose_record(
         &self,
         reading: &RecordReading,
@@ -517,6 +518,12 @@ impl RequestItem {
         } else {
             reading
         };
-        compose_item(self, reading, None, &mut AttachmentBudget::new(None))
+        let mut projected = self.clone();
+        projected.context = None;
+        let mut row = compose_item(&projected, reading, None, &mut AttachmentBudget::new(None))?;
+        if let Some(context) = &self.context {
+            row.context = Some(context.clone());
+        }
+        Ok(row)
     }
 }
