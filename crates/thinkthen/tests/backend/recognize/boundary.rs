@@ -222,6 +222,10 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one saved-result case checks proposal rescoring, the run-cut floor and both diff formats without another harness"
+)]
 fn saved_boundary_proposals_rescore_offline_without_classified_kinds() {
     let listener = Listener::answering(automatic).unwrap();
     let complete = local(
