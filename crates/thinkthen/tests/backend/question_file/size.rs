@@ -65,10 +65,12 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
         let mut files = vec![(over.as_str(), "the question file is too large")];
         // Windows has no endless file like `/dev/zero`.
         if cfg!(unix) {
-            files.push((
-                "@/dev/zero",
-                "the question file could not be opened: question source is not regular",
-            ));
+            let sentence = if verb == "annotate" {
+                "the question set could not be opened: question source is not regular"
+            } else {
+                "the question file could not be opened: question source is not regular"
+            };
+            files.push(("@/dev/zero", sentence));
         }
         for (file, sentence) in files {
             let output = run_with(
