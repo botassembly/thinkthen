@@ -42,7 +42,15 @@ The coordinator ruled that `thinkthen_plan` retains the existing shared `Engine:
 
 The retained planning check assumed an exact six-field serialized JSON string. The current shared planner adds `largest_request_bytes`, `largest_request_estimated_input_tokens` and `token_estimate_method`, so that old whole-string assertion fails even though all retained values match. The host check reads typed fields, pins the native diagnostic values and retains the zero-send assertion. PostgreSQL continues to serialize the native Plan without copying or dropping its fields.
 
-## Lessons
+## Verification
+
+Production source `379edec6930a67c7c7b6b806cc3744352fc09df9` passed the final lint, test and specification gates. The test sequence passed 1,837 workspace cases, 364 library-only cases and all 23 external consumers, plus the existing doctest and binding smoke checks. The focused native comparisons cover the shared warning repair, attempts, cache state, serialization refusal and annotation projection.
+
+The installed PostgreSQL artifact was built from `f92a733c1`. Its 255 named and typed complete cases, owning-facts checks and affected legacy host cases passed. The later native metadata repair has native regression evidence; these installed results do not claim to execute that repaired binary. Legacy conformance separately passed 53 cases with three declared exclusions: annotation grouping follows ADR 0111, cancellation has existing PostgreSQL coverage, and internal defects use the panic probe. The final cross-surface installed-package run remains required after the migrations.
+
+The artifact-default correction changes only the existing check list and this record. Its default invocation ran the counted Request fixture successfully; its later invalid legacy selector and overall exit 1 are recorded below. No fresh independent source-review verdict or landing is claimed here.
+
+## What the build taught us
 
 Native batch equivalence needs matching execution controls. Complete carriers retain opt-in attempt receipts; the old `Details::of_batch_member` document omits them. Exact document fixtures use ordinary attempt controls and retain actual batch/context metadata. The conversion preserves any attempts already present in its retained native carrier. The existing result schema's `meta.attempts` accepts them; preserving these actual receipts intentionally corrects the legacy opt-in omission rather than promising equivalence to it.
 
