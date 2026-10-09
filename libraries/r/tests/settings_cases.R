@@ -24,13 +24,13 @@ for (case in corpus$cases) {
       'tryCatch({',
       'do.call(tt_engine, settings)',
       if (identical(step$verb, "relate"))
-        sprintf('value <- nrow(tt_relate(jsonlite::fromJSON(%s), relations = %s)$value)',
-                literal(literal(case$entities)), literal(case$relation))
+        sprintf('value <- length(tt_relate(list(version = 1, relate = list(relations = list(list(name = %s, source = "*", target = "*")))), jsonlite::fromJSON(%s))$results[[1]]$value)',
+                literal(case$relation), literal(literal(case$entities)))
       else if (identical(step$verb, "decide_many"))
-        sprintf('value <- tt_decide(%s, c("refund one", "refund two", "refund three"))$value', literal(corpus$question))
+        sprintf('value <- vapply(tt_decide(%s, c("refund one", "refund two", "refund three"))$results, `[[`, TRUE, "value")', literal(corpus$question))
       else if (!is.null(step$model))
-        sprintf('value <- tt_details(%s, %s)$value', literal(corpus$question), literal(step$text))
-      else sprintf('value <- tt_decide(%s, %s)$value', literal(corpus$question), literal(step$text)),
+        sprintf('row <- tt_decide(%s, %s)$results[[1]]; value <- list(value = row$value, meta = list(model = row$meta$model))', literal(corpus$question), literal(step$text))
+      else sprintf('value <- tt_decide(%s, %s)$results[[1]]$value', literal(corpus$question), literal(step$text)),
       'cat(jsonlite::toJSON(list(value = value), auto_unbox = TRUE), "\\n")',
       '}, thinkthen_error = function(e) cat(jsonlite::toJSON(list(error = e$kind), auto_unbox = TRUE), "\\n"))'
     )

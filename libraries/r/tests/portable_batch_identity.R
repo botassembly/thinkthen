@@ -15,11 +15,11 @@ sent <- if (length(actual) == 1L) raw_members(raw_members(actual)$questions) els
 check("Max sends one request whose five questions keep the fixture bytes",
       length(actual) == 1L && identical(unlist(sent, use.names = FALSE), questions) &&
       identical(names(sent), sprintf("q%d", 1:5)))
-check("public R column returns five ordered accepted rows", identical(answer$value, rep(TRUE, 5L)) &&
-      identical(vapply(answer$details, `[[`, 0, "index"), as.numeric(0:4)))
-check("final facts count five records and one send", identical(answer$facts$records, 5L) &&
-      identical(answer$facts$requests_sent, 1L) && identical(backend_count(), 1L))
+check("public R column returns five ordered accepted rows", identical(vapply(answer$results, `[[`, TRUE, "value"), rep(TRUE, 5L)) &&
+      identical(vapply(answer$results, `[[`, 0, "index"), as.numeric(0:4)))
+check("final facts count five records and one send", identical(answer$facts$records, 5) &&
+      identical(answer$facts$requests_sent, 1) && identical(backend_count(), 1L))
 check("each row names its question key over the served address",
-      identical(lapply(answer$details, function(one) unlist(one$requests)),
+      identical(lapply(answer$results, function(one) unname(unlist(one$meta$requests))),
                 as.list(question_keys(url, actual, "jev-1.13.0"))))
 finish("portable batch identity", 1L)
