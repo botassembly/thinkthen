@@ -83,6 +83,18 @@ pub(crate) struct Engine(pub(crate) thinkthen::Engine);
 
 #[pymethods]
 impl Engine {
+    /// Start canonical execution without waiting for the provider.
+    #[pyo3(signature = (request, surface=None))]
+    fn _request_session(
+        &self,
+        py: Python<'_>,
+        request: &str,
+        surface: Option<&str>,
+    ) -> PyResult<crate::request::Session> {
+        let surface = complete_calls::native_surface(py, surface)?;
+        crate::request::Session::start(py, &self.0, request, surface)
+    }
+
     #[pyo3(signature = (request, deadline, token, surface=None))]
     fn _complete_batch(
         &self,

@@ -51,7 +51,7 @@ pub(super) fn call(
     })
 }
 
-fn native_surface(py: Python<'_>, value: Option<&str>) -> PyResult<Surface> {
+pub(super) fn native_surface(py: Python<'_>, value: Option<&str>) -> PyResult<Surface> {
     let surface = value.unwrap_or("python").parse::<Surface>().ok();
     match surface {
         Some(s @ (Surface::Python | Surface::Pandas | Surface::PythonPolars)) => Ok(s),
