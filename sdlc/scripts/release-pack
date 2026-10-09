@@ -257,9 +257,9 @@ jvm)
 		scratch_dir jvm_out
 		THINKTHEN_JVM_OUT=$jvm_out sh libraries/jvm/build.sh
 		THINKTHEN_JVM_OUT=$jvm_out python3 libraries/jvm/tests/package_check.py
-		cp "$jvm_out/jars/thinkthen-door.jar" "$jvm_out/jars/thinkthen-kotlin.jar" \
-			"$jvm_out/jars/thinkthen-scala.jar" libraries/jvm/pom.xml libraries/jvm/LICENSE \
-			libraries/jvm/README.md "$folder/"
+		for file in $(python3 sdlc/scripts/package-inventory.py jvm --field files); do
+			case $file in *.jar|product-inventory.json) cp "$jvm_out/jars/$file" "$folder/" ;; *) cp "libraries/jvm/$file" "$folder/" ;; esac
+		done
 		;;
 swift)
 		mkdir -p "$folder/Examples" "$folder/Sources/CThinkThen/include" \

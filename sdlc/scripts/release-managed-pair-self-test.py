@@ -102,7 +102,7 @@ def fixture(base):
         "libraries/c/include/thinkthen.h": C_HEADER,
         "libraries/csharp/README.md": b"C# readme\n", "libraries/csharp/LICENSE": b"MIT\n",
         "libraries/jvm/README.md": b"JVM readme\n", "libraries/jvm/LICENSE": b"MIT\n",
-        "libraries/jvm/pom.xml": f"<project><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId><version>{VERSION}</version></project>".encode(),
+        "libraries/jvm/pom.xml": (HELPER.parents[2] / "libraries/jvm/pom.xml").read_bytes(),
     }
     write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
     save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
@@ -122,6 +122,7 @@ def fixture(base):
     jars = base / "jars"
     jars.mkdir()
     managed = {"nupkg": sha(nupkg.read_bytes())}
+    inventory_members = {}
     classes = {
         "door": (
             "Complete Complete$AnnotateRow Complete$AnnotationMember Complete$AtomicAnswer Complete$AtomicKind "
@@ -175,8 +176,10 @@ def fixture(base):
         if kind == "scala":
             files.update({name + ".tasty": b"tasty" for name in
                           ("ScalaComplete", "ScalaFacade", "ScalaRequests")})
+        inventory_members[kind] = sorted(name for name in files if not name.endswith('/') and name != 'META-INF/MANIFEST.MF')
         write_zip(path, files)
         managed[kind] = sha(path.read_bytes())
+    save_json(jars / 'product-inventory.json', {'members': inventory_members})
     save_json(base / "managed.json", managed)
     return source
 

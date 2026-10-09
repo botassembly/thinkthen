@@ -1,14 +1,14 @@
 'use strict';
 // Load the native addon for this platform and chip. build-addon.sh places it
-// beside this file, and the published package carries all four (ticket 0128).
+// beside this file, and the generated inventory selects the bundled asset.
 const { join } = require('node:path');
 
-const SHIPPED = ['linux-x64', 'linux-arm64', 'darwin-x64', 'darwin-arm64'];
+const assets = require('./native-platforms.json');
 const pair = `${process.platform}-${process.arch}`;
-if (!SHIPPED.includes(pair)) {
-  throw new Error(`thinkthen: no native addon for ${pair}; this package ships linux-x64, linux-arm64, darwin-x64, and darwin-arm64`);
+if (!Object.hasOwn(assets, pair)) {
+  throw new Error(`thinkthen: no native addon for ${pair}; this package ships ${Object.keys(assets).join(', ')}`);
 }
-const file = join(__dirname, `thinkthen-${pair}.node`);
+const file = join(__dirname, assets[pair]);
 try {
   module.exports = require(file);
 } catch (error) {
