@@ -39,3 +39,7 @@ Do the bounded package design before the affected host migration, using the exis
 Own the final artifact path as well as family archives. Name the actual changes to `sdlc/scripts/release-registry.py`, `sdlc/scripts/release-workflow`, their existing self-tests, artifact collection in `.github/workflows/release.yml`, and each affected installed-consumer route before implementation. Current registry assembly selects only the existing JVM jars, and current workflow validation permits Objective-C artifacts only on Linux; both must follow the new native inventory and Apple-only ruling. A passing development archive cannot substitute for an install of the final registry-format artifact with its declared dependencies and native assets. Prove supported target selection without a checkout, warm loader state or manual library paths. Check clear unsupported-target refusal and absent/wrong native assets in the existing installed checks.
 
 0383–0385 consume these final packages for Windows qualification. Local workflow edits and assembly tests do not authorize dispatch, a candidate or publication. Native platform evidence remains required before the corresponding support claim is made.
+
+## Progress
+
+- 2026-10-09 started
