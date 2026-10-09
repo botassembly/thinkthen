@@ -1,4 +1,5 @@
 const std = @import("std");
+pub const session = @import("session.zig");
 pub const complete = @import("complete.zig");
 pub const native = @import("native.zig");
 pub const c = @cImport({

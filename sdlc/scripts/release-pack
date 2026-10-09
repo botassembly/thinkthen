@@ -278,7 +278,9 @@ zig)
 		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
 			libraries/zig/build.zig.zon "$folder/"
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/thinkthen.zig libraries/zig/src/complete.zig libraries/zig/src/native.zig "$folder/src/"
+		cp libraries/zig/src/thinkthen.zig libraries/zig/src/complete.zig libraries/zig/src/native.zig libraries/zig/src/session.zig "$folder/src/"
+		mkdir -p "$folder/native/$TARGET"
+		tar -xzf "$OUT/$c_name" -C "$folder/native/$TARGET" ./include/thinkthen.h ./lib/libthinkthen.a
 		;;
 php)
 		mkdir -p "$folder/examples" "$folder/src/complete" "$folder/src/native"
@@ -366,7 +368,7 @@ cobol)
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
 			# The wrapper's C header is copied from the one C header.
-			case $relative in Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
+			case $relative in native/*) continue ;; Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
 			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$member" | cmp -s - "$copied" || {
 				echo "release-pack: $1 source differs from archived commit: $relative" >&2; exit 1;
 			}

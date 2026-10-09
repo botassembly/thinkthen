@@ -37,12 +37,13 @@ fn headerVersionMatches(header: []const u8) bool {
     return true;
 }
 
-/// The caller supplies the absolute path of an unpacked matching C release archive.
+/// Packaged callers use the bundled native root; source builders may override it.
 /// This checks the header and layout; it cannot prove an opaque library's runtime ABI identity.
-pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Build.Module, archive: []const u8, mode: LinkMode) void {
+pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Build.Module, native_override: ?[]const u8, mode: LinkMode) void {
     const target = exe.root_module.resolved_target.?.result;
     if (target.os.tag != .linux or target.cpu.arch != .x86_64 or target.abi != .gnu)
         @panic("thinkthen supports only x86_64-linux-gnu in this rehearsal");
+    const archive = native_override orelse module.root_source_file.?.dirname().path(b, "../native/x86_64-unknown-linux-gnu").getPath(b);
     if (!std.fs.path.isAbsolute(archive)) @panic("-Dnative must name an absolute unpacked C archive directory");
     const header = b.pathJoin(&.{ archive, "include/thinkthen.h" });
     const bytes = std.fs.cwd().readFileAlloc(b.allocator, header, std.math.maxInt(usize)) catch @panic("thinkthen C header missing or unreadable");
@@ -83,8 +84,9 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     _ = b.addModule("thinkthen", .{ .root_source_file = b.path("src/thinkthen.zig"), .target = target, .optimize = optimize });
     const archive = b.option([]const u8, "native", "Absolute path to unpacked matching C archive");
-    if (archive) |native| {
-        const mode = b.option(LinkMode, "link-mode", "shared (default) or static C library") orelse .shared;
+    {
+        const native = archive;
+        const mode = b.option(LinkMode, "link-mode", "shared (default) or static C library") orelse .static;
         const exe = b.addExecutable(.{ .name = "thinkthen-example", .root_module = b.createModule(.{ .root_source_file = b.path("examples/decide.zig"), .target = target, .optimize = optimize }) });
         exe.root_module.addImport("thinkthen", b.modules.get("thinkthen").?);
         linkNative(b, exe, b.modules.get("thinkthen").?, native, mode);

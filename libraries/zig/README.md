@@ -2,6 +2,18 @@
 
 This Zig 0.15.2 source module wraps the ThinkThen C library. The package gate proves Ubuntu 24.04 x86_64 glibc with a separately installed native shared or static C library. Static-C linkage does not make the executable fully static. Static mode builds the consumer with LLVM and LLD, because Zig 0.15.2's own linker drops the 16-byte alignment of Rust's constants, and the flags go away once Zig fixes it (`sdlc/issues/2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md`). Other targets and Zig versions remain unproved.
 
+## Recommended development session API
+
+The unpublished 0.2 package bundles the generated C header and static engine under `native/x86_64-unknown-linux-gnu`. A downstream build calls `linkNative(b, exe, module, null, .static)`; the module's dependency root supplies the native files. Installation and the first call need no Rust build or manual library path. Source developers may still pass an explicit native root.
+
+`thinkthen.session` provides the ten named functions over native sessions. Pass Zig values for explicit question and input descriptors; the facade serializes them internally and Rust admits the request. `Session.read()` returns `.pending`, `.end` or an owned `.packet`; `cancel`, `finish`, `push` and `deinit` use native session ownership. Immediate refusals use Zig error unions and the borrowed `session.message()` diagnostic. Terminal packets retain typed failures and final facts independently of immediate errors.
+
+A packet borrows the complete Rust-generated header graph through `packet.view`; all known fields and unknown extension entries remain accessible without a result JSON parser. `packet.terminal()`, `packet.facts()` and `packet.failure()` return optionals. `session.presence(field)` distinguishes missing, null and value; `session.optional(field)` is for fields that do not allow null. `session.bytes` exposes counted UTF-8. Free each packet with `deinit()` after all nested reads. Packets survive session and engine destruction.
+
+`Tests/session.zig` and `Tests/session-build.zig` demonstrate an installed typed caller. The focused package check is `python3 libraries/zig/Tests/installed-session.py PATH_TO_ZIG_ARCHIVE`. It builds one downstream consumer and sends one synthetic loopback request. The older executable APIs and reachable preparation helpers remain until their replacement passes the shared release cases.
+
+## Build from source
+
 Build the matching native library from the same checkout, then supply an absolute native root to Zig:
 
 ```sh
