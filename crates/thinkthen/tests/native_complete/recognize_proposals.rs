@@ -117,6 +117,7 @@ fn judged_proposals_retain_declines_duplicate_winners_and_under_cut_seed_facts()
     std::fs::remove_dir_all(cache).unwrap();
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_details_show_the_same_proposal_facts_without_changing_bare_output_or_replay_keys() {
     use super::child::ChildEnvironment as _;

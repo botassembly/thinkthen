@@ -4,6 +4,8 @@ A fresh read-only reviewer accepted source 6ecca124, including the public API an
 
 ## What the build taught us
 
+The later combined functional run passed all default Rust cases but found the CLI proposal test starting a binary absent from the library-only build. The test now uses the existing CLI feature guard; its assertions stay intact. Fresh review accepted 0112a8e23. Both profile registrations, the retained CLI case, the library-native proposal case, supported Clippy, policy, formatting and the one-line source adjustment pass. A command test belongs to the command feature even when it sits beside native API cases.
+
 Inspect actual readers before assuming additive result fields are tolerated. The existing Python reader was strict; a small typed compatibility repair and an installed-wheel import check make the new result usable without expanding the binding migration. Keep probability capture in settlement and expose borrowed facts to callers.
 
 The change starts from `f2402855e`. PM's 2026-10-09 scope ruling makes proposal probabilities canonical Rust facts and includes supplied seeds. The Rust settlement captures original span probability once, records actual selected kind, edge bounds and strength, and tracks the winning proposal through duplicate resolution and the final cut. CLI details serialize the same answer. Bare recognition values, boundary-only values, model requests and cache identities retain their behavior.
