@@ -5,6 +5,53 @@ cd -- "$(dirname -- "$0")"
 . ../../sdlc/scripts/scratch.sh
 scratch_dir work
 : > "$work/empty.jsonl"
+repo=$(CDPATH= cd -- ../.. && pwd)
+case ${CARGO_TARGET_DIR:-target} in
+  /*) native_bin="${CARGO_TARGET_DIR}/debug/thinkthen" ;;
+  *) native_bin="$repo/${CARGO_TARGET_DIR:-target}/debug/thinkthen" ;;
+esac
+
+# Exercise the current native producer, rather than the historical saved
+# details whose question presentation predates authored on pointers.
+env -i PATH="$PATH" HOME="$work/home" XDG_CONFIG_HOME="$work/config" \
+  XDG_CACHE_HOME="$work/cache" XDG_STATE_HOME="$work/state" \
+  "$native_bin" annotate \
+  ../../demos/14-grade-a-batch/checks.json --jsonl --batch 1 --details \
+  --replay ../../demos/14-grade-a-batch/recording \
+  --input ../../demos/14-grade-a-batch/cases.jsonl > "$work/native.jsonl"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep.jq "$work/native.jsonl" \
+  | jq -c '.questions.correct | {rows,labeled,cut:.pick.cut,accuracy:.pick.accuracy,f1:.pick.f1}' \
+  > "$work/native-summary.json"
+printf '%s\n' '{"rows":6,"labeled":6,"cut":0.6,"accuracy":1,"f1":1}' \
+  > "$work/native-expected.json"
+cmp "$work/native-expected.json" "$work/native-summary.json"
+
+# Reuse captured native questions for declarations, numeric batches and
+# structured readings; the report still depends on the replay's stored odds.
+jq -c --slurpfile native ../../libraries/python/tests/fixtures/complete.json '
+  .answers.correct.question = $native[0].native_presentation.questions[4]
+' "$work/native.jsonl" > "$work/presentation.jsonl"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep.jq "$work/presentation.jsonl" > "$work/presentation-report.json"
+jq -c --slurpfile native ../../libraries/python/tests/fixtures/complete.json '
+  .answers.correct.question = ($native[0].results[]
+    | select(.type=="DecideResult") | .result.question)
+' "$work/native.jsonl" > "$work/readings.jsonl"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep.jq "$work/readings.jsonl" > "$work/readings-report.json"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep.jq "$work/native.jsonl" > "$work/native-report.json"
+cmp "$work/native-report.json" "$work/presentation-report.json"
+cmp "$work/native-report.json" "$work/readings-report.json"
+jq -c --slurpfile native ../../libraries/python/tests/fixtures/complete.json '
+  $native[0].native_presentation.questions[0] as $authored
+  | .answers.correct.question += {model:$authored.model,profile:$authored.profile,
+                                  batch:$authored.batch,on:$authored.on}
+' "$work/presentation.jsonl" > "$work/authored.jsonl"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep.jq "$work/authored.jsonl" > "$work/authored-report.json"
+cmp "$work/native-report.json" "$work/authored-report.json"
 
 jq -n -c '
   def row($id; $truth; $billing; $urgent):
@@ -86,6 +133,22 @@ expect_failure() {
     exit 1
   fi
 }
+
+# Malformed semantic fields and recognized presentation types retain one
+# data-free refusal. Declarations are structural here; Rust owns their grammar.
+for change in \
+  '.text=null' '.text=7' '.text=""' '.text="private\n"' \
+  '.true=7' '.false=false' '.true=""' '.false="private\n"' \
+  '.options=[]' '.label_details=[]' '.private="private"' \
+  '.on=null' '.on="private"' '.on=[7]' '.model=null' '.profile=7' \
+  '.batch=null' '.batch=0' '.batch=1.5' '.batch="private"' \
+  '.name=7' '.name="Invalid"' '.wording_version=null' '.wording_version=0' \
+  '.wording_version=1.5' '.wording_version=4294967296' \
+  '.item_schema=null' '.context_schema=[]'; do
+  jq -c ".answers.correct.question |= ($change)" "$work/presentation.jsonl" > "$work/bad.jsonl"
+  expect_failure "decision-question $change" 'sweep: mapped decision question is malformed' \
+    -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+done
 
 expect_failure tag-no-truth 'sweep: tag rows require --arg truth POINTER' \
   -n -f sweep.jq "$work/tag.jsonl"
