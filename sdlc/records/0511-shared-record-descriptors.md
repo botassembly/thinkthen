@@ -38,4 +38,6 @@ Integration with the rewritten ticket plan retained the accepted source. The 16 
 
 ## What the build taught us
 
+The later combined lint stopped because the SQLite source ceiling still counted the deleted grammar copy. The existing ratchet tool measures 5091 non-blank lines; the ceiling now matches that smaller source. This changes check metadata only. The stopped lint did not run the test gate, so it supplies no full-suite pass.
+
 Keep lexical compatibility at the public Request edge and delegate semantic validation to existing typed constructors and composition. Retain host authority separately from engine rules. Preserve existing proof while its exercised paths are unchanged, and recheck the affected consumer when a source correction changes its behavior. Measure allocated storage before a build; process-named harness homes provide a narrow cleanup boundary without discarding warm artifacts.
