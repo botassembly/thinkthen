@@ -1,6 +1,6 @@
 # 0500: Move PostgreSQL onto the shared request contract
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 Reviews: revision 9d6e7798c077c88fd48e69591c409c4c605167e8, accept
 
 Reviews: revision 17d9c9b3b6d27b7ee512a607974acf0fd846d1ff, accept
+
+Landed: ed7b77d
 
 ## Outcome
 
