@@ -61,7 +61,7 @@ try:
   one_portable_request(bodies)
   print('C# portable bulk: five typed rows, one exact packed body and one counted send PASS',flush=True)
  else:
-  assert b'INSTALLED_JSON_ENVELOPE_PASS' in result.stdout and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,result.stdout
+  assert b'INSTALLED_TYPED_RESULT_PASS' in result.stdout and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,result.stdout
   assert collections.Counter(server.arrivals)==collections.Counter(['consumer-csharp','consumer-json']) and server.attempts==server.connections==2,counted
   parsed=[json.loads(line) for line in bodies]
   expected=[{'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':f'The text is "{record}". Is it?'}},'state':'Each question quotes the text it asks about.'} for record in ('consumer-csharp','consumer-json')]
