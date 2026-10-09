@@ -501,3 +501,22 @@ fn read_source(
         None => crate::read_inputs(&source.paths, options),
     }
 }
+
+impl RequestItem {
+    /// Compose a decoded record through the shared Request projection path.
+    /// The caller retains source identity and supplies its admitted reading controls.
+    /// # Errors
+    /// Refuses invalid originals, projections, context or image evidence.
+    pub fn compose_record(
+        &self,
+        reading: &RecordReading,
+    ) -> Result<RecordInput<QuestionInput>, Error> {
+        let image_reading = RecordReading::new(&[], None, None)?;
+        let reading = if self.original.is_none() {
+            &image_reading
+        } else {
+            reading
+        };
+        compose_item(self, reading, None, &mut AttachmentBudget::new(None))
+    }
+}

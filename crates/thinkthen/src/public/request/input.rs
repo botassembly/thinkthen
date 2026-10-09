@@ -373,3 +373,13 @@ impl std::fmt::Debug for RequestItem {
         f.write_str("RequestItem(<withheld>)")
     }
 }
+
+impl RequestItem {
+    /// Decode a complete-call record descriptor without reading files.
+    /// This retains the existing text, document and JSON envelope grammar.
+    /// # Errors
+    /// Returns the existing Usage diagnostics for malformed descriptors.
+    pub fn from_record_descriptor(source: &str) -> Result<Self, crate::Error> {
+        super::transport::record_descriptor(source)
+    }
+}

@@ -3,8 +3,7 @@ use super::{defect, usage};
 use serde_json::{Value, value::RawValue};
 use std::collections::BTreeMap;
 use thinkthen::{
-    Error, ImageEvidence, ImageInput, ImageMedia, InputEvidence, InputReaderOptions, ObjectContext,
-    QuestionInput, RawRecord, RecordContext, RecordInput, RecordOption, RecordOptions,
+    Error, InputEvidence, InputReaderOptions, QuestionInput, RawRecord, RecordInput,
     RecordReading, SourceLocation,
 };
 
@@ -218,130 +217,24 @@ fn compose(
     reading: &RecordReading,
     native_request: bool,
 ) -> Result<RecordInput<QuestionInput>, Error> {
-    let fields = fields(raw)?;
+    let mut fields = fields(raw)?;
     if let Some(error) = fields.get("read_error") {
         if fields.len() != 1 {
             return Err(usage("a terminal reader error has no record fields"));
         }
         return Err(super::reader_error::decode(error.get())?);
     }
-    if fields.keys().any(|k| {
-        !(matches!(
-            k.as_str(),
-            "text"
-                | "document"
-                | "json_text"
-                | "json"
-                | "context"
-                | "options"
-                | "images"
-                | "source"
-        ) || native_request && matches!(k.as_str(), "examples" | "seed_spans"))
-    }) || ["text", "json", "document", "json_text"]
-        .iter()
-        .filter(|key| fields.contains_key(**key))
-        .count()
-        > 1
-    {
+    if !native_request && (fields.contains_key("examples") || fields.contains_key("seed_spans")) {
         return Err(usage("invalid complete record descriptor"));
     }
-    let images = fields
-        .get("images")
-        .map(|v| images(v.get()))
-        .transpose()?
-        .unwrap_or_default();
-    let original = if let Some(json) = fields.get("json_text") {
-        let text =
-            serde_json::from_str::<String>(json.get()).map_err(|_| usage("JSON text is text"))?;
-        Some(RawRecord::json(&text)?)
-    } else if let Some(document) = fields.get("document") {
-        let text = serde_json::from_str::<String>(document.get())
-            .map_err(|_| usage("document is text"))?;
-        Some(RawRecord::json(&text).or_else(|_| RawRecord::text(&text))?)
-    } else {
-        match (fields.get("text"), fields.get("json")) {
-            (Some(text), None) => Some(RawRecord::text(
-                &serde_json::from_str::<String>(text.get())
-                    .map_err(|_| usage("record text is literal text"))?,
-            )?),
-            (None, Some(json)) => Some(RawRecord::json(json.get())?),
-            (None, None) => None,
-            _ => return Err(usage("one original per record")),
-        }
-    };
-    let composed = match original {
-        Some(original) => {
-            let record = reading.compose(original)?;
-            let evidence = if !fields.contains_key("images") {
-                record.original
-            } else {
-                record.original.with_images(images)?
-            };
-            RecordInput {
-                seed_spans: record.seed_spans,
-                examples: record.examples,
-                original: evidence.question_input(),
-                context: record.context,
-                options: record.options,
-            }
-        }
-        None => RecordInput {
-            seed_spans: None,
-            examples: None,
-            original: QuestionInput::Images(ImageEvidence::new(None, images)?),
-            context: None,
-            options: None,
-        },
-    };
-    supplements(composed, &fields)
-}
-fn supplements(
-    mut composed: RecordInput<QuestionInput>,
-    fields: &Fields,
-) -> Result<RecordInput<QuestionInput>, Error> {
-    if let Some(source) = fields.get("source") {
-        composed.original = located(composed.original, source)?;
-    }
-    if let Some(value) = fields.get("context") {
-        composed.context = Some(context(value)?);
-    }
-    if let Some(value) = fields.get("options") {
-        composed.options = Some(options(value)?);
-    }
-    if let Some(value) = fields.get("seed_spans") {
-        composed.seed_spans = Some(
-            serde_json::from_str(value.get())
-                .map_err(|_| usage("seed spans is an ordered array"))?,
-        );
-    }
-    if let Some(value) = fields.get("examples") {
-        composed.examples = Some(
-            serde_json::from_str(value.get()).map_err(|_| usage("examples is an ordered array"))?,
-        );
+    let source = fields.remove("source");
+    let descriptor = serde_json::to_string(&fields).map_err(|_| defect())?;
+    let item = thinkthen::RequestItem::from_record_descriptor(&descriptor)?;
+    let mut composed = item.compose_record(reading)?;
+    if let Some(source) = source {
+        composed.original = located(composed.original, &source)?;
     }
     Ok(composed)
-}
-fn images(source: &str) -> Result<Vec<ImageInput>, Error> {
-    let images: Vec<Value> =
-        serde_json::from_str(source).map_err(|_| usage("images is an explicit ordered array"))?;
-    images
-        .into_iter()
-        .map(|value| {
-            let media = match value.get("media").and_then(Value::as_str) {
-                Some("image/png") => ImageMedia::Png,
-                Some("image/jpeg") => ImageMedia::Jpeg,
-                _ => return Err(usage("image media is image/png or image/jpeg")),
-            };
-            let bytes = serde_json::from_value::<Vec<u8>>(
-                value
-                    .get("bytes")
-                    .cloned()
-                    .ok_or_else(|| usage("image requires compressed bytes"))?,
-            )
-            .map_err(|_| usage("image bytes is an integer array"))?;
-            ImageInput::new(media, bytes)
-        })
-        .collect()
 }
 
 fn fields(source: &str) -> Result<Fields, Error> {
@@ -414,42 +307,6 @@ fn located(original: QuestionInput, source: &RawValue) -> Result<QuestionInput, 
         _ => return Err(usage("image sources have no text line coordinates")),
     })
 }
-fn context(context: &RawValue) -> Result<RecordContext, Error> {
-    let value: Value =
-        serde_json::from_str(context.get()).map_err(|_| usage("invalid per-record context"))?;
-    Ok(match value {
-        Value::String(text) => RecordContext::Text(text),
-        Value::Object(_) => {
-            RecordContext::Object(ObjectContext::new(&RawRecord::json(context.get())?)?)
-        }
-        _ => RecordContext::Object(ObjectContext::new(&RawRecord::json(context.get())?)?),
-    })
-}
-fn options(options: &RawValue) -> Result<RecordOptions, Error> {
-    let values: Vec<Value> =
-        serde_json::from_str(options.get()).map_err(|_| usage("options is an ordered array"))?;
-    let options = values
-        .into_iter()
-        .map(|v| {
-            let (name, description) = if let Some(name) = v.as_str() {
-                (name.to_owned(), None)
-            } else {
-                (
-                    v.get("name")
-                        .and_then(Value::as_str)
-                        .ok_or_else(|| usage("option requires a name"))?
-                        .to_owned(),
-                    v.get("description")
-                        .map(|v| thinkthen::Description::from_json(&v.to_string()))
-                        .transpose()?,
-                )
-            };
-            Ok(RecordOption { name, description })
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
-    RecordOptions::new(options)
-}
-
 fn context_schema(source: &str) -> Result<thinkthen::InputDeclaration, Error> {
     let question = thinkthen::Question::from_json(&format!(
         "{{\"decide\":\"Context declaration\",\"context_schema\":{source}}}"
