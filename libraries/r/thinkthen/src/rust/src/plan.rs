@@ -31,7 +31,7 @@ pub(crate) fn preview(
     render(planned)
 }
 
-fn render(plan: PlanEstimate) -> Crossed<List> {
+pub(crate) fn render(plan: PlanEstimate) -> Crossed<List> {
     let (lower, upper) = plan.estimated_input_tokens();
     let first_body = plan
         .first_body()

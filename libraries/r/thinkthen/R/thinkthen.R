@@ -176,6 +176,51 @@ tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completi
            error = function(e) .tt_usage("the question cannot be written as JSON"))
 }
 
+tt_usage <- function(message) {
+  stop(.tt_condition(paste("usage", "false", message, sep = "\u{1f}")))
+}
+
+.tt_local <- function(message) {
+  stop(.tt_condition(paste("local", "false", message, sep = "\u{1f}")))
+}
+
+# R's own interrupt, delivered for real: the guarded check consumed the
+# pending signal, so the process sends itself SIGINT and sleeps, and the
+# jump lands in R's own machinery with no Rust frame under it. If the
+# signal does not land, the synthetic condition below still stops the call.
+.tt_interrupt <- function() {
+  delivered <- FALSE
+  if (.Platform$OS.type == "unix") {
+    try(delivered <- tools::pskill(Sys.getpid(), 2L), silent = TRUE)
+    if (isTRUE(delivered)) Sys.sleep(0.1)
+  }
+  had_hook <- getOption("error")
+  if (!is.null(had_hook)) {
+    options(error = NULL)
+    on.exit(options(error = had_hook), add = TRUE)
+  }
+  stop(structure(class = c("interrupt", "condition"), list(message = "", call = NULL)))
+}
+
+# The one JSON writer: every string reaches jsonlite as UTF-8 under any
+# locale. Native bytes that are valid UTF-8 are UTF-8, latin1 converts, and
+# native bytes that are not valid UTF-8 are refused by name (R5-10).
+.tt_json <- function(value) {
+  utf8 <- function(text) {
+    if (!is.character(text) || !length(text)) return(text)
+    native <- Encoding(text) == "unknown" & !is.na(text)
+    if (any(native & !validUTF8(text))) {
+      .tt_usage("a text carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first")
+    }
+    Encoding(text)[native] <- "UTF-8"
+    enc2utf8(text)
+  }
+  held <- rapply(list(value), utf8, classes = "ANY", how = "replace")[[1L]]
+  tryCatch(as.character(jsonlite::toJSON(held, auto_unbox = TRUE, digits = NA,
+                                       na = "null", null = "null")),
+           error = function(e) .tt_usage("the question cannot be written as JSON"))
+}
+
 .tt_json_value <- function(value, what, top = FALSE) {
   if (is.null(value)) {
     if (top) .tt_usage(paste0(what, " must be text, an object, or an array"))
@@ -768,54 +813,14 @@ tt_details <- function(question, input, threshold = NULL,
 # The counters of the engine in use.
 tt_usage <- function() jsonlite::parse_json(.tt_call(tt_usage_counters()))
 
-#' Select settings for the R session's engine
-#'
-#' NULL retains environment selection. Equal settings can be repeated.
-#' Changing settings requires a new R session. Rust captures named keys.
-#' @param backend One backend name or NULL. Use the full keyword name.
-#' @return Invisibly returns NULL.
-#' @export
 tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
-                      max_requests_total = NULL,
-                      max_request_bytes = NULL,
+                      max_requests_total = NULL, max_request_bytes = NULL,
                       cache = NULL, timeout = NULL, max_retries = NULL,
-                      record = NULL, replay = NULL, profile = NULL, batch = NULL, ..., backend = NULL, refresh_cache = FALSE) {
+                      record = NULL, replay = NULL, profile = NULL, batch = NULL,
+                      ..., backend = NULL, refresh_cache = FALSE) {
   if (length(list(...))) .tt_unknown(...)
-  string <- function(x) is.null(x) || (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x))
-  whole <- function(x) is.null(x) || (is.numeric(x) && is.null(attr(x, "class")) &&
-    length(x) == 1L && !is.na(x) && x == round(x))
-  if (!is.null(backend) && !(is.character(backend) && length(backend) == 1L && !is.na(backend))) {
-    .tt_usage("backend is one string")
-  }
-  checks <- list(base_url = string(base_url), model = string(model),
-                 throttle = whole(throttle), max_requests = whole(max_requests),
-                 max_requests_total = whole(max_requests_total),
-                 max_request_bytes = whole(max_request_bytes),
-                 cache = identical(cache, FALSE) || string(cache),
-                 timeout = whole(timeout), max_retries = whole(max_retries),
-                 record = string(record), replay = string(replay), profile = string(profile),
-                 batch = .tt_batch_valid(batch))
-  refused <- names(checks)[!unlist(checks)]
-  if (length(refused)) {
-    .tt_usage(paste0(refused[[1L]], " is one string, one whole number, or FALSE for cache"))
-  }
   .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_requests_total,
-                         max_request_bytes, cache,
-                         timeout, max_retries, record, replay, profile, batch, backend, refresh_cache))
+                        max_request_bytes, cache, timeout, max_retries, record,
+                        replay, profile, batch, backend, refresh_cache))
   invisible(NULL)
-}
-
-print.thinkthen_question <- function(x, ...) {
-  members <- if (length(x$members)) paste0(" over ", length(x$members), " members") else ""
-  shown <- if (is.character(x$text) && length(x$text) == 1L) x$text else "<structured text>"
-  cat("<thinkthen ", x$kind, ": ", shown, members, ">\n", sep = "")
-  invisible(x)
-}
-
-# Explicit native reader for every JSON question grammar; locations stay beside values.
-tt_files <- function(question, paths, unit = "line", window = NULL, deadline_ms = NULL) {
-  source <- list(paths = as.list(paths), unit = unit)
-  if (!is.null(window)) source$window <- window
-  native <- .tt_call(tt_source_files(.tt_json(question), .tt_json(source), deadline_ms))
-  .tt_result(native$value, native)
 }

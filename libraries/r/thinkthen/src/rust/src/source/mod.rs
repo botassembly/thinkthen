@@ -29,6 +29,10 @@ pub(crate) struct Selection {
 }
 
 impl Selection {
+    #[allow(
+        dead_code,
+        reason = "other hosts still use this shared compatibility conversion"
+    )]
     pub(crate) fn request_source(&self) -> thinkthen::RequestSource {
         thinkthen::RequestSource {
             paths: self.paths.iter().map(std::path::PathBuf::from).collect(),
@@ -82,6 +86,10 @@ pub(crate) fn execute(
     execute_with_definition(engine, verb, (question, None), selection, options, detailed)
 }
 
+#[allow(
+    dead_code,
+    reason = "C still calls this shared prepared compatibility entry"
+)]
 pub(crate) fn execute_prepared(
     engine: &Engine,
     verb: &str,
