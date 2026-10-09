@@ -48,13 +48,7 @@ fn input_schema(tool: Tool) -> Value {
         .cloned()
         .unwrap_or_else(|| json!({}));
     if let Some(map) = options.get_mut("properties").and_then(Value::as_object_mut) {
-        map.retain(|name, _| {
-            tool.allows_option(name)
-                && !matches!(
-                    name.as_str(),
-                    "details" | "examples" | "examples_field" | "seed_spans" | "seed_spans_field"
-                )
-        });
+        map.retain(|name, _| tool.allows_option(name) && name != "details");
         let field = map.get("field").cloned().unwrap_or_else(|| json!({}));
         map.insert("field".into(), json!({"oneOf":[{"type":"string"},field]}));
         map.insert(
@@ -113,6 +107,8 @@ fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
         "text":{"type":"string"},"json":{},"source":source_schema(true, false, canonical),
         "context":canonical.pointer("/$defs/RequestItem/properties/context"),
         "options":{"$ref":"#/$defs/Authored_options"},
+        "examples":canonical.pointer("/$defs/RequestItem/properties/examples"),
+        "seed_spans":canonical.pointer("/$defs/RequestItem/properties/seed_spans"),
         "images":{"type":"array","maxItems":crate::MAX_IMAGES,"items":{"oneOf":[
             {"type":"string","minLength":1},
             {"type":"object","additionalProperties":false,"required":["path","media"],"properties":{
@@ -133,6 +129,10 @@ fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
         }
         if !tool.allows_option("options_field") {
             map.remove("options");
+        }
+        if !tool.allows_option("examples") {
+            map.remove("examples");
+            map.remove("seed_spans");
         }
     }
     if !tool.images()

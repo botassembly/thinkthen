@@ -66,7 +66,7 @@ accompany evidence, retain duplicates, and may not mix with records/source or
 field pointers. Only decide/choose/score admit images; others refuse before
 file content or transport. There is no network fetching or implicit discovery.
 
-MCP maps its established aliases into the shared typed Request contract. The generated canonical request schema supplies ordinary structural fields; shared admission supplies function applicability. Protocol controls and carrier aliases remain at the stdio edge. Recognition stage context and stage model controls from 0478 and 0479 remain outside this adopted surface until their owning changes land.
+MCP maps its established aliases into the shared typed Request contract. The generated canonical request schema supplies ordinary structural fields; shared admission supplies function applicability. Protocol controls and carrier aliases remain at the stdio edge. Recognition controls, shared and per-item examples and seed spans use the native Request owners. MCP always returns complete results, so the CLI output control `details` is excluded.
 
 `inputs` is a finite array of explicit native descriptors. Each descriptor supplies exactly one `text`, `json` (including JSON null), or `source`, or image-only `images`. Its source uses whole-file text reading and must yield exactly one item. Optional `context` and replacement choose `options` stay separate from evidence. Explicit descriptor context/options conflict with their corresponding projection pointers. Absent context uses shared fallback; empty text suppresses it; null or a mismatched declared type refuses natively. Existing arbitrary `records` objects retain their original meaning.
 

@@ -3,7 +3,7 @@ use super::{admission::Invocation, inputs::Descriptor};
 use crate::transport::{TransportAttachmentLimit, TransportDescriptor};
 use crate::{
     AdmittedRequest, Error, Request, RequestArguments, RequestCall, RequestFeed, RequestInput,
-    RequestItem, RequestOptions, RequestOriginal, RequestQuestion, RequestSource,
+    RequestItem, RequestOriginal, RequestQuestion, RequestSource,
 };
 
 impl Invocation {
@@ -38,7 +38,7 @@ impl Invocation {
         let arguments = RequestArguments {
             question,
             input,
-            options: a.options.native()?,
+            options: a.options.native.clone(),
         };
         let call = match self.tool {
             super::tools::Tool::Decide => RequestCall::Decide(arguments),
@@ -175,29 +175,6 @@ impl super::admission::Source {
         }
     }
 }
-impl super::admission::Options {
-    fn native(&self) -> Result<RequestOptions, Error> {
-        Ok(RequestOptions {
-            model: self.model.clone(),
-            context: self.context.clone(),
-            field: self
-                .field
-                .as_ref()
-                .map(|fields| fields.values().map(str::to_owned).collect()),
-            context_field: self.context_field.clone(),
-            options_field: self.options_field.clone(),
-            threshold: self.threshold.clone(),
-            batch: self.batch.clone(),
-            attempts: self.attempts,
-            deadline_ms: self.deadline_ms,
-            max_requests_total: self.max_requests_total,
-            top: self.top,
-            none: self.none,
-            files_only: self.files_only,
-            ..RequestOptions::default()
-        })
-    }
-}
 impl Descriptor {
     fn native(&self) -> Result<TransportDescriptor, Error> {
         if usize::from(self.text.is_some())
@@ -221,20 +198,21 @@ impl Descriptor {
             original,
             self.images.iter().map(|image| image.native()).collect(),
         );
-        if let Some(raw) = &self.context {
-            let value = crate::core::Json::parse(raw.get()).map_err(Error::refused)?;
-            item.context = Some(match value {
-                crate::core::Json::String(text) => crate::RecordContext::Text(text),
-                crate::core::Json::Object(_) => crate::RecordContext::Object(
-                    crate::ObjectContext::new(&crate::RawRecord::json(raw.get())?)?,
-                ),
-                _ => {
-                    return Err(Error::usage(
-                        "the per-item context does not match context_schema",
-                    ));
-                }
-            });
-        }
+        let fields: std::collections::BTreeMap<_, _> = [
+            ("context", &self.context),
+            ("examples", &self.examples),
+            ("seed_spans", &self.seed_spans),
+        ]
+        .into_iter()
+        .filter_map(|(name, raw)| raw.as_ref().map(|raw| (name, raw)))
+        .collect();
+        let json = serde_json::to_string(&fields)
+            .map_err(|_| Error::usage("invalid per-item controls"))?;
+        let controls: RequestItem =
+            serde_json::from_str(&json).map_err(|_| Error::usage("invalid per-item controls"))?;
+        item.context = controls.context;
+        item.examples = controls.examples;
+        item.seed_spans = controls.seed_spans;
         if let Some(raw) = &self.options {
             item.options = Some(crate::RecordOptions::project(raw.get(), "")?);
         }
