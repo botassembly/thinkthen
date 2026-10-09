@@ -75,3 +75,11 @@ This repair builds from `545c64c4628d2dcf8d18f0527def1505a5008905` and rebases t
 All eight existing backend refusal cases pass after integration. Direct saved choose and tag question checks retain the exact rank sentence, exit 2, empty stdout and zero loopback connections. Strict library Clippy, offline policy, formatting and diff checks pass. Cargo uses two jobs under scope limits of 8 GiB memory and 1 GiB swap. Existing policy size warnings remain in larger files that this repair leaves unchanged. No full routine, parity, release, load or paid check runs.
 
 The formatter repair adds eight nonblank production Rust lines. Main's independent changes add 204 lines to the earlier 182341 proposal; the integrated measured source total is 182553 against main's 181631 ceiling. The branch proposes that exact total in `sdlc/ratchet.json`. Fresh reviewer acceptance must cover the integrated 922-line increase before landing. The integration preserves `request_session_with_surface` and the CLI execution arguments in the native session owner.
+
+## Library limit-kind export
+
+This repair builds from `1ca01f5be`. Library compilation without the CLI fails with five missing `LimitKind` errors because complete record admission and native diagnostics use a shared core export that still requires tests or the CLI. Removing that obsolete gate makes the existing crate-private pure type available to every binding. The repair adds no public API or host behavior and changes no binding files.
+
+The no-CLI library check fails before the repair and passes afterward. The check uses `--no-default-features --features bundled-sqlite --lib`; omitting both SQLite features separately triggers the crate's existing SQLite configuration refusal. Strict Clippy for the same library configuration, offline policy, formatting and diff checks pass. Cargo uses two jobs under scope limits of 8 GiB memory and 1 GiB swap. Existing policy size warnings concern unchanged files. No tests, full routine, parity, release, large-input or paid checks run.
+
+The repair removes one nonblank production Rust line. The root source ceiling falls to the measured total in `sdlc/ratchet.json`, with no spare allowance. The lesson is to remove adapter feature gates from shared exports when native execution gains library consumers; a library compilation check exposes a gate that test builds conceal.
