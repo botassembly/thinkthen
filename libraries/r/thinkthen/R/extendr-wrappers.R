@@ -77,6 +77,8 @@ tt_complete_batch_close <- function(batch) .Call(wrap__tt_complete_batch_close, 
 
 tt_complete_batch_cancel <- function(batch) .Call(wrap__tt_complete_batch_cancel, batch)
 
+tt_request_column <- function(values, function_name) .Call(wrap__tt_request_column, values, function_name)
+
 tt_request_admit <- function(request) .Call(wrap__tt_request_admit, request)
 
 tt_request_native <- function(request, deadline, completion) .Call(wrap__tt_request_native, request, deadline, completion)
