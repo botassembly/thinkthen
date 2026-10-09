@@ -6,6 +6,7 @@ Milestone: 0.2
 
 Depends on: 0511
 Depends on: 0513
+Depends on: 0501
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
@@ -22,13 +23,13 @@ A TypeScript or JavaScript caller installs the npm package, imports it as Common
 ## Evidence
 
 - Starts from: the [2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). The TypeScript adapter repeats admission and result construction, including settings, batch and deadline checks. Its hand-copied reader in `_complete.js` and `_complete.d.ts` lacked facts fields added by 0461 and 0468; 0520 repaired it as a narrow bridge and its reproduced refusal cases stay.
-- Keeps: Named addon methods, both module forms, async streams and cancellation. All ten functions and their input, result, error, cache and replay behavior. Missing stays distinct from null, and permitted unknown result fields are tolerated.
+- Keeps: Named addon methods, both module forms, async streams and cancellation. All ten functions and their input, result, error, cache and replay behavior. Missing stays distinct from null, and permitted unknown result fields are tolerated. Each existing platform's addon name and bytes, and the refusal sentence for a platform the package does not ship.
 - Changes: Meet the caller acceptance and the TypeScript section of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
   - the TypeScript target template from 0513's common graph, generating both the declarations and the actual runtime conversion;
   - conversion of JavaScript values into the shared Request, with no restated checks;
   - typed errors carrying Rust error kinds and facts;
   - Promise and async-stream execution, cancellation and close;
-  - the npm packaging slice under 0517's design: build the `win32-x64` addon beside the existing addons, accept it in `loader.js` and `package.json`, add a Windows Node pin, derive the addon list from 0501's inventory, and turn the `check.sh` `win32` refusal into a load case;
+  - the npm packaging slice under 0517's design: build the `win32-x64` addon beside the existing addons, accept it in `loader.js` and `package.json`, add a Windows Node pin, derive the addon list from 0501's inventory with no second literal addon count, and turn the `check.sh` `win32` refusal into a load case;
   - the package README, with a short old-to-new call mapping and Windows named as supported;
   - removal of the old public names and copied readers after installed parity.
   One public API is one coherent family of named typed calls. Claim `libraries/typescript/**` and its installed typed consumer cases, narrowed per slice before coding.
