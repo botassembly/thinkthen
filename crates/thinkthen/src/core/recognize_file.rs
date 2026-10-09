@@ -386,69 +386,6 @@ pub(crate) fn recognize_sha256(spec: &RecognizeSpec) -> Result<String, crate::co
     Ok(crate::core::digest::hex(&hasher.finalize()))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{RecognizeSpec, recognize_sha256};
-
-    #[test]
-    fn file_defaults_and_canonical_identity_are_stable_across_whitespace() {
-        let compact =
-            RecognizeSpec::parse(r#"{"version":1,"recognize":{"kinds":{"person":"A person."}}}"#)
-                .expect("file");
-        let spaced = RecognizeSpec::parse(
-            "{ \"version\": 1, \"recognize\": { \"kinds\": { \"person\": \"A person.\" } } }",
-        )
-        .expect("file");
-        assert_eq!(compact, spaced);
-        assert_eq!(compact.threshold.to_string(), "0.5");
-        assert_eq!(compact.relation_threshold.to_string(), "0.5");
-        assert_eq!(
-            crate::core::json_line(&compact).unwrap(),
-            "{\"verb\":\"recognize\",\"kinds\":{\"person\":\"A person.\"},\"threshold\":0.5,\"relation_threshold\":0.5}"
-        );
-        assert_eq!(
-            recognize_sha256(&compact).expect("digest"),
-            recognize_sha256(&spaced).expect("digest")
-        );
-        assert_eq!(
-            recognize_sha256(&compact).expect("digest"),
-            "0ad7c0a7f97a1e1a4f609448e61f95e69d448121cfcc6ec8c940627c170e201c"
-        );
-        let mut contextual = compact.clone();
-        contextual.stage_context.boundary = Some("private boundary".to_owned());
-        assert_eq!(
-            recognize_sha256(&compact).unwrap(),
-            recognize_sha256(&contextual).unwrap()
-        );
-        assert!(
-            crate::core::json_line(&contextual)
-                .unwrap()
-                .contains("private boundary")
-        );
-        assert!(!format!("{contextual:?}").contains("private boundary"));
-        let complete = RecognizeSpec::parse(r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}]},"threshold":0.6,"relation_threshold":0.7,"model":"ignored","profile":"measured-profile","on":"/body"}"#).unwrap();
-        assert_eq!(
-            crate::core::json_line(&complete).unwrap(),
-            r#"{"verb":"recognize","kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}],"threshold":0.6,"relation_threshold":0.7,"profile":"measured-profile"}"#
-        );
-        assert_eq!(
-            recognize_sha256(&complete).unwrap(),
-            "324488ea0ddc9dc5998e8e397c395967ee648757b2e0780f24661dade832a1c9"
-        );
-    }
-
-    #[test]
-    fn invalid_references_reserved_kinds_and_policy_members_are_refused() {
-        for text in [
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"relations":[{"name":"x","source":"person","target":"organization"}]}}"#,
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person.","Entity":null}}}"#,
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"depth":2}}"#,
-        ] {
-            assert!(RecognizeSpec::parse(text).is_err(), "{text}");
-        }
-    }
-}
-
 fn parse_mode(value: Option<&Json>) -> Result<crate::core::RecognitionMode, RecognizeConfigError> {
     value
         .map(|v| {
@@ -532,4 +469,67 @@ fn declaration(value: &Json) -> Result<&Json, RecognizeConfigError> {
         return Err(RecognizeConfigError::Shape);
     }
     Ok(recognize)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RecognizeSpec, recognize_sha256};
+
+    #[test]
+    fn file_defaults_and_canonical_identity_are_stable_across_whitespace() {
+        let compact =
+            RecognizeSpec::parse(r#"{"version":1,"recognize":{"kinds":{"person":"A person."}}}"#)
+                .expect("file");
+        let spaced = RecognizeSpec::parse(
+            "{ \"version\": 1, \"recognize\": { \"kinds\": { \"person\": \"A person.\" } } }",
+        )
+        .expect("file");
+        assert_eq!(compact, spaced);
+        assert_eq!(compact.threshold.to_string(), "0.5");
+        assert_eq!(compact.relation_threshold.to_string(), "0.5");
+        assert_eq!(
+            crate::core::json_line(&compact).unwrap(),
+            "{\"verb\":\"recognize\",\"kinds\":{\"person\":\"A person.\"},\"threshold\":0.5,\"relation_threshold\":0.5}"
+        );
+        assert_eq!(
+            recognize_sha256(&compact).expect("digest"),
+            recognize_sha256(&spaced).expect("digest")
+        );
+        assert_eq!(
+            recognize_sha256(&compact).expect("digest"),
+            "0ad7c0a7f97a1e1a4f609448e61f95e69d448121cfcc6ec8c940627c170e201c"
+        );
+        let mut contextual = compact.clone();
+        contextual.stage_context.boundary = Some("private boundary".to_owned());
+        assert_eq!(
+            recognize_sha256(&compact).unwrap(),
+            recognize_sha256(&contextual).unwrap()
+        );
+        assert!(
+            crate::core::json_line(&contextual)
+                .unwrap()
+                .contains("private boundary")
+        );
+        assert!(!format!("{contextual:?}").contains("private boundary"));
+        let complete = RecognizeSpec::parse(r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}]},"threshold":0.6,"relation_threshold":0.7,"model":"ignored","profile":"measured-profile","on":"/body"}"#).unwrap();
+        assert_eq!(
+            crate::core::json_line(&complete).unwrap(),
+            r#"{"verb":"recognize","kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}],"threshold":0.6,"relation_threshold":0.7,"profile":"measured-profile"}"#
+        );
+        assert_eq!(
+            recognize_sha256(&complete).unwrap(),
+            "324488ea0ddc9dc5998e8e397c395967ee648757b2e0780f24661dade832a1c9"
+        );
+    }
+
+    #[test]
+    fn invalid_references_reserved_kinds_and_policy_members_are_refused() {
+        for text in [
+            r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"relations":[{"name":"x","source":"person","target":"organization"}]}}"#,
+            r#"{"version":1,"recognize":{"kinds":{"person":"A person.","Entity":null}}}"#,
+            r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"depth":2}}"#,
+        ] {
+            assert!(RecognizeSpec::parse(text).is_err(), "{text}");
+        }
+    }
 }
