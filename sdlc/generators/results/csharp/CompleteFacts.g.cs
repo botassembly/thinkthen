@@ -143,11 +143,13 @@ public abstract class Observation : ResultObject
         Observation? result = null;
         if (document.TryGetProperty("observation_id", out var tagObservationObservationId))
         {
+            if (!(tagObservationObservationId.ValueKind == JsonValueKind.String)) throw new JsonException("Invalid result identity kind.");
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new ObservationObservationId(document);
         }
         if (document.TryGetProperty("failure_id", out var tagObservationFailureId))
         {
+            if (!(tagObservationFailureId.ValueKind == JsonValueKind.String)) throw new JsonException("Invalid result identity kind.");
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new ObservationFailureId(document);
         }
@@ -189,11 +191,13 @@ public abstract class RelationMember : ResultObject
         RelationMember? result = null;
         if (document.TryGetProperty("answer_id", out var tagRelationMemberAnswerId))
         {
+            if (!(tagRelationMemberAnswerId.ValueKind == JsonValueKind.String)) throw new JsonException("Invalid result identity kind.");
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new RelationMemberAnswerId(document);
         }
         if (document.TryGetProperty("failure_id", out var tagRelationMemberFailureId))
         {
+            if (!(tagRelationMemberFailureId.ValueKind == JsonValueKind.String)) throw new JsonException("Invalid result identity kind.");
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new RelationMemberFailureId(document);
         }

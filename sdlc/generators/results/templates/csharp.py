@@ -153,7 +153,7 @@ def render(definitions):
         kind = name(key)
         values = enum_values(schema)
         if 'variants' in schema:
-            chunks.append(render_union(kind, schema['variants']))
+            chunks.append(render_union(kind, schema['variants'], definitions))
         elif values:
             chunks.append(f'public readonly record struct {kind}(string Value)\n{{\n')
             for value in values:
@@ -179,7 +179,20 @@ def render(definitions):
     return ''.join(chunks)
 
 
-def render_union(kind, variants):
+def kind_test(schema, definitions, expression):
+    schema = shape(schema)
+    if '$ref' in schema:
+        return kind_test(definitions[schema['$ref'].removeprefix('#/$defs/')],
+                         definitions, expression)
+    kinds = {'string': ('String',), 'number': ('Number',), 'integer': ('Number',),
+             'object': ('Object',), 'array': ('Array',), 'boolean': ('True', 'False')}
+    if schema.get('type') not in kinds:
+        raise ValueError(f'C# target needs a JSON kind for discriminator {schema}')
+    return ' || '.join(f'{expression}.ValueKind == JsonValueKind.{kind}'
+                       for kind in kinds[schema['type']])
+
+
+def render_union(kind, variants, definitions):
     chunks = [f'public abstract class {kind} : ResultObject\n{{\n'
               f'    protected {kind}(JsonElement document) : base(document) {{ }}\n'
               f'    public static {kind} Read(JsonElement document)\n    {{\n'
@@ -189,8 +202,12 @@ def render_union(kind, variants):
         if mode == 'literal':
             test += (f' && tag{name(variant)}.ValueKind == JsonValueKind.String'
                      f' && tag{name(variant)}.GetString() == {quote(value)}')
-        chunks.append(f'        if ({test})\n        {{\n'
-                      '            if (result is not null) throw new JsonException("Ambiguous result variant.");\n'
+        chunks.append(f'        if ({test})\n        {{\n')
+        if mode == 'member':
+            expected = kind_test(definitions[variant]['properties'][member], definitions,
+                                 f'tag{name(variant)}')
+            chunks.append(f'            if (!({expected})) throw new JsonException("Invalid result identity kind.");\n')
+        chunks.append('            if (result is not null) throw new JsonException("Ambiguous result variant.");\n'
                       f'            result = new {name(variant)}(document);\n        }}\n')
     chunks.append('        return result ?? throw new JsonException("Unknown result variant.");\n'
                   '    }\n}\n\n')

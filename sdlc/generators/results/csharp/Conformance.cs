@@ -39,6 +39,36 @@ static class Conformance
         Check(JsonNode.DeepEquals(source, JsonNode.Parse(result.ToJson().GetRawText())), "variant owns JSON after disposal");
     }
 
+    static void IdentityVariants<T>(Func<JsonElement, T> read,
+        params (string Member, Func<T, string> Value)[] identities) where T : ResultObject
+    {
+        foreach (var (member, value) in identities)
+        {
+            var source = new JsonObject { [member] = "future identity", ["future"] = JsonNode.Parse("{\"nested\":[null,false,0]}") };
+            var result = Read(source, read);
+            Check(value(result) == "future identity", "string identity selects its typed variant without pattern validation");
+            Retains(source, result);
+            foreach (var text in new[] { "null", "0", "{}", "[]", "true" })
+            {
+                source[member] = JsonNode.Parse(text);
+                try { Read(source, read); throw new Exception("null or wrong JSON kind selected an identity variant"); }
+                catch (JsonException) { }
+                var other = identities.Single(identity => identity.Member != member).Member;
+                source[other] = "other identity";
+                try { Read(source, read); throw new Exception("invalid identity beside a valid identity accepted"); }
+                catch (JsonException) { }
+                source.Remove(other);
+            }
+        }
+        foreach (var source in new[] {
+            new JsonObject(), new JsonObject { ["future"] = new JsonObject() },
+            new JsonObject { [identities[0].Member] = "first", [identities[1].Member] = "second" } })
+        {
+            try { Read(source, read); throw new Exception("ambiguous or unknown identity accepted"); }
+            catch (JsonException) { }
+        }
+    }
+
     static void Variants(JsonObject fixture)
     {
         foreach (var row in fixture["results"]!.AsArray())
@@ -159,11 +189,12 @@ static class Conformance
                 _ => false }, "send budget denial tag and fields");
             Retains(source, denial);
         }
-        foreach (var text in new[] { "{}", "{\"observation_id\":\"a\",\"failure_id\":\"b\"}" })
-        {
-            try { Read(JsonNode.Parse(text)!, Observation.Read); throw new Exception("ambiguous or unknown identity accepted"); }
-            catch (JsonException) { }
-        }
+        IdentityVariants(Observation.Read,
+            ("observation_id", value => ((ObservationObservationId)value).ObservationId),
+            ("failure_id", value => ((ObservationFailureId)value).FailureId));
+        IdentityVariants(RelationMember.Read,
+            ("answer_id", value => ((RelationMemberAnswerId)value).AnswerId),
+            ("failure_id", value => ((RelationMemberFailureId)value).FailureId));
         try { Read(JsonNode.Parse("{\"kind\":\"future_kind\"}")!, Answer.Read); throw new Exception("unknown tag accepted as known variant"); }
         catch (JsonException) { }
     }
