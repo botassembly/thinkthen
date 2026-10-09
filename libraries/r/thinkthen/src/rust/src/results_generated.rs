@@ -1330,6 +1330,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("first_line", false, plain),
                 ("index", false, plain),
                 ("input", false, plain),
+                ("input_sources", false, |value| {
+                    array(value, |value| convert("completesessionInputSource", value))
+                }),
                 ("last_line", false, plain),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("position", false, |value| {
@@ -1807,6 +1810,16 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("single", false, plain),
                 ("source", true, plain),
                 ("target", true, plain),
+            ],
+        ),
+        "completesessionInputSource" => object(
+            value,
+            "SessionInputSource",
+            &[
+                ("index", true, plain),
+                ("source", true, |value| {
+                    convert("completePhysicalSource", value)
+                }),
             ],
         ),
         "completesourceRelationEndpoint" => object(
