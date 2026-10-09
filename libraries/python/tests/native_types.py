@@ -1,5 +1,16 @@
 """The installed public complete API's known fields compile as concrete types."""
 from thinkthen import complete as c
+from typing import assert_type
+import thinkthen as tt
+
+def retained_judge(judge: tt.Judge[bool | None], files: tt.FileSelection) -> None:
+    assert_type(judge('note'), tt.Call[bool | None])
+    assert_type(judge(files), tt.Call[list[tt.Located[bool | None]]])
+    stream = judge(iter(['note']))
+    assert_type(stream, tt.Stream[bool | None])
+    assert_type(iter(stream), tt.Stream[bool | None])
+    with stream as entered:
+        assert_type(entered, tt.Stream[bool | None])
 
 def known(engine:c.Engine, question:c.QuestionSource, inputs:c.Records|c.Files)->None:
     decision=engine.decide(question,inputs)

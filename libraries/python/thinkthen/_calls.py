@@ -38,7 +38,7 @@ def _original(value):
     return {'kind': 'text', 'text': value} if isinstance(value, str) else {'kind': 'json', 'value': _json(value)}
 
 
-def _item(value):
+def _item(value, verb=None):
     from .complete import Item
     if isinstance(value, Item):
         out = {'images': [{'kind': 'bytes', 'media': image.media,
@@ -51,6 +51,8 @@ def _item(value):
             out['options'] = [{'name': name, **({} if description is c.ABSENT else {'description': _json(description)})}
                               for name, description in value.options]
         return out
+    if verb == 'relate' and isinstance(value, tuple):
+        value = {'name': value[0], 'kind': value[1]}
     if isinstance(value, native.Entity):
         value = {'name': value.name, 'kind': value.kind}
     elif isinstance(value, native.RecognizedEntity):
@@ -125,7 +127,7 @@ def _source(verb, value):
     if isinstance(value, (c.RecordInput, c.CandidateInput)):
         context = value.context
         items = value.records if isinstance(value, c.RecordInput) else value.units
-        rows = [_item(item) for item in items]
+        rows = [_item(item, verb) for item in items]
         if context is not c.ABSENT:
             for row in rows: row['context'] = _json(context)
         return {'kind': 'records', 'items': rows}, None, False
@@ -133,10 +135,8 @@ def _source(verb, value):
     if isinstance(value, Iterator):
         return {'kind': 'feed', 'name': 'python'}, value, False
     if isinstance(value, (list, tuple)):
-        if verb == 'relate':
-            value = [{'name': item[0], 'kind': item[1]} if isinstance(item, tuple) else item for item in value]
         kind = 'units' if verb == 'find' else 'entities' if verb == 'relate' else 'records'
-        return {'kind': kind, 'items': [_item(item) for item in value]}, None, False
+        return {'kind': kind, 'items': [_item(item, verb) for item in value]}, None, False
     item = _item(value)
     return {'kind': 'records', 'items': [item]}, None, True
 
@@ -260,7 +260,7 @@ class Operation:
         if self.producer is not None:
             if self.pending is None:
                 try:
-                    self.pending = _dump({'item': _item(next(self.producer))})
+                    self.pending = _dump({'item': _item(next(self.producer), self.verb)})
                 except StopIteration:
                     self.session._finish()
                     self._close_producer()
@@ -322,6 +322,7 @@ class AsyncCalls:
             while not operation.step(): await asyncio.sleep(.001)
             return operation.result()
         except asyncio.CancelledError:
-            operation.cancel()
+            try: operation.cancel()
+            except Exception: pass  # Producer cleanup cannot replace task cancellation.
             raise
         finally: operation.close()

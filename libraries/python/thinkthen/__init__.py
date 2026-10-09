@@ -384,8 +384,12 @@ class Engine:
         return AsyncCalls(self)
 
     def close(self):
+        failure = None
         for operation in tuple(self._sessions):
-            operation.cancel()
+            try: operation.cancel()
+            except Exception as error:
+                if failure is None: failure = error
+        if failure is not None: raise failure
 
     def __enter__(self): return self
     def __exit__(self, *args): self.close()

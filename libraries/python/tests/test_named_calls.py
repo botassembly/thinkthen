@@ -1,5 +1,6 @@
 """Installed named calls preserve native results and clean up held async work."""
 from conftest import child_env, run, start
+import pytest
 
 
 def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_path):
@@ -32,6 +33,9 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 assert pickle.loads(pickle.dumps(done)).to_dict() == done.to_dict(), verb
                 assert 'one name' not in repr(done)
                 print(verb)
+            pairs = [('A', 'person'), ('B', 'person')]
+            relations = {'knows': ('person', 'person')}
+            assert engine.relate(iter(pairs), relations=relations).value == engine.relate(pairs, relations=relations).value
             detailed = engine.decide(c.DecideSpec(decide='Late?'), c.TextInput(text='note'), details=True)
             assert detailed.value is detailed.results[0]
             assert detailed.value.input == 'note'
@@ -67,7 +71,8 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
     assert output.splitlines() == ['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']
 
 
-def test_named_async_cancellation_closes_producer_before_provider_returns(backend, tmp_path):
+@pytest.mark.parametrize('cleanup_fails', [False, True])
+def test_named_async_cancellation_closes_producer_before_provider_returns(backend, tmp_path, cleanup_fails):
     child = start('''
         import asyncio, sys, threading, thinkthen as tt
         async def main():
@@ -78,7 +83,10 @@ def test_named_async_cancellation_closes_producer_before_provider_returns(backen
                     while True:
                         reads.append(len(reads))
                         yield 'note'
-                finally: closed.append(True)
+                finally:
+                    closed.append(True)
+                    if __import__('os').environ['CLEANUP_FAILS'] == 'True':
+                        raise RuntimeError('producer cleanup failed')
             async with tt.Engine(cache=False, max_retries=0, batch=1, throttle=1) as engine:
                 task = asyncio.create_task(engine.asyncio.decide('Late?', inputs()))
                 ready = threading.Event()
@@ -105,7 +113,7 @@ def test_named_async_cancellation_closes_producer_before_provider_returns(backen
                 print('closed', flush=True)
                 sys.stdin.readline()
         asyncio.run(main())
-    ''', child_env(backend, tmp_path, 'arm/held'))
+    ''', child_env(backend, tmp_path, 'arm/held', CLEANUP_FAILS=str(cleanup_fails)))
     try:
         assert backend.wait(1) == 1
         child.stdin.write('stop\n')
@@ -119,6 +127,37 @@ def test_named_async_cancellation_closes_producer_before_provider_returns(backen
             child.stdin.flush()
         _, error = child.communicate(timeout=5)
     assert child.returncode == 0, error
+
+
+def test_engine_close_cleans_all_sessions_when_producers_raise(backend, tmp_path):
+    output = run('''
+        import asyncio, thinkthen as tt
+        async def main():
+            closed = []
+            started = set()
+            def inputs(index):
+                try:
+                    started.add(index)
+                    while True: yield 'note'
+                finally:
+                    closed.append(index)
+                    raise RuntimeError('producer cleanup failed')
+            engine = tt.Engine(cache=False, max_retries=0, batch=1, throttle=1)
+            tasks = [asyncio.create_task(engine.asyncio.decide('Late?', inputs(index))) for index in range(2)]
+            while len(started) < 2: await asyncio.sleep(.001)
+            try: engine.close()
+            except RuntimeError as error: assert str(error) == 'producer cleanup failed'
+            else: raise AssertionError('cleanup error was discarded')
+            assert sorted(closed) == [0, 1]
+            assert not engine._sessions
+            for task in tasks: task.cancel()
+            for task in tasks:
+                try: await task
+                except asyncio.CancelledError: pass
+            print('closed all')
+        asyncio.run(main())
+    ''', child_env(backend, tmp_path, 'arm/held'), timeout=5)
+    assert output.splitlines() == ['closed all']
 
 
 def test_named_calls_refuse_invalid_headers_without_sending(backend, tmp_path):
