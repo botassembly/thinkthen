@@ -19,27 +19,6 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
-    /// Resolve the documented presentation from the actual question and answer.
-    /// Typed accessors retain the primitive value, including authored null.
-    fn presented(&self) -> super::wire::AtomicValue<'_> {
-        if let Some(position) = self.rank_position {
-            return super::wire::AtomicValue::Rank(position);
-        }
-        if self.function == crate::core::image::InputFunction::Decide
-            && let crate::core::Question::Decide { yes, no, .. } = &self.legacy.question
-        {
-            let meaning = match self.legacy.value {
-                crate::core::Value::YesNo(Some(true)) => yes.as_ref(),
-                crate::core::Value::YesNo(Some(false)) => no.as_ref(),
-                _ => None,
-            };
-            if let Some(meaning) = meaning {
-                return super::wire::AtomicValue::Authored(meaning);
-            }
-        }
-        super::wire::AtomicValue::Primitive(&self.legacy.value)
-    }
-
     pub(crate) fn take_input(&mut self) -> Option<crate::core::Record> {
         self.legacy.input.take()
     }
@@ -130,11 +109,58 @@ impl Atomic {
         members: Option<Vec<super::wire::RankMemberDocument<'a>>>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        use crate::core::Value;
+        use crate::core::image::InputFunction;
+        if let Some(position) = self.rank_position {
+            return self
+                .document(input, question_name, index, members, position)
+                .serialize(serializer);
+        }
+        match (self.function, &self.legacy.value) {
+            (InputFunction::Decide, Value::YesNo(value)) => {
+                let meaning = match (&self.legacy.question, value) {
+                    (crate::core::Question::Decide { yes, .. }, Some(true)) => yes.as_ref(),
+                    (crate::core::Question::Decide { no, .. }, Some(false)) => no.as_ref(),
+                    _ => None,
+                };
+                let value = meaning.map_or(
+                    super::wire::DecideValue::Primitive(*value),
+                    super::wire::DecideValue::Authored,
+                );
+                self.document(input, question_name, index, members, value)
+                    .serialize(serializer)
+            }
+            (InputFunction::Choose, Value::Choice(value)) => self
+                .document(input, question_name, index, members, value.as_deref())
+                .serialize(serializer),
+            (InputFunction::Tag, Value::Tag(value)) => self
+                .document(input, question_name, index, members, value.as_slice())
+                .serialize(serializer),
+            (InputFunction::Score, Value::Score(value)) => self
+                .document(input, question_name, index, members, *value)
+                .serialize(serializer),
+            (InputFunction::Filter, Value::YesNo(Some(value))) => self
+                .document(input, question_name, index, members, *value)
+                .serialize(serializer),
+            _ => self
+                .document(input, question_name, index, members, &self.legacy.value)
+                .serialize(serializer),
+        }
+    }
+
+    fn document<'a, T: Serialize, V: Serialize>(
+        &'a self,
+        input: Option<&'a T>,
+        question_name: Option<&'a str>,
+        index: Option<usize>,
+        members: Option<Vec<super::wire::RankMemberDocument<'a>>>,
+        value: V,
+    ) -> super::wire::AtomicDocument<'a, T, V> {
         let row = &self.legacy;
         super::wire::AtomicDocument {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
-            value: self.presented(),
+            value,
             input,
             index,
             images: self.images.as_deref(),
@@ -149,7 +175,6 @@ impl Atomic {
             threshold: row.threshold,
             meta: CompleteMeta::of(&row.meta, &self.identity),
         }
-        .serialize(serializer)
     }
 }
 

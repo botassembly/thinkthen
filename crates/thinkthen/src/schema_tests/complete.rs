@@ -7,6 +7,12 @@ mod strict;
 pub(super) fn register(generator: &mut SchemaGenerator) {
     let _registered = [
         generator.subschema_for::<wire::AtomicDocument<'_, Value>>(),
+        generator.subschema_for::<wire::AtomicDocument<'_, Value, wire::DecideValue<'_>>>(),
+        generator.subschema_for::<wire::AtomicDocument<'_, Value, Option<&str>>>(),
+        generator.subschema_for::<wire::AtomicDocument<'_, Value, &[String]>>(),
+        generator.subschema_for::<wire::AtomicDocument<'_, Value, f64>>(),
+        generator.subschema_for::<wire::AtomicDocument<'_, Value, bool>>(),
+        generator.subschema_for::<wire::AtomicDocument<'_, Value, std::num::NonZeroUsize>>(),
         generator.subschema_for::<annotation::Document<'_, Value>>(),
         generator.subschema_for::<find::Document<'_, Value>>(),
         generator.subschema_for::<recognize::Document<'_, Value>>(),
@@ -22,6 +28,10 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
     ];
 }
 pub(super) fn finish(definitions: &mut Map<String, Value>) {
+    definitions.insert(
+        "completeAtomic".into(),
+        definitions["completeAtomic_DecideValue"].clone(),
+    );
     super::paired(
         definitions
             .get_mut("completeAtomic")
@@ -162,60 +172,49 @@ fn locations(definitions: &mut Map<String, Value>) {
     strict::graph(definitions, "completePosition");
 }
 fn functions(definitions: &mut Map<String, Value>) {
-    for (name, verb, value, threshold, input) in [
+    for (name, verb, document, input) in [
         (
             "completeDecide",
             "decide",
-            json!(true),
-            json!({"$ref":"#/$defs/completethreshold"}),
+            "completeAtomic_DecideValue",
             false,
         ),
         (
             "completeChoose",
             "choose",
-            json!({"type":["string","null"]}),
-            json!({"$ref":"#/$defs/completethreshold"}),
+            "completeAtomic_Nullable_string",
             false,
         ),
         (
             "completeTag",
             "tag",
-            json!({"type":"array","items":{"type":"string"}}),
-            json!({"$ref":"#/$defs/completethreshold"}),
+            "completeAtomic_Array_of_string",
             false,
         ),
-        (
-            "completeScore",
-            "score",
-            json!({"type":"number"}),
-            json!({"type":"null"}),
-            false,
-        ),
-        (
-            "completeFilter",
-            "decide",
-            json!({"type":"boolean"}),
-            json!({"$ref":"#/$defs/completethreshold"}),
-            true,
-        ),
-        (
-            "completeRank",
-            "",
-            json!({"type":"integer","minimum":1}),
-            json!({"type":"null"}),
-            true,
-        ),
+        ("completeScore", "score", "completeAtomic_double", false),
+        ("completeFilter", "decide", "completeAtomic_boolean", true),
+        ("completeRank", "", "completeAtomic_NonZeroUsize", true),
     ] {
-        let mut row = definitions["completeAtomic"].clone();
+        strict::graph(definitions, document);
+        let mut row = definitions[document].clone();
+        row["allOf"] = definitions["completeAtomic"]["allOf"].clone();
+        let common = definitions["completeAtomic"]["properties"]
+            .as_object()
+            .expect("atomic properties");
+        let properties = row["properties"].as_object_mut().expect("properties");
+        for (field, schema) in common {
+            if !properties.contains_key(field) {
+                properties.insert(field.clone(), schema.clone());
+            }
+        }
         if name != "completeRank" {
             row["properties"]
                 .as_object_mut()
                 .expect("properties")
                 .remove("members");
         }
-        row["properties"]["value"] = value;
         if matches!(name, "completeScore" | "completeRank") {
-            row["properties"]["threshold"] = threshold;
+            row["properties"]["threshold"] = json!({"type":"null"});
         }
         if !verb.is_empty() {
             row["allOf"]
@@ -235,14 +234,15 @@ fn functions(definitions: &mut Map<String, Value>) {
 
 fn rank_members(definitions: &mut Map<String, Value>) {
     // A member serializes a standalone judgment and never another set or original.
-    let mut child = definitions["completeAtomic"].clone();
+    strict::graph(definitions, "completeAtomic_NonZeroUsize");
+    let mut child = definitions["completeAtomic_NonZeroUsize"].clone();
+    super::paired(&mut child);
     let properties = child["properties"]
         .as_object_mut()
         .expect("member properties");
     for field in ["members", "question_name", "input", "index"] {
         properties.remove(field);
     }
-    properties.insert("value".into(), json!({"type":"integer","minimum":1}));
     properties.insert("threshold".into(), json!({"type":"null"}));
     child["allOf"]
         .as_array_mut()

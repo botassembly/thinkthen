@@ -1,6 +1,6 @@
 //! Concrete documents are the serialization and generated-schema source together.
 use super::CompleteMeta;
-use crate::core::{Answer, AnswerId, Question, Threshold, Value, declaration::ReadableQuestion};
+use crate::core::{Answer, AnswerId, Question, Threshold, declaration::ReadableQuestion};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -9,24 +9,24 @@ pub(crate) enum Version {
     #[serde(rename = "thinkthen.result/2")]
     V2,
 }
+/// Decide alone may present an authored reading instead of its primitive answer.
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(untagged)]
-pub(crate) enum AtomicValue<'a> {
-    Primitive(&'a Value),
+pub(crate) enum DecideValue<'a> {
+    Primitive(Option<bool>),
     Authored(&'a crate::core::text::Meaning),
-    Rank(std::num::NonZeroUsize),
 }
 #[derive(Serialize)]
 #[cfg_attr(
     test,
     derive(schemars::JsonSchema),
-    schemars(rename = "completeAtomic")
+    schemars(rename = "completeAtomic_{V}")
 )]
-pub(crate) struct AtomicDocument<'a, T: Serialize> {
+pub(crate) struct AtomicDocument<'a, T: Serialize, V: Serialize = DecideValue<'a>> {
     pub(crate) schema: Version,
     pub(crate) answer_id: &'a AnswerId,
-    pub(crate) value: AtomicValue<'a>,
+    pub(crate) value: V,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) input: Option<&'a T>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -78,6 +78,9 @@ impl std::fmt::Debug for PhysicalSource {
 )]
 pub(crate) struct RankMemberDocument<'a> {
     pub(crate) name: &'a str,
-    #[cfg_attr(test, schemars(with = "AtomicDocument<'a, serde_json::Value>"))]
+    #[cfg_attr(
+        test,
+        schemars(with = "AtomicDocument<'a, serde_json::Value, std::num::NonZeroUsize>")
+    )]
     pub(crate) result: &'a super::Atomic,
 }
