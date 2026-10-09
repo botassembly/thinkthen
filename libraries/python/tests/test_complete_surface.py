@@ -63,3 +63,36 @@ def test_complete_recognition_reads_proposals_and_preserves_old_documents():
     assert c.decode('RecognitionAnswer', old).proposals is c.ABSENT
     with pytest.raises(ValueError):
         c.decode('RecognitionAnswer', {**answer, 'invented': True})
+
+
+def test_tagged_json_string_context_refuses_before_sending(backend, tmp_path):
+    from conftest import child_env, run
+    output = run('''
+        import json
+        from thinkthen import _thinkthen as native
+        engine = native._Engine(cache=False, max_retries=0)
+        request = json.dumps({
+            'verb': 'decide',
+            'question': {'role': 'atomic', 'body': {'decide': 'Q'}},
+            'input': {'kind': 'records', 'records': [{
+                'content': {'kind': 'text', 'value': 'record'},
+                'context': {'kind': 'json', 'value': 'private context'},
+            }]},
+        })
+        try:
+            engine._complete(request, None, None)
+        except native.ThinkThenError as error:
+            assert 'the per-item context does not match context_schema' in str(error)
+            assert 'private context' not in str(error)
+        else:
+            raise AssertionError('tagged JSON context became text context')
+        batch = engine._complete_batch(request, None, None)
+        event = json.loads(batch._pull())
+        batch.close()
+        assert event['error']['kind'] == 'usage'
+        assert 'the per-item context does not match context_schema' in event['error']['message']
+        assert 'private context' not in event['error']['message']
+        print('refused')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['refused']
+    assert backend.count() == 0
