@@ -43,3 +43,4 @@ A C# developer installs the NuGet package and calls named functions with native 
 
 - 2026-10-09 started
 - 2026-10-09 landed 814fd7e11bdaa4714f82fdb64a71c9a3af885d63; next: Installed owned-session initial slice is accepted and landed. Finish generated settings and reader failures, canonical planning and retained legacy removal before whole adoption.
+- 2026-10-09 landed e95220d2963c21762926c42bd3e1e8d4f6359b2f; next: Generated settings, reader failures and NuGet inventory are landed. Finish generated Plan, actual shared cases through new Async methods, and obsolete API removal.
