@@ -5,10 +5,10 @@
 use std::process::ExitCode;
 
 use super::{Asks, JudgingInput};
-use crate::core::pack::{self, Ask, PackError};
+use crate::core::pack::PackError;
 use crate::core::{
-    AnswerOutcome, BackendProfile, BatchError, Descriptions, Evidence, ModelName, Plan, Reading,
-    Record, Setting, Url, quoted_plan, quoted_plan_of,
+    BackendProfile, BatchError, Descriptions, Evidence, ModelName, Plan, Reading, Record, Setting,
+    quoted_plan, quoted_plan_of,
 };
 use crate::failure::Failure;
 use crate::failure::context::Limits;
@@ -179,22 +179,6 @@ impl Planner<'_> {
             )
         };
         planned.map_err(|error| self.limits.refused(error, false))
-    }
-
-    /// The wire questions one record sends.
-    pub(super) fn asks(
-        &self,
-        api: crate::core::adapters::ApiType,
-        url: &Url,
-        held: &Held,
-    ) -> Result<Vec<Ask>, Failure> {
-        let mut asks = Vec::new();
-        for plan in self.plans(held)? {
-            asks.extend(
-                pack::asks_for(api, url, &plan).map_err(|error| super::encoded(&plan, error))?,
-            );
-        }
-        Ok(asks)
     }
 
     /// The command's refusal of a question the packer cannot send.

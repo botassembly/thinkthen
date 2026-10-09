@@ -14,6 +14,7 @@ use crate::public::{
 };
 use std::{num::NonZeroUsize, sync::Arc};
 mod render;
+mod retention;
 
 struct Input {
     at: usize,
@@ -61,28 +62,38 @@ struct Held<T> {
 type Admission<T> = (Vec<Held<T>>, Vec<Input>);
 
 impl Engine {
+    #[expect(
+        clippy::type_complexity,
+        reason = "set rank retains original and complete members"
+    )]
     pub(crate) fn request_rank_set_records_complete_with<'a, I, T>(
         &'a self,
         set: &'a RankSet,
         records: I,
         options: CallOptions<'a>,
+        top: Option<usize>,
+        release: Option<&dyn Fn(usize)>,
     ) -> Result<Call<Vec<CompleteRecord<T, CompleteSetRank>>>, Error>
     where
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        #[cfg(feature = "cli")]
-        if options.cli_reader.is_some() {
-            return self.live_rank_set(set, records, options);
+        if release.is_some() {
+            return self.live_rank_set(set, records, options, top, release);
         }
         self.try_rank_set_records_complete_with(set, records, options)
     }
-    #[cfg(feature = "cli")]
+    #[expect(
+        clippy::type_complexity,
+        reason = "set rank retains original and complete members"
+    )]
     fn live_rank_set<'a, I, T>(
         &'a self,
         set: &'a RankSet,
         records: I,
         options: CallOptions<'a>,
+        top: Option<usize>,
+        release: Option<&dyn Fn(usize)>,
     ) -> Result<Call<Vec<CompleteRecord<T, CompleteSetRank>>>, Error>
     where
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
@@ -107,7 +118,7 @@ impl Engine {
         });
         let observed_engine = Arc::clone(&engine);
         let observed_questions = questions.clone();
-        let batch = pull::try_start_prepared(
+        let mut batch = pull::try_start_prepared(
             pull::Call {
                 engine: Arc::clone(&engine),
                 stop,
@@ -137,13 +148,26 @@ impl Engine {
                 )?;
                 let (held, _) =
                     original.ok_or_else(|| Error::defect("set rank lost its original"))?;
-                Ok(Some((held, values)))
+                Ok(Some((at, held, values)))
             }),
         );
-        batch.into_call()?.try_map(|rows| {
-            let (held, values) = rows.into_iter().unzip();
-            render::ranked(
-                self, &engine, &set.0, &questions, setting, held, values, captured,
+        let mut retained = retention::Retained::new(top, questions.len());
+        for row in batch.by_ref() {
+            let (at, held, values) = row?;
+            let weights = values
+                .iter()
+                .map(|(judged, _)| judged.answer.yes().ok_or_else(super::wrong))
+                .collect::<Result<Vec<_>, Error>>()?;
+            retained.take(at, (held, values), &weights, release)?;
+        }
+        let facts = batch
+            .facts()
+            .cloned()
+            .ok_or_else(|| Error::defect("completed set rank has no facts"))?;
+        Call::new(retained, facts).try_map(|retained| {
+            let (rows, selected, positions) = retained.finish()?;
+            render::selected_rows(
+                self, &engine, &set.0, &questions, setting, rows, selected, positions, captured,
             )
         })
     }

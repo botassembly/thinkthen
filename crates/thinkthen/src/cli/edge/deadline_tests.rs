@@ -54,9 +54,15 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
     let mut output = Vec::new();
 
     let result = match &cli.command {
-        Some(Command::Decide(held)) => {
-            crate::cli::judge::decide(held, &environment, input, &mut output)
-        }
+        Some(Command::Decide(held)) => crate::cli::judge::decide(
+            held,
+            &environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("decide request"),
+            input,
+            &mut output,
+        ),
         Some(Command::Find(held)) => {
             let admitted = crate::cli::request::admit(cli.command.as_ref().expect("command"))
                 .expect("native header")

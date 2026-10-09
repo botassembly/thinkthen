@@ -226,11 +226,10 @@ impl Decided {
         let AnswerOutcome::Answered(answer) = &self.outcome else {
             return None;
         };
-        let (value, outcome) = answer.read(question.threshold);
+        let (value, _) = answer.read(question.threshold);
         Some(facade::Judgment {
             answer: answer.clone(),
             value,
-            outcome,
             answered: self.answered.clone(),
         })
     }

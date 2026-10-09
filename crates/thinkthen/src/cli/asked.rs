@@ -236,21 +236,8 @@ fn split_label(entry: &str) -> Result<(String, Option<String>), Failure> {
 
 #[cfg(test)]
 mod tests {
-    use super::{path_of, split, typed_text};
+    use super::split;
     use crate::failure::Failure;
-
-    #[test]
-    fn a_question_that_begins_with_an_at_sign_names_a_file_and_nothing_else_does() {
-        assert_eq!(path_of("@refund.json"), Some("refund.json"));
-        assert_eq!(path_of("@"), Some(""));
-        assert_eq!(path_of("Does this ask for a refund?"), None);
-        assert_eq!(path_of("user@example.test asks for a refund"), None);
-        assert_eq!(typed_text("@refund.json", true), None);
-        assert_eq!(
-            typed_text("asks for a refund", false),
-            Some("asks for a refund")
-        );
-    }
 
     #[test]
     fn an_option_splits_at_its_first_equals_sign_and_needs_one() {

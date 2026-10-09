@@ -6,9 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::args::Common;
-use crate::core::{
-    BackendProfile, BatchSetting, BatchWarning, ProfileName, ProfileWarning, Setting,
-};
+use crate::core::{BackendProfile, BatchWarning, ProfileName, ProfileWarning, Setting};
 use crate::failure::Failure;
 
 /// Read the profile file a run explicitly selected.
@@ -35,10 +33,8 @@ pub(crate) fn read(
 /// One run's mismatch, printed once and copied into every detailed row.
 #[derive(Clone, Debug)]
 pub(crate) struct Mismatch {
-    tuned_for: Option<ProfileName>,
     warning: Option<ProfileWarning>,
     printed: Arc<AtomicBool>,
-    batch_setting: Option<BatchSetting>,
     batch_warning: Option<BatchWarning>,
     batch_printed: Arc<AtomicBool>,
 }
@@ -46,17 +42,14 @@ pub(crate) struct Mismatch {
 impl Mismatch {
     pub(crate) fn new(tuned_for: Option<&ProfileName>, profile: Option<&BackendProfile>) -> Self {
         Self {
-            tuned_for: tuned_for.cloned(),
             warning: ProfileWarning::between(tuned_for, profile.map(BackendProfile::name)),
             printed: Arc::new(AtomicBool::new(false)),
-            batch_setting: None,
             batch_warning: None,
             batch_printed: Arc::new(AtomicBool::new(false)),
         }
     }
 
     pub(crate) fn with_batch(mut self, tuned_for: Option<Setting>, running: Setting) -> Self {
-        self.batch_setting = Some(running.into());
         self.batch_warning =
             tuned_for.and_then(|tuned_for| BatchWarning::between(tuned_for, running));
         self
@@ -66,16 +59,8 @@ impl Mismatch {
         self.warning.clone()
     }
 
-    pub(crate) const fn batch_setting(&self) -> Option<BatchSetting> {
-        self.batch_setting
-    }
-
     pub(crate) fn batch_warning(&self) -> Option<BatchWarning> {
         self.batch_warning.clone()
-    }
-
-    pub(crate) fn tuned_for(&self) -> Option<&ProfileName> {
-        self.tuned_for.as_ref()
     }
 
     pub(crate) fn notice(&self) -> Option<Self> {

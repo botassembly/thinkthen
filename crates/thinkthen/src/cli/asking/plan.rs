@@ -116,16 +116,6 @@ pub(super) fn packed(
     )
 }
 
-/// Refuse a context whose request with no question passes a limit, before
-/// any record is read.
-pub(super) fn check_context(
-    planner: &Planner<'_>,
-    backend: &Backend,
-    packing: Packing,
-) -> Result<(), Failure> {
-    packer(planner, backend, packing).map(|_| ())
-}
-
 fn packer(
     planner: &Planner<'_>,
     backend: &Backend,

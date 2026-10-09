@@ -11,6 +11,10 @@ use std::collections::BTreeMap;
 use std::process::ExitCode;
 use std::sync::Arc;
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one bridge owns input framing, presentation and joined native facts"
+)]
 pub(super) fn run(
     configuration: JudgingInput<'_>,
     admitted: crate::AdmittedRequest,
@@ -96,6 +100,9 @@ pub(super) fn run(
         }
     };
     let admitted = admitted.with_composed_feed("cli-atomic");
+    let release = |ordinal| {
+        held.borrow_mut().remove(&ordinal);
+    };
     let result = engine.execute_cli_request(
         &admitted,
         crate::RequestEnvironment {
@@ -103,6 +110,7 @@ pub(super) fn run(
             feed: Some(feed),
         },
         &sink,
+        &release,
     );
     let result = if configuration.keeping == crate::judge::Keeping::Ordered {
         result.map(|outcome| match outcome {
@@ -121,7 +129,6 @@ pub(super) fn run(
         environment,
         result,
         ended.into_inner(),
-        output.into_inner(),
         (recording, configuration.asks.verb(), downstream.latched()),
     )
 }
@@ -223,7 +230,6 @@ impl Renderer {
         environment: &crate::edge::Environment,
         result: Result<crate::RequestOutcome, crate::Error>,
         ended: Ended,
-        output: &mut Output<'_>,
         completion: (bool, &'static str, bool),
     ) -> Result<ExitCode, Failure> {
         let (recording, verb, closed) = completion;
@@ -276,7 +282,6 @@ impl Renderer {
                 ended.outcome.unwrap_or(Outcome::Unresolved),
             ));
         }
-        output.ended()?;
         Ok(ExitCode::SUCCESS)
     }
 }
@@ -328,7 +333,7 @@ fn take(
                 let judged = rendering.row(reading, unit, row.result().canonical.clone())?;
                 let replayed = judged.replayed;
                 let outcome = judged.outcome;
-                if output.take_members(vec![judged], ended.finished)? {
+                if output.take(judged)? {
                     ended.finished += 1;
                     ended.replayed += usize::from(replayed);
                     ended.outcome = Some(outcome);
@@ -352,7 +357,7 @@ fn take(
                     .remove(&row.ordinal())
                     .ok_or(Failure::Defect("native rank lost its host occurrence"))?;
                 let judged = rendering.row(reading, unit, row.result().canonical.clone())?;
-                if output.take_ranked(judged)? {
+                if output.take(judged)? {
                     ended.finished += 1;
                 } else {
                     ended.closed = true;
@@ -383,7 +388,7 @@ fn take(
                         judged.position.as_ref(),
                     )?;
                 }
-                if output.take_ranked(judged)? {
+                if output.take(judged)? {
                     ended.finished += 1;
                 } else {
                     ended.closed = true;
@@ -463,13 +468,15 @@ impl Renderer {
         }
         self.locate(&unit, &mut printed)?;
         Ok(Judged {
-            rank: None,
             model,
             printed,
             position: unit.position,
             outcome,
             replayed,
-            order_value: canonical.answer().yes(),
+            order_value: match canonical.value() {
+                Value::Score(value) => Some(*value),
+                _ => canonical.answer().yes(),
+            },
             partial_failure: false,
             profile_mismatch: self.mismatch.notice(),
         })

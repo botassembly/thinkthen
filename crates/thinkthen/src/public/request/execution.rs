@@ -125,7 +125,7 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, None)
+        self.execute_request_sink(request, environment, None, None)
     }
     #[cfg(feature = "cli")]
     pub(crate) fn execute_cli_request<'a>(
@@ -133,14 +133,16 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
         sink: &dyn Fn(RequestValue),
+        release: &dyn Fn(usize),
     ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, Some(sink))
+        self.execute_request_sink(request, environment, Some(sink), Some(release))
     }
     pub(super) fn execute_request_sink<'a>(
         &self,
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
         sink: Option<&dyn Fn(RequestValue)>,
+        release: Option<&dyn Fn(usize)>,
     ) -> Result<RequestOutcome, Error> {
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
@@ -213,6 +215,7 @@ impl Engine {
             eager && sink.is_none(),
             options,
             sink,
+            release,
         )?;
         Ok(if all_filter_results {
             outcome
@@ -497,12 +500,13 @@ fn dispatch<'a>(
     eager: bool,
     options: &RequestOptions,
     sink: Option<&dyn Fn(RequestValue)>,
+    release: Option<&dyn Fn(usize)>,
 ) -> Result<RequestOutcome, Error> {
     let outcome = match definition {
         RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager, sink),
         RequestDefinition::Rank(q) => Ok(complete(
             engine
-                .request_rank_records_complete_with(q, rows, controls)?
+                .request_rank_records_complete_with(q, rows, controls, options.top, release)?
                 .map(|mut rows| {
                     if let Some(n) = options.top {
                         rows.truncate(n);
@@ -512,7 +516,7 @@ fn dispatch<'a>(
         )),
         RequestDefinition::RankSet(q) => Ok(complete(
             engine
-                .request_rank_set_records_complete_with(q, rows, controls)?
+                .request_rank_set_records_complete_with(q, rows, controls, options.top, release)?
                 .map(|mut rows| {
                     if let Some(n) = options.top {
                         rows.truncate(n);

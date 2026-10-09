@@ -9,7 +9,7 @@ use std::process::ExitCode;
 
 use crate::core::{
     Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Record,
-    Resolved, Setting, Sources, Threshold,
+    Resolved, Setting, Sources,
 };
 
 use crate::args::Common;
@@ -18,7 +18,6 @@ use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
-use crate::public::AttemptObservation;
 use crate::schedule::{self, Output};
 
 pub(crate) mod context;
@@ -170,7 +169,6 @@ pub(crate) fn run(
     if common.media.as_deref() == Some("image") && !settled.on().is_empty() {
         return Err(Failure::Usage("images cannot accompany saved on pointers"));
     }
-    let threshold = settled.threshold();
     let view = view.checked()?;
     let asked = (!settled.sources().model_is_default()).then(|| settled.model().as_str());
     let per_document = matches!(
@@ -274,7 +272,6 @@ pub(crate) fn run(
         folders,
         backend,
         asks,
-        threshold,
         view,
         keeping,
         streams: reading.streams(),
@@ -306,7 +303,6 @@ struct JudgingInput<'a> {
     folders: Folders,
     backend: Backend,
     asks: Asks,
-    threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,
     streams: bool,

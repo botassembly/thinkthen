@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::core::{ModelName, Outcome, Threshold, Withheld, ranking_under};
+use crate::core::{ModelName, Outcome, Withheld};
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::Engine;
 use crate::engine::usage::Counters;
@@ -49,7 +49,6 @@ impl From<Failure> for Placed {
 
 /// One record's answer, as the line it prints and what the run counts.
 pub(crate) struct Judged {
-    pub(crate) rank: Option<rank::RankRow>,
     pub(crate) model: Option<ModelName>,
     pub(crate) printed: Option<String>,
     pub(crate) position: Option<crate::cli::intake::Position>,
@@ -92,96 +91,28 @@ impl fmt::Debug for Judged {
 
 /// Where the command sends engine results in their ordered callback.
 pub(crate) struct Output<'a> {
-    mode: Mode<'a>,
+    writer: &'a mut dyn Write,
     display: crate::cli::display::Display,
     usage: &'a Counters,
     model_guard: bool,
     run_model: Option<ModelName>,
-    members: Vec<Vec<(usize, Judged)>>,
-    member_scores: Vec<Vec<(usize, f64)>>,
-    rank_threshold: Option<Threshold>,
-}
-
-enum Mode<'a> {
-    Streaming(&'a mut dyn Write),
-    Ordered {
-        held: Vec<Judged>,
-        top: Option<usize>,
-        missing_order_value: bool,
-        writer: &'a mut dyn Write,
-    },
-}
-
-fn keep_top(held: &mut Vec<Judged>, limit: usize, judged: Judged, missing: &mut bool) {
-    let Some(value) = judged.order_value else {
-        *missing = true;
-        return;
-    };
-    let place = held.partition_point(|earlier| {
-        earlier
-            .order_value
-            .is_some_and(|score| score.total_cmp(&value).is_ge())
-    });
-    if place >= limit {
-        return;
-    }
-    if held.len() == limit {
-        held.pop();
-    }
-    held.insert(place, judged);
 }
 
 impl fmt::Debug for Output<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.mode {
-            Mode::Streaming(_) => formatter.write_str("Streaming"),
-            Mode::Ordered { held, top, .. } => formatter
-                .debug_struct("Ordered")
-                .field("held", &format_args!("<{} rows withheld>", held.len()))
-                .field("top", top)
-                .finish_non_exhaustive(),
-        }
+        formatter.write_str("Streaming")
     }
 }
 
 impl Output<'_> {
     pub(crate) fn streaming<'a>(writer: &'a mut dyn Write, usage: &'a Counters) -> Output<'a> {
         Output {
-            mode: Mode::Streaming(writer),
+            writer,
             usage,
             display: crate::cli::display::Display::default(),
             model_guard: false,
             run_model: None,
-            members: Vec::new(),
-            member_scores: Vec::new(),
-            rank_threshold: None,
         }
-    }
-
-    pub(crate) fn ordered<'a>(
-        writer: &'a mut dyn Write,
-        top: Option<usize>,
-        usage: &'a Counters,
-    ) -> Output<'a> {
-        Output {
-            mode: Mode::Ordered {
-                held: Vec::new(),
-                top,
-                missing_order_value: false,
-                writer,
-            },
-            usage,
-            display: crate::cli::display::Display::default(),
-            model_guard: false,
-            run_model: None,
-            members: Vec::new(),
-            member_scores: Vec::new(),
-            rank_threshold: None,
-        }
-    }
-
-    pub(crate) const fn rank_threshold(&mut self, threshold: Option<Threshold>) {
-        self.rank_threshold = threshold;
     }
 
     pub(crate) fn display(&mut self, arguments: crate::cli::display::Arguments) {
@@ -225,94 +156,17 @@ impl Output<'_> {
 
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
         self.check_model(&judged)?;
-        let result = match &mut self.mode {
-            Mode::Streaming(writer) => {
-                if let Some(mismatch) = &judged.profile_mismatch {
-                    mismatch.print_once()?;
-                }
-                self.display.emit(&mut **writer, &judged)
-            }
-            Mode::Ordered {
-                held,
-                top,
-                missing_order_value,
-                ..
-            } => {
-                match top {
-                    Some(limit) => keep_top(held, *limit, judged, missing_order_value),
-                    None => held.push(judged),
-                }
-                Ok(true)
-            }
-        };
-        if result.is_ok() {
-            self.usage.record_done();
-        }
-        result
-    }
-
-    /// Emit an occurrence already ordered and numbered by native rank.
-    pub(crate) fn take_ranked(&mut self, judged: Judged) -> Result<bool, Failure> {
-        self.check_model(&judged)?;
         if let Some(mismatch) = &judged.profile_mismatch {
             mismatch.print_once()?;
         }
-        let writer = match &mut self.mode {
-            Mode::Streaming(writer) | Mode::Ordered { writer, .. } => &mut **writer,
-        };
-        let result = self.display.emit(writer, &judged);
+        let result = self.display.emit(self.writer, &judged);
         if result.is_ok() {
             self.usage.record_done();
         }
         result
     }
-
-    pub(crate) fn ended(&mut self) -> Result<(), Failure> {
-        if !self.members.is_empty() {
-            return self.end_members();
-        }
-        let Mode::Ordered {
-            held,
-            top,
-            missing_order_value,
-            writer,
-        } = &mut self.mode
-        else {
-            return Ok(());
-        };
-        if *missing_order_value {
-            return Err(Failure::Defect("a ranked row carries no probability"));
-        }
-        let odds = held
-            .iter()
-            .map(|judged| {
-                judged
-                    .order_value
-                    .ok_or(Failure::Defect("a ranked row carries no probability"))
-            })
-            .collect::<Result<Vec<f64>, Failure>>()?;
-        for (at, place) in ranking_under(&odds, *top, self.rank_threshold)
-            .into_iter()
-            .enumerate()
-        {
-            let Some(judged) = held.get_mut(place) else {
-                continue;
-            };
-            judged.finish_rank(at, None)?;
-            if let Some(mismatch) = judged.profile_mismatch.as_ref() {
-                mismatch.print_once()?;
-            }
-            if !self.display.emit(&mut **writer, judged)? {
-                return Ok(());
-            }
-        }
-        Ok(())
-    }
-
     pub(crate) fn writer(&mut self) -> &mut dyn Write {
-        match &mut self.mode {
-            Mode::Streaming(writer) | Mode::Ordered { writer, .. } => *writer,
-        }
+        self.writer
     }
 }
 
@@ -374,10 +228,7 @@ where
         || Placed::from(Failure::Defect("the record reader ended early")),
     )?;
     match outcome {
-        ordered::Outcome::Complete => {
-            output.ended()?;
-            Ok(ExitCode::SUCCESS)
-        }
+        ordered::Outcome::Complete => Ok(ExitCode::SUCCESS),
         ordered::Outcome::Stopped {
             finished,
             replayed,
@@ -414,13 +265,4 @@ fn read_records<T, I>(
 
 pub(super) mod ordered;
 #[cfg(test)]
-mod top_tests;
-#[cfg(test)]
 pub(crate) mod width_tests;
-
-mod rank_set;
-
-#[cfg(test)]
-mod rank_set_tests;
-
-pub(crate) mod rank;

@@ -205,7 +205,6 @@ pub(crate) fn filter(
         tiers(&arguments.batching, file),
         &settled,
         fixed(&settled)?,
-        None,
         environment,
         input,
         writer,
@@ -226,7 +225,7 @@ pub(crate) fn rank(
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     views(&arguments.refused, Keeping::Ordered)?;
-    let top = arguments
+    let _top = arguments
         .top
         .as_deref()
         .map(|value| {
@@ -246,7 +245,6 @@ pub(crate) fn rank(
         tiers(&arguments.batching, file),
         &settled,
         set.map_or_else(|| fixed(&settled), |set| Ok(Asks::Set(set)))?,
-        top,
         environment,
         input,
         writer,
@@ -291,20 +289,13 @@ fn over_kept(
     batch: Tiers<'_>,
     settled: &Resolved,
     asks: Asks,
-    top: Option<usize>,
     environment: &Environment,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
-    let mut output = match keeping {
-        Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
-        _ => Output::streaming(writer, environment.usage()),
-    };
+    let mut output = Output::streaming(writer, environment.usage());
     output.display(display.clone());
-    if matches!(keeping, Keeping::Ordered) {
-        output.rank_threshold(settled.threshold());
-    }
     let context = match keeping {
         Keeping::Passing => ReplayContext::Filter,
         Keeping::Ordered => ReplayContext::Rank,

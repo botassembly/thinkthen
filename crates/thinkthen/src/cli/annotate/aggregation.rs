@@ -52,7 +52,6 @@ pub(super) fn finish(
         outcome: Outcome::Yes,
         replayed,
         order_value: None,
-        rank: None,
         partial_failure: failed_questions > 0,
         profile_mismatch: judging.mismatch.notice(),
     })

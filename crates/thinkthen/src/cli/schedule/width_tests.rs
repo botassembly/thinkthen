@@ -99,9 +99,22 @@ fn dispatch(
 ) -> Result<ExitCode, Failure> {
     let cli = Cli::try_parse_from(["thinkthen"].iter().chain(arguments)).expect("command line");
     let mut output = Vec::new();
+    let admitted = crate::cli::request::admit(cli.command.as_ref().expect("command"))?;
     match &cli.command {
-        Some(Verb::Decide(held)) => crate::judge::decide(held, environment, input, &mut output),
-        Some(Verb::Choose(held)) => crate::judge::choose(held, environment, input, &mut output),
+        Some(Verb::Decide(held)) => crate::judge::decide(
+            held,
+            environment,
+            admitted.expect("decide request"),
+            input,
+            &mut output,
+        ),
+        Some(Verb::Choose(held)) => crate::judge::choose(
+            held,
+            environment,
+            admitted.expect("choose request"),
+            input,
+            &mut output,
+        ),
         Some(Verb::Annotate(held)) => crate::annotate::run(held, environment, input, &mut output),
         Some(Verb::Find(held)) => {
             let admitted = crate::cli::request::admit(cli.command.as_ref().expect("command"))
