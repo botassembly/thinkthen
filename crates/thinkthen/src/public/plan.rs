@@ -197,7 +197,7 @@ pub(super) fn estimate(
             .with_api(engine.backend().api_type());
         packer.check_state(&state).map_err(packed)?;
     }
-    let mut summary = PlanSummary::new(false);
+    let mut summary = PlanSummary::new(false).with_accounting(engine.backend().accounting());
     let mut occurrences = 0_usize;
     let mut closed = Vec::new();
     for asks in asks {

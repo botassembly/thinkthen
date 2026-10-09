@@ -4,6 +4,7 @@
 //! the adapter's other vendor words. `core::backend::named` reads it and names
 //! no vendor of its own.
 
+use crate::core::backend::InputAccounting;
 use crate::core::plan::Descriptions;
 
 /// One built-in backend: its name, its base, its key variables in the order
@@ -15,6 +16,7 @@ pub(crate) struct BuiltIn {
     pub(crate) keys: &'static [&'static str],
     pub(crate) model: &'static str,
     pub(crate) descriptions: Descriptions,
+    pub(crate) accounting: InputAccounting,
 }
 
 /// The built-in backends, in name order, which the unknown-name sentence lists.
@@ -25,6 +27,7 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         base: "https://api.liquid.ai/decisions/v1",
         keys: &["LIQUIDAI_API_KEY", "LIQUID_API_KEY"],
         model: "d1:free",
+        accounting: InputAccounting::EncodedBody,
         descriptions: Descriptions::Authored,
     },
     BuiltIn {
@@ -33,6 +36,7 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         base: "http://localhost:8080/v1",
         keys: &["LLAMACPP_API_KEY"],
         model: "local",
+        accounting: InputAccounting::EncodedBody,
         descriptions: Descriptions::Authored,
     },
     BuiltIn {
@@ -43,6 +47,7 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         model: "strands-decider-2B-hobson-v19",
         // The pinned Strands server requires string score criteria (ticket 0421).
         // Debt: sdlc/issues/2026-10-05-mlx-score-criteria-need-text-rendering.md.
+        accounting: InputAccounting::EncodedBody,
         descriptions: Descriptions::Text,
     },
     BuiltIn {
@@ -54,6 +59,7 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         // Ollama refuses an object description with status 400. This row's
         // text form is the workaround, owned by the debt issue
         // `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md`.
+        accounting: InputAccounting::EncodedBody,
         descriptions: Descriptions::Text,
     },
     BuiltIn {
@@ -62,6 +68,7 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         base: "https://openrouter.ai/api/v1",
         keys: &["OPENROUTER_API_KEY"],
         model: "typesafe/jev-1.13",
+        accounting: InputAccounting::EncodedBody,
         descriptions: Descriptions::BothSides,
     },
     BuiltIn {
@@ -70,6 +77,7 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         base: "https://api.perplexity.ai/v1",
         keys: &["PERPLEXITY_API_KEY"],
         model: "pplx-decider-v1-27b",
+        accounting: InputAccounting::RepeatedState,
         descriptions: Descriptions::Authored,
     },
     BuiltIn {
@@ -78,6 +86,7 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         base: super::DEFAULT_BASE,
         keys: &["TYPESAFE_API_KEY"],
         model: super::DEFAULT_MODEL,
+        accounting: InputAccounting::EncodedBody,
         descriptions: Descriptions::Authored,
     },
 ];

@@ -12,6 +12,7 @@ pub(crate) const BUILT_IN: super::systemone::backends::BuiltIn =
         base: "https://api.openai.com/v1",
         keys: &["OPENAI_API_KEY"],
         model: "gpt-6-luna",
+        accounting: crate::core::backend::InputAccounting::EncodedBody,
         descriptions: crate::core::Descriptions::Authored,
     };
 

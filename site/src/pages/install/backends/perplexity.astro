@@ -20,7 +20,9 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <p>Perplexity accepts one-sided yes-or-no criteria. Its Decisions route is distinct from the default System One route.</p>
   <p>The <a href="https://docs.perplexity.ai/docs/decisions/quickstart">provider documentation</a> was checked on 2026-10-04. Read the provider's terms before sending sensitive text.</p>
   <h2>Price and limits</h2>
-  <p>On 2026-10-04, <a href="https://docs.perplexity.ai/docs/decisions/quickstart#pricing">Perplexity's published price</a> was $0.04 per million input tokens. Output tokens were free, with no per-request fee.</p>
+  <p>On 2026-10-09, <a href="https://docs.perplexity.ai/docs/decisions/quickstart#pricing">Perplexity's published price</a> was $0.02 per million input tokens. Output tokens were free, with no per-request fee.</p>
+  <p>Perplexity bills the reply's <code>usage.input_tokens</code>. ThinkThen uses prices only when you explicitly configure them; the published price above installs no tariff.</p>
+  <p>Plans and estimated-input caps count the encoded shared state once per packed question. This assumption follows saved usage observations. The provider gives no guaranteed formula or upper token bound. A cap limits estimated tokens; reported billable usage can exceed the estimate. Body-byte counts and cache identity stay unchanged, and image admission keeps its existing tile estimate.</p>
   <p>The <a href="https://docs.perplexity.ai/docs/decisions/quickstart#request-limits">published request limits</a> allow 128 questions, fewer than 262,144 input tokens and a body of at most 32 MiB. A choice has at most 255 options and a score has at most ten levels. ThinkThen's own request limits still apply.</p>
   <h2>Pace requests</h2>
   <p>The backend paces nothing unless the configuration file sets <code>requests_per_minute</code>. Add <code>"perplexity": &#123;"requests_per_minute": 600&#125;</code> under <code>backends</code> to pace one process at ten requests a second.</p>

@@ -148,6 +148,31 @@ impl<'a> Sender<'a> {
         })
     }
 
+    fn estimated_cancel<'c>(
+        &self,
+        cancel: &Cancel<'c>,
+        body: &[u8],
+        asks: &[(Ask, usize)],
+    ) -> Result<Cancel<'c>, Error> {
+        let budgeted = cancel
+            .with_cache_refresh(
+                self.engine.storage().refresh_cache
+                    || self
+                        .engine
+                        .backend()
+                        .api_type()
+                        .is_mutable_alias(self.engine.backend().model()),
+            )
+            .with_process_budget(self.transport.send_budget.clone());
+        if let Some(tokens) = self.image_estimate(asks) {
+            return Ok(budgeted.with_estimated_tokens(Some(tokens)));
+        }
+        let tokens =
+            crate::core::PlanSummary::request_input_high(body, self.engine.backend().accounting())
+                .map_err(|_| Error::Usage("estimated input admission cannot be counted"))?;
+        Ok(budgeted.with_text_estimated_tokens(tokens))
+    }
+
     /// One request's attempts, from the first live key read to its split.
     fn one(&self, body: &[u8], asks: Vec<(Ask, usize)>, cancel: &Cancel) -> Done {
         if let Some(limit) = self
@@ -160,17 +185,10 @@ impl<'a> Sender<'a> {
         if let Err(error) = self.image_body(body.len(), &asks) {
             return refused(asks, error);
         }
-        let budgeted = cancel
-            .with_cache_refresh(
-                self.engine.storage().refresh_cache
-                    || self
-                        .engine
-                        .backend()
-                        .api_type()
-                        .is_mutable_alias(self.engine.backend().model()),
-            )
-            .with_process_budget(self.transport.send_budget.clone())
-            .with_estimated_tokens(self.image_estimate(&asks));
+        let budgeted = match self.estimated_cancel(cancel, body, &asks) {
+            Ok(budgeted) => budgeted,
+            Err(error) => return refused(asks, error),
+        };
         // A zero limit refuses before the key is read, so a bad key never
         // outranks a spent budget.
         if budgeted.has_zero_send_limit()

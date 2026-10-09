@@ -28,6 +28,7 @@ pub(crate) const MAX_PER_MINUTE: u32 = 60_000;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Backend {
     api_type: crate::core::adapters::ApiType,
+    accounting: InputAccounting,
     url: Url,
     model: ModelName,
     descriptions: Descriptions,
@@ -35,6 +36,14 @@ pub(crate) struct Backend {
     explicit_request_size: bool,
     image_route: built_in::images::ImageRoute,
     per_minute: Option<NonZeroU32>,
+}
+
+/// How the selected route estimates text shared across wire questions.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) enum InputAccounting {
+    #[default]
+    EncodedBody,
+    RepeatedState,
 }
 
 /// The default maximum request size at every address, in bytes.
@@ -105,6 +114,7 @@ impl Backend {
     pub(crate) const fn from_parts(url: Url, model: ModelName) -> Self {
         Self {
             api_type: crate::core::adapters::ApiType::Primary,
+            accounting: InputAccounting::EncodedBody,
             url,
             model,
             descriptions: Descriptions::Authored,
@@ -145,6 +155,7 @@ impl Backend {
     ) -> Result<Self, BackendError> {
         Ok(Self {
             api_type: crate::core::adapters::ApiType::Primary,
+            accounting: InputAccounting::EncodedBody,
             url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE), path)?,
             model: ModelName::new(model)?,
             descriptions: Descriptions::Authored,
@@ -161,6 +172,15 @@ impl Backend {
     }
     pub(crate) const fn api_type(&self) -> crate::core::adapters::ApiType {
         self.api_type
+    }
+
+    pub(crate) const fn with_accounting(mut self, accounting: InputAccounting) -> Self {
+        self.accounting = accounting;
+        self
+    }
+
+    pub(crate) const fn accounting(&self) -> InputAccounting {
+        self.accounting
     }
 
     /// Send descriptions in this form. Only a named backend sets one other

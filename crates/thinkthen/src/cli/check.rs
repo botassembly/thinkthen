@@ -125,7 +125,7 @@ fn inspect(
     lines: &mut Vec<String>,
 ) -> Result<(bool, PlanSummary), Failure> {
     let mut stopped = false;
-    let mut summary = PlanSummary::new(false);
+    let mut summary = PlanSummary::new(false).with_accounting(engine.backend().accounting());
     for probe in probes {
         if dry_run {
             // The one request a probe makes, from the encoder every command uses.

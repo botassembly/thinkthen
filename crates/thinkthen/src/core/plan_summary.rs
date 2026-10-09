@@ -1,6 +1,11 @@
 //! A whole input's preview, counted from the request bodies the real planner prepared.
 
-use serde::Serialize;
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
+
+use crate::core::backend::InputAccounting;
 use thiserror::Error;
 
 /// No estimate may wrap into a smaller apparent cost.
@@ -15,6 +20,9 @@ pub(crate) struct PlanSummary {
     records: usize,
     requests: usize,
     estimated_bytes: usize,
+    token_bytes: usize,
+    largest_token_bytes: usize,
+    accounting: InputAccounting,
     largest_request_bytes: usize,
     first_body: Option<Vec<u8>>,
     upper_bound: bool,
@@ -38,6 +46,47 @@ impl PlanSummary {
         }
     }
 
+    pub(crate) const fn with_accounting(mut self, accounting: InputAccounting) -> Self {
+        self.accounting = accounting;
+        self
+    }
+
+    /// Count the final packed state once per question for routes with that
+    /// observed accounting. This is a measured estimate, not a billed bound.
+    pub(crate) fn accounting_bytes(
+        body: &[u8],
+        accounting: InputAccounting,
+    ) -> Result<usize, PlanTooLarge> {
+        if accounting == InputAccounting::EncodedBody {
+            return Ok(body.len());
+        }
+        #[derive(Deserialize)]
+        struct Packed<'a> {
+            #[serde(borrow)]
+            state: &'a RawValue,
+            questions: BTreeMap<String, serde::de::IgnoredAny>,
+        }
+        let packed: Packed<'_> = serde_json::from_slice(body).map_err(|_| PlanTooLarge)?;
+        packed
+            .state
+            .get()
+            .len()
+            .checked_mul(packed.questions.len().saturating_sub(1))
+            .and_then(|extra| body.len().checked_add(extra))
+            .ok_or(PlanTooLarge)
+    }
+
+    pub(crate) fn request_input_high(
+        body: &[u8],
+        accounting: InputAccounting,
+    ) -> Result<u64, PlanTooLarge> {
+        let bytes = Self::accounting_bytes(body, accounting)?;
+        u64::try_from(bytes)
+            .ok()
+            .and_then(Self::estimated_input_high)
+            .ok_or(PlanTooLarge)
+    }
+
     pub(crate) fn record(&mut self) -> Result<(), PlanTooLarge> {
         self.records = self.records.checked_add(1).ok_or(PlanTooLarge)?;
         Ok(())
@@ -49,6 +98,12 @@ impl PlanSummary {
     }
 
     pub(crate) fn request(&mut self, body: &[u8]) -> Result<(), PlanTooLarge> {
+        let token_bytes = Self::accounting_bytes(body, self.accounting)?;
+        self.token_bytes = self
+            .token_bytes
+            .checked_add(token_bytes)
+            .ok_or(PlanTooLarge)?;
+        self.largest_token_bytes = self.largest_token_bytes.max(token_bytes);
         let requests = self.requests.checked_add(1).ok_or(PlanTooLarge)?;
         let bytes = self
             .estimated_bytes
@@ -84,8 +139,8 @@ impl PlanSummary {
 
     /// Conservative whole-token band at the measured 0.516/0.908 rates.
     pub(crate) fn estimated_input_tokens(&self) -> Result<(usize, usize), PlanTooLarge> {
-        let lower = self.estimated_bytes.checked_mul(516).ok_or(PlanTooLarge)? / 1000;
-        let upper = u64::try_from(self.estimated_bytes)
+        let lower = self.token_bytes.checked_mul(516).ok_or(PlanTooLarge)? / 1000;
+        let upper = u64::try_from(self.token_bytes)
             .ok()
             .and_then(Self::estimated_input_high)
             .and_then(|value| usize::try_from(value).ok())
@@ -101,7 +156,7 @@ impl PlanSummary {
             estimated_bytes: self.estimated_bytes,
             largest_request_bytes: self.largest_request_bytes,
             largest_request_estimated_input_tokens: Self::estimated_input_high(
-                self.largest_request_bytes as u64,
+                self.largest_token_bytes as u64,
             )
             .ok_or(PlanTooLarge)?,
             token_estimate_method: Self::TOKEN_ESTIMATE_METHOD,

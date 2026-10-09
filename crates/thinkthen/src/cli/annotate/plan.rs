@@ -37,7 +37,7 @@ pub(super) fn dry_run(
     let model = pack::model_json(backend.model().as_str())
         .map_err(|_| Failure::Defect("a model could not be written as JSON"))?;
     let mut packer = Packer::new(limits, model);
-    let mut summary = PlanSummary::new(false);
+    let mut summary = PlanSummary::new(false).with_accounting(backend.accounting());
     let mut occurrences = 0_usize;
     let mut group_requests = vec![0; judging.groups().len()];
     let mut closed = Vec::new();

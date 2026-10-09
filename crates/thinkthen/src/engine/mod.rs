@@ -51,6 +51,7 @@ pub(crate) struct Cancel<'a> {
     /// The call's own cap on the process request total.
     call_total: Option<u64>,
     estimated_tokens: Option<u64>,
+    estimated_images: bool,
     facts: Option<CallFacts>,
     invocation: invocation::Context,
     cache_refresh: bool,
