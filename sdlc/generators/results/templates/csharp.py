@@ -402,6 +402,15 @@ def render_inputs(schema):
             item = 'entry' + str(depth)
             return 'new System.Collections.ObjectModel.' + typ.replace('IReadOnlyDictionary', 'ReadOnlyDictionary') + '(' + expr + '.EnumerateObject().ToDictionary(' + item + ' => ' + item + '.Name, ' + item + ' => ' + read(value['additionalProperties'], item + '.Value', path + '_Entry', depth + 1) + '))'
         return expr + {'string': '.GetString()!', 'bool': '.GetBoolean()', 'long': '.GetInt64()', 'ulong': '.GetUInt64()', 'uint': '.GetUInt32()', 'double': '.GetDouble()'}.get(typ, '.Clone()')
+    def constant_matches(value, expr):
+        # Match admitted values, never their authored JSON escape spelling.
+        if isinstance(value, str):
+            return '(' + expr + '.ValueKind == JsonValueKind.String && ' + expr + '.GetString() == ' + quote(value) + ')'
+        if isinstance(value, bool):
+            return expr + '.ValueKind == JsonValueKind.' + ('True' if value else 'False')
+        if isinstance(value, int):
+            return '(' + expr + '.ValueKind == JsonValueKind.Number && ' + expr + '.GetInt64() == ' + str(value) + ')'
+        raise ValueError('unsupported Request constant type: ' + type(value).__name__)
     def matches(value, expr):
         if isinstance(value, bool):
             return 'true'
@@ -412,14 +421,14 @@ def render_inputs(schema):
         if value.get('type') in kinds:
             checks.append('(' + expr + '.ValueKind == JsonValueKind.' + kinds[value['type']] + ')')
         if 'const' in value:
-            checks.append(expr + '.GetRawText() == ' + quote(json.dumps(value['const'], ensure_ascii=False, separators=(',', ':'))))
+            checks.append(constant_matches(value['const'], expr))
         if 'properties' in value:
             checks.append(expr + '.ValueKind == JsonValueKind.Object')
             for member in value.get('required', []):
                 checks.append(expr + '.TryGetProperty(' + quote(member) + ', out _)')
             for member, prop in value['properties'].items():
                 if isinstance(prop, dict) and 'const' in prop:
-                    checks.append(expr + '.GetProperty(' + quote(member) + ').GetRawText() == ' + quote(json.dumps(prop['const'], separators=(',', ':'))))
+                    checks.append(constant_matches(prop['const'], expr + '.GetProperty(' + quote(member) + ')'))
         return ' && '.join(checks) if checks else 'true'
     header = '''// Generated from the Rust-derived Request schema; do not edit.
 #nullable enable
@@ -510,7 +519,7 @@ public abstract class InputDocument {
             elif value.get('type') != 'null' and 'const' not in value:
                 assignments.append('Value = ' + read(stripped, 'value', key + '_Value'))
             lines.append('internal ' + ('new ' if '_base' in value else '') + 'static ' + typ + ' Read(JsonElement value) => new() { ' + ', '.join(assignments) + ' };')
-        lines.append('public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { parsed.WriteTo(writer); return; } ' + ' '.join(writes) + ' }')
+        lines.append('public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText()); return; } ' + ' '.join(writes) + ' }')
         lines.append('}')
         output.append('\n'.join(lines))
     return header + '\n\n'.join(output) + '\n'

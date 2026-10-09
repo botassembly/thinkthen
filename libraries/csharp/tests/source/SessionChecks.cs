@@ -33,6 +33,24 @@ static class SessionChecks
         catch (NotSupportedException) { }
         var authoredPlan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallChoose { Question = authored, Input = new InputRequestInputText { Text = "owned" } } });
         if (authoredPlan.Requests != 1 || authoredPlan.FirstBodyUtf8.State != PresenceState.Value || !authoredPlan.FirstBodyUtf8.Value.Contains("First.")) throw new Exception("owned authored definition");
+        foreach (var (batch, schema) in new[] { ("max", "string"), (@"\u006dax", "string"), ("max", @"\u0073tring"), (@"\u006dax", @"\u0073tring") })
+        {
+            string original = "{\"item_schema\":{\"type\":\"" + schema + "\"},\"decide\":\"Is it?\",\"batch\":\"" + batch + "\",\"true\":{\"future\":{\"second\":2,\"first\":1}}}";
+            var parsed = engine.ParseQuestion(AuthoredQuestionKind.Atomic, original);
+            var definition = ((InputRequestDefinitionAlternative0)parsed.Value).Value;
+            if (definition.Batch.Value is not InputAuthoredDecideBatchAlternative0 || definition.ItemSchema.Value is not InputAuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
+            using var bytes = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(bytes)) parsed.Value.Write(writer);
+            if (System.Text.Encoding.UTF8.GetString(bytes.ToArray()) != original) throw new Exception("original authored constant spelling or order changed");
+            var plan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = parsed, Input = new InputRequestInputText { Text = "owned" } } });
+            if (plan.Requests != 1 || plan.FirstBodyUtf8.State != PresenceState.Value) throw new Exception("decoded authored constant plan");
+        }
+        _ = engine.ParseQuestion(AuthoredQuestionKind.Set, "{\"version\":1,\"questions\":{\"first\":{\"decide\":\"Is it?\"}}}");
+        foreach (var version in new[] { "1.0", "1e0" })
+        {
+            try { _ = engine.ParseQuestion(AuthoredQuestionKind.Set, "{\"version\":" + version + ",\"questions\":{\"first\":{\"decide\":\"Is it?\"}}}"); throw new Exception("noninteger authored version admitted"); }
+            catch (ThinkThen.Failure error) when (error.Kind == ThinkThen.FailureKind.Usage) { }
+        }
         var preview = engine.Plan(Request(new InputRequestInputText { Text = "café\0preview" }));
         if (preview.Records != 1 || preview.Requests != 1 || preview.FirstBodyUtf8.State != PresenceState.Value ||
             !preview.FirstBodyUtf8.Value.Contains("café") || preview.EstimatedInputTokens.Lower > preview.EstimatedInputTokens.Upper)
