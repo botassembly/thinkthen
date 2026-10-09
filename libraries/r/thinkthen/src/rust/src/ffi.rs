@@ -30,6 +30,7 @@ use crate::usage;
 
 mod complete;
 mod engine;
+mod request;
 mod settings;
 mod values;
 use values::{asked, batch_of, completion_of, context_of, required_completion, spec_of, whole_of};
@@ -474,6 +475,7 @@ fn tt_source_files(question: Robj, selection: Robj, deadline: Robj) -> Crossed<L
 extendr_module! {
     mod thinkthen;
     use complete;
+    use request;
     fn tt_question_check;
     fn tt_source_files;
     fn tt_question_file;

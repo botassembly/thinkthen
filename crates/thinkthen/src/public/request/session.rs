@@ -5,7 +5,7 @@ use super::{
     AdmittedRequest, Request, RequestEnvironment, RequestFeed, RequestInput, RequestItem,
     RequestOutcome, RequestValue,
 };
-use crate::{CallOptions, Engine, Error, SourceLocation};
+use crate::{CallOptions, Engine, Error, SourceLocation, Surface};
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 
@@ -251,6 +251,16 @@ impl Engine {
     /// # Errors
     /// Returns declaration refusal or failure to create the native worker.
     pub fn request_session(&self, request: Request) -> Result<RequestSession, Error> {
+        self.request_session_with_surface(request, Surface::Rust)
+    }
+    /// Admit a request with the explicit host identity owned by its worker.
+    /// # Errors
+    /// Returns declaration refusal or failure to create the native worker.
+    pub fn request_session_with_surface(
+        &self,
+        request: Request,
+        surface: Surface,
+    ) -> Result<RequestSession, Error> {
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
             admitted.request.call.arguments().input,
@@ -262,14 +272,14 @@ impl Engine {
         std::thread::Builder::new()
             .name("request-session".into())
             .spawn(move || {
-                run(engine, admitted, &worker_queue);
+                run(engine, admitted, &worker_queue, surface);
             })
             .map_err(|_| Error::local("session worker could not be started"))?;
         Ok(RequestSession { queue, feed })
     }
 }
 
-fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>) {
+fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>, surface: Surface) {
     let function = request.request.call.function();
     let observer = |event: crate::RecordObservation<'_>| {
         queue.publish(RequestSessionResult::Observation {
@@ -287,7 +297,10 @@ fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>) {
         _ => None,
     };
     let environment = RequestEnvironment {
-        controls: CallOptions::new().cancel(&queue.cancel).observe(&observer),
+        controls: CallOptions::new()
+            .surface(surface)
+            .cancel(&queue.cancel)
+            .observe(&observer),
         feed,
     };
     let terminal = match engine.execute_request_sink(&request, environment, Some(&sink)) {

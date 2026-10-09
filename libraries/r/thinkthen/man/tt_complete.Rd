@@ -1,30 +1,36 @@
-\name{tt_complete}
-\alias{tt_decide_complete}
-\alias{tt_choose_complete}
-\alias{tt_tag_complete}
-\alias{tt_score_complete}
-\alias{tt_filter_complete}
-\alias{tt_rank_complete}
-\alias{tt_find_complete}
-\alias{tt_annotate_complete}
-\alias{tt_recognize_complete}
-\alias{tt_relate_complete}
-\alias{tt_decide_batch}
-\alias{tt_choose_batch}
-\alias{tt_tag_batch}
-\alias{tt_score_batch}
-\alias{tt_filter_batch}
-\alias{tt_annotate_batch}
-\title{Typed native complete calls and lazy batches}
+\name{tt_decide}
+\alias{tt_decide}
+\alias{tt_choose}
+\alias{tt_tag}
+\alias{tt_score}
+\alias{tt_filter}
+\alias{tt_rank}
+\alias{tt_find}
+\alias{tt_annotate}
+\alias{tt_recognize}
+\alias{tt_relate}
+\alias{tt_question}
+\alias{tt_plan}
+\alias{tt_input}
+\alias{tt_batch}
+\title{Named native typed judging calls}
 \usage{
-tt_decide_complete(question, input, ...)
-tt_decide_batch(question, input, ...)
+tt_decide(question, input, options = list(), deadline_ms = NULL, completion = NULL)
+tt_question(value = NULL, file, name, reference)
+tt_input(kind, ...)
+tt_plan(question, input, function_name = "decide", options = list())
+tt_batch(function_name, question, input, options = list())
 }
 \arguments{
-\item{question}{Explicit native question source: role and exactly one body, raw, path, name or reference.}
-\item{input}{Explicit records or files with native reading options.}
-\item{...}{attempts, deadline_ms, cancel and context controls.}
+\item{question, value}{Literal wording or an ordinary authored question list.}
+\item{input}{Text, JSON evidence, a record vector, list, data frame, or explicit input selector.}
+\item{options}{Native canonical request controls in a named list.}
+\item{deadline_ms}{Native call deadline in milliseconds.}
+\item{completion}{An optional completion handle.}
+\item{file, name, reference}{Explicit question selector authority.}
+\item{kind, ...}{An explicit canonical input descriptor, without host validation.}
+\item{function_name}{The native named judging function.}
 }
-\value{Complete calls return typed results, final native facts, original inputs and ordinals. A batch returns next_row, poll, cancel, close and facts functions.}
-\description{Runs the named native engine API. All ten complete functions share this interface; six record functions also expose native lazy batches.}
-\details{Batch preparation waits for the first pull. poll returns NULL while pending; final facts distinguish exhaustion. Close an unfinished batch. Error conditions expose complete native failures with available facts. Ordinals and recognition starts are zero-based; recognition ends are exclusive Unicode scalar offsets. Physical source lines are one-based inclusive. Native rank values are one-based ranks. Cache, record, replay, images and admission remain native.}
+\value{Calls return thinkthen_Call objects with generated results and native facts. Fields support ordinary R indexing and comparison. A batch provides next_result, poll, cancel, close and facts functions. A plan provides native packing estimates.}
+\description{Rust admits every question, input and control. R converts ordinary values and delivers native conditions, interruption and cleanup.}
+\details{Generated optional fields distinguish thinkthen_absent from explicit NULL. Native indexes and offsets remain zero-based. Objects print summaries that withhold content. Failed streamed calls retain their completed prefix and available terminal facts.}

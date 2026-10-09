@@ -20,6 +20,7 @@ mod files;
 mod native_results;
 mod plan;
 mod relate;
+mod request;
 mod results_generated;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};

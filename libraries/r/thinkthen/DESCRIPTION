@@ -3,11 +3,10 @@ Type: Package
 Title: The ThinkThen Verbs for R
 Version: 0.2.0
 Authors@R: person("Ian", "Maurer", role = c("aut", "cre"), email = "imaurer@gmail.com")
-Description: The eight verbs (decide, choose, score, tag, filter, rank,
-    find, annotate) plus recognize and relate, with a tt_ prefix, over the
-    thinkthen Rust library. A column goes in and a column comes out. NA is
-    "not sure". A bulk call crosses into the engine once and runs at the
-    engine's throttle. Errors carry one of six kinds and a retry signal.
+Description: Ten named typed judging functions over the thinkthen Rust library.
+    Ordinary R values enter native request admission. Generated results preserve
+    missing and null fields. Native conditions retain error kinds and facts.
+    Calls use R interruption and native cleanup.
 License: MIT + file LICENSE
 URL: https://thinkthen.dev, https://github.com/botassembly/thinkthen
 BugReports: https://github.com/botassembly/thinkthen/issues
