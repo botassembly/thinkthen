@@ -2,6 +2,40 @@
 
 `import thinkthen as tt` calls the real engine through the public `thinkthen` crate. The binding is the unpublished crate `thinkthen-python` in its own Cargo workspace (ADR 0047). The design page is `sdlc/planning/libraries/python.md`.
 
+Ordinary named calls on `tt.Engine` and the module use the canonical Rust Request session. Each returns `tt.Result`: `.value` retains the ordinary answer view, `.results` holds generated Rust-owned complete objects, and `.facts` holds actual native final facts. The complete objects retain original indexes, input values, source positions, answer IDs, optional presence and embedded failures. They convert to independent mappings and pickle without holding an engine. `bool(call)` follows `.value`; testing an embedded failure itself raises `TypeError`.
+
+```python
+with tt.Engine(cache=False) as engine:
+    call = engine.decide("Does the customer ask for a refund?", "Please refund this order.")
+    call.value
+    call.results[0].answer.probability
+    call.facts.requests_sent
+    detail = engine.decide("Does the customer ask for a refund?", "Please refund this order.", details=True)
+    detail.value.answer_id
+```
+
+`details=True` selects the complete typed result as `.value` for a scalar, or an ordered list for several inputs. `.results` always retains the complete typed objects. Mapping access distinguishes an absent member from a present null; unknown result members remain present. Top-level failures raise typed exceptions with `.complete` and observed facts when available. Cancellation leaves unsettled facts pending.
+
+```python
+async with tt.Engine(cache=False) as engine:
+    call = await engine.asyncio.decide("Does the customer ask for a refund?", iter(messages))
+    values = call.value
+```
+
+The async namespace provides the same ten names and argument order as the engine. It polls the native session without waiting for a provider. A cancelled task closes its iterator and native session before propagating cancellation. A synchronous iterator must yield without blocking; its own Python work runs on the event-loop thread. Context exit stops active calls. A direct iterator call collects a bounded native feed into one result; it keeps one unaccepted item while the native queue is full.
+
+| Earlier call | Named call |
+| --- | --- |
+| `engine.complete.decide(QuestionSource(...), Records(...))` | `engine.decide(DecideSpec(...), RecordInput(...))` |
+| `engine.details(question, text)` | `engine.decide(question, text, details=True)` |
+| `call.facts["requests_sent"]` | `call.facts.requests_sent` or mapping access |
+| Iterating a direct call's `Stream` | Read the direct call's collected `.value` |
+| Blocking inside an async task | `await engine.asyncio.decide(question, input)` |
+
+Typed input and question carriers remain available from `thinkthen.complete`. `complete.Item` with `complete.Image` supplies byte attachments with explicit media. A `QuestionFile`, path object, or explicit compatibility `QuestionSource` selects a question file; literal text remains literal. `Files` and `read_files` select native source readers. The older `ImageInput` carrier lacks a media declaration and requires the input-carrier migration before it can represent canonical byte attachments. JSONL `complete.Files` and raw compatibility question sources retain `engine.complete`; the canonical source and question selectors cannot express those compatibility forms.
+
+Curried `Judge`, frame adapters, `engine.complete`, and the older `details` method retain their compatibility implementation. Their frame conversion and complete-reader replacement belong to the next migration. The descriptions below cover those retained interfaces where they differ from direct named calls.
+
 The 0.2 release adds an x86-64 Windows wheel (`win_amd64`) for Python 3.10 or later. Install it with `pip install thinkthen` after 0.2 is published. Its native Windows run remains pending. Linux and macOS keep their existing wheels. A development checkout builds it with the same `build-wheel.sh` maturin route under Git Bash. The Windows gate installs the release wheel outside the checkout, checks loopback answers and refusals, then runs the applicable tests with the test-only probe extension.
 
 ```python
@@ -75,7 +109,7 @@ Every call runs on its own worker thread. Ctrl-C or the caller's token stops the
 
 ## Run facts
 
-Every successful verb returns `Call[T]`. `Call.value` is the former answer, including a Series or frame. `Call.probability` carries the yes probability for decide and the chosen option's probability for choose from the same answer; an unresolved choose has `None`, and score and tag have `None`. `Call.facts` is a read-only mapping of this call's `records`, `requests_sent`, `cache_answers`, optional tokens and model, and elapsed seconds. `Call.details` is an ordered tuple of immutable question observations with answer or failure, probabilities, request digests and per-question shares. Started ordinary failures carry final `error.facts` and `error.details`; refusals before the worker starts have neither. A caught worker panic has no account. These are Rust call observations, not differences in process counters.
+Retained Judge and frame calls return `Call[T]`; direct named calls return `Result[T]` as described above. `Call.value` is the former answer, including a Series or frame. `Call.probability` carries the yes probability for decide and the chosen option's probability for choose from the same answer; an unresolved choose has `None`, and score and tag have `None`. `Call.facts` is a read-only mapping of this call's `records`, `requests_sent`, `cache_answers`, optional tokens and model, and elapsed seconds. `Call.details` is an ordered tuple of immutable question observations with answer or failure, probabilities, request digests and per-question shares. Started ordinary failures carry final `error.facts` and `error.details`; refusals before the worker starts have neither. A caught worker panic has no account. These are Rust call observations, not differences in process counters.
 
 `details(question, text).value` is the command's `--details` line for one text as a `dict`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost.
 
