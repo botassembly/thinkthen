@@ -22,7 +22,7 @@ Extract the matching C archive supplied by your reviewed development build. It c
 PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
   $(PKG_CONFIG_PATH="$PWD/lib/pkgconfig" pkg-config --cflags thinkthen) \
   "$PWD/lib/libthinkthen.a" \
-  $(PKG_CONFIG_PATH="$PWD/lib/pkgconfig" pkg-config --libs-only-other --static thinkthen)
+  $(PKG_CONFIG_PATH="$PWD/lib/pkgconfig" pkg-config --libs --static thinkthen | sed 's/-lthinkthen//')
 ./consumer
 ```
 

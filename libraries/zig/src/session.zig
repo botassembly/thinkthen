@@ -47,11 +47,11 @@ pub const Packet = struct {
     }
     pub fn facts(self: Packet) ?*const c.thinkthen_complete_facts_v1 {
         const value = self.terminal() orelse return null;
-        return optional(value.facts);
+        return optional(value.facts) orelse return null;
     }
-    pub fn failure(self: Packet) ?*const c.thinkthen_complete_failure_v1 {
+    pub fn failure(self: Packet) ?*const c.thinkthen_complete_call_error_v1 {
         const value = self.terminal() orelse return null;
-        return optional(value.failure);
+        return optional(value.failure) orelse return null;
     }
 };
 pub const Session = struct {
