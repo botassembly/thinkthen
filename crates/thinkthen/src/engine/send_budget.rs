@@ -90,7 +90,22 @@ impl Cancel<'_> {
 
     pub(crate) fn with_estimated_tokens(mut self, tokens: Option<u64>) -> Self {
         self.estimated_tokens = tokens;
+        self.estimated_images = tokens.is_some();
         self
+    }
+
+    pub(crate) fn with_text_estimated_tokens(mut self, tokens: u64) -> Self {
+        self.estimated_tokens = Some(tokens);
+        self.estimated_images = false;
+        self
+    }
+
+    pub(crate) fn request_input_estimate(&self, bytes: usize) -> Option<u64> {
+        self.estimated_tokens.or_else(|| {
+            u64::try_from(bytes)
+                .ok()
+                .and_then(crate::core::PlanSummary::estimated_input_high)
+        })
     }
 
     pub(crate) fn reserve_send(
@@ -152,7 +167,7 @@ impl Cancel<'_> {
             (None, true) => crate::core::EstimatedInputDenial::AdditionalRequest { limit },
             (None, false) => crate::core::EstimatedInputDenial::InitialRequest { limit },
         };
-        if self.estimated_tokens.is_some() {
+        if self.estimated_images {
             error::Error::ImageEstimatedInput(reason)
         } else {
             error::Error::EstimatedInput(reason)

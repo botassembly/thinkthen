@@ -62,7 +62,7 @@ pub(super) fn packed(
         continues: false,
     };
     let mut packer = packer(&planner, backend, packing)?;
-    let mut summary = PlanSummary::new(false);
+    let mut summary = PlanSummary::new(false).with_accounting(backend.accounting());
     let mut occurrences = 0_usize;
     let mut closed = Vec::new();
     let mut dropped = false;

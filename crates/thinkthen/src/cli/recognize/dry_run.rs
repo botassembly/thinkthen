@@ -127,7 +127,7 @@ fn planned(
         examples_field,
         seed_spans_field,
     } = question;
-    let mut summary = PlanSummary::new(true);
+    let mut summary = PlanSummary::new(true).with_accounting(backend.accounting());
     let mut first = None;
     for record in records {
         let record = record?;

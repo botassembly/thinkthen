@@ -12,8 +12,137 @@ use std::time::{Duration, Instant};
 use conformance_backend::{Canned, Listener, Rendezvous};
 use thinkthen::{BatchSetting, CallOptions, Engine, ErrorKind, EstimatedInputDenial, Question};
 
+#[path = "public_controls/alone.rs"]
+mod alone;
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+use child::wait;
+
 const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":312,"output_tokens":48000}}"#;
 const NO_USAGE: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
+
+#[test]
+fn shared_state_questions_raise_only_the_selected_route_estimate_and_refuse_before_sending() {
+    alone::alone(
+        "shared_state_questions_raise_only_the_selected_route_estimate_and_refuse_before_sending",
+        shared_state_case,
+    );
+}
+
+fn shared_state_case() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"same-model","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1},"q3":{"type":"noul","noul":0.2}}}"#)).expect("listener");
+    let question = Question::tag_labels("Which topics apply?")
+        .and_then(|labels| labels.label("delivery", None))
+        .and_then(|labels| labels.label("refund", None))
+        .and_then(|labels| labels.label("support", None))
+        .and_then(thinkthen::LabelBuilder::build)
+        .expect("labels");
+    let evidence = "A public synthetic parcel report. ".repeat(40);
+    let build = |name: &str, cap| route_engine(name, listener.base(), cap);
+    let ordinary = build("typesafe", None)
+        .plan_with(&question, ["parcel"], CallOptions::new().context(&evidence))
+        .expect("ordinary plan");
+    let revised = build("perplexity", None)
+        .plan_with(&question, ["parcel"], CallOptions::new().context(&evidence))
+        .expect("revised plan");
+    assert_eq!(
+        ordinary.first_body(),
+        revised.first_body(),
+        "accounting preserves wire identity"
+    );
+    let body = revised.first_body().expect("body");
+    let packed: serde_json::Value = serde_json::from_slice(body).expect("packed JSON");
+    assert_eq!(
+        packed
+            .get("questions")
+            .expect("questions member")
+            .as_object()
+            .expect("questions")
+            .len(),
+        3
+    );
+    let state_bytes = serde_json::to_string(packed.get("state").expect("state member"))
+        .expect("state JSON")
+        .len();
+    let accounting_bytes = body.len() + state_bytes * 2;
+    let revised_high = (accounting_bytes as u64 * 908).div_ceil(1000);
+    assert_eq!(
+        ordinary.estimated_input_tokens().1 as u64,
+        (body.len() as u64 * 908).div_ceil(1000)
+    );
+    assert_eq!(revised.estimated_input_tokens().1 as u64, revised_high);
+    assert_eq!(
+        revised.estimated_bytes(),
+        body.len(),
+        "bytes describe the sent body"
+    );
+    assert_request_counts(&revised, body.len(), revised_high);
+    let cap = ordinary.estimated_input_tokens().1 as u64 + 1;
+    assert!(cap < revised_high);
+    let denial = build("perplexity", Some(cap))
+        .tag_many_complete_with(&question, ["parcel"], CallOptions::new().context(&evidence))
+        .expect_err("repeated-state estimate exceeds cap");
+    assert_eq!(
+        denial.estimated_input_denial(),
+        Some(EstimatedInputDenial::InitialRequest { limit: cap })
+    );
+    assert_eq!(listener.count(), 0, "revised admission sends nothing");
+    let ordinary_call = build("typesafe", Some(cap))
+        .tag_many_complete_with(&question, ["parcel"], CallOptions::new().context(&evidence))
+        .expect("ordinary estimate remains admitted");
+    assert_eq!(listener.count(), 1);
+    assert_request_counts(
+        ordinary_call.facts(),
+        body.len(),
+        ordinary.estimated_input_tokens().1 as u64,
+    );
+    let tally = thinkthen::Tally::new();
+    let revised_call = tally
+        .run(|| {
+            build("perplexity", Some(revised_high + cap)).tag_many_complete_with(
+                &question,
+                ["parcel"],
+                CallOptions::new().context(&evidence),
+            )
+        })
+        .expect("revised estimate admits a raised cap");
+    assert_request_counts(revised_call.facts(), body.len(), revised_high);
+    assert_request_counts(&tally.facts(), body.len(), revised_high);
+    assert_eq!(listener.count(), 2);
+}
+
+fn route_engine(name: &str, base: &str, cap: Option<u64>) -> Engine {
+    Engine::builder()
+        .backend(name)
+        .expect("backend")
+        .base_url(base)
+        .expect("base")
+        .model("same-model")
+        .expect("model")
+        .api_key("sk-test")
+        .expect("fake key")
+        .no_cache()
+        .max_retries(0)
+        .max_estimated_input_tokens_total(cap)
+        .build()
+        .expect("engine")
+}
+
+fn assert_request_counts(counts: &impl serde::Serialize, bytes: usize, tokens: u64) {
+    let counts = serde_json::to_value(counts).expect("request counts");
+    assert_eq!(
+        counts
+            .get("largest_request_bytes")
+            .and_then(serde_json::Value::as_u64),
+        Some(bytes as u64)
+    );
+    assert_eq!(
+        counts
+            .get("largest_request_estimated_input_tokens")
+            .and_then(serde_json::Value::as_u64),
+        Some(tokens)
+    );
+}
 
 #[test]
 fn final_body_charge_selects_each_limit_and_distinguishes_later_and_retry_denials() {

@@ -155,7 +155,7 @@ fn planned(
         asks = asks.with_context(backend, context)?;
     }
     let prepared = asks.requests(backend, profile, facade::Bound::WHOLE)?;
-    let mut summary = PlanSummary::new(false);
+    let mut summary = PlanSummary::new(false).with_accounting(backend.accounting());
     summary
         .records_added(records)
         .map_err(|_| Failure::Defect("a plan is too large"))?;

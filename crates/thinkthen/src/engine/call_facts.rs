@@ -25,6 +25,7 @@ struct State {
     records: u64,
     requests_sent: u64,
     largest_request_bytes: usize,
+    largest_request_estimated_input_tokens: Option<u64>,
     cache_answers: u64,
     tokens: Option<Usage>,
     reported: ReportedSum,
@@ -45,6 +46,7 @@ pub(crate) struct Snapshot {
     pub(crate) records: u64,
     pub(crate) requests_sent: u64,
     pub(crate) largest_request_bytes: usize,
+    pub(crate) largest_request_estimated_input_tokens: Option<u64>,
     pub(crate) cache_answers: u64,
     pub(crate) tokens: Option<Usage>,
     pub(crate) reported: Option<ReportedUsage>,
@@ -89,6 +91,7 @@ impl CallFacts {
             records: 0,
             requests_sent: 0,
             largest_request_bytes: 0,
+            largest_request_estimated_input_tokens: Some(0),
             cache_answers: 0,
             tokens: None,
             reported: ReportedSum::default(),
@@ -106,10 +109,14 @@ impl CallFacts {
     }
 
     /// Called after the final stop and budget checks, after the process mark.
-    pub(crate) fn sent(&self, bytes: usize) {
+    pub(crate) fn sent(&self, bytes: usize, tokens: Option<u64>) {
         let mut state = self.state();
         state.requests_sent += 1;
         state.largest_request_bytes = state.largest_request_bytes.max(bytes);
+        state.largest_request_estimated_input_tokens = state
+            .largest_request_estimated_input_tokens
+            .zip(tokens)
+            .map(|(held, next)| held.max(next));
     }
 
     /// Count only a cache answer that the process counters also count.
@@ -174,6 +181,7 @@ impl CallFacts {
             records: state.records,
             requests_sent: state.requests_sent,
             largest_request_bytes: state.largest_request_bytes,
+            largest_request_estimated_input_tokens: state.largest_request_estimated_input_tokens,
             cache_answers: state.cache_answers,
             reported: state.reported.total().ok().flatten(),
             tokens: (!state.missing_usage && state.live_replies > 0)
@@ -214,11 +222,11 @@ impl Cancel<'_> {
         }
     }
 
-    pub(crate) fn sent(&self, bytes: usize) {
+    pub(crate) fn sent(&self, bytes: usize, tokens: Option<u64>) {
         self.sent_any
             .store(true, std::sync::atomic::Ordering::Release);
         if let Some(facts) = &self.facts {
-            facts.sent(bytes);
+            facts.sent(bytes, tokens);
         }
     }
 

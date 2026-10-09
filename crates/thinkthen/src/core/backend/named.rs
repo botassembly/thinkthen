@@ -9,7 +9,7 @@ use std::fmt;
 use std::num::NonZeroU32;
 
 use crate::core::adapters::{ApiType, built_ins};
-use crate::core::backend::{Backend, BackendError, KEY_VAR};
+use crate::core::backend::{Backend, BackendError, InputAccounting, KEY_VAR};
 use crate::core::plan::Descriptions;
 use crate::core::{BackendProfile, Prices};
 
@@ -17,6 +17,7 @@ use crate::core::{BackendProfile, Prices};
 #[derive(Clone, Eq, PartialEq)]
 pub(crate) struct Named {
     api_type: ApiType,
+    accounting: InputAccounting,
     name: String,
     base: String,
     path: String,
@@ -49,6 +50,9 @@ impl Named {
     pub(crate) fn new(name: &str, base: &str, key: &str, model: &str) -> Self {
         Self {
             api_type: ApiType::Primary,
+            accounting: built_ins()
+                .find(|(entry, _)| entry.name == name)
+                .map_or(InputAccounting::EncodedBody, |(entry, _)| entry.accounting),
             name: name.to_owned(),
             base: base.to_owned(),
             path: crate::core::adapters::built_in::ENDPOINT_PATH.to_owned(),
@@ -95,6 +99,7 @@ impl Named {
             .find(|(built_in, _)| built_in.name == name)
             .map(|(built_in, api_type)| Self {
                 api_type,
+                accounting: built_in.accounting,
                 name: built_in.name.to_owned(),
                 base: built_in.base.to_owned(),
                 path: built_in.path.to_owned(),
@@ -242,6 +247,7 @@ impl Choice<'_> {
             .map(|backend| {
                 backend
                     .with_api_type(named.api_type)
+                    .with_accounting(named.accounting)
                     .with_descriptions(named.descriptions)
                     .with_image_route(crate::core::adapters::built_in::images::named(
                         &named.name,

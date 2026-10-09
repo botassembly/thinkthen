@@ -77,7 +77,7 @@ pub(super) fn write(
         context.profile,
         crate::engine::facade::Bound::pairs(context.profile),
     )?;
-    let mut summary = PlanSummary::new(true);
+    let mut summary = PlanSummary::new(true).with_accounting(context.backend.accounting());
     summary
         .records_added(context.entity_count)
         .map_err(|_| Failure::Defect("a plan is too large"))?;

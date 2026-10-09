@@ -49,6 +49,7 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
     let mut asks = Asks::default();
     asks.add(backend, find.plan())?;
     add(
+        backend,
         "find",
         asks.requests(backend, inner.profile(), Bound::WHOLE)?,
         0,
@@ -68,7 +69,7 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
     )?;
     // One token can produce at most one name. Its kind takes one request;
     // no alternate edges or relations exist in this recognition input.
-    add("recognize", prepared, 1, &mut lines, &mut requests)?;
+    add(backend, "recognize", prepared, 1, &mut lines, &mut requests)?;
     let spec = core::RelateSpec::parse(RELATE).map_err(invalid)?;
     let entities = spec
         .admit(&[
@@ -77,7 +78,14 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
         ])
         .map_err(invalid)?;
     let prepared = facade::relations(&entities, &spec, backend, inner.profile())?;
-    add("relate", prepared.requests, 0, &mut lines, &mut requests)?;
+    add(
+        backend,
+        "relate",
+        prepared.requests,
+        0,
+        &mut lines,
+        &mut requests,
+    )?;
     Ok((lines, requests))
 }
 
@@ -103,6 +111,7 @@ fn quoted(
     let mut asks = Asks::default();
     asks.add(backend, &plan)?;
     add(
+        backend,
         name,
         asks.requests(backend, inner.profile(), Bound::WHOLE)?,
         0,
@@ -112,13 +121,14 @@ fn quoted(
 }
 
 fn add(
+    backend: &core::Backend,
     name: &str,
     prepared: Vec<facade::Request>,
     adaptive: usize,
     lines: &mut Vec<String>,
     requests: &mut usize,
 ) -> Result<(), Failure> {
-    let mut summary = PlanSummary::new(adaptive > 0);
+    let mut summary = PlanSummary::new(adaptive > 0).with_accounting(backend.accounting());
     summary
         .record()
         .map_err(|_| Failure::Defect("a check plan is too large"))?;
