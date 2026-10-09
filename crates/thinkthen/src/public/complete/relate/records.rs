@@ -90,7 +90,12 @@ where
     let mut originals = Vec::new();
     let mut lines = None;
     let mut bytes = 0usize;
-    let mut records = records.into_iter().take(256).enumerate();
+    let records = records.into_iter();
+    let (lower, upper) = records.size_hint();
+    // Eager feeds expose their finite extent; lazy feeds still stop at the refusal boundary.
+    let limit = upper.filter(|upper| *upper == lower).unwrap_or(256);
+    let mut records = records.take(limit).enumerate();
+    let mut count = 0;
     loop {
         options.admission()?;
         let Some((at, record)) = records.next() else {
@@ -102,9 +107,19 @@ where
         options.admission()?;
         let (original, input, pair) = row?;
         check(at)?;
-        pairs.push(pair);
-        inputs.push(input);
-        originals.push(original);
+        count = at + 1;
+        if count > 255
+            && matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some())
+        {
+            return Err(Error::usage(
+                "source relate takes at most 255 source records",
+            ));
+        }
+        if count <= 256 {
+            pairs.push(pair);
+            inputs.push(input);
+            originals.push(original);
+        }
     }
     let lines = lines.unwrap_or(false);
     if lines {
@@ -127,7 +142,7 @@ where
     let entities = ask.0.admit(&distinct).map_err(|cause| {
         if cause == crate::core::EntitySetError::TooMany {
             Error::refused(cause).with_diagnostic(
-                crate::public::error::diagnostic::Diagnostic::RelationEntityCount(distinct.len()),
+                crate::public::error::diagnostic::Diagnostic::RelationEntityCount(count),
             )
         } else {
             Error::refused(cause)
