@@ -26,6 +26,8 @@ The design at `236db58831f6a81d8baef4b50f7d9a97e76417d6` retains ADR 0128 while 
 
 After 0499 relinquishes its shared writer, this change may edit `crates/thinkthen/src/public/request.rs`, `crates/thinkthen/src/public/request/admission.rs`, `crates/thinkthen/src/public/request/composition.rs`, `crates/thinkthen/src/public/request/execution.rs`, a private `crates/thinkthen/src/public/request/transport.rs`, and `crates/thinkthen/src/public/request/inline.rs` only if needed for the preflight. The existing bounded reader in `crates/thinkthen/src/public/input_files.rs` may lose its CLI-only guard if library-only compilation requires it. Add no canonical transport setting or cache identity field. Keep implementation and its actual API inventory together; do not publish future exports ahead of code.
 
+Correct the generated schema's omission of the existing dynamic-choose declaration in `crates/thinkthen/src/public/request/definition/schema.rs` and regenerate `specification/request.schema.json` through the existing schema test. Preserve the native declaration grammar; this repairs structural parity rather than adding a new setting or function.
+
 ## Progress
 
 - 2026-10-08 started
