@@ -86,9 +86,6 @@ impl<'de> serde::de::Visitor<'de> for OptionsCarrier {
             .map_err(serde::de::Error::custom)?
             .unwrap_or(false);
         let proxy = fields.remove("proxy");
-        if proxy.as_ref().is_some_and(|raw| raw.get() == "null") {
-            return Err(serde::de::Error::custom("proxy activation cannot be null"));
-        }
         if let Some(raw) = fields.get_mut("field") {
             let field: Fields =
                 serde_json::from_str(raw.get()).map_err(serde::de::Error::custom)?;

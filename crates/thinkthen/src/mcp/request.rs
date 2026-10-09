@@ -199,7 +199,6 @@ impl Descriptor {
             self.images.iter().map(|image| image.native()).collect(),
         );
         let fields: std::collections::BTreeMap<_, _> = [
-            ("context", &self.context),
             ("examples", &self.examples),
             ("seed_spans", &self.seed_spans),
         ]
@@ -210,7 +209,13 @@ impl Descriptor {
             .map_err(|_| Error::usage("invalid per-item controls"))?;
         let controls: RequestItem =
             serde_json::from_str(&json).map_err(|_| Error::usage("invalid per-item controls"))?;
-        item.context = controls.context;
+        if let Some(raw) = &self.context {
+            let context: RequestItem =
+                serde_json::from_str(&format!("{{\"context\":{}}}", raw.get())).map_err(|_| {
+                    Error::usage("the per-item context does not match context_schema")
+                })?;
+            item.context = context.context;
+        }
         item.examples = controls.examples;
         item.seed_spans = controls.seed_spans;
         if let Some(raw) = &self.options {
