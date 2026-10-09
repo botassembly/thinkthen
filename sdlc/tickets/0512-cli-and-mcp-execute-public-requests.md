@@ -10,6 +10,8 @@ Reviews: revision 4cd756859, reject
 
 ## Outcome
 
+The review amendment below governs the initial slice and supersedes the undefined machine-readable CLI error feature.
+
 The CLI and MCP admit and execute every call through the same public request path as the libraries. Their private pipelines and their own argument types go.
 
 ## Evidence
@@ -19,3 +21,9 @@ The CLI and MCP admit and execute every call through the same public request pat
 - Changes: Map CLI arguments and MCP tool input into the public Request and execute it. Derive CLI exit codes from public error kinds. Add a machine-readable CLI error output. Claim `crates/thinkthen/src/cli/**` and `libraries/mcp/**` in narrowed slices.
 - Proof: Existing CLI and MCP outside-in cases pass unchanged. A check fails when `cli/` or `mcp/` imports a private engine module.
 - Defers: New CLI features. Shell completions go to an idea.
+
+## Review amendment
+
+CLI converts transport arguments into Request and uses public execution instead of private judgment pipelines; its host argument parser remains. MCP already executes Request. Remove its duplicate semantic admission while preserving protocol rendering and host authority. Do not add a new machine-readable error feature in this ticket.
+
+The first MCP slice claims `crates/thinkthen/src/mcp/admission.rs`, `crates/thinkthen/src/mcp/request.rs`, `crates/thinkthen/src/mcp/inputs.rs`, `crates/thinkthen/src/mcp/tests/admission.rs`, `crates/thinkthen/src/mcp/tests/execution.rs` and `libraries/mcp/conformance.py`. Name actual CLI files per later slice. This amendment supersedes the whole-folder claim and private argument-type removal above.

@@ -30,3 +30,7 @@ Ian's ruling also covers every migrated surface through the shared Request. Admi
 Extend the narrow claim to `crates/thinkthen/src/public/request/options.rs`, `crates/thinkthen/src/public/request/admission.rs`, `crates/thinkthen/src/public/request/execution.rs`, `crates/thinkthen/src/public/request/tests.rs`, and `specification/request.schema.json`. If authored definition admission needs a change, name its exact file before implementation. Keep the CLI and Rust outside-in proofs, and add one MCP or Python contract case proving the cutoff and zero extra requests through the generated path. Select its existing test file before implementation and add that file to the claim.
 
 This amendment needs a fresh ticket review before coding. It follows ask 3 of the rank-threshold approval message and keeps the dependency order unchanged.
+
+### Review correction
+
+Also claim `crates/thinkthen/src/public/request.rs`, `crates/thinkthen/src/cli/request.rs`, `crates/thinkthen/src/mcp/request.rs` and `crates/thinkthen/src/mcp/tests/execution.rs`; MCP is the selected additional contract proof. These own option applicability, CLI forwarding and MCP admission. Claim `crates/thinkthen/src/public/request/definition.rs` and `crates/thinkthen/src/core/question_file.rs` for existing authored-threshold admission. Reject supplied and authored cutoffs on saved-score and question-set routes before sends. Preserve observations and original ordinals, applying the cut reading before top. Reuse existing schema generation.

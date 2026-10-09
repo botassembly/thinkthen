@@ -13,6 +13,8 @@ Reviews: revision 4cd756859, reject
 
 ## Outcome
 
+The review amendment below narrows the initial implementation and adds explicit session ownership proof.
+
 C# is thin and first-class end to end: the JSON session interface, generated typed results, `Task` with `CancellationToken`, `SafeHandle` cleanup, nullable reference types, typed exceptions and one entry point. Its measured result sets the pattern for 0504.
 
 ## Evidence
@@ -22,3 +24,9 @@ C# is thin and first-class end to end: the JSON session interface, generated typ
 - Changes: Rebuild `libraries/csharp` on the session interface and generated results. Remove the native layout and reader files. Claim `libraries/csharp/**`.
 - Proof: The shared conformance suite passes through the installed NuGet package. A fresh reviewer scores all ten guide items as met. The record gives lines removed and lines left.
 - Defers: Other languages follow in 0504 using this pattern.
+
+## Review amendment
+
+Use 0503's settled ownership and capacity rules. Cancellation stops further host reads and submissions. Disposal cannot free state still referenced by a native operation or cancellation callback. Retained native work references no freed host storage; copy generated results into owned host values before releasing native handles.
+
+Initial claims are `libraries/csharp/src/ThinkThen.cs`, `libraries/csharp/src/CompleteEngine.cs`, `libraries/csharp/src/NativeMethods.cs`, `libraries/csharp/tests/source/NativeChecks.cs`, `libraries/csharp/tests/source/Installed.cs` and `libraries/csharp/tests/package_check.py`. Name new session and SafeHandle files in the reviewed design before coding. Add deterministic cancelled/full/closed, stopped-reader, cancellation-versus-disposal and failure-facts cases through existing runners. Delete copied layouts and readers only as their callers migrate; retain all four dependencies.
