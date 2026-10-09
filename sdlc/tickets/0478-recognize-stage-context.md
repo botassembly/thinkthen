@@ -26,9 +26,9 @@ Design caller-supplied context separately for recognize stages so a caller can g
 - Proof: Offline exact-request and replay tests show context reaches only selected stages, omitted controls preserve existing bodies, changed context changes affected identities, and invalid combinations send nothing.
 - Defers: Proxy configuration policy and model selection by stage.
 
-### Added public declarations
-
 These declarations accompany the implemented stage-context API and the accepted ADR. Generated request and saved-question schemas use this same type.
+
+### Added public declarations
 
 ```text
 struct RecognitionStageContext
