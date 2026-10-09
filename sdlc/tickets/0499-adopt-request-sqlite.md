@@ -1,4 +1,4 @@
-# 0499: Move SQLite onto the shared request contract
+# 0499: Run SQLite through the shared request contract
 
 Status: OPEN.
 
@@ -18,35 +18,19 @@ Reviews: revision c0565d2c568769a1066fd6a751fc8a0568854ffc, accept
 
 ## Outcome
 
-Adopt shared Request and generated results in SQLite through named typed public calls.
+SQLite runs every judgment through the shared Request contract, so Rust owns all admission and result rules. SQLite keeps only its host types, SQL authority and cancellation. Its SQL conventions (NULL, binary images, JSON values and in-database descriptions) belong to 0519.
 
 ## Evidence
 
-- Starts from: PM architecture asks2/5 requires one ticket per direct binding; current SQLite adapter repeats admission/result construction.
-- Keeps: SQL authority, selected model, files and facts; all ten functions, input/result/error and cache/replay behavior.
-- Changes: Depends on0491, 0502 and the reviewed generation decision. Translate host arguments into Request, decode generated types, and remove the old copy after parity. Claim `databases/sqlite/**` and its installed typed consumer cases. Preserve absent versus null and tolerate permitted unknown result fields.
-- Proof: Full shared cases execute through the installed host's typed interface, including files/images where supported, context/options, original positions, facts, failures, invalid-input zero sends and cancellation. Raw JSON pass-through is insufficient.
-- Defers: Proxy and changing platform rulings without evidence. Size: medium surface migration.
-
-## Native feed bridge
-
-SQLite's existing composed records retain file and line locations and distinguish eager admission from incremental execution. Compatibility translations reuse the reviewed shared Request feed bridge and native legacy projections. Reuse annotation's existing per-member evidence selection and declaration admission. A composed native filter feed may explicitly retain every complete observation for SQL's existing result carrier; ordinary Request filtering and the canonical schema stay unchanged. Remaining SQLite adapter work claims its database paths, not shared Request implementation. Any further native extension must first coordinate with the recognition writer and name its exact paths.
-
-Already-composed feeds must preserve selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. Document which combinations are supported and refuse incompatible combinations before sending. Remove unused compatibility execution after parity; retain the SQL preparation, descriptor and admission helpers PostgreSQL imports. This preserves native composition, the canonical request schema and SQL authority.
-
-### Added public declarations
-
-```text
-fn RequestFeed::from_records(impl Into<String>, impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a) -> RequestFeed<'a>
-fn RequestFeed::eager(self) -> RequestFeed<'a>
-fn RequestFeed::with_image_inputs(self) -> RequestFeed<'a>
-fn RequestFeed::with_all_filter_results(self) -> RequestFeed<'a>
-fn AdmittedRequest::record_reading(&self) -> Result<RecordReading, Error>
-```
-
-### Reviewed API scope
-
-The reviewed branch declares `RequestFeed::from_records`, `RequestFeed::eager`, `RequestFeed::with_image_inputs` and `AdmittedRequest::record_reading`. Keep their exact inventory declarations with the implementation when it lands. Publishing those declarations ahead of the code makes independent main-based inventory checks fail; this paragraph retains design approval without claiming shipped exports.
+- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). Slices A and B moved the ten complete functions and the legacy scalar, many, table, rank-set, image, document and keyed routes onto Request.
+- Keeps: SQL authority, the selected model, files and facts. All ten functions and their input, result, error, cache and replay behavior. Composed records keep file and line locations and the difference between eager admission and incremental execution. Already-composed feeds keep selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. The canonical request schema and ordinary Request filtering stay unchanged. A composed native filter feed may retain every complete observation for SQL's existing result carrier.
+- Changes:
+  - Canonical saved-selector admission through Request. Claim `databases/sqlite/**` paths per slice. Name any shared Request path and coordinate it with its writer before editing.
+  - Document the supported feed combinations and refuse incompatible ones before sending.
+  - Remove unused compatibility execution after parity. Keep the SQL preparation, descriptor and admission helpers that PostgreSQL imports. DuckDB's dependency on the shared dispatcher goes in 0495; coordinate any SQLite-only deletion with it.
+  - The reviewed public declarations `RequestFeed::from_records`, `RequestFeed::eager`, `RequestFeed::with_image_inputs` and `AdmittedRequest::record_reading` land in the inventory together with their implementation, never ahead of it.
+- Proof: The full shared cases pass through the installed extension, including files and images, context and options, original positions, facts, failures, invalid input with zero sends, and cancellation. Raw JSON pass-through does not count.
+- Defers: SQL conventions to 0519. DuckDB to 0495. Proxy behavior is out of scope.
 
 ## Progress
 
