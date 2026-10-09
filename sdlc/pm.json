@@ -12,10 +12,6 @@
   },
   "evidenceFromTicketNumber": 120,
   "closedIssuesFolder": "closed",
-  "lanesTable": {
-    "file": "planning/team-0-2-2026-10-04.md",
-    "heading": "Lanes"
-  },
   "recordNaming": "ticket",
   "milestones": {
     "file": "planning/milestones.md",

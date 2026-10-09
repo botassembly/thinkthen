@@ -6,6 +6,8 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change, plus `spec` and affected surfaces when needed. Load and timing run only through `test-stress --run`. Gates use no network.
 - `policy.py` enforces source file limits; `sdlc/ratchet.json` holds the measured source ceiling. Explain warnings and growth in the commit; avoid mechanical splits.
+- Require explicit reviewer acceptance for a source-ceiling increase before landing, and lower the ceiling when deleting source.
+- Keep the handwritten complete readers in Python, Ruby, R and JavaScript unchanged except for confirmed regressions until their generated migrations replace them.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
 - Run checks that read Git history after committing the changes, and finish them before committing again.
 - Beelink is primary. M5 may run experiments and Mac-specific checks, including before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
