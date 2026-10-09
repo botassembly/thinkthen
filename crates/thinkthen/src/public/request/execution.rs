@@ -16,6 +16,7 @@ pub struct RequestFeed<'a> {
 pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
     Records(super::composition::Inputs<'a>),
+    Session(std::sync::Arc<super::session_queue::Queue>),
     #[cfg(feature = "cli")]
     Descriptors(Vec<super::transport::TransportDescriptor>),
 }
@@ -25,6 +26,18 @@ impl std::fmt::Debug for RequestFeed<'_> {
     }
 }
 impl<'a> RequestFeed<'a> {
+    pub(super) fn session(
+        name: String,
+        queue: std::sync::Arc<super::session_queue::Queue>,
+    ) -> Self {
+        Self {
+            name,
+            contents: FeedContents::Session(queue),
+            eager: false,
+            image_inputs: false,
+            all_filter_results: false,
+        }
+    }
     #[cfg(feature = "cli")]
     pub(super) fn descriptors(
         name: String,
@@ -112,9 +125,17 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
+        self.execute_request_sink(request, environment, None)
+    }
+    pub(super) fn execute_request_sink<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        environment: RequestEnvironment<'a>,
+        sink: Option<&dyn Fn(RequestValue)>,
+    ) -> Result<RequestOutcome, Error> {
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
-        let controls = controls(options, environment.controls)?.started()?;
+        let mut controls = controls(options, environment.controls)?.started()?;
         controls.admission()?;
         let mut definition = request.resolve_question()?;
         request.admit_inline(&definition)?;
@@ -168,14 +189,16 @@ impl Engine {
         } else {
             Box::new(rows)
         };
+        controls.eager_inputs = eager && sink.is_some();
         let outcome = dispatch(
             &engine,
             request.request.call.function(),
             &definition,
             rows,
             controls,
-            eager,
+            eager && sink.is_none(),
             options,
+            sink,
         )?;
         Ok(if all_filter_results {
             outcome
@@ -232,7 +255,31 @@ fn controls<'a>(
 fn complete(call: Call<RequestValue>) -> RequestOutcome {
     RequestOutcome::Complete(call)
 }
-fn stream<T>(batch: Batch<'_, T>, value: impl Fn(Vec<T>) -> RequestValue) -> RequestOutcome {
+fn stream<T>(
+    mut batch: Batch<'_, T>,
+    value: impl Fn(Vec<T>) -> RequestValue,
+    sink: Option<&dyn Fn(RequestValue)>,
+) -> RequestOutcome {
+    if let Some(sink) = sink {
+        for row in batch.by_ref() {
+            match row {
+                Ok(row) => sink(value(vec![row])),
+                Err(error) => {
+                    return RequestOutcome::Failed {
+                        completed: value(vec![]),
+                        error,
+                    };
+                }
+            }
+        }
+        return match batch.facts().cloned() {
+            Some(facts) => RequestOutcome::Complete(Call::new(value(vec![]), facts)),
+            None => RequestOutcome::Failed {
+                completed: value(vec![]),
+                error: Error::defect("a completed batch has no facts"),
+            },
+        };
+    }
     match batch.into_outcome() {
         crate::public::batch::Outcome::Complete(call) => RequestOutcome::Complete(call.map(value)),
         crate::public::batch::Outcome::Failed { completed, error } => RequestOutcome::Failed {
@@ -241,6 +288,10 @@ fn stream<T>(batch: Batch<'_, T>, value: impl Fn(Vec<T>) -> RequestValue) -> Req
         },
     }
 }
+#[expect(
+    clippy::too_many_arguments,
+    reason = "shared atomic dispatch adds only the optional owned row sink"
+)]
 fn atomic<'a>(
     engine: &'a Engine,
     function: Function,
@@ -248,6 +299,7 @@ fn atomic<'a>(
     rows: super::composition::Inputs<'a>,
     controls: CallOptions<'a>,
     eager: bool,
+    sink: Option<&dyn Fn(RequestValue)>,
 ) -> Result<RequestOutcome, Error> {
     macro_rules! run {
         ($eager:ident,$stream:ident,$q:expr,$value:expr) => {
@@ -258,7 +310,7 @@ fn atomic<'a>(
                         .map($value),
                 ))
             } else {
-                Ok(stream(engine.$stream($q, rows, controls), $value))
+                Ok(stream(engine.$stream($q, rows, controls), $value, sink))
             }
         };
     }
@@ -391,20 +443,7 @@ fn select_filter(outcome: RequestOutcome, files_only: bool) -> RequestOutcome {
             let mut files = std::collections::BTreeSet::new();
             RequestValue::Filtered(
                 rows.into_iter()
-                    .filter(|row| {
-                        if !row.result().value() {
-                            return false;
-                        }
-                        if !files_only {
-                            return true;
-                        }
-                        match row.original() {
-                            crate::QuestionInput::Record(record) => record
-                                .location()
-                                .is_some_and(|source| files.insert(source.file().to_owned())),
-                            _ => false,
-                        }
-                    })
+                    .filter(|row| selected_filter(row, files_only, &mut files))
                     .collect(),
             )
         }
@@ -417,6 +456,15 @@ fn select_filter(outcome: RequestOutcome, files_only: bool) -> RequestOutcome {
             error,
         },
     }
+}
+pub(super) fn selected_filter(
+    row: &crate::CompleteRecord<crate::QuestionInput, crate::CompleteFilter>,
+    files_only: bool,
+    files: &mut std::collections::BTreeSet<String>,
+) -> bool {
+    row.result().value()
+        && (!files_only
+            || matches!(row.original(), crate::QuestionInput::Record(record) if record.location().is_some_and(|source| files.insert(source.file().to_owned()))))
 }
 
 #[expect(
@@ -431,9 +479,10 @@ fn dispatch<'a>(
     controls: CallOptions<'a>,
     eager: bool,
     options: &RequestOptions,
+    sink: Option<&dyn Fn(RequestValue)>,
 ) -> Result<RequestOutcome, Error> {
     let outcome = match definition {
-        RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager),
+        RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager, sink),
         RequestDefinition::Rank(q) => Ok(complete(
             engine
                 .try_rank_records_complete_with(q, rows, controls)?
@@ -474,6 +523,7 @@ fn dispatch<'a>(
                 Ok(stream(
                     engine.try_annotate_records_complete_with(set, rows, controls),
                     RequestValue::Annotations,
+                    sink,
                 ))
             }
         }
@@ -507,6 +557,7 @@ fn dispatch<'a>(
                 Ok(stream(
                     engine.try_choose_dynamic_records_complete_with(q, rows, controls),
                     RequestValue::Choices,
+                    sink,
                 ))
             }
         }

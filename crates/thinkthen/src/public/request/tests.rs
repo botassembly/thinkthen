@@ -3,10 +3,11 @@ use super::*;
 
 #[test]
 fn committed_request_schema_is_derived_from_deserialization_types() {
-    let schema = schemars::generate::SchemaSettings::draft2020_12()
+    let mut generator = schemars::generate::SchemaSettings::draft2020_12()
         .for_deserialize()
-        .into_generator()
-        .into_root_schema_for::<Request>();
+        .into_generator();
+    let _descriptor = generator.subschema_for::<super::session::DescriptorDocument>();
+    let schema = generator.into_root_schema_for::<Request>();
     let text = serde_json::to_string_pretty(&schema).unwrap() + "\n";
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),

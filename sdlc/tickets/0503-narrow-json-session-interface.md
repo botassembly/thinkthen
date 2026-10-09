@@ -20,6 +20,8 @@ Reviews: revision a087f6dc3, accept
 
 Reviews: revision a1cc320d9b69b91a33e0b17944602ccae432ea6d, reject
 
+Reviews: revision 5512fd7a6022e08d6ff719844dba191baee03836, accept
+
 ## Outcome
 
 C-interface languages call one owned, bounded engine session. A caller declares a call once, feeds descriptors without staging the whole input, reads results, and finishes, cancels or frees the session. Cancel and free return promptly without waiting for a blocked provider. Final facts stay truthful and arrive only when the work actually settles.
@@ -36,6 +38,54 @@ C-interface languages call one owned, bounded engine session. A caller declares 
 - Defers: Host adoption belongs to 0516 and the language migrations. Business policy and new networking need no ticket.
 
 ## Progress
+
+The following native declarations implement the reviewed ownership contract in ADR 0129. Their implementation is `5512fd7a6022e08d6ff719844dba191baee03836`; C exports and packet serialization remain separate work within this ticket.
+
+### Added public declarations
+
+```text
+enum RequestReaderFailure
+RequestReaderFailure::InvalidInput
+RequestReaderFailure::InvalidInput::location: Option<SourceLocation>
+RequestReaderFailure::Io
+RequestReaderFailure::Io::location: Option<SourceLocation>
+RequestReaderFailure::Utf8
+RequestReaderFailure::Utf8::location: Option<SourceLocation>
+struct RequestSessionDescriptor
+RequestSessionDescriptor::item: RequestItem
+RequestSessionDescriptor::location: Option<SourceLocation>
+enum RequestSessionPush
+RequestSessionPush::Accepted
+RequestSessionPush::Closed(RequestSessionDescriptor)
+RequestSessionPush::Full(RequestSessionDescriptor)
+enum RequestSessionRead
+RequestSessionRead::End
+RequestSessionRead::Pending
+RequestSessionRead::Result(RequestSessionResult)
+enum RequestSessionResult
+RequestSessionResult::Aggregate(RequestValue)
+RequestSessionResult::Observation(OwnedRecordObservation)
+RequestSessionResult::Row(RequestSessionRow)
+RequestSessionResult::Terminal(RequestSessionTerminal)
+enum RequestSessionRow
+RequestSessionRow::Annotation(CompleteRecord<QuestionInput, CompleteAnnotated>)
+RequestSessionRow::Choice(CompleteRecord<QuestionInput, CompleteChoice>)
+RequestSessionRow::Decision(CompleteRecord<QuestionInput, CompleteDecision>)
+RequestSessionRow::Filter(CompleteRecord<QuestionInput, CompleteFilter>)
+RequestSessionRow::Score(CompleteRecord<QuestionInput, CompleteScore>)
+RequestSessionRow::Tags(CompleteRecord<QuestionInput, CompleteTags>)
+struct RequestSessionTerminal
+RequestSessionTerminal::error: Option<Error>
+RequestSessionTerminal::facts: Option<Facts>
+fn Engine::request_session(&self, Request) -> Result<RequestSession, Error>
+fn RequestSession::cancel(&self)
+fn RequestSession::finish(&self, Option<RequestReaderFailure>) -> Result<(), Error>
+fn RequestSession::try_push(&self, RequestSessionDescriptor) -> Result<RequestSessionPush, Error>
+fn RequestSession::try_read(&self) -> RequestSessionRead
+fn RequestSessionDescriptor::from_json(&str) -> Result<RequestSessionDescriptor, Error>
+impl Drop for RequestSession
+struct RequestSession
+```
 
 - 2026-10-09 landed f6768b855; next: Slice A settles ADR0129 after a real producer-closure correction and fresh acceptance. No runtime/session implementation is claimed. Implement the reviewed owned bounded session after shared admission and generated result-view interfaces; preserve frozen C compatibility and prompt caller cancellation/free.
 - 2026-10-09 landed cb1c47896; next: Accepted observation packets preserve detailed native events through the existing bounded queue. Implement shared session ownership and sink dispatch after shared descriptor admission; frozen C compatibility and prompt cancel/free remain required.
