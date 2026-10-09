@@ -29,15 +29,52 @@ static thinkthen_session *open_session(thinkthen_engine *engine, const char *jso
     free(buffer);
     return session;
 }
+static int same_text(thinkthen_complete_utf8_v1 text, const char *expected) {
+    size_t len = strlen(expected);
+    return text.len == len && (len == 0 || (text.data && memcmp(text.data, expected, len) == 0));
+}
+static void packet_view(const thinkthen_complete_session_packet_v1 *view) {
+    check(view != NULL, "complete view exists");
+    if (!view) return;
+    if (view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1) {
+        const thinkthen_complete_session_packet_terminal_v1 *terminal = view->data.terminal;
+        check(terminal && same_text(terminal->kind, "terminal"), "typed terminal kind");
+        if (!terminal) return;
+        if (terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) {
+            const thinkthen_complete_error_v1 *error = terminal->failure.value->error;
+            check(error->kind->kind == THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1, "retained typed reader failure");
+            check(error->message.data && error->message.len, "retained typed safe message");
+        } else {
+            check(terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, "success has absent failure");
+            check(terminal->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "settlement has facts");
+            check(terminal->facts.value->requests_sent == 1, "typed actual request count");
+        }
+    } else if (view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1) {
+        const thinkthen_complete_atomic_decide_value_v1 *row = view->data.decide_row->value;
+        check(row->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "typed physical source present");
+        check(same_text(row->source.value->file, "owned.txt"), "retained nested filename");
+        check(row->source.value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->first_line.value == 1, "retained first line");
+        check(row->source.value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->last_line.value == 1, "retained last line");
+        check(row->meta->observations.len && row->meta->question_sources.len, "typed nested observations and origins");
+        if (getenv("SESSION_PARTIAL")) {
+            check(row->meta->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "partial usage present");
+            const thinkthen_complete_usage_v1 *usage = row->meta->usage.value;
+            check(usage->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && usage->input_tokens.value == 0, "reported zero input retained");
+            check(usage->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, "unknown output remains missing");
+        }
+    }
+}
 struct json_reader {
     thinkthen_session_result *result;
     const char *bytes;
     size_t len;
     int code;
+    const thinkthen_complete_session_packet_v1 *view;
 };
 static THREAD_RESULT read_json(void *argument) {
     struct json_reader *reader = argument;
     reader->code = thinkthen_session_result_json(reader->result, &reader->bytes, &reader->len);
+    if (reader->code == THINKTHEN_OK) reader->code = thinkthen_session_result_view(reader->result, &reader->view);
     return THREAD_DONE;
 }
 static void packet_json(thinkthen_session_result *result) {
@@ -48,8 +85,9 @@ static void packet_json(thinkthen_session_result *result) {
     union { const char *bytes; size_t len; } alias;
     alias.bytes = (const char *)(uintptr_t)7;
     check(thinkthen_session_result_json(result, &alias.bytes, &alias.len) == THINKTHEN_EUSAGE && alias.bytes == (const char *)(uintptr_t)7, "live JSON refuses output alias");
+    check(thinkthen_session_result_view(result, NULL) == THINKTHEN_EUSAGE, "view requires output");
     const char *diagnostic = thinkthen_session_error_message();
-    struct json_reader readers[2] = {{result, NULL, 0, 99}, {result, NULL, 0, 99}};
+    struct json_reader readers[2] = {{result, NULL, 0, 99, NULL}, {result, NULL, 0, 99, NULL}};
     THREAD_TYPE threads[2];
     for (size_t i = 0; i < 2; ++i)
         if (fixture_start(&threads[i], read_json, &readers[i]) != 0) exit(1);
@@ -57,6 +95,8 @@ static void packet_json(thinkthen_session_result *result) {
         if (fixture_join(threads[i]) != 0) exit(1);
     check(readers[0].code == THINKTHEN_OK && readers[1].code == THINKTHEN_OK, "concurrent JSON succeeds");
     check(readers[0].bytes == readers[1].bytes && readers[0].len == readers[1].len, "concurrent JSON has stable storage");
+    check(readers[0].view == readers[1].view, "concurrent typed views have stable storage");
+    packet_view(readers[0].view);
     if (!readers[0].bytes) exit(1);
     check(readers[0].bytes[readers[0].len] == 0 && strlen(readers[0].bytes) == readers[0].len, "JSON owns NUL beyond counted bytes");
     check(diagnostic == thinkthen_session_error_message(), "successful JSON preserves immediate diagnostic");
@@ -66,7 +106,11 @@ static void retained_json(thinkthen_session *session, thinkthen_session_result *
     const char *before = NULL, *after = NULL;
     size_t len = 0, after_len = 0;
     check(thinkthen_session_result_json(result, &before, &len) == THINKTHEN_OK, "JSON before session free");
+    const thinkthen_complete_session_packet_v1 *first = NULL, *second = NULL;
+    check(thinkthen_session_result_view(result, &first) == THINKTHEN_OK, "view before session free");
     thinkthen_session_free(session);
+    check(thinkthen_session_result_view(result, &second) == THINKTHEN_OK && first == second, "view survives session free");
+    packet_view(second);
     check(thinkthen_session_result_json(result, &after, &after_len) == THINKTHEN_OK, "JSON after session free");
     check(before == after && len == after_len && before[len] == 0, "borrow survives engine and session free");
     thinkthen_session_result_free(result);
@@ -144,6 +188,8 @@ int main(void) {
         check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "malformed controls keep fixed diagnostic");
         check(out == (thinkthen_session *)(uintptr_t)7, "failed constructor preserves output");
     }
+    const thinkthen_complete_session_packet_v1 *view_sentinel = (const thinkthen_complete_session_packet_v1 *)(uintptr_t)7;
+    check(thinkthen_session_result_view(NULL, &view_sentinel) == THINKTHEN_EUSAGE && view_sentinel == (const thinkthen_complete_session_packet_v1 *)(uintptr_t)7, "view refusal preserves sentinel");
     const char *bytes = (const char *)(uintptr_t)7;
     size_t byte_len = 99;
     check(thinkthen_session_result_json(NULL, &bytes, &byte_len) == THINKTHEN_EUSAGE, "NULL result refuses");

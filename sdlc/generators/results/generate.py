@@ -5,6 +5,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA = ROOT / 'crates/thinkthen/src/public/results/complete.schema.json'
@@ -247,7 +248,24 @@ def prepare(definitions):
     return dict(sorted(result.items()))
 
 
-def generated(schema):
+def generated(schema, language="csharp"):
+    if language == "c":
+        path = Path(__file__).parent / "templates/c.py"
+        spec = importlib.util.spec_from_file_location("result_c", path)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        definitions = prepare(graph(schema, ("completesessionPacket",)))
+        selected, pending = {}, ["completesessionPacket"]
+        while pending:
+            name = pending.pop()
+            if name in selected:
+                continue
+            source = selected[name] = definitions[name]
+            pending.extend(references(source))
+            pending.extend(child for child, _ in source.get("variants", []))
+        return subprocess.run(["rustfmt", "--edition", "2024", "--emit", "stdout"],
+                              input=target.render(dict(sorted(selected.items()))),
+                              text=True, capture_output=True, check=True).stdout
     path = Path(__file__).parent / 'templates/csharp.py'
     spec = importlib.util.spec_from_file_location('result_csharp', path)
     target = importlib.util.module_from_spec(spec)
@@ -265,7 +283,12 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
+    parser.add_argument('--target', choices=('csharp', 'c'), default='csharp')
     args = parser.parse_args()
+    if args.target == "c":
+        if args.inputs:
+            parser.error("C target generates result views only")
+        args.output = ROOT / "libraries/c/src/session/views_generated.rs"
     if args.inputs:
         path = Path(__file__).parent / 'templates/csharp.py'
         spec = importlib.util.spec_from_file_location('result_csharp', path)
@@ -274,7 +297,7 @@ def main():
         result = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()))
         args.output = ROOT / 'libraries/csharp/src/RequestInputs.g.cs'
     else:
-        result = generated(json.loads(args.schema.read_text()))
+        result = generated(json.loads(args.schema.read_text()), args.target)
     if args.check:
         if not args.output.exists() or args.output.read_text() != result:
             print('generated C# results differ; run sdlc/generators/results/generate.py',
