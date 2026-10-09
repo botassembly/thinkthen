@@ -363,3 +363,85 @@ fn record_descriptors_compose_ordered_images_with_native_validation() {
     assert_eq!(converted.kind(), native.kind());
     assert_eq!(converted.to_string(), native.to_string());
 }
+
+#[test]
+fn ordered_shortlist_descriptors_preserve_description_order_and_native_refusals() {
+    let item = RequestItem::from_record_descriptor(r#"{"text":"Alpha."}"#).unwrap();
+    let choices = r#"[{"name":"first","description":{"z":null,"a":["text"]}},{"name":"second","description":null},{"name":"third"}]"#;
+    let parsed = item.clone().with_options_descriptor(choices).unwrap();
+    let options = parsed.options.unwrap();
+    assert_eq!(
+        options.options()[0].description.as_ref().unwrap().as_json(),
+        r#"{"z":null,"a":["text"]}"#
+    );
+    assert_eq!(
+        options.options()[1].description.as_ref().unwrap().as_json(),
+        "null"
+    );
+    assert!(options.options()[2].description.is_none());
+    for (source, native) in [
+        ("[]", RecordOptions::new(vec![]).unwrap_err()),
+        (
+            r#"[{"name":"same"},{"name":"same"}]"#,
+            RecordOptions::new(vec![
+                RecordOption {
+                    name: "same".into(),
+                    description: None,
+                },
+                RecordOption {
+                    name: "same".into(),
+                    description: None,
+                },
+            ])
+            .unwrap_err(),
+        ),
+        (
+            r#"[{"name":"first","description":42}]"#,
+            Description::from_json("42").unwrap_err(),
+        ),
+    ] {
+        let refused = item.clone().with_options_descriptor(source).unwrap_err();
+        assert_eq!(refused.kind(), native.kind());
+        assert_eq!(refused.to_string(), native.to_string());
+    }
+    for depth in [120, 126, 127, 128] {
+        let description = format!("{}null{}", r#"{"child":"#.repeat(depth), "}".repeat(depth));
+        let source =
+            format!(r#"[{{"name":"first","description":{description}}},{{"name":"second"}}]"#);
+        let native = Description::from_json(&description).and_then(|description| {
+            RecordOptions::new(vec![
+                RecordOption {
+                    name: "first".into(),
+                    description: Some(description),
+                },
+                RecordOption {
+                    name: "second".into(),
+                    description: None,
+                },
+            ])
+        });
+        let parsed = item.clone().with_options_descriptor(&source);
+        assert_eq!(parsed.is_ok(), native.is_ok(), "description depth {depth}");
+        if let (Err(parsed), Err(native)) = (parsed, native) {
+            assert_eq!(parsed.to_string(), native.to_string());
+        }
+        let canonical =
+            format!(r#"{{"original":{{"kind":"text","text":"Alpha."}},"options":{source}}}"#);
+        assert_eq!(
+            serde_json::from_str::<RequestItem>(&canonical).is_ok(),
+            depth == 120
+        );
+    }
+    for source in [
+        r#"[{"name":"first","extra":true}]"#,
+        r#"[{"name":"first","name":"second"}]"#,
+    ] {
+        assert_eq!(
+            item.clone()
+                .with_options_descriptor(source)
+                .unwrap_err()
+                .kind(),
+            ErrorKind::Usage
+        );
+    }
+}

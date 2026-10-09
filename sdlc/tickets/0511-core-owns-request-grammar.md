@@ -18,6 +18,8 @@ Reviews: revision cde3e7649c1ad0dbb2f5f5c5da379f0f0a6efe6a, reject
 
 Reviews: revision 9e9721d83f74690ba8c1768d8f104f0f162c6d5d, accept
 
+Reviews: revision 0b1012c750da66b1356b8aa346545278c1225ca8, accept
+
 ## Outcome
 
 One public Request edge admits every request through shared Rust grammar, limits, defaults and validation. Every surface calls it, and core refusals reach the caller. No binding, extension or host package restates an engine rule.
@@ -39,6 +41,7 @@ The first slice adds these public Request-edge methods for the separate SQL crat
 ```text
 fn RequestItem::from_record_descriptor(&str) -> Result<RequestItem, Error>
 fn RequestItem::compose_record(&self, &RecordReading) -> Result<RecordInput<QuestionInput>, Error>
+fn RequestItem::with_options_descriptor(self, &str) -> Result<RequestItem, Error>
 ```
 
 ## Progress
