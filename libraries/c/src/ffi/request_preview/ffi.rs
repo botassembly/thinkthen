@@ -9,7 +9,7 @@ use std::ffi::{CString, c_char};
 use thinkthen::{ErrorKind, Request, RequestEnvironment};
 
 /// Preview canonical Request JSON without reading a key or cache or sending.
-/// Supports decide, choose, tag and score. Explicit sources retain native authority.
+/// Supports fixed atomic decide, choose, tag and score questions only; other functions and dynamic questions refuse. Sessions support all ten judgments.
 /// Success owns NUL-terminated plan JSON in out and its byte length in out_len;
 /// free once with thinkthen_free_string. Refusal leaves both outputs unchanged
 /// and records the safe calling-thread thinkthen_session_error_message.
