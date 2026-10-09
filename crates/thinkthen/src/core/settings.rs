@@ -8,8 +8,7 @@ use std::fmt;
 use thiserror::Error;
 
 use crate::core::batch::Setting;
-use crate::core::json::{Json, JsonError};
-use crate::core::price::Prices;
+use crate::core::json::Json;
 use crate::core::question_file::{QuestionFile, Verb, safe_key};
 use crate::core::text::ModelName;
 
@@ -322,70 +321,9 @@ pub(crate) const fn valid_deadline_ms(value: i64) -> bool {
     value == -1 || (value >= 0 && value <= MAX_DEADLINE_MS)
 }
 
-/// Validate the engine constructor's closed JSON schema before any host
-/// converts its values or captures an environment. In particular, this reader
-/// retains duplicate names, which a generic JSON map would silently lose.
-pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
-    let parsed = Json::parse(text).map_err(|error| match error {
-        JsonError::Syntax { .. } => "settings JSON is one object".to_owned(),
-        JsonError::DuplicateName { .. } => "settings JSON repeats a member name".to_owned(),
-        JsonError::NotFinite | JsonError::TooDeep => error.to_string(),
-    })?;
-    let Json::Object(fields) = parsed else {
-        return Err("settings JSON is one object".into());
-    };
-    let mut input_price = None;
-    let mut output_price = None;
-    for (key, value) in fields {
-        let number = || match &value {
-            Json::Number(number) => number.as_u64(),
-            _ => None,
-        };
-        let string = || matches!(value, Json::String(_));
-        let valid = match key.as_str() {
-            "backend" | "base_url" | "model" | "record" | "replay" | "profile" => string(),
-            "throttle" => number().is_some_and(|count| (1..=32).contains(&count)),
-            "max_requests" => {
-                matches!(value, Json::Null) || number().is_some_and(|count| count > 0)
-            }
-            "max_request_bytes" => number().is_some_and(|count| count > 0),
-            "cache" => matches!(value, Json::Bool(false)) || string(),
-            "refresh_cache" => matches!(value, Json::Bool(_)),
-            "timeout" => number().is_some(),
-            "max_retries" => number().is_some_and(|count| u32::try_from(count).is_ok()),
-            "batch" => Setting::of_json(&value).is_some(),
-            "max_requests_total" | "max_estimated_input_tokens_total" => {
-                matches!(value, Json::Null) || number().is_some()
-            }
-            "usd_per_million_input" | "usd_per_million_output" => {
-                let Json::String(text) = &value else {
-                    return Err(format!("settings {key} has an invalid value"));
-                };
-                if key == "usd_per_million_input" {
-                    input_price = Some(text.clone());
-                } else {
-                    output_price = Some(text.clone());
-                }
-                true
-            }
-            _ => return Err(format!("settings JSON has unknown key {}", safe_key(&key))),
-        };
-        if !valid {
-            return Err(format!("settings {key} has an invalid value"));
-        }
-    }
-    match (input_price.as_deref(), output_price.as_deref()) {
-        (None, None) => {}
-        (Some(input), Some(output)) if Prices::parse(input, output).is_some() => {}
-        (Some(_), Some(_)) => return Err("settings prices have an invalid value".into()),
-        _ => return Err("settings prices require both input and output fields".into()),
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{For, Settings, SettingsError, engine_settings};
+    use super::{For, Settings, SettingsError};
     use crate::core::{Json, Setting, Threshold, Typed, Verb, resolve};
     use std::num::NonZeroUsize;
 
@@ -491,30 +429,6 @@ mod tests {
                 Settings::parse(&text),
                 Err(SettingsError::DeadlineOutOfRange)
             );
-        }
-    }
-
-    #[test]
-    fn constructor_schema_keeps_duplicate_names_and_accepts_the_active_cap() {
-        for (text, reason) in [
-            (r#"{"timeout":1,"timeout":2}"#, "repeats"),
-            (r#"{"max_requests_total":-1}"#, "max_requests_total"),
-            (r#"{"batch":0}"#, "batch"),
-            (r#"{"api_key":"secret"}"#, "api_key"),
-            (r#"{"refresh_cache":1}"#, "refresh_cache"),
-        ] {
-            assert!(engine_settings(text).expect_err(text).contains(reason));
-        }
-        for text in [
-            "{}",
-            r#"{"batch":"max","timeout":30,"cache":false}"#,
-            r#"{"max_requests_total":0}"#,
-            r#"{"max_requests_total":1}"#,
-            r#"{"max_requests_total":null}"#,
-            r#"{"refresh_cache":true}"#,
-            r#"{"refresh_cache":false}"#,
-        ] {
-            engine_settings(text).expect(text);
         }
     }
 }

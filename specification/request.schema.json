@@ -649,6 +649,16 @@
         }
       ]
     },
+    "CacheDocument": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/DisabledCache"
+        }
+      ]
+    },
     "ContextSchema": {
       "anyOf": [
         {
@@ -659,6 +669,111 @@
           "additionalProperties": true
         }
       ]
+    },
+    "DisabledCache": {
+      "type": "boolean",
+      "const": false
+    },
+    "EngineSettings": {
+      "type": "object",
+      "properties": {
+        "backend": {
+          "type": "string",
+          "default": null
+        },
+        "base_url": {
+          "type": "string",
+          "default": null
+        },
+        "batch": {
+          "$ref": "#/$defs/RequestBatch",
+          "default": null
+        },
+        "cache": {
+          "$ref": "#/$defs/CacheDocument"
+        },
+        "max_estimated_input_tokens_total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "default": null,
+          "minimum": 0
+        },
+        "max_request_bytes": {
+          "type": "integer",
+          "format": "uint",
+          "default": null,
+          "minimum": 0
+        },
+        "max_requests": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "default": null,
+          "minimum": 0
+        },
+        "max_requests_total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "default": null,
+          "minimum": 0
+        },
+        "max_retries": {
+          "type": "integer",
+          "format": "uint32",
+          "default": null,
+          "minimum": 0
+        },
+        "model": {
+          "type": "string",
+          "default": null
+        },
+        "profile": {
+          "type": "string",
+          "default": null
+        },
+        "record": {
+          "type": "string",
+          "default": null
+        },
+        "refresh_cache": {
+          "type": "boolean",
+          "default": null
+        },
+        "replay": {
+          "type": "string",
+          "default": null
+        },
+        "throttle": {
+          "type": "integer",
+          "format": "uint8",
+          "default": null,
+          "maximum": 255,
+          "minimum": 0
+        },
+        "timeout": {
+          "type": "integer",
+          "format": "uint64",
+          "default": null,
+          "minimum": 0
+        },
+        "usd_per_million_input": {
+          "type": "string",
+          "default": null
+        },
+        "usd_per_million_output": {
+          "type": "string",
+          "default": null
+        }
+      },
+      "additionalProperties": false
     },
     "ImageMedia": {
       "description": "Initially validated media; extensions never select a media type.",
@@ -2054,6 +2169,58 @@
         }
       },
       "additionalProperties": false
+    },
+    "RequestReaderFailure": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "io"
+            },
+            "location": {
+              "$ref": "#/$defs/SessionSourceLocation"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "utf8"
+            },
+            "location": {
+              "$ref": "#/$defs/SessionSourceLocation"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "invalid_input"
+            },
+            "location": {
+              "$ref": "#/$defs/SessionSourceLocation"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        }
+      ]
     },
     "RequestSessionDescriptor": {
       "type": "object",

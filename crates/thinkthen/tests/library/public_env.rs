@@ -16,6 +16,8 @@
 mod batch;
 #[path = "public_env/cache_budget.rs"]
 mod cache_budget;
+#[path = "public_env/settings_json.rs"]
+mod settings_json;
 #[path = "public_env/shared_host.rs"]
 mod shared_host;
 #[path = "public_env/usage_totals.rs"]
@@ -241,6 +243,8 @@ fn ask(engine: &Engine) -> String {
 fn run(case: &str, argument: &str) -> Vec<String> {
     let seed = || EngineBuilder::from_env().expect("a seed");
     match case {
+        "settings-json" => vec![shown(EngineBuilder::from_settings_json(argument))],
+        "settings-budget" => settings_json::budget(argument),
         "second-base" => vec![ask(&seed()
             .base_url(argument)
             .unwrap()

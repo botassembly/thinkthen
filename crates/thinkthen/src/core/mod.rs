@@ -68,7 +68,6 @@ mod render;
 mod reply;
 mod result;
 pub(crate) mod settings;
-pub(crate) use settings::engine_settings;
 mod text;
 mod threshold;
 

@@ -34,7 +34,7 @@ pub(super) struct DescriptorDocument {
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "SessionSourceLocation"), schemars(extend("dependentRequired" = serde_json::json!({"first_line":["last_line"],"last_line":["first_line"]}))))]
 #[serde(deny_unknown_fields)]
-struct LocationDocument {
+pub(super) struct LocationDocument {
     file: String,
     #[serde(default, deserialize_with = "super::present")]
     #[cfg_attr(test, schemars(with = "usize", range(min = 1)))]
@@ -83,18 +83,26 @@ pub enum RequestReaderFailure {
     },
 }
 #[derive(Deserialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "RequestReaderFailure")
+)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-enum ReaderFailureDocument {
+pub(super) enum ReaderFailureDocument {
     Io {
         #[serde(default, deserialize_with = "super::present")]
+        #[cfg_attr(test, schemars(with = "LocationDocument"))]
         location: Option<LocationDocument>,
     },
     Utf8 {
         #[serde(default, deserialize_with = "super::present")]
+        #[cfg_attr(test, schemars(with = "LocationDocument"))]
         location: Option<LocationDocument>,
     },
     InvalidInput {
         #[serde(default, deserialize_with = "super::present")]
+        #[cfg_attr(test, schemars(with = "LocationDocument"))]
         location: Option<LocationDocument>,
     },
 }
