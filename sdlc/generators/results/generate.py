@@ -253,9 +253,9 @@ def prepare(definitions):
 def generated(schema, language="csharp"):
     if language == "zig":
         return zig_generated(prepare(graph(schema, ("completeplan",))))
-    if language == "r":
-        path = Path(__file__).parent / "templates/r.py"
-        spec = importlib.util.spec_from_file_location("result_r", path)
+    if language in ("r", "python"):
+        path = Path(__file__).parent / f"templates/{language}.py"
+        spec = importlib.util.spec_from_file_location(f"result_{language}", path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
         return subprocess.run(["rustfmt", "--edition", "2024", "--emit", "stdout"],
@@ -329,7 +329,7 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
     if args.target == "zig":
@@ -338,6 +338,25 @@ def main():
         if args.output == OUTPUT:
             filename = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
             args.output = ROOT / 'libraries/zig/src' / filename
+    if args.target == "python":
+        if args.inputs or args.bridge:
+            parser.error("Python target generates native results only")
+        if args.output == OUTPUT:
+            args.output = ROOT / "libraries/python/src/results_generated.rs"
+        path = Path(__file__).parent / "templates/python.py"
+        spec = importlib.util.spec_from_file_location("result_python", path)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        definitions = prepare(graph(json.loads(args.schema.read_text()), target.ROOTS))
+        for extension in ("py", "pyi"):
+            output = ROOT / "libraries/python/thinkthen" / ("_native_results." + extension)
+            result = target.types(definitions, stubs=extension == "pyi")
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print("generated Python types differ", file=sys.stderr)
+                    return 1
+            else:
+                output.write_text(result)
     if args.target == "r":
         if args.inputs or args.bridge:
             parser.error("R target generates native result conversions only")

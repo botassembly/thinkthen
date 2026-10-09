@@ -77,6 +77,9 @@ BINDING_SOURCE_EXTENSIONS = {
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 GENERATED_BINDING_SOURCES = {
+    "libraries/python/src/results_generated.rs",
+    "libraries/python/thinkthen/_native_results.py",
+    "libraries/python/thinkthen/_native_results.pyi",
     "libraries/c/include/thinkthen.h",
     "libraries/c/src/session/views_generated.rs",
     "libraries/zig/src/request_generated.zig",

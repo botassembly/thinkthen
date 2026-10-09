@@ -57,6 +57,19 @@ impl Session {
         })
     }
 
+    fn _poll_typed(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
+        self._poll(py)?
+            .map(|json| {
+                if json == "{\"kind\":\"end\"}" {
+                    let value = serde_json::from_str(&json)
+                        .map_err(|_| crate::defect(py, "native end could not be read"))?;
+                    return crate::native_result::plain(py, &value);
+                }
+                crate::native_result::_restore_native_result(py, "completesessionPacket", &json)
+            })
+            .transpose()
+    }
+
     fn _push(&self, py: Python<'_>, descriptor: &str) -> PyResult<&'static str> {
         guard(py, || {
             let held = self
