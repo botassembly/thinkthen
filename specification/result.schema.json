@@ -9573,6 +9573,50 @@
       ],
       "type": "object"
     },
+    "legacyRecognitionOdds": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/legacyRecognizeAnswer"
+        },
+        {
+          "$ref": "#/$defs/BoundaryOdds"
+        }
+      ]
+    },
+    "legacyRecognizeAnswer": {
+      "properties": {
+        "names": {
+          "items": {
+            "$ref": "#/$defs/nameOdds"
+          },
+          "type": "array"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/pairOdds"
+          },
+          "type": "array"
+        },
+        "pieces": {
+          "items": {
+            "$ref": "#/$defs/pieceOdds"
+          },
+          "type": "array"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/RecognitionProposal"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pieces",
+        "names",
+        "pairs"
+      ],
+      "type": "object"
+    },
     "meta": {
       "properties": {
         "attempts": {
@@ -10185,7 +10229,7 @@
     "recognizeDetails": {
       "properties": {
         "answer": {
-          "$ref": "#/$defs/RecognitionOdds"
+          "$ref": "#/$defs/legacyRecognitionOdds"
         },
         "input": {},
         "meta": {
