@@ -76,6 +76,25 @@ pub(crate) fn object(value: &Value, name: &str, fields: &[Field]) -> Crossed<Rob
     tagged(List::from_pairs(held).into(), name, "thinkthen_complete")
 }
 
+// InputView is the R-owned original/provenance envelope, outside the shared
+// result graph. Only its host representation is assigned here; its contents
+// and the nested result conversions remain owned by their Rust serializers.
+fn input(value: &Value) -> Crossed<Robj> {
+    object(
+        value,
+        "NativeInput",
+        &[
+            ("original", true, plain),
+            ("location", false, |value| {
+                convert("completePhysicalSource", value)
+            }),
+            ("images", true, |value| {
+                array(value, |value| convert("completeImage", value))
+            }),
+        ],
+    )
+}
+
 pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
     let value: Value = serde_json::from_str(text)
         .map_err(|_| crate::defect("native complete result could not be decoded"))?;
@@ -107,7 +126,7 @@ pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
         results = results,
         facts = convert("completeFacts", member("facts")?)?,
         ordinals = plain(member("ordinals")?)?,
-        inputs = plain(member("inputs")?)?
+        inputs = array(member("inputs")?, input)?
     )
     .into();
     let mut packet = packet;

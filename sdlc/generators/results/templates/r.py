@@ -7,7 +7,8 @@ ROOTS = ('completeFacts', 'completeCallError', 'completeAtomic_DecideValue',
          'completeFind', 'completeAnnotation', 'completeRecognition', 'completeRelation')
 
 # R naming compatibility belongs to the target, never to the result schema.
-NAMES = {'completeAtomic_DecideValue': 'DecideResult',
+NAMES = {'completeImage': 'NativeImage',
+         'completeAtomic_DecideValue': 'DecideResult',
          'completeAtomic_Nullable_string': 'ChooseResult',
          'completeAtomic_Array_of_string': 'TagResult', 'completeAtomic_double': 'ScoreResult',
          'completeAtomic_boolean': 'FilterResult', 'completeAtomic_NonZeroUsize': 'RankResult',

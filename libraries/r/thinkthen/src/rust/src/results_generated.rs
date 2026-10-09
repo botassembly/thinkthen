@@ -552,7 +552,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         ),
         "completeImage" => object(
             value,
-            "Image",
+            "NativeImage",
             &[
                 ("base64", true, plain),
                 ("height", true, plain),
