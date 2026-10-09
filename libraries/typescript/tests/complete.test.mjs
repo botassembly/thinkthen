@@ -140,3 +140,14 @@ test('rank members retain ordered typed judgments and refuse recursive children'
   for(const members of [[],null,[{name:'saved'}]]) assert.throws(()=>decode('RankResult',{...parent,members}),/invalid/);
   assert.throws(()=>decode('Usage',{}),/invalid/);
 });
+
+test('current facts preserve request measurements and persistence', () => {
+  for (const raw of fixture.observed_facts) {
+    const facts = decode('Facts', raw);
+    assert.equal(facts.largest_request_bytes, raw.largest_request_bytes);
+    assert.equal(facts.largest_request_estimated_input_tokens, raw.largest_request_estimated_input_tokens);
+    assert.equal(facts.token_estimate_method, raw.token_estimate_method);
+    assert.deepEqual(facts.usage_persistence, raw.usage_persistence);
+    assert.deepEqual(JSON.parse(JSON.stringify(facts)), raw);
+  }
+});

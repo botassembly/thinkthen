@@ -160,3 +160,15 @@ def test_rank_members_preserve_order_positions_partial_usage_and_closed_children
     for members in ([],None,[{'name':'saved'}]):
         with pytest.raises(ValueError,match='invalid'): c.decode('RankResult',{**parent,'members':members})
     with pytest.raises(ValueError,match='invalid'): c.decode('Usage',{})
+
+
+def test_current_facts_preserve_request_measurements_and_persistence():
+    for raw in FIXTURE['observed_facts']:
+        facts = c.decode('Facts', raw)
+        assert facts.largest_request_bytes == raw['largest_request_bytes']
+        assert facts.largest_request_estimated_input_tokens == raw['largest_request_estimated_input_tokens']
+        assert facts.token_estimate_method == raw['token_estimate_method']
+        assert facts.usage_persistence.state == raw['usage_persistence']['state']
+        assert facts.usage_persistence.observed_at == 'facts_snapshot'
+        assert facts.usage_persistence.advice == raw['usage_persistence'].get('advice', c.ABSENT)
+        assert c.to_json(facts) == raw

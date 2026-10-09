@@ -42,7 +42,16 @@ export interface Attempt {
   readonly server_ms?: number;
   readonly request_id?: string;
 }
+export interface PersistenceObservation {
+  readonly state: "disabled" | "pending" | "written" | "failed";
+  readonly observed_at: string;
+  readonly advice?: string;
+}
 export interface Facts {
+  readonly largest_request_bytes?: number;
+  readonly largest_request_estimated_input_tokens?: number | null;
+  readonly token_estimate_method?: string;
+  readonly usage_persistence?: PersistenceObservation;
   readonly call_id: CallId;
   readonly records: number;
   readonly requests_sent: number;
@@ -507,6 +516,7 @@ export interface Models {
   ProfileWarning: ProfileWarning;
   BatchWarning: BatchWarning;
   Attempt: Attempt;
+  PersistenceObservation: PersistenceObservation;
   Facts: Facts;
   QuestionSource: QuestionSource;
   Observed: Observed;

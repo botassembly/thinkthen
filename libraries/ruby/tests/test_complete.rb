@@ -144,4 +144,15 @@ class CompleteCarrierTest < Minitest::Test
     assert_equal raw, C.to_json_value(C.decode("DecideSpec", raw))
   end
 
+  def test_current_facts_preserve_request_measurements_and_persistence
+    FIXTURE.fetch('observed_facts').each do |raw|
+      facts = C.decode('Facts', raw)
+      assert_equal raw['largest_request_bytes'], facts.largest_request_bytes
+      assert_equal raw['largest_request_estimated_input_tokens'], facts.largest_request_estimated_input_tokens
+      assert_equal raw['token_estimate_method'], facts.token_estimate_method
+      assert_equal raw['usage_persistence'], C.to_json_value(facts.usage_persistence)
+      assert_equal raw, C.to_json_value(facts)
+    end
+  end
+
 end

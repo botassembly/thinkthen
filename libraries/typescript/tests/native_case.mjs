@@ -27,6 +27,18 @@ try {
     for await (const row of batch) prefix.push(row);
     done={results:prefix.map(r=>r.result),facts:batch.facts,ordinals:prefix.map(r=>r.ordinal),inputs:prefix.map(r=>r.input)};
   } else done=await methods[document.verb](document.question,document.input,controls);
+  const facts=done.facts, encodedFacts=JSON.parse(JSON.stringify(facts));
+  const bytes = facts.largest_request_bytes;
+  const tokens = facts.largest_request_estimated_input_tokens;
+  const method = facts.token_estimate_method;
+  if (typeof bytes !== 'number' || (tokens !== null && typeof tokens !== 'number') || typeof method !== 'string') throw new Error('native request facts');
+  for (const key of ['largest_request_bytes','largest_request_estimated_input_tokens','token_estimate_method']) {
+    if (encodedFacts[key] !== facts[key]) throw new Error('lost request facts');
+  }
+  if (facts.usage_persistence) {
+    if (!['disabled','pending','written','failed'].includes(facts.usage_persistence.state) || facts.usage_persistence.observed_at !== 'facts_snapshot') throw new Error('native persistence observation');
+    if (JSON.stringify(encodedFacts.usage_persistence) !== JSON.stringify(facts.usage_persistence)) throw new Error('lost persistence observation');
+  }
   if (done.facts.call_id.length !== 64 || done.results.some(r=>r.answer_id.length!==64)) throw new Error('native identity');
   for(const result of done.results) for(const member of result.members??[]) {
     if(typeof member.name!=='string'||member.result.answer_id.length!==64||member.result.value<=0||member.result.question.verb!=='decide'||member.result.answer.kind!=='yes_no'||!member.result.meta) throw new Error('native rank member');

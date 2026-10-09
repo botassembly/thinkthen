@@ -1106,5 +1106,76 @@
         "request_id": "provider-1"
       }
     ]
-  }
+  },
+  "observed_facts": [
+    {
+      "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "records": 2,
+      "requests_sent": 0,
+      "cache_answers": 2,
+      "seconds": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "estimated_cost_usd": "0.000000",
+      "largest_request_bytes": 512,
+      "largest_request_estimated_input_tokens": 128,
+      "token_estimate_method": "encoded-body-bytes-908-v1",
+      "usage_persistence": {
+        "state": "disabled",
+        "observed_at": "facts_snapshot"
+      }
+    },
+    {
+      "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "records": 2,
+      "requests_sent": 0,
+      "cache_answers": 2,
+      "seconds": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "estimated_cost_usd": "0.000000",
+      "largest_request_bytes": 512,
+      "largest_request_estimated_input_tokens": null,
+      "token_estimate_method": "encoded-body-bytes-908-v1",
+      "usage_persistence": {
+        "state": "pending",
+        "observed_at": "facts_snapshot"
+      }
+    },
+    {
+      "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "records": 2,
+      "requests_sent": 0,
+      "cache_answers": 2,
+      "seconds": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "estimated_cost_usd": "0.000000",
+      "largest_request_bytes": 512,
+      "largest_request_estimated_input_tokens": 0,
+      "token_estimate_method": "encoded-body-bytes-908-v1",
+      "usage_persistence": {
+        "state": "written",
+        "observed_at": "facts_snapshot"
+      }
+    },
+    {
+      "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "records": 2,
+      "requests_sent": 0,
+      "cache_answers": 2,
+      "seconds": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "estimated_cost_usd": "0.000000",
+      "largest_request_bytes": 512,
+      "largest_request_estimated_input_tokens": null,
+      "token_estimate_method": "encoded-body-bytes-908-v1",
+      "usage_persistence": {
+        "state": "failed",
+        "observed_at": "facts_snapshot",
+        "advice": "check the usage folder permissions and free space"
+      }
+    }
+  ]
 }

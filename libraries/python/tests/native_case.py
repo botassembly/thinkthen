@@ -47,6 +47,18 @@ def main():
             done=c.Completed(tuple(row.result for row in prefix),batch.facts,tuple(row.ordinal for row in prefix),tuple(row.input for row in prefix))
         else:
             done=methods[document['verb']](question,source,token=token,deadline_ms=document.get('deadline_ms'),attempts=True,context=document.get('shared_context'))
+        encoded_facts=c.to_json(done.facts)
+        assert isinstance(done.facts.largest_request_bytes,int)
+        assert done.facts.largest_request_estimated_input_tokens is None or isinstance(done.facts.largest_request_estimated_input_tokens,int)
+        assert isinstance(done.facts.token_estimate_method,str)
+        for key in ('largest_request_bytes','largest_request_estimated_input_tokens','token_estimate_method'):
+            assert encoded_facts[key] == getattr(done.facts,key)
+        if done.facts.usage_persistence is not c.ABSENT:
+            observation=done.facts.usage_persistence
+            assert isinstance(observation,c.PersistenceObservation)
+            assert observation.state in ('disabled','pending','written','failed')
+            assert observation.observed_at == 'facts_snapshot'
+            assert encoded_facts['usage_persistence'] == c.to_json(observation)
         assert isinstance(done.facts.call_id,c.CallId)
         assert all(isinstance(r.answer_id,c.AnswerId) for r in done.results)
         for result in done.results:
