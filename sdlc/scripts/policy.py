@@ -77,6 +77,8 @@ BINDING_SOURCE_EXTENSIONS = {
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 GENERATED_BINDING_SOURCES = {
+    "libraries/jvm/session/thinkthen/Results.java",
+    "libraries/jvm/session/thinkthen/RequestVersion.java",
     "libraries/python/src/results_generated.rs",
     "libraries/python/thinkthen/_native_results.py",
     "libraries/python/thinkthen/_native_results.pyi",
@@ -908,7 +910,8 @@ def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
         root = ET.fromstring(source)
     except ET.ParseError:
         return [f"{name} has invalid XML package metadata"]
-    fields = {node.tag.rsplit("}", 1)[-1]: (node.text or "").strip() for node in root.iter()}
+    nodes = root if name == "libraries/jvm" else root.iter()
+    fields = {node.tag.rsplit("}", 1)[-1]: (node.text or "").strip() for node in nodes}
     return [f"{name} package {key} is not {value}" for key, value in NONCARGO_MANIFESTS[name][1].items()
             if fields.get(key) != value]
 
@@ -952,6 +955,10 @@ def check_bindings() -> None:
         key, value = next(iter(values.items()))
         if not noncargo_manifest_failures(name, None) or not noncargo_manifest_failures(name, source.replace(value, "planted", 1)):
             fail("binding", f"{name} missing or tampered package manifest is refused")
+        if name == "libraries/jvm":
+            nested = source.replace("</project>", "<dependencies><dependency><groupId>other</groupId><artifactId>dependency</artifactId><version>1</version></dependency></dependencies></project>")
+            if noncargo_manifest_failures(name, nested):
+                fail("binding", "Maven dependency coordinates must not override project coordinates")
         if name == "libraries/php" and not noncargo_manifest_failures(name, source.replace('"autoload.php"', '"planted.php"', 1)):
             fail("binding", "PHP with a planted autoload path is refused")
         if name in ("libraries/objective-c", "libraries/cobol") and not noncargo_manifest_failures(name, source.replace('"bundles_native": false', '"bundles_native": true', 1)):

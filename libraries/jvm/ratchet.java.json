@@ -1,8 +1,9 @@
 {
   "directory": [
     "door",
+    "session",
     "tests"
   ],
   "extension": ".java",
-  "max": 2000
+  "max": 4023
 }

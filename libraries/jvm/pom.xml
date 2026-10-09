@@ -6,6 +6,8 @@
   <version>0.2.0</version>
   <packaging>jar</packaging>
   <properties>
+    <thinkthen.session.jdk>22</thinkthen.session.jdk>
+    <thinkthen.kotlin.coroutines.version>1.8.0</thinkthen.kotlin.coroutines.version>
     <thinkthen.packages>door kotlin scala</thinkthen.packages>
     <thinkthen.package.files>pom.xml LICENSE README.md product-inventory.json</thinkthen.package.files>
     <thinkthen.package.exclude>*Caller*.class *Caller*.tasty</thinkthen.package.exclude>
@@ -13,6 +15,12 @@
     <thinkthen.native.classifier>natives-{platform}-{arch}</thinkthen.native.classifier>
     <thinkthen.native.resource>META-INF/thinkthen/native/{target}/</thinkthen.native.resource>
   </properties>
+  <dependencies>
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId><artifactId>kotlinx-coroutines-core-jvm</artifactId>
+      <version>${thinkthen.kotlin.coroutines.version}</version><optional>true</optional>
+    </dependency>
+  </dependencies>
   <name>ThinkThen JVM binding</name>
   <description>Java binding for ThinkThen, with Kotlin and Scala callers as the kotlin and scala classifier JARs; install the matching native library separately</description>
   <url>https://thinkthen.dev</url>
