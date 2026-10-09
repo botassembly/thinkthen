@@ -10,6 +10,7 @@ use super::{Counters, Counts};
 pub(super) struct State {
     records: u64,
     largest_request_bytes: usize,
+    largest_request_estimated_input_tokens: Option<u64>,
     live_replies: u64,
     reported: ReportedSum,
     model: Option<ModelName>,
@@ -23,6 +24,7 @@ impl Default for State {
         Self {
             records: 0,
             largest_request_bytes: 0,
+            largest_request_estimated_input_tokens: Some(0),
             live_replies: 0,
             reported: ReportedSum::default(),
             model: None,
@@ -38,6 +40,7 @@ pub(crate) struct Snapshot {
     pub(crate) counts: Counts,
     pub(crate) records: u64,
     pub(crate) largest_request_bytes: usize,
+    pub(crate) largest_request_estimated_input_tokens: Option<u64>,
     pub(crate) reported: Option<ReportedUsage>,
     pub(crate) estimated_cost_usd: Option<String>,
     pub(crate) model: Option<String>,
@@ -46,13 +49,18 @@ pub(crate) struct Snapshot {
 
 impl Counters {
     /// Measure bodies only after their live attempt is marked.
-    pub(crate) fn request_body_sent(&self, bytes: usize) {
+    pub(crate) fn request_body_sent(&self, bytes: usize, tokens: Option<u64>) {
         let mut queue = self
             .shared
             .queue
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
         queue.facts.largest_request_bytes = queue.facts.largest_request_bytes.max(bytes);
+        queue.facts.largest_request_estimated_input_tokens = queue
+            .facts
+            .largest_request_estimated_input_tokens
+            .zip(tokens)
+            .map(|(held, next)| held.max(next));
     }
 
     pub(crate) fn held_model_mismatch(&self) {
@@ -134,6 +142,9 @@ impl Counters {
             counts: queue.totals,
             records: queue.facts.records,
             largest_request_bytes: queue.facts.largest_request_bytes,
+            largest_request_estimated_input_tokens: queue
+                .facts
+                .largest_request_estimated_input_tokens,
             reported,
             estimated_cost_usd: queue.facts.prices.and_then(|prices| {
                 cost_complete.then(|| {

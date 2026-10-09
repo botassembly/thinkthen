@@ -74,9 +74,7 @@ pub(crate) fn write(
         records: snapshot.records,
         requests_sent: snapshot.counts.requests_sent,
         largest_request_bytes: snapshot.largest_request_bytes,
-        largest_request_estimated_input_tokens: crate::core::PlanSummary::estimated_input_high(
-            snapshot.largest_request_bytes as u64,
-        ),
+        largest_request_estimated_input_tokens: snapshot.largest_request_estimated_input_tokens,
         token_estimate_method: crate::core::PlanSummary::TOKEN_ESTIMATE_METHOD,
         retries: snapshot.counts.retries,
         cache_answers: snapshot.counts.cache_answers,

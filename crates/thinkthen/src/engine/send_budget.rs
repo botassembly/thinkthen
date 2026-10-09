@@ -100,6 +100,14 @@ impl Cancel<'_> {
         self
     }
 
+    pub(crate) fn request_input_estimate(&self, bytes: usize) -> Option<u64> {
+        self.estimated_tokens.or_else(|| {
+            u64::try_from(bytes)
+                .ok()
+                .and_then(crate::core::PlanSummary::estimated_input_high)
+        })
+    }
+
     pub(crate) fn reserve_send(
         &self,
         last_status: Option<u16>,
