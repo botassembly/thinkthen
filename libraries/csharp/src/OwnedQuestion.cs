@@ -23,7 +23,7 @@ public sealed partial class Engine
                     new StringV1 { data = pin.AddrOfPinnedObject(), len = (nuint)bytes.Length },out var question);
                 if (code != 0) throw ReadFailure(pointer,code);
                 using var owned = new QuestionHandle(question);
-                using var document = JsonDocument.Parse(bytes);
+                using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = int.MaxValue });
                 return new InputRequestQuestionDefinition { Value = InputRequestDefinition.Read(document.RootElement) };
             } finally { pin.Free(); }
         });

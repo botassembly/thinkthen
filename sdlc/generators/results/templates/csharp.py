@@ -181,7 +181,7 @@ public abstract class ResultObject
     }
     // Cloning and plain conversion retain every JSON member, including unknown nested data.
     public JsonElement ToJson() => document.Clone();
-    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText())!.AsObject();
+    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!.AsObject();
     public string ToJsonString() => document.GetRawText();
 }
 '''
@@ -239,7 +239,7 @@ def render_primitive_union(kind, variants, definitions, schemas):
               f'    protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
               '    protected JsonElement Document => document;\n'
               '    public JsonElement ToJson() => document.Clone();\n'
-              '    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;\n'
+              '    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;\n'
               '    public string ToJsonString() => document.GetRawText();\n'
               f'    public static {kind} Read(JsonElement document) => document.ValueKind switch\n    {{\n']
     for variant in variants:
@@ -448,9 +448,10 @@ public abstract class InputDocument {
     private static readonly System.Text.Encoding StrictUtf8 = new System.Text.UTF8Encoding(false, true);
     protected static void WriteText(Utf8JsonWriter writer, string? value) { if (value is not null) _ = StrictUtf8.GetByteCount(value); writer.WriteStringValue(value); }
     protected static void WriteName(Utf8JsonWriter writer, string value) { _ = StrictUtf8.GetByteCount(value); writer.WritePropertyName(value); }
-    protected JsonElement? ParsedDocument { get; init; }
+    // Only internal readers retain native-admitted JSON; raw writes bypass host depth validation.
+    private protected JsonElement? ParsedDocument { get; init; }
     public abstract void Write(Utf8JsonWriter writer);
-    internal byte[] ToBytes() { using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream)) Write(writer); return stream.ToArray(); }
+    internal byte[] ToBytes() { using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { MaxDepth = int.MaxValue })) Write(writer); return stream.ToArray(); }
 }
 '''
     nodes.update(definitions)
@@ -519,7 +520,7 @@ public abstract class InputDocument {
             elif value.get('type') != 'null' and 'const' not in value:
                 assignments.append('Value = ' + read(stripped, 'value', key + '_Value'))
             lines.append('internal ' + ('new ' if '_base' in value else '') + 'static ' + typ + ' Read(JsonElement value) => new() { ' + ', '.join(assignments) + ' };')
-        lines.append('public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText()); return; } ' + ' '.join(writes) + ' }')
+        lines.append('public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } ' + ' '.join(writes) + ' }')
         lines.append('}')
         output.append('\n'.join(lines))
     return header + '\n\n'.join(output) + '\n'

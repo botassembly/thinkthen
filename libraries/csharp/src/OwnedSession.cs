@@ -48,7 +48,7 @@ public sealed class OwnedSession : IDisposable
                         NativeSession.Check(NativeSession.thinkthen_session_result_json(packet, out var json, out var length));
                         byte[] bytes = new byte[checked((int)length)];
                         Marshal.Copy(json, bytes, 0, bytes.Length);
-                        using var document = JsonDocument.Parse(bytes);
+                        using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = int.MaxValue });
                         return SessionPacket.Read(document.RootElement);
                     }
                     finally { if (pinned) packet.DangerousRelease(); }

@@ -51,7 +51,7 @@ public sealed partial class Engine : IDisposable
  private static JsonElement ReadJson(IntPtr pointer,nuint length) {
   if(pointer==IntPtr.Zero)throw new InvalidOperationException("missing native output");
   byte[] bytes=new byte[checked((int)length)];Marshal.Copy(pointer,bytes,0,bytes.Length);
-  using var document=JsonDocument.Parse(bytes);return document.RootElement.Clone();
+  using var document=JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = int.MaxValue });return document.RootElement.Clone();
  }
  private TResult Live<TResult>(Func<IntPtr,TResult> body) {
   lifetime.EnterReadLock();bool pinned=false;

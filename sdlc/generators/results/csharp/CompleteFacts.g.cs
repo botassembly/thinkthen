@@ -39,7 +39,7 @@ public abstract class ResultObject
     }
     // Cloning and plain conversion retain every JSON member, including unknown nested data.
     public JsonElement ToJson() => document.Clone();
-    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText())!.AsObject();
+    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!.AsObject();
     public string ToJsonString() => document.GetRawText();
 }
 public sealed class Annotation : ResultObject
@@ -311,7 +311,7 @@ public abstract class Batch
     protected Batch(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static Batch Read(JsonElement document) => document.ValueKind switch
     {
@@ -1182,7 +1182,7 @@ public abstract class AnnotatedField
     protected AnnotatedField(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static AnnotatedField Read(JsonElement document) => document.ValueKind switch
     {
@@ -1308,7 +1308,7 @@ public abstract class BatchSetting
     protected BatchSetting(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static BatchSetting Read(JsonElement document) => document.ValueKind switch
     {
@@ -2106,7 +2106,7 @@ public abstract class Threshold
     protected Threshold(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static Threshold Read(JsonElement document) => document.ValueKind switch
     {
@@ -2148,7 +2148,7 @@ public abstract class Value
     protected Value(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static Value Read(JsonElement document) => document.ValueKind switch
     {
