@@ -6,6 +6,12 @@ A fresh reviewer accepted repaired revision `0c5f1f772e85a9fcdbc1e7ceb6f86bf21af
 
 ## What the build taught us
 
+Typed definitions exposed a transport loss: native session admission returned a safe schema refusal, but the C boundary kept only its error kind. The C# pilot therefore received a generic sentence. Preserve native error facts at their owning boundary rather than delaying finite validation or recreating messages in a binding.
+
+Source `82d28962252b6c433abfcafa1fcddaad4aed62af` preserves native admission messages in the calling thread's owned error slot after canonical request decoding succeeds. Malformed canonical input, invalid foreign arguments and panic guards retain fixed safe diagnostics. The slot survives input and engine destruction, remains isolated between threads, and replaces its prior message on the next failure. Interior-NUL formatting falls back to the existing safe kind message. The ABI declarations remain unchanged; ADR 0129 and the generated header comment describe the refined diagnostic rule.
+
+Fresh read-only review accepted the whole repair and explicitly accepted 77 C Rust lines, raising its ceiling to 18835, and 29 C fixture lines, raising their ceiling to 3033. The installed ASan consumer compares native context and item schema refusals, counts zero sends, preserves output sentinels and checks diagnostic lifetimes and replacement. Its focused cases, shared/static symbol checks, Clippy, header freshness and policy pass. The reviewer independently passed the installed admission case and policy and found no code defects. These checks qualify this transport repair; combined gates and installed SDK adoption remain required.
+
 Integration preserves the reviewed native session declarations from ADR 0129 and records them with the implementation in the public inventory. The inventory passes its existing negative cases. The source ceiling is measured after combining the session with the intervening native presentation work; it is not the sum of two branch ceilings. Fresh review accepted the whole-set preparation repair at `5512fd7a6022e08d6ff719844dba191baee03836`. The native session remains a partial ticket outcome; C exports and packet serialization are still required.
 
 An intake gate prevents acceptance after closure, but cannot undo a host read already performed. Keep the promised reader bound achievable. Keep the sole engine clone on the worker through settlement: the existing usage writer joins during destruction, so an additional caller-owned clone could make session free block.
