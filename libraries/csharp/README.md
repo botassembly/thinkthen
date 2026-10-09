@@ -20,7 +20,7 @@ OwnedCall call = await engine.DecideAsync(
     new InputRequestInputText { Text = "The supplied evidence." },
     cancellation: cancellationToken);
 foreach (SessionPacket packet in call.Packets)
-    if (packet is SessionPacketDecideRow row) Console.WriteLine(row.ToJsonString());
+    if (packet is SessionPacketDecideRow row) Console.WriteLine(row.Value.Value);
 SessionPacketTerminal terminal = call.Terminal;
 ```
 
@@ -32,7 +32,20 @@ Read and push wait through cancellable timer delays after Pending or Full. Each 
 
 An explicit `Cancel` retains the output receiver. Call `ReadAsync` with a fresh token to drain completed packets and eventual native terminal facts. Disposal relinquishes unread output; it does not promise that settlement has finished. A named convenience call disposes its session when cancelled.
 
-The existing synchronous, complete and batch APIs remain available while consumers migrate. `Decide` maps to `DecideAsync`, the other named judgments map to their `*Async` counterparts, and `Call` maps to typed `ExecuteAsync` or `StartSession`. `Engine.Open(InputEngineSettings)` writes the native settings document through generated types. Missing settings retain native defaults; nullable budget alternatives preserve explicit null. The string settings overload and `Engine.Plan` remain compatibility APIs while canonical Request preview is completed. Their behavior remains part of the migration contract.
+Use `Engine.Open(InputEngineSettings)` for native defaults and typed settings. Nullable budget alternatives preserve explicit null. `Engine.Plan(InputRequest)` returns the generated owned `Plan` with unsigned token bounds and explicit nullable body presence. It forwards native canonical Request preview for decide, choose, tag and score without key reads, cache reads or sends. Native admission refuses unsupported functions.
+
+The migration maps earlier callers to these public doors:
+
+| Earlier API | Typed API |
+| --- | --- |
+| `Engine.Open(settingsJson)` | `Engine.Open(InputEngineSettings)` |
+| `Decide`, `DecideComplete` and the other named judgments | The corresponding named `*Async` method with generated question and input objects |
+| Named batch readers | The named `*Async` overload accepting `IAsyncEnumerable<InputRequestSessionDescriptor>` |
+| `Call`, `CallTyped` | A named function; use `ExecuteAsync(InputRequest)` or `StartSession(InputRequest)` for explicit session control |
+| `Plan(verb, question, texts, settings)` | `Plan(InputRequest)` |
+| Compatibility result readers and native layouts | Owned generated `ThinkThen.Results` classes and packet variants |
+
+Question file, saved-name and reference selectors are generated input objects. Authored questions and ordered options also have generated types. `Engine.ParseQuestion(AuthoredQuestionKind, authoredJson)` uses the existing native authored-question parser and returns an owned generated definition. Its typed properties are immutable; serializing the definition preserves admitted unknown members and authored order. The JSON here is authored question data. Execution always receives generated Request objects. User records and original result inputs retain arbitrary JSON data; the caller does not build transport JSON. A streamed producer owns its descriptors and supplies optional source locations. The native engine owns question admission, selection, framing and judgment semantics.
 
 To pack locally, supply an already-built native asset, portable RID and native filename:
 
@@ -42,4 +55,4 @@ dotnet pack libraries/csharp/ThinkThen.csproj -c Release -o path/to/feed \
   -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so
 ```
 
-The existing package checker compares native bytes and reflected imports against the generated C header. `tests/isolated_consumer.py` restores the local package into an isolated application with no separate native archive or library-path override. Its `sessions` mode covers owned packets, held-provider cancellation, concurrent Task progress, Full and Closed, explicit drain, disposal races and presence semantics. `sh libraries/csharp/check.sh` also exercises the compatibility matrix. The SDK executable resolves from `dotnet` or `THINKTHEN_DOTNET`.
+The existing package checker compares native bytes and reflected imports against the generated C header. `tests/isolated_consumer.py` restores the local package into an isolated application with no separate native archive or library-path override. Its `sessions` mode covers owned packets, held-provider cancellation, concurrent Task progress, Full and Closed, explicit drain, disposal races and presence semantics. `sh libraries/csharp/check.sh` also exercises the typed counted matrix, the shared J1 semantic cases and all current native shared fixtures through named Async calls. The 13 structurally invalid J1 legacy wire forms and the legacy `{usage:true}` control remain schema fixtures and frozen C compatibility tests; C# exposes no legacy JSON execution door. The SDK executable resolves from `dotnet` or `THINKTHEN_DOTNET`.

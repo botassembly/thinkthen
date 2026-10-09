@@ -32,9 +32,14 @@ public abstract class ResultObject
         if (!document.TryGetProperty(name, out var member)) return default;
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
     }
+    protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
+    {
+        var member = RequiredElement(name);
+        return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
+    }
     // Cloning and plain conversion retain every JSON member, including unknown nested data.
     public JsonElement ToJson() => document.Clone();
-    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText())!.AsObject();
+    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!.AsObject();
     public string ToJsonString() => document.GetRawText();
 }
 public sealed class Annotation : ResultObject
@@ -45,7 +50,7 @@ public sealed class Annotation : ResultObject
     public Presence<string> File => Optional<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
-    public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
+    public Presence<JsonElement> Input => RequiredNullable<JsonElement>("input", member => member.Clone());
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
@@ -85,9 +90,9 @@ public sealed class AnnotationMemberAnswerId : AnnotationMember
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Request => RequiredElement("request").GetString()!;
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
-    public Presence<Value> Value => Optional<Value>("value", member => global::ThinkThen.Results.Value.Read(member));
+    public Presence<Value> Value => RequiredNullable<Value>("value", member => global::ThinkThen.Results.Value.Read(member));
 }
 
 public sealed class AnnotationMemberFailureId : AnnotationMember
@@ -99,7 +104,7 @@ public sealed class AnnotationMemberFailureId : AnnotationMember
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Request => RequiredElement("request").GetString()!;
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
 }
 
@@ -142,14 +147,14 @@ public sealed class AnnotationValueChoice : AnnotationValue
 {
     public AnnotationValueChoice(JsonElement document) : base(document) { }
     public string Kind => RequiredElement("kind").GetString()!;
-    public Presence<string> Value => Optional<string>("value", member => member.GetString()!);
+    public Presence<string> Value => RequiredNullable<string>("value", member => member.GetString()!);
 }
 
 public sealed class AnnotationValueDecision : AnnotationValue
 {
     public AnnotationValueDecision(JsonElement document) : base(document) { }
     public string Kind => RequiredElement("kind").GetString()!;
-    public Presence<bool> Value => Optional<bool>("value", member => member.GetBoolean());
+    public Presence<bool> Value => RequiredNullable<bool>("value", member => member.GetBoolean());
 }
 
 public sealed class AnnotationValueFailed : AnnotationValue
@@ -193,7 +198,7 @@ public sealed class AtomicArrayOfString : ResultObject
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public IReadOnlyList<string> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
 }
 
@@ -211,7 +216,7 @@ public sealed class AtomicDecideValue : ResultObject
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public JsonElement Value => RequiredElement("value").Clone();
 }
 
@@ -229,7 +234,7 @@ public sealed class AtomicNonZeroUsize : ResultObject
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public ulong Value => RequiredElement("value").GetUInt64();
 }
 
@@ -247,8 +252,8 @@ public sealed class AtomicNullableString : ResultObject
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
-    public Presence<string> Value => Optional<string>("value", member => member.GetString()!);
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<string> Value => RequiredNullable<string>("value", member => member.GetString()!);
 }
 
 public sealed class AtomicBoolean : ResultObject
@@ -265,7 +270,7 @@ public sealed class AtomicBoolean : ResultObject
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public bool Value => RequiredElement("value").GetBoolean();
 }
 
@@ -283,7 +288,7 @@ public sealed class AtomicDouble : ResultObject
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public Presence<Threshold> Threshold => Optional<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public double Value => RequiredElement("value").GetDouble();
 }
 
@@ -306,7 +311,7 @@ public abstract class Batch
     protected Batch(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static Batch Read(JsonElement document) => document.ValueKind switch
     {
@@ -432,7 +437,7 @@ public sealed class Facts : ResultObject
     public Presence<bool> HeldModelMismatch => Optional<bool>("held_model_mismatch", member => member.GetBoolean());
     public Presence<ulong> InputTokens => Optional<ulong>("input_tokens", member => member.GetUInt64());
     public ulong LargestRequestBytes => RequiredElement("largest_request_bytes").GetUInt64();
-    public Presence<ulong> LargestRequestEstimatedInputTokens => Optional<ulong>("largest_request_estimated_input_tokens", member => member.GetUInt64());
+    public Presence<ulong> LargestRequestEstimatedInputTokens => RequiredNullable<ulong>("largest_request_estimated_input_tokens", member => member.GetUInt64());
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<ulong> OutputTokens => Optional<ulong>("output_tokens", member => member.GetUInt64());
     public ulong Records => RequiredElement("records").GetUInt64();
@@ -450,21 +455,21 @@ public sealed class Find : ResultObject
     public Presence<IReadOnlyList<FindCandidate>> Candidates => Optional<IReadOnlyList<FindCandidate>>("candidates", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new FindCandidate(item0)).ToArray()));
     public Presence<string> File => Optional<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
-    public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
+    public Presence<ulong> Index => RequiredNullable<ulong>("index", member => member.GetUInt64());
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
     public Question2 Question => new Question2(RequiredElement("question"));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
-    public Presence<JsonElement> Threshold => Optional<JsonElement>("threshold", member => member.Clone());
-    public Presence<JsonElement> Value => Optional<JsonElement>("value", member => member.Clone());
+    public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
+    public Presence<JsonElement> Value => RequiredNullable<JsonElement>("value", member => member.Clone());
 }
 
 public sealed class FindCandidate : ResultObject
 {
     public FindCandidate(JsonElement document) : base(document) { }
-    public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
-    public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
+    public Presence<ulong> Index => RequiredNullable<ulong>("index", member => member.GetUInt64());
+    public Presence<JsonElement> Input => RequiredNullable<JsonElement>("input", member => member.Clone());
     public double Probability => RequiredElement("probability").GetDouble();
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
 }
@@ -592,7 +597,7 @@ public sealed class Meta : ResultObject
     public ulong FailedQuestions => RequiredElement("failed_questions").GetUInt64();
     public string Model => RequiredElement("model").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
-    public Presence<Origin> Origin => Optional<Origin>("origin", member => new Origin(member.GetString()!));
+    public Presence<Origin> Origin => RequiredNullable<Origin>("origin", member => new Origin(member.GetString()!));
     public Presence<ProfileWarning> ProfileWarning => Optional<ProfileWarning>("profile_warning", member => new ProfileWarning(member));
     public Presence<string> QuestionSha256 => Optional<string>("question_sha256", member => member.GetString()!);
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
@@ -679,7 +684,7 @@ public sealed class PhysicalSource : ResultObject
 public sealed class Position : ResultObject
 {
     public Position(JsonElement document) : base(document) { }
-    public Presence<string> File => Optional<string>("file", member => member.GetString()!);
+    public Presence<string> File => RequiredNullable<string>("file", member => member.GetString()!);
     public Presence<ulong> First => Optional<ulong>("first", member => member.GetUInt64());
     public Presence<IReadOnlyList<string>> Images => Optional<IReadOnlyList<string>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public Presence<ulong> Last => Optional<ulong>("last", member => member.GetUInt64());
@@ -710,7 +715,7 @@ public sealed class RankMemberResult : ResultObject
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public Presence<JsonElement> Threshold => Optional<JsonElement>("threshold", member => member.Clone());
+    public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
     public ulong Value => RequiredElement("value").GetUInt64();
 }
 
@@ -790,7 +795,7 @@ public sealed class Question4 : ResultObject
     public Question4(JsonElement document) : base(document) { }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
     public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<RelateFields> Fields => Optional<RelateFields>("fields", member => new RelateFields(member));
+    public Presence<RelateFields> Fields => RequiredNullable<RelateFields>("fields", member => new RelateFields(member));
     public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
     public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
@@ -1019,7 +1024,7 @@ public sealed class RelationMemberAnswerId : RelationMember
     public string Relation => RequiredElement("relation").GetString()!;
     public string Request => RequiredElement("request").GetString()!;
     public RelatedEntity Source => new RelatedEntity(RequiredElement("source"));
-    public Presence<RelatedEntity> Target => Optional<RelatedEntity>("target", member => new RelatedEntity(member));
+    public Presence<RelatedEntity> Target => RequiredNullable<RelatedEntity>("target", member => new RelatedEntity(member));
     public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
     public bool Accepted => RequiredElement("accepted").GetBoolean();
@@ -1040,7 +1045,7 @@ public sealed class RelationMemberFailureId : RelationMember
     public string Relation => RequiredElement("relation").GetString()!;
     public string Request => RequiredElement("request").GetString()!;
     public RelatedEntity Source => new RelatedEntity(RequiredElement("source"));
-    public Presence<RelatedEntity> Target => Optional<RelatedEntity>("target", member => new RelatedEntity(member));
+    public Presence<RelatedEntity> Target => RequiredNullable<RelatedEntity>("target", member => new RelatedEntity(member));
     public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
     public Failure Failure => new Failure(RequiredElement("failure"));
@@ -1177,7 +1182,7 @@ public abstract class AnnotatedField
     protected AnnotatedField(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static AnnotatedField Read(JsonElement document) => document.ValueKind switch
     {
@@ -1303,7 +1308,7 @@ public abstract class BatchSetting
     protected BatchSetting(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static BatchSetting Read(JsonElement document) => document.ValueKind switch
     {
@@ -1401,9 +1406,9 @@ public sealed class FindAnswer : ResultObject
 public sealed class NameOdds : ResultObject
 {
     public NameOdds(JsonElement document) : base(document) { }
-    public Presence<IReadOnlyDictionary<string, double>> Edges => Optional<IReadOnlyDictionary<string, double>>("edges", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
+    public Presence<IReadOnlyDictionary<string, double>> Edges => RequiredNullable<IReadOnlyDictionary<string, double>>("edges", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
     public ulong End => RequiredElement("end").GetUInt64();
-    public Presence<IReadOnlyDictionary<string, double>> Kinds => Optional<IReadOnlyDictionary<string, double>>("kinds", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
+    public Presence<IReadOnlyDictionary<string, double>> Kinds => RequiredNullable<IReadOnlyDictionary<string, double>>("kinds", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
     public ulong Start => RequiredElement("start").GetUInt64();
 }
 
@@ -1429,6 +1434,20 @@ public sealed class Place : ResultObject
     public Place(JsonElement document) : base(document) { }
     public ulong End => RequiredElement("end").GetUInt64();
     public ulong Start => RequiredElement("start").GetUInt64();
+}
+
+public sealed class Plan : ResultObject
+{
+    public Plan(JsonElement document) : base(document) { }
+    public ulong EstimatedBytes => RequiredElement("estimated_bytes").GetUInt64();
+    public TokenBand EstimatedInputTokens => new TokenBand(RequiredElement("estimated_input_tokens"));
+    public Presence<string> FirstBodyUtf8 => RequiredNullable<string>("first_body_utf8", member => member.GetString()!);
+    public ulong LargestRequestBytes => RequiredElement("largest_request_bytes").GetUInt64();
+    public ulong LargestRequestEstimatedInputTokens => RequiredElement("largest_request_estimated_input_tokens").GetUInt64();
+    public ulong Records => RequiredElement("records").GetUInt64();
+    public ulong Requests => RequiredElement("requests").GetUInt64();
+    public string TokenEstimateMethod => RequiredElement("token_estimate_method").GetString()!;
+    public bool UpperBound => RequiredElement("upper_bound").GetBoolean();
 }
 
 public sealed class ProfileWarning : ResultObject
@@ -1528,7 +1547,7 @@ public abstract class RelatedEntityEdgePropertiesSource : ResultObject
 public sealed class RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord : RelatedEntityEdgePropertiesSource
 {
     public RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(JsonElement document) : base(document) { }
-    public Presence<string> File => Optional<string>("file", member => member.GetString()!);
+    public Presence<string> File => RequiredNullable<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public string Kind => RequiredElement("kind").GetString()!;
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
@@ -1603,14 +1622,14 @@ public sealed class SessionJudgmentChoice : SessionJudgment
 {
     public SessionJudgmentChoice(JsonElement document) : base(document) { }
     public string Kind => RequiredElement("kind").GetString()!;
-    public Presence<string> Value => Optional<string>("value", member => member.GetString()!);
+    public Presence<string> Value => RequiredNullable<string>("value", member => member.GetString()!);
 }
 
 public sealed class SessionJudgmentDecision : SessionJudgment
 {
     public SessionJudgmentDecision(JsonElement document) : base(document) { }
     public string Kind => RequiredElement("kind").GetString()!;
-    public Presence<bool> Value => Optional<bool>("value", member => member.GetBoolean());
+    public Presence<bool> Value => RequiredNullable<bool>("value", member => member.GetBoolean());
 }
 
 public sealed class SessionJudgmentScore : SessionJudgment
@@ -1719,7 +1738,7 @@ public sealed class SessionObservedRowFind : SessionObservedRow
 {
     public SessionObservedRowFind(JsonElement document) : base(document) { }
     public string Kind => RequiredElement("kind").GetString()!;
-    public Presence<ulong> Value => Optional<ulong>("value", member => member.GetUInt64());
+    public Presence<ulong> Value => RequiredNullable<ulong>("value", member => member.GetUInt64());
 }
 
 public sealed class SessionObservedRowJudgment : SessionObservedRow
@@ -2072,7 +2091,7 @@ public sealed class SessionRelationEdge : ResultObject
 public sealed class SourceRelationEndpoint : ResultObject
 {
     public SourceRelationEndpoint(JsonElement document) : base(document) { }
-    public Presence<string> File => Optional<string>("file", member => member.GetString()!);
+    public Presence<string> File => RequiredNullable<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public string Kind => RequiredElement("kind").GetString()!;
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
@@ -2087,7 +2106,7 @@ public abstract class Threshold
     protected Threshold(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static Threshold Read(JsonElement document) => document.ValueKind switch
     {
@@ -2109,6 +2128,13 @@ public sealed class ThresholdString : Threshold
     public string Value => Document.GetString()!;
 }
 
+public sealed class TokenBand : ResultObject
+{
+    public TokenBand(JsonElement document) : base(document) { }
+    public ulong Lower => RequiredElement("lower").GetUInt64();
+    public ulong Upper => RequiredElement("upper").GetUInt64();
+}
+
 public sealed class TokenUsage : ResultObject
 {
     public TokenUsage(JsonElement document) : base(document) { }
@@ -2122,7 +2148,7 @@ public abstract class Value
     protected Value(JsonElement document) { this.document = document.Clone(); }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText())!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
     public string ToJsonString() => document.GetRawText();
     public static Value Read(JsonElement document) => document.ValueKind switch
     {

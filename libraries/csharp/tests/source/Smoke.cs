@@ -1,6 +1,6 @@
-// The replay smoke (ticket 0335): one Decide through Engine.Open, which reads
-// the environment, with the question and text sdlc/scripts/smoke names.
 using ThinkThen;
-using var engine = Engine.Open();
-var answer = engine.Decide(Environment.GetEnvironmentVariable("THINKTHEN_TEST_SMOKE_QUESTION")!, Environment.GetEnvironmentVariable("THINKTHEN_TEST_SMOKE_TEXT")!).Value;
-Console.WriteLine("smoke: " + answer.OutcomeKind switch { Outcome.Yes => "true", Outcome.No => "false", _ => "null" });
+using ThinkThen.Inputs;
+using ThinkThen.Results;
+using var engine=Engine.Open(new InputEngineSettings());
+var call=await engine.DecideAsync(new InputRequestQuestionText {Text=Environment.GetEnvironmentVariable("THINKTHEN_TEST_SMOKE_QUESTION")!},new InputRequestInputText {Text=Environment.GetEnvironmentVariable("THINKTHEN_TEST_SMOKE_TEXT")!});
+Console.WriteLine("smoke: "+call.Packets.OfType<SessionPacketDecideRow>().Single().Value.Value.GetRawText());

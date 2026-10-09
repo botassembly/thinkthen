@@ -3,6 +3,7 @@ namespace ThinkThen;
 internal static class NativeSession
 {
     private const string Library = "thinkthen";
+    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_request_plan_json(EngineHandle engine, byte[] request, nuint length, out IntPtr output, out nuint outputLength);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_new(EngineHandle engine, byte[] request, nuint length, out IntPtr session);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_try_push(SessionHandle session, byte[] descriptor, nuint length, out uint status);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_try_read(SessionHandle session, out uint status, out IntPtr packet);

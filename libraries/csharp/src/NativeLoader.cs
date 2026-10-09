@@ -3,19 +3,9 @@ using System.Runtime.InteropServices;
 namespace ThinkThen;
 internal static class NativeLoader
 {
-    private static readonly object gate = new();
-    private static bool initialized;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2255", Justification = "The binding must resolve native assets before any public compatibility import.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2255", Justification = "The binding must resolve native assets before any native operation.")]
     [System.Runtime.CompilerServices.ModuleInitializer]
-    internal static void Initialize()
-    {
-        lock (gate)
-        {
-            if (initialized) return;
-            NativeLibrary.SetDllImportResolver(typeof(Engine).Assembly, Resolve);
-            initialized = true;
-        }
-    }
+    internal static void Initialize() => NativeLibrary.SetDllImportResolver(typeof(Engine).Assembly, Resolve);
     private static IntPtr Resolve(string name, Assembly assembly, DllImportSearchPath? search)
     {
         if (name != "thinkthen" && name != "libthinkthen.so.0")

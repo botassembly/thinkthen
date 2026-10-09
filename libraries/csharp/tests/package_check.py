@@ -1,7 +1,6 @@
 """Check local C# and native package bytes and plant stale, tampered and secret variants."""
 import hashlib
 import importlib.util
-import os
 import subprocess
 import sys
 import tempfile
@@ -14,6 +13,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
 MAJOR, MINOR, PATCH = VERSION.split(".")
 HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
@@ -91,7 +91,6 @@ def abi_check(header, package):
     spec = importlib.util.spec_from_file_location('c_abi', ROOT.parents[1] / 'sdlc/scripts/check-c-exports.py')
     abi = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(abi)
-    sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
     from children import child_env
     from toolchains import dotnet
     native = abi.header_abi(header)
@@ -106,16 +105,15 @@ def abi_check(header, package):
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
         subprocess.run([str(dotnet()), 'build', str(scratch / 'Probe.csproj'), '--configfile', str(scratch / 'NuGet.Config'), '-v', 'quiet', '-m:1'], env=env, check=True, stdout=sys.stderr)
         actual = json.loads(subprocess.check_output([str(dotnet()), str(scratch / 'bin/Debug/net8.0/Probe.dll'), str(scratch / 'ThinkThen.dll')], env=env, text=True))
-    # The public facade deliberately imports opts variants instead of bare aliases.
-    omitted = {'thinkthen_call', 'thinkthen_decide', 'thinkthen_decide_many', 'thinkthen_decide_many_with_facts',
-               'thinkthen_decide_with_facts', 'thinkthen_image_view', 'thinkthen_question_author', 'thinkthen_question_file',
-               'thinkthen_recognize', 'thinkthen_recognize_with_facts', 'thinkthen_relate', 'thinkthen_relate_with_facts', 'thinkthen_result_row'}
-    constant_names = {n for n in native['constants'] if n.endswith('_V1') and not n.startswith(('THINKTHEN_PROBABILITIES_', 'THINKTHEN_RESULT_'))} | {n for n in native['constants'] if n.startswith('THINKTHEN_E') and not n.endswith('_V1')} | {'THINKTHEN_YES', 'THINKTHEN_NO', 'THINKTHEN_UNSURE'}
-    required_imports = set(native['functions']) - omitted
-    assert required_imports <= actual['functions'].keys(), 'missing required compatibility imports'
-    session_imports = {name for name in native['functions'] if name.startswith('thinkthen_session_')}
-    assert session_imports <= actual['functions'].keys(), 'missing owned session imports'
-    expected = abi.represented_abi(native, native['records'], set(actual['functions']), constant_names - {name for name in constant_names if name.startswith('THINKTHEN_SESSION_')})
+    # Validate the sole owned SDK's imports against the full frozen C header.
+    required_imports = {'thinkthen_engine_new_with', 'thinkthen_engine_free', 'thinkthen_error_code',
+                        'thinkthen_error_retryable', 'thinkthen_error_message', 'thinkthen_error_facts_json',
+                        'thinkthen_free_string', 'thinkthen_question_parse', 'thinkthen_question_free',
+                        'thinkthen_request_plan_json'} | {name for name in native['functions'] if name.startswith('thinkthen_session_')}
+    assert required_imports == actual['functions'].keys(), 'owned SDK native imports differ'
+    assert set(actual['records']) == {'thinkthen_string_v1'}, 'unused native layouts retained'
+    constant_names = {name for name in native['constants'] if name.startswith('THINKTHEN_LOAD_') or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
+    expected = abi.represented_abi(native, {'thinkthen_string_v1'}, required_imports, constant_names)
     for name, prototype in actual['functions'].items():
         pointees = prototype.pop('argument_pointees')
         for parameter, represented in zip(native['functions'][name]['arguments'], pointees):
@@ -127,7 +125,6 @@ def abi_check(header, package):
 
 def abi_plants(header):
     """Compile changed real declarations; the same package checker must refuse them."""
-    sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
     from children import child_env
     from toolchains import dotnet
     with tempfile.TemporaryDirectory(prefix='thinkthen-csharp-abi-plants-') as folder:
@@ -144,9 +141,9 @@ def abi_plants(header):
         config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
         env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
-        plants = [('field order', 'NativeAbi0.cs', 'public IntPtr data;\n public nuint len;', 'public nuint len;\n public IntPtr data;'),
-                  ('enum', 'Complete.cs', 'enum Function { Decide,', 'enum Function { Decide=19,'),
-                  ('return', 'NativeDetails.cs', 'extern int thinkthen_result_rank_member_details(', 'extern long thinkthen_result_rank_member_details(')]
+        plants = [('field order', 'NativeBridge.g.cs', 'public IntPtr data;\n public nuint len;', 'public nuint len;\n public IntPtr data;'),
+                  ('enum', 'NativeBridge.g.cs', 'Atomic = 1', 'Atomic = 19'),
+                  ('return', 'NativeSession.cs', 'extern void thinkthen_session_cancel(', 'extern long thinkthen_session_cancel(')]
         for name, file, before, after in plants:
             copied = source / file
             text = copied.read_text()
@@ -196,6 +193,9 @@ class Probe {
  }
  static void Main(string[] args) {
   var assembly=Assembly.LoadFrom(args[0]);var records=new Dictionary<string,object>();var functions=new Dictionary<string,object>();
+  var engine=assembly.GetType("ThinkThen.Engine",true)!;
+  if(engine.GetMethods(BindingFlags.Public|BindingFlags.Instance|BindingFlags.Static).Any(m=>m.Name is "Call" or "CallTyped" or "Decide" or "DecideMany" or "Recognize" or "Relate" || m.Name.EndsWith("Complete") || m.Name.EndsWith("Batch")) || engine.GetMethods().Where(m=>m.Name=="Open").Any(m=>m.GetParameters().Any(p=>p.ParameterType==typeof(string))))throw new Exception("retired public execution API retained");
+  foreach(string old in new[]{"Native","CompleteReaders","Requests","Questions","ICompleteEngine","CompleteRequest","Answer","Outcome"})if(assembly.GetType("ThinkThen."+old) is {IsPublic:true})throw new Exception("retired public type retained: "+old);
   var dynamicAssembly=AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("AbiAlign"),AssemblyBuilderAccess.Run);
   dynamicAssembly.SetCustomAttribute(new CustomAttributeBuilder(typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[]{typeof(string)})!,new object[]{assembly.GetName().Name!}));
   var module=dynamicAssembly.DefineDynamicModule("align");
@@ -216,16 +216,10 @@ class Probe {
    }
   }
   var constants=new Dictionary<string,int>();
-  foreach(var (type,prefix,bias) in new[]{("Function","FUNCTION",1),("RuleKind","RULE",0),("Media","IMAGE",1),("SourceUnit","SOURCE",1),("ValueKind","DECIDE",0),("AtomicKind","ANSWER",1),("MemberState","MEMBER",1),("MemberCause","MEMBER",1),("Origin","ORIGIN",1),("AttemptOutcome","ATTEMPT",1),("RelationMethod","RELATION",1),("Direction","DIRECTION",1),("Stage","STAGE",1),("IdentityKind","ID",1),("StopCause","STOP",1),("BatchKind","BATCH",1),("EventKind","EVENT",1),("DeclarationKind","DECLARATION",0),("PropertyKind","PROPERTY",0),("QuestionRole","LOAD",0)}) {
-   var enumType=assembly.GetType("ThinkThen."+type,true)!;
-   foreach(var value in Enum.GetValues(enumType))constants.Add("THINKTHEN_"+prefix+"_"+Regex.Replace(Enum.GetName(enumType,value)!,"(?<!^)(?=[A-Z])","_").ToUpperInvariant()+"_V1",Convert.ToInt32(value)+bias);
-  }
-  var content=assembly.GetType("ThinkThen.ContentKind",true)!;
-  foreach(string name in new[]{"Text","Json"})constants.Add("THINKTHEN_CONTENT_"+name.ToUpperInvariant()+"_V1",Convert.ToInt32(Enum.Parse(content,name))+1);
+  var authored=assembly.GetType("ThinkThen.AuthoredQuestionKind",true)!;
+  foreach(var value in Enum.GetValues(authored))constants.Add("THINKTHEN_LOAD_"+Regex.Replace(Enum.GetName(authored,value)!,"(?<!^)(?=[A-Z])","_").ToUpperInvariant()+"_V1",Convert.ToInt32(value));
   var failure=assembly.GetType("ThinkThen.FailureKind",true)!;
   foreach(var value in Enum.GetValues(failure))constants.Add("THINKTHEN_E"+Enum.GetName(failure,value)!.ToUpperInvariant(),Convert.ToInt32(value));
-  var outcome=assembly.GetType("ThinkThen.Outcome",true)!;
-  foreach(var (name,key) in new[]{("Yes","YES"),("No","NO"),("NotSure","UNSURE")})constants.Add("THINKTHEN_"+key,Convert.ToInt32(Enum.Parse(outcome,name)));
   Console.WriteLine(JsonSerializer.Serialize(new {records,functions,constants}));
  }
 }

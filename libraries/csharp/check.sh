@@ -17,6 +17,7 @@ dotnet=${THINKTHEN_DOTNET:-$(command -v dotnet || true)}
 command -v python3 >/dev/null 2>&1 || exit 77
 python3 "$here/tests/toolchains.py"
 python3 "$root/sdlc/generators/results/generate.py" --inputs --check
+python3 "$root/sdlc/generators/results/generate.py" --bridge --check
 python3 "$root/sdlc/generators/results/generate.py" --check
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     smoke_guard

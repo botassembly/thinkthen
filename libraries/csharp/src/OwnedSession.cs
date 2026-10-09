@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-using System.Text.Json;
 using ThinkThen.Inputs;
 using ThinkThen.Results;
 namespace ThinkThen;
@@ -46,10 +44,7 @@ public sealed class OwnedSession : IDisposable
                     {
                         packet.DangerousAddRef(ref pinned);
                         NativeSession.Check(NativeSession.thinkthen_session_result_json(packet, out var json, out var length));
-                        byte[] bytes = new byte[checked((int)length)];
-                        Marshal.Copy(json, bytes, 0, bytes.Length);
-                        using var document = JsonDocument.Parse(bytes);
-                        return SessionPacket.Read(document.RootElement);
+                        return SessionPacket.Read(Engine.ReadJson(json, length));
                     }
                     finally { if (pinned) packet.DangerousRelease(); }
                 }
