@@ -262,8 +262,12 @@ impl Engine {
 }
 
 fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>) {
+    let function = request.request.call.function();
     let observer = |event: crate::RecordObservation<'_>| {
-        queue.publish(RequestSessionResult::Observation(event.to_owned()));
+        queue.publish(RequestSessionResult::Observation {
+            function,
+            value: event.to_owned(),
+        });
     };
     let files = Mutex::new(std::collections::BTreeSet::new());
     let files_only = request.request.call.arguments().options.files_only;

@@ -193,11 +193,17 @@ fn reader_failure_follows_owned_completed_rows_and_observations() {
     let packets = drain(&session);
     assert!(matches!(
         &packets[0],
-        RequestSessionResult::Observation(OwnedRecordObservation::Question { .. })
+        RequestSessionResult::Observation {
+            value: OwnedRecordObservation::Question { .. },
+            ..
+        }
     ));
     assert!(matches!(
         &packets[1],
-        RequestSessionResult::Observation(OwnedRecordObservation::Row { .. })
+        RequestSessionResult::Observation {
+            value: OwnedRecordObservation::Row { .. },
+            ..
+        }
     ));
     let RequestSessionResult::Row(RequestSessionRow::Decision(row)) = &packets[2] else {
         panic!("completed decision prefix")
@@ -206,6 +212,42 @@ fn reader_failure_follows_owned_completed_rows_and_observations() {
         panic!("located original")
     };
     assert_eq!(original.location().unwrap().first_line(), Some(3));
+    let documents = packets
+        .iter()
+        .map(|packet| serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(documents[0]["kind"], "observation");
+    assert_eq!(documents[0]["function"], "decide");
+    assert_eq!(documents[0]["value"]["kind"], "question");
+    let detail = &documents[0]["value"]["detail"];
+    assert_eq!(
+        detail["question_sha256"],
+        row.result().meta().question_sha256().unwrap()
+    );
+    assert_eq!(
+        detail["question_sources"],
+        serde_json::to_value(row.result().identity().question_sources()).unwrap()
+    );
+    assert_eq!(
+        detail["observations"],
+        serde_json::to_value(row.result().identity().observations()).unwrap()
+    );
+    assert_eq!(
+        detail["answer_id"],
+        serde_json::to_value(row.result().answer_id()).unwrap()
+    );
+    assert!(!detail.as_object().unwrap().contains_key("failure_id"));
+    assert_eq!(
+        detail["input"],
+        serde_json::to_value(row.original()).unwrap()
+    );
+    assert_eq!(detail["inputs"], json!([row.original()]));
+    assert_eq!(documents[1]["value"]["value"]["kind"], "judgment");
+    assert_eq!(documents[2]["kind"], "row");
+    assert_eq!(documents[2]["value"], serde_json::to_value(row).unwrap());
+    assert_eq!(documents[3]["kind"], "terminal");
+    assert!(documents[3].as_object().unwrap().contains_key("failure"));
+
     let RequestSessionResult::Terminal(terminal) = &packets[3] else {
         panic!("joined terminal")
     };
@@ -233,15 +275,19 @@ fn full_output_preserves_a_completed_prefix_when_cancelled() {
     // its complete row then waits behind that occupied output cell.
     assert!(matches!(
         next(&session),
-        RequestSessionRead::Result(RequestSessionResult::Observation(
-            OwnedRecordObservation::Question { .. }
-        ))
+        RequestSessionRead::Result(RequestSessionResult::Observation {
+            value: OwnedRecordObservation::Question { .. },
+            ..
+        })
     ));
     session.cancel();
     let packets = drain(&session);
     assert!(matches!(
         &packets[0],
-        RequestSessionResult::Observation(OwnedRecordObservation::Row { .. })
+        RequestSessionResult::Observation {
+            value: OwnedRecordObservation::Row { .. },
+            ..
+        }
     ));
     assert!(matches!(
         &packets[1],
@@ -360,6 +406,21 @@ fn image_descriptors_keep_physical_provenance_out_of_model_evidence() {
         panic!("image original")
     };
     assert_eq!(images.location(), Some(&source));
+    let detail = packets
+        .iter()
+        .find_map(|packet| match packet {
+            RequestSessionResult::Observation {
+                value: OwnedRecordObservation::Question { .. },
+                ..
+            } => Some(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(
+        detail["value"]["detail"]["input"],
+        serde_json::to_value(row.original()).unwrap()
+    );
+    assert_eq!(detail["value"]["detail"]["inputs"], json!([row.original()]));
     assert!(
         !String::from_utf8(listener.requests()[0].body.clone())
             .unwrap()
@@ -395,6 +456,21 @@ fn whole_set_requests_publish_one_aggregate_then_truthful_terminal() {
         panic!("rank aggregate")
     };
     assert_eq!(rows.len(), 2);
+    let document: Value = serde_json::from_str(
+        &packets
+            .iter()
+            .find(|packet| matches!(packet, RequestSessionResult::Aggregate(_)))
+            .unwrap()
+            .to_json()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(document["kind"], "aggregate");
+    assert_eq!(document["function"], "rank");
+    assert_eq!(
+        document["value"],
+        serde_json::to_value(aggregates[0]).unwrap()
+    );
     assert!(
         !packets
             .iter()
@@ -447,7 +523,10 @@ fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
                 .iter()
                 .filter(|p| matches!(
                     p,
-                    RequestSessionResult::Observation(OwnedRecordObservation::Row { .. })
+                    RequestSessionResult::Observation {
+                        value: OwnedRecordObservation::Row { .. },
+                        ..
+                    }
                 ))
                 .count(),
             2

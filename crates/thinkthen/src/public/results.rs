@@ -62,6 +62,7 @@ mod observation;
 mod owned_observation;
 #[cfg(test)]
 pub(crate) use observation::QuestionJson;
+pub(crate) use owned_observation::SessionObservationDocument;
 mod stage_observation;
 pub(crate) use observation::ObservedQuestion;
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
