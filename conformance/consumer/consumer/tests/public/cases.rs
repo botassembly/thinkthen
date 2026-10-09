@@ -106,7 +106,8 @@ impl<'de> Visitor<'de> for Pairs {
 }
 
 #[test]
-fn every_applicable_shared_case_passes_through_the_public_api() {
+#[ignore = "release-only full shared-case parity; run sdlc/scripts/test-full-cases --run"]
+fn release_only_every_applicable_shared_case_passes_through_the_public_api() {
     let document: Value = serde_json::from_str(CASES).expect("the shared cases");
     let written: Written = serde_json::from_str(CASES).expect("the cases as written");
     let cases = document["cases"].as_array().expect("a case list");

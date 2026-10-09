@@ -13,3 +13,5 @@ A size boundary can share a test with small negative cases. Moving the whole tes
 The release runner's direct cargo tests need their own isolated usage and configuration folders. The routine child runner's guard cannot protect its parent after the child exits. The parent now uses the existing scratch helpers, which clean up only the folders that invocation creates.
 
 Large-input cases also live inside source modules. Selecting integration cases alone missed those boundaries; the release split must include their owning tests.
+
+Unbounded nextest concurrency can starve small cache cases that pass alone. The routine profile limits test processes to two and keeps the five-second ceiling. Full shared-case replay and parity belong to release selection even when each individual corpus row is small; focused cache and other boundary regressions remain routine.

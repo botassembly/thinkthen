@@ -132,12 +132,13 @@ fn unread(success: &super::Success, place: usize) -> (usize, usize) {
 }
 
 #[test]
+#[ignore = "release-only full shared-case parity; run sdlc/scripts/test-full-cases --run"]
 #[allow(
     clippy::excessive_nesting,
     clippy::too_many_lines,
     reason = "the command runner checks every field of every shared case in one pass"
 )]
-fn every_case_crosses_the_private_facade_under_replay() {
+fn release_only_every_case_crosses_the_private_facade_under_replay() {
     let document: Document = serde_json::from_str(CASES).expect("shared document");
     let backend_url = Url::new(&document.backend_url).expect("canonical URL");
     let backend = Backend::from_parts(backend_url, ModelName::new(DEFAULT_MODEL).expect("model"));
