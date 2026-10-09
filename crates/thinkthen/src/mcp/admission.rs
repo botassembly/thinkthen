@@ -62,57 +62,54 @@ pub(super) struct Options {
     pub(super) proxy: Option<Box<RawValue>>,
     pub(super) native: crate::RequestOptions,
 }
-impl<'de> Deserialize<'de> for Options {
-    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
-        struct Carrier;
-        impl<'de> serde::de::Visitor<'de> for Carrier {
-            type Value = Options;
-            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str("an MCP options object")
-            }
-            fn visit_map<M: serde::de::MapAccess<'de>>(
-                self,
-                mut map: M,
-            ) -> Result<Options, M::Error> {
-                let mut fields = std::collections::BTreeMap::<String, Box<RawValue>>::new();
-                while let Some((key, value)) = map.next_entry()? {
-                    if fields.insert(key, value).is_some() {
-                        return Err(serde::de::Error::custom("duplicate MCP option"));
-                    }
-                }
-                // MCP always returns complete results; details is CLI output framing.
-                if fields.contains_key("details") {
-                    return Err(serde::de::Error::custom("unsupported MCP option"));
-                }
-                let cancelled = fields
-                    .remove("cancelled")
-                    .map(|raw| serde_json::from_str(raw.get()))
-                    .transpose()
-                    .map_err(serde::de::Error::custom)?
-                    .unwrap_or(false);
-                let proxy = fields.remove("proxy");
-                if proxy.as_ref().is_some_and(|raw| raw.get() == "null") {
-                    return Err(serde::de::Error::custom("proxy activation cannot be null"));
-                }
-                if let Some(raw) = fields.get_mut("field") {
-                    let field: Fields =
-                        serde_json::from_str(raw.get()).map_err(serde::de::Error::custom)?;
-                    *raw = serde_json::value::to_raw_value(&match field {
-                        Fields::One(field) => vec![field],
-                        Fields::Many(fields) => fields,
-                    })
-                    .map_err(serde::de::Error::custom)?;
-                }
-                let json = serde_json::to_string(&fields).map_err(serde::de::Error::custom)?;
-                let native = serde_json::from_str(&json).map_err(serde::de::Error::custom)?;
-                Ok(Options {
-                    cancelled,
-                    proxy,
-                    native,
-                })
+struct OptionsCarrier;
+impl<'de> serde::de::Visitor<'de> for OptionsCarrier {
+    type Value = Options;
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an MCP options object")
+    }
+    fn visit_map<M: serde::de::MapAccess<'de>>(self, mut map: M) -> Result<Options, M::Error> {
+        let mut fields = std::collections::BTreeMap::<String, Box<RawValue>>::new();
+        while let Some((key, value)) = map.next_entry()? {
+            if fields.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom("duplicate MCP option"));
             }
         }
-        de.deserialize_map(Carrier)
+        // MCP always returns complete results; details is CLI output framing.
+        if fields.contains_key("details") {
+            return Err(serde::de::Error::custom("unsupported MCP option"));
+        }
+        let cancelled = fields
+            .remove("cancelled")
+            .map(|raw| serde_json::from_str(raw.get()))
+            .transpose()
+            .map_err(serde::de::Error::custom)?
+            .unwrap_or(false);
+        let proxy = fields.remove("proxy");
+        if proxy.as_ref().is_some_and(|raw| raw.get() == "null") {
+            return Err(serde::de::Error::custom("proxy activation cannot be null"));
+        }
+        if let Some(raw) = fields.get_mut("field") {
+            let field: Fields =
+                serde_json::from_str(raw.get()).map_err(serde::de::Error::custom)?;
+            *raw = serde_json::value::to_raw_value(&match field {
+                Fields::One(field) => vec![field],
+                Fields::Many(fields) => fields,
+            })
+            .map_err(serde::de::Error::custom)?;
+        }
+        let json = serde_json::to_string(&fields).map_err(serde::de::Error::custom)?;
+        let native = serde_json::from_str(&json).map_err(serde::de::Error::custom)?;
+        Ok(Options {
+            cancelled,
+            proxy,
+            native,
+        })
+    }
+}
+impl<'de> Deserialize<'de> for Options {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        de.deserialize_map(OptionsCarrier)
     }
 }
 
