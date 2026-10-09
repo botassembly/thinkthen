@@ -24,3 +24,7 @@ SDK and SQL callers can discover failed persistence of usage counts without expo
 - Proof: Fresh design/ticket and code reviews. Existing writer failure fixtures plus public consumers prove Pending during a held write, Written after successful finalization, latched Failed after an owned write failure, Disabled without storage, safe advice, unchanged call facts and exact request counts. SQL status remains callable before exit; exit hooks alone are insufficient. Applicable full checks at landing; no hosted run or paid call.
 - Also changes: Under the 2026-10-08 binding architecture ruling, expose the safe persistence state in the shared facts JSON with its observation point. A result's earlier Pending snapshot cannot imply a later asynchronous write succeeded. Settle this representation before generated result readers, and have their adoption tickets consume it rather than adding independent per-binding logic.
 - Defers: No monthly spending policy, ledger change, telemetry, new durable store or proof framework. Release management remains held.
+
+## Progress
+
+- 2026-10-09 started
