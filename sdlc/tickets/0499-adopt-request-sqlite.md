@@ -32,7 +32,7 @@ SQLite runs every judgment through the shared Request contract and reads generat
   - Document the supported feed combinations and refuse incompatible ones before sending.
   - Remove unused compatibility execution after parity. Keep the SQL preparation, descriptor and admission helpers that PostgreSQL imports. DuckDB's dependency on the shared dispatcher goes in 0495; coordinate any SQLite-only deletion with it.
   - The reviewed public declarations `RequestFeed::from_records`, `RequestFeed::eager`, `RequestFeed::with_image_inputs` and `AdmittedRequest::record_reading` land in the inventory together with their implementation, never ahead of it.
-- SQLite's public SQL function names stay unchanged, so it has no old-name removal. Record handwritten code removed and added in the landing record.
+  - SQLite's public SQL function names stay unchanged, so it has no old-name removal. Record handwritten code removed and added in the landing record.
 - Proof: The full shared cases pass through the installed extension, including files and images, context and options, original positions, facts, failures, invalid input with zero sends, and cancellation. Raw JSON pass-through does not count.
 - Defers: SQL conventions to 0519. DuckDB to 0495. Proxy behavior is out of scope.
 
