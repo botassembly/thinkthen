@@ -10,6 +10,12 @@ The bounded JVM slice starts from `c85666963`. It removes test programs from the
 
 The rebuilt package passes its member, metadata, private-byte and native ABI checks and planted ABI mutations. The existing bounded installed selectors pass for Java, Kotlin and Scala with one exact counted request per consumer. Both moved test consumers pass against installed JARs using the existing sandbox, backend and process-group helpers, including held cancellation and recovery with ten exact arrivals. The J1 checks pass through all three public bindings with 101 schema cases and 29 runtime cases each.
 
-The full JVM check stops in the unchanged Java `Matrix.requests[11]` fixture at `Matrix.java:77`. It supplies an encoded object as a text record to an annotate question with `on: /body`. The native engine rejects it: `question check reads on, and this record's evidence is text with no members`. A focused call using the unmodified fixture reproduces that refusal. The baseline and current Matrix source share Git object `0110a72ae40d4d6a56ae08070f3caa302a29eb74`. This slice changes no native admission behavior or Java request handling and does not repair that fixture.
+The full JVM check stops in the unchanged Java `Matrix.requests[11]` fixture at `Matrix.java:77`. It supplies an encoded object as a text record to an annotate question with `on: /body`. The native engine rejects it: ``question `check` reads `on`, and this record's evidence is text with no members``. A focused call using the unmodified fixture reproduces that refusal. The baseline and current Matrix source share Git object `0110a72ae40d4d6a56ae08070f3caa302a29eb74`. This slice changes no native admission behavior or Java request handling and does not repair that fixture.
+
+The unchanged failing request is:
+
+```json
+{"annotate":{"version":1,"questions":{"check":{"decide":"Is it?","on":"/body"}}},"records":["{\"body\":\"annotate-on\",\"hidden\":\"not-sent\"}"]}
+```
 
 Frozen C compatibility and legacy host-language APIs remain under the ticket's review amendment. This slice changes no public SDK implementation or function wrapper.
