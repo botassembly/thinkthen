@@ -522,7 +522,7 @@ impl std::fmt::Debug for RecognizeArguments {
 #[derive(Args)]
 pub(crate) struct RecognizeArguments {
     /// Return the whole recognition or boundary proposals alone.
-    #[arg(long, value_parser = ["whole", "boundary_only"])]
+    #[arg(long, value_name = "whole|boundary_only")]
     pub(crate) mode: Option<String>,
     /// Literal boundary context; empty text clears fallback.
     #[arg(long, value_name = "TEXT")]

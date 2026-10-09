@@ -3,6 +3,11 @@ use super::*;
 use serde_json::json;
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    reason = "one counted command case covers whole-to-boundary replay, the reverse replay miss and unchanged whole output"
+)]
 fn saved_boundary_mode_replays_whole_questions_without_later_sends_and_preserves_defaults() {
     let listener = Listener::answering(automatic).unwrap();
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
@@ -165,11 +170,17 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
     }
     let bad = local(
         &listener,
-        &["--mode", "unknown", "--input", "missing-boundary-evidence"],
+        &[
+            "--mode",
+            "private-mode-wording",
+            "--input",
+            "missing-boundary-evidence",
+        ],
         Some("fake"),
         b"",
     );
     assert_eq!(bad.status.code(), Some(2));
+    assert!(!String::from_utf8_lossy(&bad.stderr).contains("private-mode-wording"));
     assert_eq!(listener.count(), 0);
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("boundary-invalid-{}", std::process::id()));

@@ -63,15 +63,11 @@ pub(crate) struct QuestionDocument<'a> {
 }
 impl RecognizeSpec {
     pub(crate) fn validate_mode(&self) -> Result<(), RecognizeConfigError> {
-        if !self.mode.is_whole()
-            && (self.authored_relations
-                || self.authored_relation_threshold
-                || self.stage_context.kind_edge.is_some()
-                || self.stage_context.relation.is_some())
-        {
-            return Err(RecognizeConfigError::BoundaryControls);
-        }
-        Ok(())
+        self.mode.validate_controls(
+            self.authored_relations,
+            self.authored_relation_threshold,
+            &self.stage_context,
+        )
     }
     pub(crate) fn document(&self) -> QuestionDocument<'_> {
         QuestionDocument {
@@ -162,97 +158,22 @@ impl RecognizeSpec {
 
     pub(crate) fn parse(text: &str) -> Result<Self, RecognizeConfigError> {
         let value = Json::parse(text).map_err(|_| RecognizeConfigError::Shape)?;
-        let Json::Object(members) = &value else {
-            return Err(RecognizeConfigError::Shape);
-        };
-        if members.iter().any(|(name, _)| {
-            ![
-                "version",
-                "recognize",
-                "threshold",
-                "relation_threshold",
-                "model",
-                "profile",
-                "on",
-            ]
-            .contains(&name.as_str())
-                && !crate::core::declaration::QuestionMetadata::is_key(name)
-        }) {
-            return Err(RecognizeConfigError::Shape);
-        }
-        if value.member("version").and_then(number_u64) != Some(1) {
-            return Err(RecognizeConfigError::Shape);
-        }
-        let Some(Json::Object(recognize)) = value.member("recognize") else {
-            return Err(RecognizeConfigError::Shape);
-        };
-        if recognize.iter().any(|(name, _)| {
-            ![
-                "kinds",
-                "relations",
-                "instructions",
-                "entity_definition",
-                "stage_context",
-                "mode",
-            ]
-            .contains(&name.as_str())
-        }) {
-            return Err(RecognizeConfigError::Shape);
-        }
-        let kinds = parse_kinds(
-            value
-                .member("recognize")
-                .and_then(|held| held.member("kinds")),
-        )?;
-        let relations = parse_relations(
-            value
-                .member("recognize")
-                .and_then(|held| held.member("relations")),
-        )?;
+        let recognize = declaration(&value)?;
+        let kinds = parse_kinds(recognize.member("kinds"))?;
+        let relations = parse_relations(recognize.member("relations"))?;
         validate_relations(&kinds, &relations)?;
-        let stage_context = value
-            .member("recognize")
-            .and_then(|v| v.member("stage_context"))
-            .map(|v| {
-                crate::core::json_line(v)
-                    .map_err(|_| RecognizeConfigError::Shape)
-                    .and_then(|text| {
-                        serde_json::from_str(&text).map_err(|_| RecognizeConfigError::Shape)
-                    })
-            })
-            .transpose()?
-            .unwrap_or_default();
+        let stage_context = parse_stage_context(recognize.member("stage_context"))?;
         Ok(Self {
-            mode: value
-                .member("recognize")
-                .and_then(|v| v.member("mode"))
-                .map(|v| match v.as_str() {
-                    Some("whole") => Ok(crate::core::RecognitionMode::Whole),
-                    Some("boundary_only") => Ok(crate::core::RecognitionMode::BoundaryOnly),
-                    _ => Err(RecognizeConfigError::Shape),
-                })
-                .transpose()?
-                .unwrap_or_default(),
-            authored_relations: value
-                .member("recognize")
-                .and_then(|v| v.member("relations"))
-                .is_some(),
+            mode: parse_mode(recognize.member("mode"))?,
+            authored_relations: recognize.member("relations").is_some(),
             authored_relation_threshold: value.member("relation_threshold").is_some(),
             metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
             stage_context,
             examples: Vec::new(),
             seed_spans: Vec::new(),
             kinds,
-            instructions: task_text(
-                value
-                    .member("recognize")
-                    .and_then(|v| v.member("instructions")),
-            )?,
-            entity_definition: task_text(
-                value
-                    .member("recognize")
-                    .and_then(|v| v.member("entity_definition")),
-            )?,
+            instructions: task_text(recognize.member("instructions"))?,
+            entity_definition: task_text(recognize.member("entity_definition"))?,
             relations,
             threshold: parse_json_cut(value.member("threshold"))?,
             relation_threshold: parse_json_cut(value.member("relation_threshold"))?,
@@ -528,4 +449,89 @@ mod tests {
             assert!(RecognizeSpec::parse(text).is_err(), "{text}");
         }
     }
+}
+
+fn parse_mode(value: Option<&Json>) -> Result<crate::core::RecognitionMode, RecognizeConfigError> {
+    value
+        .map(|v| {
+            v.as_str()
+                .and_then(crate::core::RecognitionMode::parse)
+                .ok_or(RecognizeConfigError::Shape)
+        })
+        .transpose()
+        .map(Option::unwrap_or_default)
+}
+fn parse_stage_context(
+    value: Option<&Json>,
+) -> Result<crate::core::RecognitionStageContext, RecognizeConfigError> {
+    value
+        .map(|v| {
+            let text = crate::core::json_line(v).map_err(|_| RecognizeConfigError::Shape)?;
+            serde_json::from_str(&text).map_err(|_| RecognizeConfigError::Shape)
+        })
+        .transpose()
+        .map(Option::unwrap_or_default)
+}
+
+impl crate::RecognitionMode {
+    pub(crate) fn validate_controls(
+        self,
+        relations: bool,
+        relation_threshold: bool,
+        stage_context: &crate::RecognitionStageContext,
+    ) -> Result<(), RecognizeConfigError> {
+        if !self.is_whole()
+            && (relations
+                || relation_threshold
+                || stage_context.kind_edge.is_some()
+                || stage_context.relation.is_some())
+        {
+            return Err(RecognizeConfigError::BoundaryControls);
+        }
+        Ok(())
+    }
+}
+
+fn declaration(value: &Json) -> Result<&Json, RecognizeConfigError> {
+    let Json::Object(members) = value else {
+        return Err(RecognizeConfigError::Shape);
+    };
+    if members.iter().any(|(name, _)| {
+        ![
+            "version",
+            "recognize",
+            "threshold",
+            "relation_threshold",
+            "model",
+            "profile",
+            "on",
+        ]
+        .contains(&name.as_str())
+            && !crate::core::declaration::QuestionMetadata::is_key(name)
+    }) {
+        return Err(RecognizeConfigError::Shape);
+    }
+    if value.member("version").and_then(number_u64) != Some(1) {
+        return Err(RecognizeConfigError::Shape);
+    }
+    let recognize = value
+        .member("recognize")
+        .ok_or(RecognizeConfigError::Shape)?;
+    let Json::Object(fields) = recognize else {
+        return Err(RecognizeConfigError::Shape);
+    };
+    if fields.iter().any(|(name, _)| {
+        ![
+            "kinds",
+            "relations",
+            "instructions",
+            "entity_definition",
+            "stage_context",
+            "mode",
+        ]
+        .contains(&name.as_str())
+    }) {
+        return Err(RecognizeConfigError::Shape);
+    }
+    Ok(recognize)
 }

@@ -7,6 +7,10 @@ use thinkthen::{
 };
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one outside-in case compares the saved four-record exchanges and their canonical Request cache reuse"
+)]
 fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
     let fixture: Value = serde_json::from_str(include_str!(
         "../../../../conformance/recognition-context.json"
@@ -136,6 +140,7 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
     std::fs::remove_dir_all(cache).unwrap();
 }
 
+#[cfg(test)]
 fn uncertain(body: &[u8]) -> Canned {
     let request: Value = serde_json::from_slice(body).unwrap();
     let out = request["state"].as_str() == Some("lowercase");
@@ -270,4 +275,99 @@ fn skipped_stage_controls_refuse_before_native_record_enumeration() {
     }
     assert_eq!(advanced.load(Ordering::SeqCst), 0);
     assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn decoded_proposals_preserve_punctuation_and_actual_source_lines_without_edge_adjustment() {
+    use thinkthen::{RawRecord, RecordReading, SourceLocation};
+    let listener = Listener::answering(|body| {
+        let request: Value = serde_json::from_slice(body).unwrap();
+        let answers: serde_json::Map<String, Value> = request["questions"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(name, q)| {
+                let labels = q["criteria"].as_object().unwrap();
+                let words = q["instructions"].as_str().unwrap();
+                let picked = if labels.contains_key("SINGLE") {
+                    if words.contains("[[Ada]]") {
+                        "BEGIN"
+                    } else if words.contains("[[.]]") {
+                        "END"
+                    } else {
+                        "OUT"
+                    }
+                } else {
+                    "Ada"
+                };
+                assert!(labels.contains_key(picked));
+                let probabilities: serde_json::Map<String, Value> = labels
+                    .keys()
+                    .map(|label| (label.clone(), json!(u8::from(label == picked))))
+                    .collect();
+                (
+                    name.clone(),
+                    json!({"type":"choice","probabilities":probabilities}),
+                )
+            })
+            .collect();
+        Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
+    })
+    .unwrap();
+    let cache = folder();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .model("fixed")
+        .unwrap()
+        .api_key("fake")
+        .unwrap()
+        .cache_at(&cache)
+        .unwrap()
+        .max_retries(0)
+        .build()
+        .unwrap();
+    let whole = Recognize::builder().build().unwrap();
+    let full = engine
+        .recognize_complete_with(&whole, "🙂\r\nAda.", CallOptions::new())
+        .unwrap();
+    assert_eq!(full.value().value().entities()[0].text(), "Ada");
+    assert_eq!(listener.count(), 2);
+    let boundary = whole.with_mode(RecognitionMode::BoundaryOnly);
+    let mut row = RecordReading::new(&[], None, None)
+        .unwrap()
+        .compose(RawRecord::text("🙂\r\nAda.").unwrap())
+        .unwrap();
+    row.original = row
+        .original
+        .with_location(SourceLocation::new("example.txt".into(), Some(40), Some(41)).unwrap());
+    let result = engine
+        .recognize_records_complete_with(&boundary, [row], CallOptions::new())
+        .unwrap();
+    assert_eq!(result.facts().requests_sent(), 0);
+    assert_eq!(listener.count(), 2);
+    let located = result.value()[0].result().source_value().unwrap();
+    assert_eq!(located.mode(), RecognitionMode::BoundaryOnly);
+    let proposed = &located.proposals().unwrap()[0];
+    assert_eq!(
+        (
+            proposed.proposal().text(),
+            proposed.proposal().start(),
+            proposed.proposal().end(),
+            proposed.proposal().length()
+        ),
+        ("Ada.", 3, 7, 4)
+    );
+    assert_eq!(
+        (
+            proposed.location().first_line(),
+            proposed.location().last_line()
+        ),
+        (Some(41), Some(41))
+    );
+    let json: Value = serde_json::from_str(&result.value()[0].result().to_json().unwrap()).unwrap();
+    assert!(json["value"].get("entities").is_none());
+    assert_eq!(json["value"]["proposals"][0]["file"], "example.txt");
+    assert_eq!(json["value"]["proposals"][0]["first_line"], 41);
+    std::fs::remove_dir_all(cache).unwrap();
 }

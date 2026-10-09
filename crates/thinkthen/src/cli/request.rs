@@ -134,13 +134,14 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
                 };
             let mut options = options(&a.common, None, None);
             options.details = false;
-            options.mode = a.mode.as_ref().map(|mode| {
-                if mode == "boundary_only" {
-                    crate::RecognitionMode::BoundaryOnly
-                } else {
-                    crate::RecognitionMode::Whole
-                }
-            });
+            options.mode = a
+                .mode
+                .as_deref()
+                .map(|mode| {
+                    crate::RecognitionMode::parse(mode)
+                        .ok_or(Failure::Usage(crate::RecognitionMode::USAGE))
+                })
+                .transpose()?;
             options.threshold = a
                 .threshold
                 .as_ref()

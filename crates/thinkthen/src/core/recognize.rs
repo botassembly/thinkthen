@@ -17,6 +17,14 @@ pub enum RecognitionMode {
     BoundaryOnly,
 }
 impl RecognitionMode {
+    pub(crate) const USAGE: &'static str = "recognize mode is whole or boundary_only";
+    pub(crate) fn parse(text: &str) -> Option<Self> {
+        match text {
+            "whole" => Some(Self::Whole),
+            "boundary_only" => Some(Self::BoundaryOnly),
+            _ => None,
+        }
+    }
     pub(crate) const fn is_whole(&self) -> bool {
         matches!(self, Self::Whole)
     }

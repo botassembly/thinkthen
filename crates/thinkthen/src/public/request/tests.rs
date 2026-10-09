@@ -70,6 +70,10 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         definition(serde_json::json!({"score":"Grade?","levels":["low","high"]})),
         definition(serde_json::json!({"find":"Which?"})),
         definition(serde_json::json!({"version":1,"recognize":{"kinds":{"person":null}}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":"boundary_only"}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":"whole"}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":null}})),
+        definition(serde_json::json!({"version":1,"recognize":{"mode":"unknown"}})),
         definition(serde_json::json!({"version":1,"questions":{"fits":{"decide":"Fits?"}}})),
         definition(serde_json::json!({})),
         definition(serde_json::json!({"decide":"Fits?","unknown":true})),
@@ -243,8 +247,8 @@ fn recognition_mode_and_cuts_have_closed_safe_admission() {
         r#"{"mode":null}"#,
         r#"{"mode":"secret-invalid"}"#,
         r#"{"mode":"whole","mode":"boundary_only"}"#,
-        r#"{"threshold":"no<=0.4"}"#,
-        r#"{"relation_threshold":"no<=0.4"}"#,
+        r#"{"threshold":"0.4:0.6"}"#,
+        r#"{"relation_threshold":"0.4:0.6"}"#,
         r#"{"mode":"boundary_only","relation_threshold":0.5}"#,
     ] {
         let text = request.replace("CONTROL", controls);

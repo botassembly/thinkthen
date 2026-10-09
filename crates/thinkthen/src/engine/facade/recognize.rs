@@ -102,29 +102,11 @@ impl Engine {
             limit,
             self.aggregate_context.as_ref(),
         )?;
+        if pieces.is_empty() {
+            return Ok(Recognition::empty(spec));
+        }
         let mut meta = Aggregate::default();
         let mut details = crate::core::WholeRecognitionOdds::default();
-        if pieces.is_empty() {
-            return Ok(Recognition {
-                value: if spec.mode.is_whole() {
-                    Recognized::Whole {
-                        entities: Vec::new(),
-                        relations: (!spec.relations.is_empty()).then(Vec::new),
-                    }
-                } else {
-                    Recognized::BoundaryOnly {
-                        mode: crate::core::BoundaryMode::BoundaryOnly,
-                        proposals: Vec::new(),
-                    }
-                },
-                details: if spec.mode.is_whole() {
-                    Probabilities::Whole(details)
-                } else {
-                    Probabilities::BoundaryOnly(crate::core::BoundaryOdds::default())
-                },
-                meta,
-            });
-        }
         let stages = vec!["boundary"; asks.len()];
         let answers = self.recognition_stage(spec, "boundary").execute(
             &asks,
@@ -143,27 +125,14 @@ impl Engine {
         if !spec.mode.is_whole() {
             let proposals =
                 crate::core::BoundaryProposal::decoded(text, &pieces, &rows, &stretches);
-            let cut = spec.threshold.cut_value().unwrap_or(0.5);
-            let kept = proposals
-                .iter()
-                .filter(|proposal| proposal.probability >= cut)
-                .cloned()
-                .collect();
-            meta.model = meta.models.model().cloned();
-            meta.usage = meta.shares.total()?;
-            meta.reported_usage = meta.shares.reported()?;
-            return Ok(Recognition {
-                value: Recognized::BoundaryOnly {
-                    mode: crate::core::BoundaryMode::BoundaryOnly,
-                    proposals: kept,
-                },
-                details: Probabilities::BoundaryOnly(crate::core::BoundaryOdds {
-                    pieces: details.pieces,
-                    proposals,
-                }),
+            return Recognition::proposals(
+                proposals,
+                spec.threshold.cut_value().unwrap_or(0.5),
+                details.pieces,
                 meta,
-            });
+            );
         }
+
         stretches.extend(crate::core::seed_stretches(spec, &pieces).map_err(Error::Usage)?);
         stretches.sort_unstable();
         stretches.dedup();
@@ -550,5 +519,52 @@ impl Aggregate {
             .ok_or(Error::UsageOverflow)?;
         self.requests.push(answered.request.as_str().to_owned());
         Ok(())
+    }
+}
+
+impl Recognition {
+    fn empty(spec: &RecognizeSpec) -> Self {
+        Self {
+            value: if spec.mode.is_whole() {
+                Recognized::Whole {
+                    entities: Vec::new(),
+                    relations: (!spec.relations.is_empty()).then(Vec::new),
+                }
+            } else {
+                Recognized::BoundaryOnly {
+                    mode: crate::core::BoundaryMode::BoundaryOnly,
+                    proposals: Vec::new(),
+                }
+            },
+            details: if spec.mode.is_whole() {
+                Probabilities::Whole(crate::core::WholeRecognitionOdds::default())
+            } else {
+                Probabilities::BoundaryOnly(crate::core::BoundaryOdds::default())
+            },
+            meta: Aggregate::default(),
+        }
+    }
+    fn proposals(
+        proposals: Vec<crate::core::BoundaryProposal>,
+        cut: f64,
+        pieces: Vec<PieceOdds>,
+        mut meta: Aggregate,
+    ) -> Result<Self, Error> {
+        let kept = proposals
+            .iter()
+            .filter(|proposal| proposal.probability >= cut)
+            .cloned()
+            .collect();
+        meta.model = meta.models.model().cloned();
+        meta.usage = meta.shares.total()?;
+        meta.reported_usage = meta.shares.reported()?;
+        Ok(Self {
+            value: Recognized::BoundaryOnly {
+                mode: crate::core::BoundaryMode::BoundaryOnly,
+                proposals: kept,
+            },
+            details: Probabilities::BoundaryOnly(crate::core::BoundaryOdds { pieces, proposals }),
+            meta,
+        })
     }
 }

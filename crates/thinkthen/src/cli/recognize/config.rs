@@ -69,11 +69,8 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
         relation: arguments.relation_context.clone(),
     });
     if let Some(mode) = &arguments.mode {
-        spec.mode = if mode == "boundary_only" {
-            crate::RecognitionMode::BoundaryOnly
-        } else {
-            crate::RecognitionMode::Whole
-        };
+        spec.mode = crate::RecognitionMode::parse(mode)
+            .ok_or(Failure::Usage(crate::RecognitionMode::USAGE))?;
     }
     spec.authored_relation_threshold |= arguments.relation_threshold.is_some();
     spec.validate_mode()

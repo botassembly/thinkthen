@@ -191,20 +191,18 @@ fn admit_options(
     if options.mode.is_some() && function != Function::Recognize {
         return Err(Error::usage("mode belongs to recognize"));
     }
-    if let Some(rule) = &options.relation_threshold {
-        if function != Function::Recognize || !rule.native()?.is_cut() {
-            return Err(Error::usage("relation threshold is a recognize single cut"));
-        }
+    if let Some(rule) = &options.relation_threshold
+        && (function != Function::Recognize || !rule.native()?.is_cut())
+    {
+        return Err(Error::usage("relation threshold is a recognize single cut"));
     }
-    if options.mode == Some(crate::RecognitionMode::BoundaryOnly) {
-        let mut spec = crate::core::RecognizeSpec::from_parts(Vec::new(), Vec::new(), None, None)
-            .map_err(Error::refused)?;
-        spec.mode = crate::RecognitionMode::BoundaryOnly;
-        spec.authored_relation_threshold = options.relation_threshold.is_some();
-        if let Some(context) = &options.stage_context {
-            spec.stage_context.overlay(context);
-        }
-        spec.validate_mode().map_err(Error::refused)?;
+    if let Some(mode) = options.mode {
+        mode.validate_controls(
+            false,
+            options.relation_threshold.is_some(),
+            &options.stage_context.clone().unwrap_or_default(),
+        )
+        .map_err(Error::refused)?;
     }
     if let Some(rule) = &options.threshold {
         if !function.allows_option("threshold") {
