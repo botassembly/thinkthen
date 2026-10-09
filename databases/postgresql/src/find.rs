@@ -113,6 +113,8 @@ fn found(
         "index": selected,
         "value": answer.selected().map(|unit| match unit {
             thinkthen::QuestionInput::Text(text) => text.as_str(),
+            thinkthen::QuestionInput::Record(record) => record.original().literal()
+                .unwrap_or_else(|| call::raise(crate::request::wrong_result())),
             _ => call::raise(crate::request::wrong_result()),
         }),
         "probability": winner.probability(),

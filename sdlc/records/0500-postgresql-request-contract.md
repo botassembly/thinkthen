@@ -16,4 +16,8 @@ The coordinator ruled that `thinkthen_plan` retains the existing shared `Engine:
 
 ## Lessons
 
-Complete find originals are `QuestionInput`, which implements `InputEvidence` rather than `Evidence`. The SQL text-array projection must match its retained text original and use the typed selection index; it must not restore a separate index-bearing evidence wrapper.
+Complete find originals are `QuestionInput`, which implements `InputEvidence` rather than `Evidence`. Typed composition retains supplied literal text in `RecordEvidence::original()`. The installed duplicate/tie find cases caught a projection that assumed the original remained the bare Text variant. The SQL text-array projection must read the retained literal and use the typed selection index; it must not restore a separate index-bearing evidence wrapper.
+
+The installed rank refusal case caught an error-wording difference before sending: shared Request admission says `the evidence is empty or blank`, while the SQL legacy contract says `evidence is text, not white space`. The coordinator ruled that PostgreSQL adopts the shared Request sentence as the intentional 0.2 migration. The SQL assertion retains Usage classification, zero sends and secrecy. PostgreSQL adds no whitespace validator.
+
+PostgreSQL imports SQLite source through `#[path]`, so Cargo formatting follows those shared modules. Formatting a PostgreSQL file can dirty shared SQLite source, and restoring that incidental diff exposes baseline formatting drift in the PostgreSQL gate. The reviewed SQLite dependency owns that correction. Keep the existing formatter and rerun the affected installed cases after integration; changing a running shell script invalidates that run.

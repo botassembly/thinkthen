@@ -474,7 +474,7 @@ rank_empty_null_and_refusals_send_nothing() {
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('   ', '{\"a\":\"x\"}'::jsonb)")" 'thinkthen usage: a question is text, not white space (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":4}'::jsonb)")" 'thinkthen usage: keyed input value for a is text (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"1\":\"one\",\"2\":\"two\",\"3\":\"three\",\"4\":\"  \",\"5\":\"five\",\"6\":\"six\",\"7\":\"seven\"}'::jsonb)")" \
-		'thinkthen usage: evidence is text, not white space (retryable: no)'
+		'thinkthen usage: the evidence is empty or blank (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":\"x\"}'::jsonb, '{\"deadline_ms\":0}'::json)")" \
 		'thinkthen deadline: the deadline of 0 s passed before the call answered (retryable: no)'
 	same "$(bcount)" 0
