@@ -156,11 +156,11 @@ def fixture(base):
             "Requests$QuestionInput Requests$QuestionRole "
         ).split(),
         "kotlin": (
-            "KotlinCallerKt KotlinComplete KotlinFacade KotlinFacade$RunningDecision KotlinRequests "
+            "KotlinComplete KotlinFacade KotlinFacade$RunningDecision KotlinRequests "
         ).split(),
         "scala": (
-            "ScalaCaller$package ScalaCaller$package$ ScalaComplete ScalaComplete$ ScalaFacade "
-            "ScalaFacade$RunningDecision ScalaRequests ScalaRequests$ scalaCaller "
+            "ScalaComplete ScalaComplete$ ScalaFacade "
+            "ScalaFacade$RunningDecision ScalaRequests ScalaRequests$ "
         ).split(),
     }
     for kind in ("door", "kotlin", "scala"):
@@ -174,7 +174,7 @@ def fixture(base):
             files["META-INF/main.kotlin_module"] = b"module"
         if kind == "scala":
             files.update({name + ".tasty": b"tasty" for name in
-                          ("ScalaCaller$package", "ScalaComplete", "ScalaFacade", "ScalaRequests", "scalaCaller")})
+                          ("ScalaComplete", "ScalaFacade", "ScalaRequests")})
         write_zip(path, files)
         managed[kind] = sha(path.read_bytes())
     save_json(base / "managed.json", managed)
