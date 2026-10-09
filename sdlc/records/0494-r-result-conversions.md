@@ -1,5 +1,7 @@
 # R complete result conversion
 
+The routine lint exposed three stale consumer ceilings after the reviewed compatibility annotations in `341414397`. Fresh review measured and accepts C 32063, Ruby 2896 and TypeScript 2451: each includes the same eight nonblank shared R source lines already present in `9263d5f02`. This correction changes metadata only and grants no spare source allowance.
+
 This slice starts from `70a3352de`. The R target generates complete result conversion from the shared Rust result graph. Native R objects retain typed classes, field access, explicit null and an absence marker. Printing complete carriers and identities withholds content. Existing copied readers remain reachable by other hosts, batch results and errors until their generated replacements arrive.
 
 Fresh review found two caller regressions: packet inputs lost their NativeInput class and could print original evidence, while inline metadata digests lost their Digest class. The R target now derives inline digest identities from the shared graph’s existing hexadecimal pattern. It retains the existing NativeImage host name. NativeInput has no root in that graph. Its authoritative serializer is the existing R InputView, and its dependencies expose schema derivation only in native tests. A new host schema build path would expand this repair. The small R representation seam therefore assigns its three carrier fields through the existing object converter, with shared generated location and image conversion. It adds no admission or result semantics.
