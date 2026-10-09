@@ -7,7 +7,8 @@ case ${1:-} in
     REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
     python3 "$REPO/conformance/parity.py" --validate
     echo 'THINKTHEN_CONFORMANCE_IDS is unset; no required cell may be skipped'
-    echo 'sdlc/scripts/test (the whole workspace suite, doctests, consumer, self-tests)'
+    echo 'sdlc/scripts/test (routine behavior tests, doctests, consumer, self-tests)'
+    echo 'cargo test release_only_ -- --ignored (large-input boundaries and nested package builds in both workspaces)'
     echo 'surfaces --full-functional (required public parity, C safety and release smoke)'
     exit 0 ;;
 --run) ;;
@@ -23,6 +24,14 @@ fi
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 sh "$REPO/sdlc/scripts/test"
 cd -- "$REPO"
+. sdlc/scripts/scratch.sh
+usage_guard
+config_home
+# The name prefix selects release boundaries without running subprocess helpers
+# or the independent ignored load and timing campaigns.
+cargo test --locked --offline --workspace --all-targets release_only_ -- --ignored
+cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
+    --target-dir target/consumer --workspace release_only_ -- --ignored
 THINKTHEN_TEST_PROFILE=full
 export THINKTHEN_TEST_PROFILE
 unset THINKTHEN_CONFORMANCE_IDS

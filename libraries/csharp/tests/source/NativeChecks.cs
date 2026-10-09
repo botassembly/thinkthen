@@ -1,31 +1,95 @@
 using ThinkThen;
+using ThinkThen.Inputs;
+using R = ThinkThen.Results;
 using System.Text.Json;
-static class NativeChecks {
- static void Check(bool yes,string label){if(!yes)throw new Exception(label);}
- static Content Text(string s)=>new(ContentKind.Text,s,default);
- static Content Json(string s){using var d=JsonDocument.Parse(s);return new(ContentKind.Json,"",d.RootElement.Clone());}
- static RecordInput Record(Content c)=>new(Optional.Some(c),default,Array.Empty<Choice>(),Array.Empty<ImageInput>());
- static Question Question(Function f){var q=f switch{Function.Decide=>Questions.Decide(Text("Need attention?")),Function.Choose=>Questions.Choose(Text("Which?")),Function.Tag=>Questions.Tag(Text("Which?")),Function.Score=>Questions.Score(Text("How much?")),Function.Filter=>Questions.Filter(Text("Need attention?")),Function.Rank=>Questions.Rank(Text("Need attention?")),Function.Find=>Questions.Find(Text("Which?")),Function.Annotate=>Questions.Annotate(Text("")),Function.Recognize=>Questions.Recognize(Text("")),_=>Questions.Relate(Text(""))};
-  if(f==Function.Choose||f==Function.Tag||f==Function.Score)q=q with {Choices=new[]{new Choice("first",default,default),new Choice("second",default,default)}};
-  if(f==Function.Filter)q=q with {Threshold=new(RuleKind.Cut,.95,0)};
-  if(f==Function.Annotate)q=q with {Members=new[]{new QuestionMember("check",Question(Function.Decide)),new QuestionMember("team",Question(Function.Choose))}};
-  if(f==Function.Relate)q=q with {Relations=new[]{new Relation("supports","*","*",default,false,false)}};return q;
- }
- static void Call<T>(CompleteCall<T> c,int rows){Check(c.Schema=="thinkthen.result/2"&&c.Rows.Count==rows,"schema/row count");Check(c.AnswerId.Present==(rows==1)&&c.Meta.Present==(rows==1),"summary presence");Check(c.Facts.Present&&c.Facts.Value.CallId.Value.Length==64&&c.Facts.Value.RequestsSent>0,"actual facts");Check(c.Attempts.Present&&c.Attempts.Value.Count>0&&c.Observations.Count>0,"observations");foreach(var a in c.Attempts.Value)Check(a.SdkRequestId.Value.Length==64,"SDK request identity");}
- public static void Run(){using var e=Engine.Open(Environment.GetEnvironmentVariable("TT_NATIVE_SETTINGS"));var c=new CallControls(default,default,false,true);
-  foreach(bool files in new[]{false,true}){
-   var source=files?InputSource.FromFiles(new FileSource(new[]{Environment.GetEnvironmentVariable("TT_NATIVE_FILE")!},SourceUnit.Line,0)):InputSource.FromRecords(new[]{Record(Text("Maria Chen")),Record(Text("Alex Lee"))});
-   var d=e.DecideComplete(QuestionInput.Asked(Question(Function.Decide)),source,c);Call(d,2);Check(d.Rows[0].Value.Boolean&&d.Rows[0].Common.Answer.Value.Probability.Value==.9,"decision");if(files)Check(d.Rows[0].Common.Position.Value.FirstLine.Value==1&&d.Rows[1].Common.Position.Value.LastLine.Value==2,"physical lines");
-   var choose=e.ChooseComplete(QuestionInput.Asked(Question(Function.Choose)),source,c);Call(choose,2);Check(choose.Rows[0].Value.Value=="first"&&choose.Rows[0].Common.Answer.Value.Probabilities.Count==2,"choice distribution");
-   var tag=e.TagComplete(QuestionInput.Asked(Question(Function.Tag)),source,c);Call(tag,2);Check(tag.Rows[0].Value.Count==2,"tag labels");
-   var score=e.ScoreComplete(QuestionInput.Asked(Question(Function.Score)),source,c);Call(score,2);Check(score.Rows[0].Value==.1,"score");
-   var filter=e.FilterComplete(QuestionInput.Asked(Question(Function.Filter)),source,c);Call(filter,2);Check(!filter.Rows[0].Value,"rejected filter row");
-   var rank=e.RankComplete(QuestionInput.Asked(Question(Function.Rank)),source,c);Call(rank,2);Check(rank.Rows[0].Value.Value==1,"rank ordinal");
-   var find=e.FindComplete(QuestionInput.Asked(Question(Function.Find)),source,c);Call(find,1);Check(find.Rows[0].Common.Answer.Value.Probabilities.Count==2&&find.Rows[0].Common.Details!.Inputs.Count==2,"find candidates");
-   var annotate=e.AnnotateComplete(QuestionInput.Asked(Question(Function.Annotate)),source,c);Call(annotate,2);Check(annotate.Rows[0].Answers.Count==2&&annotate.Rows[0].Answers[0].Success.Value.Answer.Probability.Value==.9,"annotation members");
-   var recognize=e.RecognizeComplete(QuestionInput.Asked(Question(Function.Recognize)),source,c);Call(recognize,2);Check(recognize.Rows[0].Value.Entities.Count>0&&recognize.Rows[0].Answer.Pieces.Count>0&&recognize.Rows[0].Located!.Present==files,"recognized spans");
-   var entities=files?source:InputSource.FromRecords(new[]{Record(Json("{\"name\":\"Maria Chen\",\"kind\":\"person\"}")),Record(Json("{\"name\":\"Alex Lee\",\"kind\":\"person\"}"))});
-   var relate=e.RelateComplete(QuestionInput.Asked(Question(Function.Relate)),entities,c);Call(relate,1);Check(relate.Rows[0].Value.Count==2&&relate.Rows[0].Questions.Count==2&&relate.Rows[0].Located!.Present==files,"relation endpoints");
-  }
- }
+static class NativeChecks
+{
+    static void Check(bool yes, string label) { if (!yes) throw new Exception(label); }
+    static InputAuthoredQuestionText Text(string value) => new InputAuthoredQuestionTextAlternative0 { Value = value };
+    static IReadOnlyList<InputAuthoredName> Names => new[] { new InputAuthoredName { Value = "first" }, new InputAuthoredName { Value = "second" } };
+    static InputRequestQuestion Define(InputRequestDefinition value) => new InputRequestQuestionDefinition { Value = value };
+    static InputRequestQuestion Decide => Define(new InputRequestDefinitionAlternative0 { Value = new InputAuthoredDecide { Decide = Text("Need attention?") } });
+    static InputRequestQuestion Choose => Define(new InputRequestDefinitionAlternative1 { Value = new InputAuthoredChoose { Choose = Text("Which?"), Options = new InputAuthoredOptionsAlternative0 { Value = Names } } });
+    static InputRequestItem Item(string value) => new() { Original = new InputRequestOriginalText { Text = value } };
+    static InputRequestInput Records => new InputRequestInputRecords { Items = new[] { Item("Maria Chen"), Item("Alex Lee") } };
+    static void Call(OwnedCall call)
+    {
+        Check(call.Terminal.Failure.State == R.PresenceState.Missing && call.Terminal.Facts.State == R.PresenceState.Value, "actual terminal");
+        var facts = call.Terminal.Facts.Value;
+        Check(facts.CallId.Length == 64 && facts.RequestsSent > 0, "actual facts");
+        Check(facts.Attempts.State == R.PresenceState.Value && facts.Attempts.Value.Count > 0, "attempts");
+        Check(call.Packets.OfType<R.SessionPacketObservation>().Any(), "actual observations");
+        foreach (var attempt in facts.Attempts.Value) Check(attempt.SdkRequestId.Length == 64, "SDK request identity");
+    }
+    static T Aggregate<T>(OwnedCall call) where T : R.SessionPacket { Call(call); return call.Packets.OfType<T>().Single(); }
+    static IReadOnlyList<R.AtomicDecideValue> ReadDecide(OwnedCall call) { Call(call); return call.Packets.OfType<R.SessionPacketDecideRow>().Select(p => p.Value).ToArray(); }
+    static IReadOnlyList<R.AtomicNullableString> ReadChoose(OwnedCall call) { Call(call); return call.Packets.OfType<R.SessionPacketChooseRow>().Select(p => p.Value).ToArray(); }
+    static IReadOnlyList<R.AtomicArrayOfString> ReadTag(OwnedCall call) { Call(call); return call.Packets.OfType<R.SessionPacketTagRow>().Select(p => p.Value).ToArray(); }
+    static IReadOnlyList<R.AtomicDouble> ReadScore(OwnedCall call) { Call(call); return call.Packets.OfType<R.SessionPacketScoreRow>().Select(p => p.Value).ToArray(); }
+    static IReadOnlyList<R.Annotation> ReadAnnotate(OwnedCall call) { Call(call); return call.Packets.OfType<R.SessionPacketAnnotateRow>().Select(p => p.Value).ToArray(); }
+    public static void Run() => RunAsync().GetAwaiter().GetResult();
+    static async Task RunAsync()
+    {
+        using var settings = JsonDocument.Parse(Environment.GetEnvironmentVariable("TT_NATIVE_SETTINGS")!);
+        using var engine = Engine.Open(new InputEngineSettings {
+            BaseUrl = settings.RootElement.GetProperty("base_url").GetString()!, Model = settings.RootElement.GetProperty("model").GetString()!,
+            Cache = new InputCacheDocumentAlternative1 { Value = new InputDisabledCache() },
+            Batch = new InputRequestBatchAlternative1 { Value = "max" }, Throttle = 1, MaxRetries = 0
+        });
+        var controls = new InputRequestOptions { Attempts = true, Details = true };
+        var completeControls = new InputRequestOptions { Attempts = true };
+        foreach (bool files in new[] { false, true })
+        {
+            InputRequestInput source = files ? new InputRequestInputSource { Source = new InputRequestSource {
+                Paths = new[] { Environment.GetEnvironmentVariable("TT_NATIVE_FILE")! }, Reading = new InputRequestReader { Unit = new InputSourceUnitAlternative0() }
+            } } : Records;
+            var decide = ReadDecide(await engine.DecideAsync(Decide, source, controls));
+            Check(decide.Count == 2 && decide[0].Value.GetBoolean() && decide[0].Answer is R.AnswerYesNo { Probability: .9 }, "decision");
+            Check(decide[0].Schema.Value == "thinkthen.result/2" && decide[0].AnswerId.Length == 64, "row schema and identity");
+            if (files) Check(decide[0].Source.Value.FirstLine.Value == 1 && decide[1].Source.Value.LastLine.Value == 2, "physical lines");
+            var choose = ReadChoose(await engine.ChooseAsync(Choose, source, controls));
+            Check(choose.Count == 2 && choose[0].Value.Value == "first" && choose[0].Answer is R.AnswerChoice answer && answer.Probabilities.Count == 2, "choice distribution");
+            var tagQuestion = Define(new InputRequestDefinitionAlternative2 { Value = new InputAuthoredTag { Tag = Text("Which?"), Labels = new InputAuthoredLabelsAlternative0 { Value = Names } } });
+            var tag = ReadTag(await engine.TagAsync(tagQuestion, source, controls));
+            Check(tag.Count == 2 && tag[0].Value.Count == 2, "tag labels");
+            var scoreQuestion = Define(new InputRequestDefinitionAlternative3 { Value = new InputAuthoredScore { Score = Text("How much?"), Levels = new InputAuthoredLevelsAlternative0 { Value = Names } } });
+            var score = ReadScore(await engine.ScoreAsync(scoreQuestion, source, controls));
+            Check(score.Count == 2 && score[0].Value == .1, "score");
+            var filter = await engine.FilterAsync(new InputRequestQuestionText { Text = "Need attention?" }, source, new InputRequestOptions { Attempts = true, Threshold = new InputRequestThresholdAlternative0 { Value = .95 } });
+            Call(filter);
+            Check(!filter.Packets.OfType<R.SessionPacketFilterRow>().Any(), "rejected filter selection");
+            var filterEvents = filter.Packets.OfType<R.SessionPacketObservation>().Select(p => p.Value).OfType<R.SessionObservationRow>().ToArray();
+            Check(filterEvents.Length == 2 && filterEvents[0].Value is R.SessionObservedRowJudgment { Value: R.SessionJudgmentDecision judgment } && judgment.Value.State == R.PresenceState.Value && !judgment.Value.Value, "rejected filter observation");
+            var rank = Aggregate<R.SessionPacketRankAggregate>(await engine.RankAsync(Decide, source, completeControls)).Value;
+            Check(rank.Count == 2 && rank[0].Value == 1, "rank ordinal");
+            var findQuestion = Define(new InputRequestDefinitionAlternative5 { Value = new InputAuthoredFind { Find = Text("Which?") } });
+            var find = Aggregate<R.SessionPacketFindAggregate>(await engine.FindAsync(findQuestion, source, completeControls)).Value;
+            Check(find.Candidates.State == R.PresenceState.Value && find.Candidates.Value.Count == 2, "find candidates");
+            var annotateQuestion = Define(new InputRequestDefinitionAlternative7 { Questions = new Dictionary<string, InputRequestDefinitionAlternative7QuestionsEntry> {
+                ["check"] = new InputRequestDefinitionAlternative7QuestionsEntryAlternative0 { Decide = Text("Need attention?") },
+                ["team"] = new InputRequestDefinitionAlternative7QuestionsEntryAlternative1 { Choose = Text("Which?"), Options = new InputAuthoredOptionsAlternative0 { Value = Names } }
+            } });
+            var annotate = ReadAnnotate(await engine.AnnotateAsync(annotateQuestion, source, completeControls));
+            Check(annotate.Count == 2 && annotate[0].Answers.Count == 2 && annotate[0].Answers["check"] is R.AnnotationMemberAnswerId { Answer: R.AnswerYesNo { Probability: .9 } }, "annotation members");
+            var recognizeQuestion = Define(new InputRequestDefinitionAlternative6 { Recognize = new InputRequestDefinitionAlternative6Recognize() });
+            var recognize = Aggregate<R.SessionPacketRecognizeAggregate>(await engine.RecognizeAsync(recognizeQuestion, source, completeControls)).Value;
+            Check(recognize.Count == 2 && recognize[0].Value is R.RecognizeFieldsEntities entities && entities.Entities.Count > 0, "recognized spans");
+            Check((recognize[0].Source.State == R.PresenceState.Value) == files, "recognized location");
+            InputRequestInput relationInput = source;
+            if (!files)
+            {
+                using var first = JsonDocument.Parse("{\"name\":\"Maria Chen\",\"kind\":\"person\"}");
+                using var second = JsonDocument.Parse("{\"name\":\"Alex Lee\",\"kind\":\"person\"}");
+                relationInput = new InputRequestInputRecords { Items = new[] {
+                    new InputRequestItem { Original = new InputRequestOriginalJson { Value = first.RootElement.Clone() } },
+                    new InputRequestItem { Original = new InputRequestOriginalJson { Value = second.RootElement.Clone() } }
+                } };
+            }
+            var relateQuestion = Define(new InputRequestDefinitionAlternative4 { Value = new InputAuthoredRelate { Relate = new InputAuthoredRelateRelate {
+                Relations = new[] { new InputAuthoredRelation { Name = new InputAuthoredName { Value = "supports" } } }
+            } } });
+            var relate = Aggregate<R.SessionPacketRelateAggregate>(await engine.RelateAsync(relateQuestion, relationInput, completeControls)).Value;
+            Check(relate.Value.Count == 2 && relate.Answer.Questions.Count == 2, "relation endpoints");
+        }
+    }
 }

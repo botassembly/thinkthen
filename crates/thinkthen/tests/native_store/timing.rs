@@ -136,7 +136,8 @@ fn split_children_attribute_the_actual_parent_and_own_attempt_without_transient_
     assert_eq!(listener.count(), 3);
 }
 #[test]
-fn timing_entry_or_byte_overflow_keeps_old_answers_and_history_and_never_retries() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_timing_entry_or_byte_overflow_keeps_old_answers_and_history_and_never_retries() {
     for bytes_limit in [false, true] {
         let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
         let place = folder();

@@ -1,5 +1,5 @@
 """Install managed nupkg and native tar in unrelated bwrap roots; count replies outside namespace."""
-import collections,json,os,pathlib,re,shutil,sys,tarfile,zipfile,xml.etree.ElementTree as ET
+import collections,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
 from backend import Backend
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
@@ -10,7 +10,6 @@ V=re.search(r'<Version>([^<]+)</Version>',(R/'ThinkThen.csproj').read_text())[1]
 dotnet=resolve_dotnet()
 mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
 release_package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
-package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
 release_c=os.environ.get('THINKTHEN_RELEASE_C_DIR')
 if bool(release_package) != bool(release_c): raise AssertionError('installed release needs both package paths')
 package=pathlib.Path(release_package) if release_package else R/f'target/scratch/managed/Botassembly.ThinkThen.{V}.nupkg'
@@ -61,7 +60,7 @@ try:
   one_portable_request(bodies)
   print('C# portable bulk: five typed rows, one exact packed body and one counted send PASS',flush=True)
  else:
-  assert b'INSTALLED_JSON_ENVELOPE_PASS' in result.stdout and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,result.stdout
+  assert b'INSTALLED_TYPED_RESULT_PASS' in result.stdout and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,result.stdout
   assert collections.Counter(server.arrivals)==collections.Counter(['consumer-csharp','consumer-json']) and server.attempts==server.connections==2,counted
   parsed=[json.loads(line) for line in bodies]
   expected=[{'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':f'The text is "{record}". Is it?'}},'state':'Each question quotes the text it asks about.'} for record in ('consumer-csharp','consumer-json')]

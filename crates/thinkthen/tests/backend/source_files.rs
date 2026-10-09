@@ -251,7 +251,9 @@ fn invalid_reader_options_and_missing_operands_admit_no_requests() -> io::Result
 }
 
 #[test]
-fn source_rank_withholds_output_and_stops_before_the_invalid_tail_at_excess() -> io::Result<()> {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_source_rank_withholds_output_and_stops_before_the_invalid_tail_at_excess()
+-> io::Result<()> {
     let place = folder("source-rank-budget")?;
     let first = place.join("01-first.txt");
     let excess = place.join("02-excess.txt");

@@ -47,7 +47,8 @@ fn string_and_integer_ids_survive_without_coercion_and_debug_withholds_data() {
 }
 
 #[test]
-fn framing_bounds_oversize_and_rejects_unterminated_utf8() {
+#[ignore = "large-input boundary runs in the release suite"]
+fn release_only_framing_bounds_oversize() {
     let mut exact = vec![b' '; protocol::MAX_MESSAGE - 1];
     exact.push(b'\n');
     assert_eq!(
@@ -67,6 +68,10 @@ fn framing_bounds_oversize_and_rejects_unterminated_utf8() {
             .code,
         Fault::SIZE.code
     );
+}
+
+#[test]
+fn framing_rejects_unterminated_input_and_invalid_utf8() {
     assert_eq!(
         protocol::read_line(&mut Cursor::new(b"{}"))
             .unwrap()

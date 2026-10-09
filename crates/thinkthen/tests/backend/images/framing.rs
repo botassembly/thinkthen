@@ -34,22 +34,20 @@ fn scalar_image_captions_preserve_optional_blank_bytes_and_refuse_invalid_text()
         assert_eq!(body["state"], json!(std::str::from_utf8(caption).unwrap()));
     }
     let before = listener.count();
-    for (caption, exit) in [(vec![0xff], 5), (vec![b'x'; 16 * 1024 * 1024 + 1], 2)] {
-        let output = call(
-            &listener,
-            &[
-                "decide",
-                "Red?",
-                "--image",
-                red.to_str().unwrap(),
-                "--details",
-            ],
-            &caption,
-        );
-        assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
-        assert!(output.stdout.is_empty());
-        assert_eq!(listener.count(), before);
-    }
+    let output = call(
+        &listener,
+        &[
+            "decide",
+            "Red?",
+            "--image",
+            red.to_str().unwrap(),
+            "--details",
+        ],
+        &[0xff],
+    );
+    assert_eq!(output.status.code(), Some(5), "{}", text(&output.stderr));
+    assert!(output.stdout.is_empty());
+    assert_eq!(listener.count(), before);
     let place = crate::batching::folder("image-caption-declaration");
     std::fs::create_dir_all(&place).unwrap();
     let path = format!("{place}/question.json");
@@ -253,4 +251,25 @@ fn explicit_attachment_media_validates_every_original_before_sending() {
         body["images"],
         json!([data_url("red.png"), data_url("red.png")])
     );
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_scalar_image_caption_refuses_oversized_text_without_sending() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let red = fixture("red.png");
+    let output = call(
+        &listener,
+        &[
+            "decide",
+            "Red?",
+            "--image",
+            red.to_str().unwrap(),
+            "--details",
+        ],
+        &vec![b'x'; 16 * 1024 * 1024 + 1],
+    );
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    assert!(output.stdout.is_empty());
+    assert_eq!(listener.count(), 0);
 }

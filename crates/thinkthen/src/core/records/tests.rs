@@ -272,7 +272,8 @@ fn syntax_names_a_whole_input_but_keeps_jsonl_record_wording() {
 /// The line that ended the record is not part of it, and the size is read
 /// before the bytes are, so huge bytes that are not text are too large first.
 #[test]
-fn a_record_over_the_limit_is_refused_and_one_at_the_limit_is_taken() {
+#[ignore = "large-input boundary runs in the release suite"]
+fn release_only_a_record_over_the_limit_is_refused_and_one_at_the_limit_is_taken() {
     let limit = super::MAX_RECORD_BYTES;
     let over = Err(RecordError::TooLarge);
     let wide = |byte: u8, size: usize, ending: &[u8]| [&vec![byte; size], ending].concat();

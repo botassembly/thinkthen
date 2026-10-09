@@ -83,7 +83,7 @@ Run package gates and their children with a minimal explicit environment, using 
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
 | 4 | `sdlc/scripts/surfaces` | Each landed binding's `check.sh` against one loopback backend (ADR 0047) |
 
-Run the smallest relevant format, lint and functional checks during each change. Run full tests and lint on the landing commit. Run `spec` and affected surface checks when the change needs them. Load, churn, timing and contention belong only in explicit `test-stress --run` jobs. Additional functional cases use `test-full-cases --run`. Neither runs automatically at each handback.
+Run the smallest relevant format, lint and functional checks during each change. Run `lint` and `test` once when a ticket closes, and reuse that run while the relevant code is unchanged. Run `spec` and affected surface checks when the change needs them. No routine test runs longer than 5 seconds. Large-input boundary cases, nested package builds, the library-only pass and full per-language parity runs belong to the release suite: `test-full-cases --run` and `package`. Load, churn, timing and contention belong only in explicit `test-stress --run` jobs. The release suite runs at a candidate, never at each handback. See `../decisions/2026-10-09-two-test-suites.md`.
 
 The complete `sdlc/scripts/package` validation is a separate explicit packaging checkpoint and a required step of the manually dispatched release `crate` job before artifact upload. It includes library-only tests, internal doctests, private export probes in both feature profiles, stale archive cleanup, a fresh unpacked source build, transform bytes, and release panic modes; routine lint does not run it.
 

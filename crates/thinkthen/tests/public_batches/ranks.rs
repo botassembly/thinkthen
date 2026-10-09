@@ -97,20 +97,6 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
         );
         assert_eq!(pulls.load(Ordering::SeqCst), maximum + 1);
     }
-    let large = "x".repeat(8 * 1024 * 1024 + 1);
-    let pulls = AtomicUsize::new(0);
-    let input = std::iter::from_fn(|| {
-        assert!(
-            pulls.fetch_add(1, Ordering::SeqCst) < 2,
-            "byte tail stays unread"
-        );
-        Some(Ok(large.as_str()))
-    });
-    let error = engine
-        .try_find_with(&found, input, CallOptions::new())
-        .expect_err("bytes");
-    assert_eq!(error.to_string(), "find input exceeds 16 MiB");
-    assert_eq!(pulls.load(Ordering::SeqCst), 2);
     let error = engine
         .try_rank_with(
             &ranked,
@@ -159,4 +145,28 @@ fn saved_rank_cutoff_reads_yes_probabilities_and_keeps_exact_ties_and_originals(
         [(&"first", 0, 0.8), (&"last", 2, 0.8)]
     );
     assert_eq!(listener.count(), 3);
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_find_complete_set_stops_at_aggregate_byte_limit_before_any_send() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let found = Question::find("Q?").expect("find");
+    let large = "x".repeat(8 * 1024 * 1024 + 1);
+    let pulls = AtomicUsize::new(0);
+    let input = std::iter::from_fn(|| {
+        assert!(
+            pulls.fetch_add(1, Ordering::SeqCst) < 2,
+            "byte tail stays unread"
+        );
+        Some(Ok(large.as_str()))
+    });
+    let error = engine
+        .try_find_with(&found, input, CallOptions::new())
+        .expect_err("bytes");
+    assert_eq!(error.to_string(), "find input exceeds 16 MiB");
+    assert_eq!(pulls.load(Ordering::SeqCst), 2);
+    assert_eq!(listener.count(), 0);
 }

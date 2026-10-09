@@ -1,7 +1,8 @@
 //! Execute every shared projection through concrete native complete APIs.
 use super::child;
 #[test]
-fn complete_native_calls_preserve_required_inputs_results_and_facts()
+#[ignore = "release-only nested package build; run sdlc/scripts/test-full-cases --run"]
+fn release_only_complete_native_calls_preserve_required_inputs_results_and_facts()
 -> Result<(), Box<dyn std::error::Error>> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")

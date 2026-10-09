@@ -263,7 +263,8 @@ fn assert_request(
     }
 }
 #[test]
-fn shared_image_assets_execute_all_scalar_admission_categories_with_counted_sends() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_shared_image_assets_execute_all_scalar_admission_categories_with_counted_sends() {
     let corpus = corpus();
     let parity = &corpus["parity"];
     for (category, scenario) in parity["image_admission_scenarios"]
@@ -325,7 +326,8 @@ fn held_first(reply: &str, first: &AtomicBool, release: &Arc<Rendezvous>) -> Can
 }
 
 #[test]
-fn complete_image_questions_keep_distinct_states_and_coalesce_identical_questions() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_complete_image_questions_keep_distinct_states_and_coalesce_identical_questions() {
     let corpus = corpus();
     let parity = &corpus["parity"];
     for scenario in parity["image_admission_scenarios"]["packing-overflow"]
@@ -379,7 +381,9 @@ fn complete_image_questions_keep_distinct_states_and_coalesce_identical_question
 }
 
 #[test]
-fn different_candidate_orders_split_complete_questions_by_bytes_with_one_image_state() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_different_candidate_orders_split_complete_questions_by_bytes_with_one_image_state()
+{
     let corpus = corpus();
     let parity = &corpus["parity"];
     for scenario in parity["image_admission_scenarios"]["packing-overflow"]
@@ -464,7 +468,8 @@ fn different_candidate_orders_split_complete_questions_by_bytes_with_one_image_s
 }
 
 #[test]
-fn details_many_retains_a_valid_large_original_after_one_successful_send() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_details_many_retains_a_valid_large_original_after_one_successful_send() {
     let corpus = corpus();
     let parity = &corpus["parity"];
     let scenario = parity["image_admission_scenarios"]["packing-overflow"]

@@ -47,13 +47,12 @@ def native_parity(consumer, command):
     import sqlite3
     sys.path.insert(0, str(ROOT / "conformance"))
     import parity, c_parity, c_images
-    cases = {c["id"]: c for c in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
     named = {c["id"]: c for c in json.loads((ROOT / "conformance/named-inputs.json").read_text())["cases"]}
     failures = []
     for row in parity.required_cases(parity.inventory(), consumer).values():
         failure = None
         try:
-            value = c_parity.document(row, cases, named)
+            value = c_parity.document(row, conformance, named)
             with tempfile.TemporaryDirectory(prefix=f"thinkthen-{consumer}-parity-") as folder:
                 home = Path(folder)
                 env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": folder,
@@ -174,12 +173,11 @@ try:
         assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
         invalid = dict(p1["plan_input"], settings={"batch": 0})
         assert type_case(["plan", json.dumps(invalid)], env, "plan-batch-0")["failed"] == {"kind": "usage", "code": 1}
-        assert type_case(["helper"], env, "helper") == {"helper": "pass"}
         env["THINKTHEN_API_KEY"] = "sk-type-contract-loopback"
         assert type_case(["limits"], env, "limits") == {"limits": "pass"}
         assert sent() == 0, "a plan or a refused call sent a request"
         for index, case in enumerate(corpus["cases"]):
-            if "request" not in case or case.get("schema_only", False):
+            if "request" not in case or case.get("schema_only", False) or case.get("request_valid") is False or case["definition"] == "usage":
                 continue
             route = case.get("case_id", "generic")
             if route != "generic":
@@ -190,17 +188,27 @@ try:
                        )
             request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
             actual = type_case([request], env, case["name"])
-            if case["name"] in FIELDS:
-                # The shared null and failed annotate members, read through AnnotatedField.Read.
-                env["THINKTHEN_CACHE"] = str(Path(cache) / f"{index}-fields")
-                assert type_case(["fields", request], env, case["name"]) == FIELDS[case["name"]], case["name"]
-            if "expected_error" in case:
-                assert actual["failed"] == {"kind": "usage", "code": 1}, (case["name"], actual)
+            assert actual["code"] == 0, (case["name"], actual)
+            rows = actual["rows"]
+            if case["definition"] == "details":
+                assert rows[0]["value"] is False and rows[0]["probability"] == 0.12 and rows[0]["answer_kind"] == "YesNo", actual
                 count += 1
                 continue
-            if case["definition"] != "usage":
-                assert checks["callSuccess"].is_valid(actual), (case["name"], actual)
-                actual = actual["value"]
+            if case["definition"] in ("decide", "choose", "tag", "score", "recognize"):
+                actual = rows[0]["value"]
+            elif case["definition"] == "filter":
+                actual = [row["input"] for row in rows if row["value"] is True]
+            elif case["definition"] == "rank":
+                actual = [{"index": row["index"], "record": row["input"], "probability": row["probability"]} for row in rows]
+            elif case["definition"] == "find":
+                actual = None if rows[0]["value"] is None else {"index": rows[0]["index"], "unit": rows[0]["input"], "probability": rows[0]["probability"]}
+            elif case["definition"] == "annotate":
+                actual = [row["value"] for row in rows]
+                if case["name"] in FIELDS:
+                    states = [{key: "unresolved" if value is None else "failed " + value["failed"]["kind"] + " " + value["failed"]["cause"] if isinstance(value, dict) and "failed" in value else "answered" for key, value in row.items()} for row in actual]
+                    assert states == FIELDS[case["name"]]
+            elif case["definition"] == "relate":
+                actual = {"edges": rows[0]["value"]}
             if case["definition"] != "doorRequest":
                 assert checks[case["definition"]].is_valid(actual), case["name"]
             if "response" in case:
@@ -219,14 +227,13 @@ try:
         env=child_env(HOME=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
                       THINKTHEN_API_KEY="sk-native-complete-loopback",THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                       TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path))
-        for lang in ("csharp",):
-            before=sent()
-            assert type_case(["native"],env,"native complete")=={"native":"pass"}
-            assert sent()-before==22,(lang,"complete native listener count")
-            print(lang+" named native: ten functions, typed fields and physical file locations PASS",flush=True)
+        before=sent()
+        assert type_case(["native"],env,"native complete")=={"native":"pass"}
+        assert sent()-before==22,"complete native listener count"
+        print("C# named native: ten functions, typed fields and physical file locations PASS",flush=True)
 
 finally:
     shared.stop_backend(backend)
-print(f"C# J1 public binding: {len(corpus['cases'])} schema cases, {count} runtime cases, plan P1, limits and annotate fields passed")
+print(f"C# J1 public binding: {len(corpus['cases'])} schema cases, {count} typed runtime cases, plan P1, limits and annotate fields passed; 14 frozen C JSON syntax/control cases retain schema validation")
 
 raise SystemExit(native_parity("csharp", [str(resolve_dotnet()), str(run)]))

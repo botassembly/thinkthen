@@ -353,7 +353,8 @@ mod tests {
     }
 
     #[test]
-    fn encoded_header_and_records_hold_at_the_sixteen_mibibyte_edge() {
+    #[ignore = "large-input boundary runs in the release suite"]
+    fn release_only_encoded_header_and_records_hold_at_the_sixteen_mibibyte_edge() {
         let limit = crate::core::MAX_RECORD_BYTES;
         // The byte order mark counts, and `\r\n` is the widest ending.
         assert!(Rows::new(Cursor::new(header_at(limit, true, b"\r\n")), Kind::Csv).is_ok());
@@ -420,7 +421,8 @@ mod tests {
     }
 
     #[test]
-    fn an_oversized_tail_is_never_a_second_record() {
+    #[ignore = "large-input boundary runs in the release suite"]
+    fn release_only_an_oversized_tail_is_never_a_second_record() {
         let mut input = b"value\n".to_vec();
         input.extend(std::iter::repeat_n(b'x', crate::core::MAX_RECORD_BYTES + 3));
         input.extend_from_slice(b"\ntail\n");
