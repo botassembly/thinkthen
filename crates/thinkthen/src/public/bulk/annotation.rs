@@ -26,6 +26,7 @@ pub(crate) struct Annotating {
     backend: core::Backend,
     profile: Option<core::BackendProfile>,
     context: Option<core::Json>,
+    shared_context: Option<core::Evidence>,
 }
 
 impl Annotating {
@@ -46,18 +47,23 @@ impl Annotating {
     }
 
     pub(crate) fn with_context(mut self, context: Option<&str>) -> Result<Self, Error> {
-        self.context = context
+        self.shared_context = context
             .filter(|text| !text.is_empty())
-            .map(|text| {
-                evidence(text)?;
-                Ok::<_, Error>(core::Json::String(text.to_owned()))
-            })
+            .map(evidence)
             .transpose()?;
         Ok(self)
     }
 
-    pub(crate) fn with_typed_context(mut self, context: Option<&core::Evidence>) -> Self {
-        self.context = context.map(core::Evidence::as_json);
+    pub(crate) fn with_typed_context(
+        mut self,
+        context: Option<&core::Evidence>,
+        explicit: bool,
+    ) -> Self {
+        if explicit {
+            self.context = context.map(core::Evidence::as_json);
+        } else {
+            self.shared_context = context.cloned();
+        }
         self
     }
 
@@ -69,6 +75,7 @@ impl Annotating {
             backend: engine.backend().clone(),
             profile: engine.profile().cloned(),
             context: None,
+            shared_context: None,
         }
     }
 
@@ -102,12 +109,14 @@ impl Annotating {
             let plan = quoted_plan(
                 self.backend.asked(),
                 evidence,
-                None,
+                self.shared_context.as_ref(),
                 questions,
                 self.profile.as_ref(),
             )
             .map_err(|error| match error {
-                core::BatchError::Profile(_) => Error::refused(error),
+                core::BatchError::Profile(_) | core::BatchError::StructuredQuestionWithContext => {
+                    Error::refused(error)
+                }
                 _ => Error::defect("an annotate group asks nothing"),
             })?;
             let grouped = pack::asks_for(self.backend.api_type(), self.backend.url(), &plan)

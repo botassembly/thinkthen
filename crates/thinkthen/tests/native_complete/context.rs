@@ -128,6 +128,22 @@ fn finite_context_admission_refuses_the_whole_call_without_coercion_or_cache_loo
             .decide_records_complete_with(&undeclared, [input(Some(context()))], CallOptions::new())
             .is_err()
     );
+    let structured = thinkthen::QuestionSet::from_json(
+        r#"{"version":1,"questions":{"refund":{"decide":{"ask":"Refund?"}}}}"#,
+    )
+    .unwrap();
+    let error = engine
+        .annotate_records_complete_with(
+            &structured,
+            [input(None)],
+            CallOptions::new().context("Plain shared guide."),
+        )
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.detail().message(),
+        "a question written as JSON cannot quote a record beside a context"
+    );
     assert_eq!(listener.count(), 0);
     engine
         .decide_records_complete_with(
@@ -208,4 +224,31 @@ fn native_context_projection_keeps_originals_and_annotation_wraps_the_typed_stat
         String::from_utf8(listener.requests()[0].body.clone()).unwrap(),
         r#"{"state":{"context":{"guide":"Private guide.","ready":false,"extra":[null,12]},"evidence":"Each question quotes the text it asks about."},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}}}"#
     );
+    let text_set = thinkthen::QuestionSet::from_json(
+        r#"{"version":1,"questions":{"refund":{"decide":"Refund?"}}}"#,
+    )
+    .unwrap();
+    for (context, expected) in [
+        (
+            Some("Explicit guide.".into()),
+            serde_json::json!({"context":"Explicit guide.","evidence":"Each question quotes the text it asks about."}),
+        ),
+        (
+            Some("".into()),
+            serde_json::json!("Each question quotes the text it asks about."),
+        ),
+        (None, serde_json::json!("Plain shared guide.")),
+    ] {
+        engine
+            .annotate_records_complete_with(
+                &text_set,
+                [input(context)],
+                CallOptions::new().context("Plain shared guide."),
+            )
+            .unwrap();
+        let requests = listener.requests();
+        let body: Value = serde_json::from_slice(&requests.last().unwrap().body).unwrap();
+        assert_eq!(body["state"], expected);
+    }
+    assert_eq!(listener.count(), 4);
 }

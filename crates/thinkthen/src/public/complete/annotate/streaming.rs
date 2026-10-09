@@ -95,6 +95,7 @@ impl Engine {
             records,
             Box::new(|_, original: &Original<T>| {
                 Ok(Prepared {
+                    explicit_context: original.prepared.explicit_context,
                     text: Text {
                         at: original.prepared.text.at,
                         input: original.prepared.text.input.clone(),
