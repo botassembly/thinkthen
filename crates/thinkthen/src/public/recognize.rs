@@ -167,8 +167,31 @@ impl Recognize {
         Ok(self)
     }
 
-    /// Replace seed proposals. Exact scalar piece edges and declared kinds are admitted
-    /// against each record before sending. An empty list clears the fallback.
+    /// Override supplied stage context members and retain omitted saved members.
+    #[must_use]
+    pub fn with_stage_context(mut self, context: crate::RecognitionStageContext) -> Self {
+        self.0.stage_context.overlay(&context);
+        self
+    }
+    /// Supply boundary context, including an explicit empty clearing string.
+    #[must_use]
+    pub fn boundary_context(mut self, text: &str) -> Self {
+        self.0.stage_context.boundary = Some(text.to_owned());
+        self
+    }
+    /// Supply context shared by kind and edge questions.
+    #[must_use]
+    pub fn kind_edge_context(mut self, text: &str) -> Self {
+        self.0.stage_context.kind_edge = Some(text.to_owned());
+        self
+    }
+    /// Supply relation context.
+    #[must_use]
+    pub fn relation_context(mut self, text: &str) -> Self {
+        self.0.stage_context.relation = Some(text.to_owned());
+        self
+    }
+    /// Attach unconfirmed seed spans.
     #[must_use]
     pub fn with_seed_spans(mut self, seeds: Vec<crate::RecognitionSeedSpan>) -> Self {
         self.0.seed_spans = seeds;

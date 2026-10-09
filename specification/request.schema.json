@@ -800,6 +800,25 @@
         "end"
       ]
     },
+    "RecognitionStageContext": {
+      "description": "Optional literal context for the three recognition stages.",
+      "type": "object",
+      "properties": {
+        "boundary": {
+          "description": "Boundary context; empty text clears fallback.",
+          "type": "string"
+        },
+        "kind_edge": {
+          "description": "Shared context for kind and edge questions.",
+          "type": "string"
+        },
+        "relation": {
+          "description": "Relation context.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "RequestBatch": {
       "description": "A bounded native batch setting.",
       "anyOf": [
@@ -1224,6 +1243,9 @@
                   "items": {
                     "$ref": "#/$defs/Authored_relation"
                   }
+                },
+                "stage_context": {
+                  "$ref": "#/$defs/RecognitionStageContext"
                 }
               },
               "additionalProperties": false
@@ -1818,6 +1840,10 @@
         "seed_spans_field": {
           "description": "Per-record seed selection; missing retains fallback and an empty list clears it.",
           "type": "string"
+        },
+        "stage_context": {
+          "description": "Literal recognition context overrides, resolved member by member.",
+          "$ref": "#/$defs/RecognitionStageContext"
         },
         "threshold": {
           "description": "Explicit reading override.",

@@ -14,6 +14,8 @@ Reviews: revision 7714682107b4202d5faf796f2f9dc9c66ed4c186, reject
 
 Reviews: revision 8a67f22504a9adf6986c3c14009efe283e2371d8, accept
 
+Reviews: revision c0565d2c568769a1066fd6a751fc8a0568854ffc, accept
+
 ## Outcome
 
 Adopt shared Request and generated results in SQLite through named typed public calls.

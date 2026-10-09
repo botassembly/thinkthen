@@ -228,3 +228,74 @@ fn recognition_preserves_declared_object_context_and_refuses_mistyped_context_be
     assert_eq!(refused.stopped().at(), Some(2));
     assert_eq!(listener.count(), 2);
 }
+
+#[test]
+fn stage_context_changes_only_its_requests_and_complete_identity() {
+    let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
+    let cache = folder();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .model("fixed")
+        .unwrap()
+        .api_key("fake")
+        .unwrap()
+        .cache_at(&cache)
+        .unwrap()
+        .max_retries(0)
+        .build()
+        .unwrap();
+    let ask = Recognize::builder().build().unwrap();
+    let fallback = CallOptions::new().context("shared");
+    let initial = engine
+        .recognize_complete_with(&ask, "Ada met Acme.", fallback)
+        .unwrap();
+    let overridden = ask.clone().boundary_context("boundary\nonly");
+    let changed = engine
+        .recognize_complete_with(&overridden, "Ada met Acme.", fallback)
+        .unwrap();
+    assert_eq!(changed.facts().requests_sent(), 1);
+    assert_eq!(listener.count(), 3);
+    let requests = listener.requests();
+    let body: Value = serde_json::from_slice(&requests[2].body).unwrap();
+    assert_eq!(
+        body["state"],
+        json!({"context":"boundary\nonly","evidence":"Ada met Acme."})
+    );
+    let first: Value = serde_json::from_str(&initial.value().to_json().unwrap()).unwrap();
+    let second: Value = serde_json::from_str(&changed.value().to_json().unwrap()).unwrap();
+    assert_ne!(first["answer_id"], second["answer_id"]);
+    assert!(first["answer_id"].is_string());
+    assert_eq!(
+        second["question"]["stage_context"],
+        json!({"boundary":"boundary\nonly"})
+    );
+    assert_eq!(
+        changed
+            .value()
+            .question()
+            .stage_context()
+            .boundary
+            .as_deref(),
+        Some("boundary\nonly")
+    );
+    let cleared = ask.clone().boundary_context("").kind_edge_context("");
+    let cleared = engine
+        .recognize_complete_with(&cleared, "Ada met Acme.", fallback)
+        .unwrap();
+    assert_eq!(cleared.facts().requests_sent(), 2);
+    for request in &listener.requests() {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        assert_eq!(body["state"], json!("Ada met Acme."));
+    }
+    assert_eq!(
+        engine
+            .recognize_complete_with(&overridden, "Ada met Acme.", fallback)
+            .unwrap()
+            .facts()
+            .requests_sent(),
+        0
+    );
+    assert!(!format!("{:?}", overridden).contains("boundary\nonly"));
+    std::fs::remove_dir_all(cache).unwrap();
+}

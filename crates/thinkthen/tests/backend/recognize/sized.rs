@@ -332,3 +332,41 @@ fn contextual_probe_admits_complete_menu_and_plan_maxima_exclude_probe() {
         assert_eq!(listener.count(), 2);
     }
 }
+
+#[test]
+fn stage_context_counts_exact_encoded_bytes_before_sending() {
+    for backend in ["typesafe", "openai"] {
+        for boundary in [true, false] {
+            let listener = Listener::answering(answer).unwrap();
+            let context = "é \"stage\" \\\n".repeat(100);
+            let ask = if boundary {
+                menu(1, None).boundary_context(&context)
+            } else {
+                menu(1, None).kind_edge_context(&context)
+            };
+            builder(&listener, backend)
+                .build()
+                .unwrap()
+                .recognize(&ask, "Ada")
+                .unwrap();
+            let exact = largest(&listener.requests());
+            builder(&listener, backend)
+                .max_request_bytes(exact)
+                .unwrap()
+                .build()
+                .unwrap()
+                .recognize(&ask, "Ada")
+                .unwrap();
+            let before = listener.count();
+            let error = builder(&listener, backend)
+                .max_request_bytes(exact - 1)
+                .unwrap()
+                .build()
+                .unwrap()
+                .recognize(&ask, "Ada")
+                .unwrap_err();
+            assert!(error.detail().message().contains("request"), "{error}");
+            assert_eq!(listener.count(), before);
+        }
+    }
+}

@@ -198,6 +198,9 @@ fn admit_options(
     {
         return Err(Error::usage("examples apply only to recognize"));
     }
+    if options.stage_context.is_some() && function != Function::Recognize {
+        return Err(Error::usage("stage context belongs to recognize"));
+    }
     if (options.seed_spans.is_some() || options.seed_spans_field.is_some())
         && !function.allows_option("seed_spans")
     {

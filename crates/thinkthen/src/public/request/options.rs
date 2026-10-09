@@ -80,6 +80,14 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "String"))]
     pub context: Option<String>,
+    /// Literal recognition context overrides, resolved member by member.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "empty_stage_context"
+    )]
+    #[cfg_attr(test, schemars(with = "crate::RecognitionStageContext"))]
+    pub stage_context: Option<crate::RecognitionStageContext>,
     /// Evidence projection pointers in their caller order.
     #[serde(
         default,
@@ -185,4 +193,10 @@ impl std::fmt::Debug for RequestOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("RequestOptions(<withheld>)")
     }
+}
+
+fn empty_stage_context(value: &Option<crate::RecognitionStageContext>) -> bool {
+    value
+        .as_ref()
+        .is_none_or(crate::RecognitionStageContext::is_empty)
 }
