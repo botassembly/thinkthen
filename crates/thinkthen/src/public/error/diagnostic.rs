@@ -8,7 +8,15 @@ pub(crate) enum Diagnostic {
         first: usize,
         last: usize,
     },
+    Context {
+        initial: bool,
+        kind: crate::core::LimitKind,
+        limit: usize,
+        actual: usize,
+        profile: Option<crate::core::ProfileName>,
+    },
     PartialReply {
+        cause: Option<crate::core::adapters::built_in::DecodeError>,
         first: usize,
         last: usize,
     },

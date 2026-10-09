@@ -77,6 +77,7 @@ pub(crate) struct Decided {
     pub(crate) answered: facade::Answered,
     pub(crate) keys: Vec<String>,
     span: (usize, usize),
+    failed_reply: Option<core::adapters::built_in::DecodeError>,
 }
 
 /// Why one text has no answer.
@@ -184,6 +185,9 @@ impl Asker for Decisions {
         let [outcome] = <[AnswerOutcome; 1]>::try_from(outcomes)
             .map_err(|_| Miss::Refused(Error::defect("a question read more than one outcome")))?;
         let decided = Decided {
+            failed_reply: answers
+                .iter()
+                .find_map(|answer| answer.answer.as_ref().err().cloned()),
             span: answers
                 .iter()
                 .find(|answer| answer.answer.is_err())
@@ -272,6 +276,7 @@ pub(crate) fn failure(failed: Failed<Miss>) -> Error {
         Failed::Asker(Miss::Refused(error)) => error,
         Failed::Asker(Miss::Failed(decided)) => {
             backend_failed().with_diagnostic(super::error::diagnostic::Diagnostic::PartialReply {
+                cause: decided.failed_reply,
                 first: decided.span.0,
                 last: decided.span.1,
             })
@@ -309,11 +314,18 @@ pub(crate) fn packed(error: PackError) -> Error {
             kind,
             limit,
             actual,
-            ..
+            initial,
         } => Error::refused(core::BatchError::ContextOverLimit {
             kind,
             limit,
             actual,
+        })
+        .with_diagnostic(super::error::diagnostic::Diagnostic::Context {
+            initial,
+            kind,
+            limit,
+            actual,
+            profile: None,
         }),
     }
 }

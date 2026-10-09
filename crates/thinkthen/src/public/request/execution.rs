@@ -168,6 +168,11 @@ impl Engine {
                 &crate::core::ModelName::new(model).map_err(Error::refused)?,
             ))?;
         }
+        if controls.cli_reader.is_some()
+            && let Some(context) = controls.context_text()
+        {
+            crate::public::complete::records::cli_context(&engine.inner, context)?;
+        }
         let image_refusal = image_route(&engine, &definition)
             .err()
             .map(|error| error.detail().message().to_owned());

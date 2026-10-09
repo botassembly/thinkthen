@@ -149,10 +149,23 @@ impl From<crate::Error> for Failure {
                     other => other,
                 }
             }
-            Some(Diagnostic::PartialReply { first, last }) => Self::PartialReply {
+            Some(Diagnostic::PartialReply { first, last, .. }) => Self::PartialReply {
                 first: first.saturating_add(1),
                 last: last.saturating_add(1),
             },
+            Some(Diagnostic::Context {
+                initial,
+                kind,
+                limit,
+                actual,
+                profile,
+            }) => Self::Context(super::context::Error::OverLimit {
+                initial,
+                kind,
+                limit,
+                actual,
+                profile,
+            }),
             Some(Diagnostic::CliInput(cause)) => *cause,
             Some(Diagnostic::Model(cause)) => Self::Usage(match cause {
                 crate::core::BlankTextError::ModelControl => {

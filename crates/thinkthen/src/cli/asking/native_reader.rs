@@ -19,47 +19,13 @@ struct Shared {
 }
 pub(super) struct Reader(Arc<Shared>);
 impl Reader {
-    pub(super) fn new(mut records: Records) -> Self {
+    pub(super) fn new(records: Records) -> Self {
         let shared = Arc::new(Shared {
             state: Mutex::new(State::default()),
             changed: Condvar::new(),
         });
         let worker = shared.clone();
-        thread::spawn(move || {
-            loop {
-                let Ok(state) = worker.state.lock() else {
-                    return;
-                };
-                let Ok(mut state) = worker
-                    .changed
-                    .wait_while(state, |s| !s.demand && !s.stopped)
-                else {
-                    return;
-                };
-                if state.stopped {
-                    return;
-                }
-                state.demand = false;
-                drop(state);
-                let item = records.next();
-                let last = item.as_ref().is_none_or(Result::is_err);
-                let Ok(mut state) = worker.state.lock() else {
-                    return;
-                };
-                if state.stopped {
-                    return;
-                }
-                state.item = Some(item);
-                let wake = state.wake.clone();
-                drop(state);
-                if let Some(wake) = wake {
-                    wake.notify();
-                }
-                if last {
-                    return;
-                }
-            }
-        });
+        thread::spawn(move || feed(records, worker));
         Self(shared)
     }
     pub(super) fn wake(&self, wake: Wake) {
@@ -95,6 +61,42 @@ impl Drop for Reader {
             state.item = None;
             state.wake = None;
             self.0.changed.notify_one();
+        }
+    }
+}
+
+fn feed(mut records: Records, worker: Arc<Shared>) {
+    loop {
+        let Ok(state) = worker.state.lock() else {
+            return;
+        };
+        let Ok(mut state) = worker
+            .changed
+            .wait_while(state, |s| !s.demand && !s.stopped)
+        else {
+            return;
+        };
+        if state.stopped {
+            return;
+        }
+        state.demand = false;
+        drop(state);
+        let item = records.next();
+        let last = item.as_ref().is_none_or(Result::is_err);
+        let Ok(mut state) = worker.state.lock() else {
+            return;
+        };
+        if state.stopped {
+            return;
+        }
+        state.item = Some(item);
+        let wake = state.wake.clone();
+        drop(state);
+        if let Some(wake) = wake {
+            wake.notify();
+        }
+        if last {
+            return;
         }
     }
 }

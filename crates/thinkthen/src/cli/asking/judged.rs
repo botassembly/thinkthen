@@ -350,7 +350,6 @@ pub(super) fn run(
 ) -> Result<ExitCode, Failure> {
     let records = records(&configuration, reading, source)?;
     let streams = reading.streams();
-    let documents = configuration.documents;
     let context = configuration.context.as_ref().map(super::Context::evidence);
     let inputs = if !streams {
         Some(1)
@@ -418,7 +417,7 @@ pub(super) fn run(
     }
     match ended.stop {
         // A stop after one document's row changes nothing it printed.
-        Some(_) if !streams && !documents && ended.finished > 0 => Ok(super::exit_code(
+        Some(_) if !streams && !judging.documents && ended.finished > 0 => Ok(super::exit_code(
             ended.outcome.unwrap_or(crate::core::Outcome::Unresolved),
         )),
         Some(stop) if !streams => Err(stop
@@ -432,7 +431,7 @@ pub(super) fn run(
             held: matches!(judging.keeping, Keeping::Ordered),
             cause: Box::new(stop.cause),
         }),
-        None if !streams && !documents => Ok(super::exit_code(
+        None if !streams && !judging.documents => Ok(super::exit_code(
             ended.outcome.unwrap_or(crate::core::Outcome::Unresolved),
         )),
         None => {

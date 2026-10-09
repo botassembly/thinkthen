@@ -108,7 +108,7 @@ enum Due {
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
     pub(in crate::public) eager_inputs: bool,
-    cli_reader: Option<&'a cli_reader::CliReader<'a>>,
+    pub(in crate::public) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
     cancel: Option<&'a CancelToken>,
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,

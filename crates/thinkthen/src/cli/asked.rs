@@ -39,14 +39,14 @@ fn fields(common: &Common) -> Option<Vec<String>> {
 /// question file. They differ in the rule each one can act on, which
 /// [`Cutting`] carries, and in what each one prints.
 fn yes_no(
-    caller: &'static str,
+    operation: (&'static str, Cutting),
     question: &str,
     meanings: &Meanings,
     threshold: Option<&String>,
-    cutting: Cutting,
     common: &Common,
     admitted: Option<&mut crate::AdmittedRequest>,
 ) -> Result<(Resolved, FileTier), Failure> {
+    let (caller, cutting) = operation;
     let typed = Typed {
         threshold: threshold.cloned(),
         yes: meanings.yes.clone(),
@@ -75,11 +75,10 @@ pub(crate) fn decide(
     admitted: Option<&mut crate::AdmittedRequest>,
 ) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
-        "decide",
+        ("decide", Cutting::AsTheVerbAllows),
         &arguments.question,
         &arguments.meanings,
         arguments.threshold.as_ref(),
-        Cutting::AsTheVerbAllows,
         &arguments.common,
         admitted,
     )
@@ -91,11 +90,10 @@ pub(crate) fn filter(
     admitted: Option<&mut crate::AdmittedRequest>,
 ) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
-        "filter",
+        ("filter", Cutting::OneCut),
         &arguments.question,
         &arguments.meanings,
         arguments.threshold.as_ref(),
-        Cutting::OneCut,
         &arguments.common,
         admitted,
     )

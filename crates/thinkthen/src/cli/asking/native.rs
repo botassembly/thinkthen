@@ -31,19 +31,7 @@ pub(super) fn run(
         false,
     )?;
     let engine = crate::Engine::from_cli(inner, environment.config().prices());
-    let fields = reading
-        .fields()
-        .iter()
-        .map(crate::core::Pointer::as_str)
-        .collect::<Vec<_>>();
-    let options = admitted
-        .request()
-        .call
-        .arguments()
-        .options
-        .options_field
-        .as_deref();
-    let composition = crate::RecordReading::new(&fields, None, options).map_err(Failure::from)?;
+    let composition = composition(&admitted, reading)?;
     let held = RefCell::new(VecDeque::new());
     let reader = super::native_reader::Reader::new(records);
     let ready = || reader.ready();
@@ -52,23 +40,9 @@ pub(super) fn run(
     let rows = std::iter::from_fn(|| {
         reader.next().map(|row| {
             let unit = row.map_err(|placed| input_error(placed.cause, placed.at))?;
-            let mut record =
-                composition.compose(crate::RawRecord(Arc::new(unit.record.clone())))?;
-            record.context = unit.context.clone();
-            if let Some(images) = &unit.images {
-                record.original = record.original.with_images(images.images().to_vec())?;
-            }
-            if let Some(position) = unit.position.as_ref().filter(|p| p.located)
-                && let Some(file) = &position.file
-            {
-                record.original = record.original.with_location(crate::SourceLocation::new(
-                    file.clone(),
-                    position.first,
-                    position.last,
-                )?);
-            }
+            let record = compose(&composition, &unit)?;
             held.borrow_mut().push_back(unit);
-            Ok(record.map_original(crate::QuestionInput::Record))
+            Ok(record)
         })
     });
     let token = crate::CancelToken::new();
@@ -85,21 +59,14 @@ pub(super) fn run(
         .map(super::Context::evidence)
         .map(|c| c.as_text().map(|s| s.into_owned()))
         .transpose()?;
-    let mut controls = crate::CallOptions::new()
-        .cli_cancel(&token, environment.cancel().deadline())
-        .interrupt(&signal)
-        .surface(crate::Surface::Cli)
-        .attempts(common.details)
-        .cli_reader(&readiness);
-    if let Some(setting) = setting {
-        controls = controls.batch(match setting {
-            Setting::Max => crate::BatchSetting::Max,
-            Setting::Records(count) => crate::BatchSetting::Records(count),
-        });
-    }
-    if let Some(context) = &context {
-        controls = controls.context(context);
-    }
+    let controls = controls(
+        (environment, common, configuration.streams),
+        &token,
+        &signal,
+        &readiness,
+        setting,
+        context.as_deref(),
+    );
     let mut feed = crate::RequestFeed::from_records("cli-atomic", rows);
     if common.images() {
         feed = feed.with_image_inputs();
@@ -115,25 +82,13 @@ pub(super) fn run(
         documents: configuration.documents,
         text_view: configuration.text_view,
         mismatch: configuration.mismatch,
+        declarations: configuration.declarations,
     };
     let ended = RefCell::new(Ended::default());
     let output = RefCell::new(output);
     let sink = |value| {
         let mut ended = ended.borrow_mut();
-        if ended.closed || ended.failure.is_some() {
-            return;
-        }
-        let result = take(
-            value,
-            &held,
-            &rendering,
-            reading,
-            &mut output.borrow_mut(),
-            &mut ended,
-        );
-        if let Err(error) = result {
-            ended.failure = Some(error);
-        }
+        rendering.receive(value, &held, reading, &mut output.borrow_mut(), &mut ended);
         if ended.closed || ended.failure.is_some() {
             token.cancel();
         }
@@ -147,51 +102,168 @@ pub(super) fn run(
         },
         &sink,
     );
-    let failure = match result {
-        Ok(crate::RequestOutcome::Complete(call)) => {
-            environment.settle_native(call.facts());
-            None
-        }
-        Ok(crate::RequestOutcome::Failed { error, .. }) | Err(error) => {
-            let at = error.stopped().at();
-            if let Some(facts) = error.facts() {
-                environment.settle_native(facts);
-            }
-            Some((at, Failure::from(error)))
-        }
+    rendering.finish(
+        environment,
+        result,
+        ended.into_inner(),
+        output.into_inner(),
+        (recording, configuration.asks.verb(), downstream.latched()),
+    )
+}
+
+fn composition(
+    admitted: &crate::AdmittedRequest,
+    reading: &Reading,
+) -> Result<crate::RecordReading, Failure> {
+    let fields = reading
+        .fields()
+        .iter()
+        .map(crate::core::Pointer::as_str)
+        .collect::<Vec<_>>();
+    let options = admitted
+        .request()
+        .call
+        .arguments()
+        .options
+        .options_field
+        .as_deref();
+    let composition = crate::RecordReading::new(&fields, None, options).map_err(Failure::from)?;
+    Ok(composition)
+}
+
+fn controls<'a>(
+    configuration: (&crate::edge::Environment, &crate::args::Common, bool),
+    token: &'a crate::CancelToken,
+    signal: &'a (dyn Fn() -> bool + Sync),
+    readiness: &'a crate::public::cli_reader::CliReader<'a>,
+    setting: Option<Setting>,
+    context: Option<&'a str>,
+) -> crate::CallOptions<'a> {
+    let mut controls = crate::CallOptions::new()
+        .cli_cancel(token, configuration.0.cancel().deadline())
+        .interrupt(signal)
+        .surface(crate::Surface::Cli)
+        .attempts(configuration.1.details)
+        .cli_reader(readiness);
+    let setting = if !configuration.2 {
+        Some(Setting::Records(std::num::NonZeroUsize::MIN))
+    } else {
+        setting
     };
-    let ended = ended.into_inner();
-    if ended.closed || downstream.latched() {
-        return Ok(ExitCode::SUCCESS);
+    if let Some(setting) = setting {
+        controls = controls.batch(match setting {
+            Setting::Max => crate::BatchSetting::Max,
+            Setting::Records(count) => crate::BatchSetting::Records(count),
+        });
     }
-    let failure = ended.failure.map(|failure| (None, failure)).or(failure);
-    if let Some((at, cause)) = failure {
-        if !rendering.streams && !rendering.documents && ended.finished > 0 {
+    if let Some(context) = context {
+        controls = controls.context(context);
+    }
+    controls
+}
+
+fn compose(
+    composition: &crate::RecordReading,
+    unit: &Held,
+) -> Result<crate::RecordInput<crate::QuestionInput>, crate::Error> {
+    let mut record = composition.compose(crate::RawRecord(Arc::new(unit.record.clone())))?;
+    record.context = unit.context.clone();
+    if let Some(images) = &unit.images {
+        record.original = record.original.with_images(images.images().to_vec())?;
+    }
+    if let Some(position) = unit.position.as_ref().filter(|p| p.located)
+        && let Some(file) = &position.file
+    {
+        record.original = record.original.with_location(crate::SourceLocation::new(
+            file.clone(),
+            position.first,
+            position.last,
+        )?);
+    }
+    Ok(record.map_original(crate::QuestionInput::Record))
+}
+
+impl Renderer {
+    fn receive(
+        &self,
+        value: crate::RequestValue,
+        held: &RefCell<VecDeque<Held>>,
+        reading: &Reading,
+        output: &mut Output<'_>,
+        ended: &mut Ended,
+    ) {
+        if ended.closed || ended.failure.is_some() {
+            return;
+        }
+        let result = take(value, held, self, reading, output, ended);
+        if let Err(error) = result {
+            ended.failure = Some(error);
+        }
+    }
+}
+
+impl Renderer {
+    fn finish(
+        &self,
+        environment: &crate::edge::Environment,
+        result: Result<crate::RequestOutcome, crate::Error>,
+        ended: Ended,
+        output: &mut Output<'_>,
+        completion: (bool, &'static str, bool),
+    ) -> Result<ExitCode, Failure> {
+        let (recording, verb, closed) = completion;
+        let failure = match result {
+            Ok(crate::RequestOutcome::Complete(call)) => {
+                environment.settle_native(call.facts());
+                None
+            }
+            Ok(crate::RequestOutcome::Failed { error, .. }) | Err(error) => {
+                let at = error.stopped().at();
+                if let Some(facts) = error.facts() {
+                    environment.settle_native(facts);
+                }
+                Some((at, host_error(error, self.streams)))
+            }
+        };
+
+        if ended.closed || closed {
+            return Ok(ExitCode::SUCCESS);
+        }
+        let failure = ended.failure.map(|failure| (None, failure)).or(failure);
+        if let Some((at, cause)) = failure {
+            if matches!(
+                &cause,
+                Failure::Context(crate::failure::context::Error::OverLimit { initial: true, .. })
+            ) {
+                return Err(cause);
+            }
+            if !self.streams && !self.documents && ended.finished > 0 {
+                return Ok(super::exit_code(
+                    ended.outcome.unwrap_or(Outcome::Unresolved),
+                ));
+            }
+            if !self.streams {
+                return Err(
+                    cause.with_replay_context(crate::failure::ReplayContext::Document(verb))
+                );
+            }
+            return Err(Failure::Stopped {
+                at: at.unwrap_or(ended.finished + 1),
+                finished: ended.finished,
+                replayed: ended.replayed,
+                recording,
+                held: false,
+                cause: Box::new(cause),
+            });
+        }
+        if !self.streams && !self.documents {
             return Ok(super::exit_code(
                 ended.outcome.unwrap_or(Outcome::Unresolved),
             ));
         }
-        if !rendering.streams {
-            return Err(
-                cause.with_replay_context(crate::failure::ReplayContext::Document("atomic"))
-            );
-        }
-        return Err(Failure::Stopped {
-            at: at.unwrap_or(ended.finished + 1),
-            finished: ended.finished,
-            replayed: ended.replayed,
-            recording,
-            held: false,
-            cause: Box::new(cause),
-        });
+        output.ended()?;
+        Ok(ExitCode::SUCCESS)
     }
-    if !rendering.streams && !rendering.documents {
-        return Ok(super::exit_code(
-            ended.outcome.unwrap_or(Outcome::Unresolved),
-        ));
-    }
-    output.into_inner().ended()?;
-    Ok(ExitCode::SUCCESS)
 }
 
 fn input_error(cause: Failure, at: Option<usize>) -> crate::Error {
@@ -218,6 +290,7 @@ struct Renderer {
     documents: bool,
     text_view: bool,
     mismatch: crate::profile::Mismatch,
+    declarations: crate::core::declaration::QuestionMetadata,
 }
 
 fn take(
@@ -263,8 +336,9 @@ impl Renderer {
         &self,
         reading: &Reading,
         unit: Held,
-        canonical: crate::core::CompleteAtomic,
+        mut canonical: crate::core::CompleteAtomic,
     ) -> Result<Judged, Failure> {
+        canonical.declarations = self.declarations.clone();
         let value = canonical.value();
         let outcome = match value {
             Value::YesNo(Some(true)) => Outcome::Yes,
@@ -319,37 +393,7 @@ impl Renderer {
         if self.view.details {
             crate::cli::intake::locate(&mut printed, unit.position.as_ref())?;
         }
-        if let Some(images) = &unit.images {
-            if self.view.details {
-                if !self.streams {
-                    crate::cli::intake::image_input(&mut printed, images)?;
-                }
-                crate::cli::intake::source_members(&mut printed, unit.position.as_ref())?;
-            } else if let Some(position) = unit.position.as_ref().filter(|p| p.located) {
-                printed = printed
-                    .as_ref()
-                    .map(|v| crate::cli::intake::source_value(images, v, position))
-                    .transpose()?;
-            }
-        } else if let Some(position) = unit
-            .position
-            .as_ref()
-            .filter(|p| p.located && !self.text_view)
-        {
-            if self.view.details || (self.streams && !passing && !self.view.raw) {
-                crate::cli::intake::source_members(&mut printed, Some(position))?;
-            } else if let Some(line) = &mut printed {
-                let original = json_line(&unit.record)?;
-                *line = crate::cli::intake::source_value(
-                    &unit.record,
-                    if passing { &original } else { line },
-                    position,
-                )?;
-            }
-        }
-        if self.documents && !unit.position.as_ref().is_some_and(|p| p.located) {
-            crate::cli::intake::document(&mut printed, unit.position.as_ref(), self.view.details)?;
-        }
+        self.locate(&unit, &mut printed)?;
         Ok(Judged {
             rank: None,
             model,
@@ -362,6 +406,47 @@ impl Renderer {
             profile_mismatch: self.mismatch.notice(),
         })
     }
+    fn locate(&self, unit: &Held, printed: &mut Option<String>) -> Result<(), Failure> {
+        if let Some(images) = &unit.images {
+            if self.view.details && !self.streams {
+                crate::cli::intake::image_input(printed, images)?;
+            }
+            if self.view.details {
+                crate::cli::intake::source_members(printed, unit.position.as_ref())?;
+            } else if let Some(position) = unit.position.as_ref().filter(|p| p.located) {
+                *printed = printed
+                    .as_ref()
+                    .map(|v| crate::cli::intake::source_value(images, v, position))
+                    .transpose()?;
+            }
+            return Ok(());
+        }
+        self.source(unit, printed)?;
+        if self.documents && !unit.position.as_ref().is_some_and(|p| p.located) {
+            crate::cli::intake::document(printed, unit.position.as_ref(), self.view.details)?;
+        }
+        Ok(())
+    }
+    fn source(&self, unit: &Held, printed: &mut Option<String>) -> Result<(), Failure> {
+        let passing = self.keeping == crate::judge::Keeping::Passing;
+        let Some(position) = unit
+            .position
+            .as_ref()
+            .filter(|p| p.located && !self.text_view)
+        else {
+            return Ok(());
+        };
+        if self.view.details || (self.streams && !passing && !self.view.raw) {
+            return crate::cli::intake::source_members(printed, Some(position));
+        }
+        let Some(line) = printed else {
+            return Ok(());
+        };
+        let original = json_line(&unit.record)?;
+        let shown = if passing { &original } else { &*line };
+        *line = crate::cli::intake::source_value(&unit.record, shown, position)?;
+        Ok(())
+    }
 }
 struct Details<'a> {
     canonical: &'a crate::core::CompleteAtomic,
@@ -372,5 +457,16 @@ impl serde::Serialize for Details<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.canonical
             .serialize_occurrence(self.original, None, self.index, serializer)
+    }
+}
+
+fn host_error(mut error: crate::Error, streams: bool) -> Failure {
+    match error.take_diagnostic() {
+        Some(crate::public::error::diagnostic::Diagnostic::PartialReply {
+            cause: Some(cause),
+            ..
+        }) if !streams => Failure::Reply(cause),
+        Some(diagnostic) => Failure::from(error.with_diagnostic(diagnostic)),
+        None => Failure::from(error),
     }
 }

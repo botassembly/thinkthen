@@ -6,7 +6,7 @@ mod many;
 mod rank;
 mod rank_set;
 mod recognize;
-mod records;
+pub(in crate::public) mod records;
 mod relate;
 mod streaming;
 use crate::core::{self, Value};
