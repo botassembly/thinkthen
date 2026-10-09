@@ -671,13 +671,10 @@ def decode(kind, value):
         return globals()[kind](**held)
     if kind == "one":
         if type(value) is int and value == 1: return value
-        return _invalid()
     if kind == "bytes":
         if isinstance(value, (bytes, bytearray)): return bytes(value)
-        return _invalid()
     if kind in _ENUMS:
         if type(value) is str and value in _ENUMS[kind]: return value
-        return _invalid()
     if kind in ("CallId", "SdkRequestId", "ObservationId", "FailureId", "AnswerId", "Digest"):
         return globals()[kind](value)
     if kind.startswith("="):
@@ -687,12 +684,7 @@ def decode(kind, value):
         if kind in ("description", "text") and value is not None and not isinstance(value, (str, tuple, list, Mapping)): return _invalid()
         if kind == "text" and value is None: return _invalid()
         return _json(value)
-    elif kind == "null":
-        if value is None: return None
-    elif kind == "bool":
-        if type(value) is bool: return value
-    elif kind == "str":
-        if type(value) is str: return value
+    elif kind in ("null", "bool", "str") and type(value) is {"null": type(None), "bool": bool, "str": str}[kind]: return value
     elif kind in ("uint", "positive", "batch"):
         if kind == "batch" and value == "max": return value
         if type(value) is int and value >= (0 if kind == "uint" else 1): return value
@@ -1136,9 +1128,7 @@ class NativeInput(Carrier):
     images: tuple[NativeImage, ...]
     location: PhysicalSource | Absent = ABSENT
 
-_MODELS["NativeInput"] = {'original': 'json', 'location?': 'PhysicalSource', 'images': '[NativeImage]'}
 
-_MODELS["RelateResult"]["input?"]="json"
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FindCandidate(Carrier):

@@ -1119,7 +1119,7 @@
       "estimated_cost_usd": "0.000000",
       "largest_request_bytes": 512,
       "largest_request_estimated_input_tokens": 128,
-      "token_estimate_method": "utf8_bytes",
+      "token_estimate_method": "encoded-body-bytes-908-v1",
       "usage_persistence": {
         "state": "disabled",
         "observed_at": "facts_snapshot"
@@ -1136,7 +1136,7 @@
       "estimated_cost_usd": "0.000000",
       "largest_request_bytes": 512,
       "largest_request_estimated_input_tokens": null,
-      "token_estimate_method": "unavailable",
+      "token_estimate_method": "encoded-body-bytes-908-v1",
       "usage_persistence": {
         "state": "pending",
         "observed_at": "facts_snapshot"
@@ -1153,7 +1153,7 @@
       "estimated_cost_usd": "0.000000",
       "largest_request_bytes": 512,
       "largest_request_estimated_input_tokens": 0,
-      "token_estimate_method": "utf8_bytes",
+      "token_estimate_method": "encoded-body-bytes-908-v1",
       "usage_persistence": {
         "state": "written",
         "observed_at": "facts_snapshot"
@@ -1170,7 +1170,7 @@
       "estimated_cost_usd": "0.000000",
       "largest_request_bytes": 512,
       "largest_request_estimated_input_tokens": null,
-      "token_estimate_method": "unavailable",
+      "token_estimate_method": "encoded-body-bytes-908-v1",
       "usage_persistence": {
         "state": "failed",
         "observed_at": "facts_snapshot",
