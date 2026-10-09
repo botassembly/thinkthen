@@ -24,7 +24,7 @@ use crate::core::adapters::built_in;
 use crate::core::{Backend, Evidence, Plan, Question, QuestionText};
 use crate::engine::error::Error;
 use crate::engine::http::Exchange;
-use crate::engine::usage::{self, Counters};
+use crate::engine::usage::{self, Counters, UsagePersistence};
 use crate::engine::{Cancel, Width, limits};
 
 /// A process ID this test process does not have.
@@ -248,7 +248,9 @@ fn finish_usage_child() {
     // A parent thread holds the queue lock when the child's exit hook runs.
     let held = counters.hold_queue();
     let (finished, returned) = channel();
-    thread::spawn(move || {
+    let worker = thread::spawn(move || {
+        assert_eq!(engine.usage_persistence(), UsagePersistence::Written);
+        assert_eq!(engine.finish_usage_status(), UsagePersistence::Written);
         engine.finish_usage();
         finished.send(())
     });
@@ -257,6 +259,10 @@ fn finish_usage_child() {
         Ok(()),
         "the child returns without waiting on its parent's lock"
     );
+    worker
+        .join()
+        .expect("child finalization observer")
+        .expect("child result");
     drop(held);
     let durable = || usage::read(&usage_path, &usage::month_now()).expect("usage totals");
     assert_eq!(durable().total.requests_sent, 1, "the child wrote nothing");
@@ -264,7 +270,12 @@ fn finish_usage_child() {
     // The process that built its own state flushes its own pending request.
     let own = Engine::built_by(settings(), std::process::id()).expect("this process's engine");
     counters.request_sent();
+    let held = counters.hold_queue();
+    assert_eq!(own.usage_persistence(), UsagePersistence::Pending);
+    drop(held);
+    assert_eq!(own.finish_usage_status(), UsagePersistence::Written);
     own.finish_usage();
+    assert_eq!(own.usage_persistence(), UsagePersistence::Written);
     assert_eq!(
         durable().total.requests_sent,
         2,

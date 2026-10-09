@@ -31,6 +31,66 @@ fn hold_usage_writer(case: &str, argument: &str) -> Option<fs::File> {
     })
 }
 
+fn assert_usage_persistence(
+    engine: &Engine,
+    case: &str,
+    argument: &str,
+    call: &thinkthen::Call<thinkthen::Answer>,
+    question: &thinkthen::Question,
+) {
+    let observed = call
+        .facts()
+        .usage_persistence()
+        .expect("engine facts observation");
+    let complete: serde_json::Value =
+        serde_json::to_value(call.facts().complete().expect("complete facts")).expect("facts JSON");
+    assert_eq!(
+        complete["usage_persistence"]["observed_at"],
+        "facts_snapshot"
+    );
+    let legacy = serde_json::to_value(call.facts()).expect("legacy facts");
+    assert!(legacy.get("usage_persistence").is_none());
+    let status = engine.finish_usage_status();
+    if case == "usage-held" {
+        assert_eq!(observed, thinkthen::UsagePersistence::Pending);
+        assert_eq!(complete["usage_persistence"]["state"], "pending");
+        assert_eq!(status, thinkthen::UsagePersistence::Failed);
+        assert_eq!(engine.usage_persistence(), status);
+        assert_eq!(
+            status.advice(),
+            Some("check the usage folder permissions and free space")
+        );
+        assert_eq!(call.facts().usage_persistence(), Some(observed));
+        assert_eq!(engine.usage().requests_sent(), 1);
+        let next = engine
+            .decide(question, EVIDENCE)
+            .expect("answer after writer failure");
+        assert_eq!(next.facts().requests_sent(), 1);
+        assert_eq!(next.facts().input_tokens(), call.facts().input_tokens());
+        let failed =
+            serde_json::to_value(next.facts().complete().expect("failed persistence facts"))
+                .expect("JSON");
+        assert_eq!(
+            failed["usage_persistence"],
+            serde_json::json!({"state":"failed", "observed_at":"facts_snapshot", "advice":"check the usage folder permissions and free space"})
+        );
+        assert!(!failed.to_string().contains(argument));
+        assert_eq!(engine.usage().requests_sent(), 2);
+        assert_eq!(engine.finish_usage_status(), status);
+    } else {
+        assert_eq!(
+            status,
+            if case == "usage-builder" {
+                thinkthen::UsagePersistence::Disabled
+            } else {
+                thinkthen::UsagePersistence::Written
+            }
+        );
+        assert!(status.advice().is_none());
+    }
+    engine.finish_usage();
+}
+
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     let engine = match case {
         "usage-seeded" | "usage-held" => {
@@ -62,58 +122,8 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
         .expect("a question")
         .cut();
     let call = engine.decide(&question, EVIDENCE).expect("an answer");
-    let observed = call
-        .facts()
-        .usage_persistence()
-        .expect("engine facts observation");
-    let complete: serde_json::Value =
-        serde_json::to_value(call.facts().complete().expect("complete facts")).expect("facts JSON");
-    assert_eq!(
-        complete["usage_persistence"]["observed_at"],
-        "facts_snapshot"
-    );
-    let legacy = serde_json::to_value(call.facts()).expect("legacy facts");
-    assert!(legacy.get("usage_persistence").is_none());
-    let status = engine.finish_usage_status();
-    if case == "usage-held" {
-        assert_eq!(observed, thinkthen::UsagePersistence::Pending);
-        assert_eq!(complete["usage_persistence"]["state"], "pending");
-        assert_eq!(status, thinkthen::UsagePersistence::Failed);
-        assert_eq!(engine.usage_persistence(), status);
-        assert_eq!(
-            status.advice(),
-            Some("check the usage folder permissions and free space")
-        );
-        assert_eq!(call.facts().usage_persistence(), Some(observed));
-        assert_eq!(engine.usage().requests_sent(), 1);
-        drop(held);
-        let next = engine
-            .decide(&question, EVIDENCE)
-            .expect("answer after writer failure");
-        assert_eq!(next.facts().requests_sent(), 1);
-        assert_eq!(next.facts().input_tokens(), call.facts().input_tokens());
-        let failed =
-            serde_json::to_value(next.facts().complete().expect("failed persistence facts"))
-                .expect("JSON");
-        assert_eq!(
-            failed["usage_persistence"],
-            serde_json::json!({"state":"failed", "observed_at":"facts_snapshot", "advice":"check the usage folder permissions and free space"})
-        );
-        assert!(!failed.to_string().contains(argument));
-        assert_eq!(engine.usage().requests_sent(), 2);
-        assert_eq!(engine.finish_usage_status(), status);
-    } else {
-        assert_eq!(
-            status,
-            if case == "usage-builder" {
-                thinkthen::UsagePersistence::Disabled
-            } else {
-                thinkthen::UsagePersistence::Written
-            }
-        );
-        assert!(status.advice().is_none());
-    }
-    engine.finish_usage();
+    assert_usage_persistence(&engine, case, argument, &call, &question);
+    drop(held);
     vec![format!(
         "{:?} sent {} cached {}",
         call.value(),
