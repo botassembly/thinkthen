@@ -24,11 +24,11 @@ One public API means one coherent function family. Bare answers, complete detail
 
 Minimize maintained logic across the engine, generator, templates and host glue together. Moving handwritten rules into per-language templates does not remove duplication. Generate declarations and mechanical conversions from Rust; host code owns naming, value conversion, representation checks, scheduling, authority and cleanup. Share transport and ownership within JVM and Dart/Flutter families. A small amount of explicit host code is appropriate when its removal would make ordinary calls, errors or cleanup harder. Record actual handwritten code removed and added, including generator/template cost, in the existing landing record; set no arbitrary line target and add no recurring measurement process.
 
-0513 completes the shared semantic graph, generator mechanics and C# reference. Host migration tickets own their target templates, outputs and installed adoption. 0505 first supplies additive complete C session views and then generated constrained-host declarations. A generated header over an incomplete old carrier is not complete typed access. Known observations, presence, partial usage and failure facts must survive native serialization before any host round trip can prove them.
+0513 completes the shared semantic graph, generator mechanics and C# reference. Host migration tickets own their target templates, outputs and installed adoption. 0505 supplies additive complete C session views and generated C and Zig access. Ada 0528 and COBOL 0529 generate their constrained-host declarations from those views. A generated header over an incomplete old carrier is not complete typed access. Known observations, presence, partial usage and failure facts must survive native serialization before any host round trip can prove them.
 
 For an async host, a Task, Future or Promise type alone proves little. The installed held-provider case must show unrelated host work progressing and caller cancellation/cleanup returning before the provider is released. Native settlement may follow later; pending final facts stay pending. 0516 establishes the waiting and cancellation pattern; each migration proves its language's idiom without duplicating the native session test matrix. Synchronous hosts retain their normal execution model.
 
-Packaging design precedes the affected host migration. 0517 records the package design; each host migration implements and proves its native assets. 0516 proves the first local NuGet install. 0501 owns the common inventory and final distribution assembly. Supported targets and runtime floors come from that design, not from a language name alone. Install the final consumer artifact; a development archive, source import or generated declaration does not prove the shipped package.
+Packaging design precedes the affected host migration. 0517 records the package design; each host migration implements and proves its native assets. 0516 proves the first local NuGet install. 0501 owns the common inventory; 0530 owns final distribution assembly. Supported targets and runtime floors come from that design, not from a language name alone. Install the final consumer artifact; a development archive, source import or generated declaration does not prove the shipped package.
 
 ## Ten first-class items by language
 
@@ -106,7 +106,7 @@ C# uses the [0516 pilot](../sdlc/tickets/0516-csharp-thin-first-class-pilot.md):
 
 ### Rust Polars
 
-[Package and existing checks](polars/README.md). Ticket 0504 owns the implementation under `crates/thinkthen/src/public/frame.rs` and `frame/`, plus its installed consumers.
+[Package and existing checks](polars/README.md). Ticket 0527 owns the implementation under `crates/thinkthen/src/public/frame.rs` and `frame/`, plus its installed consumers.
 
 | Item | Expected form |
 | --- | --- |
@@ -422,7 +422,7 @@ Use the existing checks below. Their present scope does not establish future gen
 | C ABI and constrained layouts | [header generator](../sdlc/scripts/generate-c-header.py), [export check](../sdlc/scripts/check-c-exports.py), [C door tests](c/tests/door/main.rs) | Generated declarations match the Rust ABI; frozen symbols and behavior remain. Measure layout through the target compiler rather than trusting a copied declaration. |
 | Async, cancellation and cleanup | Each package's existing check.sh and [shared native consumers](../conformance/consumer/) | Exercise cancellation, blocked-provider cleanup, stopped readers, backpressure and owned buffer lifetimes at the public boundary. 0503 owns session lifetime cases; host migration adds its idiom cases. |
 | Editor support and one API | Each package's compiler/import checks and existing export inventories | A real consumer compiles or imports generated types and uses named calls; deprecated frozen C exports do not authorize duplicate host entry points. 0515 removes old host calls. |
-| Installed package and native assets | Existing package checks, including [C#](csharp/tests/package_check.py) and [JVM](jvm/tests/package_check.py), and the [release package checks](../sdlc/scripts/README.md) | Install a local artifact in a clean environment and run a real call without a library path override. 0517 and 0501 share the generated product inventory for builders and installed checks. |
+| Installed package and native assets | Existing package checks, including [C#](csharp/tests/package_check.py) and [JVM](jvm/tests/package_check.py), and the [release package checks](../sdlc/scripts/README.md) | Install a local artifact in a clean environment and run a real call without a library path override. 0501 owns the generated product inventory for builders and installed checks under 0517's design; 0530 assembles final distributions. |
 
 Test children use a cleared, explicit environment with owned cache/state directories, the loopback address and a fake key only when needed. A plan test uses no key. Source-tree checks and installed-artifact checks report separate evidence. Replay changed documentation examples. Run the smallest relevant format, policy and functional checks; the coordinator runs full gates. Hosted qualification and publication retain the release hold.
 
