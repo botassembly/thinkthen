@@ -1,6 +1,6 @@
 # SQLite native Request bridge
 
-Ticket: [0499](../tickets/0499-adopt-request-sqlite.md). Starting revision: `27017f36d7fa05c26f0b8613af0b3acbfb67c698`. Initial qualification source: `86c2686889e8e501699b227fb36676cf4d75fe38`. Final integrated production source: `efd0129d0011eef1e85993b3355f643d5a935245`. This record covers the ten named `thinkthen_*_complete` functions and the shared composed-record bridge. It does not establish the whole SQLite migration or release qualification. Ticket and lane status remain in pm.
+Ticket: [0499](../tickets/0499-adopt-request-sqlite.md). Starting revision: `27017f36d7fa05c26f0b8613af0b3acbfb67c698`. Initial qualification source: `86c2686889e8e501699b227fb36676cf4d75fe38`. Earlier integrated production source: `efd0129d0011eef1e85993b3355f643d5a935245`. Final production source: `c420025519f60660f270638e33985ed3945df3f9`; measured-ceiling correction: `947102ef8`. This record covers the ten named `thinkthen_*_complete` functions and the shared composed-record bridge. It does not establish the whole SQLite migration or release qualification. Ticket and lane status remain in pm.
 
 SQLite translates host arguments into native `Request` definitions and executes through `Engine::execute_request`. It never serializes a native Request to call Rust. Its authorized saved-question resolver, SQL spelling, complete carrier, typed result values, source positions, callbacks and settings remain at the host edge. Typed native output supplies complete results and failures; the adapter adds existing SQL ordinal and selected-find conventions.
 
@@ -22,7 +22,7 @@ All engine calls used isolated counted loopback or saved fixtures. No paid calls
 
 The initial installed archive SHA-256 is `f2412f58b7c48616c4b3259d10a1cd7c60b6a4aaf02b99dc4936b9c4e37e7841`; its release library SHA-256 is `77b89bea479631daf4e5bbe2c3cacc99b4a982a6e6a346a03dbad73636882d9e`. Hashes identify the tested local artifact; no package was published.
 
-## Integrated qualification after review
+## Earlier integrated qualification after review
 
 The final source incorporates the deferred descriptor fix and merges main `9196e77f4`, including the reviewed 0488 MCP implementation. The only merge conflict was the shared Rust ratchet; its measured total is 172,653 lines. Both API declarations and pm Progress remain intact. Later main metadata changes affect MCP planning and 0481, with no 0499 product or API change.
 
@@ -30,7 +30,7 @@ The final source incorporates the deferred descriptor fix and merges main `9196e
 
 The final release library was archived, unpacked into an owned temporary folder and loaded by its installed path. `test_complete_request.py` passed both tests, including one counted send and one completed row for each of three malformed incremental descriptors, retained Usage terminal errors and zero eager sends. `tests/complete/parity.py sqlite` passed all 255 required cases, including valid known-image route/function refusals, and `tests/complete/facts.py sqlite` passed owning costs, incomplete usage, overflow, cache/replay, started facts and terminal reader boundaries. SQLite Clippy and PostgreSQL library Clippy with `-D warnings` also passed. Earlier passing unaffected legacy checks remain applicable; they were not repeated for this descriptor fix. Log: `target/0499-integrated-sqlite.log`.
 
-Final local artifact SHA-256: archive `6573f6c1d2d8d73f8fdab6bc7a84db0370bee8eb9b3697ba6a7825b8564d1925`, library `97b06a135813c79e0b0aab5233e08fd326482eaf20e3125ffb6af2d226da06be`. Final measured ratchets are 172,653 root Rust, 4,998 SQLite Rust and 4,079 SQLite Python lines. Production source stayed unchanged throughout these checks.
+Earlier integrated artifact SHA-256: archive `6573f6c1d2d8d73f8fdab6bc7a84db0370bee8eb9b3697ba6a7825b8564d1925`, library `97b06a135813c79e0b0aab5233e08fd326482eaf20e3125ffb6af2d226da06be`. Its measured ratchets were 172,653 root Rust, 4,998 SQLite Rust and 4,079 SQLite Python lines. Production source stayed unchanged throughout those checks.
 
 ## Failures retained
 
@@ -55,6 +55,10 @@ Focused native tests passed all 12 cases. Four installed SQLite tests passed, in
 Policy passed for 268 packages and inventory passed for 1,832 declared items and four refused plants. Measured ceilings are 172,944 root Rust, 5,003 SQLite Rust and 4,115 SQLite Python lines. Growth adds the narrow result option and counted regressions; annotation validation reuses the existing helper instead of adding a schema path. The existing execution module exceeds the advisory 500-line limit because it holds the ten-function dispatcher and runtime-feed controls; the new option reuses its existing result-selection path. No mechanical file split was made.
 
 On production source `c420025519f60660f270638e33985ed3945df3f9`, the final functional and specification gates exited 0: 1,831 workspace tests, 360 library-only tests and all 23 external consumer tests passed, with their configured 27, four and three skips. All 24 demos were green. The first lint gate exited 1 because the recorded root ceiling missed six test-helper allowance lines added after measurement. The metadata correction uses the actual 172,944 total; production source and passing functional/specification checks remain unchanged. Logs: `target/0499-projections-test.log`, `target/0499-projections-spec.log`, `target/0499-projections-lint.log` and `target/0499-projections-gates.log`.
+
+Corrected `sh sdlc/scripts/lint` exited 0 on committed `947102ef8`, including policy, fixtures, ABI/header checks, dependency checks, workspace Clippy, documentation and inventory. Functional/specification checks were not repeated for the measured-ceiling correction. Logs: `target/0499-projections-lint-corrected.log` and `target/0499-projections-lint-corrected-exit.log`.
+
+The final release library was archived and unpacked into an owned temporary folder. All four `test_complete_request.py` regressions passed against that installed library. `tests/complete/parity.py sqlite` passed all 255 required cases with zero failures, and `tests/complete/facts.py sqlite` passed owning costs, incomplete usage, overflow, cache/replay, started facts and terminal reader behavior. SQLite Clippy and PostgreSQL library Clippy both passed with `-D warnings`; PostgreSQL keeps its previous dispatcher. Log: `target/0499-projections-sqlite.log`. Final archive SHA-256: `dc694bc39d9bfbf3eff06593075f2eaba3ef4a4df71d08c8aa1e1d3d8477debc`; library: `265b3a978ad43f188e0a39fade2a0e1035bca1268fa5acdce9517a312a8a0877`. Production source stayed stable through these checks. The lane used 33 GiB including library and database targets. Earlier passing unaffected legacy stages were retained.
 
 ## Retained limits
 
