@@ -33,3 +33,7 @@ A C# developer installs the NuGet package and calls named functions with native 
   - Removal. Delete copied layouts and readers as their callers migrate. Remove old public names after installed parity, with an old-to-new mapping in the README.
 - Proof: The shared conformance suite passes through the installed local NuGet package with no library-path override. One installed held-provider case shows an unrelated Task progressing while cancellation and disposal return before the provider is released. Deterministic cases cover cancelled, full and closed states, stopped readers, cancellation racing disposal, full output, and failure facts through existing runners. A Task wrapping a blocking call does not count. A fresh reviewer scores all ten guide items as met. The landing record gives handwritten code removed and added, counting generator templates.
 - Defers: Windows qualification goes to 0384 at the first authorized candidate. Other packages go to their migrations, and final assembly to 0530. Other languages follow in 0504, 0518 and 0522–0526.
+
+## Progress
+
+- 2026-10-09 started
