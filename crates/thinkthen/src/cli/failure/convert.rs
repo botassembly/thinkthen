@@ -135,6 +135,41 @@ impl From<crate::Error> for Failure {
         use crate::public::error::diagnostic::Diagnostic;
         match error.take_diagnostic() {
             Some(Diagnostic::Engine(cause)) => Self::from(cause),
+            Some(Diagnostic::EngineRange { cause, first, last }) => {
+                let cause = Self::from(cause);
+                match cause {
+                    Self::Transport(_) | Self::Status(_) | Self::TokenLimit | Self::Reply(_)
+                        if last > first =>
+                    {
+                        Self::BatchFailed {
+                            last: last.saturating_add(1),
+                            cause: Box::new(cause),
+                        }
+                    }
+                    other => other,
+                }
+            }
+            Some(Diagnostic::PartialReply { first, last, .. }) => Self::PartialReply {
+                first: first.saturating_add(1),
+                last: last.saturating_add(1),
+            },
+            Some(Diagnostic::Context {
+                initial,
+                kind,
+                limit,
+                actual,
+                profile,
+            }) => Self::Context(super::context::Error::OverLimit {
+                initial,
+                kind,
+                limit,
+                actual,
+                profile,
+            }),
+            Some(Diagnostic::CliInput(cause)) => *cause,
+            Some(Diagnostic::RelationEntityCount(count)) => {
+                Self::Relate(super::relate::Error::TooMany { count })
+            }
             Some(Diagnostic::Model(cause)) => Self::Usage(match cause {
                 crate::core::BlankTextError::ModelControl => {
                     "--model holds no control character or white space but a plain space"
@@ -172,6 +207,37 @@ fn refusal(mut cause: Box<dyn std::any::Any + Send + Sync>, error: crate::Error)
             };
         };
     }
+    cause = match cause.downcast::<crate::core::ExamplesError>() {
+        Ok(error) => {
+            return Failure::Recognize(super::recognize::Error::Examples {
+                record: None,
+                error: *error,
+            });
+        }
+        Err(cause) => cause,
+    };
+    cause = match cause.downcast::<crate::core::RelateConfigError>() {
+        Ok(cause) => {
+            return Failure::Relate(super::relate::Error::Config {
+                file: error.kind() == crate::ErrorKind::Local,
+                error: *cause,
+            });
+        }
+        Err(cause) => cause,
+    };
+    cause = match cause.downcast::<crate::core::RecognizeConfigError>() {
+        Ok(cause) => {
+            return Failure::Recognize(super::recognize::Error::Config {
+                file: error.kind() == crate::ErrorKind::Local,
+                error: *cause,
+            });
+        }
+        Err(cause) => cause,
+    };
+    cause = match cause.downcast::<crate::core::EntitySetError>() {
+        Ok(cause) => return Failure::Relate(super::relate::Error::Entities(*cause)),
+        Err(cause) => cause,
+    };
     take!(crate::core::QuestionFileError);
     take!(crate::core::QuestionSetError);
     take!(crate::core::ReadingError);

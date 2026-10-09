@@ -202,17 +202,6 @@ impl Cancel<'_> {
         }
     }
 
-    /// Capture command detail attempts under the already established invocation.
-    pub(crate) fn with_captured_attempts(&self, requested: bool) -> Self {
-        if !requested {
-            return self.clone();
-        }
-        let facts = self.facts.clone().unwrap_or_else(CallFacts::new);
-        facts.state().invocation = self.invocation.clone();
-        facts.capture_attempts(true);
-        self.with_facts(facts)
-    }
-
     pub(crate) fn with_facts(&self, facts: CallFacts) -> Self {
         let invocation = facts.state().invocation.clone();
         Self {

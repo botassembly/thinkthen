@@ -5,8 +5,8 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, BackendProfile, Framing, PartError, Plan, Pointer, QuestionSet, QuestionSetError,
-    Reading, ReadingError, Record, RecordError, Setting, quoted_plan,
+    Backend, Framing, Pointer, QuestionSet, QuestionSetError, Reading, ReadingError, Record,
+    Setting,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -16,32 +16,17 @@ use crate::edge::Environment;
 use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::profile::{self, Mismatch};
-use crate::schedule::{Judged, Output};
+use crate::schedule::Output;
 
-mod aggregation;
 mod asker;
 pub(crate) mod error_row;
+mod native;
 mod plan;
-
-pub(crate) use crate::engine::facade::GroupAnswer;
-
-pub(crate) enum PrepareError {
-    MissingOn(String),
-    Other(Failure),
-}
-
-impl PrepareError {
-    pub(crate) fn into_failure(self) -> Failure {
-        match self {
-            Self::MissingOn(pointer) => Failure::Record(RecordError::Missed(pointer)),
-            Self::Other(error) => error,
-        }
-    }
-}
 
 pub(crate) fn run(
     arguments: &AnnotateArguments,
     environment: &Environment,
+    admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -102,20 +87,27 @@ pub(crate) fn run(
         Setting::Records(most) => Some(most.get()),
         Setting::Max => None,
     });
-    let engine = asking::engine(
+    let engine = crate::cli::construction::engine(
         &arguments.common,
         environment,
         folders,
-        backend,
-        profile,
+        (backend, profile),
         arguments.common.jobs,
+        false,
     )?;
     let judging = Judging::new(arguments, environment, engine, set, mismatch)?;
     if arguments.common.dry_run {
-        return plan::dry_run(&judging, &reading, inputs, inputs_cap, &mut writer);
+        return plan::dry_run(
+            &judging,
+            admitted,
+            &reading,
+            inputs,
+            inputs_cap,
+            &mut writer,
+        );
     }
     let mut output = Output::streaming(&mut writer, environment.usage());
-    asker::run(&judging, &reading, inputs, inputs_cap, &mut output)
+    native::run(&judging, admitted, &reading, inputs, setting, &mut output)
 }
 
 fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
@@ -265,40 +257,8 @@ impl<'a> Judging<'a> {
         self.streams
     }
 
-    pub(crate) fn groups(&self) -> Vec<Vec<usize>> {
-        self.set.groups()
-    }
-
-    fn context_for(&self, record: &Record) -> Result<Option<crate::core::Evidence>, Failure> {
-        let schema = self
-            .set
-            .questions()
-            .first()
-            .and_then(|member| member.metadata().context_schema.as_ref());
-        let explicit = asking::context::record(record, self.context_field.as_deref(), schema)?;
-        const REFUSAL: &str = "the per-item context does not match context_schema";
-        if let Some(context) = &explicit {
-            for member in self.set.questions() {
-                context
-                    .validate(member.metadata().context_schema.as_ref())
-                    .map_err(|_| Failure::Usage(REFUSAL))?;
-            }
-        }
-        crate::public::RecordContext::resolved(explicit.as_ref(), self.context.as_deref())
-            .map_err(|_| Failure::Usage("the per-item context does not match context_schema"))
-    }
-
     pub(crate) const fn continue_missing(&self) -> bool {
         self.continue_missing
-    }
-
-    pub(crate) fn finish(
-        &self,
-        record: Record,
-        ordinal: usize,
-        answered: Vec<GroupAnswer>,
-    ) -> Result<Judged, Failure> {
-        aggregation::finish(self, record, ordinal, answered)
     }
 }
 
@@ -309,46 +269,4 @@ fn collisions(set: &QuestionSet, record: &Record) -> Result<(), Failure> {
         }
     }
     Ok(())
-}
-
-fn plan_for(
-    set: &QuestionSet,
-    group: &[usize],
-    backend: &Backend,
-    (profile, context): (Option<&BackendProfile>, Option<&crate::core::Evidence>),
-    base: &Reading,
-    record: &Record,
-) -> Result<Plan, PrepareError> {
-    if group.is_empty() {
-        return Err(PrepareError::Other(Failure::Defect(
-            "an annotate group is empty",
-        )));
-    }
-    let record = base
-        .batch_record(record)
-        .map_err(|error| PrepareError::Other(error.into()))?;
-    let evidence = set
-        .group_evidence(group, &record)
-        .map_err(|error| match error {
-            PartError::Declaration(_) => {
-                PrepareError::Other(Failure::Usage("the item does not match item_schema"))
-            }
-            PartError::Reading(error) => PrepareError::Other(error.into()),
-            PartError::Record(RecordError::Missed(pointer)) => PrepareError::MissingOn(pointer),
-            PartError::Record(error) => PrepareError::Other(error.into()),
-        })?;
-    let questions = group
-        .iter()
-        .map(|place| {
-            set.questions()
-                .get(*place)
-                .map(|named| named.question().clone())
-                .ok_or(PrepareError::Other(Failure::Defect(
-                    "a group points outside its set",
-                )))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    quoted_plan(backend.asked(), evidence, context, questions, profile).map_err(|error| {
-        PrepareError::Other(crate::failure::context::Limits::new(profile).refused(error, false))
-    })
 }

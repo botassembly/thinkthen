@@ -1,6 +1,7 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
 mod admission;
+pub(crate) mod cli_reader;
 mod observer;
 
 pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};
@@ -19,6 +20,8 @@ use crate::core::Prices;
 use crate::engine::{AttemptSink, CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
 use crate::public::results::{AttemptObservation, Call, Facts, RecordObservation};
+
+pub(crate) type AnnotationRecovery<'a> = Option<&'a dyn Fn(usize, &str) -> bool>;
 
 type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
 type AttemptObserver<'a> = &'a (dyn Fn(AttemptObservation) + Send + Sync);
@@ -106,7 +109,9 @@ enum Due {
 /// check stops the call, joins its workers, and then resumes on the caller.
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
+    pub(in crate::public) cli_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
+    pub(in crate::public) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
     cancel: Option<&'a CancelToken>,
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
@@ -155,7 +160,9 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn new() -> Self {
         Self {
+            cli_text_limit: None,
             eager_inputs: false,
+            cli_reader: None,
             cancel: None,
             due: None,
             check: None,
@@ -170,6 +177,17 @@ impl<'a> CallOptions<'a> {
             proxy: None,
             surface: None,
         }
+    }
+
+    #[cfg(feature = "cli")]
+    pub(crate) const fn cli_text_limit(mut self, limit: usize) -> Self {
+        self.cli_text_limit = Some(limit);
+        self
+    }
+
+    pub(crate) const fn cli_reader(mut self, reader: &'a cli_reader::CliReader<'a>) -> Self {
+        self.cli_reader = Some(reader);
+        self
     }
 
     /// Stop the call when this token fires.
@@ -403,6 +421,7 @@ impl<'a> CallOptions<'a> {
 /// The per-call stop state: the call's own flag and deadline, the caller's
 /// token and check, and a check's panic held until the call has joined.
 pub(crate) struct Stop<'a> {
+    pub(crate) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
     base: Cancel<'static>,
     facts: CallFacts,
     prices: Option<Prices>,
@@ -448,6 +467,7 @@ impl<'a> Stop<'a> {
             }));
         }
         let stop = Self {
+            cli_reader: options.cli_reader,
             base,
             facts,
             prices: None,

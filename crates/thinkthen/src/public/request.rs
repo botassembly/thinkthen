@@ -1,6 +1,8 @@
 //! One versioned edge contract for native and serialized requests.
 
 mod admission;
+#[cfg(feature = "cli")]
+pub(crate) mod cli_atomic;
 mod composition;
 mod definition;
 mod execution;

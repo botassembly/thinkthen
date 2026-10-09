@@ -29,6 +29,7 @@ pub(crate) struct Asked<'a> {
     pub(crate) keeping: Keeping,
     /// Where record verbs read their batch setting, or `None`.
     pub(crate) batch: Option<Tiers<'a>>,
+    pub(crate) admitted: Option<crate::AdmittedRequest>,
 }
 
 /// The typed `--batch` and a question file's `batch`, which with
@@ -142,6 +143,7 @@ impl View {
 pub(crate) fn decide(
     arguments: &DecideArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -150,7 +152,7 @@ pub(crate) fn decide(
             "`decide` prints JSON; `choose --raw` prints a bare label",
         ));
     }
-    let (settled, file) = asked::decide(arguments)?;
+    let (settled, file) = asked::decide(arguments, Some(&mut admitted))?;
     let view = View {
         quiet: arguments.quiet,
         raw: false,
@@ -159,6 +161,7 @@ pub(crate) fn decide(
     judging(
         ReplayContext::Decide,
         Asked {
+            admitted: Some(admitted),
             common: &arguments.common,
             asks: fixed(&settled)?,
             settled: &settled,
@@ -181,6 +184,7 @@ pub(crate) fn decide(
 pub(crate) fn filter(
     arguments: &FilterArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -190,17 +194,17 @@ pub(crate) fn filter(
             "`filter` keeps records and has no order to cut, so --top belongs to `rank`",
         ));
     }
-    let (settled, file) = asked::filter(arguments)?;
+    let (settled, file) = asked::filter(arguments, Some(&mut admitted))?;
     let mut display = arguments.display.clone();
     display.files_only = arguments.files_only;
     over_kept(
+        Some(admitted),
         Keeping::Passing,
         &arguments.common,
         &display,
         tiers(&arguments.batching, file),
         &settled,
         fixed(&settled)?,
-        None,
         environment,
         input,
         writer,
@@ -216,11 +220,12 @@ pub(crate) fn filter(
 pub(crate) fn rank(
     arguments: &RankArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     views(&arguments.refused, Keeping::Ordered)?;
-    let top = arguments
+    let _top = arguments
         .top
         .as_deref()
         .map(|value| {
@@ -231,15 +236,15 @@ pub(crate) fn rank(
                 .ok_or(Failure::TopIsZero)
         })
         .transpose()?;
-    let (settled, file, set) = asked::rank(arguments)?;
+    let (settled, file, set) = asked::rank(arguments, Some(&mut admitted))?;
     over_kept(
+        Some(admitted),
         Keeping::Ordered,
         &arguments.common,
         &arguments.display,
         tiers(&arguments.batching, file),
         &settled,
         set.map_or_else(|| fixed(&settled), |set| Ok(Asks::Set(set)))?,
-        top,
         environment,
         input,
         writer,
@@ -277,26 +282,20 @@ fn views(refused: &Refused, keeping: Keeping) -> Result<(), Failure> {
     reason = "the two verbs share every step, and splitting the call would split the flow"
 )]
 fn over_kept(
+    admitted: Option<crate::AdmittedRequest>,
     keeping: Keeping,
     common: &Common,
     display: &crate::cli::display::Arguments,
     batch: Tiers<'_>,
     settled: &Resolved,
     asks: Asks,
-    top: Option<usize>,
     environment: &Environment,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
-    let mut output = match keeping {
-        Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
-        _ => Output::streaming(writer, environment.usage()),
-    };
+    let mut output = Output::streaming(writer, environment.usage());
     output.display(display.clone());
-    if matches!(keeping, Keeping::Ordered) {
-        output.rank_threshold(settled.threshold());
-    }
     let context = match keeping {
         Keeping::Passing => ReplayContext::Filter,
         Keeping::Ordered => ReplayContext::Rank,
@@ -304,6 +303,7 @@ fn over_kept(
     };
     run(
         Asked {
+            admitted,
             common,
             asks,
             settled,
@@ -349,13 +349,14 @@ fn judging(
 pub(crate) fn choose(
     arguments: &ChooseArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     if arguments.raw && (arguments.common.csv || arguments.common.tsv) {
         return Err(Failure::TableRaw);
     }
-    let (settled, file) = asked::choose(arguments)?;
+    let (settled, file) = asked::choose(arguments, Some(&mut admitted))?;
     let asks = match arguments.options_pointer.as_deref() {
         Some(typed) => {
             if !arguments.common.jsonl {
@@ -377,6 +378,7 @@ pub(crate) fn choose(
     judging(
         ReplayContext::Choose,
         Asked {
+            admitted: Some(admitted),
             common: &arguments.common,
             asks,
             settled: &settled,
@@ -394,6 +396,7 @@ pub(crate) fn choose(
 pub(crate) fn tag(
     arguments: &TagArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -403,10 +406,11 @@ pub(crate) fn tag(
     if arguments.quiet {
         return Err(Failure::TagQuiet);
     }
-    let (settled, file) = asked::tag(arguments)?;
+    let (settled, file) = asked::tag(arguments, Some(&mut admitted))?;
     judging(
         ReplayContext::Tag,
         Asked {
+            admitted: Some(admitted),
             common: &arguments.common,
             asks: fixed(&settled)?,
             settled: &settled,
@@ -434,6 +438,7 @@ pub(crate) fn tag(
 pub(crate) fn score(
     arguments: &ScoreArguments,
     environment: &Environment,
+    mut admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -447,7 +452,7 @@ pub(crate) fn score(
             "`score` has no answer exit code, so --quiet would discard its result",
         ));
     }
-    let (settled, file) = asked::score(arguments)?;
+    let (settled, file) = asked::score(arguments, Some(&mut admitted))?;
     let view = View {
         quiet: false,
         raw: false,
@@ -456,6 +461,7 @@ pub(crate) fn score(
     judging(
         ReplayContext::Score,
         Asked {
+            admitted: Some(admitted),
             common: &arguments.common,
             asks: fixed(&settled)?,
             settled: &settled,

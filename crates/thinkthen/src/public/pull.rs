@@ -27,21 +27,33 @@ pub(crate) type Row<A> = Result<<A as Asker>::Row, Failed<<A as Asker>::Error>>;
 enum Event<A: Asker> {
     Port(Port<A::Input, A::Error>),
     Ask,
+    ReaderReady,
     Row(Row<A>),
     End(Result<(), Error>),
 }
 
 /// The coordinator's side: each ask and each row goes to the calling thread.
-struct Bridge<A: Asker>(Sender<Event<A>>);
+struct Bridge<'a, A: Asker> {
+    asker: &'a A,
+    events: Sender<Event<A>>,
+    pause: Option<Duration>,
+}
 
-impl<A: Asker> Host<A> for Bridge<A> {
+impl<A: Asker> Host<A> for Bridge<'_, A> {
+    fn pause(&self) -> Duration {
+        self.pause.unwrap_or(TICK)
+    }
     fn ask(&mut self) -> bool {
-        self.0.send(Event::Ask).is_ok()
+        self.events.send(Event::Ask).is_ok()
     }
 
     fn row(&mut self, _place: usize, result: Row<A>) -> Flow {
-        let failed = result.is_err();
-        if self.0.send(Event::Row(result)).is_err() || failed {
+        let failed = match &result {
+            Err(Failed::Asker(error)) => !self.asker.recovers(error),
+            Err(_) => true,
+            Ok(_) => false,
+        };
+        if self.events.send(Event::Row(result)).is_err() || failed {
             Flow::Stop
         } else {
             Flow::Continue
@@ -128,6 +140,14 @@ where
     I: Iterator<Item = Result<R, Error>> + 'a,
 {
     let (events, received) = channel();
+    let cli_reader = call.stop.cli_reader;
+    if let Some(reader) = cli_reader {
+        let wake_events = events.clone();
+        reader.wake().register(Box::new(move || {
+            let _sent = wake_events.send(Event::ReaderReady);
+        }));
+    }
+    let pause = cli_reader.and_then(|reader| reader.pause);
     let cancel = call.stop.shared();
     let (engine, packing) = (call.engine, call.packing);
     let coordinator = thread::spawn(move || {
@@ -138,7 +158,11 @@ where
                     packing,
                     |port| {
                         let _sent = events.send(Event::Port(port));
-                        Bridge(events.clone())
+                        Bridge {
+                            asker: &asker,
+                            events: events.clone(),
+                            pause,
+                        }
                     },
                     &cancel,
                 )
@@ -159,7 +183,8 @@ where
         fed: 0,
         completed: 0,
         most: call.most,
-        interactive: packing.inputs == Some(1),
+        interactive: packing.inputs == Some(1) && cli_reader.is_none(),
+        pending_ask: false,
         deferred: false,
         coordinator: Some(coordinator),
     }))
@@ -181,6 +206,7 @@ struct Pull<'a, A: Asker, I: Iterator, R, T> {
     /// Batch 1 returns each row before it pulls the next record.
     interactive: bool,
     deferred: bool,
+    pending_ask: bool,
     coordinator: Option<JoinHandle<()>>,
 }
 
@@ -202,6 +228,9 @@ where
             self.coordinator.as_ref()?;
             if self.stop.interrupted() {
                 self.stop.fire();
+            }
+            if self.pending_ask {
+                self.feed();
             }
             let event = if self.stop.polls() {
                 match self.events.recv_timeout(TICK) {
@@ -242,7 +271,15 @@ where
         match event {
             Event::Port(port) => self.port = Some(port),
             Event::Ask if self.interactive && self.fed > self.completed => self.deferred = true,
-            Event::Ask => self.feed(),
+            Event::Ask => {
+                self.pending_ask = true;
+                self.feed();
+            }
+            Event::ReaderReady => {
+                if self.pending_ask {
+                    self.feed();
+                }
+            }
             Event::Row(row) => self.row(row),
             Event::End(ended) => {
                 let joined = self.join();
@@ -258,6 +295,16 @@ where
     /// Answer one ask with the caller's next record, its end, or the refusal
     /// of one record past the engine's limit.
     fn feed(&mut self) {
+        if self.stop.interrupted() {
+            self.stop.fire();
+            self.pending_ask = false;
+            return;
+        }
+        if self.stop.cli_reader.is_some_and(|reader| !reader.ready()) {
+            self.pending_ask = true;
+            return;
+        }
+        self.pending_ask = false;
         let input = match self.items.next() {
             None => Input::End,
             Some(Err(error)) => Input::Failed(A::Error::from(error)),
@@ -327,6 +374,10 @@ impl<A: Asker, I: Iterator, R, T> Pull<'_, A, I, R, T> {
             return Ok(());
         };
         self.stop.fire();
+        self.pending_ask = false;
+        if let Some(reader) = self.stop.cli_reader {
+            reader.wake().clear();
+        }
         self.port = None;
         while !coordinator.is_finished() {
             self.stop.drain_attempts();

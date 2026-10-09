@@ -1,107 +1,76 @@
 //! The annotate dry run: every record's questions packed as a run would
 //! pack them, with nothing looked up.
 
-use std::collections::BTreeSet;
 use std::io::Write;
 use std::process::ExitCode;
-use std::sync::Arc;
 
 use super::Judging;
 use super::asker::{self, Framed};
 use crate::core::adapters::built_in;
-use crate::core::pack::{self, Entry, PackError, Packer};
 use crate::core::{PlanDocument, PlanSummary, Reading, json_line};
 use crate::edge;
-use crate::engine::pipeline::Packing;
 use crate::failure::Failure;
 use crate::schedule::Placed;
 
 pub(super) fn dry_run(
     judging: &Judging<'_>,
+    admitted: crate::AdmittedRequest,
     reading: &Reading,
     inputs: impl Iterator<Item = Result<Framed, Placed>>,
     inputs_cap: Option<usize>,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
-    let engine = judging.engine();
-    let backend = engine.backend();
-    let limits = engine.pack_limits(Packing {
-        questions: None,
-        sized: true,
-        inputs: inputs_cap,
-        strict_singleton: false,
-        context: judging.context.is_some() || judging.context_field.is_some(),
-        detailed: false,
-        continues: false,
-    });
-    let model = pack::model_json(backend.model().as_str())
-        .map_err(|_| Failure::Defect("a model could not be written as JSON"))?;
-    let mut packer = Packer::new(limits, model);
-    let mut summary = PlanSummary::new(false).with_accounting(backend.accounting());
-    let mut occurrences = 0_usize;
-    let mut group_requests = vec![0; judging.groups().len()];
-    let mut closed = Vec::new();
     let parser = asker::Parser::of(judging, reading);
-    for framed in inputs {
-        let record = parser.record(framed.map_err(|placed| placed.cause)?)?;
-        let asks = asker::asks(judging, reading, backend.url(), &record)
-            .map_err(super::PrepareError::into_failure)?;
-        summary
-            .record()
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
-        let entries: Vec<_> = asks
-            .into_iter()
-            .flat_map(|(group, asks)| asks.into_iter().map(move |ask| (group, ask)))
-            .map(|(group, ask)| Entry {
-                state: ask.state.clone(),
-                question: Arc::clone(&ask.question),
-                options: 0,
-                item: group,
-            })
-            .collect();
-        occurrences = occurrences
-            .checked_add(entries.len())
-            .ok_or(Failure::Defect("a plan is too large"))?;
-        packer
-            .add(entries, &mut closed)
-            .map_err(|error| match error {
-                PackError::Profile(limit) => Failure::ProfileLimit(limit),
-                PackError::Context {
-                    initial,
-                    kind,
-                    limit,
-                    actual,
-                } => crate::failure::context::Limits::new(engine.profile()).refused(
-                    crate::core::BatchError::ContextOverLimit {
-                        kind,
-                        limit,
-                        actual,
-                    },
-                    initial,
-                ),
-            })?;
-        for request in closed.drain(..) {
-            preview_request(
-                &mut summary,
-                &mut group_requests,
-                &request.body,
-                &request.items,
-            )?;
-        }
+    let fields = reading
+        .fields()
+        .iter()
+        .map(crate::core::Pointer::as_str)
+        .collect::<Vec<_>>();
+    let composition = crate::RecordReading::new(&fields, None, None).map_err(Failure::from)?;
+    let rows = inputs
+        .map(|framed| {
+            let original = parser.record(framed.map_err(|placed| placed.cause)?)?;
+            super::native::compose(judging, &composition, &original)
+        })
+        .map(|row| {
+            row.map(|record| record.map_original(crate::QuestionInput::Record))
+                .map_err(|cause| {
+                    crate::Error::usage("the CLI reader failed").with_diagnostic(
+                        crate::public::error::diagnostic::Diagnostic::CliInput(Box::new(cause)),
+                    )
+                })
+        });
+    let native = crate::Engine::from_cli(
+        judging.engine.clone(),
+        judging.environment.config().prices(),
+    );
+    let admitted = admitted
+        .retain_cli_definition(crate::QuestionSet(judging.set.clone()).into())
+        .map_err(Failure::from)?
+        .with_composed_feed("cli-annotate-plan");
+    let ready = || true;
+    let readiness = crate::public::cli_reader::CliReader::new(&ready, None);
+    let mut controls = crate::CallOptions::new()
+        .surface(crate::Surface::Cli)
+        .cli_reader(&readiness);
+    if let Some(context) = judging.context.as_deref() {
+        controls = controls.context(context);
     }
-    if let Some(request) = packer.close() {
-        preview_request(
-            &mut summary,
-            &mut group_requests,
-            &request.body,
-            &request.items,
-        )?;
+    if let Some(inputs) = inputs_cap {
+        controls = controls.batch(crate::BatchSetting::Records(
+            std::num::NonZeroUsize::new(inputs)
+                .ok_or(Failure::Defect("a plan has no input capacity"))?,
+        ));
     }
-    let count = summary
-        .counts()
-        .map_err(|_| Failure::Defect("a plan is too large"))?
-        .requests;
-    summary.bound_requests(occurrences);
+    let (summary, count, group_requests) = native
+        .plan_annotation_request(
+            &admitted,
+            crate::RequestEnvironment {
+                controls,
+                feed: Some(crate::RequestFeed::from_records("cli-annotate-plan", rows)),
+            },
+        )
+        .map_err(Failure::from)?;
     print_plan(judging, reading, &summary, count, group_requests, writer)
 }
 
@@ -148,23 +117,4 @@ fn print_plan(
         .map_err(|_| Failure::Defect("a plan is too large"))?;
     edge::write_line(writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
-}
-
-fn preview_request(
-    summary: &mut PlanSummary,
-    group_requests: &mut [usize],
-    body: &[u8],
-    groups: &[usize],
-) -> Result<(), Failure> {
-    summary
-        .request(body)
-        .map_err(|_| Failure::Defect("a plan is too large"))?;
-    for group in groups.iter().collect::<BTreeSet<_>>() {
-        if let Some(count) = group_requests.get_mut(*group) {
-            *count = count
-                .checked_add(1)
-                .ok_or(Failure::Defect("a plan is too large"))?;
-        }
-    }
-    Ok(())
 }

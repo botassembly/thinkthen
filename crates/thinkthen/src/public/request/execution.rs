@@ -125,13 +125,26 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, None)
+        self.execute_request_sink(request, environment, None, None, None)
+    }
+    #[cfg(feature = "cli")]
+    pub(crate) fn execute_cli_request<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        environment: RequestEnvironment<'a>,
+        sink: &dyn Fn(RequestValue),
+        release: &dyn Fn(usize),
+        recover: crate::public::options::AnnotationRecovery<'a>,
+    ) -> Result<RequestOutcome, Error> {
+        self.execute_request_sink(request, environment, Some(sink), Some(release), recover)
     }
     pub(super) fn execute_request_sink<'a>(
         &self,
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
         sink: Option<&dyn Fn(RequestValue)>,
+        release: Option<&dyn Fn(usize)>,
+        recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<RequestOutcome, Error> {
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
@@ -158,6 +171,11 @@ impl Engine {
             engine.inner = self.for_model(Some(
                 &crate::core::ModelName::new(model).map_err(Error::refused)?,
             ))?;
+        }
+        if controls.cli_reader.is_some()
+            && let Some(context) = controls.context_text()
+        {
+            crate::public::complete::records::cli_context(&engine.inner, context)?;
         }
         let image_refusal = image_route(&engine, &definition)
             .err()
@@ -196,9 +214,11 @@ impl Engine {
             &definition,
             rows,
             controls,
-            eager && sink.is_none(),
+            eager && (sink.is_none() || request.request.call.function() == Function::Recognize),
             options,
             sink,
+            release,
+            recover,
         )?;
         Ok(if all_filter_results {
             outcome
@@ -472,6 +492,7 @@ pub(super) fn selected_filter(
 
 #[expect(
     clippy::too_many_arguments,
+    clippy::too_many_lines,
     reason = "one typed dispatch preserves all ten existing native scheduler contracts"
 )]
 fn dispatch<'a>(
@@ -483,12 +504,28 @@ fn dispatch<'a>(
     eager: bool,
     options: &RequestOptions,
     sink: Option<&dyn Fn(RequestValue)>,
+    release: Option<&dyn Fn(usize)>,
+    recover: crate::public::options::AnnotationRecovery<'a>,
 ) -> Result<RequestOutcome, Error> {
+    if controls.cli_reader.is_some() {
+        let recognition = match definition {
+            RequestDefinition::Recognize(file) => Some(file.question()),
+            RequestDefinition::Recognition(ask) => Some(ask),
+            _ => None,
+        };
+        if let Some(ask) = recognition {
+            return Ok(complete(
+                engine
+                    .request_recognize_stream(ask, rows, controls, eager, sink)?
+                    .map(RequestValue::Recognized),
+            ));
+        }
+    }
     let outcome = match definition {
         RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager, sink),
         RequestDefinition::Rank(q) => Ok(complete(
             engine
-                .try_rank_records_complete_with(q, rows, controls)?
+                .request_rank_records_complete_with(q, rows, controls, options.top, release)?
                 .map(|mut rows| {
                     if let Some(n) = options.top {
                         rows.truncate(n);
@@ -498,7 +535,7 @@ fn dispatch<'a>(
         )),
         RequestDefinition::RankSet(q) => Ok(complete(
             engine
-                .try_rank_set_records_complete_with(q, rows, controls)?
+                .request_rank_set_records_complete_with(q, rows, controls, options.top, release)?
                 .map(|mut rows| {
                     if let Some(n) = options.top {
                         rows.truncate(n);
@@ -524,7 +561,7 @@ fn dispatch<'a>(
                 ))
             } else {
                 Ok(stream(
-                    engine.try_annotate_records_complete_with(set, rows, controls),
+                    engine.request_annotate_stream(set, rows, controls, recover),
                     RequestValue::Annotations,
                     sink,
                 ))
@@ -584,7 +621,9 @@ pub(super) fn image_descriptors(input: &RequestInput) -> bool {
 }
 pub(super) fn image_route(engine: &Engine, definition: &RequestDefinition) -> Result<(), Error> {
     let configured = match definition {
-        RequestDefinition::Atomic(LoadedQuestion::Question(q)) => engine.asking(q)?,
+        RequestDefinition::Atomic(LoadedQuestion::Question(q)) | RequestDefinition::Rank(q) => {
+            engine.asking(q)?
+        }
         RequestDefinition::Atomic(LoadedQuestion::Banded(q)) => engine.asking(&q.0)?,
         RequestDefinition::DynamicChoose(q) => engine.for_model(q.model.as_ref())?,
         _ => return Err(Error::usage("this function takes text only")),

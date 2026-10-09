@@ -47,15 +47,35 @@ pub(super) fn ranked<T>(
         }
     }
     let selected = core::turns(&lists, None);
+    let rows = held.into_iter().zip(rows).enumerate().collect();
+    let positions = positions.into_iter().enumerate().collect();
+    selected_rows(
+        public, engine, set, questions, setting, rows, selected, positions, captured,
+    )
+}
+#[expect(
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    reason = "one renderer retains actual selection and complete members"
+)]
+pub(super) fn selected_rows<T>(
+    public: &Engine,
+    engine: &facade::Engine,
+    set: &core::QuestionSet,
+    questions: &[Question],
+    setting: core::Setting,
+    mut rows: std::collections::BTreeMap<usize, (Held<T>, Vec<Keyed>)>,
+    selected: Vec<(usize, usize)>,
+    positions: std::collections::BTreeMap<usize, Vec<usize>>,
+    captured: bool,
+) -> Result<Vec<CompleteRecord<T, CompleteSetRank>>, Error> {
     let digest = set.sha256().map_err(|_| super::super::wrong())?;
-    let mut rows: Vec<_> = held.into_iter().zip(rows).map(Some).collect();
     selected
         .into_iter()
         .enumerate()
         .map(|(at, (index, winner))| {
             let (held, rows) = rows
-                .get_mut(index)
-                .and_then(Option::take)
+                .remove(&index)
                 .ok_or_else(|| Error::defect("set rank lost its original"))?;
             let members = members(
                 public,
@@ -66,7 +86,7 @@ pub(super) fn ranked<T>(
                 &held,
                 index,
                 rows,
-                positions.get(index).ok_or_else(super::super::wrong)?,
+                positions.get(&index).ok_or_else(super::super::wrong)?,
                 captured,
             )?;
             let winning = members.get(winner).ok_or_else(super::super::wrong)?;

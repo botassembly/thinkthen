@@ -8,8 +8,8 @@ use std::num::NonZeroUsize;
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Record,
-    Resolved, Setting, Sources, Threshold,
+    Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Resolved,
+    Setting, Sources,
 };
 
 use crate::args::Common;
@@ -18,32 +18,19 @@ use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
-use crate::public::AttemptObservation;
 use crate::schedule::{self, Output};
 
 pub(crate) mod context;
 mod folders;
 mod judged;
+mod native;
+pub(crate) mod native_reader;
 mod plan;
-mod rank_set;
 mod reading;
-mod row;
 
 use context::Context;
 pub(crate) use folders::Folders;
 use reading::read_by;
-
-/// What one row shows beside its answer: the line it arrived as, the keys
-/// of its questions, and its requests' attempts.
-struct RowContext<'a> {
-    record: usize,
-    arrived: Option<&'a [u8]>,
-    requests: Vec<String>,
-    attempts: Vec<AttemptObservation>,
-    position: Option<&'a crate::cli::intake::Position>,
-    images: Option<&'a crate::public::ImageEvidence>,
-    context_sha256: Option<String>,
-}
 
 /// Build the one engine a command calls, from what the command resolved.
 ///
@@ -113,28 +100,6 @@ impl Asks {
             Self::Fixed(Question::Choose { .. }) | Self::FromRecord { .. } => "choose",
         }
     }
-
-    /// Build the question this record is asked.
-    fn of(&self, record: &Record) -> Result<Question, Failure> {
-        match self {
-            Self::Fixed(question) => Ok(question.clone()),
-            Self::Set(_) => Err(Failure::Defect("a set is not one question")),
-            Self::FromRecord { text, pointer } => Ok(Question::Choose {
-                text: text.clone(),
-                options: record.choices(pointer)?,
-            }),
-        }
-    }
-    fn questions(&self, record: &Record) -> Result<Vec<Question>, Failure> {
-        match self {
-            Self::Set(set) => Ok(set
-                .questions()
-                .iter()
-                .map(|member| member.question().clone())
-                .collect()),
-            _ => self.of(record).map(|question| vec![question]),
-        }
-    }
 }
 
 /// The one question every record is asked, which every verb but one has.
@@ -176,12 +141,12 @@ pub(crate) fn run(
         view,
         keeping,
         batch,
+        admitted,
     } = asked;
     common.check_plan_name()?;
     if common.media.as_deref() == Some("image") && !settled.on().is_empty() {
         return Err(Failure::Usage("images cannot accompany saved on pointers"));
     }
-    let threshold = settled.threshold();
     let view = view.checked()?;
     let asked = (!settled.sources().model_is_default()).then(|| settled.model().as_str());
     let per_document = matches!(
@@ -278,13 +243,13 @@ pub(crate) fn run(
     )?;
     output.snapshot(snapshot);
     let configuration = JudgingInput {
+        admitted,
         declarations: settled.metadata().clone(),
         common,
         environment,
         folders,
         backend,
         asks,
-        threshold,
         view,
         keeping,
         streams: reading.streams(),
@@ -308,29 +273,14 @@ pub(crate) fn run(
     judged::run(configuration, &reading, source, batch, output)
 }
 
-/// One question over one engine, asked of every record in turn.
-struct Judging<'a> {
-    declarations: crate::core::declaration::QuestionMetadata,
-    environment: &'a Environment,
-    engine: Engine,
-    asks: Asks,
-    threshold: Option<Threshold>,
-    view: View,
-    keeping: Keeping,
-    streams: bool,
-    documents: bool,
-    text_view: bool,
-    mismatch: Mismatch,
-}
-
 struct JudgingInput<'a> {
+    admitted: Option<crate::AdmittedRequest>,
     declarations: crate::core::declaration::QuestionMetadata,
     common: &'a Common,
     environment: &'a Environment,
     folders: Folders,
     backend: Backend,
     asks: Asks,
-    threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,
     streams: bool,
@@ -343,59 +293,11 @@ struct JudgingInput<'a> {
     context_field: Option<String>,
 }
 
-impl Judging<'_> {
-    fn new(input: JudgingInput<'_>) -> Result<Judging<'_>, Failure> {
-        let JudgingInput {
-            declarations,
-            common,
-            environment,
-            folders,
-            backend,
-            asks,
-            threshold,
-            view,
-            keeping,
-            streams,
-            documents,
-            text_view,
-            sources: _,
-            profile,
-            mismatch,
-            context: _,
-            context_field: _,
-        } = input;
-        Ok(Judging {
-            declarations,
-            environment,
-            engine: engine(common, environment, folders, backend, profile, common.jobs)?,
-            asks,
-            threshold,
-            view,
-            keeping,
-            streams,
-            documents,
-            text_view,
-            mismatch,
-        })
-    }
-}
-
 /// Turn the outcome into the exit code `specification/channels.md` fixes.
 fn exit_code(outcome: Outcome) -> ExitCode {
     match outcome {
         Outcome::Yes => ExitCode::from(0),
         Outcome::No => ExitCode::from(1),
         Outcome::Unresolved => ExitCode::from(3),
-    }
-}
-
-fn encoded(
-    plan: &crate::core::Plan,
-    error: crate::core::adapters::built_in::EncodeError,
-) -> Failure {
-    if plan.images().is_some() {
-        Failure::Image(error.to_string())
-    } else {
-        Failure::Defect("a request could not be written as JSON")
     }
 }

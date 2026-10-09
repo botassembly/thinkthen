@@ -11,9 +11,66 @@ use crate::{Error, LoadedQuestion, Question, QuestionKind};
 pub struct AdmittedRequest {
     pub(super) request: Request,
     pub(super) definition: Option<RequestDefinition>,
+    #[cfg(feature = "cli")]
+    pub(super) cli_atomic: Option<super::cli_atomic::Prepared>,
     pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
+    #[cfg(feature = "cli")]
+    pub(crate) fn retain_cli_atomic(
+        mut self,
+        prepared: Option<super::cli_atomic::Prepared>,
+    ) -> Self {
+        self.cli_atomic = prepared;
+        self
+    }
+    #[cfg(feature = "cli")]
+    pub(crate) fn resolve_cli_atomic(
+        &mut self,
+        verb: crate::core::Verb,
+        typed: &crate::core::Typed,
+    ) -> Result<super::cli_atomic::Prepared, Error> {
+        if let Some(prepared) = &self.cli_atomic {
+            return Ok(prepared.clone());
+        }
+        let text = selector_text(&self.request.call.arguments().question)?;
+        let prepared = super::cli_atomic::saved(verb, &text, typed)?;
+        let definition = super::cli_atomic::definition(&prepared)?;
+        let definition = admit_definition(self.request.call.function(), definition)?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
+        self.definition = Some(definition);
+        self.cli_atomic = Some(prepared.clone());
+        Ok(prepared)
+    }
+    #[cfg(feature = "cli")]
+    pub(crate) fn resolve_cli_rank(
+        &mut self,
+        typed: &crate::core::Typed,
+    ) -> Result<super::cli_atomic::Prepared, Error> {
+        if let Some(prepared) = &self.cli_atomic {
+            return Ok(prepared.clone());
+        }
+        let text = selector_text(&self.request.call.arguments().question)?;
+        let prepared = super::cli_atomic::rank(&text, true, typed)?;
+        let definition = admit_definition(
+            self.request.call.function(),
+            super::cli_atomic::definition(&prepared)?,
+        )?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
+        self.definition = Some(definition);
+        self.cli_atomic = Some(prepared.clone());
+        Ok(prepared)
+    }
+    #[cfg(feature = "cli")]
+    pub(crate) fn retain_cli_definition(
+        mut self,
+        definition: RequestDefinition,
+    ) -> Result<Self, Error> {
+        let definition = admit_definition(self.request.call.function(), definition)?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
+        self.definition = Some(definition);
+        Ok(self)
+    }
     pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
         let args = self.request.call.arguments_mut();
         args.input = RequestInput::Feed {
@@ -23,11 +80,28 @@ impl AdmittedRequest {
             images: Vec::new(),
         };
         args.options.field = None;
+        args.options.context_field = None;
+        args.options.options_field = None;
+        args.options.examples_field = None;
+        args.options.seed_spans_field = None;
         self
+    }
+
+    #[cfg(feature = "cli")]
+    pub(crate) fn cli_definition(&mut self) -> Result<&mut RequestDefinition, Error> {
+        if self.definition.is_none() {
+            self.resolve_once()?;
+        }
+        self.definition
+            .as_mut()
+            .ok_or_else(|| Error::defect("admitted question lost its definition"))
     }
 
     pub(crate) fn resolve_once(&mut self) -> Result<RequestDefinition, Error> {
         let definition = self.resolve_question_for(Some(self.request.call.function()))?;
+        if self.definition.is_none() {
+            self.admit_inline(&definition)?;
+        }
         self.definition = Some(definition.clone());
         Ok(definition)
     }
@@ -47,29 +121,14 @@ impl AdmittedRequest {
         if let Some(q) = &self.definition {
             return Ok(q.clone());
         }
-        let question = &self.request.call.arguments().question;
-        let text = match question {
-            RequestQuestion::File { path } => question_text(path, true)?,
-            RequestQuestion::Name { name } => crate::public::named_question::named_text(name)?,
-            RequestQuestion::Reference { reference } => {
-                match crate::public::named_question::Reference::resolve(reference)? {
-                    crate::public::named_question::Reference::Name(name) => {
-                        crate::public::named_question::named_text(&name)?
-                    }
-                    crate::public::named_question::Reference::Path(path) => {
-                        question_text(&path, false)?
-                    }
-                }
-            }
-            _ => {
-                return Err(Error::defect(
-                    "admitted inline question lost its definition",
-                ));
-            }
-        };
+        let text = selector_text(&self.request.call.arguments().question)?;
         // A retained host call already names its function. Use the native saved
-        // find parser directly so its typed file cause survives resolution.
-        let value = if expected == Some(Function::Find) {
+        // function parser directly so its typed file cause survives resolution.
+        let value = if expected == Some(Function::Recognize) {
+            crate::RecognizeQuestionFile::from_json(&text).map(RequestDefinition::Recognize)
+        } else if expected == Some(Function::Relate) {
+            crate::Relate::from_records_json(&text).map(RequestDefinition::Relate)
+        } else if expected == Some(Function::Find) {
             crate::FindQuestionFile::from_json(&text).map(RequestDefinition::Find)
         } else {
             RequestDefinition::from_authored_json(&text)
@@ -80,6 +139,23 @@ impl AdmittedRequest {
         admit_definition_controls(&value, &self.request.call.arguments().options)
             .map_err(|e| e.into_local())?;
         Ok(value)
+    }
+}
+fn selector_text(question: &RequestQuestion) -> Result<String, Error> {
+    match question {
+        RequestQuestion::File { path } => question_text(path, true),
+        RequestQuestion::Name { name } => crate::public::named_question::named_text(name),
+        RequestQuestion::Reference { reference } => {
+            match crate::public::named_question::Reference::resolve(reference)? {
+                crate::public::named_question::Reference::Name(name) => {
+                    crate::public::named_question::named_text(&name)
+                }
+                crate::public::named_question::Reference::Path(path) => question_text(&path, false),
+            }
+        }
+        _ => Err(Error::defect(
+            "admitted inline question lost its definition",
+        )),
     }
 }
 pub(super) fn admit(
@@ -125,6 +201,8 @@ fn admit_header(
         request,
         definition,
         attachment_limit,
+        #[cfg(feature = "cli")]
+        cli_atomic: None,
     };
     if let Some(definition) = &admitted.definition {
         admit_definition_controls(definition, &admitted.request.call.arguments().options)?;

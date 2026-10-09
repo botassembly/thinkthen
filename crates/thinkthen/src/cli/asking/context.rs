@@ -36,10 +36,6 @@ pub(crate) fn shared(path: Option<&Path>) -> Result<Option<String>, Failure> {
     .transpose()
 }
 
-pub(crate) fn digest(context: Option<&str>) -> Option<String> {
-    context.map(|text| crate::core::bytes_sha256(text.as_bytes()))
-}
-
 pub(crate) fn record(
     record: &crate::core::Record,
     pointer: Option<&str>,

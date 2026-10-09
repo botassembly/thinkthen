@@ -4,46 +4,18 @@
 //! rule that settles which value wins lives in `thinkthen-core`, so a library
 //! over that crate reaches the question a shell user reaches.
 
-use std::path::Path;
-
-use crate::core::{Cutting, Description, Json, QuestionFile, Resolved, Typed, Verb, resolve};
+use crate::core::{Cutting, Description, Json, Resolved, Typed, Verb};
 
 use crate::args::{
     ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, ScoreArguments,
     TagArguments,
 };
-use crate::cli::question_text;
 use crate::failure::Failure;
-
-/// The path the first argument names, when it is `@` and a path.
-fn path_of(question: &str) -> Option<&str> {
-    question.strip_prefix('@')
-}
-
-/// A question file, if the first argument names one, and an eligible file's raw `batch`.
-/// Clippy's type-complexity rule asks for the name.
-type Top = (Option<QuestionFile>, Option<Json>);
 
 /// The raw file batch tier and whether that file carries a tuned threshold.
 pub(crate) struct FileTier {
     pub(crate) batch: Option<Json>,
     pub(crate) tuned: bool,
-}
-
-/// Read and check the question file the first argument names, if it names
-/// one, with a `decide` file's raw `batch`.
-fn read_top(question: &str) -> Result<Top, Failure> {
-    let Some(path) = path_of(question) else {
-        return Ok((None, None));
-    };
-    let text = question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
-    let (file, batch) = QuestionFile::parse_top(&text)?;
-    Ok((Some(file), batch))
-}
-
-/// The question text the command line carries, or `None` when a file holds it.
-const fn typed_text(question: &str, from_file: bool) -> Option<&str> {
-    if from_file { None } else { Some(question) }
 }
 
 /// The pointers `--field` named, or `None` when it named none.
@@ -57,15 +29,14 @@ fn fields(common: &Common) -> Option<Vec<String>> {
 /// question file. They differ in the rule each one can act on, which
 /// [`Cutting`] carries, and in what each one prints.
 fn yes_no(
-    caller: &'static str,
+    operation: (&'static str, Cutting),
     question: &str,
     meanings: &Meanings,
     threshold: Option<&String>,
-    cutting: Cutting,
     common: &Common,
+    admitted: Option<&mut crate::AdmittedRequest>,
 ) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(question)?;
-    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
+    let (caller, cutting) = operation;
     let typed = Typed {
         threshold: threshold.cloned(),
         yes: meanings.yes.clone(),
@@ -75,45 +46,46 @@ fn yes_no(
         cutting,
         ..Typed::default()
     };
-    resolve(
-        Verb::Decide,
-        typed_text(question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )
-    .map_err(|error| match error {
-        crate::core::QuestionFileError::VerbMismatch { held, .. } if caller != "decide" => {
+    atomic(Verb::Decide, question, &typed, admitted).map_err(|error| match error {
+        Failure::Question(crate::core::QuestionFileError::VerbMismatch { held, .. })
+            if caller != "decide" =>
+        {
             Failure::QuestionKind {
                 command: caller,
                 held: held.word(),
             }
         }
-        other => Failure::Question(other),
+        other => other,
     })
-    .map(|resolved| (resolved, FileTier { batch, tuned }))
 }
 
 /// Settle everything `decide` was asked.
-pub(crate) fn decide(arguments: &DecideArguments) -> Result<(Resolved, FileTier), Failure> {
+pub(crate) fn decide(
+    arguments: &DecideArguments,
+    admitted: Option<&mut crate::AdmittedRequest>,
+) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
-        "decide",
+        ("decide", Cutting::AsTheVerbAllows),
         &arguments.question,
         &arguments.meanings,
         arguments.threshold.as_ref(),
-        Cutting::AsTheVerbAllows,
         &arguments.common,
+        admitted,
     )
 }
 
 /// Settle everything `filter` was asked, which takes a single cut alone.
-pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, FileTier), Failure> {
+pub(crate) fn filter(
+    arguments: &FilterArguments,
+    admitted: Option<&mut crate::AdmittedRequest>,
+) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
-        "filter",
+        ("filter", Cutting::OneCut),
         &arguments.question,
         &arguments.meanings,
         arguments.threshold.as_ref(),
-        Cutting::OneCut,
         &arguments.common,
+        admitted,
     )
 }
 
@@ -121,9 +93,10 @@ mod rank;
 pub(crate) use rank::rank;
 
 /// Settle everything `choose` was asked.
-pub(crate) fn choose(arguments: &ChooseArguments) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(&arguments.question)?;
-    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
+pub(crate) fn choose(
+    arguments: &ChooseArguments,
+    admitted: Option<&mut crate::AdmittedRequest>,
+) -> Result<(Resolved, FileTier), Failure> {
     let listed = !arguments.options.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -159,19 +132,14 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<(Resolved, FileTier)
         options_from_record: arguments.options_pointer.is_some(),
         ..Typed::default()
     };
-    let settled = resolve(
-        Verb::Choose,
-        typed_text(&arguments.question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )?;
-    Ok((settled, FileTier { batch, tuned }))
+    atomic(Verb::Choose, &arguments.question, &typed, admitted)
 }
 
 /// Settle everything `tag` was asked.
-pub(crate) fn tag(arguments: &TagArguments) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(&arguments.question)?;
-    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
+pub(crate) fn tag(
+    arguments: &TagArguments,
+    admitted: Option<&mut crate::AdmittedRequest>,
+) -> Result<(Resolved, FileTier), Failure> {
     let listed = !arguments.labels.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -204,18 +172,14 @@ pub(crate) fn tag(arguments: &TagArguments) -> Result<(Resolved, FileTier), Fail
         on: fields(&arguments.common),
         ..Typed::default()
     };
-    let settled = resolve(
-        Verb::Tag,
-        typed_text(&arguments.question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )?;
-    Ok((settled, FileTier { batch, tuned }))
+    atomic(Verb::Tag, &arguments.question, &typed, admitted)
 }
 
 /// Settle everything `score` was asked.
-pub(crate) fn score(arguments: &ScoreArguments) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(&arguments.question)?;
+pub(crate) fn score(
+    arguments: &ScoreArguments,
+    admitted: Option<&mut crate::AdmittedRequest>,
+) -> Result<(Resolved, FileTier), Failure> {
     let typed = Typed {
         // `score` takes no rule, and the core writes that refusal, so the
         // value reaches it rather than being refused twice.
@@ -231,17 +195,26 @@ pub(crate) fn score(arguments: &ScoreArguments) -> Result<(Resolved, FileTier), 
         on: fields(&arguments.common),
         ..Typed::default()
     };
-    let settled = resolve(
-        Verb::Score,
-        typed_text(&arguments.question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )?;
+    atomic(Verb::Score, &arguments.question, &typed, admitted)
+}
+
+fn atomic(
+    verb: Verb,
+    question: &str,
+    typed: &Typed,
+    admitted: Option<&mut crate::AdmittedRequest>,
+) -> Result<(Resolved, FileTier), Failure> {
+    let prepared = if let Some(admitted) = admitted {
+        admitted.resolve_cli_atomic(verb, typed)
+    } else {
+        crate::cli_atomic::inline(verb, question, typed)
+    }
+    .map_err(Failure::from)?;
     Ok((
-        settled,
+        prepared.resolved,
         FileTier {
-            batch,
-            tuned: false,
+            batch: prepared.batch,
+            tuned: prepared.tuned,
         },
     ))
 }
@@ -263,21 +236,8 @@ fn split_label(entry: &str) -> Result<(String, Option<String>), Failure> {
 
 #[cfg(test)]
 mod tests {
-    use super::{path_of, split, typed_text};
+    use super::split;
     use crate::failure::Failure;
-
-    #[test]
-    fn a_question_that_begins_with_an_at_sign_names_a_file_and_nothing_else_does() {
-        assert_eq!(path_of("@refund.json"), Some("refund.json"));
-        assert_eq!(path_of("@"), Some(""));
-        assert_eq!(path_of("Does this ask for a refund?"), None);
-        assert_eq!(path_of("user@example.test asks for a refund"), None);
-        assert_eq!(typed_text("@refund.json", true), None);
-        assert_eq!(
-            typed_text("asks for a refund", false),
-            Some("asks for a refund")
-        );
-    }
 
     #[test]
     fn an_option_splits_at_its_first_equals_sign_and_needs_one() {

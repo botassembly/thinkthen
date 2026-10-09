@@ -403,7 +403,7 @@ pub(super) fn validate_context(engine: &facade::Engine, asks: &[Ask]) -> Result<
     for ask in asks {
         packer
             .check_state(&ask.state)
-            .map_err(crate::public::asking::packed)?;
+            .map_err(|error| context_failure(engine, error))?;
     }
     let entries = asks
         .iter()
@@ -416,6 +416,58 @@ pub(super) fn validate_context(engine: &facade::Engine, asks: &[Ask]) -> Result<
         .collect();
     packer
         .add(entries, &mut closed)
-        .map_err(crate::public::asking::packed)?;
+        .map_err(|error| context_failure(engine, error))?;
     Ok(())
+}
+
+/// Retain the actual native context refusal for the CLI formatter.
+pub(in crate::public) fn context_failure(
+    engine: &facade::Engine,
+    error: core::pack::PackError,
+) -> Error {
+    let mut error = crate::public::asking::packed(error);
+    match error.take_diagnostic() {
+        Some(super::super::error::diagnostic::Diagnostic::Context {
+            initial,
+            kind,
+            limit,
+            actual,
+            ..
+        }) => {
+            let profile = engine
+                .profile()
+                .filter(|held| match kind {
+                    core::LimitKind::EvidenceBytes => held.max_evidence_bytes == Some(limit),
+                    core::LimitKind::RequestBytes => held.max_request_bytes == Some(limit),
+                    core::LimitKind::Questions => held.max_questions == Some(limit),
+                    core::LimitKind::Options => false,
+                })
+                .map(|held| held.name().clone());
+            error = error.with_diagnostic(super::super::error::diagnostic::Diagnostic::Context {
+                initial,
+                kind,
+                limit,
+                actual,
+                profile,
+            });
+        }
+        Some(diagnostic) => error = error.with_diagnostic(diagnostic),
+        None => {}
+    }
+    error
+}
+pub(in crate::public) fn cli_context(engine: &facade::Engine, context: &str) -> Result<(), Error> {
+    let evidence = crate::public::engine::evidence(context)?;
+    let state = core::pack::state(&evidence)
+        .map_err(|_| super::wrong())?
+        .with_api(engine.backend().api_type());
+    let model =
+        core::pack::model_json(engine.backend().model().as_str()).map_err(|_| super::wrong())?;
+    let packer = core::pack::Packer::<()>::new(
+        engine.pack_limits(pull::packing(core::Setting::Max, true, false)),
+        model,
+    );
+    packer
+        .check_state(&state)
+        .map_err(|error| context_failure(engine, error))
 }

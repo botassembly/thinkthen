@@ -24,13 +24,36 @@ struct Held<T> {
     context: Option<core::Evidence>,
 }
 struct Annotations {
+    recover_missing: bool,
+    cli_groups: bool,
     engine: Arc<facade::Engine>,
     set: core::QuestionSet,
+}
+impl Annotations {
+    fn asks_with_groups(
+        &self,
+        input: &Prepared,
+        group_done: impl FnMut(usize, usize),
+    ) -> Result<Vec<Ask>, Error> {
+        let asks = Annotating::new(&self.engine, self.set.clone())
+            .with_typed_context(input.context.as_ref())
+            .asks_with_groups(&input.text, group_done)?;
+        if input.context.is_some() {
+            super::records::validate_context(&self.engine, &asks)?;
+        }
+        Ok(asks)
+    }
 }
 impl Asker for Annotations {
     type Input = Prepared;
     type Row = facade::Annotation;
     type Error = Error;
+    fn recovers(&self, error: &Error) -> bool {
+        self.recover_missing && error.missed_pointer().is_some()
+    }
+    fn refuses_batch(&self, error: &Error) -> bool {
+        !self.cli_groups || error.missed_pointer().is_none()
+    }
     fn validates_batches(&self) -> bool {
         self.set.questions().iter().any(|member| {
             member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
@@ -40,20 +63,17 @@ impl Asker for Annotations {
         input.text.at
     }
     fn asks(&self, input: &Prepared) -> Result<Vec<Ask>, Error> {
-        let asks = Annotating::new(&self.engine, self.set.clone())
-            .with_typed_context(input.context.as_ref())
-            .asks(&input.text)?;
-        if input.context.is_some() {
-            super::records::validate_context(&self.engine, &asks)?;
-        }
-        Ok(asks)
+        self.asks_with_groups(input, |_, _| {})
     }
+
     fn row(
         &self,
         input: Prepared,
         answers: Vec<pipeline::Answered>,
     ) -> Result<facade::Annotation, Error> {
-        Annotating::new(&self.engine, self.set.clone()).row(input.text, answers)
+        Annotating::new(&self.engine, self.set.clone())
+            .require_usable_groups(self.cli_groups)
+            .row(input.text, answers)
     }
 }
 impl Engine {
@@ -84,6 +104,8 @@ impl Engine {
         )?;
         let engine = Arc::clone(&self.inner);
         let asker = Annotations {
+            recover_missing: false,
+            cli_groups: false,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -180,10 +202,14 @@ fn prepare<T: InputEvidence>(
 fn failed(row: pipeline::Failed<Error>) -> Error {
     match row {
         pipeline::Failed::Asker(error) => error,
-        pipeline::Failed::Pack { error, .. } => crate::public::asking::packed(error),
-        pipeline::Failed::Engine { error, .. } | pipeline::Failed::Stopped(error) => {
-            Error::from(error)
-        }
+        pipeline::Failed::Pack { error, at } => crate::public::asking::packed(error).at_record(at),
+        pipeline::Failed::Engine { error, first, last } => Error::from(error.clone())
+            .with_diagnostic(crate::public::error::diagnostic::Diagnostic::EngineRange {
+                cause: error,
+                first,
+                last,
+            }),
+        pipeline::Failed::Stopped(error) => Error::from(error),
     }
 }
 
@@ -296,4 +322,49 @@ fn prepare_record<T: InputEvidence>(
             context,
         },
     ))
+}
+
+pub(super) fn preview_asks(
+    engine: &Arc<facade::Engine>,
+    set: &QuestionSet,
+    record: RecordInput<crate::QuestionInput>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
+    let (_, input) = prepare_record(&set.0, record, fallback, at)?;
+    let dropped = set.0.questions().iter().any(|q| {
+        crate::core::adapters::built_in::drops_detail_of(
+            engine.backend().descriptions(),
+            q.question(),
+        )
+    });
+    let asks = Annotations {
+        engine: Arc::clone(engine),
+        set: set.0.clone(),
+        recover_missing: false,
+        cli_groups: false,
+    }
+    .asks(&input)?;
+    Ok((asks, dropped))
+}
+
+pub(in crate::public) fn preview_grouped_asks(
+    engine: &Arc<facade::Engine>,
+    set: &QuestionSet,
+    record: RecordInput<crate::QuestionInput>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<Vec<(crate::core::pack::Ask, usize)>, Error> {
+    let (_, input) = prepare_record(&set.0, record, fallback, at)?;
+    let mut groups = Vec::new();
+    let asks = Annotations {
+        engine: Arc::clone(engine),
+        set: set.0.clone(),
+        recover_missing: false,
+        cli_groups: false,
+    }
+    .asks_with_groups(&input, |group, count| {
+        groups.extend(std::iter::repeat_n(group, count))
+    })?;
+    Ok(asks.into_iter().zip(groups).collect())
 }

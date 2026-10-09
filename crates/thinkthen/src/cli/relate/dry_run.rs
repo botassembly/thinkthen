@@ -3,11 +3,8 @@ use std::io::Write;
 use serde::Serialize;
 
 use super::config::From;
-use crate::core::{
-    Backend, BackendProfile, Framing, PlanSummary, RelateFields, RelateSpec, json_line,
-};
+use crate::core::{Backend, BackendProfile, Framing, RelateFields, RelateSpec, json_line};
 use crate::edge;
-use crate::engine::facade::PreparedRelations;
 use crate::failure::Failure;
 
 #[derive(Serialize)]
@@ -55,7 +52,6 @@ pub(super) struct Context<'a> {
     pub(super) framing: Framing,
     pub(super) spec: &'a RelateSpec,
     pub(super) from: Option<From>,
-    pub(super) entity_count: usize,
     pub(super) key_env: &'a str,
     pub(super) shared_context: Option<&'a str>,
 }
@@ -63,29 +59,27 @@ pub(super) struct Context<'a> {
 pub(super) fn write(
     writer: &mut dyn Write,
     context: Context<'_>,
-    prepared: &PreparedRelations,
+    admitted: crate::AdmittedRequest,
+    (originals, sources): (&[crate::core::Record], Option<&super::source::Sources>),
 ) -> Result<(), Failure> {
-    let asks = match context.shared_context {
-        Some(shared) => prepared
-            .asks
-            .clone()
-            .with_context(context.backend, shared)?,
-        None => prepared.asks.clone(),
-    };
-    let prepared_requests = asks.requests(
-        context.backend,
-        context.profile,
-        crate::engine::facade::Bound::pairs(context.profile),
-    )?;
-    let mut summary = PlanSummary::new(true).with_accounting(context.backend.accounting());
-    summary
-        .records_added(context.entity_count)
-        .map_err(|_| Failure::Defect("a plan is too large"))?;
-    for request in &prepared_requests {
-        summary
-            .request(&request.body)
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
+    let request = admitted.with_composed_feed("cli-relate-plan");
+    let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
+    if let Some(shared) = context.shared_context {
+        controls = controls.context(shared);
     }
+    let rows = super::records(originals, sources)?;
+    let preview = request
+        .plan_relations(
+            context.backend,
+            context.profile,
+            crate::RequestEnvironment {
+                controls,
+                feed: Some(crate::RequestFeed::from_records("cli-relate-plan", rows)),
+            },
+        )
+        .map_err(Failure::from)?;
+    let prepared = &preview.prepared;
+    let prepared_requests = &preview.requests;
     let relations = prepared
         .rules
         .iter()
@@ -101,24 +95,11 @@ pub(super) fn write(
                 method: if rule.single { "choice" } else { "yes_no" },
                 fallback: None,
                 logical_questions: *questions,
-                request_count: if context.shared_context.is_none() {
-                    prepared
-                        .requests_per_rule
-                        .get(at)
-                        .copied()
-                        .ok_or(Failure::Defect("a relation has no request count"))?
-                } else {
-                    let belongs = |place: &usize| {
-                        prepared
-                            .asked
-                            .get(*place)
-                            .is_some_and(|asked| asked.rule() == at)
-                    };
-                    prepared_requests
-                        .iter()
-                        .filter(|request| request.places.iter().any(&belongs))
-                        .count()
-                },
+                request_count: preview
+                    .requests_per_rule
+                    .get(at)
+                    .copied()
+                    .ok_or(Failure::Defect("a relation has no request count"))?,
             })
         })
         .collect::<Result<Vec<_>, Failure>>()?;
@@ -142,14 +123,15 @@ pub(super) fn write(
         framing: context.framing,
         fields: (context.framing != Framing::Lines).then_some(context.spec.fields()),
         from: context.from,
-        entity_count: context.entity_count,
+        entity_count: preview.entities,
         logical_questions: relations.iter().map(|item| item.logical_questions).sum(),
         relations,
         request_count: requests.len(),
         requests,
     };
     edge::write_line(&mut *writer, &json_line(&report)?)?;
-    let counts = summary
+    let counts = preview
+        .summary
         .counts()
         .map_err(|_| Failure::Defect("a plan is too large"))?;
     edge::write_line(writer, &json_line(&counts)?)?;

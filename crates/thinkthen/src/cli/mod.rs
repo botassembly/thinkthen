@@ -244,6 +244,10 @@ fn report_early(
     ExitCode::from(code)
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one dispatch gives every input verb its admitted request"
+)]
 fn run(
     cli: &Cli,
     environment: &Environment,
@@ -270,12 +274,48 @@ fn run(
     let input = io::stdin();
     match &cli.command {
         Some(Command::Mcp(_)) => Err(Failure::Defect("MCP command bypassed startup")),
-        Some(Command::Decide(arguments)) => judge::decide(arguments, environment, input, writer),
-        Some(Command::Choose(arguments)) => judge::choose(arguments, environment, input, writer),
-        Some(Command::Tag(arguments)) => judge::tag(arguments, environment, input, writer),
-        Some(Command::Score(arguments)) => judge::score(arguments, environment, input, writer),
-        Some(Command::Filter(arguments)) => judge::filter(arguments, environment, input, writer),
-        Some(Command::Rank(arguments)) => judge::rank(arguments, environment, input, writer),
+        Some(Command::Decide(arguments)) => judge::decide(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?,
+            input,
+            writer,
+        ),
+        Some(Command::Choose(arguments)) => judge::choose(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?,
+            input,
+            writer,
+        ),
+        Some(Command::Tag(arguments)) => judge::tag(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?,
+            input,
+            writer,
+        ),
+        Some(Command::Score(arguments)) => judge::score(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?,
+            input,
+            writer,
+        ),
+        Some(Command::Filter(arguments)) => judge::filter(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("atomic call has no admitted request"))?,
+            input,
+            writer,
+        ),
+        Some(Command::Rank(arguments)) => judge::rank(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("rank has no admitted request"))?,
+            input,
+            writer,
+        ),
         Some(Command::Find(arguments)) => find::run(
             arguments,
             environment,
@@ -283,11 +323,27 @@ fn run(
             input,
             writer,
         ),
-        Some(Command::Annotate(arguments)) => annotate::run(arguments, environment, input, writer),
-        Some(Command::Recognize(arguments)) => {
-            recognize::run(arguments, environment, input, writer)
-        }
-        Some(Command::Relate(arguments)) => relate::run(arguments, environment, input, writer),
+        Some(Command::Annotate(arguments)) => annotate::run(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("annotate has no admitted request"))?,
+            input,
+            writer,
+        ),
+        Some(Command::Recognize(arguments)) => recognize::run(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("recognize has no admitted request"))?,
+            input,
+            writer,
+        ),
+        Some(Command::Relate(arguments)) => relate::run(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("relate has no admitted request"))?,
+            input,
+            writer,
+        ),
         Some(Command::Cache(arguments)) => match &arguments.command {
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
             args::CacheCommand::Unused(arguments) => cache::unused(arguments, writer),

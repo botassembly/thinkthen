@@ -74,15 +74,43 @@ fn dispatch(arguments: &[String], input: Vec<u8>) -> (Result<ExitCode, Failure>,
     let environment = Environment::default();
     let input = Cursor::new(input);
     let mut output = Vec::new();
+    let admitted = match crate::cli::request::admit(cli.command.as_ref().expect("command")) {
+        Ok(admitted) => admitted,
+        Err(error) => return (Err(error), output),
+    };
     let result = match &cli.command {
-        Some(Command::Decide(held)) => crate::judge::decide(held, &environment, input, &mut output),
-        Some(Command::Rank(held)) => crate::judge::rank(held, &environment, input, &mut output),
-        Some(Command::Recognize(held)) => {
-            crate::cli::recognize::run(held, &environment, input, &mut output)
-        }
-        Some(Command::Relate(held)) => {
-            crate::cli::relate::run(held, &environment, input, &mut output)
-        }
+        Some(Command::Decide(held)) => crate::judge::decide(
+            held,
+            &environment,
+            admitted.expect("decide request"),
+            input,
+            &mut output,
+        ),
+        Some(Command::Rank(held)) => crate::judge::rank(
+            held,
+            &environment,
+            admitted.expect("rank request"),
+            input,
+            &mut output,
+        ),
+        Some(Command::Recognize(held)) => crate::cli::recognize::run(
+            held,
+            &environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("recognize request"),
+            input,
+            &mut output,
+        ),
+        Some(Command::Relate(held)) => crate::cli::relate::run(
+            held,
+            &environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("relate request"),
+            input,
+            &mut output,
+        ),
         _ => panic!("no command runner arm for {arguments:?}"),
     };
     (result, output)

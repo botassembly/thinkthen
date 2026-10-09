@@ -5,9 +5,9 @@ mod find;
 mod many;
 mod rank;
 mod rank_set;
-mod recognize;
-mod records;
-mod relate;
+pub(crate) mod recognize;
+pub(in crate::public) mod records;
+pub(crate) mod relate;
 mod streaming;
 use crate::core::{self, Value};
 use crate::public::engine::only;
@@ -29,12 +29,17 @@ pub(in crate::public) fn preview_asks(
     record: crate::RecordInput<QuestionInput>,
     fallback: Option<&str>,
     at: usize,
-) -> Result<Vec<crate::core::pack::Ask>, Error> {
+) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
     use crate::engine::pipeline::Asker as _;
-    let (_, input) = records::prepare_record(function, question, record, fallback, at)?;
-    records::Records(std::sync::Arc::clone(engine), false)
+    let (held, input) = records::prepare_record(function, question, record, fallback, at)?;
+    let dropped = crate::core::adapters::built_in::drops_detail_of(
+        engine.backend().descriptions(),
+        &held.question.core,
+    );
+    let asks = records::Records(std::sync::Arc::clone(engine), false)
         .asks(&input)
-        .map_err(records::pipeline_failure)
+        .map_err(records::pipeline_failure)?;
+    Ok((asks, dropped))
 }
 
 impl Engine {
@@ -211,6 +216,17 @@ fn batch_run<'a>(
     profile: Option<&'a core::BackendProfile>,
     setting: core::Setting,
 ) -> Run<'a> {
+    let text = match &question.core {
+        core::Question::Decide { text, .. }
+        | core::Question::Choose { text, .. }
+        | core::Question::Tag { text, .. }
+        | core::Question::Score { text, .. } => text,
+    };
+    let setting = if text.as_json().as_str().is_some() {
+        setting
+    } else {
+        core::Setting::Records(std::num::NonZeroUsize::MIN)
+    };
     let mut result = run(engine, question, profile);
     result.batch_setting = Some(setting.into());
     result.batch_warning = super::results::batch_warning(question, setting);
@@ -315,3 +331,44 @@ fn ancillary_images(input: &QuestionInput) -> Option<Vec<core::image::Image>> {
         _ => None,
     }
 }
+
+pub(in crate::public) fn preview_definition_asks(
+    engine: &std::sync::Arc<crate::engine::facade::Engine>,
+    function: InputFunction,
+    definition: &crate::RequestDefinition,
+    record: crate::RecordInput<crate::QuestionInput>,
+    options: &CallOptions<'_>,
+    at: usize,
+) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
+    use crate::{LoadedQuestion, RequestDefinition as Definition};
+    match definition {
+        Definition::Atomic(LoadedQuestion::Question(question)) | Definition::Rank(question) => {
+            preview_asks(
+                engine,
+                function,
+                question,
+                record,
+                options.context_text(),
+                at,
+            )
+        }
+        Definition::Atomic(LoadedQuestion::Banded(question)) => preview_asks(
+            engine,
+            function,
+            &question.0,
+            record,
+            options.context_text(),
+            at,
+        ),
+        Definition::RankSet(set) => rank_set::preview_asks(engine, set, record, options, at),
+        Definition::DynamicChoose(question) => {
+            dynamic_choose::preview_asks(engine, question, record, options.context_text(), at)
+        }
+        Definition::Annotate(set) => {
+            annotate::preview_asks(engine, set, record, options.context_text(), at)
+        }
+        _ => Err(Error::usage("plan requires a record question")),
+    }
+}
+
+pub(in crate::public) use annotate::preview_grouped_asks as annotation_preview_asks;

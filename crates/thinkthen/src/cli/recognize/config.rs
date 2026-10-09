@@ -1,29 +1,34 @@
 //! Recognition command and question-file precedence.
 
-use std::path::Path;
-
 use crate::args::RecognizeArguments;
-use crate::cli::question_text;
 use crate::core::{
     Description, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule, rule_side,
 };
 use crate::failure::Failure;
 use crate::failure::recognize::Error;
 
-pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Failure> {
+pub(super) fn settle(
+    arguments: &RecognizeArguments,
+    admitted: Option<&mut crate::AdmittedRequest>,
+) -> Result<RecognizeSpec, Failure> {
     let file = arguments
         .kinds
         .first()
         .and_then(|kind| kind.strip_prefix('@'));
-    let mut spec = if let Some(path) = file {
-        if arguments.kinds.len() != 1
+    if file.is_some()
+        && (arguments.kinds.len() != 1
             || !arguments.described.is_empty()
-            || !arguments.relations.is_empty()
-        {
-            return Err(error(true, RecognizeConfigError::Shape));
+            || !arguments.relations.is_empty())
+    {
+        return Err(error(true, RecognizeConfigError::Shape));
+    }
+    let prepared = admitted.is_some();
+    let mut spec = if let Some(admitted) = admitted {
+        match admitted.resolve_once().map_err(Failure::from)? {
+            crate::RequestDefinition::Recognition(ask) => ask.0,
+            crate::RequestDefinition::Recognize(file) => file.into_parts().0.0,
+            _ => return Err(Failure::Defect("recognize lost its definition")),
         }
-        let text = question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
-        RecognizeSpec::parse(&text).map_err(|why| error(true, why))?
     } else {
         let kinds = command_kinds(arguments)?;
         let relations = arguments
@@ -39,20 +44,8 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
         )
         .map_err(|why| error(false, why))?
     };
-    if file.is_some() {
-        if let Some(threshold) = arguments.threshold.as_deref() {
-            spec.threshold = threshold
-                .parse()
-                .map_err(|_| error(false, RecognizeConfigError::Threshold))?;
-        }
-        if let Some(threshold) = arguments.relation_threshold.as_deref() {
-            spec.relation_threshold = threshold
-                .parse()
-                .map_err(|_| error(false, RecognizeConfigError::Threshold))?;
-        }
-        if !spec.threshold.is_cut() || !spec.relation_threshold.is_cut() {
-            return Err(error(false, RecognizeConfigError::Threshold));
-        }
+    if prepared && file.is_none() {
+        return Ok(spec);
     }
     let wording = |value: &str| {
         crate::core::QuestionText::new(value).map_err(|_| error(false, RecognizeConfigError::Shape))
@@ -60,24 +53,25 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
     if let Some(value) = &arguments.instructions {
         spec.instructions = Some(wording(value)?);
     }
-    if let Some(value) = arguments.snippet_pieces {
-        spec.snippet_pieces = value;
-    }
     if let Some(value) = &arguments.entity_definition {
         spec.entity_definition = Some(wording(value)?);
     }
-    spec.stage_context.overlay(&crate::RecognitionStageContext {
-        boundary: arguments.boundary_context.clone(),
-        kind_edge: arguments.kind_edge_context.clone(),
-        relation: arguments.relation_context.clone(),
-    });
-    if let Some(mode) = &arguments.mode {
-        spec.mode = crate::RecognitionMode::parse(mode)
-            .ok_or(Failure::Usage(crate::RecognitionMode::USAGE))?;
+    if !prepared {
+        if let Some(value) = arguments.snippet_pieces {
+            spec.snippet_pieces = value;
+        }
+        spec.stage_context.overlay(&crate::RecognitionStageContext {
+            boundary: arguments.boundary_context.clone(),
+            kind_edge: arguments.kind_edge_context.clone(),
+            relation: arguments.relation_context.clone(),
+        });
+        if let Some(mode) = &arguments.mode {
+            spec.mode = crate::RecognitionMode::parse(mode)
+                .ok_or(Failure::Usage(crate::RecognitionMode::USAGE))?;
+        }
+        spec.authored_relation_threshold |= arguments.relation_threshold.is_some();
+        spec.validate_mode().map_err(|why| error(false, why))?;
     }
-    spec.authored_relation_threshold |= arguments.relation_threshold.is_some();
-    spec.validate_mode()
-        .map_err(|why| error(file.is_some(), why))?;
     Ok(spec)
 }
 

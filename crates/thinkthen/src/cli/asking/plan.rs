@@ -3,17 +3,11 @@
 use std::io::{self, IsTerminal, Write};
 use std::process::ExitCode;
 
-use std::sync::Arc;
-
 use super::JudgingInput;
-use super::judged::{Planner, Records};
-use crate::core::adapters::built_in;
-use crate::core::pack::{self, Entry, PackLimits, Packer};
+use super::judged::Records;
 use crate::core::{Backend, Evidence, PlanDocument, PlanSummary, Reading, Sources, json_line};
 use crate::edge;
-use crate::engine::pipeline::{self, MOST_INPUTS, Packing};
 use crate::failure::Failure;
-use crate::failure::context::Limits;
 use crate::profile::Mismatch;
 use crate::schedule::Output;
 
@@ -43,65 +37,58 @@ pub(super) fn packed(
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let backend = &configuration.backend;
-    let planner = Planner {
-        asks: &configuration.asks,
-        reading,
-        asked: backend.asked(),
-        context,
-        profile: configuration.profile.as_ref(),
-        limits: Limits::new(configuration.profile.as_ref()),
-        route: backend.image_route(),
-    };
-    let packing = Packing {
-        questions: None,
-        sized: true,
-        inputs,
-        strict_singleton: false,
-        context: planner.context.is_some() || configuration.context_field.is_some(),
-        detailed: false,
-        continues: false,
-    };
-    let mut packer = packer(&planner, backend, packing)?;
-    let mut summary = PlanSummary::new(false).with_accounting(backend.accounting());
-    let mut occurrences = 0_usize;
-    let mut closed = Vec::new();
-    let mut dropped = false;
-    for held in records {
-        let held = held.map_err(|placed| placed.cause)?;
-        summary
-            .record()
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
-        let mut entries = Vec::new();
-        for plan in planner.plans(&held)? {
-            dropped |= built_in::drops_detail(&plan);
-            let asks = pack::asks_for(backend.api_type(), backend.url(), &plan)
-                .map_err(|error| super::encoded(&plan, error))?;
-            entries.extend(asks.into_iter().map(|ask| Entry {
-                state: ask.state.clone(),
-                question: Arc::clone(&ask.question),
-                options: pipeline::options(&ask),
-                item: (),
-            }));
-        }
-        occurrences = occurrences
-            .checked_add(entries.len())
-            .ok_or(Failure::Defect("a plan is too large"))?;
-        packer
-            .add(entries, &mut closed)
-            .map_err(|error| planner.refused(error))?;
-        for request in closed.drain(..) {
-            summary
-                .request(&request.body)
-                .map_err(|_| Failure::Defect("a plan is too large"))?;
-        }
+    let admitted = configuration
+        .admitted
+        .as_ref()
+        .ok_or(Failure::Defect("judgment plan has no admitted request"))?;
+    let composition = super::native::composition(admitted, reading)?;
+    let rows = records.map(|held| {
+        let held = held.map_err(|placed| {
+            crate::Error::usage("the CLI reader failed").with_diagnostic(
+                crate::public::error::diagnostic::Diagnostic::CliInput(Box::new(placed.cause)),
+            )
+        })?;
+        super::native::compose(&composition, &held)
+    });
+    let inner = crate::cli::construction::engine(
+        configuration.common,
+        configuration.environment,
+        super::Folders::of(configuration.common, configuration.environment)?,
+        (backend.clone(), configuration.profile.clone()),
+        configuration.common.jobs,
+        false,
+    )?;
+    let native = crate::Engine::from_cli(inner, configuration.environment.config().prices());
+    let admitted = admitted.clone().with_composed_feed("cli-plan");
+    let shared = context.as_ref().map(|value| value.as_text()).transpose()?;
+    let ready = || true;
+    let readiness = crate::public::cli_reader::CliReader::new(&ready, None);
+    let mut controls = crate::CallOptions::new()
+        .surface(crate::Surface::Cli)
+        .cli_reader(&readiness);
+    if let Some(shared) = &shared {
+        controls = controls.context(shared);
     }
+    if let Some(inputs) = inputs {
+        controls = controls.batch(crate::BatchSetting::Records(
+            std::num::NonZeroUsize::new(inputs)
+                .ok_or(Failure::Defect("a plan has no input capacity"))?,
+        ));
+    }
+    let mut feed = crate::RequestFeed::from_records("cli-plan", rows);
+    if configuration.common.images() {
+        feed = feed.with_image_inputs();
+    }
+    let (summary, dropped) = native
+        .plan_request_summary(
+            &admitted,
+            crate::RequestEnvironment {
+                controls,
+                feed: Some(feed),
+            },
+        )
+        .map_err(Failure::from)?;
     crate::cli::check::say_dropped_detail(dropped, configuration.environment.named())?;
-    if let Some(request) = packer.close() {
-        summary
-            .request(&request.body)
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
-    }
-    summary.bound_requests(occurrences);
     let Some(first) = summary.first_body() else {
         return Ok(ExitCode::SUCCESS);
     };
@@ -114,44 +101,6 @@ pub(super) fn packed(
         &summary,
         output.writer(),
     )
-}
-
-/// Refuse a context whose request with no question passes a limit, before
-/// any record is read.
-pub(super) fn check_context(
-    planner: &Planner<'_>,
-    backend: &Backend,
-    packing: Packing,
-) -> Result<(), Failure> {
-    packer(planner, backend, packing).map(|_| ())
-}
-
-fn packer(
-    planner: &Planner<'_>,
-    backend: &Backend,
-    packing: Packing,
-) -> Result<Packer<()>, Failure> {
-    let limits = PackLimits {
-        image_ceiling: backend.image_ceiling(),
-        ceiling: backend.ceiling(),
-        profile: planner.profile.cloned(),
-        inputs: packing.inputs.unwrap_or(MOST_INPUTS).max(1),
-        questions: None,
-        strict_singleton: false,
-        context: packing.context,
-    };
-    let model = pack::model_json(backend.model().as_str())
-        .map_err(|_| Failure::Defect("a model could not be written as JSON"))?;
-    let packer = Packer::new(limits, model);
-    if let Some(context) = planner.context.as_ref() {
-        let state = pack::state(context)
-            .map_err(|_| Failure::Defect("a context could not be written as JSON"))?
-            .with_api(backend.api_type());
-        packer
-            .check_state(&state)
-            .map_err(|error| planner.refused(error))?;
-    }
-    Ok(packer)
 }
 
 /// Print the plan document of one checked plan.

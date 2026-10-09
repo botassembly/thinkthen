@@ -45,7 +45,6 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         outcome: crate::core::Outcome::Yes,
         order_value: Some(0.91),
         replayed: false,
-        rank: None,
         partial_failure: false,
         profile_mismatch: None,
     };
@@ -54,11 +53,10 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         false,
         &crate::engine::limits::process().widths,
     );
-    // `rank --top` retains winning records until the input ends, so the
-    // sink that holds them is a place where a whole record could leak.
+    // The presentation sink sees complete records; Debug must withhold their text.
     let mut written = Vec::new();
     let usage = crate::engine::usage::Counters::new(None);
-    let mut ordered = crate::schedule::Output::ordered(&mut written, Some(2), &usage);
+    let mut ordered = crate::schedule::Output::streaming(&mut written, &usage);
     ordered
         .take(crate::schedule::Judged {
             model: None,
@@ -67,7 +65,6 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             outcome: crate::core::Outcome::Yes,
             order_value: Some(0.91),
             replayed: false,
-            rank: None,
             partial_failure: false,
             profile_mismatch: None,
         })

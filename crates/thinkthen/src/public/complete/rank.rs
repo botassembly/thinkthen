@@ -6,6 +6,38 @@ use crate::public::{
 };
 
 impl Engine {
+    #[expect(
+        clippy::type_complexity,
+        reason = "rank retains the original and complete result together"
+    )]
+    pub(crate) fn request_rank_records_complete_with<'a, I, T>(
+        &'a self,
+        question: &'a Question,
+        records: I,
+        options: CallOptions<'a>,
+        top: Option<usize>,
+        release: Option<&dyn Fn(usize)>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+        T: InputEvidence + 'a,
+    {
+        if let Some(release) = release {
+            let mut batch =
+                self.complete_stream(InputFunction::Rank, question, records, options, Ok)?;
+            let mut held = Vec::new();
+            for row in batch.by_ref() {
+                retain_row(&mut held, top, question, row?, release)?;
+            }
+            let facts = batch
+                .facts()
+                .cloned()
+                .ok_or_else(|| Error::defect("completed rank has no facts"))?;
+            return Call::new(held.into_iter().map(|(_, row)| row).collect(), facts)
+                .try_map(|rows| ranked(rows, None));
+        }
+        self.try_rank_records_complete_with(question, records, options)
+    }
     /// Admit a fallible whole original set before any complete rank request.
     /// # Errors
     /// Input failures refuse the whole set before sending; otherwise as rank_records_complete_with.
@@ -53,41 +85,7 @@ impl Engine {
         T: InputEvidence,
     {
         self.records_complete(InputFunction::Rank, question, records, options)?
-            .try_map(|rows| {
-                let weights = rows
-                    .iter()
-                    .map(|row| match row.result.value() {
-                        Value::Score(value) => Ok(*value),
-                        Value::YesNo(_) => row.result.answer().yes().ok_or_else(super::wrong),
-                        _ => Err(super::wrong()),
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?;
-                let order = core::ranking_under(&weights, None, question.threshold);
-                let mut rows: Vec<_> = rows.into_iter().map(Some).collect();
-                order
-                    .into_iter()
-                    .enumerate()
-                    .map(|(at, original)| {
-                        let row = rows
-                            .get_mut(original)
-                            .and_then(Option::take)
-                            .ok_or_else(|| Error::defect("rank lost an original occurrence"))?;
-                        let value = at
-                            .checked_add(1)
-                            .and_then(std::num::NonZeroUsize::new)
-                            .ok_or_else(|| Error::defect("rank position overflow"))?;
-                        let canonical = row
-                            .result
-                            .ranked(row.ordinal, value)
-                            .map_err(|_| Error::defect("rank identity could not be finalized"))?;
-                        Ok(CompleteRecord {
-                            original: row.original,
-                            ordinal: row.ordinal,
-                            result: CompleteRank { canonical, value },
-                        })
-                    })
-                    .collect()
-            })
+            .try_map(|rows| ranked(rows, question.threshold))
     }
 
     /// Complete rank of plain originals under one optional shared context.
@@ -119,5 +117,104 @@ impl Engine {
             }),
             options,
         )
+    }
+}
+
+fn ranked<T>(
+    rows: Vec<CompleteRecord<T, core::CompleteAtomic>>,
+    threshold: Option<core::Threshold>,
+) -> Result<Vec<CompleteRecord<T, CompleteRank>>, Error> {
+    let weights = rows
+        .iter()
+        .map(|row| weight(&row.result))
+        .collect::<Result<Vec<_>, Error>>()?;
+    let order = core::ranking_under(&weights, None, threshold);
+    let mut rows: Vec<_> = rows.into_iter().map(Some).collect();
+    order
+        .into_iter()
+        .enumerate()
+        .map(|(at, original)| {
+            let row = rows
+                .get_mut(original)
+                .and_then(Option::take)
+                .ok_or_else(|| Error::defect("rank lost an original occurrence"))?;
+            let value = at
+                .checked_add(1)
+                .and_then(std::num::NonZeroUsize::new)
+                .ok_or_else(|| Error::defect("rank position overflow"))?;
+            let canonical = row
+                .result
+                .ranked(row.ordinal, value)
+                .map_err(|_| Error::defect("rank identity could not be finalized"))?;
+            Ok(CompleteRecord {
+                original: row.original,
+                ordinal: row.ordinal,
+                result: CompleteRank { canonical, value },
+            })
+        })
+        .collect()
+}
+
+fn retain_row<T>(
+    held: &mut Vec<(f64, CompleteRecord<T, core::CompleteAtomic>)>,
+    top: Option<usize>,
+    question: &Question,
+    row: CompleteRecord<T, core::CompleteAtomic>,
+    release: &dyn Fn(usize),
+) -> Result<(), Error> {
+    let value = weight(&row.result)?;
+    if question
+        .threshold
+        .is_some_and(|cut| !core::ranking_under(&[value], None, Some(cut)).contains(&0))
+    {
+        release(row.ordinal);
+        return Ok(());
+    }
+    if let Some(old) = keep_best(held, top, value, row) {
+        release(old.ordinal);
+    }
+    Ok(())
+}
+
+fn weight(result: &core::CompleteAtomic) -> Result<f64, Error> {
+    match result.value() {
+        Value::Score(value) => Ok(*value),
+        Value::YesNo(_) => result.answer().yes().ok_or_else(super::wrong),
+        _ => Err(super::wrong()),
+    }
+}
+
+fn keep_best<T>(held: &mut Vec<(f64, T)>, top: Option<usize>, value: f64, row: T) -> Option<T> {
+    let place = held.partition_point(|(earlier, _)| *earlier >= value);
+    if top.is_some_and(|top| place >= top) {
+        return Some(row);
+    }
+    let evicted = if top == Some(held.len()) {
+        held.pop().map(|(_, row)| row)
+    } else {
+        None
+    };
+    held.insert(place, (value, row));
+    evicted
+}
+#[cfg(test)]
+mod retention_tests {
+    #[test]
+    fn native_top_keeps_only_winners_and_retains_stable_ties() {
+        let mut held = Vec::new();
+        for (name, score) in [
+            ("first", 0.5),
+            ("low", 0.1),
+            ("best", 0.9),
+            ("later tie", 0.5),
+            ("equal best", 0.9),
+        ] {
+            super::keep_best(&mut held, Some(2), score, name);
+            assert!(held.len() <= 2);
+        }
+        assert_eq!(
+            held.into_iter().map(|(_, name)| name).collect::<Vec<_>>(),
+            ["best", "equal best"]
+        );
     }
 }

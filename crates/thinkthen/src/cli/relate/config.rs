@@ -1,9 +1,6 @@
-use std::path::Path;
-
 use serde::Serialize;
 
 use crate::args::RelateArguments;
-use crate::cli::question_text;
 use crate::core::{Framing, RelateConfigError, RelateSpec, Source};
 use crate::edge;
 use crate::failure::Failure;
@@ -25,7 +22,10 @@ pub(super) struct From {
     profile: Option<Source>,
 }
 
-pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
+pub(super) fn settle(
+    arguments: &RelateArguments,
+    admitted: &mut crate::AdmittedRequest,
+) -> Result<Settled, Failure> {
     if arguments.common.field.len() > 1 {
         return Err(Failure::Usage("--field takes one pointer on `relate`"));
     }
@@ -38,21 +38,20 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
         }
         _ => None,
     };
-    let (mut spec, mut from) = if let Some(path) = file {
-        if arguments.either {
-            return Err(Failure::Usage(
-                "`--either` applies only to inline relation rules; a question file sets either on each relation",
-            ));
-        }
-        from_file(path)?
-    } else {
-        (
-            RelateSpec::inline(&arguments.relations, arguments.either)
-                .map_err(|error| config_error(false, error))?,
-            None,
-        )
+    if file.is_some() && arguments.either {
+        return Err(Failure::Usage(
+            "`--either` applies only to inline relation rules; a question file sets either on each relation",
+        ));
+    }
+    let crate::RequestDefinition::Relate(ask) = admitted.resolve_once().map_err(Failure::from)?
+    else {
+        return Err(Failure::Defect("relate lost its definition"));
     };
-    if let Some(threshold) = arguments.threshold.as_deref() {
+    let mut spec = ask.0;
+    let mut from = file.map(|_| from_file(&spec));
+    if file.is_some()
+        && let Some(threshold) = arguments.threshold.as_deref()
+    {
         spec.override_threshold(threshold)
             .map_err(|error| config_error(false, error))?;
         if let Some(sources) = &mut from {
@@ -60,8 +59,10 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
         }
     }
     let name = arguments.common.field.first().map(String::as_str);
-    spec.override_fields(name, arguments.kind_field.as_deref())
-        .map_err(|error| config_error(false, error))?;
+    if file.is_some() {
+        spec.override_fields(name, arguments.kind_field.as_deref())
+            .map_err(|error| config_error(false, error))?;
+    }
     if let Some(sources) = &mut from {
         if name.is_some() {
             sources.field = Source::CommandLine;
@@ -85,7 +86,7 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
         arguments.common.framing()
     };
     if framing == Framing::Lines {
-        lines_only(name.is_some() || arguments.kind_field.is_some(), &spec)?;
+        lines_only(name.is_some() || arguments.kind_field.is_some())?;
     }
     Ok(Settled {
         spec,
@@ -95,30 +96,25 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
 }
 
 /// Read the question file and name which values it supplied.
-fn from_file(path: &str) -> Result<(RelateSpec, Option<From>), Failure> {
-    let text = question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
-    let spec = RelateSpec::parse(&text).map_err(|error| config_error(true, error))?;
+fn from_file(spec: &RelateSpec) -> From {
     let presence = spec.presence();
-    let from = From {
+    From {
         question: Source::File,
         threshold: file_or_default(presence.threshold),
         model: file_or_default(presence.model),
         field: file_or_default(presence.fields),
         kind_field: file_or_default(presence.fields),
         profile: spec.profile.is_some().then_some(Source::File),
-    };
-    Ok((spec, Some(from)))
+    }
 }
 
 /// Line input has no members to point into and one synthetic kind.
-fn lines_only(pointed: bool, spec: &RelateSpec) -> Result<(), Failure> {
+fn lines_only(pointed: bool) -> Result<(), Failure> {
     if pointed {
         return Err(Failure::Usage(
             "--lines takes neither --field nor --kind-field",
         ));
     }
-    spec.check_lines()
-        .map_err(|error| Failure::Relate(crate::failure::relate::Error::Entities(error)))?;
     Ok(())
 }
 

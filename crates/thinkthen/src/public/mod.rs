@@ -37,13 +37,14 @@ mod rank_question;
 mod rank_set;
 pub use rank_set::RankSet;
 mod choice;
-mod complete;
+pub(crate) mod complete;
 mod engine;
 pub(crate) mod error;
 #[cfg(feature = "polars")]
 mod frame;
 mod native_batch;
 mod options;
+pub(crate) use options::cli_reader;
 mod panic;
 mod plan;
 mod proxy;

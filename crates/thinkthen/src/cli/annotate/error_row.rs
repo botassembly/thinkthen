@@ -41,7 +41,6 @@ pub(crate) fn missed(at: usize, pointer: &str) -> Result<Judged, Failure> {
         outcome: Outcome::Yes,
         replayed: false,
         order_value: None,
-        rank: None,
         partial_failure: false,
         profile_mismatch: None,
     })

@@ -107,6 +107,41 @@ fn canonical_atomic_previews_match_existing_plans_without_a_key() {
 }
 
 #[test]
+fn filter_and_rank_previews_reuse_decide_packing_without_sending() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let expected = engine
+        .plan(
+            &Question::decide("Fits?").unwrap().cut(),
+            ["Alpha.", "Beta."],
+        )
+        .unwrap();
+    for call in [
+        RequestCall::Filter(args(
+            Question::decide("Fits?").unwrap().cut().into(),
+            RequestInput::Records {
+                items: vec![item("Alpha."), item("Beta.")],
+            },
+        )),
+        RequestCall::Rank(args(
+            Question::rank("Fits?").unwrap().into(),
+            RequestInput::Records {
+                items: vec![item("Alpha."), item("Beta.")],
+            },
+        )),
+    ] {
+        let estimate = engine
+            .plan_request(
+                &Request::new(call).admit().unwrap(),
+                RequestEnvironment::default(),
+            )
+            .unwrap();
+        assert_eq!(estimate, expected);
+    }
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
 fn canonical_preview_keeps_native_cancellation_and_reader_failures() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
@@ -273,8 +308,8 @@ fn preview_retains_json_context_shortlists_and_matches_execution() {
 fn unsupported_preview_refuses_before_advancing_the_feed() {
     let listener = Listener::answering(response).unwrap();
     let mut advanced = false;
-    let request = Request::new(RequestCall::Filter(args(
-        Question::decide("Fits?").unwrap().cut().into(),
+    let request = Request::new(RequestCall::Find(args(
+        Question::find("Fits?").unwrap().into(),
         RequestInput::Feed {
             name: "input".into(),
             framing: RequestFraming::Document,

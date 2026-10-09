@@ -360,6 +360,10 @@ pub(crate) struct NamedValues(
 );
 
 impl NamedValues {
+    pub(crate) fn into_values(self) -> Vec<(String, AnnotatedValue)> {
+        self.0
+    }
+
     /// Keep named values in question-set order.
     #[must_use]
     pub(crate) const fn new(values: Vec<(String, AnnotatedValue)>) -> Self {

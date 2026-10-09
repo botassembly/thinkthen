@@ -3,7 +3,27 @@ use std::any::Any;
 
 pub(crate) enum Diagnostic {
     Engine(crate::engine::error::Error),
+    EngineRange {
+        cause: crate::engine::error::Error,
+        first: usize,
+        last: usize,
+    },
+    Context {
+        initial: bool,
+        kind: crate::core::LimitKind,
+        limit: usize,
+        actual: usize,
+        profile: Option<crate::core::ProfileName>,
+    },
+    PartialReply {
+        cause: Option<crate::core::adapters::built_in::DecodeError>,
+        first: usize,
+        last: usize,
+    },
+    #[cfg(feature = "cli")]
+    CliInput(Box<crate::cli::failure::Failure>),
     Refusal(Box<dyn Any + Send + Sync>),
+    RelationEntityCount(usize),
     Model(crate::core::BlankTextError),
     Pointer(&'static str, String, crate::core::PointerError),
     Batch,

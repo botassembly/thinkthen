@@ -12,8 +12,7 @@ use std::time::Duration;
 
 use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{
-    Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Outcome, Plan,
-    Reply, Value,
+    Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Plan, Reply, Value,
 };
 #[cfg(test)]
 use crate::core::{BatchError, Evidence, Question, Threshold, quoted_plan};
@@ -141,7 +140,6 @@ pub(crate) struct Answered {
 pub(crate) struct Judgment {
     pub(crate) answer: Answer,
     pub(crate) value: Value,
-    pub(crate) outcome: Outcome,
     pub(crate) answered: Answered,
 }
 
@@ -361,11 +359,10 @@ impl Engine {
         })?;
         let answered = answered.ok_or(Error::Defect("a question had no answer"))?;
         let answer = only_answer(&answered)?;
-        let (value, outcome) = answer.read(threshold);
+        let (value, _) = answer.read(threshold);
         Ok(Judgment {
             answer,
             value,
-            outcome,
             answered,
         })
     }
