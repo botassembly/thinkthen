@@ -4,7 +4,7 @@ The bounded JVM slice starts from `c85666963`. It removes test programs from the
 
 `libraries/jvm/kotlin/KotlinCaller.kt` shrinks from 59 to 27 lines. `libraries/jvm/scala/ScalaCaller.scala` shrinks from 62 to 23 lines. These files remove 71 shipped source lines. Their test programs move to `libraries/jvm/tests/KotlinConsumer.kt` and `ScalaConsumer.scala` without copying the product facade definitions.
 
-`libraries/jvm/tests/installed.py` copies those test consumers into the isolated installed project. `consumer-run.py` compiles and runs their distinct entrypoints against the product JARs. Their assertions retain cancellation, fired-token refusal, recovery and JSON-call coverage.
+`libraries/jvm/tests/installed.py` copies those test consumers into the isolated installed project. `consumer-run.py` compiles and runs their distinct entrypoints against the product JARs. Their assertions retain cancellation, fired-token refusal, recovery and JSON-call coverage. Removing an unused Kotlin import leaves one extra Kotlin source line and three extra Scala source lines across product and tests because each installed consumer now imports its own dependencies. The existing `ratchet.kt.json` and `ratchet.scala.json` record those measured totals.
 
 `libraries/jvm/tests/package_check.py` rejects the former Kotlin and Scala demo classes independently of the compiled-directory comparison. The original built JARs failed this assertion with `demo entrypoint escaped product JAR`. `sdlc/scripts/release-managed-pair.py` and its existing self-test remove those classes and Scala metadata from their declared archive inventories. The actual rebuilt JARs match those inventories.
 
