@@ -49,3 +49,4 @@ fn RequestItem::with_options_descriptor(self, &str) -> Result<RequestItem, Error
 - 2026-10-09 started
 - 2026-10-09 landed 2dbccdf0e; next: Shared SQL record descriptors are landed. Continue named consumer migrations and remove remaining duplicated request grammar and cross-crate includes; this first slice does not complete the whole ticket.
 - 2026-10-09 landed 48363919e; next: SQL and shared binding record descriptors now delegate original/image composition to Request. Preserve the documented legacy tagged-context and ordered-description translations until canonical grammar expresses them; finish remaining consumer grammar and cross-crate includes.
+- 2026-10-09 landed 75544b8f7bf62d904b9aaf061a090245a03e599e; next: Ordered shortlist admission is shared. Finish typed engine settings, canonical plan preview and retained context translation before host migrations.
