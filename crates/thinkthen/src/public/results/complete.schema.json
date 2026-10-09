@@ -1278,6 +1278,13 @@
         },
         "token_estimate_method": {
           "type": "string"
+        },
+        "usage_persistence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePersistenceObservation"
+            }
+          ]
         }
       },
       "required": [
@@ -2052,6 +2059,27 @@
           "type": "string"
         }
       ]
+    },
+    "completePersistenceObservation": {
+      "properties": {
+        "advice": {
+          "type": [
+            "string"
+          ]
+        },
+        "observed_at": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/completeUsagePersistence"
+        }
+      },
+      "required": [
+        "state",
+        "observed_at"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
     },
     "completePhysicalSource": {
       "dependentRequired": {
@@ -4014,6 +4042,26 @@
       },
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completeUsagePersistence": {
+      "oneOf": [
+        {
+          "const": "disabled",
+          "type": "string"
+        },
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "written",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        }
+      ]
     },
     "completeVerb": {
       "enum": [
