@@ -449,3 +449,82 @@ fn text_request_band_keeps_native_threshold_reading() {
     let requests = listener.requests();
     assert_eq!(requests[0].body, requests[1].body);
 }
+
+#[test]
+#[allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    reason = "isolated native selector behavior uses fixed loopback fixtures"
+)]
+fn authorized_saved_definition_preserves_selector_and_refuses_replacement_before_sends() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let saved = Request::new(RequestCall::Decide(RequestArguments {
+        question: RequestQuestion::File {
+            path: "not-read-by-request.json".into(),
+        },
+        input: RequestInput::Records {
+            items: vec![item("Alpha.")],
+        },
+        options: RequestOptions::default(),
+    }))
+    .admit()
+    .unwrap();
+    let definition: RequestDefinition = Question::decide("Fits?").unwrap().cut().into();
+    let mismatch: RequestDefinition =
+        Question::from_json(r#"{"choose":"Which?","options":["a","b"]}"#)
+            .unwrap()
+            .into();
+    assert_eq!(
+        saved
+            .clone()
+            .with_resolved_definition(mismatch)
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Usage
+    );
+    let declared: RequestDefinition =
+        Question::from_json(r#"{"decide":"Fits?","item_schema":{"type":"object","properties":{"body":{"type":"string"}},"required":["body"]}}"#)
+            .unwrap()
+            .into();
+    assert_eq!(
+        saved
+            .clone()
+            .with_resolved_definition(declared)
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Usage
+    );
+    let resolved = saved.with_resolved_definition(definition.clone()).unwrap();
+    assert!(matches!(
+        resolved.request().call.arguments().question,
+        RequestQuestion::File { .. }
+    ));
+    assert_eq!(
+        resolved
+            .clone()
+            .with_resolved_definition(definition.clone())
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Usage
+    );
+    let inline = Request::new(RequestCall::Decide(args(
+        definition.clone(),
+        RequestInput::Records { items: vec![] },
+    )))
+    .admit()
+    .unwrap();
+    assert_eq!(
+        inline
+            .with_resolved_definition(definition)
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Usage
+    );
+    assert_eq!(listener.requests().len(), 0);
+    let outcome = engine
+        .execute_request(&resolved, RequestEnvironment::default())
+        .unwrap();
+    assert!(matches!(outcome, RequestOutcome::Complete(_)));
+    assert_eq!(listener.requests().len(), 1);
+}

@@ -224,6 +224,17 @@ bounded descriptor admits no caller facts, IDs or started stops. The consuming
 native SQL iterator supplies its own terminal facts. PostgreSQL question files
 retain the privileged descriptor loader and all confinement/link/size rules.
 
+SQLite accepts exactly one input collection, `records` or `files`. Supplying both or neither refuses before question-file resolution and sends nothing. A `reading` descriptor composes the selected collection once; it does not add another input collection. Unknown input fields and nonboolean flags also refuse before resolution.
+
+| SQLite input combination | Admission and execution |
+| --- | --- |
+| `records` with optional `reading` | Compose explicit records and preserve their originals and locations. |
+| `files` with optional `reading` | Read selected files with native reader options; preserve file and line locations. |
+| `files` with `format: "jsonl"` | Require text media and compose each JSON line through the selected reading. |
+| Text or JSON records with explicit `images` | Admit actual image media, route and function before sending. |
+| Image-only records or image file media | Admit native image inputs; images never follow implicitly from text or JSON. |
+| Either collection with `incremental: true` | Row-producing calls retain the completed prefix; whole-set calls still admit the complete set. |
+
 The `native` member contains the strict native `Call::complete()` envelope: `value` contains complete
 result/2 rows (or the native find/relation object), and `facts` contains the owning
 call ID, records, requests, cache answers, reported tokens, elapsed time, optional
@@ -258,10 +269,7 @@ Annotation declarations validate each member's selected evidence. Complete filte
 calls retain both passing and rejected observations and their original ordinals,
 including completed rows before an incremental failure. Ordinary native Request
 filtering retains its passing-row behavior; SQL explicitly selects all results.
-Top-level input descriptors validate before SQL resolves a saved question. SQL still
-resolves saved selectors through its own authorized file reader; canonical selector
-translation and the legacy scalar/table execution paths remain later migration work.
-PostgreSQL retains the compatibility dispatcher until its Request migration.
+Top-level input descriptors validate before SQL resolves a saved question. Request admits the canonical saved selector before SQLite runs its authorized file reader. SQLite supplies the resolved native definition for Request admission without granting Request filesystem permission. Its legacy scalar and table judgments also execute through Request. PostgreSQL imports the shared SQL preparation and Request helpers; DuckDB retains the compatibility dispatcher until its Request migration.
 
 The existing surface checks execute all applicable shared cases through these
 named calls against counted owned loopback, check known JSON fields using SQL

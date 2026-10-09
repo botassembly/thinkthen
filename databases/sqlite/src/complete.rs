@@ -6,6 +6,7 @@ use rusqlite::{
 };
 use thinkthen::{Error, ErrorKind, Surface};
 mod request;
+mod selector;
 
 fn prepare(
     verb: &str,
@@ -41,8 +42,14 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
         };
         let result = (|| {
             let inputs = crate::complete_native::Inputs::parse_request(&inputs)?;
+            let selector = selector::admit(verb, &question)?;
             let prepared = prepare(verb, &question, &settings)?;
-            let request = request::admit(&prepared)?;
+            let request = match selector {
+                Some(selector) => {
+                    selector.with_resolved_definition(request::definition(&prepared))?
+                }
+                None => request::admit(&prepared)?,
+            };
             Ok::<_, thinkthen::Error>((prepared, inputs, request))
         })();
         let value = match result {
