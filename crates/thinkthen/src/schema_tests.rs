@@ -213,3 +213,43 @@ fn the_committed_result_schema_is_the_one_the_rust_types_derive() {
         .expect("run the result declaration generator");
     assert!(status.success(), "generated host results differ from Rust");
 }
+
+#[test]
+fn complete_plan_schema_reads_native_previews_and_requires_the_nullable_body() {
+    use std::io::Write as _;
+    use std::process::Stdio;
+
+    let engine = crate::Engine::builder().no_cache().build().expect("engine");
+    let question = crate::Question::decide("Fits?").expect("question").cut();
+    let mut cases = Vec::new();
+    for records in [vec!["Alpha."], vec![]] {
+        let plan = engine.plan(&question, records).expect("native plan");
+        let value = serde_json::to_value(plan).expect("serialized plan");
+        cases.push((value.clone(), true));
+        let mut missing = value;
+        missing
+            .as_object_mut()
+            .expect("plan object")
+            .remove("first_body_utf8");
+        cases.push((missing, false));
+    }
+    let mut schema: Value = serde_json::from_str(&generated("completeCall")).expect("schema");
+    schema["$ref"] = json!("#/$defs/completeplan");
+    let mut child = crate::test_deadline::child::command("python3", &[])
+        .arg("-c")
+        .arg("import json,sys; from jsonschema import Draft202012Validator; schema,cases=json.load(sys.stdin); Draft202012Validator.check_schema(schema); validator=Draft202012Validator(schema); assert all(validator.is_valid(value)==expected for value,expected in cases), 'native plan presence contract'")
+        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
+        .spawn().expect("schema validator");
+    child
+        .stdin
+        .take()
+        .expect("validator input")
+        .write_all(&serde_json::to_vec(&(schema, cases)).expect("cases"))
+        .expect("write cases");
+    let output = child.wait_with_output().expect("validator output");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
