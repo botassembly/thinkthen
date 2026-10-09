@@ -65,7 +65,7 @@ def render(definitions):
             lines.append(expression(source))
         lines.append('},')
     lines += ['_ => Err(crate::defect(py, "unknown generated Python result type")),', '}', '}',
-              '#[expect(clippy::too_many_lines, reason = "fields generated from the shared result graph")]',
+              '#[expect(clippy::too_many_lines, clippy::cognitive_complexity, reason = "fields generated from the shared result graph")]',
               'pub(crate) fn field(py: Python<\'_>, kind: &str, member: &str, value: &Value) -> PyResult<Py<PyAny>> {',
               'match (kind, member) {']
     for key, source in definitions.items():
@@ -99,7 +99,8 @@ def annotation(source):
 
 def types(definitions, stubs=False):
     lines = ['# Generated from the shared Rust result graph; do not edit.',
-             'from ._thinkthen import _NativeResult']
+             'from ._thinkthen import _NativeResult',
+             'from typing import Any, Literal, Union']
     if stubs:
         lines = [lines[0], 'from typing import Any, Literal, Union',
                  'class _NativeResult:',
@@ -116,10 +117,12 @@ def types(definitions, stubs=False):
                 for member, field in source['properties'].items():
                     if member.isidentifier():
                         lines += ['    @property', f'    def {member}(self) -> {annotation(field)}: ...']
-        elif stubs:
+    for key, source in definitions.items():
+        if 'properties' not in source:
             if 'variants' in source:
                 value = 'Union[' + ', '.join(name(child) for child, _ in source['variants']) + ']'
             else:
-                value = 'Any' if 'primitive_schemas' in source else annotation(source)
+                value = ('Union[' + ', '.join(annotation(v) for v in source['primitive_schemas'].values()) + ']'
+                         if 'primitive_schemas' in source else annotation(source))
             lines.append(f'{name(key)} = {value}')
     return '\n'.join(lines) + '\n'

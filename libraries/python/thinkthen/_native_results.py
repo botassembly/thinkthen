@@ -1,5 +1,6 @@
 # Generated from the shared Rust result graph; do not edit.
 from ._thinkthen import _NativeResult
+from typing import Any, Literal, Union
 
 class NativeAnnotation(_NativeResult):
     __slots__ = ()
@@ -390,3 +391,51 @@ class NativeSourceRelationEndpoint(_NativeResult):
 
 class NativeTokenUsage(_NativeResult):
     __slots__ = ()
+NativeAnnotationMember = Union[NativeAnnotationMemberAnswerId, NativeAnnotationMemberFailureId]
+NativeAnnotationValue = Union[NativeAnnotationValueDecision, NativeAnnotationValueChoice, NativeAnnotationValueScore, NativeAnnotationValueTags, NativeAnnotationValueFailed]
+NativeAnswerId = str
+NativeBatch = Union[int, Literal['max']]
+NativeBoundaryMode = Literal['boundary_only']
+NativeCallId = str
+NativeDecideValue = Union[Union[bool, None], Any]
+NativeEstimatedInputDenial = Union[NativeEstimatedInputDenialInitialRequest, NativeEstimatedInputDenialAdditionalRequest, NativeEstimatedInputDenialRetry]
+NativeFailureId = str
+NativeImageMedia = Union[Literal['image/jpeg'], Literal['image/png']]
+NativeInputDeclaration = Union[NativeInputDeclarationString, NativeInputDeclarationObject]
+NativeInputPropertyType = Union[NativeInputPropertyTypeString, NativeInputPropertyTypeNumber, NativeInputPropertyTypeBoolean, NativeInputPropertyTypeArray]
+NativeObjectType = Literal['object']
+NativeObservation = Union[NativeObservationObservationId, NativeObservationFailureId]
+NativeObservationId = str
+NativeOrigin = Union[Literal['live'], Literal['cache'], Literal['replay'], Literal['proxy'], Literal['memory']]
+NativeQuestionName = str
+NativeReadableQuestion = Union[NativeReadableQuestionDecide, NativeReadableQuestionChoose, NativeReadableQuestionTag, NativeReadableQuestionScore]
+NativeRecognitionMode = Union[Literal['whole'], Literal['boundary_only']]
+NativeRecognitionOdds = Union[NativeRecognitionOddsFieldsNamesPairsPiecesProposals, NativeRecognitionOddsFieldsPiecesProposals]
+NativeRelationDirection = Union[Literal['source_to_target'], Literal['either']]
+NativeRelationMember = Union[NativeRelationMemberAnswerId, NativeRelationMemberFailureId]
+NativeRelationMethod = Union[Literal['yes_no'], Literal['choice']]
+NativeRequestFunction = Union[Literal['decide'], Literal['choose'], Literal['tag'], Literal['score'], Literal['filter'], Literal['rank'], Literal['find'], Literal['annotate'], Literal['recognize'], Literal['relate']]
+NativeSdkRequestId = str
+NativeSendBudgetDenial = Union[NativeSendBudgetDenialBeforeFirstSend, NativeSendBudgetDenialBeforeAdditionalSend, NativeSendBudgetDenialBeforeRetry]
+NativeStopCause = Union[Literal['usage'], Literal['local'], Literal['no_key'], Literal['transport'], Literal['status'], Literal['too_large'], Literal['reply'], Literal['backend'], Literal['cancelled'], Literal['deadline'], Literal['defect']]
+NativeStringType = Literal['string']
+NativeUsagePersistence = Union[Literal['disabled'], Literal['pending'], Literal['written'], Literal['failed']]
+NativeVerb = Literal['recognize']
+NativeVersion = Literal['thinkthen.result/2']
+NativeWordingVersion = int
+NativeAnnotatedField = Union[bool, None, str, list[str], float, NativeFailed]
+NativeAnnotatedRow = dict[str, NativeAnnotatedField]
+NativeAnswer = Union[NativeAnswerYesNo, NativeAnswerChoice, NativeAnswerTag, NativeAnswerScore]
+NativeAttemptOutcome = Union[Literal['ok'], Literal['status'], Literal['transport']]
+NativeBatchSetting = Union[int, str]
+NativeFailureCause = Union[Literal['missing_answer'], Literal['wrong_kind'], Literal['missing_probability'], Literal['invalid_probability'], Literal['invalid_distribution'], Literal['unexpected_probability']]
+NativeFailureKind = Union[Literal['usage'], Literal['backend'], Literal['local'], Literal['cancelled'], Literal['deadline'], Literal['defect']]
+NativeRecognize = Union[NativeRecognizeFieldsEntities, NativeRecognizeFieldsModeProposals]
+NativeRelatedEntityEdgePropertiesSource = Union[NativeRelatedEntityEdgePropertiesSourceFieldsKindName, NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord]
+NativeSessionJudgment = Union[NativeSessionJudgmentDecision, NativeSessionJudgmentChoice, NativeSessionJudgmentScore, NativeSessionJudgmentTags]
+NativeSessionObservation = Union[NativeSessionObservationQuestion, NativeSessionObservationRow]
+NativeSessionObservedRow = Union[NativeSessionObservedRowJudgment, NativeSessionObservedRowAnnotated, NativeSessionObservedRowRecognized, NativeSessionObservedRowFind, NativeSessionObservedRowRelations]
+NativeSessionPacket = Union[NativeSessionPacketDecideRow, NativeSessionPacketChooseRow, NativeSessionPacketTagRow, NativeSessionPacketScoreRow, NativeSessionPacketFilterRow, NativeSessionPacketAnnotateRow, NativeSessionPacketDecideAggregate, NativeSessionPacketChooseAggregate, NativeSessionPacketTagAggregate, NativeSessionPacketScoreAggregate, NativeSessionPacketFilterAggregate, NativeSessionPacketRankAggregate, NativeSessionPacketFindAggregate, NativeSessionPacketAnnotateAggregate, NativeSessionPacketRecognizeAggregate, NativeSessionPacketRelateAggregate, NativeSessionPacketObservation, NativeSessionPacketTerminal]
+NativeSessionProbabilities = Union[NativeSessionProbabilitiesYesNo, NativeSessionProbabilitiesNamed]
+NativeThreshold = Union[float, str]
+NativeValue = Union[bool, None, str, list[str], float]

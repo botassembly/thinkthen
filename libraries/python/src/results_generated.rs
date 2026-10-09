@@ -1007,6 +1007,7 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
 }
 #[expect(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "fields generated from the shared result graph"
 )]
 pub(crate) fn field(

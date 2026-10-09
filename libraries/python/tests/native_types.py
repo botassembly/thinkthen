@@ -49,3 +49,14 @@ def known(engine:c.Engine, question:c.QuestionSource, inputs:c.Records|c.Files)-
         observed_at:str=persistence.observed_at
         advice:str|c.Absent=persistence.advice
     author:str|c.Absent=decision.results[0].question.name
+
+from thinkthen._native_results import NativeSessionPacketDecideRow, NativeSessionPacketTerminal
+
+def generated_known(row: NativeSessionPacketDecideRow, terminal: NativeSessionPacketTerminal) -> None:
+    schema: str = row.value.schema
+    identifier: str = row.value.answer_id
+    snapshots: list[object] = list(row.value.meta.observations)
+    requests: int = terminal.facts.requests_sent
+    failed: str = terminal.failure.error.kind
+    present: bool = 'failure' in terminal
+    raw: dict[str, object] = terminal.to_dict()

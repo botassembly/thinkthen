@@ -34,7 +34,6 @@ class NativeAnnotation(_NativeResult):
     def source(self) -> Union[NativePhysicalSource]: ...
     @property
     def value(self) -> NativeAnnotatedRow: ...
-NativeAnnotationMember = Union[NativeAnnotationMemberAnswerId, NativeAnnotationMemberFailureId]
 
 class NativeAnnotationMemberAnswerId(_NativeResult):
     __slots__ = ()
@@ -75,7 +74,6 @@ class NativeAnnotationMemberFailureId(_NativeResult):
     def threshold(self) -> Union[NativeThreshold, None]: ...
     @property
     def usage(self) -> Union[NativeUsage]: ...
-NativeAnnotationValue = Union[NativeAnnotationValueDecision, NativeAnnotationValueChoice, NativeAnnotationValueScore, NativeAnnotationValueTags, NativeAnnotationValueFailed]
 
 class NativeAnnotationValueChoice(_NativeResult):
     __slots__ = ()
@@ -111,7 +109,6 @@ class NativeAnnotationValueTags(_NativeResult):
     def kind(self) -> Literal['tags']: ...
     @property
     def value(self) -> list[str]: ...
-NativeAnswerId = str
 
 class NativeAnswers(_NativeResult):
     __slots__ = ()
@@ -310,8 +307,6 @@ class NativeAttempt(_NativeResult):
     def status(self) -> Union[int]: ...
     @property
     def wall_ms(self) -> int: ...
-NativeBatch = Union[int, Literal['max']]
-NativeBoundaryMode = Literal['boundary_only']
 
 class NativeBoundaryOdds(_NativeResult):
     __slots__ = ()
@@ -339,8 +334,6 @@ class NativeCallError(_NativeResult):
     def error(self) -> NativeError: ...
     @property
     def facts(self) -> Union[NativeFacts]: ...
-NativeCallId = str
-NativeDecideValue = Union[Union[bool, None], Any]
 
 class NativeEntityDocument(_NativeResult):
     __slots__ = ()
@@ -363,7 +356,6 @@ class NativeError(_NativeResult):
     def send_budget_denial(self) -> Union[NativeSendBudgetDenial]: ...
     @property
     def stopped(self) -> NativeStopped: ...
-NativeEstimatedInputDenial = Union[NativeEstimatedInputDenialInitialRequest, NativeEstimatedInputDenialAdditionalRequest, NativeEstimatedInputDenialRetry]
 
 class NativeEstimatedInputDenialAdditionalRequest(_NativeResult):
     __slots__ = ()
@@ -420,7 +412,6 @@ class NativeFacts(_NativeResult):
     def token_estimate_method(self) -> str: ...
     @property
     def usage_persistence(self) -> Union[NativePersistenceObservation]: ...
-NativeFailureId = str
 
 class NativeFind(_NativeResult):
     __slots__ = ()
@@ -472,8 +463,6 @@ class NativeImage(_NativeResult):
     def media(self) -> NativeImageMedia: ...
     @property
     def width(self) -> int: ...
-NativeImageMedia = Union[Literal['image/jpeg'], Literal['image/png']]
-NativeInputDeclaration = Union[NativeInputDeclarationString, NativeInputDeclarationObject]
 
 class NativeInputDeclarationObject(_NativeResult):
     __slots__ = ()
@@ -488,7 +477,6 @@ class NativeInputDeclarationString(_NativeResult):
     __slots__ = ()
     @property
     def type(self) -> NativeStringType: ...
-NativeInputPropertyType = Union[NativeInputPropertyTypeString, NativeInputPropertyTypeNumber, NativeInputPropertyTypeBoolean, NativeInputPropertyTypeArray]
 
 class NativeInputPropertyTypeArray(_NativeResult):
     __slots__ = ()
@@ -568,9 +556,6 @@ class NativeObjectRoot(_NativeResult):
     def required(self) -> Union[list[str]]: ...
     @property
     def type(self) -> NativeObjectType: ...
-NativeObjectType = Literal['object']
-NativeObservation = Union[NativeObservationObservationId, NativeObservationFailureId]
-NativeObservationId = str
 
 class NativeObservationFailureId(_NativeResult):
     __slots__ = ()
@@ -581,7 +566,6 @@ class NativeObservationObservationId(_NativeResult):
     __slots__ = ()
     @property
     def observation_id(self) -> NativeObservationId: ...
-NativeOrigin = Union[Literal['live'], Literal['cache'], Literal['replay'], Literal['proxy'], Literal['memory']]
 
 class NativePersistenceObservation(_NativeResult):
     __slots__ = ()
@@ -611,7 +595,6 @@ class NativePosition(_NativeResult):
     def images(self) -> Union[list[str]]: ...
     @property
     def last(self) -> Union[int]: ...
-NativeQuestionName = str
 
 class NativeQuestionSource(_NativeResult):
     __slots__ = ()
@@ -649,7 +632,6 @@ class NativeRankMemberResult(_NativeResult):
     def threshold(self) -> None: ...
     @property
     def value(self) -> int: ...
-NativeReadableQuestion = Union[NativeReadableQuestionDecide, NativeReadableQuestionChoose, NativeReadableQuestionTag, NativeReadableQuestionScore]
 
 class NativeReadableQuestion2(_NativeResult):
     __slots__ = ()
@@ -899,8 +881,6 @@ class NativeRecognitionEdgeDocument(_NativeResult):
     def source(self) -> NativeEntity: ...
     @property
     def target(self) -> NativeEntity: ...
-NativeRecognitionMode = Union[Literal['whole'], Literal['boundary_only']]
-NativeRecognitionOdds = Union[NativeRecognitionOddsFieldsNamesPairsPiecesProposals, NativeRecognitionOddsFieldsPiecesProposals]
 
 class NativeRecognitionOddsFieldsNamesPairsPiecesProposals(_NativeResult):
     __slots__ = ()
@@ -972,8 +952,6 @@ class NativeRelation(_NativeResult):
     def schema(self) -> NativeVersion: ...
     @property
     def value(self) -> list[NativeRelatedEntityEdge]: ...
-NativeRelationDirection = Union[Literal['source_to_target'], Literal['either']]
-NativeRelationMember = Union[NativeRelationMemberAnswerId, NativeRelationMemberFailureId]
 
 class NativeRelationMemberAnswerId(_NativeResult):
     __slots__ = ()
@@ -1040,10 +1018,6 @@ class NativeRelationMemberFailureId(_NativeResult):
     def failure(self) -> NativeFailure: ...
     @property
     def failure_id(self) -> NativeFailureId: ...
-NativeRelationMethod = Union[Literal['yes_no'], Literal['choice']]
-NativeRequestFunction = Union[Literal['decide'], Literal['choose'], Literal['tag'], Literal['score'], Literal['filter'], Literal['rank'], Literal['find'], Literal['annotate'], Literal['recognize'], Literal['relate']]
-NativeSdkRequestId = str
-NativeSendBudgetDenial = Union[NativeSendBudgetDenialBeforeFirstSend, NativeSendBudgetDenialBeforeAdditionalSend, NativeSendBudgetDenialBeforeRetry]
 
 class NativeSendBudgetDenialBeforeAdditionalSend(_NativeResult):
     __slots__ = ()
@@ -1061,7 +1035,6 @@ class NativeSendBudgetDenialBeforeRetry(_NativeResult):
     def kind(self) -> Literal['before_retry']: ...
     @property
     def last_status(self) -> int: ...
-NativeStopCause = Union[Literal['usage'], Literal['local'], Literal['no_key'], Literal['transport'], Literal['status'], Literal['too_large'], Literal['reply'], Literal['backend'], Literal['cancelled'], Literal['deadline'], Literal['defect']]
 
 class NativeStopped(_NativeResult):
     __slots__ = ()
@@ -1078,7 +1051,6 @@ class NativeStringRoot(_NativeResult):
     __slots__ = ()
     @property
     def type(self) -> NativeStringType: ...
-NativeStringType = Literal['string']
 
 class NativeUsage(_NativeResult):
     __slots__ = ()
@@ -1086,13 +1058,6 @@ class NativeUsage(_NativeResult):
     def input_tokens(self) -> Union[int]: ...
     @property
     def output_tokens(self) -> Union[int]: ...
-NativeUsagePersistence = Union[Literal['disabled'], Literal['pending'], Literal['written'], Literal['failed']]
-NativeVerb = Literal['recognize']
-NativeVersion = Literal['thinkthen.result/2']
-NativeWordingVersion = int
-NativeAnnotatedField = Any
-NativeAnnotatedRow = dict[str, NativeAnnotatedField]
-NativeAnswer = Union[NativeAnswerYesNo, NativeAnswerChoice, NativeAnswerTag, NativeAnswerScore]
 
 class NativeAnswerChoice(_NativeResult):
     __slots__ = ()
@@ -1129,8 +1094,6 @@ class NativeAnswerYesNo(_NativeResult):
     def kind(self) -> Literal['yes_no']: ...
     @property
     def probability(self) -> float: ...
-NativeAttemptOutcome = Union[Literal['ok'], Literal['status'], Literal['transport']]
-NativeBatchSetting = Union[int, str]
 
 class NativeBatchWarning(_NativeResult):
     __slots__ = ()
@@ -1184,8 +1147,6 @@ class NativeFailure(_NativeResult):
     def cause(self) -> NativeFailureCause: ...
     @property
     def kind(self) -> Literal['backend']: ...
-NativeFailureCause = Union[Literal['missing_answer'], Literal['wrong_kind'], Literal['missing_probability'], Literal['invalid_probability'], Literal['invalid_distribution'], Literal['unexpected_probability']]
-NativeFailureKind = Union[Literal['usage'], Literal['backend'], Literal['local'], Literal['cancelled'], Literal['deadline'], Literal['defect']]
 
 class NativeFindAnswer(_NativeResult):
     __slots__ = ()
@@ -1242,7 +1203,6 @@ class NativeProfileWarning(_NativeResult):
     def running(self) -> str: ...
     @property
     def tuned_for(self) -> str: ...
-NativeRecognize = Union[NativeRecognizeFieldsEntities, NativeRecognizeFieldsModeProposals]
 
 class NativeRecognizeAnswer(_NativeResult):
     __slots__ = ()
@@ -1295,7 +1255,6 @@ class NativeRelatedEntityEdge(_NativeResult):
     def source(self) -> NativeRelatedEntityEdgePropertiesSource: ...
     @property
     def target(self) -> NativeRelatedEntityEdgePropertiesSource: ...
-NativeRelatedEntityEdgePropertiesSource = Union[NativeRelatedEntityEdgePropertiesSourceFieldsKindName, NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord]
 
 class NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(_NativeResult):
     __slots__ = ()
@@ -1349,7 +1308,6 @@ class NativeSessionInputSource(_NativeResult):
     def index(self) -> int: ...
     @property
     def source(self) -> NativePhysicalSource: ...
-NativeSessionJudgment = Union[NativeSessionJudgmentDecision, NativeSessionJudgmentChoice, NativeSessionJudgmentScore, NativeSessionJudgmentTags]
 
 class NativeSessionJudgmentChoice(_NativeResult):
     __slots__ = ()
@@ -1385,7 +1343,6 @@ class NativeSessionNamedProbability(_NativeResult):
     def name(self) -> str: ...
     @property
     def probability(self) -> float: ...
-NativeSessionObservation = Union[NativeSessionObservationQuestion, NativeSessionObservationRow]
 
 class NativeSessionObservationQuestion(_NativeResult):
     __slots__ = ()
@@ -1410,7 +1367,6 @@ class NativeSessionObservationRow(_NativeResult):
     def kind(self) -> Literal['row']: ...
     @property
     def value(self) -> NativeSessionObservedRow: ...
-NativeSessionObservedRow = Union[NativeSessionObservedRowJudgment, NativeSessionObservedRowAnnotated, NativeSessionObservedRowRecognized, NativeSessionObservedRowFind, NativeSessionObservedRowRelations]
 
 class NativeSessionObservedRowAnnotated(_NativeResult):
     __slots__ = ()
@@ -1446,7 +1402,6 @@ class NativeSessionObservedRowRelations(_NativeResult):
     def kind(self) -> Literal['relations']: ...
     @property
     def value(self) -> list[NativeSessionRelationEdge]: ...
-NativeSessionPacket = Union[NativeSessionPacketDecideRow, NativeSessionPacketChooseRow, NativeSessionPacketTagRow, NativeSessionPacketScoreRow, NativeSessionPacketFilterRow, NativeSessionPacketAnnotateRow, NativeSessionPacketDecideAggregate, NativeSessionPacketChooseAggregate, NativeSessionPacketTagAggregate, NativeSessionPacketScoreAggregate, NativeSessionPacketFilterAggregate, NativeSessionPacketRankAggregate, NativeSessionPacketFindAggregate, NativeSessionPacketAnnotateAggregate, NativeSessionPacketRecognizeAggregate, NativeSessionPacketRelateAggregate, NativeSessionPacketObservation, NativeSessionPacketTerminal]
 
 class NativeSessionPacketAnnotateAggregate(_NativeResult):
     __slots__ = ()
@@ -1609,7 +1564,6 @@ class NativeSessionPacketTerminal(_NativeResult):
     def failure(self) -> Union[NativeCallError]: ...
     @property
     def kind(self) -> Literal['terminal']: ...
-NativeSessionProbabilities = Union[NativeSessionProbabilitiesYesNo, NativeSessionProbabilitiesNamed]
 
 class NativeSessionProbabilitiesNamed(_NativeResult):
     __slots__ = ()
@@ -1716,7 +1670,6 @@ class NativeSourceRelationEndpoint(_NativeResult):
     def ordinal(self) -> int: ...
     @property
     def record(self) -> Any: ...
-NativeThreshold = Union[float, str]
 
 class NativeTokenUsage(_NativeResult):
     __slots__ = ()
@@ -1724,4 +1677,51 @@ class NativeTokenUsage(_NativeResult):
     def input_tokens(self) -> int: ...
     @property
     def output_tokens(self) -> int: ...
-NativeValue = Any
+NativeAnnotationMember = Union[NativeAnnotationMemberAnswerId, NativeAnnotationMemberFailureId]
+NativeAnnotationValue = Union[NativeAnnotationValueDecision, NativeAnnotationValueChoice, NativeAnnotationValueScore, NativeAnnotationValueTags, NativeAnnotationValueFailed]
+NativeAnswerId = str
+NativeBatch = Union[int, Literal['max']]
+NativeBoundaryMode = Literal['boundary_only']
+NativeCallId = str
+NativeDecideValue = Union[Union[bool, None], Any]
+NativeEstimatedInputDenial = Union[NativeEstimatedInputDenialInitialRequest, NativeEstimatedInputDenialAdditionalRequest, NativeEstimatedInputDenialRetry]
+NativeFailureId = str
+NativeImageMedia = Union[Literal['image/jpeg'], Literal['image/png']]
+NativeInputDeclaration = Union[NativeInputDeclarationString, NativeInputDeclarationObject]
+NativeInputPropertyType = Union[NativeInputPropertyTypeString, NativeInputPropertyTypeNumber, NativeInputPropertyTypeBoolean, NativeInputPropertyTypeArray]
+NativeObjectType = Literal['object']
+NativeObservation = Union[NativeObservationObservationId, NativeObservationFailureId]
+NativeObservationId = str
+NativeOrigin = Union[Literal['live'], Literal['cache'], Literal['replay'], Literal['proxy'], Literal['memory']]
+NativeQuestionName = str
+NativeReadableQuestion = Union[NativeReadableQuestionDecide, NativeReadableQuestionChoose, NativeReadableQuestionTag, NativeReadableQuestionScore]
+NativeRecognitionMode = Union[Literal['whole'], Literal['boundary_only']]
+NativeRecognitionOdds = Union[NativeRecognitionOddsFieldsNamesPairsPiecesProposals, NativeRecognitionOddsFieldsPiecesProposals]
+NativeRelationDirection = Union[Literal['source_to_target'], Literal['either']]
+NativeRelationMember = Union[NativeRelationMemberAnswerId, NativeRelationMemberFailureId]
+NativeRelationMethod = Union[Literal['yes_no'], Literal['choice']]
+NativeRequestFunction = Union[Literal['decide'], Literal['choose'], Literal['tag'], Literal['score'], Literal['filter'], Literal['rank'], Literal['find'], Literal['annotate'], Literal['recognize'], Literal['relate']]
+NativeSdkRequestId = str
+NativeSendBudgetDenial = Union[NativeSendBudgetDenialBeforeFirstSend, NativeSendBudgetDenialBeforeAdditionalSend, NativeSendBudgetDenialBeforeRetry]
+NativeStopCause = Union[Literal['usage'], Literal['local'], Literal['no_key'], Literal['transport'], Literal['status'], Literal['too_large'], Literal['reply'], Literal['backend'], Literal['cancelled'], Literal['deadline'], Literal['defect']]
+NativeStringType = Literal['string']
+NativeUsagePersistence = Union[Literal['disabled'], Literal['pending'], Literal['written'], Literal['failed']]
+NativeVerb = Literal['recognize']
+NativeVersion = Literal['thinkthen.result/2']
+NativeWordingVersion = int
+NativeAnnotatedField = Union[bool, None, str, list[str], float, NativeFailed]
+NativeAnnotatedRow = dict[str, NativeAnnotatedField]
+NativeAnswer = Union[NativeAnswerYesNo, NativeAnswerChoice, NativeAnswerTag, NativeAnswerScore]
+NativeAttemptOutcome = Union[Literal['ok'], Literal['status'], Literal['transport']]
+NativeBatchSetting = Union[int, str]
+NativeFailureCause = Union[Literal['missing_answer'], Literal['wrong_kind'], Literal['missing_probability'], Literal['invalid_probability'], Literal['invalid_distribution'], Literal['unexpected_probability']]
+NativeFailureKind = Union[Literal['usage'], Literal['backend'], Literal['local'], Literal['cancelled'], Literal['deadline'], Literal['defect']]
+NativeRecognize = Union[NativeRecognizeFieldsEntities, NativeRecognizeFieldsModeProposals]
+NativeRelatedEntityEdgePropertiesSource = Union[NativeRelatedEntityEdgePropertiesSourceFieldsKindName, NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord]
+NativeSessionJudgment = Union[NativeSessionJudgmentDecision, NativeSessionJudgmentChoice, NativeSessionJudgmentScore, NativeSessionJudgmentTags]
+NativeSessionObservation = Union[NativeSessionObservationQuestion, NativeSessionObservationRow]
+NativeSessionObservedRow = Union[NativeSessionObservedRowJudgment, NativeSessionObservedRowAnnotated, NativeSessionObservedRowRecognized, NativeSessionObservedRowFind, NativeSessionObservedRowRelations]
+NativeSessionPacket = Union[NativeSessionPacketDecideRow, NativeSessionPacketChooseRow, NativeSessionPacketTagRow, NativeSessionPacketScoreRow, NativeSessionPacketFilterRow, NativeSessionPacketAnnotateRow, NativeSessionPacketDecideAggregate, NativeSessionPacketChooseAggregate, NativeSessionPacketTagAggregate, NativeSessionPacketScoreAggregate, NativeSessionPacketFilterAggregate, NativeSessionPacketRankAggregate, NativeSessionPacketFindAggregate, NativeSessionPacketAnnotateAggregate, NativeSessionPacketRecognizeAggregate, NativeSessionPacketRelateAggregate, NativeSessionPacketObservation, NativeSessionPacketTerminal]
+NativeSessionProbabilities = Union[NativeSessionProbabilitiesYesNo, NativeSessionProbabilitiesNamed]
+NativeThreshold = Union[float, str]
+NativeValue = Union[bool, None, str, list[str], float]
