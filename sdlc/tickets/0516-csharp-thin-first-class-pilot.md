@@ -39,3 +39,4 @@ A C# developer installs the NuGet package and calls named functions with native 
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed 814fd7e11bdaa4714f82fdb64a71c9a3af885d63; next: Installed owned-session initial slice is accepted and landed. Finish generated settings and reader failures, canonical planning and retained legacy removal before whole adoption.
