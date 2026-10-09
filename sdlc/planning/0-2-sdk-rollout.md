@@ -14,7 +14,7 @@ The [thin, first-class binding ruling](../decisions/2026-10-09-thin-first-class-
 | 6 | 0517 packaging linked with 0501; Windows packages 0383–0385; 0484 pruning; 0470 DuckDB feed; 0467 docs | Medium package work and bounded cleanup. Test installed packages, retain distinct risk cases and avoid a second manifest system. Windows packages follow settled family adoption. |
 | 7 | 0508 final review, after-sprint review and full installed run | Large final integration. Fix confirmed required defects. Required not-run cases fail, and parity gaps need written rulings. |
 
-The unresolved 0461 window ruling remains in pm. Independent controls proceed under recorded strict-byte and unknown-route assumptions without a vendor-fit guarantee. Notify TCGA with a named main build after 0475 and 0476. Cache tickets 0474 and 0480 retain their native Windows obligations. Release management remains held: no tag, candidate, workflow, rehearsal or publication without Ian's permission. Outside dependencies do not block local SDK completion.
+The PM settled 0461's unknown-window rule on 2026-10-09: retain routes under byte limits, report the window as unknown and let provider refusal stand. An estimate gives no vendor-fit guarantee. Notify TCGA with a named main build after 0475 and 0476. Cache tickets 0474 and 0480 retain their native Windows obligations. Release management remains held: no tag, candidate, workflow, rehearsal or publication without Ian's permission. Outside dependencies do not block local SDK completion. The 0470 bounded DuckDB feed precedes or accompanies 0495 adoption after shared session work; this dependency overrides the later cleanup placement in the table.
 
 ## Superseded 2026-10-08 order
 

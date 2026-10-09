@@ -11,6 +11,8 @@ Depends on: 0514
 
 Reviews: revision 4cd756859, reject
 
+Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
+
 ## Outcome
 
 The review amendment below narrows the initial implementation and adds explicit session ownership proof.

@@ -8,6 +8,8 @@ Depends on: 0511
 
 Reviews: revision 4cd756859, reject
 
+Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
+
 ## Outcome
 
 The review amendment below requires a reviewed SQL NULL and image contract before changing current assertions.
@@ -24,6 +26,6 @@ DuckDB, SQLite and PostgreSQL treat NULL one way, take images as binary values, 
 
 ## Review amendment
 
-Settle the NULL contract against accepted SQL rulings before changing current tests. Proposed consistent behavior: required NULL scalar operands return SQL NULL; required NULL table operands produce zero rows; neither inspects other operands nor sends. Optional settings NULL means omitted settings; backend failures remain failures. This proposal requires PM review because existing SQLite rank tests deliberately expect errors.
+The PM accepted this NULL contract in ask 5 of the 2026-10-09 thin-first-class message: required NULL scalar operands return SQL NULL; required NULL table or set operands produce zero rows; neither inspects other operands, reads files nor sends. Optional settings NULL means omitted settings; backend failures remain failures. This ruling supersedes the SQLite rank tests that expect errors. Update those assertions and record the rule in the SQL specification during implementation.
 
 Preserve valid existing image forms while defining native binary overloads and each database's actual description query in the reviewed design. SQLite function comments alone are not an interface. The initial SQLite NULL slice claims `databases/sqlite/src/many.rs`, `databases/sqlite/tests/test_rank.py`, `databases/sqlite/tests/test_values.py` and `databases/sqlite/README.md`. Claim DuckDB JSON return changes and binary input separately before coding. Count zero sends and unnecessary reads. Signing and registry submission remain outside dependencies; 0517 owns local native package inventory, not their submission. This amendment supersedes that deferral above.

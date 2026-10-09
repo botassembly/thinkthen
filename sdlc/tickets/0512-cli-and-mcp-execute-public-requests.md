@@ -8,6 +8,8 @@ Depends on: 0511
 
 Reviews: revision 4cd756859, reject
 
+Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
+
 ## Outcome
 
 The review amendment below governs the initial slice and supersedes the undefined machine-readable CLI error feature.

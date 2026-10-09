@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision 4cd756859, reject
 
+Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
+
 ## Outcome
 
 One public core module admits every request: inputs, question files, label descriptions, limits, defaults and validation. Every surface calls it. No binding, extension or host package restates a rule.
