@@ -23,7 +23,7 @@ pub(super) enum RecognitionOdds {
 pub(super) struct WholeOdds {
     pieces: Vec<PieceOdds>,
     names: Vec<NameOdds>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     proposals: Vec<RecognitionProposal>,
     pairs: Vec<PairOdds>,
 }
