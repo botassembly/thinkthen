@@ -16,7 +16,7 @@
   </PropertyGroup>
   <ItemGroup><Compile Include="src/*.cs"/><Compile Include="../../sdlc/generators/results/csharp/CompleteFacts.g.cs" Link="CompleteFacts.g.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README.md" Pack="true" PackagePath="/"/></ItemGroup>
   <ItemGroup Condition="'$(ThinkThenNativeAsset)' != ''">
-    <None Include="$(ThinkThenNativeAsset)" Pack="true" PackagePath="runtimes/$(ThinkThenNativeRid)/native/$(ThinkThenNativeName)" />
+    <None Include="$(ThinkThenNativeAsset)" Pack="true" PackagePath="runtimes/$(ThinkThenNativeRid)/native/$(ThinkThenNativeName)" Link="$(ThinkThenNativeName)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="RequireNativeAsset" BeforeTargets="Pack">
     <Error Condition="'$(ThinkThenNativeAsset)' == '' or '$(ThinkThenNativeRid)' == '' or '$(ThinkThenNativeName)' == '' or !Exists('$(ThinkThenNativeAsset)')" Text="Pack requires a built version-matched native asset, RID and native name." />

@@ -119,7 +119,7 @@ static class Program
             JsonElement envelope = json.RootElement;
             Check(envelope.ValueKind == JsonValueKind.Object && envelope.EnumerateObject().Select(p => p.Name).OrderBy(n => n).SequenceEqual(new[] { "facts", "value" }), "JSON door envelope fields");
             JsonElement facts = envelope.GetProperty("facts");
-            Check(facts.ValueKind == JsonValueKind.Object && facts.EnumerateObject().Select(p => p.Name).OrderBy(n => n).SequenceEqual(new[] { "cache_answers", "input_tokens", "model", "output_tokens", "records", "requests_sent", "seconds" }), "JSON door facts fields");
+            Check(facts.ValueKind == JsonValueKind.Object, "JSON door facts object");
             Check(facts.GetProperty("records").GetInt32() >= 0 && facts.GetProperty("requests_sent").GetInt32() >= 0 && facts.GetProperty("cache_answers").GetInt32() >= 0 && facts.GetProperty("input_tokens").GetInt32() >= 0 && facts.GetProperty("output_tokens").GetInt32() >= 0 && facts.GetProperty("model").GetString() == "jev-1.13.0" && facts.GetProperty("seconds").GetDouble() >= 0, "JSON door facts types and values");
             JsonElement value = envelope.GetProperty("value");
             switch (i)

@@ -39,7 +39,8 @@ public sealed partial class Engine
                 packets.Add(packet);
                 if (packet is SessionPacketTerminal settled) terminal = settled;
             }
-            await producer.ConfigureAwait(false);
+            stop.Cancel();
+            if (producer.IsFaulted) await producer.ConfigureAwait(false);
             cancellation.ThrowIfCancellationRequested();
             var call = new OwnedCall(packets.AsReadOnly(), terminal ?? throw new InvalidOperationException("Native End has no terminal."));
             if (call.Terminal.Failure.State == PresenceState.Value) throw new SessionFailure(call.Terminal.Failure.Value, call);

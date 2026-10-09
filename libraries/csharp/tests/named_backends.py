@@ -13,11 +13,9 @@ from children import child_env
 from backend_cases import ROWS, alias, configuration, paths
 
 with tempfile.TemporaryDirectory(prefix="csharp-named-") as scratch:
-    (Path(scratch) / "libthinkthen.so.0").symlink_to(ROOT / "libraries/c/target/debug/libthinkthen_c.so")
     env = child_env(HOME=scratch, XDG_CONFIG_HOME=str(Path(scratch) / "config"), XDG_CACHE_HOME=str(Path(scratch) / "cache"), XDG_STATE_HOME=str(Path(scratch) / "state"),
                     DOTNET_CLI_HOME=scratch, DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_NOLOGO="1",
-                    NUGET_PACKAGES=str(PACKAGE / "target/scratch/nuget"),
-                    LD_LIBRARY_PATH=scratch)
+                    NUGET_PACKAGES=str(PACKAGE / "target/scratch/nuget"))
     subprocess.run([str(dotnet()), "build", str(PACKAGE / "tests/Consumer.csproj"), "--configuration", "Release",
                     "--source", str(PACKAGE / "target/scratch/nuget"), "-v", "quiet"], env=env, check=True, timeout=120)
     server = subprocess.Popen([ROOT / "target/debug/conformance-backend"],

@@ -283,6 +283,16 @@ def main():
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(result)
+    if args.check and not args.inputs and args.schema == SCHEMA and args.output == OUTPUT:
+        path = Path(__file__).parent / 'templates/csharp.py'
+        spec = importlib.util.spec_from_file_location('request_csharp', path)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        inputs = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()))
+        output = ROOT / 'libraries/csharp/src/RequestInputs.g.cs'
+        if not output.exists() or output.read_text() != inputs:
+            print('generated C# inputs differ; run sdlc/generators/results/generate.py --inputs', file=sys.stderr)
+            return 1
     return 0
 
 

@@ -59,8 +59,7 @@ public override void Write(Utf8JsonWriter writer) { writer.WriteStartArray(); fo
 }
 
 public sealed class InputAuthoredCriterionAlternative3 : InputAuthoredCriterion {
-public required JsonElement Value { get; init; }
-public override void Write(Utf8JsonWriter writer) { Value.WriteTo(writer); }
+public override void Write(Utf8JsonWriter writer) { writer.WriteNullValue(); }
 }
 
 public abstract class InputAuthoredCut : InputDocument { private protected InputAuthoredCut() {} }
@@ -125,8 +124,7 @@ public override void Write(Utf8JsonWriter writer) { writer.WriteStartArray(); fo
 }
 
 public sealed class InputAuthoredDescriptionValueAlternative3 : InputAuthoredDescriptionValue {
-public required JsonElement Value { get; init; }
-public override void Write(Utf8JsonWriter writer) { Value.WriteTo(writer); }
+public override void Write(Utf8JsonWriter writer) { writer.WriteNullValue(); }
 }
 
 public sealed class InputAuthoredFind : InputDocument {
@@ -389,9 +387,9 @@ public override void Write(Utf8JsonWriter writer) { writer.WriteStringValue("ima
 public abstract class InputRecognitionExample : InputDocument { private protected InputRecognitionExample() {} }
 
 public sealed class InputRecognitionExampleEntity : InputDocument {
-public required long End { get; init; }
+public required ulong End { get; init; }
 public required string Kind { get; init; }
-public required long Start { get; init; }
+public required ulong Start { get; init; }
 public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); writer.WritePropertyName("end"); writer.WriteNumberValue(End); writer.WritePropertyName("kind"); writer.WriteStringValue(Kind); writer.WritePropertyName("start"); writer.WriteNumberValue(Start); writer.WriteEndObject(); }
 }
 
@@ -423,9 +421,9 @@ public override void Write(Utf8JsonWriter writer) { writer.WriteStringValue("bou
 }
 
 public sealed class InputRecognitionSeedSpan : InputDocument {
-public required long End { get; init; }
+public required ulong End { get; init; }
 public InputPresence<string> Kind { get; init; }
-public required long Start { get; init; }
+public required ulong Start { get; init; }
 public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); writer.WritePropertyName("end"); writer.WriteNumberValue(End); if (Kind.IsPresent) { writer.WritePropertyName("kind"); writer.WriteStringValue(Kind.Value); } writer.WritePropertyName("start"); writer.WriteNumberValue(Start); writer.WriteEndObject(); }
 }
 
@@ -445,7 +443,7 @@ public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); w
 public abstract class InputRequestBatch : InputDocument { private protected InputRequestBatch() {} }
 
 public sealed class InputRequestBatchAlternative0 : InputRequestBatch {
-public required long Value { get; init; }
+public required ulong Value { get; init; }
 public override void Write(Utf8JsonWriter writer) { writer.WriteNumberValue(Value); }
 }
 
@@ -578,7 +576,7 @@ public InputPresence<InputAuthoredQuestionText> Instructions { get; init; }
 public InputPresence<IReadOnlyDictionary<string, InputAuthoredDescription>> Kinds { get; init; }
 public InputPresence<InputRecognitionMode> Mode { get; init; }
 public InputPresence<IReadOnlyList<InputAuthoredRelation>> Relations { get; init; }
-public InputPresence<long> SnippetPieces { get; init; }
+public InputPresence<uint> SnippetPieces { get; init; }
 public InputPresence<InputRecognitionStageContext> StageContext { get; init; }
 public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); if (EntityDefinition.IsPresent) { writer.WritePropertyName("entity_definition"); EntityDefinition.Value.Write(writer); } if (Instructions.IsPresent) { writer.WritePropertyName("instructions"); Instructions.Value.Write(writer); } if (Kinds.IsPresent) { writer.WritePropertyName("kinds"); writer.WriteStartObject(); foreach (var entry in Kinds.Value) { writer.WritePropertyName(entry.Key); entry.Value.Write(writer); } writer.WriteEndObject(); } if (Mode.IsPresent) { writer.WritePropertyName("mode"); Mode.Value.Write(writer); } if (Relations.IsPresent) { writer.WritePropertyName("relations"); writer.WriteStartArray(); foreach (var item in Relations.Value) { item.Write(writer); } writer.WriteEndArray(); } if (SnippetPieces.IsPresent) { writer.WritePropertyName("snippet_pieces"); writer.WriteNumberValue(SnippetPieces.Value); } if (StageContext.IsPresent) { writer.WritePropertyName("stage_context"); StageContext.Value.Write(writer); } writer.WriteEndObject(); }
 }
@@ -740,7 +738,7 @@ public InputPresence<IReadOnlyList<InputRecognitionExample>> Examples { get; ini
 public InputPresence<string> ExamplesField { get; init; }
 public InputPresence<IReadOnlyList<string>> Field { get; init; }
 public InputPresence<bool> FilesOnly { get; init; }
-public InputPresence<long> MaxRequestsTotal { get; init; }
+public InputPresence<ulong> MaxRequestsTotal { get; init; }
 public InputPresence<InputRecognitionMode> Mode { get; init; }
 public InputPresence<string> Model { get; init; }
 public InputPresence<bool> None { get; init; }
@@ -748,10 +746,10 @@ public InputPresence<string> OptionsField { get; init; }
 public InputPresence<InputRequestThreshold> RelationThreshold { get; init; }
 public InputPresence<IReadOnlyList<InputRecognitionSeedSpan>> SeedSpans { get; init; }
 public InputPresence<string> SeedSpansField { get; init; }
-public InputPresence<long> SnippetPieces { get; init; }
+public InputPresence<uint> SnippetPieces { get; init; }
 public InputPresence<InputRecognitionStageContext> StageContext { get; init; }
 public InputPresence<InputRequestThreshold> Threshold { get; init; }
-public InputPresence<long> Top { get; init; }
+public InputPresence<ulong> Top { get; init; }
 public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); if (Attempts.IsPresent) { writer.WritePropertyName("attempts"); writer.WriteBooleanValue(Attempts.Value); } if (Batch.IsPresent) { writer.WritePropertyName("batch"); Batch.Value.Write(writer); } if (Context.IsPresent) { writer.WritePropertyName("context"); writer.WriteStringValue(Context.Value); } if (ContextField.IsPresent) { writer.WritePropertyName("context_field"); writer.WriteStringValue(ContextField.Value); } if (DeadlineMs.IsPresent) { writer.WritePropertyName("deadline_ms"); writer.WriteNumberValue(DeadlineMs.Value); } if (Details.IsPresent) { writer.WritePropertyName("details"); writer.WriteBooleanValue(Details.Value); } if (Examples.IsPresent) { writer.WritePropertyName("examples"); writer.WriteStartArray(); foreach (var item in Examples.Value) { item.Write(writer); } writer.WriteEndArray(); } if (ExamplesField.IsPresent) { writer.WritePropertyName("examples_field"); writer.WriteStringValue(ExamplesField.Value); } if (Field.IsPresent) { writer.WritePropertyName("field"); writer.WriteStartArray(); foreach (var item in Field.Value) { writer.WriteStringValue(item); } writer.WriteEndArray(); } if (FilesOnly.IsPresent) { writer.WritePropertyName("files_only"); writer.WriteBooleanValue(FilesOnly.Value); } if (MaxRequestsTotal.IsPresent) { writer.WritePropertyName("max_requests_total"); writer.WriteNumberValue(MaxRequestsTotal.Value); } if (Mode.IsPresent) { writer.WritePropertyName("mode"); Mode.Value.Write(writer); } if (Model.IsPresent) { writer.WritePropertyName("model"); writer.WriteStringValue(Model.Value); } if (None.IsPresent) { writer.WritePropertyName("none"); writer.WriteBooleanValue(None.Value); } if (OptionsField.IsPresent) { writer.WritePropertyName("options_field"); writer.WriteStringValue(OptionsField.Value); } if (RelationThreshold.IsPresent) { writer.WritePropertyName("relation_threshold"); RelationThreshold.Value.Write(writer); } if (SeedSpans.IsPresent) { writer.WritePropertyName("seed_spans"); writer.WriteStartArray(); foreach (var item in SeedSpans.Value) { item.Write(writer); } writer.WriteEndArray(); } if (SeedSpansField.IsPresent) { writer.WritePropertyName("seed_spans_field"); writer.WriteStringValue(SeedSpansField.Value); } if (SnippetPieces.IsPresent) { writer.WritePropertyName("snippet_pieces"); writer.WriteNumberValue(SnippetPieces.Value); } if (StageContext.IsPresent) { writer.WritePropertyName("stage_context"); StageContext.Value.Write(writer); } if (Threshold.IsPresent) { writer.WritePropertyName("threshold"); Threshold.Value.Write(writer); } if (Top.IsPresent) { writer.WritePropertyName("top"); writer.WriteNumberValue(Top.Value); } writer.WriteEndObject(); }
 }
 
@@ -796,7 +794,7 @@ public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); w
 
 public sealed class InputRequestReader : InputDocument {
 public InputPresence<InputSourceUnit> Unit { get; init; }
-public InputPresence<long> Window { get; init; }
+public InputPresence<ulong> Window { get; init; }
 public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); if (Unit.IsPresent) { writer.WritePropertyName("unit"); Unit.Value.Write(writer); } if (Window.IsPresent) { writer.WritePropertyName("window"); writer.WriteNumberValue(Window.Value); } writer.WriteEndObject(); }
 }
 
@@ -833,8 +831,8 @@ public override void Write(Utf8JsonWriter writer) { writer.WriteStringValue("thi
 
 public sealed class InputSessionSourceLocation : InputDocument {
 public required string File { get; init; }
-public InputPresence<long> FirstLine { get; init; }
-public InputPresence<long> LastLine { get; init; }
+public InputPresence<ulong> FirstLine { get; init; }
+public InputPresence<ulong> LastLine { get; init; }
 public override void Write(Utf8JsonWriter writer) { writer.WriteStartObject(); writer.WritePropertyName("file"); writer.WriteStringValue(File); if (FirstLine.IsPresent) { writer.WritePropertyName("first_line"); writer.WriteNumberValue(FirstLine.Value); } if (LastLine.IsPresent) { writer.WritePropertyName("last_line"); writer.WriteNumberValue(LastLine.Value); } writer.WriteEndObject(); }
 }
 

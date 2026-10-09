@@ -337,7 +337,7 @@ def render_inputs(schema):
         if kind == 'object' and isinstance(value.get('additionalProperties'), dict):
             return 'IReadOnlyDictionary<string, ' + cs_type(value['additionalProperties'], path + '_Entry') + '>'
         return {'string': 'string', 'boolean': 'bool', 'integer': 'long',
-                'number': 'double'}.get(kind, 'JsonElement')
+                'number': 'double'}.get(kind, 'JsonElement') if kind != 'integer' else {'uint64':'ulong', 'uint32':'uint', 'uint':'ulong'}.get(value.get('format'), 'long')
     def type_of_literal(value):
         return 'string' if isinstance(value, str) else 'bool' if isinstance(value, bool) else 'long'
     def emit(value, expr, path):
@@ -351,6 +351,8 @@ def render_inputs(schema):
         return {'string': 'writer.WriteStringValue(' + expr + ');',
                 'bool': 'writer.WriteBooleanValue(' + expr + ');',
                 'long': 'writer.WriteNumberValue(' + expr + ');',
+                'ulong': 'writer.WriteNumberValue(' + expr + ');',
+                'uint': 'writer.WriteNumberValue(' + expr + ');',
                 'double': 'writer.WriteNumberValue(' + expr + ');'}.get(typ, expr + '.WriteTo(writer);')
     header = '''// Generated from the Rust-derived Request schema; do not edit.
 #nullable enable
@@ -405,6 +407,8 @@ public abstract class InputDocument {
                 body = 'writer.WritePropertyName(' + quote(member) + '); ' + emit(prop, pname if mandatory else pname + '.Value', key + '_' + member)
                 writes.append(body if mandatory else 'if (' + pname + '.IsPresent) { ' + body + ' }')
             writes.append('writer.WriteEndObject();')
+        elif value.get('type') == 'null':
+            writes = ['writer.WriteNullValue();']
         elif 'const' in value:
             literal = value['const']
             writes = [emit(value, quote(literal) if isinstance(literal, str) else str(literal).lower(), key + '_Value')]
