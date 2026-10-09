@@ -9,6 +9,6 @@ check("the team and urgency columns", identical(drawn$team, rep("billing", 3L)) 
       isTRUE(all.equal(drawn$urgency, rep(0.15, 3L))))
 # A band the generic 0.9 falls inside makes every row "not sure", and
 # filter() drops them all.
-banded <- tickets |> filter(vapply(tt_decide("Is this a complaint?", body, options = list(threshold = "0.2:0.95"))$results, function(row) isTRUE(row$value), TRUE))
+banded <- complaints(tickets, options = list(threshold = "0.2:0.95"))
 check("filter drops the not-sure rows", identical(nrow(banded), 0L))
 finish("slide", 3L)

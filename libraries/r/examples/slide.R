@@ -4,10 +4,13 @@ library(dplyr)
 library(thinkthen)
 teams <- c("billing", "shipping", "account")
 levels <- c("Routine.", "Soon.", "Immediate.")
-tickets |>
-  filter(vapply(tt_decide("Is this a complaint?", body)$results, `[[`, TRUE, "value")) |>
+complaints <- function(tickets, options = list()) {
+  tickets |>
+  filter(vapply(tt_decide("Is this a complaint?", body, options = options)$results, function(row) isTRUE(row$value), TRUE)) |>
   mutate(
     team = vapply(tt_choose(list(choose = "Which team owns this?", options = teams), body)$results, `[[`, "", "value"),
     urgency = vapply(tt_score(list(score = "How urgent is this?", levels = levels), body)$results, `[[`, 0, "value")
   ) |>
   arrange(desc(urgency))
+}
+complaints(tickets)
