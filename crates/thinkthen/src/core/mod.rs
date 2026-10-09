@@ -46,12 +46,15 @@ mod recognition_result;
 mod recognize;
 pub(crate) use recognize::{ExamplesError, example_file, render_examples, selected_examples};
 pub use recognize::{
-    RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionSeedSpan,
-    RecognitionStageContext,
+    RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionMode,
+    RecognitionSeedSpan, RecognitionStageContext,
 };
 pub(crate) use recognize::{seed_stretches, selected_seeds};
 mod surface;
-pub(crate) use recognition_result::{PairOdds, Place, RecognitionOdds, RecognizedValue};
+pub(crate) use recognition_result::{
+    BoundaryMode, BoundaryOdds, BoundaryProposal, PairOdds, Place, RecognitionOdds,
+    RecognizedValue, WholeRecognitionOdds,
+};
 pub use surface::{Surface, SurfaceError};
 mod recognize_file;
 pub(crate) mod record_input;

@@ -16,6 +16,9 @@ pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[cfg_attr(test, schemars(inline, with = "crate::core::Json"))]
 pub(crate) struct RecognizeSpec {
+    pub(crate) mode: crate::core::RecognitionMode,
+    pub(crate) authored_relations: bool,
+    pub(crate) authored_relation_threshold: bool,
     pub(crate) stage_context: crate::core::RecognitionStageContext,
     pub(crate) examples: Vec<crate::core::RecognitionExample>,
     pub(crate) seed_spans: Vec<crate::core::RecognitionSeedSpan>,
@@ -41,6 +44,8 @@ enum Verb {
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub(crate) struct QuestionDocument<'a> {
     verb: Verb,
+    #[serde(skip_serializing_if = "crate::core::RecognitionMode::is_whole")]
+    mode: crate::core::RecognitionMode,
     #[serde(skip_serializing_if = "crate::core::RecognitionStageContext::is_empty")]
     stage_context: &'a crate::core::RecognitionStageContext,
     kinds: Kinds<'a>,
@@ -51,21 +56,34 @@ pub(crate) struct QuestionDocument<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     relations: Option<&'a [RelationRule]>,
     threshold: Threshold,
-    relation_threshold: Threshold,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relation_threshold: Option<Threshold>,
     #[serde(skip_serializing_if = "Option::is_none")]
     profile: Option<&'a ProfileName>,
 }
 impl RecognizeSpec {
+    pub(crate) fn validate_mode(&self) -> Result<(), RecognizeConfigError> {
+        if !self.mode.is_whole()
+            && (self.authored_relations
+                || self.authored_relation_threshold
+                || self.stage_context.kind_edge.is_some()
+                || self.stage_context.relation.is_some())
+        {
+            return Err(RecognizeConfigError::BoundaryControls);
+        }
+        Ok(())
+    }
     pub(crate) fn document(&self) -> QuestionDocument<'_> {
         QuestionDocument {
             verb: Verb::Recognize,
+            mode: self.mode,
             stage_context: &self.stage_context,
             kinds: Kinds(&self.kinds),
             instructions: self.instructions.as_ref(),
             entity_definition: self.entity_definition.as_ref(),
             relations: (!self.relations.is_empty()).then_some(self.relations.as_slice()),
             threshold: self.threshold,
-            relation_threshold: self.relation_threshold,
+            relation_threshold: self.mode.is_whole().then_some(self.relation_threshold),
             profile: self.profile.as_ref(),
         }
     }
@@ -107,6 +125,10 @@ pub(crate) enum RecognizeConfigError {
     Reference,
     #[error("recognize thresholds are single cuts above zero and at most one")]
     Threshold,
+    #[error(
+        "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"
+    )]
+    BoundaryControls,
 }
 
 impl RecognizeSpec {
@@ -119,6 +141,9 @@ impl RecognizeSpec {
         validate_kinds(&kinds)?;
         validate_relations(&kinds, &relations)?;
         Ok(Self {
+            mode: crate::core::RecognitionMode::Whole,
+            authored_relations: !relations.is_empty(),
+            authored_relation_threshold: relation_threshold.is_some(),
             stage_context: crate::core::RecognitionStageContext::default(),
             examples: Vec::new(),
             seed_spans: Vec::new(),
@@ -168,6 +193,7 @@ impl RecognizeSpec {
                 "instructions",
                 "entity_definition",
                 "stage_context",
+                "mode",
             ]
             .contains(&name.as_str())
         }) {
@@ -197,6 +223,21 @@ impl RecognizeSpec {
             .transpose()?
             .unwrap_or_default();
         Ok(Self {
+            mode: value
+                .member("recognize")
+                .and_then(|v| v.member("mode"))
+                .map(|v| match v.as_str() {
+                    Some("whole") => Ok(crate::core::RecognitionMode::Whole),
+                    Some("boundary_only") => Ok(crate::core::RecognitionMode::BoundaryOnly),
+                    _ => Err(RecognizeConfigError::Shape),
+                })
+                .transpose()?
+                .unwrap_or_default(),
+            authored_relations: value
+                .member("recognize")
+                .and_then(|v| v.member("relations"))
+                .is_some(),
+            authored_relation_threshold: value.member("relation_threshold").is_some(),
             metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
             stage_context,
             examples: Vec::new(),

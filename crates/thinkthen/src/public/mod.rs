@@ -65,8 +65,8 @@ pub use record_context::{ObjectContext, RecordContext};
 pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
 pub use crate::core::{
-    RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionSeedSpan,
-    RecognitionStageContext,
+    RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionMode,
+    RecognitionSeedSpan, RecognitionStageContext,
 };
 mod recognize_question;
 pub use recognize_question::RecognizeQuestionFile;
@@ -108,7 +108,8 @@ pub use question::{
 };
 pub use question_file::{QuestionFileError, read_question_file};
 pub use recognize::{
-    Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relation, RelationRule,
+    BoundaryProposal, Kind, RecognitionValue, Recognize, RecognizeBuilder, Recognized,
+    RecognizedEntity, Relation, RelationRule,
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::FindSelection;
@@ -476,4 +477,6 @@ pub(crate) mod named_question;
 pub use crate::core::QuestionRole as QuestionFileRole;
 pub use named_question::QuestionFileReference;
 
-pub use results::{SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation};
+pub use results::{
+    SourceBoundaryProposal, SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation,
+};

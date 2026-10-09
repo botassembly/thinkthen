@@ -161,3 +161,28 @@ fn stage_context_is_closed_strict_and_recognition_only() {
     assert!(encoded.contains(r#""stage_context":{"boundary":"","relation":"retained"}"#));
     assert!(!format!("{:?}", question).contains("retained"));
 }
+
+#[test]
+fn recognition_mode_resolves_before_source_reads_and_refuses_skipped_controls() {
+    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"version":1,"recognize":DECL}},"input":{"kind":"source","source":{"paths":["missing-evidence"]}},"options":OPTIONS}}"#;
+    for mode in ["whole", "boundary_only"] {
+        let text = request
+            .replace("DECL", "{}")
+            .replace("OPTIONS", &format!(r#"{{"mode":"{mode}"}}"#));
+        assert!(Request::from_json(&text).unwrap().admit().is_ok());
+    }
+    for control in [
+        r#""relations":[]"#,
+        r#""stage_context":{"kind_edge":""}"#,
+        r#""stage_context":{"relation":""}"#,
+    ] {
+        let text = request
+            .replace("DECL", &format!("{{{control}}}"))
+            .replace("OPTIONS", r#"{"mode":"boundary_only"}"#);
+        let error = Request::from_json(&text).unwrap().admit().unwrap_err();
+        assert_eq!(
+            error.detail().message(),
+            "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"
+        );
+    }
+}

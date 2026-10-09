@@ -103,14 +103,25 @@ impl Engine {
             self.aggregate_context.as_ref(),
         )?;
         let mut meta = Aggregate::default();
-        let mut details = Probabilities::default();
+        let mut details = crate::core::WholeRecognitionOdds::default();
         if pieces.is_empty() {
             return Ok(Recognition {
-                value: Recognized {
-                    entities: Vec::new(),
-                    relations: (!spec.relations.is_empty()).then(Vec::new),
+                value: if spec.mode.is_whole() {
+                    Recognized::Whole {
+                        entities: Vec::new(),
+                        relations: (!spec.relations.is_empty()).then(Vec::new),
+                    }
+                } else {
+                    Recognized::BoundaryOnly {
+                        mode: crate::core::BoundaryMode::BoundaryOnly,
+                        proposals: Vec::new(),
+                    }
                 },
-                details,
+                details: if spec.mode.is_whole() {
+                    Probabilities::Whole(details)
+                } else {
+                    Probabilities::BoundaryOnly(crate::core::BoundaryOdds::default())
+                },
                 meta,
             });
         }
@@ -132,6 +143,30 @@ impl Engine {
         stretches.extend(crate::core::seed_stretches(spec, &pieces).map_err(Error::Usage)?);
         stretches.sort_unstable();
         stretches.dedup();
+        if !spec.mode.is_whole() {
+            let proposals =
+                crate::core::BoundaryProposal::decoded(text, &pieces, &rows, &stretches);
+            let cut = spec.threshold.cut_value().unwrap_or(0.5);
+            let kept = proposals
+                .iter()
+                .filter(|proposal| proposal.probability >= cut)
+                .cloned()
+                .collect();
+            meta.model = meta.models.model().cloned();
+            meta.usage = meta.shares.total()?;
+            meta.reported_usage = meta.shares.reported()?;
+            return Ok(Recognition {
+                value: Recognized::BoundaryOnly {
+                    mode: crate::core::BoundaryMode::BoundaryOnly,
+                    proposals: kept,
+                },
+                details: Probabilities::BoundaryOnly(crate::core::BoundaryOdds {
+                    pieces: details.pieces,
+                    proposals,
+                }),
+                meta,
+            });
+        }
         let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
         let answers = self.recognition_stage(spec, "kind").execute(
             &asks,
@@ -169,11 +204,11 @@ impl Engine {
         meta.usage = meta.shares.total()?;
         meta.reported_usage = meta.shares.reported()?;
         Ok(Recognition {
-            value: Recognized {
+            value: Recognized::Whole {
                 entities,
                 relations,
             },
-            details,
+            details: Probabilities::Whole(details),
             meta,
         })
     }
@@ -186,7 +221,7 @@ impl Engine {
         entities: &[RecognizedName],
         held: (
             &mut Aggregate,
-            &mut Probabilities,
+            &mut crate::core::WholeRecognitionOdds,
             &mut impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
         ),
         cancel: &Cancel,
@@ -332,6 +367,7 @@ pub(crate) fn step_one_context(
     limit: usize,
     context: Option<&crate::core::Json>,
 ) -> Result<StepOne, Error> {
+    spec.validate_mode().map_err(|_| Error::Usage("boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"))?;
     let examples =
         crate::core::render_examples(spec, &spec.examples).map_err(Error::RecognitionExamples)?;
     if text.len() > limit {
@@ -346,7 +382,7 @@ pub(crate) fn step_one_context(
         return Ok((pieces, Asks::default(), Vec::new()));
     }
     let kinds: Vec<&str> = spec.kinds.iter().map(|(kind, _)| kind.as_str()).collect();
-    if !kinds.is_empty() || !spec.seed_spans.is_empty() {
+    if spec.mode.is_whole() && (!kinds.is_empty() || !spec.seed_spans.is_empty()) {
         let generic = vec![("ENTITY".to_owned(), None)];
         let probe = kind_question(
             text,

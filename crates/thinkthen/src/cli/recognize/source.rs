@@ -13,7 +13,7 @@ pub(super) struct Entity<'a> {
     coordinates: SourceFields<'a>,
 }
 #[derive(Serialize)]
-struct Relation<'a> {
+pub(super) struct Relation<'a> {
     relation: &'a str,
     source: Entity<'a>,
     target: Entity<'a>,
@@ -22,23 +22,56 @@ struct Relation<'a> {
     either: bool,
 }
 #[derive(Serialize)]
-pub(super) struct Located<'a> {
-    entities: Vec<Entity<'a>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    relations: Option<Vec<Relation<'a>>>,
+#[serde(untagged)]
+pub(super) enum Located<'a> {
+    Whole {
+        entities: Vec<Entity<'a>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        relations: Option<Vec<Relation<'a>>>,
+    },
+    BoundaryOnly {
+        mode: core::BoundaryMode,
+        proposals: Vec<Proposal<'a>>,
+    },
+}
+#[derive(Serialize)]
+pub(super) struct Proposal<'a> {
+    #[serde(flatten)]
+    proposal: &'a core::BoundaryProposal,
+    #[serde(flatten)]
+    coordinates: SourceFields<'a>,
 }
 pub(super) fn located<'a>(
     value: &'a RecognizedValue,
     position: &'a Position,
     text: &str,
 ) -> Result<Located<'a>, Failure> {
-    let entities = value
-        .entities
+    let RecognizedValue::Whole {
+        entities,
+        relations,
+    } = value
+    else {
+        let RecognizedValue::BoundaryOnly { proposals, mode } = value else {
+            return Err(Failure::Defect("recognition has no value"));
+        };
+        return Ok(Located::BoundaryOnly {
+            mode: *mode,
+            proposals: proposals
+                .iter()
+                .map(|proposal| {
+                    Ok(Proposal {
+                        proposal,
+                        coordinates: coordinates(proposal.start, proposal.end, position, text)?,
+                    })
+                })
+                .collect::<Result<_, Failure>>()?,
+        });
+    };
+    let entities = entities
         .iter()
         .map(|name| entity(name, position, text))
         .collect::<Result<_, _>>()?;
-    let relations = value
-        .relations
+    let relations = relations
         .as_ref()
         .map(|edges| {
             edges
@@ -55,7 +88,7 @@ pub(super) fn located<'a>(
                 .collect::<Result<_, Failure>>()
         })
         .transpose()?;
-    Ok(Located {
+    Ok(Located::Whole {
         entities,
         relations,
     })
@@ -65,6 +98,17 @@ fn entity<'a>(
     position: &'a Position,
     text: &str,
 ) -> Result<Entity<'a>, Failure> {
+    Ok(Entity {
+        entity: name,
+        coordinates: coordinates(name.start, name.end, position, text)?,
+    })
+}
+fn coordinates<'a>(
+    start: usize,
+    end: usize,
+    position: &'a Position,
+    text: &str,
+) -> Result<SourceFields<'a>, Failure> {
     let lines = match (position.first, position.last) {
         (Some(first_line), Some(last_line)) => {
             let record = SourceRecord {
@@ -75,7 +119,7 @@ fn entity<'a>(
             };
             Some(
                 record
-                    .span_lines(name.start, name.end)
+                    .span_lines(start, end)
                     .map_err(|_| Failure::Defect("recognized span is outside its source"))?,
             )
         }
@@ -86,13 +130,10 @@ fn entity<'a>(
             ));
         }
     };
-    Ok(Entity {
-        entity: name,
-        coordinates: SourceFields {
-            file: position.file.as_deref(),
-            first_line: lines.map(|(first, _)| first),
-            last_line: lines.map(|(_, last)| last),
-        },
+    Ok(SourceFields {
+        file: position.file.as_deref(),
+        first_line: lines.map(|(first, _)| first),
+        last_line: lines.map(|(_, last)| last),
     })
 }
 pub(super) struct Complete<'a> {

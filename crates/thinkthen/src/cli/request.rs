@@ -134,6 +134,21 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
                 };
             let mut options = options(&a.common, None, None);
             options.details = false;
+            options.mode = a.mode.as_ref().map(|mode| {
+                if mode == "boundary_only" {
+                    crate::RecognitionMode::BoundaryOnly
+                } else {
+                    crate::RecognitionMode::Whole
+                }
+            });
+            options.threshold = a
+                .threshold
+                .as_ref()
+                .map(|rule| crate::RequestThreshold::Rule(rule.clone()));
+            options.relation_threshold = a
+                .relation_threshold
+                .as_ref()
+                .map(|rule| crate::RequestThreshold::Rule(rule.clone()));
             options.context_field = a.context_field.clone();
             options.examples_field = a.examples_field.clone();
             options.seed_spans_field = a.seed_spans_field.clone();

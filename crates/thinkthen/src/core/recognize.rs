@@ -3,7 +3,24 @@
 
 use std::ops::Range;
 
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
+
+/// The recognition stages selected by the caller.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum RecognitionMode {
+    /// Decode boundaries, classify kinds and edges, then judge declared relations.
+    #[default]
+    Whole,
+    /// Return decoded proposals without asking any later stage.
+    BoundaryOnly,
+}
+impl RecognitionMode {
+    pub(crate) const fn is_whole(&self) -> bool {
+        matches!(self, Self::Whole)
+    }
+}
 
 use crate::core::question::LabelsError;
 use crate::core::text::Withheld;
