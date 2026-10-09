@@ -1,6 +1,6 @@
 # 0280 C# and JVM typed facts preparation
 
-Read-only source pin at preparation: main `9c4022428`. The [ticket](../tickets/0280-csharp-jvm-call-facts.md) was design at that pin; its High design/API review accepted `dddf2654` and the coordinator approved implementation on main `90170b29a`. Ian's [every-call issue](../issues/2026-09-26-every-surface-should-give-back-run-facts.md) remains open. Historical note: ADR 0106 had not landed at the preparation pin. It and 0277 later landed at `c4202fbc0`, before this build; no ADR amendment was needed for the approved C#/JVM shapes.
+Read-only source pin at preparation: main `9c4022428`. The [ticket](../tickets/0280-csharp-jvm-call-facts.md) was design at that pin; its High design/API review accepted `dddf2654` and the coordinator approved implementation on main `90170b29a`. Ian's [every-call issue](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md) remains open. Historical note: ADR 0106 had not landed at the preparation pin. It and 0277 later landed at `c4202fbc0`, before this build; no ADR amendment was needed for the approved C#/JVM shapes.
 
 ## Current call paths and authority
 

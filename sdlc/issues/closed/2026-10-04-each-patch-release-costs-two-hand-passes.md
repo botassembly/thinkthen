@@ -1,6 +1,7 @@
 # Each patch release costs two hand passes on the site proofs and install text
 
-Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the 0425 release/documentation completion outcome; ticket 0402 completed its core documentation scope. Item 1 is moot under Ian's no-patch-release ruling. Item 2 remains once per release.
+Status: closed.
+Resolution: 0425
 Milestone: 0.2
 Kind: debt
 Debt: 035

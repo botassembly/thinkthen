@@ -33,7 +33,7 @@ Root claimed the implementation after High design/API review and approval of ADR
 
 ## Evidence
 
-- Starts from: Ian's [every-call ruling](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), ADR 0101's **C-only** compatibility exception, current C header/typed-facts proof and the [0260 wrapper host proof](../records/0260-wrapper-host-proof.md).
+- Starts from: Ian's [every-call ruling](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md), ADR 0101's **C-only** compatibility exception, current C header/typed-facts proof and the [0260 wrapper host proof](../records/0260-wrapper-host-proof.md).
 - Keeps: The four typed values and order, JSON `Call`/`call` envelopes, started-failure facts, C ABI and old C exports, existing cancellation/deadline and host concurrency limits.
 - Changes: Migrates pre-0.1 Go/PHP typed success returns that own value and final facts from one C facts-returning operation, with all direct examples and consumers migrated.
 - Proof: Focused existing-fixture scalar/four-method, ordered bulk, empty bulk, missing-usage omission, failure/next-call lifetime and same-engine Go concurrency receipts, plus matched source and copied installed-source checks; release archives stay separate.

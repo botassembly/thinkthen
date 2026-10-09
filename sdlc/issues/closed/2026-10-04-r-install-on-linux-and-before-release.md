@@ -1,6 +1,7 @@
 # The R package has no Linux install for most hosts and no proof before release
 
-Status: open for prepublication R source-package proof, hosted install qualification and sync/release sequencing. Linux install documentation and the contribution-path correction have landed.
+Status: closed.
+Resolution: 0425
 Milestone: 0.2
 
 R-universe built 0.1.2 in run 37142825335 in `r-universe/botassembly`. Its plain address serves Linux the source package, which needs Rust's `cargo` and `rustc`. R-universe's package listing shows built Linux packages only for Ubuntu 26.04 ("resolute"), for R-release 4.6 and R-devel. Quick fix `67d27b7d1` names the built package's address on the install page, but the page does not name Ubuntu 26.04. Other distributions and older Ubuntu releases must build from source.
@@ -25,4 +26,4 @@ To evaluate:
 
 ## Reconciliation, 2026-10-08
 
-Commit `715a6a994` documents the exact Ubuntu 26.04/R 4.6 binary route and source prerequisites in the R README and install page. Ticket 0398 B2 at `ddfcbc74c` fixes the contribution path. The read-only receipts below remain evidence of a path bug, not successful installation. [0398 record](../records/0398-release-safety.md) and 0425 retain hosted/public-package proof under Ian’s release hold. Items 2 and 3 remain; item 1 is fulfilled.
+Commit `715a6a994` documents the exact Ubuntu 26.04/R 4.6 binary route and source prerequisites in the R README and install page. Ticket 0398 B2 at `ddfcbc74c` fixes the contribution path. The read-only receipts below remain evidence of a path bug, not successful installation. [0398 record](../../records/0398-release-safety.md) and 0425 retain hosted/public-package proof under Ian’s release hold. Items 2 and 3 remain; item 1 is fulfilled.

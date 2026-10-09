@@ -1,6 +1,7 @@
 # The public install checks are done by hand
 
-Status: open for actual hosted/public-channel qualification and any uncovered version-floor checks. Ticket 0398 implements the installed-channel workflow and isolated replay checks.
+Status: closed.
+Resolution: 0425
 Milestone: 0.2
 
 After each release, the queue owner installed every channel by hand: Linux containers on one machine and macOS on another. Those checks found two defects that every release job had passed:
@@ -20,4 +21,4 @@ To evaluate:
 
 ## Reconciliation, 2026-10-08
 
-The dispatched install-check workflow and release guard landed at `dda236c21`; R index/archive contribution paths were corrected at `ddfcbc74c`. Existing offline channel fixtures validate mechanics. They do not establish a successful install from each public registry or on every required platform. [0398 record](../records/0398-release-safety.md) and 0425 retain those checks after an authorized release. The observed 0.1 placeholder failures remain historical evidence; Ruby’s candidate diagnostic fallback now exists but its publication remains held.
+The dispatched install-check workflow and release guard landed at `dda236c21`; R index/archive contribution paths were corrected at `ddfcbc74c`. Existing offline channel fixtures validate mechanics. They do not establish a successful install from each public registry or on every required platform. [0398 record](../../records/0398-release-safety.md) and 0425 retain those checks after an authorized release. The observed 0.1 placeholder failures remain historical evidence; Ruby’s candidate diagnostic fallback now exists but its publication remains held.

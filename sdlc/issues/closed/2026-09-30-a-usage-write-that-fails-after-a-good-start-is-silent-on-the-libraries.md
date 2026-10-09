@@ -1,6 +1,7 @@
 # A usage write that fails after a good start is silent on the libraries
 
-Status: open. Ticket [0468](../tickets/0468-usage-write-failure-reporting.md) owns the confirmed SDK/SQL persistence failure in 0.2.
+Status: closed.
+Resolution: 0468
 
 Owner: ticket 0468.
 

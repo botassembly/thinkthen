@@ -5,7 +5,7 @@
 
 ## Context
 
-Ian's [every-surface facts ruling](../../issues/2026-09-26-every-surface-should-give-back-run-facts.md) requires library judgment calls to return facts on every call, without a setting or second call. The C door now provides owned `*_with_facts_opts` outputs for decide, decide-many, recognize and relate. [ADR 0101](0101-typed-c-call-facts.md) preserves the old bare **C exports** for compiled ABI compatibility; it does not exempt newer Go/PHP wrapper methods. Current Go `Engine.Decide`, `DecideMany`, `Recognize`, `Relate` and PHP `decide`, `decideMany`, `recognize`, `relate` still call those old exports. Their JSON `Call`/`call` routes already return a `value`/`facts` envelope, and their started-failure paths already copy facts. These wrappers are pre-0.1; retaining bare typed spellings would silently perpetuate the gap.
+Ian's [every-surface facts ruling](../../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md) requires library judgment calls to return facts on every call, without a setting or second call. The C door now provides owned `*_with_facts_opts` outputs for decide, decide-many, recognize and relate. [ADR 0101](0101-typed-c-call-facts.md) preserves the old bare **C exports** for compiled ABI compatibility; it does not exempt newer Go/PHP wrapper methods. Current Go `Engine.Decide`, `DecideMany`, `Recognize`, `Relate` and PHP `decide`, `decideMany`, `recognize`, `relate` still call those old exports. Their JSON `Call`/`call` routes already return a `value`/`facts` envelope, and their started-failure paths already copy facts. These wrappers are pre-0.1; retaining bare typed spellings would silently perpetuate the gap.
 
 ## Decision
 

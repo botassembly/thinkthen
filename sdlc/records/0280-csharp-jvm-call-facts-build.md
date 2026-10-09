@@ -1,6 +1,6 @@
 # 0280 C# and JVM typed facts build
 
-Candidate on `ticket/0280-csharp-jvm-call-facts` after main `ac19afc9d`. High design/API review accepted `dddf2654`; main approved the exact shapes at `90170b29a`. ADR 0106 and 0277 had landed at `c4202fbc0` before implementation. Fresh High code review accepted corrected candidate `3b74fa121`. The broader [every-call issue](../issues/2026-09-26-every-surface-should-give-back-run-facts.md) remains open.
+Candidate on `ticket/0280-csharp-jvm-call-facts` after main `ac19afc9d`. High design/API review accepted `dddf2654`; main approved the exact shapes at `90170b29a`. ADR 0106 and 0277 had landed at `c4202fbc0` before implementation. Fresh High code review accepted corrected candidate `3b74fa121`. The broader [every-call issue](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md) remains open.
 
 ## Changed behavior and ownership
 

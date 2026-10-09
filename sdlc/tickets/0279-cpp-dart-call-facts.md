@@ -37,7 +37,7 @@ Run selected C++ header/parser and installed shared/static consumer checks again
 
 ## Evidence
 
-- Starts from: The [every-call ruling](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), accepted [0255](0255-typed-c-call-facts.md) owned C outputs, current C++/Dart old-symbol calls, and ADR 0106's reviewed pre-0.1 Go/PHP return precedent.
+- Starts from: The [every-call ruling](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md), accepted [0255](0255-typed-c-call-facts.md) owned C outputs, current C++/Dart old-symbol calls, and ADR 0106's reviewed pre-0.1 Go/PHP return precedent.
 - Keeps: Frozen C ABI and old symbols, JSON Call envelopes, former typed values/order, same-thread started-failure facts, host cleanup and lifetime rules, and existing no-send/cancellation boundaries.
 - Changes: Four direct typed routes per host return owned value plus strict final facts from one C `_with_facts_opts` call, with migrated C++/Dart/Flutter direct callers and no bare alias.
 - Proof: Focused counted four-route, omitted-usage, empty-bulk, decoder-refusal, typed started-failure/later-call/close and held-overlap cases; matching C exports and selected installed-source C++/Dart/Flutter consumers.

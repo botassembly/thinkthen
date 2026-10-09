@@ -35,7 +35,7 @@ The C facts JSON requires `records`, `requests_sent`, `cache_answers`, `seconds`
 
 ## Evidence
 
-- Starts from: Ian's [every-call ruling](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), integrated [0255 C facts](0255-typed-c-call-facts.md), accepted ADR 0106/0277 precedent and current C#/JVM source and package routes in the [preparation](../records/0280-csharp-jvm-call-facts-preparation.md).
+- Starts from: Ian's [every-call ruling](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md), integrated [0255 C facts](0255-typed-c-call-facts.md), accepted ADR 0106/0277 precedent and current C#/JVM source and package routes in the [preparation](../records/0280-csharp-jvm-call-facts-preparation.md).
 - Keeps: Old typed values/order/bytes, JSON call routes, frozen C ABI, six native error kinds, borrowed started-failure snapshot semantics, cancellation/deadline cleanup, C# active-call close wait and JVM join-before-close limit.
 - Changes: C#/JVM direct typed successes become owned value/facts results from the same C `_with_facts_opts` call; all direct callers and package consumers follow that pre-0.1 return change.
 - Proof: Four-method value/facts checks, no-usage and zero-bulk cases, typed failure lifetime, barrier-forced same-engine overlap, exact retained request inventory, current C export/header, matched installed-source consumer and JAR member checks.

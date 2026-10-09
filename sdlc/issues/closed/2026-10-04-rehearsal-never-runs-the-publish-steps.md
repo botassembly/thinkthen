@@ -1,6 +1,7 @@
 # The rehearsal never runs the publish steps
 
-Status: open for account/trusted-publisher prerequisites and hosted qualification. Rehearsal now checks supported publish inputs without publication.
+Status: closed.
+Resolution: 0425
 Milestone: 0.2
 
 The first real release, run 37035814818 for `v0.1.0`, was the first run of every publish step. Five of eight publish jobs failed. Maven Central, pub.dev and the tap published 0.1.0, and the rest could not take it, so the next release had to be 0.1.1. The failures:
@@ -22,4 +23,4 @@ To evaluate:
 
 ## Reconciliation, 2026-10-08
 
-Commit `065a4e5dd` adds rehearsal publish-input checks; 0398 adds Cargo publication dry-run, wheel validation and checked Homebrew rendering. [0398 record](../records/0398-release-safety.md) retains their evidence and failed historical candidate runs. Registry account setup, npm staged approval under 0393, hosted rehearsal and final release QA remain obligations under 0425. No offline check establishes an active external account or permission, and no release workflow is authorized by this record.
+Commit `065a4e5dd` adds rehearsal publish-input checks; 0398 adds Cargo publication dry-run, wheel validation and checked Homebrew rendering. [0398 record](../../records/0398-release-safety.md) retains their evidence and failed historical candidate runs. Registry account setup, npm staged approval under 0393, hosted rehearsal and final release QA remain obligations under 0425. No offline check establishes an active external account or permission, and no release workflow is authorized by this record.
