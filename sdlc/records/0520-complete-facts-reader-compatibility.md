@@ -23,6 +23,10 @@ The retained `sdlc/scripts/smoke --one target/debug libraries/r` check passes th
 
 The checks used an owned systemd unit with 8 GiB memory, 1 GiB swap and two build jobs. Its final process exited successfully and the unit is inactive. Logs and temporary artifacts are under `target/0520-readers/`; installed Python and JavaScript evidence is in `installed-consumers.log`, the remaining consumers and R smoke are in `installed-remaining.log`. Initial environment failures were corrected by selecting stable Python 3.13, the pinned compiler, the existing vendored R builder and Rust 1.95.0.
 
+The coordinator's combined qualification at `986324637d902f165a7459fef53f8cf07dfab984` stopped during lint with exit 1. `target/0520-combined-qualification/lint.log` records the Python source count of 7784 against its stale ceiling of 7754; `result` records `lint 1`. The runner stops at the first failure, so full test and specification checks did not start and remain owed.
+
+The metadata repair starts from `6fa915274bc2704d32090eccc2eb72c08a45c7ef`. The existing `sdlc/scripts/ratchet.mjs` checker measures Python at 7784, R at 3356, Ruby at 3361, and TypeScript JavaScript, test modules and declarations at 825, 1727 and 1578. Their existing ceilings now equal those measurements. The retained facts fields, observation types and existing reader and installed-consumer assertions account for the growth. Inspection covered those additions and the Python duplicate removals already made by the repair. The root and every other binding and database ceiling already match. This metadata repair adds no product logic, tests or checking tools; the coordinator resumes combined qualification.
+
 ## Limits and lessons
 
 Ordinary native calls emit numeric token estimates. The current checked arithmetic can return null only for a request byte count beyond practical body limits. Saved snapshots cover that nullable type boundary; no enormous body was allocated, and image calls are not claimed to produce null. Actual calls cover the measurements and persistence observations the engine emits.
