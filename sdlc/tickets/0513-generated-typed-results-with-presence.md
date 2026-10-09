@@ -33,3 +33,4 @@ The initial shared slice claims `crates/thinkthen/src/schema_tests.rs`, `crates/
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed aa49e3b32; next: The reviewed C# facts generation slice is landed; run combined qualification with shared admission. Finish authoritative function variants and observations before generating all results and adopting installed bindings.
