@@ -1,15 +1,12 @@
 //! Native grammar/loading boundaries exercised before any engine sends.
-use super::super::{
-    admission::{CallParams, Invocation},
-    dispatch::PreparedQuestion,
-};
+use super::super::admission::{CallParams, Invocation};
 use conformance_backend::Backend;
 use serde_json::json;
 
-fn inline(tool: &str, question: &str) -> Invocation {
+fn inline(tool: &str, question: &str) -> Result<Invocation, crate::Error> {
     let text =
         format!(r#"{{"name":"{tool}","arguments":{{"question":{question},"evidence":"x"}}}}"#);
-    Invocation::admit(serde_json::from_str::<CallParams>(&text).unwrap()).unwrap()
+    Invocation::admit(serde_json::from_str::<CallParams>(&text).unwrap())
 }
 
 #[test]
@@ -47,7 +44,7 @@ fn native_closed_grammars_refuse_duplicate_unknown_and_wrong_kind_without_sends(
         ),
         ("tag", r#"{"decide":"q"}"#),
     ] {
-        let failure = inline(tool, question).question().unwrap_err();
+        let failure = inline(tool, question).unwrap_err();
         assert_eq!(failure.kind(), crate::ErrorKind::Usage, "{tool}");
     }
     assert_eq!(backend.count(), 0);
@@ -71,7 +68,13 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
             json!({"name":tool,"arguments":{"question_file":path,"evidence":"x"}}),
         )
         .unwrap();
-        let failure = Invocation::admit(params).unwrap().question().unwrap_err();
+        let failure = Invocation::admit(params)
+            .unwrap()
+            .request()
+            .unwrap()
+            .0
+            .resolve_question()
+            .unwrap_err();
         assert_eq!(failure.kind(), crate::ErrorKind::Local, "{tool}");
         assert_eq!(std::fs::read(&path).unwrap(), bytes);
     }
@@ -80,7 +83,13 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
         json!({"name":"decide","arguments":{"question_file":absent,"evidence":"x"}}),
     )
     .unwrap();
-    let failure = Invocation::admit(params).unwrap().question().unwrap_err();
+    let failure = Invocation::admit(params)
+        .unwrap()
+        .request()
+        .unwrap()
+        .0
+        .resolve_question()
+        .unwrap_err();
     assert_eq!(
         failure.detail().message(),
         "the question file could not be read"
@@ -91,7 +100,13 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
         json!({"name":"decide","arguments":{"question_file":path,"evidence":"x"}}),
     )
     .unwrap();
-    let failure = Invocation::admit(params).unwrap().question().unwrap_err();
+    let failure = Invocation::admit(params)
+        .unwrap()
+        .request()
+        .unwrap()
+        .0
+        .resolve_question()
+        .unwrap_err();
     assert_eq!(failure.kind(), crate::ErrorKind::Local);
     assert_eq!(failure.detail().message(), "the question file is too large");
     assert_eq!(backend.count(), 0);
@@ -104,7 +119,14 @@ fn native_question_set_preparation_keeps_authored_names_and_utf8_order() {
         "annotate",
         r#"{"version":1,"questions":{"zebra":{"decide":"café 😀?"},"alpha":{"score":"grade","levels":["low","high"]}}}"#,
     );
-    let PreparedQuestion::Annotate(set) = call.question().unwrap() else {
+    let crate::RequestDefinition::Annotate(set) = call
+        .unwrap()
+        .request()
+        .unwrap()
+        .0
+        .resolve_question()
+        .unwrap()
+    else {
         panic!("annotate set")
     };
     assert_eq!(

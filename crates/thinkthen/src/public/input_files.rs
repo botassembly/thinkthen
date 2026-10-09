@@ -193,7 +193,6 @@ fn attachment_budget_error() -> Error {
 }
 impl SourceItems {
     /// Internal transport admission leaves ordinary native readers unchanged.
-    #[cfg(feature = "cli")]
     pub(crate) fn bounded_images(
         paths: impl IntoIterator<Item = impl AsRef<Path>>,
         options: InputReaderOptions,
