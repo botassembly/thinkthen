@@ -313,3 +313,27 @@ fn prepare_record<T: InputEvidence>(
         },
     ))
 }
+
+pub(super) fn preview_asks(
+    engine: &Arc<facade::Engine>,
+    set: &QuestionSet,
+    record: RecordInput<crate::QuestionInput>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
+    let (_, input) = prepare_record(&set.0, record, fallback, at)?;
+    let dropped = set.0.questions().iter().any(|q| {
+        crate::core::adapters::built_in::drops_detail_of(
+            engine.backend().descriptions(),
+            q.question(),
+        )
+    });
+    let asks = Annotations {
+        engine: Arc::clone(engine),
+        set: set.0.clone(),
+        recover_missing: false,
+        cli_groups: false,
+    }
+    .asks(&input)?;
+    Ok((asks, dropped))
+}

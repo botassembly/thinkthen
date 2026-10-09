@@ -8,8 +8,8 @@ use std::num::NonZeroUsize;
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Record,
-    Resolved, Setting, Sources,
+    Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Resolved,
+    Setting, Sources,
 };
 
 use crate::args::Common;
@@ -98,28 +98,6 @@ impl Asks {
             Self::Fixed(Question::Tag { .. }) => "tag",
             Self::Fixed(Question::Score { .. }) => "score",
             Self::Fixed(Question::Choose { .. }) | Self::FromRecord { .. } => "choose",
-        }
-    }
-
-    /// Build the question this record is asked.
-    fn of(&self, record: &Record) -> Result<Question, Failure> {
-        match self {
-            Self::Fixed(question) => Ok(question.clone()),
-            Self::Set(_) => Err(Failure::Defect("a set is not one question")),
-            Self::FromRecord { text, pointer } => Ok(Question::Choose {
-                text: text.clone(),
-                options: record.choices(pointer)?,
-            }),
-        }
-    }
-    fn questions(&self, record: &Record) -> Result<Vec<Question>, Failure> {
-        match self {
-            Self::Set(set) => Ok(set
-                .questions()
-                .iter()
-                .map(|member| member.question().clone())
-                .collect()),
-            _ => self.of(record).map(|question| vec![question]),
         }
     }
 }
@@ -321,16 +299,5 @@ fn exit_code(outcome: Outcome) -> ExitCode {
         Outcome::Yes => ExitCode::from(0),
         Outcome::No => ExitCode::from(1),
         Outcome::Unresolved => ExitCode::from(3),
-    }
-}
-
-fn encoded(
-    plan: &crate::core::Plan,
-    error: crate::core::adapters::built_in::EncodeError,
-) -> Failure {
-    if plan.images().is_some() {
-        Failure::Image(error.to_string())
-    } else {
-        Failure::Defect("a request could not be written as JSON")
     }
 }

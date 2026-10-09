@@ -4,14 +4,9 @@
 
 use std::process::ExitCode;
 
-use super::{Asks, JudgingInput};
-use crate::core::pack::PackError;
-use crate::core::{
-    BackendProfile, BatchError, Descriptions, Evidence, ModelName, Plan, Reading, Record, Setting,
-    quoted_plan, quoted_plan_of,
-};
+use super::JudgingInput;
+use crate::core::{Reading, Record, Setting};
 use crate::failure::Failure;
-use crate::failure::context::Limits;
 use crate::judge::Keeping;
 use crate::schedule::{Output, Placed};
 
@@ -96,110 +91,6 @@ pub(super) fn records(
         stopped = held.is_err();
         Some(held)
     })))
-}
-
-/// What one record's plan needs besides the record.
-pub(super) struct Planner<'a> {
-    pub(super) asks: &'a Asks,
-    pub(super) reading: &'a Reading,
-    pub(super) asked: (ModelName, Descriptions),
-    pub(super) context: Option<Evidence>,
-    pub(super) profile: Option<&'a BackendProfile>,
-    pub(super) limits: Limits,
-    pub(super) route: crate::core::adapters::built_in::images::ImageRoute,
-}
-
-impl Planner<'_> {
-    /// The quoted plan one record sends. A stream's record quotes the JSON
-    /// value a batch has always quoted, and one document quotes its evidence.
-    pub(super) fn plans(&self, held: &Held) -> Result<Vec<Plan>, Failure> {
-        let context = self.context_for(held)?;
-        if let Some(images) = &held.images {
-            if self.reading.declares_item() && images.text().is_none() {
-                return Err(Failure::Record(crate::core::RecordError::ItemSchema));
-            }
-            if self.reading.declares_item() && (self.reading.streams() || self.reading.has_fields())
-            {
-                self.reading.evidence(&held.record)?;
-            }
-            let mut state = images.state();
-            if self.reading.streams() || self.reading.has_fields() {
-                state.text = self.reading.batch_record(&held.record)?.value;
-            }
-            return crate::core::image::plan(
-                self.asked.clone(),
-                state,
-                context.as_ref(),
-                self.asks.questions(&held.record)?,
-                self.profile,
-                self.route,
-            )
-            .map(|plan| vec![plan])
-            .map_err(|error| self.limits.refused(error, false));
-        }
-        let record = &held.record;
-        self.asks
-            .questions(record)?
-            .into_iter()
-            .map(|question| self.plan(record, question, context.as_ref()))
-            .collect()
-    }
-
-    pub(super) fn context_for(&self, held: &Held) -> Result<Option<Evidence>, Failure> {
-        match held.context.as_ref() {
-            Some(context) => crate::public::RecordContext::resolved(Some(context), None)
-                .map_err(|_| Failure::Usage("the per-item context does not match context_schema")),
-            None => Ok(self.context.clone()),
-        }
-    }
-
-    fn plan(
-        &self,
-        record: &Record,
-        question: crate::core::Question,
-        context: Option<&Evidence>,
-    ) -> Result<Plan, Failure> {
-        let planned = if self.reading.streams() {
-            let batch = self.reading.batch_record(record)?;
-            quoted_plan_of(
-                self.asked.clone(),
-                batch.evidence,
-                &batch.value,
-                context,
-                vec![question],
-                self.profile,
-            )
-        } else {
-            quoted_plan(
-                self.asked.clone(),
-                self.reading.evidence(record)?,
-                context,
-                vec![question],
-                self.profile,
-            )
-        };
-        planned.map_err(|error| self.limits.refused(error, false))
-    }
-
-    /// The command's refusal of a question the packer cannot send.
-    pub(super) fn refused(&self, error: PackError) -> Failure {
-        match error {
-            PackError::Profile(limit) => Failure::ProfileLimit(limit),
-            PackError::Context {
-                initial,
-                kind,
-                limit,
-                actual,
-            } => self.limits.refused(
-                BatchError::ContextOverLimit {
-                    kind,
-                    limit,
-                    actual,
-                },
-                initial,
-            ),
-        }
-    }
 }
 
 /// Frame host input, then execute the retained native request.

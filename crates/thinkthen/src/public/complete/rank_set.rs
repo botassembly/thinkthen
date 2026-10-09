@@ -394,3 +394,24 @@ fn prepare_one<T: InputEvidence>(
     };
     Ok((held, Input { at, members }))
 }
+
+pub(super) fn preview_asks(
+    engine: &Arc<facade::Engine>,
+    set: &RankSet,
+    record: RecordInput<crate::QuestionInput>,
+    options: &CallOptions<'_>,
+    at: usize,
+) -> Result<(Vec<pack::Ask>, bool), Error> {
+    let questions = questions(&set.0);
+    let (_, input) = prepare_one(&questions, record, options, at)?;
+    let dropped = questions.iter().any(|q| {
+        crate::core::adapters::built_in::drops_detail_of(engine.backend().descriptions(), &q.core)
+    });
+    let asks = SetRecords {
+        records: Records(Arc::clone(engine), false),
+        questions,
+    }
+    .asks(&input)
+    .map_err(pipeline_failure)?;
+    Ok((asks, dropped))
+}

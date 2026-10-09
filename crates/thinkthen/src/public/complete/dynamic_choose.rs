@@ -134,3 +134,21 @@ impl Engine {
         ))
     }
 }
+
+pub(super) fn preview_asks(
+    engine: &Arc<crate::engine::facade::Engine>,
+    question: &RecordChooseQuestion,
+    record: RecordInput<crate::QuestionInput>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
+    let original = prepare(question, record, fallback, at)?;
+    let dropped = crate::core::adapters::built_in::drops_detail_of(
+        engine.backend().descriptions(),
+        &original.held.question.core,
+    );
+    let asks = Records(Arc::clone(engine), false)
+        .asks(&original.prepared)
+        .map_err(super::records::pipeline_failure)?;
+    Ok((asks, dropped))
+}

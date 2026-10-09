@@ -184,6 +184,15 @@ pub(super) fn estimate(
     context: Option<crate::core::Evidence>,
     asks: impl Iterator<Item = Result<Vec<pack::Ask>, Error>>,
 ) -> Result<PlanEstimate, Error> {
+    from_summary(estimate_summary(engine, setting, context, asks)?)
+}
+
+pub(in crate::public) fn estimate_summary(
+    engine: &crate::engine::facade::Engine,
+    setting: crate::core::Setting,
+    context: Option<crate::core::Evidence>,
+    asks: impl Iterator<Item = Result<Vec<pack::Ask>, Error>>,
+) -> Result<PlanSummary, Error> {
     let too_large = || Error::usage("the planned input is too large to count");
     let model = pack::model_json(engine.backend().model().as_str())
         .map_err(|_| Error::defect("a model could not be written as JSON"))?;
@@ -224,7 +233,13 @@ pub(super) fn estimate(
         summary.request(&request.body).map_err(|_| too_large())?;
     }
     summary.bound_requests(occurrences);
-    let counts = summary.counts().map_err(|_| too_large())?;
+    Ok(summary)
+}
+
+pub(in crate::public) fn from_summary(summary: PlanSummary) -> Result<PlanEstimate, Error> {
+    let counts = summary
+        .counts()
+        .map_err(|_| Error::usage("the planned input is too large to count"))?;
     let first_body = summary
         .first_body()
         .map(|body| String::from_utf8(body.to_vec()))

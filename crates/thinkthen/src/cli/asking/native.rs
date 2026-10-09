@@ -134,7 +134,7 @@ pub(super) fn run(
     )
 }
 
-fn composition(
+pub(super) fn composition(
     admitted: &crate::AdmittedRequest,
     reading: &Reading,
 ) -> Result<crate::RecordReading, Failure> {
@@ -185,7 +185,7 @@ fn controls<'a>(
     controls
 }
 
-fn compose(
+pub(super) fn compose(
     composition: &crate::RecordReading,
     unit: &Held,
 ) -> Result<crate::RecordInput<crate::QuestionInput>, crate::Error> {

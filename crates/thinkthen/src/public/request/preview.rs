@@ -14,6 +14,14 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
+        crate::public::plan::from_summary(self.plan_request_summary(request, environment)?.0)
+    }
+
+    pub(crate) fn plan_request_summary<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        environment: RequestEnvironment<'a>,
+    ) -> Result<(crate::core::PlanSummary, bool), Error> {
         let function = match request.request.call.function() {
             RequestFunction::Decide => InputFunction::Decide,
             RequestFunction::Choose => InputFunction::Choose,
@@ -32,18 +40,12 @@ impl Engine {
         let reading_definition = definition.clone();
         apply(&mut definition, options)?;
         controls.admission()?;
-        let question = match &definition {
-            RequestDefinition::Atomic(LoadedQuestion::Question(q)) | RequestDefinition::Rank(q) => {
-                q
-            }
-            RequestDefinition::Atomic(LoadedQuestion::Banded(q)) => &q.0,
-            _ => {
-                return Err(Error::usage(
-                    "plan requires a fixed atomic or rank question",
-                ));
-            }
-        };
-        let engine = self.asking(question)?;
+        let (engine, setting) = configuration(self, &definition, &controls)?;
+        if controls.cli_reader.is_some()
+            && let Some(context) = controls.context_text()
+        {
+            crate::public::complete::records::cli_context(&engine, context)?;
+        }
         let image_refusal = image_route(self, &definition)
             .err()
             .map(|error| error.detail().message().to_owned());
@@ -57,25 +59,66 @@ impl Engine {
         {
             return Err(Error::usage(message.clone()));
         }
-        let setting = crate::public::bulk::selected_batch(question, &controls, self.batch)?;
         let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
+        let mut dropped = false;
         let asks = rows.enumerate().map(|(at, row)| {
             controls.admission()?;
             let row = row.map_err(|error| error.at_record(at))?;
             self.check_record_limit(at)?;
             super::inline::validate_composed(&reading_definition, options, &row)
                 .map_err(|error| error.at_record(at))?;
-            crate::public::complete::preview_asks(
+            let (asks, loses_detail) = crate::public::complete::preview_definition_asks(
                 &engine,
                 function,
-                question,
+                &definition,
                 row,
-                controls.context_text(),
+                &controls,
                 at,
             )
-            .map_err(|error| error.at_record(at))
+            .map_err(|error| error.at_record(at))?;
+            dropped |= loses_detail;
+            Ok(asks)
         });
         // Native record preparation embeds each resolved context in its own asks.
-        crate::public::plan::estimate(&engine, setting, None, asks)
+        let summary = crate::public::plan::estimate_summary(&engine, setting, None, asks)?;
+        Ok((summary, dropped))
     }
+}
+
+fn configuration(
+    engine: &Engine,
+    definition: &RequestDefinition,
+    controls: &crate::CallOptions<'_>,
+) -> Result<
+    (
+        std::sync::Arc<crate::engine::facade::Engine>,
+        crate::core::Setting,
+    ),
+    Error,
+> {
+    use crate::public::bulk::{selected_batch, selected_batch_file, selected_set_batch};
+    Ok(match definition {
+        RequestDefinition::Atomic(LoadedQuestion::Question(question))
+        | RequestDefinition::Rank(question) => (
+            engine.asking(question)?,
+            selected_batch(question, controls, engine.batch)?,
+        ),
+        RequestDefinition::Atomic(LoadedQuestion::Banded(question)) => (
+            engine.asking(&question.0)?,
+            selected_batch(&question.0, controls, engine.batch)?,
+        ),
+        RequestDefinition::RankSet(set) => (
+            std::sync::Arc::clone(&engine.inner),
+            selected_set_batch(&set.0, controls, engine.batch)?,
+        ),
+        RequestDefinition::Annotate(set) => (
+            std::sync::Arc::clone(&engine.inner),
+            selected_set_batch(&set.0, controls, engine.batch)?,
+        ),
+        RequestDefinition::DynamicChoose(question) => (
+            engine.for_model(question.model.as_ref())?,
+            selected_batch_file(question.batch.as_ref(), controls, engine.batch)?,
+        ),
+        _ => return Err(Error::usage("plan requires a record question")),
+    })
 }

@@ -29,12 +29,17 @@ pub(in crate::public) fn preview_asks(
     record: crate::RecordInput<QuestionInput>,
     fallback: Option<&str>,
     at: usize,
-) -> Result<Vec<crate::core::pack::Ask>, Error> {
+) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
     use crate::engine::pipeline::Asker as _;
-    let (_, input) = records::prepare_record(function, question, record, fallback, at)?;
-    records::Records(std::sync::Arc::clone(engine), false)
+    let (held, input) = records::prepare_record(function, question, record, fallback, at)?;
+    let dropped = crate::core::adapters::built_in::drops_detail_of(
+        engine.backend().descriptions(),
+        &held.question.core,
+    );
+    let asks = records::Records(std::sync::Arc::clone(engine), false)
         .asks(&input)
-        .map_err(records::pipeline_failure)
+        .map_err(records::pipeline_failure)?;
+    Ok((asks, dropped))
 }
 
 impl Engine {
@@ -324,5 +329,44 @@ fn ancillary_images(input: &QuestionInput) -> Option<Vec<core::image::Image>> {
                 .collect(),
         ),
         _ => None,
+    }
+}
+
+pub(in crate::public) fn preview_definition_asks(
+    engine: &std::sync::Arc<crate::engine::facade::Engine>,
+    function: InputFunction,
+    definition: &crate::RequestDefinition,
+    record: crate::RecordInput<crate::QuestionInput>,
+    options: &CallOptions<'_>,
+    at: usize,
+) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
+    use crate::{LoadedQuestion, RequestDefinition as Definition};
+    match definition {
+        Definition::Atomic(LoadedQuestion::Question(question)) | Definition::Rank(question) => {
+            preview_asks(
+                engine,
+                function,
+                question,
+                record,
+                options.context_text(),
+                at,
+            )
+        }
+        Definition::Atomic(LoadedQuestion::Banded(question)) => preview_asks(
+            engine,
+            function,
+            &question.0,
+            record,
+            options.context_text(),
+            at,
+        ),
+        Definition::RankSet(set) => rank_set::preview_asks(engine, set, record, options, at),
+        Definition::DynamicChoose(question) => {
+            dynamic_choose::preview_asks(engine, question, record, options.context_text(), at)
+        }
+        Definition::Annotate(set) => {
+            annotate::preview_asks(engine, set, record, options.context_text(), at)
+        }
+        _ => Err(Error::usage("plan requires a record question")),
     }
 }
