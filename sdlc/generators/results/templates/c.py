@@ -192,14 +192,12 @@ class Target:
                     presence = ident(path + '_presence')
                     self.structure(presence, [('presence', 'u32'), ('value', typ)])
                     members.append((member, presence))
-                    lines.append('        ' + field(member) + ': match node.member(' + literal(member) + ') {')
-                    if optional:
-                        lines.append('            None => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, value: ' + empty(typ) + ' },')
-                    else:
-                        lines.append('            None => return Err(ErrorKind::Defect),')
-                    if null:
-                        lines.append('            Some(value) if value.kind() == "null" => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: ' + empty(typ) + ' },')
-                    lines.append('            Some(value) => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, value: ' + read + ' },\n        },')
+                    mandatory = 'false' if optional else 'true'
+                    decode = read[:-1] if read.endswith('?') else 'Ok(' + read + ')'
+                    parameter = 'store' if 'store' in read else '_store'
+                    direct = re.fullmatch(r'(read_\w+)\(value, store\)', decode)
+                    reader = direct[1] if direct else '|value, ' + parameter + '| { ' + decode + ' }'
+                    lines.append('        ' + field(member) + ': { let (presence, value) = read_presence(node.member(' + literal(member) + '), ' + mandatory + ', ' + empty(typ) + ', ' + reader + ', store)?; ' + presence + ' { presence, value } },')
                 else:
                     members.append((member, typ))
                     lines.append('        ' + field(member) + ': { let value = node.required(' + literal(member) + ')?; ' + read + ' },')
@@ -219,7 +217,7 @@ def render(definitions):
         target.definition(key, source)
     return '''// Generated from Rust-derived complete result schema; do not edit.
 #![allow(non_camel_case_types, missing_docs, clippy::too_many_lines, reason = "generated versioned C schema objects and tagged alternatives")]
-use super::views::{Node, Storage, read_json};
+use super::views::{Node, Storage, read_json, read_presence};
 use super::views::{thinkthen_complete_utf8_v1, thinkthen_complete_json_v1, thinkthen_complete_extensions_v1};
 use thinkthen::ErrorKind;
 pub const THINKTHEN_COMPLETE_PRESENCE_MISSING_V1: u32 = 0;

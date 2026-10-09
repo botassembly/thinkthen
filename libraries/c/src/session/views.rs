@@ -126,6 +126,26 @@ impl Storage {
     }
 }
 
+/// Presence belongs to result conversion, independently of scalar conversion.
+pub(crate) fn read_presence<T>(
+    node: Option<&Node>,
+    required: bool,
+    empty: T,
+    read: impl FnOnce(&Node, &mut Storage) -> Result<T, ErrorKind>,
+    store: &mut Storage,
+) -> Result<(u32, T), ErrorKind> {
+    use super::views_generated::{
+        THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+        THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
+    };
+    match node {
+        None if required => Err(ErrorKind::Defect),
+        None => Ok((THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, empty)),
+        Some(node) if node.kind() == "null" => Ok((THINKTHEN_COMPLETE_PRESENCE_NULL_V1, empty)),
+        Some(node) => Ok((THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, read(node, store)?)),
+    }
+}
+
 #[derive(Debug)]
 enum Kind {
     Null,

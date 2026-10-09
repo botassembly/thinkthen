@@ -288,7 +288,8 @@ def main():
     if args.target == "c":
         if args.inputs:
             parser.error("C target generates result views only")
-        args.output = ROOT / "libraries/c/src/session/views_generated.rs"
+        if args.output == OUTPUT:
+            args.output = ROOT / "libraries/c/src/session/views_generated.rs"
     if args.inputs:
         path = Path(__file__).parent / 'templates/csharp.py'
         spec = importlib.util.spec_from_file_location('result_csharp', path)
