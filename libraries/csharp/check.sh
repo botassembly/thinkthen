@@ -25,7 +25,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     mkdir "$smoke/feed" "$smoke/app" "$smoke/home"
     export DOTNET_CLI_HOME="$smoke/home" NUGET_PACKAGES="$smoke/home/nuget" DOTNET_CLI_TELEMETRY_OPTOUT=1 \
         DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1
-    "$dotnet" pack "$here/ThinkThen.csproj" -c Release -o "$smoke/feed" -v quiet >&2
+    "$dotnet" pack "$here/ThinkThen.csproj" -p:ThinkThenNativeAsset="$root/libraries/c/target/debug/libthinkthen_c.so" -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so -c Release -o "$smoke/feed" -v quiet >&2
     cp "$here/tests/Smoke.csproj" "$here/tests/source/Smoke.cs" "$smoke/app/"
     python3 "$here/tests/package_check.py" "$smoke/native/include/thinkthen.h" "$smoke/feed/Botassembly.ThinkThen.$version.nupkg"
     "$dotnet" build "$smoke/app/Smoke.csproj" -c Release -o "$smoke/app/out" -p:RestoreSources="$smoke/feed" -v quiet >&2
@@ -72,7 +72,7 @@ ln -sf libthinkthen.so "$here/target/scratch/lib/libthinkthen.so.0"
 cp "$native" "$here/target/artifacts/native/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/artifacts/native/lib/libthinkthen.so.0"
 tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -C "$here/target/artifacts/native" .
-"$dotnet" pack "$here/ThinkThen.csproj" -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
+"$dotnet" pack "$here/ThinkThen.csproj" -p:ThinkThenNativeAsset="$root/libraries/c/target/debug/libthinkthen_c.so" -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
 test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
 python3 "$here/tests/package_check.py"
 python3 "$here/tests/named_backends.py"

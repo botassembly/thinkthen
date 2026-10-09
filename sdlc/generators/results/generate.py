@@ -264,8 +264,17 @@ def main():
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
+    parser.add_argument('--inputs', action='store_true')
     args = parser.parse_args()
-    result = generated(json.loads(args.schema.read_text()))
+    if args.inputs:
+        path = Path(__file__).parent / 'templates/csharp.py'
+        spec = importlib.util.spec_from_file_location('result_csharp', path)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        result = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()))
+        args.output = ROOT / 'libraries/csharp/src/RequestInputs.g.cs'
+    else:
+        result = generated(json.loads(args.schema.read_text()))
     if args.check:
         if not args.output.exists() or args.output.read_text() != result:
             print('generated C# results differ; run sdlc/generators/results/generate.py',

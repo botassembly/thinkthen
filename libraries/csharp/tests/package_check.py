@@ -40,7 +40,7 @@ def inspect(header, package, native, expected=None):
     with zipfile.ZipFile(io.BytesIO(package)) as bundle:
         members = set(bundle.namelist())
         assert {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE"} <= members
-        assert not any(name.endswith((".so", ".dylib")) for name in members)
+        assert bundle.read('runtimes/linux-x64/native/libthinkthen.so') == NATIVE.read_bytes(), 'tampered packaged native asset'
         assert b"<id>Botassembly.ThinkThen</id>" in bundle.read("Botassembly.ThinkThen.nuspec")
         assert bundle.read("README.md") == (ROOT / "README.md").read_bytes(), "stale package README"
         for name in members:
