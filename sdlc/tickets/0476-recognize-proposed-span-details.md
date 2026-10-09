@@ -17,15 +17,15 @@ Make proposal probabilities canonical facts in the Rust result, available throug
 
 PM approved these borrowed API details within the canonical-result outcome on 2026-10-09; they land with the reviewed implementation.
 
-```rust
+```text
 struct RecognitionProposal<'a>
 fn RecognitionProbabilities::judged_proposals(&self) -> impl ExactSizeIterator<Item = RecognitionProposal<'a>>
 fn RecognitionProposal::range(&self) -> std::ops::Range<usize>
-fn RecognitionProposal::span_probability(&self) -> f64
+const fn RecognitionProposal::span_probability(&self) -> f64
 fn RecognitionProposal::selected(&self) -> Option<std::ops::Range<usize>>
 fn RecognitionProposal::kind(&self) -> Option<&str>
-fn RecognitionProposal::strength(&self) -> Option<f64>
-fn RecognitionProposal::kept(&self) -> bool
+const fn RecognitionProposal::strength(&self) -> Option<f64>
+const fn RecognitionProposal::kept(&self) -> bool
 ```
 
 ## Evidence
