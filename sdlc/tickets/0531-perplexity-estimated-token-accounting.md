@@ -17,3 +17,7 @@ Perplexity plans and estimated-input budgets account for the provider's repeated
 - Changes: Inspect the existing native request estimator and route metadata, then apply repeated-state accounting to the Perplexity route before plan display and send-budget admission. Name the narrow estimator, route and test claims before coding. Correct the stale $0.04 setup example and explain the counting assumption and uncertainty. Use saved exchanges or synthetic public content only.
 - Proof: Existing outside-in plan and send-budget cases retain their behavior. Add a focused shared-state/multiple-question regression for the Perplexity route, including zero sends when its revised estimate exceeds the cap, and prove another provider's estimate stays unchanged. Retain original raw replies and reported usage in existing recording storage; add no capture framework or paid gate.
 - Defers: Actual invoice reconciliation and undocumented provider guarantees need provider evidence. No paid calls, clinical quality evaluation, automatic business routing, new raw-response feature or broader benchmark belongs to this repair.
+
+## Progress
+
+- 2026-10-09 started
