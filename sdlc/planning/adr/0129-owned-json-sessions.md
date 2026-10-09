@@ -1,6 +1,6 @@
-# Draft: Own JSON request sessions and result handles
+# ADR 0129: Own JSON request sessions and result handles
 
-This draft proposes the shared interface for ticket 0503. It records a design for review, not an accepted ADR or implementation. Ian can overturn its additive names, packet shape and queue choice. The governing contract is the 2026-10-09 amendment to 0503, the amendments to 0511 and 0513, and `sdlc/decisions/2026-10-09-thin-first-class-bindings.md`. ADR 0125 retains Request admission and pure-core boundaries. ADR 0101 retains the frozen C compatibility forms.
+The queue owner accepted this interface for ticket 0503 after fresh review of revision `0c5f1f772e85a9fcdbc1e7ceb6f86bf21af004bd`. Implementation follows this decision. Ian can overturn its additive names, packet shape and queue choice. The governing contract is the 2026-10-09 amendment to 0503, the amendments to 0511 and 0513, and `sdlc/decisions/2026-10-09-thin-first-class-bindings.md`. ADR 0125 retains Request admission and pure-core boundaries. ADR 0101 retains the frozen C compatibility forms.
 
 ## Evidence and problem
 
