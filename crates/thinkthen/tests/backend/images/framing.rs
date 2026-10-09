@@ -34,22 +34,20 @@ fn scalar_image_captions_preserve_optional_blank_bytes_and_refuse_invalid_text()
         assert_eq!(body["state"], json!(std::str::from_utf8(caption).unwrap()));
     }
     let before = listener.count();
-    for (caption, exit) in [(vec![0xff], 5)] {
-        let output = call(
-            &listener,
-            &[
-                "decide",
-                "Red?",
-                "--image",
-                red.to_str().unwrap(),
-                "--details",
-            ],
-            &caption,
-        );
-        assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
-        assert!(output.stdout.is_empty());
-        assert_eq!(listener.count(), before);
-    }
+    let output = call(
+        &listener,
+        &[
+            "decide",
+            "Red?",
+            "--image",
+            red.to_str().unwrap(),
+            "--details",
+        ],
+        &[0xff],
+    );
+    assert_eq!(output.status.code(), Some(5), "{}", text(&output.stderr));
+    assert!(output.stdout.is_empty());
+    assert_eq!(listener.count(), before);
     let place = crate::batching::folder("image-caption-declaration");
     std::fs::create_dir_all(&place).unwrap();
     let path = format!("{place}/question.json");
