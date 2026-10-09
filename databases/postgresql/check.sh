@@ -168,7 +168,7 @@ echo "== package"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
 	PACKAGE_LIB=$RUN/artifact/lib
 	PACKAGE_SQL=$RUN/artifact/extension/thinkthen--$EXT_VERSION.sql
-	STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
+	STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
