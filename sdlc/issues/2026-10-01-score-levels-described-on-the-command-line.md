@@ -3,7 +3,7 @@
 Status: open. Filed 2026-10-01 from release QA's message "Two ideas for 0.2", which Ian asked QA to send. Not approved. Owner: the queue owner, in 0.2.
 Kind: idea
 When: 0.2 work starts on main
-Milestone: 0.2
+Milestone: later
 
 A user could describe `score` levels without writing a question file.
 
@@ -14,3 +14,5 @@ QA's compatibility notes, to keep 0.1 users whole:
 - An unused new setting leaves the question digest unchanged, so cached answers and audit records still match.
 - Exit codes, messages and existing output fields keep their meanings.
 - The language packages gain a new call or an optional setting, never a new argument on an existing call. The C JSON door can take a new key.
+
+Moved to milestone later on 2026-10-09 under the 0.2 scope freeze in [the binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). Only bugs and TCGA blockers enter 0.2.

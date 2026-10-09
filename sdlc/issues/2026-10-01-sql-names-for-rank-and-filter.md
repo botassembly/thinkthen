@@ -3,7 +3,7 @@
 Status: open for `thinkthen_filter` only. Filed 2026-10-01 from the site owner's mailroom message "SQL names for rank and filter". Owner: the queue owner, in 0.2. Ian decides.
 Kind: idea
 When: 0.2 work starts on main
-Milestone: 0.2
+Milestone: later
 
 Named SQL forms would let a SQL reader find all ten functions by name.
 
@@ -18,3 +18,5 @@ The cost: two more functions in each of three extensions, each with its tests an
 Ian approved `thinkthen_rank` for 0.1 on 2026-10-01. Ticket 0378 added it to all three extensions as a keyed table of `(key, rank, probability)` rows and retired DuckDB's `thinkthen_probability`. The rank half of this idea is done.
 
 Only `thinkthen_filter` stays a 0.2 idea for Ian. Until he decides, the docs keep teaching `WHERE` over decide for filter.
+
+Moved to milestone later on 2026-10-09 under the 0.2 scope freeze in [the binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). Only bugs and TCGA blockers enter 0.2.
