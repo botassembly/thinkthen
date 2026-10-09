@@ -1,25 +1,10 @@
 #!/usr/bin/env node
-// Ratchet — the size ceiling, checked at lint time so you hear about it here
-// rather than at the sealed verify gate. The number lives in sdlc/ratchet.json
-// and nowhere else; this file is the same short reader in every repo that has
-// adopted one, and it applies the same rule the sealed gate applies: the
-// ceiling must EQUAL the measured total (ticket 0060 — the ceiling lands at
-// actual). Slack cannot accumulate, so a raise is always a deliberate edit.
-//
-// Raising max requires two things in that commit's message, and the second is
-// the one that matters:
-//   1. the justification — what grew, and why it earns its lines;
-//   2. the confirmation — you looked for duplication and bloat to remove
-//      first, and name what you checked. "I searched X and Y for code to
-//      slim and found none" is the sentence; without it a raise is refused
-//      in review. Tickets do not grant raise allowances (ruling 2026-08-13,
-//      landed as ticket 0085): an attempt raises the ceiling itself, in the
-//      commit that needs it, and defends the number there.
-// The ceiling exists because you maintain this codebase — every raise you
-// take today is code future-you must carry. The lazy raise is the trap.
-//
-// A repo with no sdlc/ratchet.json has not adopted a ceiling; that is a
-// choice, not a fault, and this exits quiet — same as the sealed gate.
+// Check the nonblank source total against sdlc/ratchet.json.
+// The ceiling must equal the measured total; spare allowance cannot accumulate.
+// A fresh reviewer accepts proposed growth before it lands. Explain the useful
+// behavior and check for duplication first. Lower the ceiling when deleting code.
+// AGENTS.md defines the current workflow; this reader adds no review gates.
+// A repository without a ceiling exits quietly.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";

@@ -62,6 +62,8 @@ The reader-failure schema prerequisite derives the registered `RequestReaderFail
 
 ## Canonical preview forwarding
 
+Source accounting: landing `478317a35`, titled as a 0513 slice, also carries this ticket's C session transport and ownership implementation. Its first-parent C-package diff adds 621 lines across eleven files, including the generated header and session tests. The canonical JSON exposure followed at `8c834929a`. Generated constrained-language views belong to 0505.
+
 `thinkthen_request_plan_json` accepts length-delimited canonical Request JSON and forwards to `Request::from_json`, admission and `Engine::plan_request`. It owns a NUL-terminated result string and returns its counted length. `thinkthen_free_string` releases that independent string after the engine and input storage are gone. Refusals preserve both output slots and use the existing safe calling-thread session diagnostic. The generated header derives the declaration from Rust. The frozen `thinkthen_plan_json` call and its input grammar remain unchanged.
 
 The installed-header C preview test runs without a key and counts zero backend requests. It covers counted input without a terminator, released input and engine storage, result length and cleanup, malformed and repeated controls, unsupported functions before source reads, null arguments, aliased output slots and an unrepresentable input extent. The retained legacy P1 preview also passes unchanged. The native and C checks use offline Cargo, two build jobs and scopes with 8 GiB memory and 1 GiB swap. No paid call, remote build, package publication or C# adoption runs here.

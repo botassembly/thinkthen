@@ -5595,6 +5595,68 @@
       "type": "object",
       "unevaluatedProperties": false
     },
+    "completeplan": {
+      "properties": {
+        "estimated_bytes": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "estimated_input_tokens": {
+          "$ref": "#/$defs/completetokenBand"
+        },
+        "first_body_utf8": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "largest_request_bytes": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "largest_request_estimated_input_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "records": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "token_estimate_method": {
+          "type": "string"
+        },
+        "upper_bound": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "records",
+        "requests",
+        "estimated_bytes",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
+        "estimated_input_tokens",
+        "upper_bound",
+        "first_body_utf8"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completeprofileWarning": {
       "properties": {
         "running": {
@@ -6807,6 +6869,28 @@
         "number",
         "string"
       ]
+    },
+    "completetokenBand": {
+      "properties": {
+        "lower": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "upper": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "lower",
+        "upper"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
     },
     "completetokenUsage": {
       "properties": {

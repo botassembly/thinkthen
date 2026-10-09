@@ -67,6 +67,7 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
     // Strict complete readers have their own derived graph; released definitions
     // keep their compatibility spelling and permissiveness.
     strict::graph(definitions, "completeCall");
+    strict::graph(definitions, "plan");
     strict::graph(definitions, "Surface");
     definitions
         .get_mut("completeUsage")
