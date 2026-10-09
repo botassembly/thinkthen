@@ -142,7 +142,13 @@ impl Invocation {
         self.arguments
             .source
             .as_ref()
-            .map(|s| crate::read_inputs(&s.paths, s.options()))
+            .map(|s| {
+                crate::SourceItems::bounded_images(
+                    &s.paths,
+                    s.options(),
+                    super::protocol::MAX_MESSAGE,
+                )
+            })
             .transpose()
     }
     pub(super) fn attachments(&self) -> Result<Option<crate::ImageEvidence>, Error> {
@@ -156,12 +162,16 @@ impl Invocation {
             },
             media: crate::ReaderMedia::Image,
         };
-        let images = crate::read_inputs(&self.arguments.images, options)?
-            .map(|item| match item? {
-                crate::SourceItem::Image(image) => Ok(image.record),
-                crate::SourceItem::Text(_) => Err(Error::defect("image reader returned text")),
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
+        let images = crate::SourceItems::bounded_images(
+            &self.arguments.images,
+            options,
+            super::protocol::MAX_MESSAGE,
+        )?
+        .map(|item| match item? {
+            crate::SourceItem::Image(image) => Ok(image.record),
+            crate::SourceItem::Text(_) => Err(Error::defect("image reader returned text")),
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
         crate::ImageEvidence::new(self.arguments.evidence.clone(), images).map(Some)
     }
 }
