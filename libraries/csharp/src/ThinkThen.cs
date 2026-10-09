@@ -127,12 +127,18 @@ public sealed partial class Engine : IDisposable
     private TResult Live<TResult>(Func<IntPtr, TResult> body)
     {
         lifetime.EnterReadLock();
+        bool pinned = false;
         try
         {
             if (engine == IntPtr.Zero) throw new ObjectDisposedException(nameof(Engine));
+            ownedEngine.DangerousAddRef(ref pinned);
             return body(engine);
         }
-        finally { lifetime.ExitReadLock(); }
+        finally
+        {
+            if (pinned) ownedEngine.DangerousRelease();
+            lifetime.ExitReadLock();
+        }
     }
     private TResult Invoke<TResult>(TimeSpan? budget, CancellationToken cancellation, Func<IntPtr, long, IntPtr, TResult> body) => Live(ptr =>
     {
