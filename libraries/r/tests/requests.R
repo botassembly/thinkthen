@@ -11,6 +11,11 @@ for (call in list(
   function() tt_decide(list(decide = "Q?", item_schema = list(type = "string")), list(n = 1))
 )) check("canonical admission refuses invalid values", identical(kind_of(call()), "usage"))
 check("invalid request sends nothing", backend_count() == arrivals)
+empty <- tt_decide("No records?", NULL)
+check("ordinary NULL supplies no records and sends nothing", length(empty$results) == 0L &&
+  empty$facts$requests_sent == 0 && backend_count() == arrivals)
+null_plan <- tt_plan("Explicit null?", tt_input("json", value = NULL))
+check("explicit JSON null remains one original", null_plan$records == 1 && backend_count() == arrivals)
 plan <- tt_plan("Plan question?", c("first", "second"))
 check("native preview sends nothing", plan$records == 2 && backend_count() == arrivals)
 check("plan prints safely", identical(capture.output(print(plan)), "<complete carrier: content withheld>"))

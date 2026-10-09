@@ -11,12 +11,12 @@ call$facts$requests_sent
 choice <- tt_choose(list(choose = "Which category?", options = c("refund", "other")),
                     "Please refund my order.")
 choice$results[[1]]$value
-ranked <- tt_rank("Which message most clearly asks for a refund?",
+prioritized_messages <- tt_rank("Which message most clearly asks for a refund?",
                   c("Please refund my order.", "When will it arrive?"))
-ranked$results[[1]]$index
+prioritized_messages$results[[1]]$index
 ```
 
-A scalar character input is literal text. Other scalar or structured inputs become JSON evidence. Record functions take a vector, list, or data frame of original records; data frames convert by row. Character vectors also supply records to primitive calls. Missing R values serialize to JSON null and receive native admission; no row is silently removed. JSON null, an absent generated field, and R `NA` remain distinct values.
+An ordinary `NULL` input supplies an empty record collection. `tt_input("json", value = NULL)` retains explicit JSON null. A scalar character input is literal text. Other scalar or structured inputs become JSON evidence. Record functions take a vector, list, or data frame of original records; data frames convert by row. Character vectors also supply records to primitive calls. Missing R values serialize to JSON null and receive native admission; no row is silently removed. JSON null, an absent generated field, and R `NA` remain distinct values.
 
 A question string is literal wording, including strings beginning with `@`. An authored question is an ordinary named list. Explicit authority uses `tt_question(file = "question.json")`, `tt_question(name = "support.refund")`, or `tt_question(reference = "@support.refund")`. `tt_files(paths, unit = "line", window = NULL, media = "text")` selects native file reading. See the [canonical request schema](../../specification/request.schema.json) for accepted selector fields and options. Rust rejects incompatible options before sending or reading selected sources.
 

@@ -29,7 +29,7 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
 .tt_request <- function(function_name, question, input, options) {
   question <- .tt_selector(question, "thinkthen_question")
   if (inherits(input, "thinkthen_input")) input <- unclass(input)
-  else if (is.data.frame(input) || function_name %in% c("filter", "rank", "find", "annotate", "relate") ||
+  else if (is.null(input) || is.data.frame(input) || function_name %in% c("filter", "rank", "find", "annotate", "relate") ||
            (is.character(input) && length(input) != 1L)) {
     # A record vector/list is converted once. No NA row disappears or loses its position.
     if (is.data.frame(input)) input <- lapply(seq_len(nrow(input)), function(at) lapply(input, `[[`, at))

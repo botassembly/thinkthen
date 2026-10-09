@@ -123,6 +123,12 @@ fn texts_of(value: &Robj, what: &str) -> Crossed<Vec<String>> {
         .collect()
 }
 
+/// Convert host character values with the one native encoding crossing.
+#[extendr]
+fn tt_text_utf8(value: Robj) -> Crossed<Vec<String>> {
+    texts_of(&value, "a text")
+}
+
 fn positions_of(value: &Robj, count: usize) -> Crossed<Vec<usize>> {
     if value.rtype() != Rtype::Integers || value.len() != count {
         return Err(usage("observation positions must match the live evidence"));
@@ -476,6 +482,7 @@ extendr_module! {
     mod thinkthen;
     use complete;
     use request;
+    fn tt_text_utf8;
     fn tt_question_check;
     fn tt_source_files;
     fn tt_question_file;
