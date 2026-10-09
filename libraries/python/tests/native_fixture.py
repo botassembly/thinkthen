@@ -132,7 +132,13 @@ def project(packet,verb):
 
 def assert_required(packet,row,value,bodies,root):
     """Compare required known fields and independent selected-content expectations."""
-    if 'error' in packet:return
+    if 'error' in packet:
+        if 'prefix_indexes' in value['expect']:
+            completed=project(packet,value['verb'])
+            assert [r['index'] for r in completed['completed']]==value['expect']['prefix_indexes'],completed
+            assert completed['records']==len(completed['completed']),completed
+            assert all(len(r['answer_id'])==64 and r['observations']==r['sources']>0 for r in completed['completed']),completed
+        return
     results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
     expect=value['expect']
     for result in results:
@@ -235,7 +241,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             steps.append({**value,'paths':[str(root/'specification/fixtures/files/documents/01-policy.txt'),
                                 str(root/'specification/fixtures/files/documents/02-contract.txt'),str(bad)],
                                 'source_unit':3,'incremental':incremental,'count_delta':True,'override_arm':'arm/full/capture/v1',
-                                'expect':{'error':'usage','requests_sent':2,'completed_prefix':[0,1]}})
+                                'expect':{'error':'usage','requests_sent':2,'prefix_indexes':[0,1]}})
                     if consumer=='r' and row['id']=='19-find-none':
                         steps.append({**value,'items':[None,'other'],'text':False,'count_delta':True,
                             'override_arm':'arm/full/capture/v1','expect':{'value':None,'index':0,'requests_sent':1}})
