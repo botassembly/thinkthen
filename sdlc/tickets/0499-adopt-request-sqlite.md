@@ -6,6 +6,12 @@ Milestone: 0.2
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
+Reviews: revision b0fc3e13e4451a1abeb38dfc0a9ecc29abd06905, reject
+
+Reviews: revision 83e9c8a21fc757d2903ba170f35e206d35d9393e, reject
+
+Reviews: revision 7714682107b4202d5faf796f2f9dc9c66ed4c186, reject
+
 ## Outcome
 
 Adopt shared Request and generated results in SQLite through named typed public calls.
@@ -20,11 +26,11 @@ Adopt shared Request and generated results in SQLite through named typed public 
 
 ## Native feed bridge
 
-SQLite's existing composed records retain file and line locations and distinguish eager admission from incremental execution. The migration owns the narrow shared Request feed bridge required to preserve those properties. Extend `crates/thinkthen/src/public/request/**`, its outside-in request tests, existing API documentation and measured gate metadata only as needed. One developer owns this bridge; recognition stage-context work waits before touching the same files.
+SQLite's existing composed records retain file and line locations and distinguish eager admission from incremental execution. The migration owns the narrow shared Request feed bridge required to preserve those properties. Extend `crates/thinkthen/src/public/request/**`, `crates/thinkthen/src/public/bulk/annotation.rs`, its outside-in request tests, existing API documentation and measured gate metadata only as needed. Reuse annotation's existing per-member evidence selection and declaration admission. A composed native filter feed may explicitly retain every complete observation for SQL's existing result carrier; ordinary Request filtering and the canonical schema stay unchanged. One developer owns this bridge; recognition stage-context work waits before touching the same files.
 
 Already-composed feeds must preserve selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. Document which combinations are supported and refuse incompatible combinations before sending. Keep SQLite's new execution path separate from the compatibility module PostgreSQL imports; remove that compatibility copy when 0500 migrates. This changes native composition, not the canonical request schema or SQL authority.
 
-### Added public declarations
+### Reviewed API scope
 
 ```text
 fn RequestFeed::from_records(impl Into<String>, impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a) -> RequestFeed<'a>
@@ -33,6 +39,8 @@ fn RequestFeed::with_image_inputs(self) -> RequestFeed<'a>
 fn RequestFeed::with_all_filter_results(self) -> RequestFeed<'a>
 fn AdmittedRequest::record_reading(&self) -> Result<RecordReading, Error>
 ```
+
+The reviewed branch declares `RequestFeed::from_records`, `RequestFeed::eager`, `RequestFeed::with_image_inputs` and `AdmittedRequest::record_reading`. Keep their exact inventory declarations with the implementation when it lands. Publishing those declarations ahead of the code makes independent main-based inventory checks fail; this paragraph retains design approval without claiming shipped exports.
 
 ## Progress
 

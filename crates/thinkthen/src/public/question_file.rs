@@ -3,7 +3,6 @@
 //! The command, the public loaders and every library read a question file
 //! through [`read_question_file`] and map its reason to their own sentence.
 
-use std::fs::File;
 use std::io::{self, Read as _};
 use std::path::Path;
 
@@ -23,15 +22,24 @@ pub enum QuestionFileError {
     NotUtf8,
 }
 
-/// Read a question file's text, reading at most one byte past 1 MiB, so a file
-/// such as `/dev/zero` is refused before memory is spent on it.
+/// Read a regular question file's text, reading at most one byte past 1 MiB.
+/// Stable nonregular paths refuse before opening or consuming a protocol pipe. Symlinks
+/// to regular files remain accepted. Metadata and open are separate operations;
+/// this does not prevent a hostile replacement race between them.
 ///
 /// # Errors
 ///
 /// Returns the [`QuestionFileError`] that says why no text was read.
 pub fn read_question_file(path: impl AsRef<Path>) -> Result<String, QuestionFileError> {
     let mut bytes = Vec::new();
-    File::open(path)
+    let path = path.as_ref();
+    let metadata = std::fs::metadata(path).map_err(QuestionFileError::Unreadable)?;
+    if !metadata.is_file() {
+        return Err(QuestionFileError::Unreadable(io::Error::other(
+            "question source is not regular",
+        )));
+    }
+    super::files::open_regular(path)
         .and_then(|file| file.take(LIMIT + 1).read_to_end(&mut bytes))
         .map_err(QuestionFileError::Unreadable)?;
     if bytes.len() as u64 > LIMIT {

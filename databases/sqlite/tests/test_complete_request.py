@@ -22,6 +22,7 @@ for verb, question, inputs in cases:
         [json.dumps(question),json.dumps(inputs)]).fetchone()[0]
     document=json.loads(value)
     results.append(document['native']['error']['kind'])
+    if verb=='decide': assert document['native']['error']['stopped']['at']==2, document
     assert 'secret' not in value
 for inputs in ({'records':[], 'incremental':None}, {'records':[], 'unknown':True}):
     value=db.execute('SELECT thinkthen_decide_complete(?,?)',

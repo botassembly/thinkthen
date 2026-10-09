@@ -140,9 +140,10 @@ impl Engine {
                 RequestInput::Feed { .. } | RequestInput::Source { .. }
             );
         let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
-        let rows = rows.map(|row| {
-            let row = row?;
-            super::inline::validate_composed(&reading_definition, options, &row)?;
+        let rows = rows.enumerate().map(|(at, row)| {
+            let row = row.map_err(|error| error.at_record(at))?;
+            super::inline::validate_composed(&reading_definition, options, &row)
+                .map_err(|error| error.at_record(at))?;
             Ok(row)
         });
         let rows: super::composition::Inputs<'_> = if eager {

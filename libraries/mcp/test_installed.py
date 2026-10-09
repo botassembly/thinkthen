@@ -1,6 +1,7 @@
 """Installed public MCP behavior using one owned offline backend and scratch home."""
 import base64
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -45,6 +46,43 @@ class Installed(unittest.TestCase):
     def launch(self, route='generic', *options):
         return Client.launch((BINARY, 'mcp', '--url', f'http://127.0.0.1:{self.port}/{route}/v1',
                               '--max-retries', '0', *options), env=self.env)
+
+    def test_repeated_image_rows_hit_aggregate_bound_before_later_paths_or_sends(self):
+        image = self.home / 'image.png'
+        image.write_bytes((ROOT / 'specification/fixtures/images/above-spike.png').read_bytes())
+        rows = [{'images': [str(image)]} for _ in range(160)]
+        rows.append({'images': [str(self.home / 'absent.png')]})
+        with self.launch('generic', '--no-cache') as client:
+            with self.assertRaises(ToolError) as failure:
+                client.decide(question='q', inputs=rows)
+            self.assertEqual(failure.exception.result['error']['kind'], 'usage')
+            self.assertEqual(failure.exception.result['error']['message'],
+                             'retained attachments exceed the input byte ceiling')
+            self.assertEqual(client.ping(), {})
+            # A later selector still reaches its ordinary local refusal after this call releases its budget.
+            with self.assertRaises(ToolError) as missing:
+                client.decide(question_file=str(self.home / 'absent.json'), evidence='x')
+            self.assertEqual(missing.exception.result['error']['kind'], 'local')
+        self.assertEqual(self.count(), 0)
+
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'owned FIFO/stdin cases use Linux')
+    def test_nonregular_selectors_refuse_and_next_framed_tool_remains_usable(self):
+        fifo = self.home / 'question.fifo'
+        os.mkfifo(fifo)
+        with self.launch('generic', '--no-cache') as client:
+            process = client.process
+            for path in (fifo, Path('/dev/stdin'), self.home):
+                with self.subTest(path=path):
+                    with self.assertRaises(ToolError) as failure:
+                        client.decide(question_file=str(path), evidence='x')
+                    self.assertEqual(failure.exception.result['error']['kind'], 'local')
+                    self.assertEqual(failure.exception.result['error']['message'],
+                                     'the question file could not be read')
+                    result = client.decide(question='q', evidence='x')
+                    self.assertIsInstance(result['value']['value'], bool)
+                    self.assertEqual(client.ping(), {})
+        self.assertEqual(process.returncode, 0)
+        self.assertEqual(self.count(), 3)
 
     def test_protocol_errors_preserve_readable_ids_and_omit_unreadable_ids(self):
         cases = [
@@ -223,6 +261,11 @@ class Installed(unittest.TestCase):
             file = client.decide(question_file=str(path), evidence='Please refund.')
             self.assertEqual(named['value']['question'], file['value']['question'])
             self.assertIs(file['value']['value'], True)
+            if os.name == 'posix':
+                link = self.home / 'question-link.json'
+                link.symlink_to(path)
+                linked = client.decide(question_reference='@' + str(link), evidence='Please refund.')
+                self.assertEqual(linked['value']['question'], file['value']['question'])
             literal = client.decide(question='@refund', evidence='Please refund.')
             self.assertEqual(literal['value']['question']['text'], '@refund')
             before = self.count()

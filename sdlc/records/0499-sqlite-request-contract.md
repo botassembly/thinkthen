@@ -60,6 +60,14 @@ Corrected `sh sdlc/scripts/lint` exited 0 on committed `947102ef8`, including po
 
 The final release library was archived and unpacked into an owned temporary folder. All four `test_complete_request.py` regressions passed against that installed library. `tests/complete/parity.py sqlite` passed all 255 required cases with zero failures, and `tests/complete/facts.py sqlite` passed owning costs, incomplete usage, overflow, cache/replay, started facts and terminal reader behavior. SQLite Clippy and PostgreSQL library Clippy both passed with `-D warnings`; PostgreSQL keeps its previous dispatcher. Log: `target/0499-projections-sqlite.log`. Final archive SHA-256: `dc694bc39d9bfbf3eff06593075f2eaba3ef4a4df71d08c8aa1e1d3d8477debc`; library: `265b3a978ad43f188e0a39fade2a0e1035bca1268fa5acdce9517a312a8a0877`. Production source stayed stable through these checks. The lane used 33 GiB including library and database targets. Earlier passing unaffected legacy stages were retained.
 
+## Third review ordinal regression
+
+The third review found that eager composed-row validation refused an invalid second declaration with Usage and zero sends but omitted `native.error.stopped.at`. The retained SQL contract reports record 2. The existing installed declaration regression now asserts that ordinal; it failed against the previous library with a missing `at` field and exit 1 in `target/0499-ordinal-red.log`.
+
+Request execution now enumerates rows before composed validation and attaches the existing `at_record` ordinal to both incoming row errors and validation errors before eager collection. This preserves previously attached locations and the existing eager zero-send and incremental completed-prefix behavior. No new API or runner was added.
+
+The integration brings main `7ceefbba5a400cd2159736c9b833d60ebc73d51a`, including the landed 0481 MCP bounds work and subsequent metadata. Merge conflicts were limited to the root ratchet and ticket API block. The combined measured root total is 173,114 lines; SQLite Rust remains 5,003 and Python is 4,116. The implemented API declarations and all main Reviews and Progress lines remain intact. Additional MCP features remain outside this slice.
+
 ## Retained limits
 
 Legacy scalar/table execution still calls Engine directly: `src/scalars.rs` uses primitive details/decide and annotation; `src/scalars/find.rs` uses find; `src/tables.rs` uses recognize/relate; `src/many.rs` uses details-many/rank; `src/rank_set.rs` uses rank-set; `src/images.rs` uses image details; and `src/recognize_document.rs` uses recognize. Existing keyed lookup, file readers, question helpers and scalar planning remain coupled to those paths. The old `complete_native` dispatcher is retained for PostgreSQL 0500. Whole-surface migration must replace these paths while preserving SQL conventions.
