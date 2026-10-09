@@ -918,6 +918,57 @@
         }
       ]
     },
+    "RecognitionProposal": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kept": {
+          "type": "boolean"
+        },
+        "kind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selected": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "span_probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "start": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "strength": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "span_probability",
+        "kept"
+      ],
+      "type": "object"
+    },
     "RecognitionStageContext": {
       "additionalProperties": false,
       "properties": {
@@ -5412,6 +5463,55 @@
         }
       ]
     },
+    "completeRecognitionProposal": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kept": {
+          "type": "boolean"
+        },
+        "kind": {
+          "type": [
+            "string"
+          ]
+        },
+        "selected": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeplace"
+            }
+          ]
+        },
+        "span_probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "start": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "strength": {
+          "format": "double",
+          "type": [
+            "number"
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "span_probability",
+        "kept"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completeRecognitionStageContext": {
       "additionalProperties": false,
       "properties": {
@@ -7054,11 +7154,18 @@
             "$ref": "#/$defs/completepieceOdds"
           },
           "type": "array"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/completeRecognitionProposal"
+          },
+          "type": "array"
         }
       },
       "required": [
         "pieces",
         "names",
+        "proposals",
         "pairs"
       ],
       "type": "object",
@@ -8334,11 +8441,18 @@
             "$ref": "#/$defs/pieceOdds"
           },
           "type": "array"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/RecognitionProposal"
+          },
+          "type": "array"
         }
       },
       "required": [
         "pieces",
         "names",
+        "proposals",
         "pairs"
       ],
       "type": "object"

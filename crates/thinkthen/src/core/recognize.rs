@@ -242,10 +242,25 @@ pub(crate) fn settle(
     found: &[(usize, usize)],
     answers: &[(Asked, NameOdds)],
     cut: f64,
-) -> Vec<RecognizedName> {
+) -> (Vec<RecognizedName>, Vec<crate::core::RecognitionProposal>) {
     let spans = SpanOdds::new(rows);
-    let mut names: Vec<RecognizedName> = Vec::new();
+    let mut names: Vec<(usize, RecognizedName)> = Vec::new();
+    let mut proposals = Vec::with_capacity(found.len());
     for ((first, last), (asked, odds)) in found.iter().copied().zip(answers) {
+        let span_probability = spans.span(first, last);
+        let index = proposals.len();
+        proposals.push(crate::core::RecognitionProposal {
+            start: odds.start,
+            end: odds.end,
+            span_probability,
+            selected: None,
+            kind: None,
+            strength: None,
+            kept: false,
+        });
+        let Some(proposal) = proposals.get_mut(index) else {
+            continue;
+        };
         let (kind, kind_odds) = match &odds.kinds {
             None => (ENTITY, 1.0),
             Some(kinds) => match kinds.leader() {
@@ -260,21 +275,32 @@ pub(crate) fn settle(
             .and_then(Odds::leader)
             .and_then(|(place, _, _)| asked.edges.get(place).copied())
             .unwrap_or((first, last));
-        let strength = strength(kind_odds, spans.span(first, last));
+        let strength = strength(kind_odds, span_probability);
+        proposal.kind = Some(kind.to_owned());
+        proposal.strength = Some(strength);
         let Some(held) = named(text, pieces, picked, kind, strength) else {
             continue;
         };
-        match names.iter_mut().find(|other| {
+        proposal.selected = Some(crate::core::Place::of(&held));
+        match names.iter_mut().find(|(_, other)| {
             (other.start, other.end, &other.kind) == (held.start, held.end, &held.kind)
         }) {
-            Some(other) if other.strength < held.strength => *other = held,
+            Some((winner, other)) if other.strength < held.strength => {
+                *winner = index;
+                *other = held;
+            }
             Some(_) => {}
-            None => names.push(held),
+            None => names.push((index, held)),
         }
     }
-    names.retain(|name| name.strength >= cut);
-    names.sort_by_key(|name| (name.start, name.end));
-    names
+    names.retain(|(_, name)| name.strength >= cut);
+    names.sort_by_key(|(_, name)| (name.start, name.end));
+    for (index, _) in &names {
+        if let Some(proposal) = proposals.get_mut(*index) {
+            proposal.kept = true;
+        }
+    }
+    (names.into_iter().map(|(_, name)| name).collect(), proposals)
 }
 
 fn named(

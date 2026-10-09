@@ -135,6 +135,7 @@ fn scored(case: &Scored) -> Vec<(String, f64)> {
         &asked,
         0.5,
     )
+    .0
     .into_iter()
     .map(|name| (name.text, name.strength))
     .collect()

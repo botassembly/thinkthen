@@ -24,6 +24,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
         )
         .unwrap(),
         answer: RecognitionOdds::Whole(crate::core::WholeRecognitionOdds {
+            proposals: Vec::new(),
             pieces: vec![PieceOdds {
                 start: 0,
                 end: 3,

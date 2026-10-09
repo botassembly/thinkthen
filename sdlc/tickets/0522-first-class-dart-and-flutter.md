@@ -9,6 +9,8 @@ Depends on: 0517
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 36382970a, accept
+
 ## Outcome
 
 Dart and Flutter callers install one package, call the ten functions with Dart values, await `Future` and `Stream` results as generated presence-aware Dart classes, and handle typed exceptions. Cancellation is explicit and cleanup is deterministic, with a finalizer as a backstop. Flutter ships as a real FFI plugin with its platform libraries. Hand-copied layouts, readers and old public names are gone.
@@ -20,7 +22,7 @@ Dart and Flutter callers install one package, call the ten functions with Dart v
 - Changes: Follow the 0516 pilot pattern on 0503's session with 0513's generated results. Meet the caller acceptance and the Dart and Flutter section of `../../libraries/BINDING-AUTHOR.md`. Dart and Flutter share one implementation. This ticket owns:
   - the Dart target template and generated outputs;
   - native input conversion, typed exceptions, `Future` and `Stream` scheduling, cancellation and cleanup;
-  - the pub package and a real Flutter FFI plugin for the targets declared by 0517;
+  - the pub package and a real Flutter FFI plugin for the targets declared by 0517, fetching the prebuilt library at build time under [the pub ruling](../decisions/2026-10-09-pub-build-time-native-asset.md);
   - `libraries/dart/README.md` and `libraries/dart/flutter/README.md`, with a short old-to-new call mapping;
   - removal of old public names after installed parity.
   One public API is one coherent family of named typed calls. Claim `libraries/dart/**`, including `libraries/dart/flutter/**`, narrowed and named per slice.

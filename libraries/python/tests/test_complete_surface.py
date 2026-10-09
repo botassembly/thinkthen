@@ -46,3 +46,20 @@ def test_complete_surface_is_closed_immediate_and_used_by_eager_and_lazy_calls(m
         assert agents==[f'thinkthen/0.2.0 ({s})' for s in ('python','python','pandas','python-polars') for _ in range(2)]
     finally:
         server.shutdown();server.server_close();worker.join()
+
+
+def test_complete_recognition_reads_proposals_and_preserves_old_documents():
+    from thinkthen import complete as c
+    answer = {'pieces': [], 'names': [], 'pairs': [], 'proposals': [
+        {'start': 11, 'end': 14, 'span_probability': .4, 'selected': {'start': 11, 'end': 14},
+         'kind': 'person', 'strength': .36, 'kept': False},
+        {'start': 3, 'end': 6, 'span_probability': .9, 'kept': False}]}
+    result = c.decode('RecognitionAnswer', answer)
+    assert result.proposals[0].strength == .36
+    assert result.proposals[0].kind == 'person'
+    assert result.proposals[1].strength is c.ABSENT
+    assert c.to_json(result) == answer
+    old = {key: value for key, value in answer.items() if key != 'proposals'}
+    assert c.decode('RecognitionAnswer', old).proposals is c.ABSENT
+    with pytest.raises(ValueError):
+        c.decode('RecognitionAnswer', {**answer, 'invented': True})

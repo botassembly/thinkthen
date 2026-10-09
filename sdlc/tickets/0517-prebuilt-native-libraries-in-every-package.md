@@ -1,6 +1,6 @@
 # 0517: Design how every package carries its native library
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -11,6 +11,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
+
+Landed: b377a6c
 
 ## Outcome
 

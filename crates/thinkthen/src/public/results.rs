@@ -40,7 +40,7 @@ pub use complete_annotation::{CompleteAnnotated, CompleteAnnotationMember};
 pub use complete_find::{CompleteFound, FindSelection};
 pub use complete_recognize::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
-    RecognitionProbabilities,
+    RecognitionProbabilities, RecognitionProposal,
 };
 pub use complete_record::CompleteRecord;
 pub use complete_set_rank::{CompleteRankMember, CompleteSetRank};
