@@ -2,7 +2,7 @@
 
 The queue owner accepted this interface for ticket 0503 after fresh review of revision `0c5f1f772e85a9fcdbc1e7ceb6f86bf21af004bd`. Implementation follows this decision. Ian can overturn its additive names, packet shape and queue choice. The governing contract is the 2026-10-09 amendment to 0503, the amendments to 0511 and 0513, and `sdlc/decisions/2026-10-09-thin-first-class-bindings.md`. ADR 0125 retains Request admission and pure-core boundaries. ADR 0101 retains the frozen C compatibility forms.
 
-The observation follow-up below is proposed for fresh review against `6af931685`. It does not change the acceptance provenance above or authorize product implementation. If accepted, it extends the output and shared execution sections as stated below; the original ownership, queue, terminal, pure-core and frozen C rules continue to apply.
+The queue owner accepted the observation follow-up below after fresh review of revision `e8f546aeca5644f3703f61cf6c6cf51b3038e0d6` against `6af931685`. It extends the output and shared execution sections as stated below. The original acceptance provenance, ownership, queue, terminal, pure-core and frozen C rules continue to apply. Runtime implementation remains work under ticket 0503.
 
 ## Evidence and problem
 
