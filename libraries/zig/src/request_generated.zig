@@ -1165,6 +1165,12 @@ pub const RequestReader = struct {
     window: ?u64 = null,
 };
 
+pub const RequestSessionDescriptor = struct {
+    item: RequestItem,
+
+    location: ?SessionSourceLocation = null,
+};
+
 pub const RequestSource = struct {
     media: ?ReaderMedia = null,
 
@@ -1188,6 +1194,14 @@ pub const RequestThreshold = union(enum) {
 };
 
 pub const RequestVersion = enum { @"thinkthen.request/1" };
+
+pub const SessionSourceLocation = struct {
+    file: []const u8,
+
+    first_line: ?u64 = null,
+
+    last_line: ?u64 = null,
+};
 
 pub const SourceUnit = enum { line, window, file };
 

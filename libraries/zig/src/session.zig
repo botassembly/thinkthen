@@ -62,7 +62,7 @@ pub const Session = struct {
     pub fn cancel(self: Session) void {
         c.thinkthen_session_cancel(self.raw);
     }
-    pub fn push(self: Session, allocator: std.mem.Allocator, item: tt.authored.inputs.RequestItem) !enum { accepted, full, closed } {
+    pub fn push(self: Session, allocator: std.mem.Allocator, item: tt.authored.inputs.RequestSessionDescriptor) !enum { accepted, full, closed } {
         const json = try std.json.Stringify.valueAlloc(allocator, item, .{ .emit_null_optional_fields = false });
         defer allocator.free(json);
         var status: u32 = undefined;

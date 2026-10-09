@@ -54,7 +54,9 @@ pub fn main() !void {
         std.debug.print("installed Zig plan PASS\n", .{});
         return;
     }
-    var session = try tt.session.decide(&engine, .{ .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .text = .{ .text = "Evidence." } } });
+    var session = try tt.session.decide(&engine, .{ .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .feed = .{ .name = "owned" } } });
+    if (try session.push(a, .{ .item = .{ .original = .{ .text = .{ .text = "Evidence." } } }, .location = .{ .file = "owned.txt", .first_line = 1, .last_line = 1 } }) != .accepted) return error.FeedRefused;
+    try session.finish();
     engine.deinit();
     var retained: ?tt.session.Packet = null;
     defer if (retained) |*packet| packet.deinit();

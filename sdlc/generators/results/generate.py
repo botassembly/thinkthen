@@ -354,7 +354,7 @@ def main():
     elif args.inputs and args.target == 'zig':
         schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
         schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
-        result = zig_generated(prepare(graph(schema, ('Request',))))
+        result = zig_generated(prepare(graph(schema, ('Request', 'RequestSessionDescriptor'))))
     elif args.inputs:
         path = Path(__file__).parent / 'templates/csharp.py'
         spec = importlib.util.spec_from_file_location('result_csharp', path)
