@@ -115,3 +115,7 @@ pub(super) fn execute(
 pub(crate) mod ordered;
 mod records;
 mod streaming;
+
+mod preview;
+pub(crate) use preview::Preview as RecognitionPreview;
+pub(in crate::public) use preview::prepare as preview_recognition;

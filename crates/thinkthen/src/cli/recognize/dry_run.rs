@@ -8,11 +8,8 @@ use serde::Serialize;
 
 use crate::cli::intake::{Data, Intake};
 use crate::core::adapters::built_in;
-use crate::core::{
-    Backend, BackendProfile, Description, PlanSummary, Reading, RecognizeSpec, Record, json_line,
-};
+use crate::core::{Backend, BackendProfile, Description, Reading, RecognizeSpec, json_line};
 use crate::edge;
-use crate::engine::facade;
 use crate::failure::Failure;
 
 #[derive(Serialize)]
@@ -87,100 +84,111 @@ pub(super) struct Question<'a> {
 
 pub(super) fn run(
     reading: &Reading,
+    admitted: crate::AdmittedRequest,
     source: Intake,
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
+    (backend, profile): (&Backend, Option<&BackendProfile>),
     question: Question<'_>,
     writer: &mut dyn Write,
-) -> Result<ExitCode, Failure> {
-    let records = source.map(|item| {
-        let item = item.map_err(|placed| placed.cause)?;
-        match item.data {
-            crate::cli::intake::Data::Images(_) => Err(Failure::Usage(
-                "recognize accepts text only; images are unsupported",
-            )),
-            Data::Record(record) => Ok(record),
-            Data::Bytes(bytes) => reading
-                .record(&bytes)
-                .map_err(|error| Failure::record(error, reading.streams())),
-        }
-    });
-    planned(records, backend, profile, question, writer, reading)
-}
-
-fn planned(
-    records: impl Iterator<Item = Result<Record, Failure>>,
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    question: Question<'_>,
-    writer: &mut dyn Write,
-    reading: &Reading,
 ) -> Result<ExitCode, Failure> {
     let Question {
         spec,
-        from_file,
         limit,
-        key_env,
-        backend_name,
         context,
         context_field,
         examples_field,
         seed_spans_field,
-    } = question;
-    let mut summary = PlanSummary::new(true).with_accounting(backend.accounting());
-    let mut first = None;
-    for record in records {
-        let record = record?;
-        let spec = super::examples::selected(&record, examples_field, spec)?;
-        let spec = super::examples::seeds(&record, seed_spans_field, spec)?;
-        let context = super::selected_context(&record, context_field, &spec, context)?;
-        let text = reading.evidence(&record)?.as_text()?.into_owned();
-        let context_value = context.as_ref().map(crate::core::Evidence::as_json);
-        let (pieces, _, prepared) = facade::step_one_context(
+        ..
+    } = &question;
+    let composition = super::native::composition(reading, *examples_field, *seed_spans_field)?;
+    let records = source
+        .map(|item| {
+            let item = item.map_err(|placed| placed.cause)?;
+            let record = match item.data {
+                Data::Images(_) => {
+                    return Err(Failure::Usage(
+                        "recognize accepts text only; images are unsupported",
+                    ));
+                }
+                Data::Record(record) => record,
+                Data::Bytes(bytes) => reading
+                    .record(&bytes)
+                    .map_err(|error| Failure::record(error, reading.streams()))?,
+            };
+            let mut native = composition
+                .compose(crate::RawRecord(std::sync::Arc::new(record.clone())))
+                .map_err(Failure::from)?;
+            native.context = crate::asking::context::record(
+                &record,
+                *context_field,
+                spec.metadata.context_schema.as_ref(),
+            )?;
+            Ok(native.map_original(crate::QuestionInput::Record))
+        })
+        .map(|row| {
+            row.map_err(|cause| {
+                crate::Error::usage("the CLI reader failed").with_diagnostic(
+                    crate::public::error::diagnostic::Diagnostic::CliInput(Box::new(cause)),
+                )
+            })
+        });
+    let admitted = admitted
+        .retain_cli_definition(crate::RequestDefinition::Recognition(crate::Recognize(
+            (*spec).clone(),
+        )))
+        .map_err(Failure::from)?
+        .with_composed_feed("cli-recognize-plan");
+    let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
+    if let Some(context) = *context {
+        controls = controls.context(context);
+    }
+    let preview = admitted
+        .plan_recognition(
             backend,
             profile,
-            &spec,
-            &text,
-            limit,
-            context_value.as_ref(),
-        )?;
-        summary
-            .record()
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
-        // Each found name asks at most one kind and one edge question. A
-        // profile may split stage two differently, but a request asks at
-        // least one question and there cannot be more names than pieces.
-        let name_bound = name_upper_bound(&spec, pieces.len())?;
-        let mut requests = Vec::new();
-        for request in prepared {
-            summary
-                .request(&request.body)
-                .map_err(|_| Failure::Defect("a plan is too large"))?;
-            if first.is_none() {
-                requests.push(Request {
-                    digest: request.digest.as_str().to_owned(),
-                    bytes: request.body.len(),
-                    body_utf8: String::from_utf8(request.body)
-                        .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
-                });
-            }
-        }
-        summary
-            .possible_requests(name_bound)
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
-        let bound = relation_upper_bound(&spec, pieces.len().saturating_add(spec.seed_spans.len()));
-        if let Some(bound) = bound {
-            summary
-                .possible_requests(bound)
-                .map_err(|_| Failure::Defect("a plan is too large"))?;
-        }
-        if first.is_none() {
-            first = Some((pieces.len(), requests, name_bound, bound));
-        }
-    }
-    let Some((pieces, requests, name_bound, relation_bound)) = first else {
+            crate::RequestEnvironment {
+                controls,
+                feed: Some(crate::RequestFeed::from_records(
+                    "cli-recognize-plan",
+                    records,
+                )),
+            },
+            *limit,
+        )
+        .map_err(Failure::from)?;
+    print(preview, backend, question, writer)
+}
+
+fn print(
+    preview: crate::public::complete::recognize::RecognitionPreview,
+    backend: &Backend,
+    question: Question<'_>,
+    writer: &mut dyn Write,
+) -> Result<ExitCode, Failure> {
+    let Question {
+        spec,
+        from_file,
+        key_env,
+        backend_name,
+        ..
+    } = question;
+    let Some(first) = preview.first else {
         return Ok(ExitCode::SUCCESS);
     };
+    let pieces = first.pieces;
+    let name_bound = first.names;
+    let relation_bound = first.relations;
+    let requests = first
+        .requests
+        .into_iter()
+        .map(|request| {
+            Ok(Request {
+                digest: request.digest.as_str().to_owned(),
+                bytes: request.body.len(),
+                body_utf8: String::from_utf8(request.body)
+                    .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
+            })
+        })
+        .collect::<Result<Vec<_>, Failure>>()?;
     crate::cli::check::say_dropped_detail(
         built_in::drops_any(
             backend.descriptions(),
@@ -204,38 +212,12 @@ fn planned(
         requests,
     };
     edge::write_line(&mut *writer, &json_line(&report)?)?;
-    let counts = summary
+    let counts = preview
+        .summary
         .counts()
         .map_err(|_| Failure::Defect("a plan is too large"))?;
     edge::write_line(writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
-}
-
-fn name_upper_bound(spec: &RecognizeSpec, pieces: usize) -> Result<usize, Failure> {
-    if !spec.mode.is_whole() {
-        return Ok(0);
-    }
-    let decoded = pieces.checked_mul(if spec.kinds.is_empty() { 1 } else { 2 });
-    decoded
-        .and_then(|count| {
-            spec.seed_spans
-                .len()
-                .checked_mul(2)
-                .and_then(|seeds| count.checked_add(seeds))
-        })
-        .ok_or(Failure::Defect("a plan is too large"))
-}
-
-fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {
-    if !spec.mode.is_whole() {
-        return Some(0);
-    }
-    (!spec.relations.is_empty()).then(|| {
-        let directed = tokens.saturating_mul(tokens.saturating_sub(1));
-        spec.relations.iter().fold(0_usize, |total, rule| {
-            total.saturating_add(if rule.either { directed / 2 } else { directed })
-        })
-    })
 }
 
 #[cfg(test)]

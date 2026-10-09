@@ -192,3 +192,47 @@ fn annotation_groups(
         _ => Err(Error::usage("annotation plan requires a question set")),
     }
 }
+
+impl AdmittedRequest {
+    pub(crate) fn plan_recognition<'a>(
+        &'a self,
+        backend: &crate::core::Backend,
+        profile: Option<&crate::core::BackendProfile>,
+        environment: RequestEnvironment<'a>,
+        limit: usize,
+    ) -> Result<crate::public::complete::recognize::RecognitionPreview, Error> {
+        feed_projection(self, environment.feed.as_ref())?;
+        let options = &self.request.call.arguments().options;
+        let controls = controls(options, environment.controls)?.started()?;
+        controls.admission()?;
+        let mut definition = self.resolve_question()?;
+        self.admit_inline(&definition)?;
+        let reading = definition.clone();
+        apply(&mut definition, options)?;
+        let ask = match &definition {
+            RequestDefinition::Recognition(ask) => ask,
+            RequestDefinition::Recognize(file) => file.question(),
+            _ => {
+                return Err(Error::usage(
+                    "recognize plan requires a recognition question",
+                ));
+            }
+        };
+        let rows = self.records(&reading, environment, controls, None)?;
+        let rows = rows.enumerate().map(|(at, row)| {
+            controls.admission()?;
+            let row = row?;
+            super::inline::validate_composed(&reading, options, &row)
+                .map_err(|error| error.at_record(at))?;
+            Ok(row)
+        });
+        crate::public::complete::recognize::preview_recognition(
+            backend,
+            profile,
+            ask,
+            rows,
+            controls.context_text(),
+            limit,
+        )
+    }
+}

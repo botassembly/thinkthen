@@ -34,22 +34,11 @@ pub(super) fn run(
     let eager = running.context_field.is_some()
         || running.examples_field.is_some()
         || running.seed_spans_field.is_some();
-    let fields = reading
-        .fields()
-        .iter()
-        .map(crate::core::Pointer::as_str)
-        .collect::<Vec<_>>();
-    let mut composition = crate::RecordReading::new(&fields, None, None).map_err(Failure::from)?;
-    if let Some(pointer) = &running.examples_field {
-        composition = composition
-            .with_examples_field(pointer)
-            .map_err(Failure::from)?;
-    }
-    if let Some(pointer) = &running.seed_spans_field {
-        composition = composition
-            .with_seed_spans_field(pointer)
-            .map_err(Failure::from)?;
-    }
+    let composition = composition(
+        reading,
+        running.examples_field.as_deref(),
+        running.seed_spans_field.as_deref(),
+    )?;
     let held = RefCell::new(BTreeMap::new());
     let compose = |ordinal, frame: Item| {
         let record = match &frame.data {
@@ -329,4 +318,28 @@ fn located_line(
     } else {
         crate::cli::intake::source_value(&text, &json_line(&value)?, position)
     }
+}
+
+pub(super) fn composition(
+    reading: &Reading,
+    examples_field: Option<&str>,
+    seed_spans_field: Option<&str>,
+) -> Result<crate::RecordReading, Failure> {
+    let fields = reading
+        .fields()
+        .iter()
+        .map(crate::core::Pointer::as_str)
+        .collect::<Vec<_>>();
+    let mut composition = crate::RecordReading::new(&fields, None, None).map_err(Failure::from)?;
+    if let Some(pointer) = examples_field {
+        composition = composition
+            .with_examples_field(pointer)
+            .map_err(Failure::from)?;
+    }
+    if let Some(pointer) = seed_spans_field {
+        composition = composition
+            .with_seed_spans_field(pointer)
+            .map_err(Failure::from)?;
+    }
+    Ok(composition)
 }

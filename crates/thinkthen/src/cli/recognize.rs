@@ -11,7 +11,7 @@ use crate::asking::{self, Folders};
 use crate::cli::intake::Intake;
 #[cfg(test)]
 use crate::core::Meta;
-use crate::core::{ModelName, Reading, RecognizeSpec, Record};
+use crate::core::{ModelName, Reading};
 use crate::edge::{self, Environment};
 use crate::engine::facade::{Engine, MAX_TEXT_BYTES};
 #[cfg(test)]
@@ -155,9 +155,9 @@ pub(crate) fn run(
         }
         return dry_run::run(
             &reading,
+            admitted,
             source,
-            &backend,
-            selected_profile.as_ref(),
+            (&backend, selected_profile.as_ref()),
             dry_run::Question {
                 spec: &spec,
                 from_file: arguments
@@ -204,15 +204,4 @@ pub(crate) fn run(
         source,
         &mut schedule::Output::streaming(&mut writer, environment.usage()),
     )
-}
-
-fn selected_context(
-    record: &Record,
-    pointer: Option<&str>,
-    spec: &RecognizeSpec,
-    fallback: Option<&str>,
-) -> Result<Option<crate::core::Evidence>, Failure> {
-    let selected = asking::context::record(record, pointer, spec.metadata.context_schema.as_ref())?;
-    crate::public::RecordContext::resolved(selected.as_ref(), fallback)
-        .map_err(|_| Failure::Usage("the per-item context does not match context_schema"))
 }

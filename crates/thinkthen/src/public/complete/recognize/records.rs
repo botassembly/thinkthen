@@ -137,6 +137,36 @@ pub(super) fn prepare<T: InputEvidence>(
     fallback: Option<&str>,
     limit: usize,
 ) -> Result<Unit<T>, Error> {
+    let (original, input, text, context, resolved, ask) = prepare_input(ask, record, fallback)?;
+    let engine = engine.clone().with_aggregate_context_value(resolved);
+    engine
+        .admit_recognition_limit(&ask.0, &text, limit)
+        .map_err(Error::from)?;
+    Ok(Unit {
+        original,
+        prepared: Prepared {
+            input,
+            text,
+            engine,
+            context,
+            ask,
+        },
+    })
+}
+
+type Input<T> = (
+    T,
+    Arc<QuestionInput>,
+    String,
+    Option<String>,
+    Option<crate::core::Evidence>,
+    Recognize,
+);
+pub(super) fn prepare_input<T: InputEvidence>(
+    ask: &Recognize,
+    record: RecordInput<T>,
+    fallback: Option<&str>,
+) -> Result<Input<T>, Error> {
     if record.options.is_some() {
         return Err(Error::usage("recognize takes no per-record options"));
     }
@@ -158,7 +188,6 @@ pub(super) fn prepare<T: InputEvidence>(
                 .map_err(Error::refused)
         })
         .transpose()?;
-    let engine = engine.clone().with_aggregate_context_value(resolved);
     let input = Arc::new(record.original.question_input());
     ask.0.metadata.validate_item(&input)?;
     crate::public::images::guard(InputFunction::Recognize, &input)?;
@@ -170,19 +199,7 @@ pub(super) fn prepare<T: InputEvidence>(
         }
         QuestionInput::Images(_) => return Err(crate::public::complete::wrong()),
     };
-    engine
-        .admit_recognition_limit(&ask.0, &text, limit)
-        .map_err(Error::from)?;
-    Ok(Unit {
-        original: record.original,
-        prepared: Prepared {
-            input,
-            text,
-            engine,
-            context,
-            ask,
-        },
-    })
+    Ok((record.original, input, text, context, resolved, ask))
 }
 
 pub(super) fn source_value(
