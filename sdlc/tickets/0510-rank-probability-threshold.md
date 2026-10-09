@@ -31,3 +31,7 @@ Callers can use `rank --threshold P` to keep records whose yes probability is at
   Confirm the smallest public reading seam before coding, and change claims if it needs other files.
 - Proof: Outside-in CLI, Rust and MCP cases keep an exactly-at-cut record, drop below-cut records, preserve probability order and stable ties, compose with top, and reject invalid cutoffs and refused routes before sends. Run plain rank first, then the cut reading against the same cache or recording, and count zero extra model requests with the same question and cache identities. With no cutoff, existing literal output and error cases stay unchanged.
 - Defers: A new function, a grep alias, calibration, extra model calls and proxy business policy need no ticket. Release management stays with Ian.
+
+## Progress
+
+- 2026-10-09 started
