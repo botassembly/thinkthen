@@ -13,12 +13,75 @@ pub(super) type Records<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
 pub(crate) struct Inputs {
     raw: Fields,
+    native_request: bool,
     pub(crate) jsonl: bool,
     pub(crate) incremental: bool,
     pub(crate) attempts: bool,
     pub(crate) cancelled: bool,
 }
 impl Inputs {
+    /// Inspect descriptors only; native route admission precedes file/image readers.
+    #[allow(
+        dead_code,
+        reason = "only SQLite uses shared Request image-route admission before ticket 0500"
+    )]
+    pub(crate) fn image_inputs(&self) -> Result<bool, Error> {
+        if let Some(files) = self.raw.get("files") {
+            let files = fields(files.get())?;
+            let options = files
+                .get("options")
+                .map(|value| {
+                    serde_json::from_str::<InputReaderOptions>(value.get())
+                        .map_err(|_| usage("invalid native reader options"))
+                })
+                .transpose()?
+                .unwrap_or_default();
+            return Ok(options.media == thinkthen::ReaderMedia::Image);
+        }
+        let records: Vec<Box<RawValue>> =
+            serde_json::from_str(self.raw.get("records").ok_or_else(defect)?.get())
+                .map_err(|_| usage("records is an ordered array"))?;
+        for record in records {
+            let Ok(record) = fields(record.get()) else {
+                continue;
+            };
+            let Some(images) = record.get("images") else {
+                continue;
+            };
+            let Ok(images) = serde_json::from_str::<Vec<Box<RawValue>>>(images.get()) else {
+                continue;
+            };
+            if !images.is_empty() {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+    #[allow(
+        dead_code,
+        reason = "only SQLite adopts native request controls before PostgreSQL ticket 0500"
+    )]
+    pub(crate) fn parse_request(source: &str) -> Result<Self, Error> {
+        let mut inputs = Self::parse(source, true)?;
+        inputs.native_request = true;
+        Ok(inputs)
+    }
+    /// Advance host readers only after shared request admission and cancellation checks.
+    #[allow(
+        dead_code,
+        reason = "only SQLite defers readers through Request before PostgreSQL ticket 0500"
+    )]
+    pub(crate) fn deferred_records(&self, reading: Option<&RecordReading>) -> Records<'_> {
+        let reading = reading.cloned();
+        Box::new(
+            std::iter::once_with(move || self.records(reading.as_ref())).flat_map(|result| {
+                match result {
+                    Ok(records) => records,
+                    Err(error) => Box::new(std::iter::once(Err(error))),
+                }
+            }),
+        )
+    }
     pub(crate) fn parse(source: &str, server_files: bool) -> Result<Self, Error> {
         let raw = fields(source)?;
         if raw.keys().any(|key| {
@@ -63,6 +126,7 @@ impl Inputs {
         let cancelled = flag("cancelled")?.unwrap_or(false);
         Ok(Self {
             raw,
+            native_request: false,
             jsonl,
             incremental,
             attempts,
@@ -77,10 +141,10 @@ impl Inputs {
                 .as_object()
                 .ok_or_else(|| usage("reading is one object"))?;
             if object.keys().any(|k| {
-                !matches!(
+                !(matches!(
                     k.as_str(),
                     "fields" | "context" | "options" | "context_schema"
-                )
+                ) || self.native_request && matches!(k.as_str(), "examples" | "seed_spans"))
             }) {
                 return Err(usage("unknown reading field"));
             }
@@ -99,7 +163,14 @@ impl Inputs {
                     .map(|v| v.as_str().ok_or_else(|| usage("reading pointers are text")))
                     .transpose()
             };
-            let reading = RecordReading::new(&fields, pointer("context")?, pointer("options")?)?;
+            let mut reading =
+                RecordReading::new(&fields, pointer("context")?, pointer("options")?)?;
+            if let Some(pointer) = pointer("examples")? {
+                reading = reading.with_examples_field(pointer)?;
+            }
+            if let Some(pointer) = pointer("seed_spans")? {
+                reading = reading.with_seed_spans_field(pointer)?;
+            }
             let raw_reading = super::inputs::fields(value.get())?;
             if let Some(schema) = raw_reading.get("context_schema") {
                 reading.with_context_schema(context_schema(schema.get())?)
@@ -136,15 +207,17 @@ impl Inputs {
         let records: Vec<Box<RawValue>> =
             serde_json::from_str(self.raw.get("records").ok_or_else(defect)?.get())
                 .map_err(|_| usage("records is an ordered array"))?;
-        Ok(Box::new(
-            records
-                .into_iter()
-                .map(move |raw| compose(raw.get(), &reading)),
-        ))
+        Ok(Box::new(records.into_iter().map(move |raw| {
+            compose(raw.get(), &reading, self.native_request)
+        })))
     }
 }
 
-fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInput>, Error> {
+fn compose(
+    raw: &str,
+    reading: &RecordReading,
+    native_request: bool,
+) -> Result<RecordInput<QuestionInput>, Error> {
     let fields = fields(raw)?;
     if let Some(error) = fields.get("read_error") {
         if fields.len() != 1 {
@@ -153,7 +226,7 @@ fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInp
         return Err(super::reader_error::decode(error.get())?);
     }
     if fields.keys().any(|k| {
-        !matches!(
+        !(matches!(
             k.as_str(),
             "text"
                 | "document"
@@ -163,7 +236,7 @@ fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInp
                 | "options"
                 | "images"
                 | "source"
-        )
+        ) || native_request && matches!(k.as_str(), "examples" | "seed_spans"))
     }) || ["text", "json", "document", "json_text"]
         .iter()
         .filter(|key| fields.contains_key(**key))
@@ -196,7 +269,7 @@ fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInp
             _ => return Err(usage("one original per record")),
         }
     };
-    let mut composed = match original {
+    let composed = match original {
         Some(original) => {
             let record = reading.compose(original)?;
             let evidence = if !fields.contains_key("images") {
@@ -205,8 +278,8 @@ fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInp
                 record.original.with_images(images)?
             };
             RecordInput {
-            seed_spans: None,
-                examples: None,
+                seed_spans: record.seed_spans,
+                examples: record.examples,
                 original: evidence.question_input(),
                 context: record.context,
                 options: record.options,
@@ -220,6 +293,12 @@ fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInp
             options: None,
         },
     };
+    supplements(composed, &fields)
+}
+fn supplements(
+    mut composed: RecordInput<QuestionInput>,
+    fields: &Fields,
+) -> Result<RecordInput<QuestionInput>, Error> {
     if let Some(source) = fields.get("source") {
         composed.original = located(composed.original, source)?;
     }
@@ -228,6 +307,17 @@ fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInp
     }
     if let Some(value) = fields.get("options") {
         composed.options = Some(options(value)?);
+    }
+    if let Some(value) = fields.get("seed_spans") {
+        composed.seed_spans = Some(
+            serde_json::from_str(value.get())
+                .map_err(|_| usage("seed spans is an ordered array"))?,
+        );
+    }
+    if let Some(value) = fields.get("examples") {
+        composed.examples = Some(
+            serde_json::from_str(value.get()).map_err(|_| usage("examples is an ordered array"))?,
+        );
     }
     Ok(composed)
 }
@@ -277,8 +367,8 @@ fn compose_file(
     };
     let record = reading.compose(RawRecord::json(&source.record)?)?;
     Ok(RecordInput {
-            seed_spans: None,
-        examples: None,
+        seed_spans: record.seed_spans,
+        examples: record.examples,
         original: record
             .original
             .with_location(SourceLocation::new(

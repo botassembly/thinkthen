@@ -84,6 +84,9 @@ def main():
         host=PostgresqlHost()
     rows=list(inventory.required_cases(inventory.inventory(),consumer).values())
     if len(sys.argv)>2:rows=[r for r in rows if r['id']==sys.argv[2]]
+    if not rows:
+        print(f'{consumer} complete SQL: FAIL required cases did not run',file=sys.stderr)
+        return True
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
     failed=0

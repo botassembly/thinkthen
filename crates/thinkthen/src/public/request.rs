@@ -6,6 +6,7 @@ mod definition;
 mod execution;
 mod inline;
 mod input;
+mod native_feed;
 mod options;
 mod result;
 #[cfg(test)]

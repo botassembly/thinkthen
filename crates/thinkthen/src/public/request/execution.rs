@@ -8,7 +8,14 @@ use crate::{Batch, Call, CallOptions, Engine, Error, LoadedQuestion, Question};
 /// One runtime feed, owned by the caller and consumed with bounded native scheduling.
 pub struct RequestFeed<'a> {
     pub(super) name: String,
-    pub(super) items: Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>,
+    pub(super) contents: FeedContents<'a>,
+    pub(super) eager: bool,
+    pub(super) image_inputs: bool,
+    all_filter_results: bool,
+}
+pub(super) enum FeedContents<'a> {
+    Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
+    Records(super::composition::Inputs<'a>),
 }
 impl std::fmt::Debug for RequestFeed<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -24,8 +31,51 @@ impl<'a> RequestFeed<'a> {
     ) -> Self {
         Self {
             name: name.into(),
-            items: Box::new(items),
+            contents: FeedContents::Items(Box::new(items)),
+            eager: false,
+            image_inputs: false,
+            all_filter_results: false,
         }
+    }
+    /// Supply already composed native records, retaining original locations and images.
+    /// This feed owns framing and projection; additional request framing, projections
+    /// or shared attachments refuse before the iterator advances. Runtime admission,
+    /// declaration validation, image routes and engine limits still apply to each row.
+    #[must_use]
+    pub fn from_records(
+        name: impl Into<String>,
+        records: impl Iterator<Item = Result<crate::RecordInput<crate::QuestionInput>, Error>> + 'a,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            contents: FeedContents::Records(Box::new(records)),
+            eager: false,
+            image_inputs: false,
+            all_filter_results: false,
+        }
+    }
+    /// Admit the entire supplied feed before any sends, using native eager execution.
+    /// Without this control, joined failures retain the actual completed prefix.
+    #[must_use]
+    pub fn eager(mut self) -> Self {
+        self.eager = true;
+        self
+    }
+    /// Declare image-bearing input so route admission precedes the first reader access.
+    /// Every actual image row is still validated when it arrives.
+    #[must_use]
+    pub fn with_image_inputs(mut self) -> Self {
+        self.image_inputs = true;
+        self
+    }
+    /// Retain passing and rejected filter occurrences in the complete native result.
+    /// Only a composed-record feed executing filter admits this projection;
+    /// invalid combinations refuse before advancement. Ordinary Request filtering
+    /// remains unchanged, including file-only selection.
+    #[must_use]
+    pub fn with_all_filter_results(mut self) -> Self {
+        self.all_filter_results = true;
+        self
     }
 }
 /// Runtime controls and feed authority never enter the serialized request.
@@ -46,16 +96,7 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        if let RequestInput::Feed { name, .. } = &request.request.call.arguments().input
-            && environment
-                .feed
-                .as_ref()
-                .is_none_or(|feed| &feed.name != name)
-        {
-            return Err(Error::usage(
-                "the request requires its named caller-supplied feed",
-            ));
-        }
+        let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
         let controls = controls(options, environment.controls)?.started()?;
         controls.admission()?;
@@ -64,6 +105,17 @@ impl Engine {
         let reading_definition = definition.clone();
         apply(&mut definition, options)?;
         controls.admission()?;
+        if environment
+            .feed
+            .as_ref()
+            .is_some_and(|feed| feed.image_inputs)
+            && !request.request.call.function().images()
+        {
+            return Err(Error::usage(format!(
+                "{} accepts text only; images are unsupported",
+                request.request.call.function().name()
+            )));
+        }
         let mut engine = self.clone();
         if let Some(model) = &options.model {
             engine.inner = self.for_model(Some(
@@ -73,16 +125,32 @@ impl Engine {
         let image_refusal = image_route(&engine, &definition)
             .err()
             .map(|error| error.detail().message().to_owned());
-        if image_descriptors(&request.request.call.arguments().input)
+        if (image_descriptors(&request.request.call.arguments().input)
+            || environment
+                .feed
+                .as_ref()
+                .is_some_and(|feed| feed.image_inputs))
             && let Some(message) = &image_refusal
         {
             return Err(Error::usage(message.clone()));
         }
+        let eager = environment.feed.as_ref().is_some_and(|feed| feed.eager)
+            || !matches!(
+                request.request.call.arguments().input,
+                RequestInput::Feed { .. } | RequestInput::Source { .. }
+            );
         let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
-        let eager = !matches!(
-            request.request.call.arguments().input,
-            RequestInput::Feed { .. } | RequestInput::Source { .. }
-        );
+        let rows = rows.enumerate().map(|(at, row)| {
+            let row = row.map_err(|error| error.at_record(at))?;
+            super::inline::validate_composed(&reading_definition, options, &row)
+                .map_err(|error| error.at_record(at))?;
+            Ok(row)
+        });
+        let rows: super::composition::Inputs<'_> = if eager {
+            Box::new(rows.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
+        } else {
+            Box::new(rows)
+        };
         let outcome = dispatch(
             &engine,
             request.request.call.function(),
@@ -92,8 +160,36 @@ impl Engine {
             eager,
             options,
         )?;
-        Ok(select_filter(outcome, options.files_only))
+        Ok(if all_filter_results {
+            outcome
+        } else {
+            select_filter(outcome, options.files_only)
+        })
     }
+}
+fn feed_projection(
+    request: &AdmittedRequest,
+    feed: Option<&RequestFeed<'_>>,
+) -> Result<bool, Error> {
+    let args = request.request.call.arguments();
+    if let RequestInput::Feed { name, .. } = &args.input
+        && feed.is_none_or(|feed| &feed.name != name)
+    {
+        return Err(Error::usage(
+            "the request requires its named caller-supplied feed",
+        ));
+    }
+    let all = feed.is_some_and(|feed| feed.all_filter_results);
+    if all
+        && (request.request.call.function() != Function::Filter
+            || !matches!(args.input, RequestInput::Feed { .. })
+            || feed.is_none_or(|feed| !matches!(feed.contents, FeedContents::Records(_))))
+    {
+        return Err(Error::usage(
+            "all filter results require a native composed filter feed",
+        ));
+    }
+    Ok(all)
 }
 fn controls<'a>(
     options: &'a RequestOptions,

@@ -22,7 +22,9 @@ say(good=good, invalid=invalid, repeated=repeated, conflict=conflict, choice=cho
     plan = json.loads(held["good"][0][0])
     expect({key: value for key, value in plan.items() if key != "first_body_utf8"},
            {"records": 1, "requests": 1, "estimated_bytes": 182,
-            "estimated_input_tokens": {"lower": 93, "upper": 166}, "upper_bound": False}, "P1 native JSON text")
+            "estimated_input_tokens": {"lower": 93, "upper": 166}, "upper_bound": False,
+            "largest_request_bytes": 182, "largest_request_estimated_input_tokens": 166,
+            "token_estimate_method": "encoded-body-bytes-908-v1"}, "P1 native JSON text")
     expect(plan["first_body_utf8"],
            '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"Refund me please.\\". asks for a refund"}}}',
            "independent 182-byte first body")

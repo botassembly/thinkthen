@@ -18,7 +18,8 @@ pub enum RequestValue {
     Tags(Vec<CompleteRecord<QuestionInput, CompleteTags>>),
     /// Complete score occurrences.
     Scores(Vec<CompleteRecord<QuestionInput, CompleteScore>>),
-    /// Complete passing filter occurrences.
+    /// Complete filter occurrences: passing rows by default, all rows when the
+    /// native composed feed explicitly retains rejected results.
     Filtered(Vec<CompleteRecord<QuestionInput, CompleteFilter>>),
     /// Complete ranked occurrences.
     Ranked(Vec<CompleteRecord<QuestionInput, CompleteRank>>),
