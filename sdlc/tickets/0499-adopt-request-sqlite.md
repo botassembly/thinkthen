@@ -30,7 +30,7 @@ SQLite's existing composed records retain file and line locations and distinguis
 
 Already-composed feeds must preserve selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. Document which combinations are supported and refuse incompatible combinations before sending. Keep SQLite's new execution path separate from the compatibility module PostgreSQL imports; remove that compatibility copy when 0500 migrates. This changes native composition, not the canonical request schema or SQL authority.
 
-### Reviewed API scope
+### Added public declarations
 
 ```text
 fn RequestFeed::from_records(impl Into<String>, impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a) -> RequestFeed<'a>
@@ -39,6 +39,8 @@ fn RequestFeed::with_image_inputs(self) -> RequestFeed<'a>
 fn RequestFeed::with_all_filter_results(self) -> RequestFeed<'a>
 fn AdmittedRequest::record_reading(&self) -> Result<RecordReading, Error>
 ```
+
+### Reviewed API scope
 
 The reviewed branch declares `RequestFeed::from_records`, `RequestFeed::eager`, `RequestFeed::with_image_inputs` and `AdmittedRequest::record_reading`. Keep their exact inventory declarations with the implementation when it lands. Publishing those declarations ahead of the code makes independent main-based inventory checks fail; this paragraph retains design approval without claiming shipped exports.
 
