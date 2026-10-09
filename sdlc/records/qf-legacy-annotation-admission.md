@@ -24,4 +24,4 @@ Translation must preserve the input's established meaning before shared admissio
 
 ## Limits
 
-This is Linux C evidence. The complete JVM suite, other installed language surfaces, macOS, Windows and release qualification were not run. Exact fixture equivalence and the real C door cover the unchanged JVM request at its native boundary. The three baseline failures and repeated source-recognition deadline failure remain outside this repair. A fresh independent review must assess this branch before landing.
+This is Linux C evidence. The complete JVM suite, other installed language surfaces, macOS, Windows and release qualification were not run. Exact fixture equivalence and the real C door cover the unchanged JVM request at its native boundary. The three baseline failures and repeated source-recognition deadline failure remain outside this repair. Fresh independent review accepted revision `8840dafab1b0003f6dc2a87c0d1d809fc3bc0970`, including parser reuse, canonical text boundaries, projection and cache behavior. The repair landed at `d79272adbcd12ab771c4d3f2b20e84167dd9e3db`.
