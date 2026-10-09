@@ -40,11 +40,13 @@ def graph(schema, roots):
     return dict(sorted(selected.items()))
 
 
-def object_variants(schema):
+def object_variants(schema, definitions):
     """Separate object alternatives from assertions on an existing object."""
     if 'oneOf' in schema and 'anyOf' in schema:
         raise ValueError('combined object unions need a typed alternative')
     alternatives = schema.get('oneOf', schema.get('anyOf', []))
+    alternatives = [definitions[item['$ref'].removeprefix('#/$defs/')]
+                    if '$ref' in item else item for item in alternatives]
     if not alternatives:
         return None
     if 'properties' in schema and all(assertion(item) for item in alternatives):
@@ -76,6 +78,10 @@ def discriminator(variants, definitions):
     common = set.intersection(*(set(item.get('required', [])) for item in variants))
     for member in sorted(common):
         fields = [item['properties'][member] for item in variants]
+        fields = [definitions[field['$ref'].removeprefix('#/$defs/')]
+                  if '$ref' in field else field for field in fields]
+        fields = [{'const': field['enum'][0]} if len(field.get('enum', [])) == 1
+                  else field for field in fields]
         if all(isinstance(field.get('const'), str) for field in fields):
             values = [field['const'] for field in fields]
             if len(set(values)) == len(values):
@@ -105,7 +111,7 @@ def prepare(definitions):
     for key, source in definitions.items():
         if 'allOf' in source:
             raise ValueError('object intersections need an explicit typed representation')
-        variants = object_variants(source)
+        variants = object_variants(source, definitions)
         if variants is None:
             source = dict(source)
             if 'properties' in source:
@@ -132,7 +138,7 @@ def generated(schema):
     spec.loader.exec_module(target)
     roots = ('completeFacts', 'completeanswer', 'completefindAnswer',
              'completeCallError', 'completeRelationMember', 'completeObservation',
-             'completeUsage')
+             'completeUsage', 'completeReadableQuestion', 'completesourceRelationEndpoint')
     return target.render(prepare(graph(schema, roots)))
 
 

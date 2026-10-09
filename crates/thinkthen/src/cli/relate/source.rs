@@ -97,6 +97,7 @@ pub(super) fn read(
         occurrences.push((
             entity,
             Occurrence {
+                ordinal: occurrences.len(),
                 record,
                 file: position.file,
                 first_line: position.first,
@@ -113,6 +114,7 @@ pub(super) fn read(
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 struct Occurrence {
+    ordinal: usize,
     record: Record,
     file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

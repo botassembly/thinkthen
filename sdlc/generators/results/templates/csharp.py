@@ -4,6 +4,9 @@ import re
 
 
 def name(value):
+    value = value.removeprefix('complete')
+    if value.startswith('ReadableQuestion'):
+        value = value.removeprefix('Readable')
     words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+',
                        value.removeprefix('complete'))
     return ''.join(word[0].upper() + word[1:] for word in words)
@@ -38,6 +41,10 @@ def shape(schema):
             raise ValueError(f'C# target needs a typed union for {schema}')
         if 'anyOf' in schema:
             variants = [item for item in schema['anyOf'] if item.get('type') != 'null']
+            kinds = [variant.get('type') for variant in variants]
+            if len(kinds) == 2 and set(kinds) == {'integer', 'string'}:
+                return {**schema, 'primitive_variants': kinds,
+                        'primitive_schemas': dict(zip(kinds, variants))}
             if len(variants) != 1:
                 raise ValueError(f'C# target needs a typed union for {schema}')
             return shape(variants[0])
@@ -133,7 +140,7 @@ public abstract class ResultObject
 {
     private readonly JsonElement document;
     protected ResultObject(JsonElement document) { this.document = document.Clone(); }
-    protected JsonElement Required(string name) => document.GetProperty(name);
+    protected JsonElement RequiredElement(string name) => document.GetProperty(name);
     protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
     {
         if (!document.TryGetProperty(name, out var member)) return default;
@@ -165,7 +172,7 @@ def render(definitions):
         if 'variants' in schema:
             chunks.append(render_union(kind, schema['variants'], definitions))
         elif 'primitive_variants' in schema:
-            chunks.append(render_primitive_union(kind, schema['primitive_variants'], definitions))
+            chunks.append(render_primitive_union(kind, schema['primitive_variants'], definitions, schema.get('primitive_schemas', {})))
         elif values:
             chunks.append(f'public readonly record struct {kind}(string Value)\n{{\n')
             for value in values:
@@ -182,7 +189,7 @@ def render(definitions):
                     chunks.append(f'    public Presence<{field_type}> {prop} => '
                                   f'Optional<{field_type}>({quote(member)}, member => {decode});\n')
                 else:
-                    _, required_decode = conversion(field, definitions, f'Required({quote(member)})')
+                    _, required_decode = conversion(field, definitions, f'RequiredElement({quote(member)})')
                     chunks.append(f'    public {field_type} {prop} => {required_decode};\n')
             chunks.append('}\n\n')
         else:
@@ -191,7 +198,7 @@ def render(definitions):
     return ''.join(chunks)
 
 
-def render_primitive_union(kind, variants, definitions):
+def render_primitive_union(kind, variants, definitions, schemas):
     chunks = [f'public abstract class {kind}\n{{\n'
               '    private readonly JsonElement document;\n'
               f'    protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
@@ -201,12 +208,12 @@ def render_primitive_union(kind, variants, definitions):
               '    public string ToJsonString() => document.GetRawText();\n'
               f'    public static {kind} Read(JsonElement document) => document.ValueKind switch\n    {{\n']
     for variant in variants:
-        token = {'number': 'Number', 'string': 'String'}[variant]
+        token = {'number': 'Number', 'integer': 'Number', 'string': 'String'}[variant]
         chunks.append(f'        JsonValueKind.{token} => new {kind}{name(variant)}(document),\n')
     chunks.append('        _ => throw new JsonException("Unknown primitive result variant.")\n'
                   '    };\n}\n\n')
     for variant in variants:
-        native, decode = conversion({'type': variant}, definitions, 'Document')
+        native, decode = conversion(schemas.get(variant, {'type': variant}), definitions, 'Document')
         chunks.append(f'public sealed class {kind}{name(variant)} : {kind}\n{{\n'
                       f'    public {kind}{name(variant)}(JsonElement document) : base(document) {{ }}\n'
                       f'    public {native} Value => {decode};\n}}\n\n')

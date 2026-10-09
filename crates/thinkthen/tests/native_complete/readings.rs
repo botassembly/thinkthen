@@ -37,7 +37,7 @@ fn complete_getters_keep_authored_content_order_null_and_raw_choice_before_cut()
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"second":0.7,"first":0.3},"confidence":0.8}}}"#)).unwrap();
     let engine = engine(&listener);
     let LoadedQuestion::Question(question) = Question::from_json(
-        r#"{"choose":{"z":"Authored.","a":["original",null]},"options":{"second":{"z":null,"a":"kept"},"first":null},"threshold":0.9}"#).unwrap() else { panic!("choose") };
+        r#"{"choose":{"z":"Authored.","a":["original",null]},"options":{"second":{"z":null,"a":"kept"},"first":null},"threshold":0.9,"model":"fixed","profile":"authored","batch":"max","on":[""]}"#).unwrap() else { panic!("choose") };
     let call = engine
         .choose_complete_with(&question, "Original evidence.", CallOptions::new())
         .unwrap();
@@ -61,6 +61,22 @@ fn complete_getters_keep_authored_content_order_null_and_raw_choice_before_cut()
         options[0].description().unwrap().to_json().unwrap(),
         r#"{"z":null,"a":"kept"}"#
     );
+    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    assert_eq!(
+        document["value"]["question"]["options"],
+        json!(["second", "first"])
+    );
+    assert_eq!(
+        document["value"]["question"]["label_details"],
+        json!([
+            {"name":"second","description":{"z":null,"a":"kept"}}, {"name":"first"}
+        ])
+    );
+    assert_eq!(document["value"]["question"]["model"], "fixed");
+    assert_eq!(document["value"]["question"]["profile"], "authored");
+    assert_eq!(document["value"]["question"]["batch"], "max");
+    assert_eq!(document["value"]["question"]["on"], json!([""]));
+    schema::check(&document, "completeChoose");
     // In the ordinary choose grammar null descriptions mean absent.
     assert!(options[1].description().is_none());
     assert!(!format!("{:?}", result.question()).contains("Authored"));
@@ -173,4 +189,28 @@ fn aggregate_request_debug_withholds_authored_names_models_and_private_rules() {
     ] {
         assert!(!rendered.contains(secret));
     }
+}
+
+#[test]
+fn complete_score_retains_explicit_null_and_array_level_descriptions() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"score","probabilities":{"0":0.25,"1":0.75}}}}"#)).unwrap();
+    let engine = engine(&listener);
+    let thinkthen::LoadedQuestion::Question(question) =
+        Question::from_json(r#"{"score":"Grade?","levels":{"low":null,"high":["Higher.",null]}}"#)
+            .unwrap()
+    else {
+        panic!("score")
+    };
+    let call = engine
+        .score_complete_with(&question, "Evidence.", CallOptions::new())
+        .unwrap();
+    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    assert_eq!(
+        document["value"]["question"]["label_details"],
+        json!([
+            {"name":"low","description":null}, {"name":"high","description":["Higher.",null]}
+        ])
+    );
+    schema::check(&document, "completeScore");
+    assert_eq!(listener.count(), 1);
 }

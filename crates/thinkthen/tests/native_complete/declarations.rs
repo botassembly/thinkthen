@@ -20,7 +20,7 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
     };
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let first = Question::from_json(r#"{"decide":"Refund?","name":"refund","wording_version":1,"item_schema":{"type":"string"}}"#).unwrap();
-    let second = Question::from_json(r#"{"decide":"Refund?","name":"other","wording_version":7,"item_schema":{"type":"string"},"context_schema":{"type":"object","properties":{}}}"#).unwrap();
+    let second = Question::from_json(r#"{"decide":"Refund?","name":"other","wording_version":7,"model":"fixed","batch":2,"on":[""],"item_schema":{"type":"string"},"context_schema":{"type":"object","properties":{}}}"#).unwrap();
     let live = engine
         .decide_complete_with(&first, "Refund me.", CallOptions::new())
         .unwrap();
@@ -40,6 +40,10 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
     schema::call(&cached, "completeDecide");
     let output: Value = serde_json::from_str(&cached.value().to_json().unwrap()).unwrap();
     assert_eq!(output["question"]["item_schema"], json!({"type":"string"}));
+    assert_eq!(output["question"]["model"], "fixed");
+    assert_eq!(output["question"]["batch"], 2);
+    assert_eq!(output["question"]["on"], json!([""]));
+    assert!(output["question"].get("profile").is_none());
     assert_eq!(
         output["question"]["context_schema"],
         json!({"type":"object","properties":{}})
