@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use serde_json::value::RawValue;
 use thinkthen::{
-    Engine, Error, ImageEvidence, ImageInput, ImageMedia, InputEvidence, InputReaderOptions,
-    QuestionInput, RawRecord, RecordContext, RecordInput, RecordOption, RecordOptions,
-    RecordReading, SourceItem,
+    Engine, Error, ImageInput, ImageMedia, InputEvidence, InputReaderOptions, QuestionInput,
+    RawRecord, RecordContext, RecordInput, RecordOption, RecordOptions, RecordReading, RequestItem,
+    SourceItem,
 };
 
 #[derive(Deserialize)]
@@ -58,7 +58,7 @@ enum ContentKind {
 fn null() -> Box<RawValue> {
     RawValue::NULL.to_owned()
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Image {
     media: ImageMedia,
@@ -103,85 +103,91 @@ fn compose(
     reading: &RecordReading,
     annotation: bool,
 ) -> Result<RecordInput<Original>, Error> {
-    let images = item
-        .images
-        .into_iter()
-        .map(|i| ImageInput::new(i.media, i.bytes))
-        .collect::<Result<Vec<_>, _>>()?;
-    let (value, input, context, options) = match item.content.kind {
+    // The host envelope retains its accepted spelling and Serde field checks.
+    // Request owns descriptor admission, projection and attachment composition.
+    let mut descriptor = std::collections::BTreeMap::new();
+    let (value, annotation_text) = match item.content.kind {
         ContentKind::Text => {
             let text: String = serde_json::from_str(item.content.value.get())
                 .map_err(|_| super::usage("text requires a string"))?;
-            let record = reading.compose(RawRecord::text(&text)?)?;
-            let native = if images.is_empty() && annotation {
-                QuestionInput::annotation_document(&text)?
-            } else if images.is_empty() {
-                record.original.question_input()
-            } else {
-                record.original.with_images(images)?.question_input()
-            };
-            (
-                serde_json::value::to_raw_value(&text).map_err(|_| super::usage("invalid text"))?,
-                native,
-                record.context,
-                record.options,
-            )
+            let value =
+                serde_json::value::to_raw_value(&text).map_err(|_| super::usage("invalid text"))?;
+            descriptor.insert("text", value.clone());
+            let annotation_text = (annotation && item.images.is_empty()).then_some(text);
+            (value, annotation_text)
         }
         ContentKind::Json => {
             let value = item.content.value;
-            let record = reading.compose(RawRecord::json(value.get())?)?;
-            let native = if images.is_empty() {
-                record.original.question_input()
-            } else {
-                record.original.with_images(images)?.question_input()
-            };
-            (value, native, record.context, record.options)
+            // Transport objects must not consume the original's nesting budget.
+            descriptor.insert(
+                "json_text",
+                serde_json::value::to_raw_value(value.get())
+                    .map_err(|_| super::usage("invalid JSON text"))?,
+            );
+            (value, None)
         }
-        ContentKind::Images if !images.is_empty() => (
-            RawValue::from_string("null".into()).map_err(|_| super::usage("invalid images"))?,
-            QuestionInput::Images(ImageEvidence::new(None, images)?),
-            None,
-            None,
-        ),
+        ContentKind::Images if !item.images.is_empty() => (null(), None),
         _ => {
             return Err(super::usage(
                 "give text, JSON or explicit images for each item",
             ));
         }
     };
-    let context = match item.context {
-        None => context,
-        Some(Context::Text(t)) => Some(RecordContext::Text(t)),
-        Some(Context::Json(v)) => Some(RecordContext::Object(thinkthen::ObjectContext::new(
-            &RawRecord::json(v.get())?,
+    // Legacy empty attachments mean absence; SQL descriptors treat an explicit
+    // empty images array as an image-only refusal.
+    if !item.images.is_empty() {
+        descriptor.insert(
+            "images",
+            serde_json::value::to_raw_value(&item.images)
+                .map_err(|_| super::usage("invalid images"))?,
+        );
+    }
+    let descriptor = serde_json::to_string(&descriptor)
+        .map_err(|_| super::usage("invalid record descriptor"))?;
+    let request = RequestItem::from_record_descriptor(&descriptor)?;
+    let mut record = request.compose_record(reading)?;
+    if let Some(text) = annotation_text {
+        record.original = QuestionInput::annotation_document(&text)?;
+    }
+    // The host's tagged JSON context denotes an object even when its value is
+    // a string. The shared untagged descriptor cannot express that distinction.
+    record.context = match item.context {
+        None => record.context,
+        Some(Context::Text(text)) => Some(RecordContext::Text(text)),
+        Some(Context::Json(value)) => Some(RecordContext::Object(thinkthen::ObjectContext::new(
+            &RawRecord::json(value.get())?,
         )?)),
     };
-    let options = if let Some(choices) = item.options {
-        Some(RecordOptions::new(
+    // The descriptor shortlist parser uses Value and sorts description objects.
+    // Keep authored RawValue order until that shared parser admits it directly.
+    if let Some(choices) = item.options {
+        record.options = Some(RecordOptions::new(
             choices
                 .into_iter()
-                .map(|c| {
+                .map(|choice| {
                     Ok(RecordOption {
-                        name: c.name,
-                        description: c
+                        name: choice.name,
+                        description: choice
                             .description
-                            .map(|d| thinkthen::Description::from_json(d.get()))
+                            .map(|value| thinkthen::Description::from_json(value.get()))
                             .transpose()?,
                     })
                 })
                 .collect::<Result<Vec<_>, Error>>()?,
-        )?)
-    } else {
-        options
-    };
+        )?);
+    }
     Ok(RecordInput {
-            seed_spans: None,
-        examples: None,
-        original: Original { value, input },
-        context,
-        options,
+        seed_spans: record.seed_spans,
+        examples: record.examples,
+        original: Original {
+            value,
+            input: record.original,
+        },
+        context: record.context,
+        options: record.options,
     })
 }
+
 pub(crate) type Rows<'a> = Box<dyn Iterator<Item = Result<RecordInput<Original>, Error>> + 'a>;
 pub(crate) fn iter<'a>(
     engine: &'a Engine,
@@ -292,7 +298,7 @@ fn source(
             let value = serde_json::value::to_raw_value(r.original.original())
                 .map_err(|_| super::usage("invalid original"))?;
             return Ok(RecordInput {
-            seed_spans: None,
+                seed_spans: None,
                 examples: None,
                 original: Original {
                     value,
@@ -305,7 +311,7 @@ fn source(
         source => reading.compose_source(source)?,
     };
     Ok(RecordInput {
-            seed_spans: None,
+        seed_spans: None,
         examples: None,
         original: Original {
             value,

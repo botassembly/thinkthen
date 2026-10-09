@@ -63,3 +63,67 @@ def test_complete_recognition_reads_proposals_and_preserves_old_documents():
     assert c.decode('RecognitionAnswer', old).proposals is c.ABSENT
     with pytest.raises(ValueError):
         c.decode('RecognitionAnswer', {**answer, 'invented': True})
+
+
+def test_tagged_json_string_context_refuses_before_sending(backend, tmp_path):
+    from conftest import child_env, run
+    output = run('''
+        import json
+        from thinkthen import _thinkthen as native
+        engine = native._Engine(cache=False, max_retries=0)
+        request = json.dumps({
+            'verb': 'decide',
+            'question': {'role': 'atomic', 'body': {'decide': 'Q'}},
+            'input': {'kind': 'records', 'records': [{
+                'content': {'kind': 'text', 'value': 'record'},
+                'context': {'kind': 'json', 'value': 'private context'},
+            }]},
+        })
+        try:
+            engine._complete(request, None, None)
+        except native.ThinkThenError as error:
+            assert 'the per-item context does not match context_schema' in str(error)
+            assert 'private context' not in str(error)
+        else:
+            raise AssertionError('tagged JSON context became text context')
+        batch = engine._complete_batch(request, None, None)
+        event = json.loads(batch._pull())
+        batch.close()
+        assert event['error']['kind'] == 'usage'
+        assert 'the per-item context does not match context_schema' in event['error']['message']
+        assert 'private context' not in event['error']['message']
+        print('refused')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['refused']
+    assert backend.count() == 0
+
+
+@pytest.mark.parametrize('depth,kind', [(126, 'cancelled'), (127, 'cancelled'), (128, 'usage')])
+def test_complete_json_nesting_keeps_original_parser_limit(backend, tmp_path, depth, kind):
+    from conftest import child_env, run
+    output = run(f'''
+        import json
+        from thinkthen import _thinkthen as native
+        value = 'private original'
+        for _ in range({depth}):
+            value = {{'child': value}}
+        request = json.dumps({{
+            'verb': 'decide',
+            'question': {{'role': 'atomic', 'body': {{'decide': 'Q'}}}},
+            'input': {{'kind': 'records', 'records': [{{
+                'content': {{'kind': 'json', 'value': value}},
+            }}]}},
+            'cancel': True,
+        }})
+        engine = native._Engine(cache=False, max_retries=0)
+        try:
+            engine._complete(request, None, None)
+        except native.ThinkThenError as error:
+            assert error.kind == {kind!r}, error.kind
+            assert 'private original' not in str(error)
+            print(error.kind)
+        else:
+            raise AssertionError('cancelled or excessive-depth original admitted')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == [kind]
+    assert backend.count() == 0
