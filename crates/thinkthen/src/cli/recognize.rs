@@ -10,7 +10,7 @@ use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
 use crate::cli::intake::Intake;
 #[cfg(test)]
-use crate::core::Meta;
+use crate::core::{Meta, RecognizeSpec, Record};
 use crate::core::{ModelName, Reading};
 use crate::edge::{self, Environment};
 use crate::engine::facade::{Engine, MAX_TEXT_BYTES};
