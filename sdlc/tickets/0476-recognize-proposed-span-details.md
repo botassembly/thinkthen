@@ -1,6 +1,6 @@
 # 0476: Show recognition proposals and their probabilities
 
-Status: OPEN. Fresh ticket review accepted the design; implementation has not started.
+Status: COMPLETE. Fresh ticket review accepted the design; implementation has not started.
 
 Milestone: 0.2
 Owner: builder.
@@ -8,6 +8,8 @@ Signed: queue owner, 2026-10-08.
 Review: accept. Fresh read-only Sol review accepted the design after the signoff correction.
 
 Reviews: revision b6970338e, accept
+
+Landed: 43a1499
 
 ## Outcome
 
