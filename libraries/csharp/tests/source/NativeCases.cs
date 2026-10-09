@@ -62,6 +62,7 @@ static class AsyncFixtureCases
     static ThinkThen.Inputs.InputPresence<ulong> Unsigned(JsonElement value, string key) => Get(value, key).ValueKind == JsonValueKind.Number ? Get(value, key).GetUInt64() : default(ThinkThen.Inputs.InputPresence<ulong>);
     static ThinkThen.Inputs.InputRequestBatch Batch(JsonElement value) => value.ValueKind == JsonValueKind.Number ? new ThinkThen.Inputs.InputRequestBatchAlternative0 { Value = value.GetUInt64() } : new ThinkThen.Inputs.InputRequestBatchAlternative1 { Value = value.GetString()! };
     static ThinkThen.Inputs.InputEngineSettings Settings(JsonElement value) => new() {
+        Proxy = Get(value,"proxy").ValueKind==JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<JsonElement>) : Get(value,"proxy").Clone(),
         BaseUrl = String(value,"base_url"), Model = String(value,"model"), Backend = String(value,"backend"), Profile = String(value,"profile"),
         Record = String(value,"record"), Replay = String(value,"replay"), UsdPerMillionInput = String(value,"usd_per_million_input"), UsdPerMillionOutput = String(value,"usd_per_million_output"),
         Cache = Get(value,"cache").ValueKind == JsonValueKind.Undefined ? default : Get(value,"cache").ValueKind == JsonValueKind.String ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputCacheDocument>)new ThinkThen.Inputs.InputCacheDocumentAlternative0 { Value = Text(value,"cache") } : new ThinkThen.Inputs.InputCacheDocumentAlternative1 { Value = new ThinkThen.Inputs.InputDisabledCache() },
