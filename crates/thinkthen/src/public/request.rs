@@ -140,9 +140,8 @@ impl RequestFunction {
                 Self::Decide | Self::Choose | Self::Tag | Self::Filter | Self::Recognize
             ),
             "options_field" => self == Self::Choose,
-            "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context" => {
-                self == Self::Recognize
-            }
+            "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context"
+            | "snippet_pieces" => self == Self::Recognize,
             "none" => self == Self::Find,
             "top" => self == Self::Rank,
             "files_only" => self == Self::Filter,

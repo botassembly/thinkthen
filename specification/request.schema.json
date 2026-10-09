@@ -1250,8 +1250,7 @@
                   "type": "object",
                   "additionalProperties": {
                     "$ref": "#/$defs/Authored_description"
-                  },
-                  "maxProperties": 20
+                  }
                 },
                 "mode": {
                   "$ref": "#/$defs/RecognitionMode"
@@ -1261,6 +1260,13 @@
                   "items": {
                     "$ref": "#/$defs/Authored_relation"
                   }
+                },
+                "snippet_pieces": {
+                  "description": "Recognition tokenizer pieces on each side; omission retains the saved width.",
+                  "type": "integer",
+                  "format": "uint32",
+                  "maximum": 4294967295,
+                  "minimum": 0
                 },
                 "stage_context": {
                   "$ref": "#/$defs/RecognitionStageContext"
@@ -1866,6 +1872,13 @@
         "seed_spans_field": {
           "description": "Per-record seed selection; missing retains fallback and an empty list clears it.",
           "type": "string"
+        },
+        "snippet_pieces": {
+          "description": "Recognition tokenizer pieces on each side; omission retains the saved width.",
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 0
         },
         "stage_context": {
           "description": "Literal recognition context overrides, resolved member by member.",

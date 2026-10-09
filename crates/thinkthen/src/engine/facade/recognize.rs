@@ -369,7 +369,7 @@ pub(crate) fn step_one_context(
         let mut alone = Asks::default();
         alone.add(
             backend,
-            &window_plan(backend, (text, &pieces), (0, 0), vec![probe])?,
+            &window_plan(backend, (text, &pieces), (0, 0), vec![probe], spec)?,
         )?;
         let selected = spec.stage_context.effective("kind", context);
         contextual_requests(
@@ -387,7 +387,13 @@ pub(crate) fn step_one_context(
             .map_err(|_| Error::Defect("fixed boundary questions are invalid"))?;
         asks.add(
             backend,
-            &window_plan(backend, (text, &pieces), (group.start, last), questions)?,
+            &window_plan(
+                backend,
+                (text, &pieces),
+                (group.start, last),
+                questions,
+                spec,
+            )?,
         )?;
     }
     let asks = asks.with_examples(backend, &examples)?;
@@ -449,7 +455,7 @@ fn step_two(
         if !questions.is_empty() {
             asks.add(
                 backend,
-                &window_plan(backend, (text, pieces), (first, last), questions)?,
+                &window_plan(backend, (text, pieces), (first, last), questions, spec)?,
             )?;
         }
     }
@@ -462,10 +468,17 @@ fn window_plan(
     source: (&str, &[Piece]),
     stretch: (usize, usize),
     questions: Vec<Question>,
+    spec: &RecognizeSpec,
 ) -> Result<Plan, Error> {
     let (text, pieces) = source;
     let evidence = text
-        .get(window(pieces, stretch.0, stretch.1))
+        .get(window(
+            pieces,
+            stretch.0,
+            stretch.1,
+            usize::try_from(spec.snippet_pieces)
+                .map_err(|_| Error::Defect("snippet width was not admitted"))?,
+        ))
         .and_then(|part| Evidence::new(part).ok())
         .ok_or(Error::Defect("a recognize window is blank"))?;
     Plan::new(

@@ -23,6 +23,7 @@ pub(crate) struct RecognizeSpec {
     pub(crate) examples: Vec<crate::core::RecognitionExample>,
     pub(crate) seed_spans: Vec<crate::core::RecognitionSeedSpan>,
     pub(crate) metadata: crate::core::declaration::QuestionMetadata,
+    pub(crate) snippet_pieces: u32,
     pub(crate) kinds: RecognizeKinds,
     pub(crate) instructions: Option<QuestionText>,
     pub(crate) entity_definition: Option<QuestionText>,
@@ -48,6 +49,9 @@ pub(crate) struct QuestionDocument<'a> {
     mode: crate::core::RecognitionMode,
     #[serde(skip_serializing_if = "crate::core::RecognitionStageContext::is_empty")]
     stage_context: &'a crate::core::RecognitionStageContext,
+    #[serde(skip_serializing_if = "default_snippet")]
+    #[cfg_attr(test, schemars(range(max = u32::MAX)))]
+    snippet_pieces: u32,
     kinds: Kinds<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     instructions: Option<&'a QuestionText>,
@@ -62,7 +66,9 @@ pub(crate) struct QuestionDocument<'a> {
     profile: Option<&'a ProfileName>,
 }
 impl RecognizeSpec {
+    pub(crate) const DEFAULT_SNIPPET_PIECES: u32 = 6;
     pub(crate) fn validate_mode(&self) -> Result<(), RecognizeConfigError> {
+        usize::try_from(self.snippet_pieces).map_err(|_| RecognizeConfigError::SnippetPieces)?;
         self.mode.validate_controls(
             self.authored_relations,
             self.authored_relation_threshold,
@@ -74,6 +80,7 @@ impl RecognizeSpec {
             verb: Verb::Recognize,
             mode: self.mode,
             stage_context: &self.stage_context,
+            snippet_pieces: self.snippet_pieces,
             kinds: Kinds(&self.kinds),
             instructions: self.instructions.as_ref(),
             entity_definition: self.entity_definition.as_ref(),
@@ -123,6 +130,8 @@ pub(crate) enum RecognizeConfigError {
     Threshold,
     #[error("{}", crate::core::RecognitionMode::BOUNDARY_USAGE)]
     BoundaryControls,
+    #[error("snippet pieces must be a whole unsigned 32-bit integer representable by the host")]
+    SnippetPieces,
 }
 
 impl RecognizeSpec {
@@ -143,6 +152,7 @@ impl RecognizeSpec {
             seed_spans: Vec::new(),
             metadata: crate::core::declaration::QuestionMetadata::default(),
             kinds,
+            snippet_pieces: Self::DEFAULT_SNIPPET_PIECES,
             instructions: None,
             entity_definition: None,
             relations,
@@ -170,6 +180,7 @@ impl RecognizeSpec {
             examples: Vec::new(),
             seed_spans: Vec::new(),
             kinds,
+            snippet_pieces: parse_snippet(recognize.member("snippet_pieces"))?,
             instructions: task_text(recognize.member("instructions"))?,
             entity_definition: task_text(recognize.member("entity_definition"))?,
             relations,
@@ -202,6 +213,19 @@ pub(crate) fn task_text(
     }
 }
 
+fn default_snippet(value: &u32) -> bool {
+    *value == RecognizeSpec::DEFAULT_SNIPPET_PIECES
+}
+fn parse_snippet(value: Option<&Json>) -> Result<u32, RecognizeConfigError> {
+    let Some(value) = value else {
+        return Ok(RecognizeSpec::DEFAULT_SNIPPET_PIECES);
+    };
+    let value = number_u64(value)
+        .and_then(|n| u32::try_from(n).ok())
+        .ok_or(RecognizeConfigError::SnippetPieces)?;
+    usize::try_from(value).map_err(|_| RecognizeConfigError::SnippetPieces)?;
+    Ok(value)
+}
 fn number_u64(value: &Json) -> Option<u64> {
     match value {
         Json::Number(number) => number.as_u64(),
@@ -461,6 +485,7 @@ fn declaration(value: &Json) -> Result<&Json, RecognizeConfigError> {
             "relations",
             "instructions",
             "entity_definition",
+            "snippet_pieces",
             "stage_context",
             "mode",
         ]

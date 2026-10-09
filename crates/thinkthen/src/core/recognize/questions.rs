@@ -7,8 +7,11 @@ use super::pieces::Piece;
 use crate::core::question::LabelsError;
 use crate::core::{Description, Labels, Question, QuestionText, RecognizeSpec};
 
-/// How many pieces each side of a piece or name a snippet and a request show.
-pub(crate) const WINDOW: usize = 6;
+/// The admitted caller width, or the shared compatibility default.
+fn width(spec: Option<&RecognizeSpec>) -> usize {
+    let value = spec.map_or(RecognizeSpec::DEFAULT_SNIPPET_PIECES, |s| s.snippet_pieces);
+    usize::try_from(value).unwrap_or(usize::MAX)
+}
 
 /// How many piece questions one step-1 request holds at most.
 pub(crate) const GROUP: usize = 40;
@@ -65,10 +68,10 @@ pub(crate) fn name_groups(names: &[(usize, usize)]) -> Vec<Range<usize>> {
 }
 
 /// The inclusive piece places shown around pieces `first` to `last`.
-pub(crate) fn shown(count: usize, first: usize, last: usize) -> (usize, usize) {
+pub(crate) fn shown(count: usize, first: usize, last: usize, width: usize) -> (usize, usize) {
     (
-        first.saturating_sub(WINDOW),
-        last.saturating_add(WINDOW).min(count.saturating_sub(1)),
+        first.saturating_sub(width),
+        last.saturating_add(width).min(count.saturating_sub(1)),
     )
 }
 
@@ -80,15 +83,21 @@ pub(crate) fn bytes(pieces: &[Piece], first: usize, last: usize) -> Range<usize>
 }
 
 /// The byte range of the text a request over pieces `first` to `last` carries.
-pub(crate) fn evidence(pieces: &[Piece], first: usize, last: usize) -> Range<usize> {
-    let (from, to) = shown(pieces.len(), first, last);
+pub(crate) fn evidence(pieces: &[Piece], first: usize, last: usize, width: usize) -> Range<usize> {
+    let (from, to) = shown(pieces.len(), first, last, width);
     bytes(pieces, from, to)
 }
 
 /// The text around pieces `first` to `last`, with them wrapped in `[[ ]]`.
-fn marked(text: &str, pieces: &[Piece], stretch: (usize, usize), ellipses: bool) -> String {
+fn marked(
+    text: &str,
+    pieces: &[Piece],
+    stretch: (usize, usize),
+    ellipses: bool,
+    width: usize,
+) -> String {
     let (first, last) = stretch;
-    let (from, to) = shown(pieces.len(), first, last);
+    let (from, to) = shown(pieces.len(), first, last, width);
     let outer = bytes(pieces, from, to);
     let inner = bytes(pieces, first, last);
     let part = |range: Range<usize>| text.get(range).unwrap_or_default();
@@ -190,7 +199,7 @@ pub(crate) fn step_one_questions(
             Ok(Question::Choose {
                 text: text_of(format!(
                     "{words}\n\nSnippet: {}",
-                    marked(text, pieces, (place, place), false)
+                    marked(text, pieces, (place, place), false, width(spec))
                 ))?,
                 options: options.clone(),
             })
@@ -221,7 +230,7 @@ pub(crate) fn kind_question(
     Ok(Question::Choose {
         text: text_of(format!(
             "{words}\n\nText: {}",
-            marked(text, pieces, name, false)
+            marked(text, pieces, name, false, width(spec))
         ))?,
         options: Labels::recognition_menu(options)?,
     })
@@ -294,14 +303,14 @@ pub(crate) fn edge_question(
         while labels.iter().any(|(held, _)| *held == label) {
             label.push(' ');
         }
-        let shown = marked(text, pieces, (first, last), true);
+        let shown = marked(text, pieces, (first, last), true, width(spec));
         labels.push((label, Some(Description::text(shown))));
     }
     let found = options.first().copied().unwrap_or_default();
     Ok(Question::Choose {
         text: text_of(format!(
             "{words}\n\nText: {}",
-            marked(text, pieces, found, false)
+            marked(text, pieces, found, false, width(spec))
         ))?,
         options: Labels::described(labels)?,
     })

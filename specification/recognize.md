@@ -54,11 +54,11 @@ The native Rust builder provides `instructions` and `entity_definition`. SDK typ
 
 White space separates pieces. Each character of Unicode general category P or S is a piece of its own. A run of characters of category Mn, Me or Cf joins the piece that ends right before it. A run after white space or at the text's start begins a piece. At the start of the input only, a contiguous prefix of U+FEFF (BOM), U+200B (zero width space), U+200C (zero width non-joiner), U+200D (zero width joiner) and U+2060 (word joiner) is excluded from pieces and extracted spans. The original input remains intact and every excluded scalar still counts toward offsets. Internal occurrences and all other formatting or combining characters retain the rules above. Nothing else joins or splits. `Ada met Acme.` is four pieces: `Ada`, `met`, `Acme` and `.`.
 
-Each piece gets one pick-one question: `BEGIN`, `INSIDE`, `END`, `SINGLE` or `OUT`. Default questions name bare caller kinds. Caller-defined questions include the complete task declaration. With no kinds the output kind is `ENTITY`. Each question shows a snippet of six pieces on each side, with the piece wrapped in `[[ ]]`.
+Each piece gets one pick-one question: `BEGIN`, `INSIDE`, `END`, `SINGLE` or `OUT`. Default questions name bare caller kinds. Caller-defined questions include the complete task declaration. With no kinds the output kind is `ENTITY`. Each question shows a snippet of the selected number of pieces on each side (six when omitted), with the piece wrapped in `[[ ]]`.
 
 When all customization is omitted, fixed step-1 wording lists person, organisation, place, product, work, event or other thing, or names the bare caller kinds. This is the current generic wording, not the earlier news-document question. The measurements below cover their named keys and public sets, not every caller kind or domain.
 
-A step-1 request holds at most 40 consecutive pieces. Its evidence runs from six pieces before its first piece to six pieces after its last. A text of 40 pieces or fewer sends its whole text once. A longer text never sends its whole text in one step-1 request.
+A step-1 request holds at most 40 consecutive pieces. Its evidence runs from the selected number of pieces before its first piece to the selected number of pieces after its last. A text of 40 pieces or fewer carries its whole text in the initial group. Wider caller windows can carry a whole longer text; grouping remains fixed.
 
 After every step-1 request returns, a Viterbi decode picks the most likely valid tag sequence over the whole text. `BEGIN` and `INSIDE` must be followed by `INSIDE` or `END`. Each probability is floored at one in a million. On a tie the earlier tag in the order above wins. A `SINGLE` piece is a name, and so is a `BEGIN` through its `END`.
 
@@ -79,7 +79,7 @@ The plan cannot know which names the boundary answers will produce. It reports a
 
 ## Step 2: kinds and edges
 
-Step 2 starts with one request for each step-1 request that holds a found name's first piece. Both stages split between complete questions to fit the effective encoded request-byte limit. A label menu always stays whole. Its evidence runs from six pieces before its first name to six pieces after its last. A request with no questions is not sent.
+Step 2 starts with one request for each step-1 request that holds a found name's first piece. Both stages split between complete questions to fit the effective encoded request-byte limit. A label menu always stays whole. Its evidence runs from the selected number of pieces before its first name to the selected number of pieces after its last. A request with no questions is not sent.
 
 - **The kind question.** One per found name when the run has kinds. The options are the caller's kinds in order, each with its description when given, then `none of these`. A name whose answer is `none of these` is dropped.
 - **The edge question.** One per found name that has two or more stretches to choose from. The options are the name as found, the name plus a touching mark at either end, and the name less a mark at either end. A one-piece name gets no removal option. A name with no edge question keeps its span.
@@ -257,3 +257,7 @@ Caller kinds, descriptions, instructions, entity definition and effective bounda
 Boundary-only recognition refuses any authored relations declaration, including an empty saved array, any authored relation threshold, and any resolved `kind_edge` or `relation` stage context, including empty strings. Admission resolves saved and call controls before evidence reads. The safe diagnostic is `boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context`. Boundary descriptions omit the inapplicable implicit relation threshold, so a complete saved reading can rebuild without adding a forbidden control. Plans retain exact boundary requests and zero later-stage bounds.
 
 Canonical RequestDefinition encoding preserves authored controls: it omits an implicit relation threshold and retains explicit relation cuts and empty authored relation arrays. This lets a native Request survive a canonical wire round trip without turning a default into a forbidden boundary control. Complete whole descriptions and result identities retain their existing default bytes.
+
+## Recognition snippet width
+
+Saved `recognize.snippet_pieces`, CLI `--snippet-pieces` and native `RecognizeBuilder::snippet_pieces(u32)` choose the tokenizer pieces shown on each side of each marked token or span and each request group. Omission keeps six; zero shows only the marked stretch. Shared request options admit `snippet_pieces` only for recognition and override saved values. Values must be whole unsigned 32-bit integers representable by the host's piece index. Negative, fractional, overflow and unrepresentable values refuse before sending. Clipping uses the available pieces at each end. Batch grouping and caller wording remain unchanged. Actual text, encoded request-byte and selected profile admission still apply; this setting makes no model token-fit or accuracy guarantee.

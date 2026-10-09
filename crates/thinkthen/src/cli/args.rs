@@ -551,6 +551,9 @@ pub(crate) struct RecognizeArguments {
     /// Define the literal spans to recognize.
     #[arg(long, value_name = "TEXT")]
     pub(crate) entity_definition: Option<String>,
+    /// Tokenizer pieces shown on each side of a token or name; six by default.
+    #[arg(long, value_name = "N")]
+    pub(crate) snippet_pieces: Option<u32>,
     /// Share the exact UTF-8 contents of FILE across every recognition stage.
     #[arg(long, value_name = "FILE", hide_short_help = true)]
     pub(crate) context: Option<PathBuf>,

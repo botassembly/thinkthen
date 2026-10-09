@@ -786,6 +786,12 @@
             "null"
           ]
         },
+        "snippet_pieces": {
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 0,
+          "type": "integer"
+        },
         "stage_context": {
           "$ref": "#/$defs/RecognitionStageContext"
         },
@@ -4751,6 +4757,12 @@
           "type": [
             "array"
           ]
+        },
+        "snippet_pieces": {
+          "format": "uint32",
+          "maximum": 4294967295,
+          "minimum": 0,
+          "type": "integer"
         },
         "stage_context": {
           "$ref": "#/$defs/completeRecognitionStageContext"

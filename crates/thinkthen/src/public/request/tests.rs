@@ -61,6 +61,9 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
             &serde_json::json!({"kind":"definition","value":value}).to_string(),
         )
     };
+    let kinds: serde_json::Map<_, _> = (0..256)
+        .map(|n| (format!("kind{n}"), serde_json::Value::Null))
+        .collect();
     let texts = [
         valid.to_owned(),
         definition(serde_json::json!({"decide":"Fits?","true":null,"false":{"label":"no"}})),
@@ -70,6 +73,12 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         definition(serde_json::json!({"score":"Grade?","levels":["low","high"]})),
         definition(serde_json::json!({"find":"Which?"})),
         definition(serde_json::json!({"version":1,"recognize":{"kinds":{"person":null}}})),
+        definition(serde_json::json!({"version":1,"recognize":{"kinds":kinds}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":0}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":4294967295u32}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":4294967296u64}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":1.5}})),
+        definition(serde_json::json!({"version":1,"recognize":{"snippet_pieces":-1}})),
         definition(serde_json::json!({"version":1,"recognize":{"mode":"boundary_only"}})),
         definition(serde_json::json!({"version":1,"recognize":{"mode":"whole"}})),
         definition(serde_json::json!({"version":1,"recognize":{"mode":null}})),
@@ -269,4 +278,36 @@ fn recognition_mode_and_cuts_have_closed_safe_admission() {
                 .is_ok()
         );
     }
+}
+
+#[test]
+fn snippet_width_is_unsigned_strict_and_recognition_only() {
+    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"version":1,"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":WIDTH}}}"#;
+    for width in ["0", "6", "4294967295"] {
+        Request::from_json(&request.replace("WIDTH", width))
+            .unwrap()
+            .admit()
+            .unwrap();
+        let saved = format!(r#"{{"version":1,"recognize":{{"snippet_pieces":{width}}}}}"#);
+        assert_eq!(
+            crate::Recognize::from_json(&saved)
+                .unwrap()
+                .reading()
+                .snippet_pieces(),
+            width.parse::<u32>().unwrap()
+        );
+    }
+    for width in ["null", "-1", "1.5", "4294967296", r#""6""#] {
+        assert!(Request::from_json(&request.replace("WIDTH", width)).is_err());
+        let saved = format!(r#"{{"version":1,"recognize":{{"snippet_pieces":{width}}}}}"#);
+        assert!(crate::Recognize::from_json(&saved).is_err());
+    }
+    let default = crate::Recognize::builder().build().unwrap();
+    let six = crate::Recognize::builder()
+        .snippet_pieces(6)
+        .build()
+        .unwrap();
+    assert_eq!(default, six);
+    let decide = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":0}}}"#;
+    assert!(Request::from_json(decide).unwrap().admit().is_err());
 }
