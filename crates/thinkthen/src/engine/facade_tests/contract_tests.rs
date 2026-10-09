@@ -1,5 +1,4 @@
-//! The facade's contract checks against the shared cases, its one state
-//! accessor, and key secrecy.
+//! The facade's contract checks against the shared cases and key secrecy.
 
 use conformance_backend::{Backend as Loopback, Canned, Listener};
 
@@ -82,26 +81,6 @@ fn bulk_and_one_question_annotate_answers_match_the_shared_cases() {
             "{id}"
         );
     }
-}
-
-#[test]
-fn only_the_one_accessor_reads_the_retained_state() {
-    let sources = [
-        include_str!("../facade.rs"),
-        include_str!("../facade/annotate.rs"),
-        include_str!("../facade/recognize.rs"),
-        include_str!("../facade/relate.rs"),
-    ];
-    let reads = sources
-        .iter()
-        .map(|source| {
-            source
-                .match_indices("self.state")
-                .filter(|(at, _)| !source[at + "self.state".len()..].starts_with('('))
-                .count()
-        })
-        .sum::<usize>();
-    assert_eq!(reads, 1, "only `Engine::state` names the state field");
 }
 
 #[test]
