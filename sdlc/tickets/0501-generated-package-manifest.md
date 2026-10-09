@@ -1,6 +1,6 @@
 # 0501: Generate one package inventory
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -15,6 +15,8 @@ Reviews: revision 4d59e7c6a, accept
 Reviews: revision a087f6dc3, accept
 
 Reviews: revision a1dc03edae7ba64cbe1b3d1ff9f6f1f800dd1457, accept
+
+Landed: 3638aba
 
 ## Outcome
 
