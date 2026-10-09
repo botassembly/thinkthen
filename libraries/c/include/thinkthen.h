@@ -4435,6 +4435,19 @@ int thinkthen_session_new(const struct thinkthen_engine *engine,
 void thinkthen_session_result_free(struct thinkthen_session_result *result);
 
 /*
+ Borrow canonical immutable packet JSON, including an owned trailing NUL.
+ The length excludes that terminator. Bytes stay valid until result_free,
+ even after session_free and engine_free. Concurrent access is synchronized.
+ Immediate failure preserves both outputs and records the session diagnostic.
+ # Safety
+ result is live throughout the call. out and out_len are nonnull, writable,
+ distinct addresses; alignment and partial overlaps are caller duties.
+ */
+int thinkthen_session_result_json(const struct thinkthen_session_result *result,
+                                  const char **out,
+                                  size_t *out_len);
+
+/*
  Admit one owned descriptor through the shared native decoder without waiting.
  ACCEPTED retains decoded data; FULL and CLOSED retain nothing. Check native
  capacity before decoding or allocating retained content. A concurrent closure
