@@ -655,11 +655,11 @@ npm-assemble)
 	mkdir -p "$output"
 	output=$(CDPATH='' cd -- "$output" && pwd)
 	scratch_dir work
-	cp libraries/typescript/package.json libraries/typescript/loader.js libraries/typescript/index.js \
-		libraries/typescript/index.mjs libraries/typescript/index.d.ts \
-		libraries/typescript/complete.js libraries/typescript/complete.d.ts \
-		libraries/typescript/_complete.js libraries/typescript/_complete.d.ts \
-		libraries/typescript/LICENSE "$work/"
+	python3 sdlc/scripts/package-inventory.py npm --write >/dev/null
+	for file in $(python3 sdlc/scripts/package-inventory.py npm --field files); do
+		case $file in *.node) continue ;; esac
+		cp "libraries/typescript/$file" "$work/"
+	done
 	count=0
 	for file in "$input"/*/thinkthen-"$version".tgz; do
 		[ -f "$file" ] || continue
@@ -669,10 +669,7 @@ npm-assemble)
 		tar -xOf "$file" "$entry" >"$work/${entry##*/}"
 		count=$((count + 1))
 	done
-	[ "$count" = 4 ] || fail "wanted four platform npm builds, got $count"
-	for platform in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
-		[ -f "$work/thinkthen-$platform.node" ] || fail "the $platform addon is missing"
-	done
+	python3 sdlc/scripts/package-inventory.py npm --check "$work" >/dev/null
 	(cd "$work" && npm pack --silent --offline --pack-destination "$output" >/dev/null)
 	(cd "$output" && sha256 "thinkthen-$version.tgz" >"thinkthen-$version.tgz.sha256")
 	;;

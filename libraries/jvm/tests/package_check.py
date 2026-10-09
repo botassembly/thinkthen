@@ -27,8 +27,11 @@ def inspect(name, source):
                     "ScalaCaller$package$.class", "scalaCaller.class",
                     "ScalaCaller$package.tasty", "scalaCaller.tasty"}
     assert not demo_classes.intersection(members), "demo entrypoint escaped product JAR"
-    expected = {path.relative_to(TARGET / "classes" / name).as_posix(): path.read_bytes()
-                for path in (TARGET / "classes" / name).rglob("*") if path.is_file()}
+    spec = importlib.util.spec_from_file_location("package_inventory", ROOT.parents[1] / "sdlc/scripts/package-inventory.py")
+    inventory = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(inventory)
+    expected = {member: (TARGET / "classes" / name / member).read_bytes()
+                for member in inventory.jvm_inventory(TARGET)['members'][name]}
     assert members.pop("META-INF/MANIFEST.MF").startswith(b"Manifest-Version: 1.0"), "bad JAR manifest"
     assert members == expected, f"stale or extra {name} JAR member"
     assert not any("ProbeDoor" in member or "TypeCase" in member for member in members), "diagnostic class escaped product JAR"
@@ -212,8 +215,13 @@ def main():
     metadata = {child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in pom}
     assert metadata["groupId"] == "io.github.botassembly" and metadata["artifactId"] == "thinkthen-jvm" and metadata["version"] == VERSION
     receipt = {}
-    for name in ("door", "kotlin", "scala"):
-        jar = TARGET / "jars" / f"thinkthen-{name}.jar"
+    spec = importlib.util.spec_from_file_location("package_inventory", ROOT.parents[1] / "sdlc/scripts/package-inventory.py")
+    inventory = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(inventory)
+    definition = inventory.jvm_inventory(TARGET)
+    assert json.loads((TARGET / 'jars/product-inventory.json').read_text()) == definition, 'stale generated JVM inventory'
+    for name, filename in definition['jars'].items():
+        jar = TARGET / "jars" / filename
         source = jar.read_bytes()
         receipt[name] = inspect(name, source)
         altered = io.BytesIO()

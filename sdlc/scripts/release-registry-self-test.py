@@ -23,7 +23,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
-TREE = ("crates/thinkthen/Cargo.toml", "composer.json", "libraries/php/composer.json", "libraries/go/go.mod",
+TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "crates/thinkthen/Cargo.toml", "composer.json", "libraries/php/composer.json", "libraries/go/go.mod",
         "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/door/thinkthen/Door.java",
         "libraries/jvm/door/thinkthen/Json.java", "libraries/jvm/kotlin/KotlinCaller.kt",
         "libraries/jvm/scala/ScalaCaller.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
@@ -69,7 +69,7 @@ def tree(root, plant):
     for path in TREE:
         (root / path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / path, root / path)
-    (root / "sdlc/scripts").mkdir(parents=True)
+    (root / "sdlc/scripts").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(REPO / "sdlc/scripts/release-registry.py", root / "sdlc/scripts/release-registry.py")
     v = version()
     platform = root / "platform"
@@ -78,6 +78,7 @@ def tree(root, plant):
         "csharp": {f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Botassembly.ThinkThen", v)},
         "jvm": {"pom.xml": (root / "libraries/jvm/pom.xml").read_bytes(),
                 "README.md": (root / "libraries/jvm/README.md").read_bytes(),
+                "LICENSE": b"MIT\n", "product-inventory.json": b"{}\n",
                 **{f"thinkthen-{kind}.jar": jar(kind) for kind in ("door", "kotlin", "scala")}},
         "dart": {"pubspec.yaml": (root / "libraries/dart/pubspec.yaml").read_bytes(), "pubspec.lock": b"lock",
                  "README.md": b"readme", "lib/thinkthen_dart.dart": b"library;"},

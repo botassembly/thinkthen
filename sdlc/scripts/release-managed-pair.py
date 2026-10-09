@@ -5,6 +5,7 @@ Receipts are created by the workflow at Git tar generation, C container output,
 and managed compilation. This program never creates or refreshes their trust pins.
 """
 import argparse
+import importlib.util
 import hashlib
 import io
 import json
@@ -15,6 +16,11 @@ import sys
 import tarfile
 import xml.etree.ElementTree as ET
 import zipfile
+
+
+spec = importlib.util.spec_from_file_location("package_inventory", Path(__file__).with_name("package-inventory.py"))
+package_inventory = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(package_inventory)
 
 
 def require(condition, message):
@@ -120,59 +126,13 @@ def check_nupkg(data, version, source):
                     for token in forbidden), "private nupkg member")
 
 
-def check_jar(data, kind):
+def check_jar(data, kind, inventory):
     members, dirs = zip_members(data, f"{kind} JAR")
-    require(dirs == ({"META-INF/", "thinkthen/"} if kind == "door" else {"META-INF/"}),
-            f"{kind} JAR directory inventory differs")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is not None and manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
-    classes = {
-        "door": (
-            "Complete Complete$AnnotateRow Complete$AnnotationMember Complete$AtomicAnswer Complete$AtomicKind "
-            "Complete$Attempt Complete$AttemptOutcome Complete$BatchKind Complete$BatchSetting Complete$BatchWarning "
-            "Complete$CallControls Complete$CallFacts Complete$Choice Complete$ChooseRow Complete$CommonRow "
-            "Complete$CompleteError Complete$Content Complete$ContentKind Complete$DecideRow Complete$DecideValue "
-            "Complete$Direction Complete$Edge Complete$Endpoint Complete$Entity Complete$EntityEdge Complete$EventKind "
-            "Complete$FileSource Complete$FilterRow Complete$FindRow Complete$Function Complete$IdentityKind "
-            "Complete$ImageInput Complete$ImageView Complete$Location Complete$Media Complete$MemberCause "
-            "Complete$MemberFailure Complete$MemberState Complete$MemberSuccess Complete$MemberValue Complete$Meta "
-            "Complete$NameSpan Complete$ObservationEvent Complete$ObservationIdentity Complete$ObservationSuccess "
-            "Complete$ObservedProbabilities Complete$OptionalValue Complete$Origin Complete$PairSpan Complete$Piece "
-            "Complete$Place Complete$Probability Complete$ProfileWarning Complete$Question Complete$QuestionMember "
-            "Complete$QuestionObservation Complete$QuestionSource Complete$RankRow Complete$RecognizeAnswer "
-            "Complete$RecognizeRow Complete$RecognizeValue Complete$RecordInput Complete$RelateRow Complete$Relation "
-            "Complete$RelationAnswer Complete$RelationMethod Complete$RelationSuccess Complete$RowObservation "
-            "Complete$RowValue Complete$Rule Complete$RuleKind Complete$ScoreRow Complete$SourceUnit Complete$Stage "
-            "Complete$StopCause Complete$Stopped Complete$TagRow Complete$TokenUsage Complete$ValueKind "
-            "CompleteDetails CompleteDetails$DeclarationKind CompleteDetails$Details CompleteDetails$InputDeclaration "
-            "CompleteDetails$InputProperty CompleteDetails$InputView CompleteDetails$PropertyKind "
-            "CompleteDetails$QuestionAuthor CompleteDetails$ReportedUsage CompleteDetails$SourceDetail "
-            "CompleteDetails$SourceEdge CompleteDetails$SourceEndpoint CompleteDetails$SourceEntity "
-            "CompleteDetails$SourceEntityEdge CompleteDetails$SourceRecognition CompleteDetails$SourceRelations "
-            "CompleteEngine CompleteEngine$CompleteCall CompleteReaders Door Door$AnnotatedField "
-            "Door$AnnotatedField$Answered Door$AnnotatedField$Failed Door$AnnotatedField$Unresolved Door$Answer "
-            "Door$Failure Door$FailureKind Door$NativeCall Door$NativeFailure Door$Outcome Door$Token Door$TypedResult Ids "
-            "Ids$AnswerId Ids$CallId Ids$Digest Ids$FailureId Ids$ObservationId Ids$SdkRequestId Json Json$Reader "
-            "NativeBatch NativeBatch$Command NativeCalls NativeCalls$NativeCall NativeDetailReaders0 NativeDetails NativeExecution "
-            "NativeExecution$RowReader NativeInputs NativeLayouts NativeLayouts0 NativeLayouts1 NativeLayouts2 "
-            "NativeLayouts3 NativeLayouts4 NativeLayouts5 NativeLayouts6 NativeLayouts7 NativeRead NativeReaders0 "
-            "NativeReaders1 NativeReaders2 Questions Requests Requests$CompleteRequest Requests$InputSource "
-            "Requests$QuestionInput Requests$QuestionRole "
-        ).split(),
-        "kotlin": (
-            "KotlinComplete KotlinFacade KotlinFacade$RunningDecision KotlinRequests "
-        ).split(),
-        "scala": (
-            "ScalaComplete ScalaComplete$ ScalaFacade "
-            "ScalaFacade$RunningDecision ScalaRequests ScalaRequests$ "
-        ).split(),
-    }[kind]
-    expected = {("thinkthen/" if kind == "door" else "") + name + ".class" for name in classes}
-    if kind == "kotlin":
-        expected.add("META-INF/main.kotlin_module")
-    if kind == "scala":
-        expected.update(name + ".tasty" for name in
-                        ("ScalaComplete", "ScalaFacade", "ScalaRequests"))
+    expected = set(inventory['members'][kind])
+    allowed_dirs = {'META-INF/'} | {str(parent) + '/' for member in expected for parent in Path(member).parents if str(parent) != '.'}
+    require(dirs <= allowed_dirs, f'{kind} JAR directory inventory differs')
     require(set(members) == expected, f"{kind} JAR classes differ")
     require(not any(token in value for value in members.values() for token in
                     (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275",
@@ -218,7 +178,9 @@ def check(args):
     manifest = (f"source_commit={source_receipt['commit']}\ntarget={args.target}\n"
                 f"version={args.version}\nc_archive={c_name}\nc_sha256={c_receipt['sha256']}\n").encode()
     nupkg = f"Botassembly.ThinkThen.{args.version}.nupkg"
-    inner = {"nupkg": nupkg, **{kind: f"thinkthen-{kind}.jar" for kind in ("door", "kotlin", "scala")}}
+    definition = package_inventory.jvm_inventory(pom=source['libraries/jvm/pom.xml'])
+    kinds = definition['jars']
+    inner = {"nupkg": nupkg, **kinds}
     outer = {"csharp": f"thinkthen-csharp-{args.version}-{args.target}.tar.gz",
              "jvm": f"thinkthen-jvm-{args.version}-{args.target}.tar.gz"}
     if args.mode == "assemble":
@@ -229,7 +191,9 @@ def check(args):
                     not (args.output / (name + ".sha256")).is_symlink(),
                     f"output already exists: {name}")
         source_paths = {"csharp": ("LICENSE", "README.md"),
-                        "jvm": ("LICENSE", "README.md", "pom.xml")}
+                        "jvm": tuple(name for name in definition["files"] if name not in kinds.values() and name != "product-inventory.json")}
+        inventory_bytes = regular(args.jars / "product-inventory.json")
+        inventory = json.loads(inventory_bytes)
         for kind, name in inner.items():
             path = args.nupkg if kind == "nupkg" else args.jars / name
             data = regular(path)
@@ -237,7 +201,7 @@ def check(args):
             if kind == "nupkg":
                 check_nupkg(data, args.version, source)
             else:
-                check_jar(data, kind)
+                check_jar(data, kind, inventory)
         require(tuple(xml_field(source["libraries/jvm/pom.xml"], key) for key in
                       ("groupId", "artifactId", "version")) ==
                 ("io.github.botassembly", "thinkthen-jvm", args.version), "source POM identity differs")
@@ -249,7 +213,9 @@ def check(args):
                 for name in source_paths[family]:
                     (folder / name).write_bytes(source[f"libraries/{family}/{name}"])
                 (folder / "THINKTHEN-PACKAGE-INPUTS").write_bytes(manifest)
-                keys = ("nupkg",) if family == "csharp" else ("door", "kotlin", "scala")
+                if family == 'jvm':
+                    (folder / 'product-inventory.json').write_bytes(inventory_bytes)
+                keys = ("nupkg",) if family == "csharp" else kinds
                 for kind in keys:
                     path = args.nupkg if kind == "nupkg" else args.jars / inner[kind]
                     shutil.copyfile(path, folder / inner[kind])
@@ -263,7 +229,7 @@ def check(args):
         require(regular(args.output / (name + ".sha256")) == f"{digest(data)}  {name}\n".encode(),
                 f"{family} outer sidecar differs")
         names = {"THINKTHEN-PACKAGE-INPUTS", "LICENSE", "README.md"}
-        names |= {nupkg} if family == "csharp" else {"pom.xml", *(inner[k] for k in ("door", "kotlin", "scala"))}
+        names |= {nupkg} if family == "csharp" else set(definition["files"])
         files = archive_members(data, names, family)
         require(files["THINKTHEN-PACKAGE-INPUTS"] == manifest, f"{family} C identity differs")
         for member in ("README.md", "LICENSE"):
@@ -275,9 +241,10 @@ def check(args):
             require(files["pom.xml"] == source["libraries/jvm/pom.xml"], "JVM POM differs from source")
             require(tuple(xml_field(files["pom.xml"], key) for key in ("groupId", "artifactId", "version")) ==
                     ("io.github.botassembly", "thinkthen-jvm", args.version), "JVM POM identity differs")
-            for kind in ("door", "kotlin", "scala"):
+            inventory = json.loads(files['product-inventory.json'])
+            for kind in kinds:
                 pinned(files[inner[kind]], managed[kind], f"{kind} JAR")
-                check_jar(files[inner[kind]], kind)
+                check_jar(files[inner[kind]], kind, inventory)
     return True
 
 

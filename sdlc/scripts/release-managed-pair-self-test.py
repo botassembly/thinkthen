@@ -102,7 +102,7 @@ def fixture(base):
         "libraries/c/include/thinkthen.h": C_HEADER,
         "libraries/csharp/README.md": b"C# readme\n", "libraries/csharp/LICENSE": b"MIT\n",
         "libraries/jvm/README.md": b"JVM readme\n", "libraries/jvm/LICENSE": b"MIT\n",
-        "libraries/jvm/pom.xml": f"<project><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId><version>{VERSION}</version></project>".encode(),
+        "libraries/jvm/pom.xml": (HELPER.parents[2] / "libraries/jvm/pom.xml").read_bytes(),
     }
     write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
     save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
@@ -122,47 +122,9 @@ def fixture(base):
     jars = base / "jars"
     jars.mkdir()
     managed = {"nupkg": sha(nupkg.read_bytes())}
-    classes = {
-        "door": (
-            "Complete Complete$AnnotateRow Complete$AnnotationMember Complete$AtomicAnswer Complete$AtomicKind "
-            "Complete$Attempt Complete$AttemptOutcome Complete$BatchKind Complete$BatchSetting Complete$BatchWarning "
-            "Complete$CallControls Complete$CallFacts Complete$Choice Complete$ChooseRow Complete$CommonRow "
-            "Complete$CompleteError Complete$Content Complete$ContentKind Complete$DecideRow Complete$DecideValue "
-            "Complete$Direction Complete$Edge Complete$Endpoint Complete$Entity Complete$EntityEdge Complete$EventKind "
-            "Complete$FileSource Complete$FilterRow Complete$FindRow Complete$Function Complete$IdentityKind "
-            "Complete$ImageInput Complete$ImageView Complete$Location Complete$Media Complete$MemberCause "
-            "Complete$MemberFailure Complete$MemberState Complete$MemberSuccess Complete$MemberValue Complete$Meta "
-            "Complete$NameSpan Complete$ObservationEvent Complete$ObservationIdentity Complete$ObservationSuccess "
-            "Complete$ObservedProbabilities Complete$OptionalValue Complete$Origin Complete$PairSpan Complete$Piece "
-            "Complete$Place Complete$Probability Complete$ProfileWarning Complete$Question Complete$QuestionMember "
-            "Complete$QuestionObservation Complete$QuestionSource Complete$RankRow Complete$RecognizeAnswer "
-            "Complete$RecognizeRow Complete$RecognizeValue Complete$RecordInput Complete$RelateRow Complete$Relation "
-            "Complete$RelationAnswer Complete$RelationMethod Complete$RelationSuccess Complete$RowObservation "
-            "Complete$RowValue Complete$Rule Complete$RuleKind Complete$ScoreRow Complete$SourceUnit Complete$Stage "
-            "Complete$StopCause Complete$Stopped Complete$TagRow Complete$TokenUsage Complete$ValueKind "
-            "CompleteDetails CompleteDetails$DeclarationKind CompleteDetails$Details CompleteDetails$InputDeclaration "
-            "CompleteDetails$InputProperty CompleteDetails$InputView CompleteDetails$PropertyKind "
-            "CompleteDetails$QuestionAuthor CompleteDetails$ReportedUsage CompleteDetails$SourceDetail "
-            "CompleteDetails$SourceEdge CompleteDetails$SourceEndpoint CompleteDetails$SourceEntity "
-            "CompleteDetails$SourceEntityEdge CompleteDetails$SourceRecognition CompleteDetails$SourceRelations "
-            "CompleteEngine CompleteEngine$CompleteCall CompleteReaders Door Door$AnnotatedField "
-            "Door$AnnotatedField$Answered Door$AnnotatedField$Failed Door$AnnotatedField$Unresolved Door$Answer "
-            "Door$Failure Door$FailureKind Door$NativeCall Door$NativeFailure Door$Outcome Door$Token Door$TypedResult Ids "
-            "Ids$AnswerId Ids$CallId Ids$Digest Ids$FailureId Ids$ObservationId Ids$SdkRequestId Json Json$Reader "
-            "NativeBatch NativeBatch$Command NativeCalls NativeCalls$NativeCall NativeDetailReaders0 NativeDetails NativeExecution "
-            "NativeExecution$RowReader NativeInputs NativeLayouts NativeLayouts0 NativeLayouts1 NativeLayouts2 "
-            "NativeLayouts3 NativeLayouts4 NativeLayouts5 NativeLayouts6 NativeLayouts7 NativeRead NativeReaders0 "
-            "NativeReaders1 NativeReaders2 Questions Requests Requests$CompleteRequest Requests$InputSource "
-            "Requests$QuestionInput Requests$QuestionRole "
-        ).split(),
-        "kotlin": (
-            "KotlinComplete KotlinFacade KotlinFacade$RunningDecision KotlinRequests "
-        ).split(),
-        "scala": (
-            "ScalaComplete ScalaComplete$ ScalaFacade "
-            "ScalaFacade$RunningDecision ScalaRequests ScalaRequests$ "
-        ).split(),
-    }
+    inventory_members = {}
+    # Synthetic members exercise the archive boundary, not the public API inventory.
+    classes = {'door': ['Door'], 'kotlin': ['KotlinFacade'], 'scala': ['ScalaFacade']}
     for kind in ("door", "kotlin", "scala"):
         path = jars / f"thinkthen-{kind}.jar"
         files = {"META-INF/": b"", "META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\n"}
@@ -174,9 +136,11 @@ def fixture(base):
             files["META-INF/main.kotlin_module"] = b"module"
         if kind == "scala":
             files.update({name + ".tasty": b"tasty" for name in
-                          ("ScalaComplete", "ScalaFacade", "ScalaRequests")})
+                          classes[kind]})
+        inventory_members[kind] = sorted(name for name in files if not name.endswith('/') and name != 'META-INF/MANIFEST.MF')
         write_zip(path, files)
         managed[kind] = sha(path.read_bytes())
+    save_json(jars / 'product-inventory.json', {'members': inventory_members})
     save_json(base / "managed.json", managed)
     return source
 

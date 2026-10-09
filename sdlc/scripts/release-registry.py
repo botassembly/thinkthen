@@ -17,6 +17,7 @@ Usage:
 """
 
 import base64
+import importlib.util
 import hashlib
 import io
 import json
@@ -34,6 +35,10 @@ import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
 import zipfile
+
+spec = importlib.util.spec_from_file_location("package_inventory", pathlib.Path(__file__).with_name("package-inventory.py"))
+package_inventory = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(package_inventory)
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 # Stage 1 Windows ships only the command; these wrapper packages stay on Linux x86.
@@ -158,17 +163,18 @@ def pack(platform, out, sha):
     (out / "nuget" / nupkg_name).write_bytes(csharp[nupkg_name])
 
     jvm = archive_files(platform, "jvm", v)
-    for name in ("pom.xml", "README.md", "thinkthen-door.jar", "thinkthen-kotlin.jar", "thinkthen-scala.jar"):
+    definition = package_inventory.jvm_inventory(pom=jvm['pom.xml'])
+    for name in definition['files']:
         require(name in jvm, f"JVM archive lacks {name}")
     check_pom(jvm["pom.xml"], v)
     base = out / "maven" / GROUP.replace(".", "/") / ARTIFACT / v
     base.mkdir(parents=True)
     stem = f"{ARTIFACT}-{v}"
     (base / f"{stem}.pom").write_bytes(jvm["pom.xml"])
-    (base / f"{stem}.jar").write_bytes(jvm["thinkthen-door.jar"])
-    (base / f"{stem}-kotlin.jar").write_bytes(jvm["thinkthen-kotlin.jar"])
-    (base / f"{stem}-scala.jar").write_bytes(jvm["thinkthen-scala.jar"])
-    sources = sorted(p for folder in ("door", "kotlin", "scala")
+    for kind, filename in definition['jars'].items():
+        suffix = '' if kind == 'door' else '-' + kind
+        (base / f"{stem}{suffix}.jar").write_bytes(jvm[filename])
+    sources = sorted(p for folder in definition["jars"]
                      for p in (REPO / "libraries/jvm" / folder).rglob("*")
                      if p.suffix in (".java", ".kt", ".scala") and p.is_file())
     require(sources, "no JVM sources to pack")

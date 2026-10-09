@@ -19,10 +19,21 @@ kotlinc=${kotlinc:-$(command -v kotlinc || true)}
 scalac=${THINKTHEN_SCALA_HOME:+$THINKTHEN_SCALA_HOME/bin/scalac}
 scalac=${scalac:-$(command -v scalac || true)}
 for binary in "$javac" "$jar" "$kotlinc" "$scalac"; do [ -x "$binary" ] || exit 77; done
-mkdir -p "$out/classes/door" "$out/classes/kotlin" "$out/classes/scala" "$out/jars"
-"$javac" --enable-preview --release 21 -d "$out/classes/door" "$here"/door/thinkthen/*.java
-"$jar" --create --file "$out/jars/thinkthen-door.jar" -C "$out/classes/door" .
-"$kotlinc" -J-XX:ActiveProcessorCount=2 -jvm-target 21 -classpath "$out/jars/thinkthen-door.jar" "$here"/kotlin/*.kt -d "$out/classes/kotlin"
-"$jar" --create --file "$out/jars/thinkthen-kotlin.jar" -C "$out/classes/kotlin" .
-"$scalac" -J-XX:ActiveProcessorCount=2 -classpath "$out/jars/thinkthen-door.jar" -d "$out/classes/scala" "$here"/scala/*.scala
-"$jar" --create --file "$out/jars/thinkthen-scala.jar" -C "$out/classes/scala" .
+mkdir -p "$out/jars"
+for file in $(python3 "$here/../../sdlc/scripts/package-inventory.py" jvm --field jars); do
+    kind=${file#thinkthen-}
+    kind=${kind%.jar}
+    mkdir -p "$out/classes/$kind"
+    case $kind in
+    door) "$javac" --enable-preview --release 21 -d "$out/classes/$kind" "$here"/door/thinkthen/*.java ;;
+    kotlin) "$kotlinc" -J-XX:ActiveProcessorCount=2 -jvm-target 21 -classpath "$out/jars/thinkthen-door.jar" "$here"/kotlin/*.kt -d "$out/classes/$kind" ;;
+    scala) "$scalac" -J-XX:ActiveProcessorCount=2 -classpath "$out/jars/thinkthen-door.jar" -d "$out/classes/$kind" "$here"/scala/*.scala ;;
+    *) echo "jvm build: no compiler for $kind" >&2; exit 1 ;;
+    esac
+    set --
+    for member in $(python3 "$here/../../sdlc/scripts/package-inventory.py" jvm --out "$out" --field members --kind "$kind"); do
+        set -- "$@" -C "$out/classes/$kind" "$member"
+    done
+    "$jar" --create --file "$out/jars/$file" "$@"
+done
+python3 "$here/../../sdlc/scripts/package-inventory.py" jvm --out "$out" >"$out/jars/product-inventory.json"

@@ -14,6 +14,8 @@ Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision a1dc03edae7ba64cbe1b3d1ff9f6f1f800dd1457, accept
+
 ## Outcome
 
 One generated product inventory names every file each package ships, including its native libraries. Builders and installed checks read that inventory, so no package keeps a second handwritten file or platform list.

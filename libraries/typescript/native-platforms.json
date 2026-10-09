@@ -1,0 +1,7 @@
+{
+  "linux-x64": "thinkthen-linux-x64.node",
+  "linux-arm64": "thinkthen-linux-arm64.node",
+  "darwin-arm64": "thinkthen-darwin-arm64.node",
+  "darwin-x64": "thinkthen-darwin-x64.node",
+  "win32-x64": "thinkthen-win32-x64.node"
+}

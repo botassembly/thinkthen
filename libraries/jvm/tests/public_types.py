@@ -35,9 +35,12 @@ if os.environ.get("THINKTHEN_ARTIFACT") and not installed:
 classes = Path(installed) / "test-classes" if installed else TARGET / "classes/typecase"
 classes.mkdir(parents=True, exist_ok=True)
 jars = Path(installed).resolve(strict=True) if installed else TARGET / "jars"
-for part in ("door", "kotlin", "scala"):
-    (jars / f"thinkthen-{part}.jar").resolve(strict=True)
-classpath = ":".join(str(jars / f"thinkthen-{part}.jar") for part in ("door", "kotlin", "scala"))
+inventory_spec = importlib.util.spec_from_file_location("package_inventory", ROOT / "sdlc/scripts/package-inventory.py")
+inventory = importlib.util.module_from_spec(inventory_spec)
+inventory_spec.loader.exec_module(inventory)
+definition = inventory.jvm_inventory(pom=(jars / "pom.xml").read_bytes() if installed else None)
+package_jars = [(jars / filename).resolve(strict=True) for filename in definition['jars'].values()]
+classpath = os.pathsep.join(map(str, package_jars))
 compiler_env = child_env(JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"),
                          PATH=str(JDK / "bin") + ":" + os.environ.get("PATH", "/usr/bin:/bin"))
 java = [str(JDK / "bin/java"), "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(native / "libthinkthen.so")]

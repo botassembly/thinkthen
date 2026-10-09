@@ -18,7 +18,8 @@
   ],
   "os": [
     "linux",
-    "darwin"
+    "darwin",
+    "win32"
   ],
   "cpu": [
     "x64",
@@ -44,10 +45,8 @@
     "_complete.js",
     "_complete.d.ts",
     "LICENSE",
-    "thinkthen-linux-x64.node",
-    "thinkthen-linux-arm64.node",
-    "thinkthen-darwin-x64.node",
-    "thinkthen-darwin-arm64.node"
+    "native-platforms.json",
+    "thinkthen-*.node"
   ],
   "scripts": {
     "build": "./build-addon.sh",
@@ -58,5 +57,9 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "thinkthen": {
+    "nativeTargets": "release",
+    "nativeFile": "thinkthen-{platform}-{arch}.node"
   }
 }
