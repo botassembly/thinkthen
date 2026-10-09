@@ -2,9 +2,9 @@
 use super::{Request as LegacyRequest, alone, flag, member, object};
 use crate::failures::Failure;
 use thinkthen::{
-    AdmittedRequest, LoadedQuestion, Question, QuestionSet, RawRecord, Request, RequestArguments,
-    RequestBatch, RequestCall, RequestDefinition, RequestInput, RequestItem, RequestOptions,
-    RequestOriginal, RequestQuestion,
+    AdmittedRequest, LoadedQuestion, Question, QuestionInput, QuestionSet, RawRecord, Request,
+    RequestArguments, RequestBatch, RequestCall, RequestDefinition, RequestInput, RequestItem,
+    RequestOptions, RequestOriginal, RequestQuestion,
 };
 
 pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Failure> {
@@ -38,8 +38,8 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
                 serde_json::from_str::<Vec<String>>(raw)
             })?
             .into_iter()
-            .map(|text| item(RequestOriginal::Text { text }))
-            .collect()
+            .map(|text| string_record(text, request.verb == "annotate"))
+            .collect::<Result<Vec<_>, Failure>>()?
         };
         if request.verb == "relate" {
             RequestInput::Entities { items }
@@ -92,6 +92,24 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
         _ => RequestCall::Relate(args),
     };
     Ok(Request::new(call).admit()?)
+}
+fn string_record(text: String, annotate: bool) -> Result<RequestItem, Failure> {
+    if !annotate {
+        return Ok(item(RequestOriginal::Text { text }));
+    }
+    let QuestionInput::Record(record) = QuestionInput::annotation_document(&text)? else {
+        return Err(Failure::defect(
+            "an annotation document has no original record",
+        ));
+    };
+    let value = record.original();
+    Ok(item(if value.literal().is_some() {
+        RequestOriginal::Text { text }
+    } else {
+        RequestOriginal::Json {
+            value: value.clone(),
+        }
+    }))
 }
 fn item(original: RequestOriginal) -> RequestItem {
     RequestItem {
