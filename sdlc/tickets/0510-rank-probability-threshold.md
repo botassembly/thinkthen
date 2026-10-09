@@ -41,3 +41,4 @@ Callers can use `rank --threshold P` to keep records whose yes probability is at
 
 - 2026-10-09 started
 - 2026-10-09 landed 1cc856481d5383afe888d385a4d14f914f213363; next: Inclusive rank cutoff is reviewed and landed. Run combined functional checks before closing; cache reuse and refused routes pass focused CLI, native and MCP cases.
+- 2026-10-09 landed 6800aaca5; next: Rank cutoff and the corrected saved-band diagnostic are landed. The full default Rust suite passes; finish the combined library-only and downstream checks before whole closure.
