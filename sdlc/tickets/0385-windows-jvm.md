@@ -4,8 +4,10 @@ Status: ready. Deferred to 0.3 under Ian's 2026-10-05 scope ruling; the ticket s
 
 Milestone: 0.2
 
-Depends on: 0498
 Depends on: 0504
+Depends on: 0501
+
+Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
@@ -21,3 +23,7 @@ Depends on: 0504
   Claim `libraries/jvm/**` and `.github/workflows/windows.yml`. Windows execution is owed to the first authorized candidate; do not close until it passes.
 - Proof: a load and smoke case on `windows-2025` that counts loopback requests. The Linux and macOS JVM checks and the installed-file check stay green.
 - Defers: the report names no unknown of note. Kotlin and Scala ride on the same jar, and their own checks on Windows wait for stage 2 unless the builder finds them free.
+
+## Surface assessment amendment
+
+The 2026-10-09 ruling supersedes the old 0.3 deferral, mandatory absolute library path and jars-without-natives contract. Consume 0504's stable JVM implementation and the final native artifacts from 0501 and the relevant 0517 package slice. The ordinary dependency declaration must select and load the Windows native library without `-Dthinkthen.library` or preview flags. Exercise installed Java, Kotlin and Scala public consumers, with platform equivalents for required cancellation and cleanup cases. Windows execution waits for the first authorized candidate; the ticket stays open until native qualification passes.
