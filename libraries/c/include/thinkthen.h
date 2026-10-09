@@ -4401,9 +4401,9 @@ const char *thinkthen_session_error_message(void);
  # Safety
  session is live and failure_json has failure_len readable UTF-8 bytes.
  */
-int32_t thinkthen_session_finish(struct thinkthen_session *session,
-                                 const char *failure_json,
-                                 size_t failure_len);
+int thinkthen_session_finish(struct thinkthen_session *session,
+                             const char *failure_json,
+                             size_t failure_len);
 
 /*
  Close the output receiver and release this owner without joining native work.
@@ -4422,10 +4422,10 @@ void thinkthen_session_free(struct thinkthen_session *session);
  engine is live, request_json points at request_len readable bytes (NULL
  requires zero), and out is writable. Extents must fit Rust slices.
  */
-int32_t thinkthen_session_new(const struct thinkthen_engine *engine,
-                              const char *request_json,
-                              size_t request_len,
-                              struct thinkthen_session **out);
+int thinkthen_session_new(const struct thinkthen_engine *engine,
+                          const char *request_json,
+                          size_t request_len,
+                          struct thinkthen_session **out);
 
 /*
  Release an independent packet owner. NULL is ignored.
@@ -4443,10 +4443,10 @@ void thinkthen_session_result_free(struct thinkthen_session_result *result);
  session is live, descriptor_json has descriptor_len readable UTF-8 bytes
  (NULL requires zero), and status is nonnull and writable.
  */
-int32_t thinkthen_session_try_push(struct thinkthen_session *session,
-                                   const char *descriptor_json,
-                                   size_t descriptor_len,
-                                   uint32_t *status);
+int thinkthen_session_try_push(struct thinkthen_session *session,
+                               const char *descriptor_json,
+                               size_t descriptor_len,
+                               uint32_t *status);
 
 /*
  Transfer one owned packet without waiting for native work.
@@ -4456,9 +4456,9 @@ int32_t thinkthen_session_try_push(struct thinkthen_session *session,
  session is live. status and out are writable, nonnull, distinct addresses.
  Alignment, readable/writable ranges and partial overlaps are caller duties.
  */
-int32_t thinkthen_session_try_read(struct thinkthen_session *session,
-                                   uint32_t *status,
-                                   struct thinkthen_session_result **out);
+int thinkthen_session_try_read(struct thinkthen_session *session,
+                               uint32_t *status,
+                               struct thinkthen_session_result **out);
 
 /*
  Clone an explicit native text/image reader selection.
