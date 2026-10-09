@@ -3,6 +3,7 @@ use super::{
     Request, RequestDefinition, RequestFunction as Function, RequestImage, RequestInput,
     RequestOptions, RequestQuestion, RequestThreshold,
 };
+use crate::public::error::diagnostic::Diagnostic;
 use crate::{Error, LoadedQuestion, Question, QuestionKind};
 
 /// A validated request header; execution resolves explicit source authority afterward.
@@ -13,6 +14,24 @@ pub struct AdmittedRequest {
     pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
+    pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
+        let args = self.request.call.arguments_mut();
+        args.input = RequestInput::Feed {
+            name: name.to_owned(),
+            framing: super::RequestFraming::Document,
+            reading: crate::ReaderOptions::default(),
+            images: Vec::new(),
+        };
+        args.options.field = None;
+        self
+    }
+
+    pub(crate) fn resolve_once(&mut self) -> Result<RequestDefinition, Error> {
+        let definition = self.resolve_question()?;
+        self.definition = Some(definition.clone());
+        Ok(definition)
+    }
+
     /// Borrow the admitted typed header.
     #[must_use]
     pub const fn request(&self) -> &Request {
@@ -27,14 +46,7 @@ impl AdmittedRequest {
         }
         let question = &self.request.call.arguments().question;
         let text = match question {
-            RequestQuestion::File { path } => {
-                crate::read_question_file(path).map_err(|reason| match reason {
-                    crate::QuestionFileError::TooLarge => {
-                        Error::local("the question file is too large")
-                    }
-                    _ => Error::local("the question file could not be read"),
-                })?
-            }
+            RequestQuestion::File { path } => question_text(path, true)?,
             RequestQuestion::Name { name } => crate::public::named_question::named_text(name)?,
             RequestQuestion::Reference { reference } => {
                 match crate::public::named_question::Reference::resolve(reference)? {
@@ -42,8 +54,7 @@ impl AdmittedRequest {
                         crate::public::named_question::named_text(&name)?
                     }
                     crate::public::named_question::Reference::Path(path) => {
-                        crate::read_question_file(&path)
-                            .map_err(|_| Error::local("the question file could not be read"))?
+                        question_text(&path, false)?
                     }
                 }
             }
@@ -53,12 +64,12 @@ impl AdmittedRequest {
                 ));
             }
         };
-        let value = RequestDefinition::from_authored_json(&text)
-            .map_err(|error| Error::local(error.detail().message()))?;
-        let value = admit_definition(self.request.call.function(), value)
-            .map_err(|e| Error::local(e.detail().message()))?;
+        let value =
+            RequestDefinition::from_authored_json(&text).map_err(|error| error.into_local())?;
+        let value =
+            admit_definition(self.request.call.function(), value).map_err(|e| e.into_local())?;
         admit_definition_controls(&value, &self.request.call.arguments().options)
-            .map_err(|e| Error::local(e.detail().message()))?;
+            .map_err(|e| e.into_local())?;
         Ok(value)
     }
 }
@@ -203,7 +214,9 @@ fn admit_options(
     located_feed: bool,
 ) -> Result<(), Error> {
     if let Some(model) = &options.model {
-        crate::core::ModelName::new(model).map_err(|_| Error::usage("invalid model name"))?;
+        crate::core::ModelName::new(model).map_err(|cause| {
+            Error::usage("invalid model name").with_diagnostic(Diagnostic::Model(cause))
+        })?;
     }
     if options.mode.is_some() && function != Function::Recognize {
         return Err(Error::usage("mode belongs to recognize"));
@@ -227,11 +240,13 @@ fn admit_options(
     }
     if let Some(rule) = &options.threshold {
         if !function.allows_option("threshold") {
-            return Err(Error::usage("this function does not accept this threshold"));
+            return Err(Error::usage("this function does not accept this threshold")
+                .with_diagnostic(Diagnostic::ThresholdFunction(function)));
         }
         let rule = rule.native()?;
         if function != Function::Decide && !rule.is_cut() {
-            return Err(Error::usage("this function does not accept this threshold"));
+            return Err(Error::usage("this function does not accept this threshold")
+                .with_diagnostic(Diagnostic::ThresholdFunction(function)));
         }
     }
     if (options.examples.is_some() || options.examples_field.is_some())
@@ -275,17 +290,33 @@ fn admit_options(
     if let Some(ms) = options.deadline_ms {
         crate::CallOptions::new().deadline_ms(ms)?;
     }
-    for pointer in options.field.iter().flatten().chain(
-        [
-            &options.context_field,
-            &options.options_field,
-            &options.examples_field,
-            &options.seed_spans_field,
-        ]
-        .into_iter()
-        .flatten(),
-    ) {
-        crate::core::Pointer::new(pointer).map_err(|_| Error::usage("invalid field pointer"))?;
+    admit_pointers(options)
+}
+
+fn admit_pointers(options: &RequestOptions) -> Result<(), Error> {
+    for (option, pointer) in options
+        .field
+        .iter()
+        .flatten()
+        .map(|p| ("--field", p))
+        .chain(
+            [
+                ("--context-field", &options.context_field),
+                ("--options", &options.options_field),
+                ("--examples-field", &options.examples_field),
+                ("--seed-spans-field", &options.seed_spans_field),
+            ]
+            .into_iter()
+            .filter_map(|(option, value)| value.as_ref().map(|p| (option, p))),
+        )
+    {
+        crate::core::Pointer::new(pointer).map_err(|cause| {
+            Error::usage("invalid field pointer").with_diagnostic(Diagnostic::Pointer(
+                option,
+                crate::core::safe_key(pointer),
+                cause,
+            ))
+        })?;
     }
     Ok(())
 }
@@ -501,4 +532,15 @@ pub(super) fn apply_recognition(
         spec.authored_relation_threshold = true;
     }
     spec.validate_mode().map_err(Error::refused)
+}
+
+fn question_text(path: &std::path::Path, sized: bool) -> Result<String, Error> {
+    crate::read_question_file(path).map_err(|cause| {
+        let message = if sized && matches!(cause, crate::QuestionFileError::TooLarge) {
+            "the question file is too large"
+        } else {
+            "the question file could not be read"
+        };
+        Error::local(message).with_diagnostic(Diagnostic::QuestionRead(cause))
+    })
 }

@@ -1,6 +1,7 @@
 //! The one public error: six kinds, a safe message, and the retry signal.
 
 use serde::Serialize;
+pub(crate) mod diagnostic;
 mod stopped;
 pub use stopped::{StopCause, Stopped};
 
@@ -77,6 +78,7 @@ pub struct ErrorDetail {
     send_budget_denial: Option<SendBudgetDenial>,
     estimated_input_denial: Option<EstimatedInputDenial>,
     facts: Option<Box<Facts>>,
+    diagnostic: Option<Box<diagnostic::Diagnostic>>,
 }
 
 impl std::fmt::Debug for ErrorDetail {
@@ -207,6 +209,7 @@ impl Error {
             send_budget_denial: None,
             estimated_input_denial: None,
             facts: None,
+            diagnostic: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),
@@ -223,8 +226,31 @@ impl Error {
     }
 
     /// A usage error whose message is the refusal the core gave.
-    pub(crate) fn refused(error: impl std::fmt::Display) -> Self {
+    pub(crate) fn refused(error: impl std::fmt::Display + Send + Sync + 'static) -> Self {
         Self::usage(error.to_string())
+            .with_diagnostic(diagnostic::Diagnostic::Refusal(Box::new(error)))
+    }
+
+    pub(crate) fn with_diagnostic(mut self, cause: diagnostic::Diagnostic) -> Self {
+        self.detail_mut().diagnostic = Some(Box::new(cause));
+        self
+    }
+
+    pub(crate) fn take_diagnostic(&mut self) -> Option<diagnostic::Diagnostic> {
+        self.detail_mut().diagnostic.take().map(|cause| *cause)
+    }
+
+    pub(crate) fn into_local(self) -> Self {
+        let mut detail = match self {
+            Self::Usage(detail)
+            | Self::Backend(detail)
+            | Self::Local(detail)
+            | Self::Cancelled(detail)
+            | Self::Deadline(detail)
+            | Self::Defect(detail) => detail,
+        };
+        detail.stopped = Stopped::of_kind(ErrorKind::Local);
+        Self::Local(detail)
     }
 
     pub(crate) fn local(message: impl Into<String>) -> Self {
@@ -280,7 +306,7 @@ impl From<EngineError> for Error {
                 };
             }
         }
-        public
+        public.with_diagnostic(diagnostic::Diagnostic::Engine(error))
     }
 }
 

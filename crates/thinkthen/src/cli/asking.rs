@@ -4,10 +4,8 @@
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
 use std::io::Read;
-use std::io::{self, Write as _};
 use std::num::NonZeroUsize;
 use std::process::ExitCode;
-use std::time::Duration;
 
 use crate::core::{
     Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Record,
@@ -16,8 +14,7 @@ use crate::core::{
 
 use crate::args::Common;
 use crate::edge::Environment;
-use crate::engine::Width;
-use crate::engine::facade::{Engine, Settings, Storage};
+use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
@@ -59,55 +56,14 @@ pub(crate) fn engine(
     profile: Option<BackendProfile>,
     width: Option<u8>,
 ) -> Result<Engine, Failure> {
-    let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
-    let roots = environment.roots()?;
-    if !common.dry_run {
-        environment.cancel().invocation()?;
-    }
-    if !common.dry_run && folders.writable_by_another() {
-        writeln!(
-            io::stderr().lock(),
-            "thinkthen: warning: another user may change this named cache or recording folder; its writers decide the answers read from it"
-        )
-        .map_err(Failure::Output)?;
-    }
-    if folders.record.is_some()
-        && folders.replay.is_some()
-        && (folders.refresh_cache || backend.api_type().is_mutable_alias(backend.model()))
-    {
-        writeln!(
-            io::stderr().lock(),
-            "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge"
-        )
-        .map_err(Failure::Output)?;
-    }
-    Ok(Engine::with_roots(
-        Settings {
-            backend,
-            profile,
-            timeout: Duration::from_secs(common.timeout),
-            max_retries: common.max_retries,
-            retry_wait: environment.retry_wait(),
-            per_minute: environment.per_minute,
-            width,
-            storage: Storage {
-                record: folders.record,
-                replay: folders.replay,
-                private_default: folders.private_default,
-                cache_answers: folders.cache_answers,
-                refresh_cache: folders.refresh_cache,
-            },
-            key: environment.key_reader(),
-            usage: environment.counters(),
-        },
-        roots,
-    )?
-    .with_process_budget(
-        common.max_requests_total,
-        common
-            .max_estimated_input_tokens_total
-            .or(environment.estimated_total),
-    ))
+    crate::cli::construction::engine(
+        common,
+        environment,
+        folders,
+        (backend, profile),
+        width,
+        true,
+    )
 }
 
 /// Where one record's question comes from.

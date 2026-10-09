@@ -45,9 +45,10 @@ impl RequestBatch {
         match setting {
             Some(crate::core::Setting::Records(n)) => Ok(BatchSetting::Records(n)),
             Some(crate::core::Setting::Max) => Ok(BatchSetting::Max),
-            None => Err(Error::usage(
-                "batch requires a positive whole number or max",
-            )),
+            None => Err(
+                Error::usage("batch requires a positive whole number or max")
+                    .with_diagnostic(crate::public::error::diagnostic::Diagnostic::Batch),
+            ),
         }
     }
 }

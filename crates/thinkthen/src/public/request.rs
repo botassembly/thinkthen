@@ -228,6 +228,20 @@ impl RequestCall {
             Self::Relate(_) => RequestFunction::Relate,
         }
     }
+    pub(crate) fn arguments_mut(&mut self) -> &mut RequestArguments {
+        match self {
+            Self::Decide(a)
+            | Self::Choose(a)
+            | Self::Tag(a)
+            | Self::Score(a)
+            | Self::Filter(a)
+            | Self::Rank(a)
+            | Self::Find(a)
+            | Self::Annotate(a)
+            | Self::Recognize(a)
+            | Self::Relate(a) => a,
+        }
+    }
     /// Borrow the typed arguments regardless of the function.
     #[must_use]
     pub const fn arguments(&self) -> &RequestArguments {

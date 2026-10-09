@@ -73,6 +73,7 @@ pub(crate) struct Environment {
     pub(super) sigint_ack: Option<PathBuf>,
     pub(super) cancel: crate::engine::Cancel<'static>,
     usage: std::sync::Arc<Counters>,
+    native_facts: std::sync::Mutex<Option<crate::Facts>>,
     usage_path: Option<PathBuf>,
     key: KeySnapshot,
     ca_bundle: Option<PathBuf>,
@@ -93,6 +94,19 @@ impl std::fmt::Debug for Environment {
 }
 
 impl Environment {
+    pub(crate) fn settle_native(&self, facts: &crate::Facts) {
+        if let Ok(mut settled) = self.native_facts.lock() {
+            *settled = Some(facts.clone());
+        }
+    }
+
+    pub(crate) fn native_call_id(&self) -> Option<crate::core::CallId> {
+        self.native_facts
+            .lock()
+            .ok()
+            .and_then(|facts| facts.as_ref().and_then(|facts| facts.call_id().cloned()))
+    }
+
     /// Read the base address and the hidden test wait, which help never shows.
     pub(crate) fn read() -> Result<Self, Failure> {
         let named_cache = read("THINKTHEN_CACHE");
@@ -114,6 +128,7 @@ impl Environment {
             named_cache: named_cache.is_some(),
             config,
             config_path,
+            native_facts: std::sync::Mutex::new(None),
             retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS")
                 .and_then(|text| text.parse().ok()),
             input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS")

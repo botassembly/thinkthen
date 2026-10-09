@@ -231,6 +231,10 @@ pub struct RecordReading {
     seed_spans: Option<core::Pointer>,
 }
 impl RecordReading {
+    pub(crate) fn fields(&self) -> &[core::Pointer] {
+        self.reading.fields()
+    }
+
     /// Admit ordered pointers using the ordinary reader, including field-name clashes.
     /// # Errors
     /// Refuses malformed pointers or ambiguous selected member names.

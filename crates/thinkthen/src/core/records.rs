@@ -281,6 +281,10 @@ pub(crate) struct ReadingPlan<'a> {
 }
 
 impl Reading {
+    pub(crate) fn fields(&self) -> &[Pointer] {
+        &self.fields
+    }
+
     /// Take the framing and the pointers, or say why they cannot act together.
     ///
     /// # Errors

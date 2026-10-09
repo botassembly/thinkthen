@@ -39,7 +39,7 @@ pub use rank_set::RankSet;
 mod choice;
 mod complete;
 mod engine;
-mod error;
+pub(crate) mod error;
 #[cfg(feature = "polars")]
 mod frame;
 mod native_batch;

@@ -14,7 +14,7 @@ use std::path::PathBuf;
     clippy::too_many_lines,
     reason = "one ten-function adapter makes CLI transport choices reviewable together"
 )]
-pub(super) fn admit(command: &Command) -> Result<(), Failure> {
+pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>, Failure> {
     let call = match command {
         Command::Decide(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
@@ -189,14 +189,9 @@ pub(super) fn admit(command: &Command) -> Result<(), Failure> {
             options.field = None;
             RequestCall::Relate(arguments(&mut a.common.clone(), question, options)?)
         }
-        _ => return Ok(()),
+        _ => return Ok(None),
     };
-    let request = Request::new(call);
-    request
-        .clone()
-        .admit()
-        .map_err(|error| diagnostic(error, &request))?;
-    Ok(())
+    Request::new(call).admit().map(Some).map_err(native)
 }
 fn selector(
     text: &str,
@@ -357,47 +352,7 @@ fn arguments(
     })
 }
 fn native(error: crate::Error) -> Failure {
-    Failure::Image(error.detail().message().to_owned())
-}
-
-// Reuse the established CLI formatter only after shared admission has refused.
-fn diagnostic(error: crate::Error, request: &Request) -> Failure {
-    let options = &request.call.arguments().options;
-    match error.detail().message() {
-        "invalid model name" => {
-            if let Some(model) = &options.model
-                && let Err(failure) = super::edge::model_flag(model)
-            {
-                return failure;
-            }
-        }
-        "invalid field pointer" => {
-            let pointers = options
-                .field
-                .iter()
-                .flatten()
-                .map(|p| ("--field", p))
-                .chain(options.options_field.iter().map(|p| ("--options", p)))
-                .chain(options.context_field.iter().map(|p| ("--context-field", p)));
-            for (option, pointer) in pointers {
-                if let Err(cause) = crate::core::Pointer::new(pointer) {
-                    return Failure::Pointer(option, crate::core::safe_key(pointer), cause);
-                }
-            }
-        }
-        "batch requires a positive whole number or max" => {
-            return Failure::Usage("--batch takes max or a whole number of at least 1");
-        }
-        "this function does not accept this threshold"
-            if request.call.function() == crate::RequestFunction::Annotate =>
-        {
-            return Failure::Usage(
-                "--threshold belongs to each question in the question set; `annotate` takes no command-level threshold",
-            );
-        }
-        _ => {}
-    }
-    native(error)
+    error.into()
 }
 
 fn relate_config(error: crate::core::RelateConfigError) -> Failure {

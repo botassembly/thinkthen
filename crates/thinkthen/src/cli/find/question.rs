@@ -1,8 +1,7 @@
-//! Ordinary find file preparation shares the capped reader and native field validators.
+//! Find host settings come from the retained native admitted question.
 use crate::args::{Common, FindArguments};
-use crate::core::{ProfileName, QuestionFile, QuestionText, Source, Sources};
+use crate::core::{ProfileName, QuestionText, Source, Sources};
 use crate::failure::Failure;
-use std::path::Path;
 
 pub(super) struct Prepared {
     pub(super) metadata: crate::core::declaration::QuestionMetadata,
@@ -12,64 +11,66 @@ pub(super) struct Prepared {
     pub(super) sources: Option<Sources>,
 }
 impl Prepared {
-    pub(super) fn new(arguments: &FindArguments) -> Result<Self, Failure> {
-        let mut common = arguments.common.as_common();
-        common.check_plan_name()?;
-        let Some(path) = arguments.question.strip_prefix('@') else {
-            let question = QuestionText::new(&arguments.question).map_err(|_| {
-                Failure::Usage("`find` takes a question that is text, not white space")
-            })?;
-            return Ok(Self {
-                metadata: Default::default(),
-                common,
-                question,
-                profile: None,
-                sources: None,
-            });
-        };
-        let text =
-            crate::cli::question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
-        let file = QuestionFile::parse_find(&text)?;
-        let sources = Sources::for_find(
-            if !common.field.is_empty() {
-                Source::CommandLine
-            } else if !file.on.is_empty() {
-                Source::File
-            } else {
-                Source::Default
-            },
-            if common.model.is_some() {
-                Source::CommandLine
-            } else if file.model.is_some() {
-                Source::File
-            } else {
-                Source::Default
-            },
-        );
-        if common.field.is_empty() {
-            common.field = file
-                .on
+    pub(super) fn new(
+        arguments: &FindArguments,
+        admitted: &mut crate::AdmittedRequest,
+    ) -> Result<Self, Failure> {
+        let definition = admitted.resolve_once().map_err(Failure::from)?;
+        let saved_fields = match &definition {
+            crate::RequestDefinition::Find(file) => file
+                .reading()
+                .fields()
                 .iter()
-                .map(|pointer| pointer.as_str().to_owned())
-                .collect();
+                .map(|p| p.as_str().to_owned())
+                .collect(),
+            _ => Vec::new(),
+        };
+        let question = match &definition {
+            crate::RequestDefinition::Find(file) => file.question(),
+            crate::RequestDefinition::Atomic(crate::LoadedQuestion::Question(question)) => question,
+            _ => {
+                return Err(Failure::Defect(
+                    "find admission retained another question kind",
+                ));
+            }
+        };
+        let crate::core::Question::Decide { text, .. } = &question.core else {
+            return Err(Failure::Defect(
+                "find admission retained another question shape",
+            ));
+        };
+        let mut common = arguments.common.as_common();
+        let fields = &saved_fields;
+        let sources = arguments.question.starts_with('@').then(|| {
+            Sources::for_find(
+                if !common.field.is_empty() {
+                    Source::CommandLine
+                } else if !fields.is_empty() {
+                    Source::File
+                } else {
+                    Source::Default
+                },
+                if common.model.is_some() {
+                    Source::CommandLine
+                } else if question.model.is_some() {
+                    Source::File
+                } else {
+                    Source::Default
+                },
+            )
+        });
+        if common.field.is_empty() {
+            common.field = fields.clone();
         }
         if common.model.is_none() {
-            common.model = file.model.map(|model| model.as_str().to_owned());
+            common.model = question.model.as_ref().map(|m| m.as_str().to_owned());
         }
         Ok(Self {
-            metadata: file.metadata,
+            metadata: question.metadata.clone(),
             common,
-            question: file.text,
-            profile: file.profile,
-            sources: Some(sources),
+            question: text.clone(),
+            profile: question.profile.clone(),
+            sources,
         })
-    }
-}
-
-pub(super) fn resolved(text: &QuestionText) -> crate::core::Question {
-    crate::core::Question::Decide {
-        text: text.clone(),
-        yes: None,
-        no: None,
     }
 }

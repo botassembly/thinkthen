@@ -129,3 +129,53 @@ impl From<EngineError> for Failure {
         }
     }
 }
+
+impl From<crate::Error> for Failure {
+    fn from(mut error: crate::Error) -> Self {
+        use crate::public::error::diagnostic::Diagnostic;
+        match error.take_diagnostic() {
+            Some(Diagnostic::Engine(cause)) => Self::from(cause),
+            Some(Diagnostic::Model(cause)) => Self::Usage(match cause {
+                crate::core::BlankTextError::ModelControl => {
+                    "--model holds no control character or white space but a plain space"
+                }
+                _ => "--model is text, not white space",
+            }),
+            Some(Diagnostic::Pointer(option, typed, cause)) => Self::Pointer(option, typed, cause),
+            Some(Diagnostic::Batch) => {
+                Self::Usage("--batch takes max or a whole number of at least 1")
+            }
+            Some(Diagnostic::ThresholdFunction(crate::RequestFunction::Annotate)) => Self::Usage(
+                "--threshold belongs to each question in the question set; `annotate` takes no command-level threshold",
+            ),
+            Some(Diagnostic::QuestionRead(cause)) => match cause {
+                crate::QuestionFileError::Unreadable(cause) => Self::OpenQuestionFile(cause),
+                crate::QuestionFileError::TooLarge => Self::QuestionFileTooLarge,
+                crate::QuestionFileError::NotUtf8 => Self::OpenQuestionFile(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "stream did not contain valid UTF-8",
+                )),
+            },
+            Some(Diagnostic::Refusal(cause)) => refusal(cause, error),
+            _ if error.kind() == crate::ErrorKind::Cancelled => Self::Cancelled,
+            _ => Self::Native(error.kind(), error.detail().message().to_owned()),
+        }
+    }
+}
+
+fn refusal(mut cause: Box<dyn std::any::Any + Send + Sync>, error: crate::Error) -> Failure {
+    macro_rules! take {
+        ($kind:ty) => {
+            cause = match cause.downcast::<$kind>() {
+                Ok(cause) => return Failure::from(*cause),
+                Err(cause) => cause,
+            };
+        };
+    }
+    take!(crate::core::QuestionFileError);
+    take!(crate::core::QuestionSetError);
+    take!(crate::core::ReadingError);
+    take!(crate::core::RecordError);
+    let _cause = cause;
+    Failure::Native(error.kind(), error.detail().message().to_owned())
+}
