@@ -2,27 +2,14 @@
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
-use thinkthen::{Evidence, For, Question, Settings};
+use thinkthen::{For, Question, Settings};
 
 use crate::question::{call_settings, text};
 use crate::{Failure, ffi, guard, worker};
 
 const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
 
-/// Carry the original SQL position even when two units have equal text.
-#[derive(Debug)]
-struct Indexed {
-    position: usize,
-    text: String,
-}
-
-impl Evidence for Indexed {
-    fn evidence(&self) -> &str {
-        &self.text
-    }
-}
-
-fn units(argument: &str) -> Result<Vec<Indexed>, Failure> {
+fn units(argument: &str) -> Result<Vec<String>, Failure> {
     let source: serde_json::Value = serde_json::from_str(argument)
         .map_err(|_| Failure::usage("find units are a JSON array of text"))?;
     let array = source
@@ -31,8 +18,7 @@ fn units(argument: &str) -> Result<Vec<Indexed>, Failure> {
     let mut bytes = 0_usize;
     array
         .iter()
-        .enumerate()
-        .map(|(position, value)| {
+        .map(|value| {
             let text = value.as_str().ok_or_else(|| {
                 Failure::usage("each find unit is text, not NULL or another type")
             })?;
@@ -45,10 +31,7 @@ fn units(argument: &str) -> Result<Vec<Indexed>, Failure> {
             if bytes > MAX_TEXT_BYTES {
                 return Err(Failure::usage("find units exceed 16 MiB of text"));
             }
-            Ok(Indexed {
-                position,
-                text: text.to_owned(),
-            })
+            Ok(text.to_owned())
         })
         .collect()
 }
@@ -107,32 +90,53 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
                 } else {
                     options
                 };
-                let call = engine.find_with(&question, units, options)?;
-                let found = call.into_value();
-                let selected = found.selected();
-                let candidates = found.candidates();
-                let winner = match selected {
-                    Some(unit) => candidates.get(unit.position),
-                    None => candidates.last().filter(|candidate| candidate.is_none()),
-                }
-                .ok_or_else(|| Failure::defect("a find answer selected no candidate"))?;
-                let candidates: Vec<_> = candidates
-                    .iter()
-                    .map(|candidate| {
-                        serde_json::json!({
-                            "index": candidate.input().map(|unit| unit.position),
-                            "probability": candidate.probability(),
-                        })
-                    })
-                    .collect();
-                Ok(serde_json::json!({
-                    "index": selected.map(|unit| unit.position),
-                    "value": selected.map(|unit| unit.text.as_str()),
-                    "probability": winner.probability(),
-                    "candidates": candidates,
-                })
-                .to_string())
+                let call = crate::request::run(
+                    engine,
+                    thinkthen::RequestFunction::Find,
+                    question.into(),
+                    units.into_iter().map(crate::request::text).collect(),
+                    options,
+                )?;
+                let thinkthen::RequestValue::Found(found) = call.into_value() else {
+                    return Err(crate::request::wrong_result().into());
+                };
+                project(&found)
             })?;
         Ok(Some(answer))
     })?)
+}
+
+fn project(found: &thinkthen::CompleteFound<thinkthen::QuestionInput>) -> Result<String, Failure> {
+    let selected = match found.selection() {
+        thinkthen::FindSelection::Unit(at) => Some(at),
+        thinkthen::FindSelection::None => None,
+    };
+    let candidates = found.candidates();
+    let winner = match selected {
+        Some(at) => candidates.get(at),
+        None => candidates.last().filter(|candidate| candidate.is_none()),
+    }
+    .ok_or_else(|| Failure::defect("a find answer selected no candidate"))?;
+    let candidates: Vec<_> = candidates
+        .iter()
+        .enumerate()
+        .map(|(at, candidate)| {
+            serde_json::json!({
+                "index": candidate.input().map(|_| at),
+                "probability": candidate.probability(),
+            })
+        })
+        .collect();
+    Ok(serde_json::json!({
+        "index": selected,
+        "value": found.selected().map(|unit| match unit {
+            thinkthen::QuestionInput::Text(text) => Ok(text.as_str()),
+            thinkthen::QuestionInput::Record(record) => record.original().literal()
+                .ok_or_else(|| Failure::defect("a find unit lost its text")),
+            _ => Err(Failure::defect("a find unit held no text")),
+        }).transpose()?,
+        "probability": winner.probability(),
+        "candidates": candidates,
+    })
+    .to_string())
 }

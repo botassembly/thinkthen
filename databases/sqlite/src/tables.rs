@@ -240,9 +240,22 @@ impl Table for Recognizer {
             } else {
                 options
             };
-            Ok(engine.recognize_with(&ask, &evidence, options)?)
-        })?
-        .into_value();
+            let call = crate::request::run(
+                engine,
+                thinkthen::RequestFunction::Recognize,
+                ask.into(),
+                vec![crate::request::text(evidence)],
+                options,
+            )?;
+            match call.into_value() {
+                thinkthen::RequestValue::Recognized(rows) => rows
+                    .into_iter()
+                    .next()
+                    .map(|row| row.result().value().clone())
+                    .ok_or_else(|| crate::request::wrong_result().into()),
+                _ => Err(crate::request::wrong_result().into()),
+            }
+        })?;
         found
             .entities()
             .iter()
@@ -418,9 +431,24 @@ impl Table for Relater {
             } else {
                 options
             };
-            Ok(engine.relate_with(&ask, entities, options)?)
-        })?
-        .into_value();
+            let items = entities
+                .into_iter()
+                .map(|entity| {
+                    crate::request::json(json!({"name":entity.name(), "kind":entity.kind()}))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let call = crate::request::run(
+                engine,
+                thinkthen::RequestFunction::Relate,
+                ask.into(),
+                items,
+                options,
+            )?;
+            match call.into_value() {
+                thinkthen::RequestValue::Related(row) => Ok(row.result().value().to_vec()),
+                _ => Err(crate::request::wrong_result().into()),
+            }
+        })?;
         let mut rows = Vec::new();
         for edge in &edges {
             let held =

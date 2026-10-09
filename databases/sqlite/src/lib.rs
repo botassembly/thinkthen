@@ -28,6 +28,7 @@ mod many;
 mod question;
 mod rank_set;
 mod recognize_document;
+mod request;
 mod scalars;
 mod settings;
 mod tables;
