@@ -1,26 +1,9 @@
-"""ThinkThen from Python: ``import thinkthen as tt``.
+"""Ten named calls over the canonical native Request session.
 
-Ten verbs, ``details``, ``question``, ``plan``, and ``usage``. Omitting an input
-captures an immutable Judge. Applying it to an ordered collection is eager;
-only a true iterator returns a lazy Stream. ``None`` means "not sure".
-``decide``, ``choose``, ``score``, and ``tag`` also take a Polars or pandas
-``Series`` and give one back, and
-``annotate`` and ``recognize`` take a Polars or pandas ``DataFrame`` with
-``on=``. The engine makes one call over a column. A pandas answer keeps the
-caller's index and name, and a pandas frame gets new columns: one per question
-from ``annotate``, and ``names`` from ``recognize``. This package never imports
-Polars or pandas. Every call reaches the real engine on its own worker
-thread, so Ctrl-C stops it at once and raises ``Cancelled``, a subclass of
-both ``KeyboardInterrupt`` and ``ThinkThenError``.
-
-The module functions use one engine configured by the environment
-(``THINKTHEN_BASE_URL``, ``THINKTHEN_CACHE``, and the rest). ``tt.Engine``
-takes the settings as keywords and has the same methods.
-
-Every verb takes ``deadline_ms``, in whole milliseconds from call start,
-and ``token``, a ``CancelToken`` any thread can set to stop the call.
-Omit ``deadline_ms`` or pass -1 for no deadline. Zero is spent and sends
-nothing. The old ``deadline=`` spelling raises ``UsageError``.
+Ordinary direct calls return Result with an ordinary value, generated owned
+complete results, and native final facts. Engine.asyncio mirrors those calls.
+Engine context exit closes active sessions. Curried Judge and frame calls
+retain their compatibility implementation until their migration.
 """
 
 import json
@@ -52,12 +35,13 @@ from ._thinkthen import (
 from .judge import Judge, make as _make_judge
 from .stream import Stream
 from . import _frames
+from ._calls import Result
 from .files import FileSelection, SourceRecord, Located, read_files
 from .files import call as _source_call, spec_source as _source_spec
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
-    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
+    "Call", "Result", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
     "annotate", "choose", "decide", "details", "filter",
     "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
@@ -365,7 +349,7 @@ class Engine:
     takes ``labels``.
     """
 
-    __slots__ = ("_engine", "_settings_json")
+    __slots__ = ("_engine", "_settings_json", "_sessions")
 
     def __setattr__(self, name, value):
         if hasattr(self, name):
@@ -376,6 +360,7 @@ class Engine:
                  batch=None,
                  max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None,
                  record=None, replay=None, profile=None):
+        self._sessions = set()
         self._engine = _thinkthen._Engine(
             backend=backend, base_url=base_url, model=model, throttle=throttle,
             batch=batch,
@@ -392,6 +377,28 @@ class Engine:
 
     def __repr__(self):
         return "Engine()"
+
+    @property
+    def asyncio(self):
+        from ._calls import AsyncCalls
+        return AsyncCalls(self)
+
+    def close(self):
+        failure = None
+        for operation in tuple(self._sessions):
+            try: operation.cancel()
+            except Exception as error:
+                if failure is None: failure = error
+        if failure is not None: raise failure
+
+    def __enter__(self): return self
+    def __exit__(self, *args): self.close()
+    async def __aenter__(self): return self
+    async def __aexit__(self, *args): self.close()
+
+    def _named(self, verb, question, value, **controls):
+        from ._calls import call
+        return call(self, verb, question, value, controls)
 
     @property
     def complete(self):
@@ -425,6 +432,8 @@ class Engine:
         return self._judged("filter", question, records, token, keywords)
 
     def _judged(self, verb, question, value, token, keywords):
+        if value is not _MISSING and not _frames.is_series(value):
+            return self._named(verb, question, value, token=token, **keywords)
         fields = dict(keywords)
         deadline_ms = fields.pop("deadline_ms", _MISSING)
         if value is _MISSING and (deadline_ms is not _MISSING or token is not None):
@@ -464,6 +473,12 @@ class Engine:
 
         ``question`` is the question text. ``top`` keeps the first entries.
         """
+        if not _frames.is_series(records):
+            controls = dict(legacy)
+            for key, item in dict(top=top, batch=batch, context=context).items():
+                if item is not None: controls[key] = item
+            if deadline_ms is not _MISSING: controls["deadline_ms"] = deadline_ms
+            return self._named('rank', question, records, token=token, **controls)
         deadline_ms = _due_keyword(deadline_ms, legacy)
         if isinstance(records, FileSelection):
             asked = _ordering(question, "rank")
@@ -485,6 +500,10 @@ class Engine:
         """The unit that answers the question best, as ``{"index", "unit",
         "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
         a none candidate, as ``find --none`` does."""
+        if not _frames.is_series(units):
+            controls = dict(legacy, none=none, token=token)
+            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+            return self._named('find', question, units, **controls)
         if not isinstance(none, bool):
             raise UsageError("none is True or False")
         asked = _ordering(question, "find")
@@ -520,6 +539,12 @@ class Engine:
         holds a question-to-failure map for partial rows and null otherwise.
         A pandas frame keeps its index. A question named as a column is refused first.
         """
+        if on is None and not _frames.is_series(records):
+            controls = dict(legacy, token=token)
+            for key, item in dict(batch=batch, context=context).items():
+                if item is not None: controls[key] = item
+            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+            return self._named('annotate', questions, records, **controls)
         deadline_ms = _due_keyword(deadline_ms, legacy)
         if context is not None:
             raise UsageError("annotate does not take a shared context")
@@ -566,6 +591,16 @@ class Engine:
         ``names`` column: one list per row of ``dict`` with those fields but
         ``row``. Relations take one text.
         """
+        if on is None and not _frames.is_series(text):
+            controls = dict(legacy, token=token)
+            if ask is None:
+                controls.update(kinds=kinds or [], relations=relations, either=either, descriptions=descriptions)
+                if instructions is not None: controls['instructions'] = instructions
+                if entity_definition is not None: controls['entity_definition'] = entity_definition
+            for key, item in dict(threshold=threshold, relation_threshold=relation_threshold).items():
+                if item is not None: controls[key] = item
+            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+            return self._named('recognize', ask, text, **controls)
         deadline_ms = _due_keyword(deadline_ms, legacy)
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
@@ -621,6 +656,12 @@ class Engine:
         named by its ``text``. ``relations`` and ``either`` read as for
         ``recognize``.
         """
+        if not _frames.is_series(entities):
+            controls = dict(legacy, token=token)
+            if ask is None: controls.update(relations=relations, either=either)
+            if threshold is not None: controls['threshold'] = threshold
+            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+            return self._named('relate', ask, entities, **controls)
         deadline_ms = _due_keyword(deadline_ms, legacy)
         if ask is not None:
             spec = _spec(_thinkthen._Relate, ask)
@@ -656,6 +697,7 @@ def _engine():
         engine = Engine.__new__(Engine)
         engine._engine = _thinkthen._Engine._process()
         engine._settings_json = None
+        engine._sessions = set()
         _process = engine
     return _process
 
@@ -685,6 +727,8 @@ def filter(question, records=_MISSING, *, token=None, **keywords):
 
 
 def _module_judged(verb, question, value, token, keywords):
+    if value is not _MISSING:
+        return getattr(_engine(), verb)(question, value, token=token, **keywords)
     fields = dict(keywords)
     deadline_ms = fields.pop("deadline_ms", _MISSING)
     if value is _MISSING and (deadline_ms is not _MISSING or token is not None):
