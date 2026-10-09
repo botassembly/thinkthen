@@ -4,6 +4,9 @@ use pgrx::datum::Json;
 use pgrx::prelude::*;
 use thinkthen::Surface;
 
+#[path = "../../sqlite/src/complete/request.rs"]
+mod request;
+
 fn invoke(
     verb: &'static str,
     question: Option<&str>,
@@ -28,24 +31,30 @@ fn invoke(
             }
             None => crate::complete_native::prepare(verb, question, &settings)?,
         };
-        let inputs = crate::complete_native::Inputs::parse(inputs, false)?;
+        // Retain PostgreSQL's client-reader restriction before enabling deferred native inputs.
+        crate::complete_native::Inputs::parse(inputs, false)?;
+        let inputs = crate::complete_native::Inputs::parse_request(inputs)?;
+        let request = request::admit(&prepared)?;
         let call = call::read_result()?.with_settings(&settings)?;
-        Ok::<_, thinkthen::Error>((prepared, inputs, call))
+        Ok::<_, thinkthen::Error>((prepared, inputs, request, call))
     })();
     let result = match prepared {
         Err(error) => crate::complete_native::admission(&error),
-        Ok((prepared, inputs, call)) => match call::run_result(call, move |engine, options| {
-            Ok(crate::complete_native::run(
-                engine,
-                &prepared,
-                inputs,
-                options,
-                Surface::Postgresql,
-            ))
-        }) {
-            Ok(value) => value,
-            Err(error) => crate::complete_native::admission(&error),
-        },
+        Ok((prepared, inputs, request, call)) => {
+            match call::run_result(call, move |engine, options| {
+                Ok(request::run(
+                    engine,
+                    &prepared,
+                    &request,
+                    inputs,
+                    options,
+                    Surface::Postgresql,
+                ))
+            }) {
+                Ok(value) => value,
+                Err(error) => crate::complete_native::admission(&error),
+            }
+        }
     };
     Some(Json(result))
 }

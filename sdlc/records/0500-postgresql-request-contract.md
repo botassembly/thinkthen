@@ -2,6 +2,12 @@
 
 The adapter starts from `ee9b233f8`. PostgreSQL reads saved questions on the backend thread through its existing role, descriptor, regular-file, link, size and confinement checks. A typed Request receives the admitted definition and caller-owned evidence. PostgreSQL keeps its SQL key, row-id and NULL projections. Evidence paths remain the native client-reader workaround.
 
+## Complete bridge
+
+The PostgreSQL complete adapter includes the reviewed shared SQL Request bridge and calls its admission and execution functions directly. Backend-thread saved-question checks remain before worker execution. The existing `Inputs::parse(inputs, false)` authority guard refuses server evidence and image paths before `Inputs::parse_request` enables deferred native readers; this reuses the existing rule and performs an extra parse without widening file access. A future shared parser parameter can remove that extra parse after review.
+
+The installed PostgreSQL cases extend the existing complete-call boundary with eager declaration failure at record two, incremental malformed-image prefixes, annotation selection before schema checks, retained false filter observations and original ordinals, and zero-send descriptor and server-file refusals. They reuse the installed typed SQL child checks and counted owned loopback helper. The full shared parity and owning-facts checks remain in the same gate.
+
 ## Shared legacy result conversion
 
 Complete atomic results retain `core::result::complete::Atomic::legacy`, a native `DecisionResult`. That carrier owns the question, threshold, primitive value, probabilities, nearest level and metadata. `public/complete/records.rs` deliberately supplies no input when it constructs the atomic carrier; the enclosing `CompleteRecord` owns the original. Converting only the atomic result cannot reproduce a legacy record document.
@@ -20,7 +26,7 @@ For PostgreSQL details and try-details, context-free single-text calls use the a
 
 ### Proposed source claim
 
-The shared implementation claim is limited to `crates/thinkthen/src/public/results.rs` for registering the conversion module, `crates/thinkthen/src/public/results/legacy.rs` for the private constructor and four atomic and four record methods, `crates/thinkthen/src/public/results/complete_annotation.rs` for the annotation projection, `crates/thinkthen/src/core/result/meta.rs` for the private cached accessor, and `crates/thinkthen/src/core/result.rs` for the private annotation-value accessor. Regression cases belong in `crates/thinkthen/tests/request_legacy_projection.rs`, using the existing isolated engine and counted loopback helpers. No executor, admission, scheduler, schema or generated binding implementation changes belong to this seam. PostgreSQL changes remain in `databases/postgresql/**`; this record remains the sole design and lessons document.
+The shared implementation claim is limited to `crates/thinkthen/src/public/results.rs` for registering the conversion module, `crates/thinkthen/src/public/results/legacy.rs` for the private constructor and four atomic and four record methods, `crates/thinkthen/src/public/results/complete_annotation.rs` for the annotation projection, `crates/thinkthen/src/core/result/meta.rs` for the private cached accessor, and `crates/thinkthen/src/core/result.rs` for the private annotation-value accessor. Regression cases belong in `crates/thinkthen/tests/request_legacy_projection.rs`, using the existing isolated engine and counted loopback helpers; `sdlc/ratchet.json` records the resulting measured source ceiling. No executor, admission, scheduler, schema or generated binding implementation changes belong to this seam. PostgreSQL changes remain in `databases/postgresql/**`; this record remains the sole design and lessons document.
 
 ### Exact regression cases
 

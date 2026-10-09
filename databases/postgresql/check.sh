@@ -1556,6 +1556,7 @@ complete_cases() {
     export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
     sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
     sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
+    sh "$LIMIT" 300 python3 tests/complete_request_cases.py
 }
 check complete_cases
 
