@@ -10,9 +10,8 @@ int main(int argc, char **argv) {
     /* The second response stays held while the deadline stops the call. */
     char *out = thinkthen_call_opts(engine, argv[1], 1000, NULL);
     int failed = out != NULL || thinkthen_error_code(engine) != THINKTHEN_EDEADLINE;
-    /* A fresh relative deadline on the second record would report 1 s.
-       The absolute source deadline instead carries only its remaining budget. */
-    failed |= strstr(thinkthen_error_message(engine), "the deadline of 1 s ") != NULL;
+    /* A started deadline retains its configured budget and expiration. */
+    failed |= strcmp(thinkthen_error_message(engine), "the deadline of 1 s passed before the call answered") != 0;
     if (failed) fprintf(stderr, "code %d: %s\n", thinkthen_error_code(engine), thinkthen_error_message(engine));
     const char *facts = thinkthen_error_facts_json(engine);
     if (facts) puts(facts);

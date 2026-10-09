@@ -252,7 +252,7 @@ fn request_originals_and_cache_metadata_survive_owning_projections() {
 }
 
 #[test]
-fn explicit_saved_batch_tuning_and_opt_in_attempts_survive_native_projection() {
+fn saved_batch_without_threshold_and_opt_in_attempts_survive_native_projection() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
     let loaded =
@@ -272,10 +272,7 @@ fn explicit_saved_batch_tuning_and_opt_in_attempts_survive_native_projection() {
         .unwrap()
         .unwrap();
     assert_eq!(documents(&details), documents(native.value()));
-    assert_eq!(
-        documents(&details).0["meta"]["batch_warning"],
-        json!({"running":"max","tuned_for":2})
-    );
+    assert!(documents(&details).0["meta"].get("batch_warning").is_none());
     let q = Question::decide("Fits?").unwrap().cut();
     let call = engine
         .decide_records_complete_with(&q, [record()], controls.attempts(true))
