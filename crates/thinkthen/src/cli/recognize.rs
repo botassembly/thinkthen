@@ -23,6 +23,8 @@ use crate::schedule;
 mod config;
 mod dry_run;
 mod examples;
+#[cfg(test)]
+mod legacy_schema;
 mod source;
 
 #[cfg(test)]
@@ -35,6 +37,7 @@ pub(crate) struct Detailed<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<Record>,
     question: &'a RecognizeSpec,
+    #[schemars(with = "legacy_schema::RecognitionOdds")]
     answer: &'a Probabilities,
     meta: Meta,
 }

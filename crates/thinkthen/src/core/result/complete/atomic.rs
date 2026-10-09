@@ -167,10 +167,10 @@ impl Atomic {
             source: self.source.as_ref(),
             question_name,
             members,
-            question: crate::core::declaration::ReadableQuestion {
-                question: &row.question,
-                metadata: &self.declarations,
-            },
+            question: crate::core::declaration::ReadableQuestion::atomic(
+                &row.question,
+                &self.declarations,
+            ),
             answer: &row.answer,
             threshold: row.threshold,
             meta: CompleteMeta::of(&row.meta, &self.identity),

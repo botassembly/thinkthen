@@ -204,6 +204,10 @@ fn assert_expansion(
         written["value"][0]["target"]["record"]["private"],
         Value::Null
     );
+    for (edge, native) in written["value"].as_array().unwrap().iter().zip(edges) {
+        assert_eq!(edge["source"]["ordinal"], native.source().ordinal());
+        assert_eq!(edge["target"]["ordinal"], native.target().ordinal());
+    }
     assert_eq!(written["value"][1]["source"]["first_line"], 5);
     assert_eq!(written["value"][1]["source"]["file"], "renamed.jsonl");
     assert!(!format!("{edges:?}").contains("renamed.jsonl"));

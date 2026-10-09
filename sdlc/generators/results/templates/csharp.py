@@ -4,6 +4,9 @@ import re
 
 
 def name(value):
+    value = value.removeprefix('complete')
+    if value.startswith('ReadableQuestion'):
+        value = value.removeprefix('Readable')
     words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+',
                        value.removeprefix('complete'))
     return ''.join(word[0].upper() + word[1:] for word in words)
@@ -23,21 +26,51 @@ def enum_values(schema):
     return None
 
 
-def nullable(schema):
+def nullable(schema, definitions=None):
+    if isinstance(schema, bool):
+        return schema
+    if definitions and '$ref' in schema:
+        return nullable(definitions[schema['$ref'].removeprefix('#/$defs/')], definitions)
+    if schema.get('nullable_json'):
+        return True
     kinds = schema.get('type', [])
     return (kinds == 'null' or isinstance(kinds, list) and 'null' in kinds or
             any(item.get('type') == 'null' for item in schema.get('anyOf', [])))
 
 
 def shape(schema):
+    if schema is True:
+        return {}
     schema = dict(schema)
-    if 'variants' in schema:
+    if 'variants' in schema or 'primitive_variants' in schema:
         return schema
     if not enum_values(schema):
         if 'oneOf' in schema:
             raise ValueError(f'C# target needs a typed union for {schema}')
         if 'anyOf' in schema:
+            if any(item is True or item == {} for item in schema['anyOf']):
+                return {}
             variants = [item for item in schema['anyOf'] if item.get('type') != 'null']
+            kinds = [variant.get('type') for variant in variants]
+            # Native judgments have disjoint JSON kinds, with null repeated by
+            # unresolved decide and choose readings. Missing stays at the member edge.
+            alternatives = []
+            for variant in variants:
+                source = dict(variant)
+                kinds_here = source.get('type')
+                if isinstance(kinds_here, list):
+                    kinds_here = [kind for kind in kinds_here if kind != 'null']
+                    if len(kinds_here) == 1:
+                        source['type'] = kinds_here[0]
+                alternatives.append(source)
+            native_kinds = [variant.get('type') for variant in alternatives]
+            if (len(native_kinds) == 4 and
+                    set(native_kinds) == {'boolean', 'string', 'number', 'array'}):
+                return {**schema, 'primitive_variants': native_kinds,
+                        'primitive_schemas': dict(zip(native_kinds, alternatives))}
+            if len(kinds) == 2 and set(kinds) == {'integer', 'string'}:
+                return {**schema, 'primitive_variants': kinds,
+                        'primitive_schemas': dict(zip(kinds, variants))}
             if len(variants) != 1:
                 raise ValueError(f'C# target needs a typed union for {schema}')
             return shape(variants[0])
@@ -53,7 +86,7 @@ def shape(schema):
 
 def conversion(schema, definitions, expression='member', depth=0):
     schema = shape(schema)
-    if schema == {}:
+    if schema is True or schema == {}:
         # An explicitly unrestricted authored value owns arbitrary JSON content.
         return 'JsonElement', f'{expression}.Clone()'
     if '$ref' in schema:
@@ -80,12 +113,14 @@ def conversion(schema, definitions, expression='member', depth=0):
             f'new ReadOnlyDictionary<string, {element}>({expression}.EnumerateObject()'
             f'.ToDictionary({entry} => {entry}.Name, {entry} => {decode}, StringComparer.Ordinal))')
     if kind == 'array':
-        if nullable(schema['items']):
+        if nullable(schema['items']) and shape(schema['items']) != {}:
             raise ValueError('C# target needs a nullable array item alternative')
         item = f'item{depth}'
         element, decode = conversion(schema['items'], definitions, item, depth + 1)
         return f'IReadOnlyList<{element}>', (
             f'Array.AsReadOnly({expression}.EnumerateArray().Select({item} => {decode}).ToArray())')
+    if kind == 'null':
+        return 'JsonElement', f'{expression}.Clone()'
     if kind == 'integer':
         integers = {'uint16': ('ushort', 'GetUInt16'),
                     'uint32': ('uint', 'GetUInt32'),
@@ -133,7 +168,7 @@ public abstract class ResultObject
 {
     private readonly JsonElement document;
     protected ResultObject(JsonElement document) { this.document = document.Clone(); }
-    protected JsonElement Required(string name) => document.GetProperty(name);
+    protected JsonElement RequiredElement(string name) => document.GetProperty(name);
     protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
     {
         if (!document.TryGetProperty(name, out var member)) return default;
@@ -165,7 +200,7 @@ def render(definitions):
         if 'variants' in schema:
             chunks.append(render_union(kind, schema['variants'], definitions))
         elif 'primitive_variants' in schema:
-            chunks.append(render_primitive_union(kind, schema['primitive_variants'], definitions))
+            chunks.append(render_primitive_union(kind, schema['primitive_variants'], definitions, schema.get('primitive_schemas', {})))
         elif values:
             chunks.append(f'public readonly record struct {kind}(string Value)\n{{\n')
             for value in values:
@@ -175,14 +210,16 @@ def render(definitions):
             chunks.append(f'public sealed class {kind} : {parents.get(key, "ResultObject")}\n{{\n'
                           f'    public {kind}(JsonElement document) : base(document) {{ }}\n')
             for member, field in schema['properties'].items():
-                optional = member not in schema.get('required', []) or nullable(field)
+                optional = member not in schema.get('required', []) or nullable(field, definitions)
                 field_type, decode = conversion(field, definitions)
                 prop = name(member)
+                if prop == kind:
+                    prop += "Value"
                 if optional:
                     chunks.append(f'    public Presence<{field_type}> {prop} => '
                                   f'Optional<{field_type}>({quote(member)}, member => {decode});\n')
                 else:
-                    _, required_decode = conversion(field, definitions, f'Required({quote(member)})')
+                    _, required_decode = conversion(field, definitions, f'RequiredElement({quote(member)})')
                     chunks.append(f'    public {field_type} {prop} => {required_decode};\n')
             chunks.append('}\n\n')
         else:
@@ -191,7 +228,7 @@ def render(definitions):
     return ''.join(chunks)
 
 
-def render_primitive_union(kind, variants, definitions):
+def render_primitive_union(kind, variants, definitions, schemas):
     chunks = [f'public abstract class {kind}\n{{\n'
               '    private readonly JsonElement document;\n'
               f'    protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
@@ -201,12 +238,15 @@ def render_primitive_union(kind, variants, definitions):
               '    public string ToJsonString() => document.GetRawText();\n'
               f'    public static {kind} Read(JsonElement document) => document.ValueKind switch\n    {{\n']
     for variant in variants:
-        token = {'number': 'Number', 'string': 'String'}[variant]
-        chunks.append(f'        JsonValueKind.{token} => new {kind}{name(variant)}(document),\n')
+        tokens = {'number': ('Number',), 'integer': ('Number',), 'string': ('String',),
+                  'boolean': ('True', 'False'), 'array': ('Array',),
+                  'object': ('Object',), 'null': ('Null',)}[variant]
+        for token in tokens:
+            chunks.append(f'        JsonValueKind.{token} => new {kind}{name(variant)}(document),\n')
     chunks.append('        _ => throw new JsonException("Unknown primitive result variant.")\n'
                   '    };\n}\n\n')
     for variant in variants:
-        native, decode = conversion({'type': variant}, definitions, 'Document')
+        native, decode = conversion(schemas.get(variant, {'type': variant}), definitions, 'Document')
         chunks.append(f'public sealed class {kind}{name(variant)} : {kind}\n{{\n'
                       f'    public {kind}{name(variant)}(JsonElement document) : base(document) {{ }}\n'
                       f'    public {native} Value => {decode};\n}}\n\n')
@@ -215,6 +255,8 @@ def render_primitive_union(kind, variants, definitions):
 
 def kind_test(schema, definitions, expression):
     schema = shape(schema)
+    if schema == {}:
+        return 'true'
     if '$ref' in schema:
         return kind_test(definitions[schema['$ref'].removeprefix('#/$defs/')],
                          definitions, expression)
@@ -233,6 +275,24 @@ def render_union(kind, variants, definitions):
               f'        {kind}? result = null;\n']
     for variant, (mode, member, value) in variants:
         test = f'document.TryGetProperty({quote(member)}, out var tag{name(variant)})'
+        if mode == 'literals':
+            tests = []
+            for index, (tag, literal) in enumerate(value.items()):
+                variable = f'tag{name(variant)}{index}'
+                tests.append(f'document.TryGetProperty({quote(tag)}, out var {variable})'
+                             f' && {variable}.ValueKind == JsonValueKind.String'
+                             f' && {variable}.GetString() == {quote(literal)}')
+            test = ' && '.join(tests)
+        if mode == 'structure':
+            tests = []
+            for index, tag in enumerate(value['required']):
+                variable = f'tag{name(variant)}{index}'
+                expected = kind_test(definitions[variant]['properties'][tag], definitions, variable)
+                tests.append(f'document.TryGetProperty({quote(tag)}, out var {variable})'
+                             f' && ({expected})')
+            tests.extend(f'!document.TryGetProperty({quote(tag)}, out _)'
+                         for tag in value['excluded'])
+            test = ' && '.join(tests)
         if mode == 'literal':
             test += (f' && tag{name(variant)}.ValueKind == JsonValueKind.String'
                      f' && tag{name(variant)}.GetString() == {quote(value)}')

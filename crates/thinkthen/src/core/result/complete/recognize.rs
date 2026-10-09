@@ -46,7 +46,7 @@ pub(crate) struct Document<'a, T: Serialize, V: Serialize = RecognizedValue> {
     index: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     source: Option<&'a super::wire::PhysicalSource>,
-    question: crate::core::declaration::ReadableQuestion<
+    question: crate::core::declaration::SemanticReadableQuestion<
         'a,
         crate::core::recognize_file::QuestionDocument<'a>,
     >,
@@ -84,10 +84,10 @@ impl Recognition {
             answer_id: self.identity.answer_id(),
             value,
             input,
-            question: crate::core::declaration::ReadableQuestion {
-                question: &self.question.document(),
-                metadata: &self.question.metadata,
-            },
+            question: crate::core::declaration::SemanticReadableQuestion::semantic(
+                &self.question.document(),
+                &self.question.metadata,
+            ),
             answer: &self.answer,
             meta: CompleteMeta::of(&self.meta, &self.identity),
         }

@@ -199,6 +199,111 @@ static class Conformance
         catch (JsonException) { }
     }
 
+    static void NativePresentation(JsonObject fixture)
+    {
+        var questions = fixture["native_presentation"]!["questions"]!.AsArray();
+        var choice = (QuestionChoose)Read(questions[0]!, Question.Read);
+        Check(choice.Options.SequenceEqual(new[] { "second", "first" }), "native choice order survives");
+        Check(choice.LabelDetails.Value[0].Description.Value.GetProperty("z").ValueKind == JsonValueKind.Null && choice.LabelDetails.Value[1].Description.State == PresenceState.Missing, "native description content and absence survive");
+        Check(choice.Model.Value == "fixed" && choice.Profile.Value == "authored" && choice.Batch.Value is BatchString maximum && maximum.Value == "max" && choice.On.Value.Single() == "", "native authored reading survives");
+        var score = (QuestionScore)Read(questions[1]!, Question.Read);
+        Check(score.Levels.SequenceEqual(new[] { "low", "high" }) && score.LabelDetails.Value[0].Description.Value.GetString() == "Lower." && score.LabelDetails.Value[1].Description.Value.GetString() == "Higher.", "native typed score retains descriptions");
+        var nullScore = (QuestionScore)Read(questions[2]!, Question.Read);
+        Check(nullScore.LabelDetails.Value[0].Description.State == PresenceState.Null && nullScore.LabelDetails.Value[1].Description.Value.ValueKind == JsonValueKind.Array, "native null score description differs from absence");
+        var tag = (QuestionTag)Read(questions[3]!, Question.Read);
+        Check(tag.LabelDetails.Value[0].Description.Value.GetString() == "Topic." && tag.LabelDetails.Value[1].Description.State == PresenceState.Missing, "native tag retains described and bare labels");
+        var decision = (QuestionDecide)Read(questions[4]!, Question.Read);
+        Check(decision.Model.Value == "fixed" && decision.Profile.State == PresenceState.Missing && decision.Batch.Value is BatchInteger records && records.Value == 2 && decision.On.Value.Single() == "", "native numeric batch and absent profile survive");
+        Check(decision.ItemSchema.Value is InputDeclarationString, "native declared input remains typed");
+        for (var at = 0; at < questions.Count; at++) Retains(questions[at]!, Read(questions[at]!, Question.Read));
+        var endpoints = fixture["native_presentation"]!["endpoints"]!.AsArray();
+        for (var at = 0; at < endpoints.Count; at++)
+        {
+            var endpoint = Read(endpoints[at]!, value => new SourceRelationEndpoint(value));
+            Check(endpoint.Ordinal == (ulong)new[] { 0, 1, 2, 1 }[at], "native endpoint ordinal survives duplicate expansion");
+            Retains(endpoints[at]!, endpoint);
+        }
+    }
+
+    static void NativeSessionPackets(string path)
+    {
+        var packets = File.ReadLines(path).SelectMany(line => JsonNode.Parse(line)!.AsArray()).ToArray();
+        var sawMissing = false;
+        var sawNull = false;
+        var sawPartial = false;
+        var sawWhole = false;
+        var sawBoundary = false;
+        foreach (var source in packets)
+        {
+            var packet = Read(source!, SessionPacket.Read);
+            Retains(source!, packet);
+            var extended = source!.DeepClone().AsObject();
+            extended["future"] = JsonNode.Parse("{\"nested\":[null,false,0]}");
+            Retains(extended, Read(extended, SessionPacket.Read));
+            if (packet is SessionPacketObservation observed && observed.Value is SessionObservationQuestion question)
+            {
+                var original = source["value"]!["detail"]!;
+                var detail = question.Detail;
+                Retains(original, detail);
+                Retains(original["question"]!, detail.Question);
+                var expected = original.AsObject();
+                var value = expected["value"];
+                var state = !expected.ContainsKey("value") ? PresenceState.Missing : value is null ? PresenceState.Null : PresenceState.Value;
+                Check(detail.Value.State == state, "actual native detail value retains missing and unresolved null");
+                sawMissing |= state == PresenceState.Missing;
+                sawNull |= state == PresenceState.Null;
+                if (state == PresenceState.Value)
+                    Check(JsonNode.DeepEquals(value, detail.Value.Value.ToPlain()), "native primitive judgment survives typed conversion");
+                if (detail.ReportedUsage.State == PresenceState.Value)
+                {
+                    var usage = detail.ReportedUsage.Value;
+                    Retains(original["reported_usage"]!, usage);
+                    sawPartial |= usage.InputTokens.State == PresenceState.Missing || usage.OutputTokens.State == PresenceState.Missing;
+                }
+                var future = original.DeepClone().AsObject();
+                future["future"] = JsonNode.Parse("{\"owned\":[null,false,0]}");
+                future["question"]!["future"] = JsonNode.Parse("{\"inside\":[0,null]}");
+                var owned = Read(future, node => new SessionQuestionDetail(node));
+                Retains(future, owned);
+                Retains(future["question"]!, owned.Question);
+                future["future"] = null;
+                Check(owned.ToPlain()["future"] is JsonObject, "caller mutation leaves the owned event intact");
+            }
+            if (packet is SessionPacketRecognizeAggregate recognized)
+            {
+                var result = recognized.Value.Single();
+                var original = source["value"]![0]!;
+                Retains(original, result);
+                Retains(original["answer"]!, result.Answer);
+                Retains(original["value"]!, result.Value);
+                sawWhole |= result.Answer is RecognitionOddsFieldsNamesPairsPiecesProposals;
+                sawBoundary |= result.Answer is RecognitionOddsFieldsPiecesProposals;
+                var future = original["answer"]!.DeepClone().AsObject();
+                future["future"] = JsonNode.Parse("{\"owned\":[null,false,0]}");
+                Retains(future, Read(future, RecognitionOdds.Read));
+                if (future.ContainsKey("names"))
+                {
+                    future.Remove("pairs");
+                    try { Read(future, RecognitionOdds.Read); throw new Exception("partial known recognition alternative accepted"); }
+                    catch (JsonException) { }
+                }
+                else
+                {
+                    future["names"] = new JsonArray();
+                    try { Read(future, RecognitionOdds.Read); throw new Exception("partial whole recognition extension accepted"); }
+                    catch (JsonException) { }
+                }
+            }
+        }
+        Check(sawMissing && sawNull && sawPartial && sawWhole && sawBoundary, "actual native packets cover failure, null, partial usage and both recognition modes");
+        foreach (var malformed in new[] { "{\"kind\":\"future\"}", "{\"kind\":\"row\",\"function\":null}", "{\"kind\":\"row\",\"function\":\"future\"}" })
+        {
+            using var document = JsonDocument.Parse(malformed);
+            try { SessionPacket.Read(document.RootElement); throw new Exception("unknown packet tag accepted"); }
+            catch (JsonException) { }
+        }
+    }
+
     public static void Main(string[] args)
     {
         var fixture = JsonNode.Parse(File.ReadAllText(args[0]))!.AsObject();
@@ -243,6 +348,8 @@ static class Conformance
                 Retains(source!, nativeMember);
             }
         }
+        if (args.Length > 2) NativeSessionPackets(args[2]);
+        NativePresentation(fixture);
         Variants(fixture);
         RoundTrip(fixture["facts"]!);
         // Final failure facts use exactly the same generated carrier.

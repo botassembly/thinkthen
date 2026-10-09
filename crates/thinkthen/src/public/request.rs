@@ -13,6 +13,8 @@ mod session;
 mod session_queue;
 mod session_result;
 #[cfg(test)]
+pub(crate) use session_result::SessionPacketDocument;
+#[cfg(test)]
 mod tests;
 pub(crate) mod transport;
 use super::{Error, LoadedQuestion};
@@ -27,7 +29,7 @@ pub use result::{RequestOutcome, RequestValue};
 use serde::{Deserialize, Serialize};
 pub use session::{
     RequestReaderFailure, RequestSession, RequestSessionDescriptor, RequestSessionPush,
-    RequestSessionRead,
+    RequestSessionPushStatus, RequestSessionRead,
 };
 pub use session_result::{RequestSessionResult, RequestSessionRow, RequestSessionTerminal};
 use std::path::PathBuf;

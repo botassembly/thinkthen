@@ -40,12 +40,14 @@ def graph(schema, roots):
     return dict(sorted(selected.items()))
 
 
-def object_variants(schema):
+def object_variants(schema, definitions):
     """Separate object alternatives from assertions on an existing object."""
     if 'oneOf' in schema and 'anyOf' in schema:
         raise ValueError('combined object unions need a typed alternative')
     alternatives = schema.get('oneOf', schema.get('anyOf', []))
-    if not alternatives:
+    alternatives = [definitions[item['$ref'].removeprefix('#/$defs/')]
+                    if '$ref' in item else item for item in alternatives]
+    if len(alternatives) < 2:
         return None
     if 'properties' in schema and all(assertion(item) for item in alternatives):
         return None
@@ -76,10 +78,25 @@ def discriminator(variants, definitions):
     common = set.intersection(*(set(item.get('required', [])) for item in variants))
     for member in sorted(common):
         fields = [item['properties'][member] for item in variants]
+        fields = [definitions[field['$ref'].removeprefix('#/$defs/')]
+                  if '$ref' in field else field for field in fields]
+        fields = [{'const': field['enum'][0]} if len(field.get('enum', [])) == 1
+                  else field for field in fields]
         if all(isinstance(field.get('const'), str) for field in fields):
             values = [field['const'] for field in fields]
             if len(set(values)) == len(values):
                 return [('literal', member, value) for value in values]
+    # Flattened Rust enum envelopes can require more than one closed tag.
+    literals = []
+    for item in variants:
+        fields = {member: item['properties'][member].get('const')
+                  for member in item.get('required', [])}
+        literals.append({member: value for member, value in fields.items()
+                         if isinstance(value, str)})
+    if all(literals) and all(
+            any(left.get(member) != right[member] for member in left.keys() & right.keys())
+            for index, left in enumerate(literals) for right in literals[index + 1:]):
+        return [('literals', '', fields) for fields in literals]
     tags = []
     for index, item in enumerate(variants):
         others = set.union(*(set(other.get('required', []))
@@ -88,9 +105,20 @@ def discriminator(variants, definitions):
         unique = {member for member in unique if
                   identity_field(item['properties'][member], definitions)}
         if len(unique) != 1:
-            raise ValueError('ambiguous object union discriminator')
+            break
         tags.append(('member', unique.pop(), None))
-    return tags
+    if len(tags) == len(variants):
+        return tags
+    # Native untagged alternatives can use required-key shapes. Excluding known
+    # sibling keys makes partial alternatives refuse instead of becoming extensions.
+    required = [set(item.get('required', [])) for item in variants]
+    if not all(required) or len({frozenset(fields) for fields in required}) != len(variants):
+        raise ValueError('ambiguous object union discriminator')
+    return [('structure', '', {
+        'required': sorted(fields),
+        'excluded': sorted(set.union(*(other for j, other in enumerate(required)
+                                      if j != index)) - fields),
+    }) for index, fields in enumerate(required)]
 
 
 def identity_field(field, definitions):
@@ -99,13 +127,105 @@ def identity_field(field, definitions):
     return field.get('type') == 'string' and 'pattern' in field
 
 
+def refinement(schema, source, definitions):
+    """Ignore value assertions only when they add no conversion members."""
+    if '$ref' in source:
+        source = definitions[source['$ref'].removeprefix('#/$defs/')]
+    if set(schema) <= {'const', 'type', 'maxItems', 'minItems', 'required', 'not'}:
+        return 'not' not in schema or refinement(schema['not'], source, definitions)
+    if set(schema) <= {'if', 'then', 'else'}:
+        return all(refinement(value, source, definitions) for value in schema.values())
+    if set(schema) == {'properties'}:
+        alternatives = [source] + source.get('oneOf', source.get('anyOf', []))
+        return all(any(member in alternative.get('properties', {}) and
+                       refinement(value, alternative['properties'][member], definitions)
+                       for alternative in alternatives)
+                   for member, value in schema['properties'].items())
+    if set(schema) <= {'properties', 'not', 'required'}:
+        return all(refinement({key: value}, source, definitions)
+                   for key, value in schema.items())
+    return False
+
+
+def json_alternatives(schema, definitions):
+    """Resolve native bare-value alternatives by disjoint JSON kinds."""
+    if '$ref' in schema:
+        source = definitions[schema['$ref'].removeprefix('#/$defs/')]
+        alternatives = json_alternatives(source, definitions)
+        return alternatives if alternatives and len(alternatives) > 1 else [schema]
+    if 'anyOf' in schema:
+        alternatives = [json_alternatives(item, definitions) for item in schema['anyOf']]
+        if all(alternatives):
+            return [item for group in alternatives for item in group]
+        return None
+    kinds = schema.get('type')
+    if isinstance(kinds, list):
+        return [{**schema, 'type': kind} for kind in kinds]
+    return [schema] if isinstance(kinds, str) else None
+
+
+def native_value_union(schema, definitions):
+    alternatives = json_alternatives(schema, definitions)
+    if not alternatives:
+        return None
+    selected = {}
+    for item in alternatives:
+        source = definitions[item['$ref'].removeprefix('#/$defs/')] if '$ref' in item else item
+        kind = source.get('type')
+        if kind in selected and kind != 'null':
+            return None
+        selected[kind] = item
+    if not {'boolean', 'string', 'number', 'array'} <= selected.keys():
+        return None
+    if selected.keys() - {'boolean', 'string', 'number', 'array', 'object', 'null'}:
+        return None
+    return {'primitive_variants': list(selected), 'primitive_schemas': selected,
+            'nullable_json': 'null' in selected}
+
+
+def lift_inline(definitions):
+    """Name nested object alternatives from their native schema position."""
+    definitions = dict(definitions)
+    pending = list(definitions)
+    seen = {}
+    def visit(value, path):
+        if isinstance(value, list):
+            return [visit(child, path + '_' + str(index)) for index, child in enumerate(value)]
+        if not isinstance(value, dict):
+            return value
+        if object_variants(value, definitions):
+            identity = json.dumps(value, sort_keys=True)
+            if identity not in seen:
+                key = path
+                if key in definitions:
+                    raise ValueError('colliding nested result alternative name')
+                seen[identity] = key
+                definitions[key] = value
+                pending.append(key)
+            return {'$ref': '#/$defs/' + seen[identity]}
+        return {key: visit(child, path + '_' + key) for key, child in value.items()}
+    while pending:
+        key = pending.pop()
+        source = definitions[key]
+        definitions[key] = {member: visit(value, key + '_' + member)
+                            for member, value in source.items()}
+    return definitions
+
+
 def prepare(definitions):
     """Derive reusable tagged object definitions without a target member inventory."""
+    definitions = lift_inline(definitions)
     result = {}
     for key, source in definitions.items():
         if 'allOf' in source:
-            raise ValueError('object intersections need an explicit typed representation')
-        variants = object_variants(source)
+            if not all(refinement(item, source, definitions) for item in source['allOf']):
+                raise ValueError('object intersections need an explicit typed representation')
+            source = {key: value for key, value in source.items() if key != 'allOf'}
+        native = native_value_union(source, definitions)
+        if native:
+            result[key] = native
+            continue
+        variants = object_variants(source, definitions)
         if variants is None:
             source = dict(source)
             if 'properties' in source:
@@ -116,7 +236,9 @@ def prepare(definitions):
             result[key] = source
             continue
         tags = discriminator(variants, definitions)
-        names = [key + '_' + (value if mode == 'literal' else member)
+        names = [key + '_' + (value if mode == 'literal' else
+                             '_'.join(value.values()) if mode == 'literals' else
+                             'fields_' + '_'.join(value['required']) if mode == 'structure' else member)
                  for mode, member, value in tags]
         if len(set(names)) != len(names) or any(name in definitions for name in names):
             raise ValueError('colliding generated object variant names')
@@ -132,7 +254,8 @@ def generated(schema):
     spec.loader.exec_module(target)
     roots = ('completeFacts', 'completeanswer', 'completefindAnswer',
              'completeCallError', 'completeRelationMember', 'completeObservation',
-             'completeUsage')
+             'completeUsage', 'completeReadableQuestion', 'completesourceRelationEndpoint',
+             'completesessionPacket')
     return target.render(prepare(graph(schema, roots)))
 
 

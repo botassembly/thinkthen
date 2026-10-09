@@ -83,7 +83,7 @@ struct EntryDocument<'a> {
     #[serde(flatten)]
     outcome: Outcome<'a>,
     request: &'a str,
-    question: &'a crate::core::Question,
+    question: crate::core::declaration::ReadableQuestion<'a, crate::core::Question>,
     threshold: crate::core::Threshold,
     question_sources: &'a [crate::core::QuestionSource],
     observations: &'a [crate::core::Observation],
@@ -130,7 +130,10 @@ impl Serialize for RelationEntry {
             target: self.target.as_ref(),
             outcome,
             request: &self.request,
-            question: &self.question,
+            question: crate::core::declaration::ReadableQuestion::atomic(
+                &self.question,
+                &crate::core::declaration::QuestionMetadata::default(),
+            ),
             threshold: self.threshold,
             question_sources: &self.sources,
             observations: &self.observations,
@@ -184,7 +187,7 @@ pub(crate) struct Document<'a, T: Serialize, V: Serialize = Vec<RelationEdge<Rel
     input: Option<&'a T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     index: Option<usize>,
-    question: crate::core::declaration::ReadableQuestion<
+    question: crate::core::declaration::SemanticReadableQuestion<
         'a,
         crate::core::relate_file::RelateQuestion<'a>,
     >,
@@ -221,10 +224,10 @@ impl Relation {
             answer_id: self.identity.answer_id(),
             value,
             input,
-            question: crate::core::declaration::ReadableQuestion {
-                question: &self.question.question(self.lines),
-                metadata: &self.question.metadata,
-            },
+            question: crate::core::declaration::SemanticReadableQuestion::semantic(
+                &self.question.question(self.lines),
+                &self.question.metadata,
+            ),
             answer: Answers {
                 questions: &self.members,
             },

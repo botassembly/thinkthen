@@ -156,6 +156,7 @@ fn msvc_asan_proves_instrumentation_before_ownership_checks() {
         "threads",
         "engines",
         "typed_facts",
+        "session",
         "atexit",
     ] {
         let backend = Backend::start().expect("backend");

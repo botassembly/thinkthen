@@ -20,6 +20,7 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
         generator
             .subschema_for::<crate::public::CompleteCall<'_, wire::AtomicDocument<'_, Value>>>(),
         generator.subschema_for::<crate::public::batch::CompletedPrefix<'_, wire::AtomicDocument<'_, Value>>>(),
+        generator.subschema_for::<crate::SessionPacketDocument<'_>>(),
         generator.subschema_for::<crate::public::CompleteError<'_>>(),
         generator.subschema_for::<crate::public::Surface>(),
         generator.subschema_for::<crate::cli::intake::Position>(),
@@ -116,6 +117,8 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
     locations(definitions);
     rank_members(definitions);
     functions(definitions);
+    flatten_packet(definitions);
+    strict::graph(definitions, "sessionPacket");
 }
 fn locations(definitions: &mut Map<String, Value>) {
     let source = definitions
@@ -277,4 +280,48 @@ fn rank_members(definitions: &mut Map<String, Value>) {
                 }
             }
         }));
+}
+
+fn flatten_packet(definitions: &mut Map<String, Value>) {
+    let alternatives = definitions["sessionPacket"]["oneOf"]
+        .as_array()
+        .expect("packet variants")
+        .clone();
+    let mut flattened = Vec::new();
+    for mut packet in alternatives {
+        let Some(reference) = packet.get("$ref").and_then(Value::as_str) else {
+            flattened.push(packet);
+            continue;
+        };
+        let name = reference
+            .strip_prefix("#/$defs/")
+            .expect("packet reference");
+        let members = definitions[name]["oneOf"]
+            .as_array()
+            .expect("function variants");
+        packet.as_object_mut().expect("packet").remove("$ref");
+        for member in members {
+            let mut merged = member.clone();
+            merged["properties"]
+                .as_object_mut()
+                .expect("function properties")
+                .extend(
+                    packet["properties"]
+                        .as_object()
+                        .expect("packet properties")
+                        .clone(),
+                );
+            merged["required"]
+                .as_array_mut()
+                .expect("function required")
+                .extend(
+                    packet["required"]
+                        .as_array()
+                        .expect("packet required")
+                        .clone(),
+                );
+            flattened.push(merged);
+        }
+    }
+    definitions["sessionPacket"]["oneOf"] = flattened.into();
 }

@@ -37,7 +37,7 @@ fn complete_getters_keep_authored_content_order_null_and_raw_choice_before_cut()
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"second":0.7,"first":0.3},"confidence":0.8}}}"#)).unwrap();
     let engine = engine(&listener);
     let LoadedQuestion::Question(question) = Question::from_json(
-        r#"{"choose":{"z":"Authored.","a":["original",null]},"options":{"second":{"z":null,"a":"kept"},"first":null},"threshold":0.9}"#).unwrap() else { panic!("choose") };
+        r#"{"choose":{"z":"Authored.","a":["original",null]},"options":{"second":{"z":null,"a":"kept"},"first":null},"threshold":0.9,"model":"fixed","profile":"authored","batch":"max","on":[""]}"#).unwrap() else { panic!("choose") };
     let call = engine
         .choose_complete_with(&question, "Original evidence.", CallOptions::new())
         .unwrap();
@@ -61,6 +61,22 @@ fn complete_getters_keep_authored_content_order_null_and_raw_choice_before_cut()
         options[0].description().unwrap().to_json().unwrap(),
         r#"{"z":null,"a":"kept"}"#
     );
+    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    assert_eq!(
+        document["value"]["question"]["options"],
+        json!(["second", "first"])
+    );
+    assert_eq!(
+        document["value"]["question"]["label_details"],
+        json!([
+            {"name":"second","description":{"z":null,"a":"kept"}}, {"name":"first"}
+        ])
+    );
+    assert_eq!(document["value"]["question"]["model"], "fixed");
+    assert_eq!(document["value"]["question"]["profile"], "authored");
+    assert_eq!(document["value"]["question"]["batch"], "max");
+    assert_eq!(document["value"]["question"]["on"], json!([""]));
+    schema::check(&document, "completeChoose");
     // In the ordinary choose grammar null descriptions mean absent.
     assert!(options[1].description().is_none());
     assert!(!format!("{:?}", result.question()).contains("Authored"));
@@ -173,4 +189,98 @@ fn aggregate_request_debug_withholds_authored_names_models_and_private_rules() {
     ] {
         assert!(!rendered.contains(secret));
     }
+}
+
+#[test]
+fn complete_score_retains_explicit_null_and_array_level_descriptions() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"score","probabilities":{"0":0.25,"1":0.75}}}}"#)).unwrap();
+    let engine = engine(&listener);
+    let thinkthen::LoadedQuestion::Question(question) =
+        Question::from_json(r#"{"score":"Grade?","levels":{"low":null,"high":["Higher.",null]}}"#)
+            .unwrap()
+    else {
+        panic!("score")
+    };
+    let call = engine
+        .score_complete_with(&question, "Evidence.", CallOptions::new())
+        .unwrap();
+    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    assert_eq!(
+        document["value"]["question"]["label_details"],
+        json!([
+            {"name":"low","description":null}, {"name":"high","description":["Higher.",null]}
+        ])
+    );
+    schema::check(&document, "completeScore");
+    assert_eq!(listener.count(), 1);
+}
+
+#[test]
+fn saved_profiled_questions_emit_one_profile_and_preserve_native_readings() {
+    // RawRecord uses the native duplicate-rejecting JSON reader before Value can collapse keys.
+    assert!(thinkthen::RawRecord::json(r#"{"profile":"first","profile":"second"}"#).is_err());
+    let listener = Listener::answering(|_| {
+        Canned::ok(
+            r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"u001":1,"u002":0}}}}"#,
+        )
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    for profile in [None, Some("saved-profile")] {
+        let extra = profile.map_or(String::new(), |value| format!(r#", "profile":"{value}""#));
+        let find = Question::find_from_json(&format!(
+            r#"{{"find":{{"z":"Which?","a":[null,false]}},"model":"fixed","on":""{extra}}}"#
+        ))
+        .unwrap();
+        let recognition = thinkthen::RecognizeQuestionFile::from_json(&format!(
+            r#"{{"version":1,"recognize":{{"kinds":{{"person":null}}}},"model":"fixed","on":"/body"{extra}}}"#
+        )).unwrap();
+        let relation = thinkthen::Relate::from_json(&format!(
+            r#"{{"version":1,"relate":{{"relations":[{{"name":"knows","source":"person","target":"person","reads":"knows"}}]}},"model":"fixed"{extra}}}"#
+        ))
+        .unwrap();
+        let found = engine
+            .find_complete_with(&find, ["first", "second"], CallOptions::new())
+            .unwrap();
+        let recognized = engine
+            .recognize_complete_with(recognition.question(), "", CallOptions::new())
+            .unwrap();
+        let related = engine
+            .relate_complete_with(&relation, [], CallOptions::new())
+            .unwrap();
+        assert_eq!(found.value().question().profile(), profile);
+        assert_eq!(recognized.value().question().profile(), profile);
+        assert_eq!(related.value().question().profile(), profile);
+        for (function, bytes) in [
+            ("find", found.value().to_json().unwrap()),
+            ("recognize", recognized.value().to_json().unwrap()),
+            ("relate", related.value().to_json().unwrap()),
+        ] {
+            let parsed = thinkthen::RawRecord::json(&bytes)
+                .unwrap_or_else(|error| panic!("{function}: {error}"));
+            let document = serde_json::to_value(parsed).unwrap();
+            assert_eq!(document["question"]["verb"], function);
+            assert_eq!(document["question"]["model"], "fixed");
+            assert_eq!(
+                document["question"].get("profile"),
+                profile.map(|value| json!(value)).as_ref()
+            );
+            match function {
+                "find" => {
+                    assert_eq!(
+                        document["question"]["text"],
+                        json!({"z":"Which?","a":[null,false]})
+                    );
+                    assert_eq!(document["question"]["on"], json!([""]));
+                }
+                "recognize" => {
+                    assert_eq!(document["question"]["kinds"], json!({"person":null}));
+                    assert_eq!(document["question"]["on"], json!(["/body"]));
+                }
+                "relate" => assert_eq!(document["question"]["relations"][0]["reads"], "knows"),
+                _ => unreachable!(),
+            }
+        }
+    }
+    assert_eq!(listener.count(), 2);
 }

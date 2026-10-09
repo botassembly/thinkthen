@@ -1508,5 +1508,172 @@
       ]
     }
   }
-]
+],
+  "native_presentation": {
+    "questions": [
+      {
+        "batch": "max",
+        "label_details": [
+          {
+            "description": {
+              "a": "kept",
+              "z": null
+            },
+            "name": "second"
+          },
+          {
+            "name": "first"
+          }
+        ],
+        "model": "fixed",
+        "on": [
+          ""
+        ],
+        "options": [
+          "second",
+          "first"
+        ],
+        "profile": "authored",
+        "text": {
+          "a": [
+            "original",
+            null
+          ],
+          "z": "Authored."
+        },
+        "verb": "choose"
+      },
+      {
+        "label_details": [
+          {
+            "description": "Lower.",
+            "name": "low"
+          },
+          {
+            "description": "Higher.",
+            "name": "high"
+          }
+        ],
+        "levels": [
+          "low",
+          "high"
+        ],
+        "text": "Grade?",
+        "verb": "score"
+      },
+      {
+        "label_details": [
+          {
+            "description": null,
+            "name": "low"
+          },
+          {
+            "description": [
+              "Higher.",
+              null
+            ],
+            "name": "high"
+          }
+        ],
+        "levels": [
+          "low",
+          "high"
+        ],
+        "text": "Grade?",
+        "verb": "score"
+      },
+      {
+        "label_details": [
+          {
+            "description": "Topic.",
+            "name": "a"
+          },
+          {
+            "name": "b"
+          }
+        ],
+        "labels": [
+          "a",
+          "b"
+        ],
+        "text": "Topics?",
+        "verb": "tag"
+      },
+      {
+        "batch": 2,
+        "context_schema": {
+          "properties": {},
+          "type": "object"
+        },
+        "item_schema": {
+          "type": "string"
+        },
+        "model": "fixed",
+        "name": "other",
+        "on": [
+          ""
+        ],
+        "text": "Refund?",
+        "verb": "decide",
+        "wording_version": 7
+      }
+    ],
+    "endpoints": [
+      {
+        "file": "renamed.jsonl",
+        "first_line": 1,
+        "kind": "person",
+        "last_line": 1,
+        "name": "Ada",
+        "ordinal": 0,
+        "record": {
+          "kind": "person",
+          "name": "Ada",
+          "private": false
+        }
+      },
+      {
+        "file": "renamed.jsonl",
+        "first_line": 3,
+        "kind": "person",
+        "last_line": 3,
+        "name": "Grace",
+        "ordinal": 1,
+        "record": {
+          "kind": "person",
+          "name": "Grace",
+          "private": null
+        }
+      },
+      {
+        "file": "renamed.jsonl",
+        "first_line": 5,
+        "kind": "person",
+        "last_line": 5,
+        "name": "Ada",
+        "ordinal": 2,
+        "record": {
+          "kind": "person",
+          "name": "Ada",
+          "private": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "file": "renamed.jsonl",
+        "first_line": 3,
+        "kind": "person",
+        "last_line": 3,
+        "name": "Grace",
+        "ordinal": 1,
+        "record": {
+          "kind": "person",
+          "name": "Grace",
+          "private": null
+        }
+      }
+    ]
+  }
 }

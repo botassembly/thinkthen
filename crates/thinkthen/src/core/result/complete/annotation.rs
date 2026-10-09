@@ -107,10 +107,8 @@ enum MemberDocument<'a> {
 
 impl Serialize for AnnotationMember {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let question = crate::core::declaration::ReadableQuestion {
-            question: self.question(),
-            metadata: &self.declarations,
-        };
+        let question =
+            crate::core::declaration::ReadableQuestion::atomic(self.question(), &self.declarations);
         let document = match (&self.identity, &self.legacy) {
             (MemberIdentity::Answered(id), AnnotatedEntry::Answered(entry)) => {
                 MemberDocument::Answered {
