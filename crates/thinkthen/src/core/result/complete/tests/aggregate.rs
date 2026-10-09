@@ -66,7 +66,8 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
         Some(&serde_json::json!({
             "pieces":[{"start":0,"end":3,"tags":{"B":0.1,"I":0.0,"L":0.1,"O":0.0,"U":0.8}}],
             "names":[{"start":0,"end":3,"kinds":{"person":0.8,"none":0.2},"edges":null}],
-            "pairs":[{"relation":"works_for","source":{"start":0,"end":3},"target":{"start":8,"end":12},"probability":0.3}]
+            "pairs":[{"relation":"works_for","source":{"start":0,"end":3},"target":{"start":8,"end":12},"probability":0.3}],
+            "proposals":[]
         }))
     );
     assert!(document.get("threshold").is_none());

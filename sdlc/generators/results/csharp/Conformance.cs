@@ -202,6 +202,28 @@ static class Conformance
     public static void Main(string[] args)
     {
         var fixture = JsonNode.Parse(File.ReadAllText(args[0]))!.AsObject();
+        var annotation = fixture["results"]!.AsArray().Single(row => row!["type"]!.GetValue<string>() == "AnnotateResult")!["result"]!;
+        var member = annotation["answers"]!["ok"]!;
+        var threshold = Read(member["threshold"]!, Threshold.Read);
+        Check(threshold is ThresholdString band && band.Value == "0.3:0.7", "typed string threshold retains authored band");
+        Check(JsonNode.DeepEquals(member["threshold"], threshold.ToPlain()), "threshold owns primitive JSON after disposal");
+        var relation = fixture["results"]!.AsArray().Single(row => row!["type"]!.GetValue<string>() == "RelateResult")!["result"]!;
+        var cut = Read(relation["question"]!["threshold"]!, Threshold.Read);
+        Check(cut is ThresholdNumber number && number.Value == 0.5, "typed numeric threshold retains cut");
+        Check(JsonNode.DeepEquals(relation["question"]!["threshold"], JsonNode.Parse(cut.ToJsonString())), "numeric threshold round trips");
+        foreach (var invalid in new[] { "null", "true", "[]", "{}" })
+        {
+            using var document = JsonDocument.Parse(invalid);
+            try { Threshold.Read(document.RootElement); throw new Exception("unsupported threshold kind accepted"); }
+            catch (JsonException) { }
+        }
+        var question = (QuestionDecide)Read(member["question"]!, Question.Read);
+        Check(question.Text.ValueKind == JsonValueKind.Array, "authored question content remains an owned array");
+        Check(question.True.State == PresenceState.Null && question.False.Value.ValueKind == JsonValueKind.Object, "authored readings retain null and object presence");
+        Retains(member["question"]!, question);
+        var missingReading = member["question"]!.DeepClone().AsObject();
+        missingReading.Remove("true");
+        Check(((QuestionDecide)Read(missingReading, Question.Read)).True.State == PresenceState.Missing, "missing authored reading differs from null");
         Variants(fixture);
         RoundTrip(fixture["facts"]!);
         // Final failure facts use exactly the same generated carrier.

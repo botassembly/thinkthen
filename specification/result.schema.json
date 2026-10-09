@@ -1964,8 +1964,20 @@
             "answer_id": {
               "$ref": "#/$defs/completeAnswerId"
             },
+            "observations": {
+              "items": {
+                "$ref": "#/$defs/completeObservation"
+              },
+              "type": "array"
+            },
             "question": {
               "$ref": "#/$defs/completeReadableQuestion"
+            },
+            "question_sources": {
+              "items": {
+                "$ref": "#/$defs/completeQuestionSource"
+              },
+              "type": "array"
             },
             "request": {
               "type": "string"
@@ -1980,6 +1992,13 @@
                 }
               ]
             },
+            "usage": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completeUsage"
+                }
+              ]
+            },
             "value": {
               "$ref": "#/$defs/completevalue"
             }
@@ -1990,7 +2009,9 @@
             "question",
             "answer",
             "threshold",
-            "request"
+            "request",
+            "question_sources",
+            "observations"
           ],
           "type": "object",
           "unevaluatedProperties": false
@@ -2003,18 +2024,50 @@
             "failure_id": {
               "$ref": "#/$defs/completeFailureId"
             },
+            "observations": {
+              "items": {
+                "$ref": "#/$defs/completeObservation"
+              },
+              "type": "array"
+            },
             "question": {
               "$ref": "#/$defs/completeReadableQuestion"
             },
+            "question_sources": {
+              "items": {
+                "$ref": "#/$defs/completeQuestionSource"
+              },
+              "type": "array"
+            },
             "request": {
               "type": "string"
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completethreshold"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "usage": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completeUsage"
+                }
+              ]
             }
           },
           "required": [
             "failure_id",
             "question",
             "failure",
-            "request"
+            "threshold",
+            "request",
+            "question_sources",
+            "observations"
           ],
           "type": "object",
           "unevaluatedProperties": false
@@ -5658,6 +5711,21 @@
         "method": {
           "$ref": "#/$defs/completeRelationMethod"
         },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/completeObservation"
+          },
+          "type": "array"
+        },
+        "question": {
+          "$ref": "#/$defs/completequestion"
+        },
+        "question_sources": {
+          "items": {
+            "$ref": "#/$defs/completeQuestionSource"
+          },
+          "type": "array"
+        },
         "reads": {
           "type": "string"
         },
@@ -5679,6 +5747,16 @@
               "type": "null"
             }
           ]
+        },
+        "threshold": {
+          "$ref": "#/$defs/completethreshold"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeUsage"
+            }
+          ]
         }
       },
       "required": [
@@ -5688,7 +5766,11 @@
         "direction",
         "source",
         "target",
-        "request"
+        "request",
+        "question",
+        "threshold",
+        "question_sources",
+        "observations"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -7088,6 +7170,93 @@
       ],
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completequestion": {
+      "oneOf": [
+        {
+          "properties": {
+            "false": {},
+            "text": {},
+            "true": {},
+            "verb": {
+              "const": "decide",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "options": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "choose",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "options"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "labels": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "tag",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "labels"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "levels": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "score",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "levels"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
     },
     "completerecognize": {
       "anyOf": [

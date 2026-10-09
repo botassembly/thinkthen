@@ -80,6 +80,16 @@ fn native_annotation_keeps_member_null_failure_order_and_actual_batch_sources() 
     assert_eq!(row["value"]["unsure"], Value::Null);
     assert_eq!(row["meta"]["usage"], json!({"input_tokens":9}));
     assert_eq!(row["meta"]["failed_questions"], 1);
+    for member in &members {
+        let document = &row["answers"][member.name()];
+        assert_eq!(
+            document["question_sources"],
+            json!(member.question_sources())
+        );
+        assert_eq!(document["observations"], json!(member.observations()));
+        assert_eq!(document["usage"], json!(member.reported_usage()));
+    }
+    assert_eq!(row["answers"]["failed"]["threshold"], json!(0.5));
     annotation_metadata(result);
     assert_eq!(result.identity().observations().len(), 3);
     assert!(
@@ -135,6 +145,19 @@ fn complete_relations_keep_full_answers_rejections_failures_and_empty_metadata()
         0.9
     );
     assert_eq!(document["meta"]["failed_questions"], 1);
+    for (member, document) in members
+        .iter()
+        .zip(document["answer"]["questions"].as_array().unwrap())
+    {
+        assert_eq!(
+            document["question_sources"],
+            json!(member.question_sources())
+        );
+        assert_eq!(document["observations"], json!(member.observations()));
+        assert_eq!(document.get("usage"), None);
+        assert_eq!(document["threshold"], json!(0.5));
+        assert_eq!(document["question"]["verb"], "decide");
+    }
     let body: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
     assert_eq!(body["state"]["context"], "Separate.");
     assert!(body["state"]["evidence"].is_object());
