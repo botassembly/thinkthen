@@ -40,7 +40,7 @@ def main():
     kotlin_cp = os.pathsep.join(map(str,(feed / 'thinkthen-door.jar',feed / 'thinkthen-kotlin.jar',kotlin / 'lib/kotlinx-coroutines-core-jvm.jar')))
     subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target','22','-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),'-d',str(work / 'app')],check=True,env=env)
     subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-door.jar') + os.pathsep + str(feed / 'thinkthen-scala.jar'),'-d',str(work / 'app'),str(work / 'SessionScala.scala')],check=True,env=env)
-    backend_source = ROOT / 'libraries/csharp/tests/backend.py' 
+    backend_source = ROOT / 'libraries/csharp/tests/backend.py'
     spec = importlib.util.spec_from_file_location('shared_package_backend',backend_source)
     backend = importlib.util.module_from_spec(spec); spec.loader.exec_module(backend)
     server = backend.Backend(work / 'barrier')
@@ -69,6 +69,7 @@ def main():
             assert actual.returncode == 0,(actual.stdout,actual.stderr)
             assert ('INSTALLED_JVM_' + language.upper() + '_SESSION_PASS').encode() in actual.stdout,actual.stdout
             expected += ['hold-jvm-' + language,'session-' + language + '-independent']
+            if language == 'scala': expected += ['session-scala-nested']
             assert server.arrivals == expected,server.arrivals
             print(actual.stdout.decode(),end='')
         assert server.attempts == server.connections == len(expected),server.arrivals
