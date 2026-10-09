@@ -21,13 +21,13 @@ fn answered(
     call.within(records.len());
     let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
     let answers = call::run(call, move |engine, options| {
-        let rows = engine
-            .details_many_with(&question, texts, options)
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(rows
-            .into_iter()
-            .map(|row| row.into_parts().1)
-            .collect::<Vec<_>>())
+        crate::request::details(
+            engine,
+            &question,
+            texts.into_iter().map(crate::request::text).collect(),
+            options,
+            true,
+        )
     });
     keys.into_iter().zip(answers).collect()
 }
@@ -187,19 +187,34 @@ fn rank(
         call.within(records.len());
         let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
         let ranked = call::run(call, move |engine, options| {
-            engine
-                .rank_with(&asked, texts, options)
-                .map(thinkthen::Call::into_value)
+            let call = crate::request::run(
+                engine,
+                thinkthen::RequestFunction::Rank,
+                asked.into(),
+                texts.into_iter().map(crate::request::text).collect(),
+                options,
+            )?;
+            match call.into_value() {
+                thinkthen::RequestValue::Ranked(rows) => Ok(rows),
+                _ => Err(crate::request::wrong_result()),
+            }
         });
         let rows = ranked
             .iter()
             .zip(1_i64..)
             .map(|(row, place)| {
                 let key = keys
-                    .get(row.index())
+                    .get(row.ordinal())
                     .ok_or_else(|| call::defect("a ranked row lost its record"))
                     .or_raise();
-                (key.clone(), place, row.probability())
+                (
+                    key.clone(),
+                    place,
+                    match row.result().probabilities() {
+                        Probabilities::YesNo { yes } => yes,
+                        _ => call::raise(crate::request::wrong_result()),
+                    },
+                )
             })
             .collect::<Vec<_>>();
         TableIterator::new(rows)

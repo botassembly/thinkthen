@@ -188,15 +188,8 @@ fn batch_run<'a>(
     setting: core::Setting,
 ) -> Run<'a> {
     let mut result = run(engine, question, profile);
-    let saved = question.authored_threshold.then(|| {
-        question
-            .batch
-            .as_ref()
-            .and_then(core::Setting::of_json)
-            .unwrap_or(core::Setting::Records(std::num::NonZeroUsize::MIN))
-    });
     result.batch_setting = Some(setting.into());
-    result.batch_warning = saved.and_then(|saved| core::BatchWarning::between(saved, setting));
+    result.batch_warning = super::results::batch_warning(question, setting);
     result
 }
 

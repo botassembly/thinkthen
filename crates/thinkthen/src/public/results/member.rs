@@ -11,13 +11,26 @@ use crate::result_json::{Run, decision_with_requests};
 
 use super::{Details, Written};
 
+pub(crate) fn batch_warning(question: &Question, setting: core::Setting) -> Option<BatchWarning> {
+    question
+        .batch
+        .as_ref()
+        .and_then(core::Setting::of_json)
+        .or_else(|| {
+            question
+                .threshold
+                .map(|_| core::Setting::Records(std::num::NonZeroUsize::MIN))
+        })
+        .and_then(|saved| BatchWarning::between(saved, setting))
+}
+
 impl fmt::Debug for Details {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Details")
-            .field("value", &self.value)
-            .field("probabilities", &self.probabilities)
-            .field("nearest", &self.nearest)
+            .field("value", &"<withheld>")
+            .field("probabilities", &"<withheld>")
+            .field("nearest", &"<withheld>")
             .field("model", &self.model)
             .field("question_sha256", &self.question_sha256)
             .field("profile_warning", &self.profile_warning)
@@ -125,15 +138,6 @@ impl Details {
             profile,
             member.requests.clone(),
         )?;
-        let file_batch = question
-            .batch
-            .as_ref()
-            .and_then(core::Setting::of_json)
-            .or_else(|| {
-                question
-                    .threshold
-                    .map(|_| core::Setting::Records(std::num::NonZeroUsize::MIN))
-            });
         let run = Run {
             backend,
             tuned_for: question.profile.as_ref(),
@@ -142,7 +146,7 @@ impl Details {
                 profile.map(core::BackendProfile::name),
             ),
             batch_setting: Some(setting.into()),
-            batch_warning: file_batch.and_then(|saved| BatchWarning::between(saved, setting)),
+            batch_warning: batch_warning(question, setting),
             context_sha256: context_sha256.map(str::to_owned),
         };
         let scalar_json = input

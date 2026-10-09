@@ -54,22 +54,33 @@ fn rank_set(
         }
         let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
         let rows = call::run(call, move |engine, options| {
-            let ranked = engine.rank_set_with(&set, texts, options)?;
+            let ranked = crate::request::run(
+                engine,
+                thinkthen::RequestFunction::Rank,
+                set.into(),
+                texts.into_iter().map(crate::request::text).collect(),
+                options,
+            )?;
             let facts = serde_json::to_value(ranked.facts())
                 .map_err(|_| call::defect("rank facts could not be encoded"))?;
-            ranked
-                .value()
+            let thinkthen::RequestValue::SetRanked(ranked_rows) = ranked.value() else {
+                return Err(crate::request::wrong_result());
+            };
+            ranked_rows
                 .iter()
                 .zip(1_i64..)
                 .map(|(row, place)| {
                     let key = keys
-                        .get(row.index())
+                        .get(row.ordinal())
                         .ok_or_else(|| call::defect("a ranked row lost its record"))?;
                     Ok((
                         key.clone(),
                         place,
-                        row.probability(),
-                        row.question_name().to_owned(),
+                        match row.result().result().probabilities() {
+                            thinkthen::Probabilities::YesNo { yes } => yes,
+                            _ => return Err(crate::request::wrong_result()),
+                        },
+                        row.result().question_name().to_owned(),
                         facts.clone(),
                     ))
                 })

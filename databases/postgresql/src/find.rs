@@ -2,7 +2,7 @@
 
 use pgrx::datum::{Array, JsonB};
 use pgrx::prelude::*;
-use thinkthen::{Error, Evidence, For, Question};
+use thinkthen::{Error, For, Question};
 
 use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
@@ -10,24 +10,11 @@ use crate::forms::{self, Named};
 
 const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
 
-/// Preserve a duplicate's original SQL position through the public result.
-struct IndexedEvidence {
-    index: usize,
-    text: String,
-}
-
-impl Evidence for IndexedEvidence {
-    fn evidence(&self) -> &str {
-        &self.text
-    }
-}
-
-fn indexed(array: Array<'_, &str>, none: bool) -> Result<Vec<IndexedEvidence>, Error> {
+fn indexed(array: Array<'_, &str>, none: bool) -> Result<Vec<String>, Error> {
     let mut bytes = 0_usize;
     let units = array
         .iter()
-        .enumerate()
-        .map(|(index, member)| {
+        .map(|member| {
             let text = member.ok_or_else(|| call::usage("a find unit is text, not NULL"))?;
             if text.trim().is_empty() {
                 return Err(call::usage("a find unit is text, not white space"));
@@ -38,10 +25,7 @@ fn indexed(array: Array<'_, &str>, none: bool) -> Result<Vec<IndexedEvidence>, E
             if bytes > MAX_TEXT_BYTES {
                 return Err(call::usage("find units exceed 16 MiB of text"));
             }
-            Ok(IndexedEvidence {
-                index,
-                text: text.to_owned(),
-            })
+            Ok(text.to_owned())
         })
         .collect::<Result<Vec<_>, _>>()?;
     if units.is_empty() {
@@ -92,30 +76,47 @@ fn found(
         question
     };
     let answer = call::run(call, move |engine, options| {
-        engine
-            .find_with(&question, units, options)
-            .map(thinkthen::Call::into_value)
+        let call = crate::request::run(
+            engine,
+            thinkthen::RequestFunction::Find,
+            question.into(),
+            units.into_iter().map(crate::request::text).collect(),
+            options,
+        )?;
+        match call.into_value() {
+            thinkthen::RequestValue::Found(found) => Ok(found),
+            _ => Err(crate::request::wrong_result()),
+        }
     });
-    let selected = answer.selected();
+    let selected = match answer.selection() {
+        thinkthen::FindSelection::Unit(at) => Some(at),
+        thinkthen::FindSelection::None => None,
+    };
     let candidates = answer.candidates();
     let winner = match selected {
-        Some(unit) => candidates.get(unit.index),
+        Some(at) => candidates.get(at),
         None => candidates.last().filter(|candidate| candidate.is_none()),
     }
     .ok_or_else(|| call::defect("a find answer selected no candidate"))
     .or_raise();
     let probabilities: Vec<_> = candidates
         .iter()
-        .map(|candidate| {
+        .enumerate()
+        .map(|(at, candidate)| {
             serde_json::json!({
-                "index": candidate.input().map(|unit| unit.index),
+                "index": candidate.input().map(|_| at),
                 "probability": candidate.probability(),
             })
         })
         .collect();
     Some(JsonB(serde_json::json!({
-        "index": selected.map(|unit| unit.index),
-        "value": selected.map(|unit| unit.text.as_str()),
+        "index": selected,
+        "value": answer.selected().map(|unit| match unit {
+            thinkthen::QuestionInput::Text(text) => text.as_str(),
+            thinkthen::QuestionInput::Record(record) => record.original().literal()
+                .unwrap_or_else(|| call::raise(crate::request::wrong_result())),
+            _ => call::raise(crate::request::wrong_result()),
+        }),
         "probability": winner.probability(),
         "candidates": probabilities,
     })))

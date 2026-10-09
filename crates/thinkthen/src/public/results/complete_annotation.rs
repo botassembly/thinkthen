@@ -13,6 +13,15 @@ pub struct CompleteAnnotated {
 }
 
 impl CompleteAnnotated {
+    /// Project the existing primitive named annotation values, including failed members.
+    /// Authored structured readings retain the legacy annotation's primitive semantics.
+    /// # Errors
+    /// Returns Defect if the native named values cannot be serialized.
+    pub fn value_json(&self) -> Result<String, Error> {
+        core::json_line(self.canonical.legacy.value())
+            .map_err(|_| Error::defect("annotation values could not be written as JSON"))
+    }
+
     /// Borrow actual metadata without decoding a result document.
     #[must_use]
     pub fn meta(&self) -> super::ResultMetadata<'_> {

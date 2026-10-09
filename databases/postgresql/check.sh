@@ -168,7 +168,7 @@ echo "== package"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
 	PACKAGE_LIB=$RUN/artifact/lib
 	PACKAGE_SQL=$RUN/artifact/extension/thinkthen--$EXT_VERSION.sql
-	STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
+	STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -293,8 +293,9 @@ p=json.loads(sys.argv[1]); expected="{\"state\":\"Each question quotes the text 
 assert p["records"] == 1 and p["requests"] == 1, p
 assert p["estimated_bytes"] == 182 and p["estimated_input_tokens"] == {"lower":93,"upper":166}, p
 assert p["upper_bound"] is False and p["first_body_utf8"] == expected, p
-text = "{\"records\": 1, \"requests\": 1, \"upper_bound\": false, \"estimated_bytes\": 182, \"first_body_utf8\": " + json.dumps(expected) + ", \"estimated_input_tokens\": {\"lower\": 93, \"upper\": 166}}"
-assert sys.argv[1] == text, (sys.argv[1], text)' "$out"
+assert p["largest_request_bytes"] == 182, p
+assert p["largest_request_estimated_input_tokens"] == 166, p
+assert p["token_estimate_method"] == "encoded-body-bytes-908-v1", p' "$out"
 	same "$(bcount)" 0
 	for sql in \
 		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"bogus\":1}'::json)" \
@@ -474,7 +475,7 @@ rank_empty_null_and_refusals_send_nothing() {
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('   ', '{\"a\":\"x\"}'::jsonb)")" 'thinkthen usage: a question is text, not white space (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":4}'::jsonb)")" 'thinkthen usage: keyed input value for a is text (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"1\":\"one\",\"2\":\"two\",\"3\":\"three\",\"4\":\"  \",\"5\":\"five\",\"6\":\"six\",\"7\":\"seven\"}'::jsonb)")" \
-		'thinkthen usage: evidence is text, not white space (retryable: no)'
+		'thinkthen usage: the evidence is empty or blank (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":\"x\"}'::jsonb, '{\"deadline_ms\":0}'::json)")" \
 		'thinkthen deadline: the deadline of 0 s passed before the call answered (retryable: no)'
 	same "$(bcount)" 0
@@ -1550,14 +1551,22 @@ check an_update_cannot_grant_public
 client_reader_validates_file_formats() { python3 tests/read_inputs.py; }
 check client_reader_validates_file_formats
 
-complete_cases() {
+complete_environment() {
     pg_stop
     [ -z "${BPID:-}" ] || backend_stop
     export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
+}
+complete_cases() {
+    complete_environment
     sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
     sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
 }
 check complete_cases
+complete_request_contract_cases() {
+    complete_environment
+    sh "$LIMIT" 300 python3 tests/complete_request_cases.py
+}
+check complete_request_contract_cases
 
 echo "== conformance"
 # Each case on its own server, backend, and cache folder. Every case counts

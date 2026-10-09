@@ -326,6 +326,11 @@ pub(crate) struct AnnotateResult {
 }
 
 impl AnnotateResult {
+    /// Primitive named values through the existing annotation serializer.
+    pub(crate) const fn value(&self) -> &NamedValues {
+        &self.value
+    }
+
     /// Gather one complete annotation row.
     #[must_use]
     pub(crate) const fn new(
@@ -402,6 +407,11 @@ pub(crate) struct DecisionResult {
 }
 
 impl DecisionResult {
+    /// Actual retained compatibility cache flag, independent of source provenance.
+    pub(crate) const fn cached(&self) -> bool {
+        self.meta.cached
+    }
+
     pub(crate) fn with_captured_attempts(
         mut self,
         attempts: Option<Vec<AttemptObservation>>,

@@ -25,6 +25,7 @@ mod question_file;
 mod rank_set;
 mod relate;
 mod removed;
+mod request;
 mod scalar;
 
 use call::OrRaise as _;
@@ -44,16 +45,14 @@ fn details(
     options: thinkthen::CallOptions<'_>,
     contextual: bool,
 ) -> Result<Option<Details>, Error> {
-    if contextual {
-        return engine
-            .details_many_with(question, [evidence.to_owned()], options)
-            .next()
-            .transpose()
-            .map(|answer| answer.map(|held| held.into_parts().1));
-    }
-    engine
-        .details_with(question, evidence, options)
-        .map(|answer| Some(answer.into_value()))
+    request::details(
+        engine,
+        question,
+        vec![request::text(evidence.to_owned())],
+        options,
+        contextual,
+    )
+    .map(|rows| rows.into_iter().next())
 }
 
 fn answer_value(answer: thinkthen::Answer) -> Option<bool> {
@@ -85,11 +84,20 @@ fn thinkthen_annotate(
             .or_raise();
         let input = input?.to_owned();
         let value = call::run(call, move |engine, options| {
-            let mut records = engine.annotate_with(&set, [input.as_str()], options);
-            records
-                .next()
-                .transpose()
-                .map(|record| record.map(|held| held.value_json()))
+            let result = request::run(
+                engine,
+                thinkthen::RequestFunction::Annotate,
+                set.into(),
+                vec![request::document(input)?],
+                options,
+            )?;
+            match result.value() {
+                thinkthen::RequestValue::Annotations(rows) => rows
+                    .first()
+                    .map(|row| row.result().value_json())
+                    .transpose(),
+                _ => Err(request::wrong_result()),
+            }
         });
         value.map(|text| jsonb(&text))
     })
@@ -124,9 +132,21 @@ type Names = Vec<(String, i32, i32, i32, String, f64)>;
 fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognized> {
     let body = body?.to_owned();
     Some(call::run(call::read(), move |engine, options| {
-        engine
-            .recognize_with(&ask, &body, options)
-            .map(thinkthen::Call::into_value)
+        let call = request::run(
+            engine,
+            thinkthen::RequestFunction::Recognize,
+            ask.into(),
+            vec![request::text(body)],
+            options,
+        )?;
+        match call.into_value() {
+            thinkthen::RequestValue::Recognized(rows) => rows
+                .into_iter()
+                .next()
+                .map(|row| row.result().value().clone())
+                .ok_or_else(request::wrong_result),
+            _ => Err(request::wrong_result()),
+        }
     }))
 }
 

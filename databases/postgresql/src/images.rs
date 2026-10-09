@@ -2,7 +2,7 @@
 
 use pgrx::datum::Array;
 use pgrx::prelude::*;
-use thinkthen::{ImageEvidence, ImageInput, ImageMedia, Judgment, QuestionInput};
+use thinkthen::{ImageInput, ImageMedia, Judgment, RequestImage, RequestItem, RequestOriginal};
 
 use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
@@ -50,7 +50,7 @@ fn thinkthen_image(
 fn input(
     images: Array<'_, pgrx::composite_type!("thinkthen_image_value")>,
     text: Option<&str>,
-) -> QuestionInput {
+) -> RequestItem {
     if !(1..=thinkthen::MAX_IMAGES).contains(&images.len()) {
         call::raise(call::usage("image evidence requires 1 to 8 images"));
     }
@@ -84,10 +84,23 @@ fn input(
                 .unwrap_or_else(|_| call::raise(call::usage("invalid image media field")))
                 .unwrap_or_else(|| call::raise(call::usage("image media is NULL")));
             // file is retained in the caller's composite, never model evidence.
-            image(bytes, &mime).or_raise()
+            let image = image(bytes, &mime).or_raise();
+            RequestImage::Bytes {
+                media: image.media(),
+                bytes: image.bytes().to_vec(),
+            }
         })
         .collect();
-    QuestionInput::Images(ImageEvidence::new(text.map(str::to_owned), images).or_raise())
+    RequestItem {
+        original: text.map(|text| RequestOriginal::Text {
+            text: text.to_owned(),
+        }),
+        images,
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans: None,
+    }
 }
 
 fn judged(
@@ -107,19 +120,9 @@ fn judged(
     }
     let question = forms::question(Some(question), None, verb, &settings);
     let input = input(images, text);
-    let contextual = settings.context().is_some();
     call::run(controls, move |engine, options| {
-        if contextual {
-            engine
-                .details_input_many_with(&question, [input], options)
-                .next()
-                .transpose()
-                .map(|held| held.map(|row| row.into_parts().1))
-        } else {
-            engine
-                .details_input_with(&question, &input, options)
-                .map(|held| Some(held.into_value()))
-        }
+        crate::request::details(engine, &question, vec![input], options, false)
+            .map(|rows| rows.into_iter().next())
     })
     .unwrap_or_else(|| call::raise(call::defect("image details returned no record")))
 }
