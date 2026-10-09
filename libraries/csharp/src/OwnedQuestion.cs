@@ -6,7 +6,7 @@ namespace ThinkThen;
 internal sealed class QuestionHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     internal QuestionHandle(IntPtr pointer) : base(true) => SetHandle(pointer);
-    protected override bool ReleaseHandle() { NativeComplete.thinkthen_question_free(handle); return true; }
+    protected override bool ReleaseHandle() { Native.thinkthen_question_free(handle); return true; }
 }
 public sealed partial class Engine
 {
@@ -19,7 +19,7 @@ public sealed partial class Engine
         lock (authoredErrorGuard) return Live(pointer => {
             var pin = GCHandle.Alloc(bytes,GCHandleType.Pinned);
             try {
-                int code = NativeComplete.thinkthen_question_parse(pointer,(uint)kind,
+                int code = Native.thinkthen_question_parse(pointer,(uint)kind,
                     new StringV1 { data = pin.AddrOfPinnedObject(), len = (nuint)bytes.Length },out var question);
                 if (code != 0) throw ReadFailure(pointer,code);
                 using var owned = new QuestionHandle(question);

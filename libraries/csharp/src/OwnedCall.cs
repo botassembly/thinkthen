@@ -7,7 +7,7 @@ public sealed class SessionFailure : Exception
 {
     public CallError Failure { get; }
     public OwnedCall Call { get; }
-    internal SessionFailure(CallError failure, OwnedCall call) : base("Native execution failed.") { Failure = failure; Call = call; }
+    internal SessionFailure(CallError failure, OwnedCall call) : base(failure.Error.Message) { Failure = failure; Call = call; }
 }
 public sealed partial class Engine
 {

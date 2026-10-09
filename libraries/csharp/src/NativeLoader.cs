@@ -5,7 +5,7 @@ internal static class NativeLoader
 {
     private static readonly object gate = new();
     private static bool initialized;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2255", Justification = "The binding must resolve native assets before any public compatibility import.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2255", Justification = "The binding must resolve native assets before any native operation.")]
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Initialize()
     {
