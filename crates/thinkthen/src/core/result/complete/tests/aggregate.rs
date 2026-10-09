@@ -14,7 +14,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
     let canonical = Recognition {
         source: None,
         identity: base.identity,
-        value: RecognizedValue {
+        value: RecognizedValue::Whole {
             entities: Vec::new(),
             relations: Some(Vec::new()),
         },
@@ -23,7 +23,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
             r#"{"version":1,"recognize":{"kinds":{"person":"A person."}}}"#,
         )
         .unwrap(),
-        answer: RecognitionOdds {
+        answer: RecognitionOdds::Whole(crate::core::WholeRecognitionOdds {
             pieces: vec![PieceOdds {
                 start: 0,
                 end: 3,
@@ -47,7 +47,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
                 target: Place { start: 8, end: 12 },
                 probability: 0.3,
             }],
-        },
+        }),
         meta: base.legacy.meta,
     };
     let document: serde_json::Value =

@@ -102,18 +102,11 @@ impl Engine {
             limit,
             self.aggregate_context.as_ref(),
         )?;
-        let mut meta = Aggregate::default();
-        let mut details = Probabilities::default();
         if pieces.is_empty() {
-            return Ok(Recognition {
-                value: Recognized {
-                    entities: Vec::new(),
-                    relations: (!spec.relations.is_empty()).then(Vec::new),
-                },
-                details,
-                meta,
-            });
+            return Ok(Recognition::empty(spec));
         }
+        let mut meta = Aggregate::default();
+        let mut details = crate::core::WholeRecognitionOdds::default();
         let stages = vec!["boundary"; asks.len()];
         let answers = self.recognition_stage(spec, "boundary").execute(
             &asks,
@@ -129,6 +122,17 @@ impl Engine {
             .map(|(piece, row)| PieceOdds::new(piece, row))
             .collect();
         let mut stretches = found_names(&rows);
+        if !spec.mode.is_whole() {
+            let proposals =
+                crate::core::BoundaryProposal::decoded(text, &pieces, &rows, &stretches);
+            return Recognition::proposals(
+                proposals,
+                spec.threshold.cut_value().unwrap_or(0.5),
+                details.pieces,
+                meta,
+            );
+        }
+
         stretches.extend(crate::core::seed_stretches(spec, &pieces).map_err(Error::Usage)?);
         stretches.sort_unstable();
         stretches.dedup();
@@ -169,11 +173,11 @@ impl Engine {
         meta.usage = meta.shares.total()?;
         meta.reported_usage = meta.shares.reported()?;
         Ok(Recognition {
-            value: Recognized {
+            value: Recognized::Whole {
                 entities,
                 relations,
             },
-            details,
+            details: Probabilities::Whole(details),
             meta,
         })
     }
@@ -186,7 +190,7 @@ impl Engine {
         entities: &[RecognizedName],
         held: (
             &mut Aggregate,
-            &mut Probabilities,
+            &mut crate::core::WholeRecognitionOdds,
             &mut impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
         ),
         cancel: &Cancel,
@@ -332,6 +336,8 @@ pub(crate) fn step_one_context(
     limit: usize,
     context: Option<&crate::core::Json>,
 ) -> Result<StepOne, Error> {
+    spec.validate_mode()
+        .map_err(|_| Error::Usage(crate::core::RecognitionMode::BOUNDARY_USAGE))?;
     let examples =
         crate::core::render_examples(spec, &spec.examples).map_err(Error::RecognitionExamples)?;
     if text.len() > limit {
@@ -346,7 +352,7 @@ pub(crate) fn step_one_context(
         return Ok((pieces, Asks::default(), Vec::new()));
     }
     let kinds: Vec<&str> = spec.kinds.iter().map(|(kind, _)| kind.as_str()).collect();
-    if !kinds.is_empty() || !spec.seed_spans.is_empty() {
+    if spec.mode.is_whole() && (!kinds.is_empty() || !spec.seed_spans.is_empty()) {
         let generic = vec![("ENTITY".to_owned(), None)];
         let probe = kind_question(
             text,
@@ -514,5 +520,52 @@ impl Aggregate {
             .ok_or(Error::UsageOverflow)?;
         self.requests.push(answered.request.as_str().to_owned());
         Ok(())
+    }
+}
+
+impl Recognition {
+    fn empty(spec: &RecognizeSpec) -> Self {
+        Self {
+            value: if spec.mode.is_whole() {
+                Recognized::Whole {
+                    entities: Vec::new(),
+                    relations: (!spec.relations.is_empty()).then(Vec::new),
+                }
+            } else {
+                Recognized::BoundaryOnly {
+                    mode: crate::core::BoundaryMode::BoundaryOnly,
+                    proposals: Vec::new(),
+                }
+            },
+            details: if spec.mode.is_whole() {
+                Probabilities::Whole(crate::core::WholeRecognitionOdds::default())
+            } else {
+                Probabilities::BoundaryOnly(crate::core::BoundaryOdds::default())
+            },
+            meta: Aggregate::default(),
+        }
+    }
+    fn proposals(
+        proposals: Vec<crate::core::BoundaryProposal>,
+        cut: f64,
+        pieces: Vec<PieceOdds>,
+        mut meta: Aggregate,
+    ) -> Result<Self, Error> {
+        let kept = proposals
+            .iter()
+            .filter(|proposal| proposal.probability >= cut)
+            .cloned()
+            .collect();
+        meta.model = meta.models.model().cloned();
+        meta.usage = meta.shares.total()?;
+        meta.reported_usage = meta.shares.reported()?;
+        Ok(Self {
+            value: Recognized::BoundaryOnly {
+                mode: crate::core::BoundaryMode::BoundaryOnly,
+                proposals: kept,
+            },
+            details: Probabilities::BoundaryOnly(crate::core::BoundaryOdds { pieces, proposals }),
+            meta,
+        })
     }
 }

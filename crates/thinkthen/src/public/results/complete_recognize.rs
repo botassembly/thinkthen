@@ -122,19 +122,45 @@ impl Serialize for CompleteRecognized {
 pub struct RecognitionProbabilities<'a>(&'a core::RecognitionOdds);
 
 impl RecognitionProbabilities<'_> {
+    /// Every decoded proposal before the probability cut; absent for whole recognition.
+    #[must_use]
+    pub fn proposals(&self) -> Option<Vec<crate::BoundaryProposal>> {
+        match self.0 {
+            core::RecognitionOdds::Whole(_) => None,
+            core::RecognitionOdds::BoundaryOnly(odds) => Some(
+                odds.proposals
+                    .iter()
+                    .cloned()
+                    .map(crate::BoundaryProposal)
+                    .collect(),
+            ),
+        }
+    }
     /// Every input piece's boundary tag distribution.
     pub fn pieces(&self) -> impl ExactSizeIterator<Item = PieceProbabilities<'_>> {
-        self.0.pieces.iter().map(PieceProbabilities)
+        let pieces = match self.0 {
+            core::RecognitionOdds::Whole(odds) => &odds.pieces,
+            core::RecognitionOdds::BoundaryOnly(odds) => &odds.pieces,
+        };
+        pieces.iter().map(PieceProbabilities)
     }
 
     /// Every step-one name's kind and edge distributions.
     pub fn names(&self) -> impl ExactSizeIterator<Item = NameProbabilities<'_>> {
-        self.0.names.iter().map(NameProbabilities)
+        let names = match self.0 {
+            core::RecognitionOdds::Whole(odds) => odds.names.as_slice(),
+            core::RecognitionOdds::BoundaryOnly(_) => &[],
+        };
+        names.iter().map(NameProbabilities)
     }
 
     /// Every asked relation pair, including rejected pairs.
     pub fn pairs(&self) -> impl ExactSizeIterator<Item = PairProbability<'_>> {
-        self.0.pairs.iter().map(PairProbability)
+        let pairs = match self.0 {
+            core::RecognitionOdds::Whole(odds) => odds.pairs.as_slice(),
+            core::RecognitionOdds::BoundaryOnly(_) => &[],
+        };
+        pairs.iter().map(PairProbability)
     }
 }
 

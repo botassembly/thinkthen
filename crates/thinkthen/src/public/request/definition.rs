@@ -211,9 +211,19 @@ fn recognition_json(q: &Recognize) -> Result<crate::core::Json, Error> {
     for (key, value) in document {
         match key.as_str() {
             "verb" => {}
-            "threshold" | "relation_threshold" | "profile" => fields.push((key, value)),
+            "relation_threshold" => {}
+            "threshold" | "profile" => fields.push((key, value)),
             _ => recognize.push((key, value)),
         }
+    }
+    if q.0.authored_relation_threshold {
+        fields.push((
+            "relation_threshold".to_owned(),
+            encoded(&q.0.relation_threshold)?,
+        ));
+    }
+    if q.0.authored_relations && q.0.relations.is_empty() {
+        recognize.push(("relations".to_owned(), Json::Array(Vec::new())));
     }
     fields.push(("recognize".to_owned(), Json::Object(recognize)));
     if let Some(model) = &q.0.model {

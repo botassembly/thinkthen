@@ -43,6 +43,11 @@ impl ResolvedRelationRule<'_> {
 #[derive(Clone, Copy)]
 pub struct RecognitionReading<'a>(pub(crate) &'a core::RecognizeSpec);
 impl RecognitionReading<'_> {
+    /// The resolved recognition stages.
+    #[must_use]
+    pub const fn mode(&self) -> crate::RecognitionMode {
+        self.0.mode
+    }
     /// Resolved literal stage overrides, including explicit empty strings.
     #[must_use]
     pub fn stage_context(&self) -> &crate::RecognitionStageContext {

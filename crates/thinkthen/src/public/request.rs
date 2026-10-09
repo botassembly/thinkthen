@@ -135,7 +135,10 @@ impl RequestFunction {
     ];
     pub(crate) fn allows_option(self, name: &str) -> bool {
         match name {
-            "threshold" => matches!(self, Self::Decide | Self::Choose | Self::Tag | Self::Filter),
+            "threshold" => matches!(
+                self,
+                Self::Decide | Self::Choose | Self::Tag | Self::Filter | Self::Recognize
+            ),
             "options_field" => self == Self::Choose,
             "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context" => {
                 self == Self::Recognize

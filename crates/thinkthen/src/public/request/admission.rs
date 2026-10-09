@@ -55,8 +55,11 @@ impl AdmittedRequest {
         };
         let value = RequestDefinition::from_authored_json(&text)
             .map_err(|error| Error::local(error.detail().message()))?;
-        admit_definition(self.request.call.function(), value)
-            .map_err(|e| Error::local(e.detail().message()))
+        let value = admit_definition(self.request.call.function(), value)
+            .map_err(|e| Error::local(e.detail().message()))?;
+        admit_recognition_controls(&value, &self.request.call.arguments().options)
+            .map_err(|e| Error::local(e.detail().message()))?;
+        Ok(value)
     }
 }
 pub(super) fn admit(
@@ -94,6 +97,7 @@ pub(super) fn admit(
         attachment_limit,
     };
     if let Some(definition) = &admitted.definition {
+        admit_recognition_controls(definition, &admitted.request.call.arguments().options)?;
         admitted.admit_inline(definition)?;
     }
     Ok(admitted)
@@ -183,6 +187,22 @@ fn admit_options(
 ) -> Result<(), Error> {
     if let Some(model) = &options.model {
         crate::core::ModelName::new(model).map_err(|_| Error::usage("invalid model name"))?;
+    }
+    if options.mode.is_some() && function != Function::Recognize {
+        return Err(Error::usage("mode belongs to recognize"));
+    }
+    if let Some(rule) = &options.relation_threshold
+        && (function != Function::Recognize || !rule.native()?.is_cut())
+    {
+        return Err(Error::usage("relation threshold is a recognize single cut"));
+    }
+    if let Some(mode) = options.mode {
+        mode.validate_controls(
+            false,
+            options.relation_threshold.is_some(),
+            &options.stage_context.clone().unwrap_or_default(),
+        )
+        .map_err(Error::refused)?;
     }
     if let Some(rule) = &options.threshold {
         if !function.allows_option("threshold") {
@@ -399,4 +419,36 @@ pub(super) fn admit_item(
         return Err(Error::usage("item options apply only to choose"));
     }
     Ok(())
+}
+
+fn admit_recognition_controls(
+    definition: &RequestDefinition,
+    options: &RequestOptions,
+) -> Result<(), Error> {
+    let ask = match definition {
+        RequestDefinition::Recognition(q) => q,
+        RequestDefinition::Recognize(q) => q.question(),
+        _ => return Ok(()),
+    };
+    let mut spec = ask.0.clone();
+    apply_recognition(&mut spec, options)
+}
+pub(super) fn apply_recognition(
+    spec: &mut crate::core::RecognizeSpec,
+    options: &RequestOptions,
+) -> Result<(), Error> {
+    if let Some(mode) = options.mode {
+        spec.mode = mode;
+    }
+    if let Some(context) = &options.stage_context {
+        spec.stage_context.overlay(context);
+    }
+    if let Some(threshold) = &options.threshold {
+        spec.threshold = threshold.native()?;
+    }
+    if let Some(threshold) = &options.relation_threshold {
+        spec.relation_threshold = threshold.native()?;
+        spec.authored_relation_threshold = true;
+    }
+    spec.validate_mode().map_err(Error::refused)
 }

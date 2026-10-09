@@ -64,6 +64,22 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "String"))]
     pub model: Option<String>,
+    /// Explicit recognition stage selection; omission retains the saved mode.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "crate::RecognitionMode"))]
+    pub mode: Option<crate::RecognitionMode>,
+    /// Authored relation cut, applicable only to whole recognition.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "RequestThreshold"))]
+    pub relation_threshold: Option<RequestThreshold>,
     /// Explicit reading override.
     #[serde(
         default,
