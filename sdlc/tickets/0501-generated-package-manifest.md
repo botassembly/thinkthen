@@ -25,3 +25,7 @@ One generated product inventory names every file each package ships, including i
 - Changes: Extend the existing package definitions with the targets and native assets from 0517's design. Keep no second platform or native-file list. The first slice covers npm and the JVM jars; claim `libraries/typescript/package.json` and the JVM packaging files, naming producer and consuming scripts before editing. Each host migration's packaging slice then adds its package to the inventory instead of keeping its own list. This ticket is complete when the generator and the npm and JVM slice land.
 - Proof: Built inventories agree with the generated definition, and a missing or stale product file fails the installed consumer. Agreement between a builder and the inventory cannot prove that both include what the caller needs, so the installed consumer stays the independent check.
 - Defers: Final distribution assembly goes to 0530. Package design belongs to 0517. No new receipt framework or per-language report.
+
+## Progress
+
+- 2026-10-09 started
