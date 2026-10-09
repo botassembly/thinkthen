@@ -90,6 +90,13 @@ static thinkthen_session_result *drain(thinkthen_session *session) {
         }
     }
 }
+static THREAD_RESULT separate_error(void *unused) {
+    (void)unused;
+    check(strcmp(thinkthen_session_error_message(), "no session failure yet") == 0, "new thread has independent diagnostic");
+    check(thinkthen_session_new(NULL, NULL, 0, NULL) == THINKTHEN_EUSAGE, "other thread refusal");
+    check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "other thread fixed diagnostic");
+    return THREAD_DONE;
+}
 int main(void) {
     thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
     check(engine != NULL, "engine builds");
@@ -106,6 +113,27 @@ int main(void) {
         (void)getchar();
         return failed;
     }
+    if (getenv("SESSION_ADMISSION")) {
+        size_t len = strlen(getenv("SESSION_ADMISSION"));
+        char *json = malloc(len + 1);
+        if (!json) return 1;
+        memcpy(json, getenv("SESSION_ADMISSION"), len + 1);
+        thinkthen_session *out = (thinkthen_session *)(uintptr_t)7;
+        check(thinkthen_session_new(engine, json, len, &out) == THINKTHEN_EUSAGE, "native admission kind");
+        check(out == (thinkthen_session *)(uintptr_t)7, "native refusal preserves output");
+        memset(json, 'x', len); free(json);
+        const char *message = thinkthen_session_error_message();
+        THREAD_TYPE thread;
+        if (fixture_start(&thread, separate_error, NULL) != 0) return 1;
+        check(fixture_join(thread) == 0, "join independent diagnostic thread");
+        thinkthen_engine_free(engine);
+        thinkthen_session_free(NULL);
+        check(message == thinkthen_session_error_message(), "native diagnostic survives engine free and success");
+        puts(message);
+        check(thinkthen_session_new(NULL, NULL, 0, NULL) == THINKTHEN_EUSAGE, "next slot mutation");
+        check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "fixed failure replaces owned message");
+        return failed;
+    }
     check(strcmp(thinkthen_session_error_message(), "no session failure yet") == 0, "fresh session error slot");
     check(thinkthen_engine_new_with("{\"bad\":1}") == NULL, "saved failed constructor");
     const char *old_error = thinkthen_error_message(NULL);
@@ -113,6 +141,7 @@ int main(void) {
     for (size_t i = 0; i < sizeof bad_requests / sizeof bad_requests[0]; ++i) {
         thinkthen_session *out = (thinkthen_session *)(uintptr_t)7;
         check(thinkthen_session_new(engine, bad_requests[i], strlen(bad_requests[i]), &out) == THINKTHEN_EUSAGE, "bad request refuses");
+        check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "malformed controls keep fixed diagnostic");
         check(out == (thinkthen_session *)(uintptr_t)7, "failed constructor preserves output");
     }
     const char *bytes = (const char *)(uintptr_t)7;
