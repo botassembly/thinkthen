@@ -326,6 +326,11 @@ pub(crate) struct AnnotateResult {
 }
 
 impl AnnotateResult {
+    /// Primitive named values through the existing annotation serializer.
+    pub(crate) const fn value(&self) -> &NamedValues {
+        &self.value
+    }
+
     /// Gather one complete annotation row.
     #[must_use]
     pub(crate) const fn new(
@@ -402,6 +407,11 @@ pub(crate) struct DecisionResult {
 }
 
 impl DecisionResult {
+    /// Actual retained compatibility cache flag, independent of source provenance.
+    pub(crate) const fn cached(&self) -> bool {
+        self.meta.cached
+    }
+
     pub(crate) fn with_captured_attempts(
         mut self,
         attempts: Option<Vec<AttemptObservation>>,
@@ -447,3 +457,72 @@ impl DecisionResult {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod legacy_projection_tests {
+    use crate::{
+        core,
+        public::{Answer, CompleteDecision, CompleteRecord},
+    };
+    use serde::Serialize;
+
+    #[test]
+    fn actual_cached_flag_survives_absent_complete_sources() {
+        let answer = core::Answer::new_yes_no(core::probability::Probability::new(0.9).unwrap());
+        let threshold = core::Threshold::default();
+        let canonical = core::CompleteAtomic {
+            function: core::image::InputFunction::Decide,
+            declarations: Default::default(),
+            rank_position: None,
+            source: None,
+            images: None,
+            legacy: core::DecisionResult::new(
+                answer.read(Some(threshold)).0,
+                core::Question::Decide {
+                    text: core::QuestionText::new("Fits?").unwrap(),
+                    yes: None,
+                    no: None,
+                },
+                answer,
+                Some(threshold),
+                core::Meta::new(
+                    "0.2.0",
+                    "question".into(),
+                    core::Url::new("http://localhost/decisions").unwrap(),
+                    core::ModelName::new("requested").unwrap(),
+                    None,
+                    core::RequestMeta::new(true, 0, vec![]),
+                ),
+            ),
+            identity: core::ResultIdentity::resolved(
+                core::AnswerId::new("a".repeat(64)).unwrap(),
+                None,
+                vec![],
+                vec![],
+                None,
+            ),
+        };
+        let result = CompleteDecision {
+            canonical,
+            value: Answer::Yes,
+        };
+        let details = result.legacy_details().unwrap();
+        assert!(details.cached());
+        assert!(result.identity().question_sources().is_empty());
+        assert!(details.to_json().contains(r#""cached":true"#));
+        struct Refuses;
+        impl Serialize for Refuses {
+            fn serialize<S: serde::Serializer>(&self, _: S) -> Result<S::Ok, S::Error> {
+                Err(serde::ser::Error::custom("sensitive original"))
+            }
+        }
+        let row = CompleteRecord {
+            original: Refuses,
+            ordinal: 0,
+            result,
+        };
+        let error = row.legacy_details().unwrap_err();
+        assert_eq!(error.kind(), crate::public::ErrorKind::Usage);
+        assert_eq!(error.to_string(), "a record cannot be written as JSON");
+    }
+}

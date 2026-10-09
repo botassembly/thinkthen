@@ -21,13 +21,13 @@ fn answered(
     call.within(records.len());
     let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
     let answers = call::run(call, move |engine, options| {
-        let rows = engine
-            .details_many_with(&question, texts, options)
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(rows
-            .into_iter()
-            .map(|row| row.into_parts().1)
-            .collect::<Vec<_>>())
+        crate::request::details(
+            engine,
+            &question,
+            texts.into_iter().map(crate::request::text).collect(),
+            options,
+            true,
+        )
     });
     keys.into_iter().zip(answers).collect()
 }

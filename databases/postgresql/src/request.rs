@@ -24,6 +24,19 @@ pub(crate) fn json(value: serde_json::Value) -> Result<RequestItem, Error> {
     Ok(item)
 }
 
+pub(crate) fn document(text: String) -> Result<RequestItem, Error> {
+    match thinkthen::QuestionInput::annotation_document(&text)? {
+        thinkthen::QuestionInput::Record(record) => {
+            let mut item = self::text(String::new());
+            item.original = Some(RequestOriginal::Json {
+                value: record.original().clone(),
+            });
+            Ok(item)
+        }
+        _ => Ok(self::text(text)),
+    }
+}
+
 pub(crate) fn run(
     engine: &Engine,
     function: RequestFunction,
@@ -68,4 +81,45 @@ pub(crate) fn run(
 
 pub(crate) fn wrong_result() -> Error {
     crate::call::defect("the admitted request returned another function's result")
+}
+
+pub(crate) fn details(
+    engine: &Engine,
+    question: &thinkthen::LoadedQuestion,
+    items: Vec<RequestItem>,
+    options: CallOptions<'_>,
+    records: bool,
+) -> Result<Vec<thinkthen::Details>, Error> {
+    let function = match question {
+        thinkthen::LoadedQuestion::Banded(_) => RequestFunction::Decide,
+        thinkthen::LoadedQuestion::Question(question) => match question.kind() {
+            thinkthen::QuestionKind::Decide => RequestFunction::Decide,
+            thinkthen::QuestionKind::Choose => RequestFunction::Choose,
+            thinkthen::QuestionKind::Tag => RequestFunction::Tag,
+            thinkthen::QuestionKind::Score => RequestFunction::Score,
+            _ => return Err(wrong_result()),
+        },
+    };
+    let call = run(engine, function, question.clone().into(), items, options)?;
+    macro_rules! project {
+        ($rows:expr) => {
+            $rows
+                .into_iter()
+                .map(|row| {
+                    if records {
+                        row.legacy_details()
+                    } else {
+                        row.result().legacy_details()
+                    }
+                })
+                .collect()
+        };
+    }
+    match call.into_value() {
+        RequestValue::Decisions(rows) => project!(rows),
+        RequestValue::Choices(rows) => project!(rows),
+        RequestValue::Tags(rows) => project!(rows),
+        RequestValue::Scores(rows) => project!(rows),
+        _ => Err(wrong_result()),
+    }
 }

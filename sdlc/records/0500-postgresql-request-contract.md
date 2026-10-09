@@ -42,6 +42,14 @@ The coordinator ruled that `thinkthen_plan` retains the existing shared `Engine:
 
 ## Lessons
 
+Native batch equivalence needs matching execution controls. Complete carriers retain opt-in attempt receipts; the old `Details::of_batch_member` document omits them. Exact document fixtures use ordinary attempt controls and retain actual batch/context metadata. The conversion preserves any attempts already present in its retained native carrier.
+
+The default max-batch tag fixture exposed another native difference: the legacy batch details emit a `batch_warning` tuned for one record, while the complete-record carrier omits that warning. The conversion must not invent a warning. The exact four-function equivalence fixture explicitly selects batch one; the max-batch discrepancy needs a shared native ruling or fix. Its source is `public/complete/records.rs` passing the composed question into `batch_run` rather than rebuilding metadata in the compatibility adapter.
+
+Annotation input framing remains native. Valid JSON documents must use `QuestionInput::annotation_document` before typed Request composition, so authored member selectors operate on structured originals. A literal-text Request item would lose that behavior. The existing installed missing-member case exercises the retained distinction.
+
+The new native fixture initially used invalid tag grammar and a non-RFC-6901 selector; native admission refused both. A score fixture also assumed object wire criteria, but the native score route sends an array. The loopback response now handles both criteria shapes. The first unit fixture attempted private probability and identity construction from the result adapter; the core result test uses the existing identity constructor in its permitted scope. These setup failures supplied no product parity evidence.
+
 Complete find originals are `QuestionInput`, which implements `InputEvidence` rather than `Evidence`. Typed composition retains supplied literal text in `RecordEvidence::original()`. The installed duplicate/tie find cases caught a projection that assumed the original remained the bare Text variant. The SQL text-array projection must read the retained literal and use the typed selection index; it must not restore a separate index-bearing evidence wrapper.
 
 The installed rank refusal case caught an error-wording difference before sending: shared Request admission says `the evidence is empty or blank`, while the SQL legacy contract says `evidence is text, not white space`. The coordinator ruled that PostgreSQL adopts the shared Request sentence as the intentional 0.2 migration. The SQL assertion retains Usage classification, zero sends and secrecy. PostgreSQL adds no whitespace validator.

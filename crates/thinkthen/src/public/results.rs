@@ -51,6 +51,7 @@ mod set_ranked;
 pub use set_ranked::SetRanked;
 mod tally;
 pub use tally::{Tally, TallyStart};
+mod legacy;
 mod member;
 pub(crate) use member::Member;
 mod observation;

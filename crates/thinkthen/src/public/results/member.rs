@@ -15,9 +15,9 @@ impl fmt::Debug for Details {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Details")
-            .field("value", &self.value)
-            .field("probabilities", &self.probabilities)
-            .field("nearest", &self.nearest)
+            .field("value", &"<withheld>")
+            .field("probabilities", &"<withheld>")
+            .field("nearest", &"<withheld>")
             .field("model", &self.model)
             .field("question_sha256", &self.question_sha256)
             .field("profile_warning", &self.profile_warning)
