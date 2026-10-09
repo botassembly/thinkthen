@@ -46,7 +46,8 @@ const fn BoundaryProposal::start(&self) -> usize
 const fn BoundaryProposal::end(&self) -> usize
 const fn BoundaryProposal::length(&self) -> usize
 const fn BoundaryProposal::probability(&self) -> f64
-enum RecognitionValue
+enum RecognitionValue<'a>
+RecognitionValue::Whole
 RecognitionValue::Whole::entities: &'a [RecognizedEntity]
 RecognitionValue::Whole::relations: Option<&'a [Relation]>
 RecognitionValue::BoundaryOnly(&'a [BoundaryProposal])
@@ -63,6 +64,7 @@ fn SourceRecognition::proposals(&self) -> Option<&[SourceBoundaryProposal]>
 impl Default for RecognitionMode
 impl Deserialize<'de> for RecognitionMode
 impl Serialize for RecognitionMode
+impl Serialize for SourceBoundaryProposal
 ```
 
 ## Progress
