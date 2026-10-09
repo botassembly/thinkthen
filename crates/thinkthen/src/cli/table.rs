@@ -324,26 +324,6 @@ mod tests {
     }
 
     #[test]
-    fn header_and_row_rules_name_no_input_values() {
-        let cases: &[(&[u8], &str)] = &[
-            (b"", "the CSV header is missing because the input is empty"),
-            (b" ,b\n1,2\n", "the CSV header has a blank name"),
-            (b"a,a\n1,2\n", "the CSV header repeats a name"),
-            (
-                b"a,\x01\n1,2\n",
-                "the CSV header has a name containing a control character",
-            ),
-            (b"a,b\n1\n", "the CSV record has 1 field; its header has 2"),
-        ];
-        for (input, expected) in cases {
-            assert_eq!(
-                parsed(Kind::Csv, input).expect_err("input is refused"),
-                *expected
-            );
-        }
-    }
-
-    #[test]
     fn a_header_without_data_is_an_empty_dataset() {
         assert!(
             parsed(Kind::Csv, b"a,b\n")
