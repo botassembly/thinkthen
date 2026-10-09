@@ -1,5 +1,25 @@
 # 0.2 SDK rollout
 
+## 2026-10-09 amendment
+
+The [thin, first-class binding ruling](../decisions/2026-10-09-thin-first-class-bindings.md) replaces the generation fallback and the direct-surface-before-session order below. Rust owns every rule; each language owns only its idiom. All binding architecture belongs to 0.2. Scope is frozen to this work, confirmed bugs and TCGA blockers. Prefer deleting duplicated code over adapting it. Preserve the frozen C ABI and raise any conflict before changing it.
+
+| Order | Outcome and tickets | Breadth and dependencies |
+| --- | --- | --- |
+| 1 | Finish 0468, 0487, 0475, 0476, 0510 and confirmed reader repair 0520 | Medium per behavior; 0520 spans four readers and precedes wider result migration. 0510 follows 0475 and 0476 and includes shared Request/schema admission and a MCP or Python case alongside CLI and Rust cache proofs. |
+| 2 | 0514 guide, 0511 Rust-owned grammar, 0503 bounded session and 0513 generated results | Small guide and large shared interfaces. The guide can start independently. Keep one writer per shared seam. Request decoding stays at the public edge; pure core retains its existing boundary. Preserve presence, failure facts and memory ownership. |
+| 3 | 0512 CLI/MCP, 0515 one public host API, 0519 SQL | Medium per surface; large API removal across languages. Follow shared grammar. Preserve MCP framing and file authority, PostgreSQL server-side paths and frozen C compatibility. |
+| 4 | 0516 C# pilot, then 0504 families, 0518 Objective-C and direct languages 0494–0498 | Medium pilot and large adoption. Families follow the measured pilot with language-specific async, cancellation and cleanup. Direct languages adopt generated typed results; Python includes repr, equality, to_dict, pickling and bool without raising, plus dataframe behavior. |
+| 5 | 0505 constrained languages | Large adoption of generated C/Zig layouts, Ada specs and COBOL copybooks. Preserve C compatibility and written host limits. |
+| 6 | 0517 packaging linked with 0501; Windows packages 0383–0385; 0484 pruning; 0470 DuckDB feed; 0467 docs | Medium package work and bounded cleanup. Test installed packages, retain distinct risk cases and avoid a second manifest system. Windows packages follow settled family adoption. |
+| 7 | 0508 final review, after-sprint review and full installed run | Large final integration. Fix confirmed required defects. Required not-run cases fail, and parity gaps need written rulings. |
+
+The unresolved 0461 window ruling remains in pm. Independent controls proceed under recorded strict-byte and unknown-route assumptions without a vendor-fit guarantee. Notify TCGA with a named main build after 0475 and 0476. Cache tickets 0474 and 0480 retain their native Windows obligations. Release management remains held: no tag, candidate, workflow, rehearsal or publication without Ian's permission. Outside dependencies do not block local SDK completion.
+
+## Superseded 2026-10-08 order
+
+This earlier order remains for decision history. The amendment above governs remaining work.
+
 Ian's 2026-10-08 binding architecture ruling puts all SDK architecture in 0.2. The proxy belongs to 0.3. This replaces earlier architecture deferrals. Keep all languages and named typed public functions. Preserve the frozen 0.1 C ABI and accepted `thinkthen_call` grammar through compatibility translation. Release management remains held until Ian authorizes it.
 
 Sizes describe work breadth, not duration. Small changes touch one existing behavior or documentation seam. Medium changes migrate one public surface or run one bounded experiment. Large changes cross shared execution, memory ownership or several languages. A family slice gets one review and its installed shared cases; no additional per-language reports.
