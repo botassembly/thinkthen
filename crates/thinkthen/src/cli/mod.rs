@@ -337,7 +337,13 @@ fn run(
             input,
             writer,
         ),
-        Some(Command::Relate(arguments)) => relate::run(arguments, environment, input, writer),
+        Some(Command::Relate(arguments)) => relate::run(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("relate has no admitted request"))?,
+            input,
+            writer,
+        ),
         Some(Command::Cache(arguments)) => match &arguments.command {
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
             args::CacheCommand::Unused(arguments) => cache::unused(arguments, writer),

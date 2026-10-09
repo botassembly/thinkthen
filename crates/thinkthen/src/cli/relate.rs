@@ -18,6 +18,7 @@ pub(crate) mod source;
 pub(crate) fn run(
     arguments: &RelateArguments,
     environment: &Environment,
+    admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -40,12 +41,6 @@ pub(crate) fn run(
     if entities.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
-    let prepared = facade::relations(
-        &entities,
-        &settled.spec,
-        &backend,
-        selected_profile.as_ref(),
-    )?;
     let folders = Folders::of(&arguments.common, environment)?;
     if arguments.common.dry_run {
         if folders.named() {
@@ -61,6 +56,12 @@ pub(crate) fn run(
             key_env: environment.key_variable(),
             shared_context: shared_context.as_deref(),
         };
+        let prepared = facade::relations(
+            &entities,
+            &settled.spec,
+            &backend,
+            selected_profile.as_ref(),
+        )?;
         dry_run::write(&mut writer, context, &prepared)?;
         return Ok(ExitCode::SUCCESS);
     }
@@ -74,33 +75,88 @@ pub(crate) fn run(
         arguments.common.jobs,
     )?
     .with_aggregate_context(shared_context.clone());
-    let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
-    let cancel = environment
-        .cancel()
-        .with_captured_attempts(arguments.common.details);
-    let execution = engine
-        .relate(prepared, &entities, threshold, &cancel)
-        .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Relate))?;
-    let partial = execution.failed > 0;
-    let output = result::Output {
-        details: arguments.common.details,
-        framing: settled.framing,
-        spec: &settled.spec,
-        entities: &entities,
-        engine: &engine,
-        context: shared_context.as_deref(),
-        originals: &originals,
-    };
+    let result = execute(
+        admitted,
+        (&settled.spec, shared_context.as_deref()),
+        (&originals, sources.as_ref()),
+        &engine,
+        environment,
+        arguments.common.details,
+    )?;
+    let canonical = &result.canonical;
+    let partial = canonical
+        .members
+        .iter()
+        .any(|member| matches!(member.identity, crate::core::MemberIdentity::Failed(_)));
     if let Some(sources) = &sources {
-        source::write(&mut writer, &output, &execution, sources)?;
+        source::write(&mut writer, arguments.common.details, canonical, sources)?;
     } else {
-        result::write(&mut writer, &output, &execution)?;
+        result::write(&mut writer, arguments.common.details, canonical, &originals)?;
     }
-    environment.usage().record_done();
     mismatch.print_once()?;
     Ok(if partial {
         ExitCode::from(6)
     } else {
         ExitCode::SUCCESS
     })
+}
+
+fn execute(
+    admitted: crate::AdmittedRequest,
+    (spec, context): (&crate::core::RelateSpec, Option<&str>),
+    (originals, sources): (&[crate::core::Record], Option<&source::Sources>),
+    engine: &facade::Engine,
+    environment: &Environment,
+    details: bool,
+) -> Result<crate::CompleteRelated, Failure> {
+    let composition = crate::RecordReading::new(&[], None, None).map_err(Failure::from)?;
+    let records = originals.iter().enumerate().map(|(ordinal, original)| {
+        let mut row =
+            composition.compose(crate::RawRecord(std::sync::Arc::new(original.clone())))?;
+        if let Some(sources) = sources {
+            row.original = row.original.with_location(sources.location(ordinal)?);
+        }
+        Ok(row.map_original(crate::QuestionInput::Record))
+    });
+    let request = admitted
+        .retain_cli_definition(crate::Relate(spec.clone()).into())
+        .map_err(Failure::from)?
+        .with_composed_feed("cli-relate");
+    let native = crate::Engine::from_cli(engine.clone(), environment.config().prices());
+    let token = crate::CancelToken::new();
+    let signal = || environment.cancel().fired();
+    let mut controls = crate::CallOptions::new()
+        .cli_cancel(&token, environment.cancel().deadline())
+        .interrupt(&signal)
+        .surface(crate::Surface::Cli)
+        .attempts(details);
+    if let Some(context) = context {
+        controls = controls.context(context);
+    }
+    let failure = |error: crate::Error| {
+        if let Some(facts) = error.facts() {
+            environment.settle_native(facts);
+        }
+        Failure::from(error).with_replay_context(ReplayContext::Relate)
+    };
+    let outcome = native
+        .execute_request(
+            &request,
+            crate::RequestEnvironment {
+                controls,
+                feed: Some(crate::RequestFeed::from_records("cli-relate", records).eager()),
+            },
+        )
+        .map_err(failure)?;
+    let call = match outcome {
+        crate::RequestOutcome::Complete(call) => call,
+        crate::RequestOutcome::Failed { error, .. } => {
+            return Err(failure(error));
+        }
+    };
+    environment.settle_native(call.facts());
+    let crate::RequestValue::Related(row) = call.into_value() else {
+        return Err(Failure::Defect("relate returned a different function"));
+    };
+    Ok(row.result)
 }

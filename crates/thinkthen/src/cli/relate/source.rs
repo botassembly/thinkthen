@@ -7,12 +7,25 @@ use serde::Serialize;
 use crate::args::Common;
 use crate::cli::intake::{Data, Intake};
 use crate::core::{Framing, Reading, Record, RelateSpec, RelationEntity, RelationEntityView};
-use crate::engine::facade::Execution;
 use crate::failure::Failure;
 
 pub(super) struct Sources {
     pub(super) entities: Vec<RelationEntity>,
     occurrences: Vec<(RelationEntity, Occurrence)>,
+}
+
+impl Sources {
+    pub(super) fn location(&self, ordinal: usize) -> Result<crate::SourceLocation, crate::Error> {
+        let (_, source) = self
+            .occurrences
+            .get(ordinal)
+            .ok_or_else(|| crate::Error::defect("relate lost an occurrence"))?;
+        crate::SourceLocation::new(
+            source.file.clone().unwrap_or_default(),
+            source.first_line,
+            source.last_line,
+        )
+    }
 }
 
 type Selection = (Vec<RelationEntity>, Option<Sources>, Vec<Record>);
@@ -148,15 +161,15 @@ struct Edge<'a> {
 
 pub(super) fn write(
     writer: &mut dyn Write,
-    output: &super::result::Output<'_>,
-    execution: &Execution,
+    details: bool,
+    canonical: &crate::core::CompleteRelation,
     sources: &Sources,
 ) -> Result<(), Failure> {
     let mut edges = Vec::new();
     let mut budget = crate::result_json::bounded::OutputBudget(
-        crate::core::MAX_RECORD_BYTES - usize::from(output.details) * 2,
+        crate::core::MAX_RECORD_BYTES - usize::from(details) * 2,
     );
-    for edge in &execution.edges {
+    for edge in &canonical.value {
         for source in sources
             .occurrences
             .iter()
@@ -185,16 +198,15 @@ pub(super) fn write(
                 // Count escaped JSON bytes using borrowed evidence before retaining
                 // the Cartesian expansion or writing any part of this complete set.
                 budget
-                    .admit(&located, !output.details || !edges.is_empty())
+                    .admit(&located, !details || !edges.is_empty())
                     .map_err(|()| Failure::Usage("source relate output exceeds 16 MiB"))?;
                 edges.push(located);
             }
         }
     }
-    if output.details {
-        let canonical = super::result::details(output, execution)?;
+    if details {
         let located = Complete {
-            canonical: &canonical,
+            canonical,
             value: &edges,
             originals: sources
                 .occurrences

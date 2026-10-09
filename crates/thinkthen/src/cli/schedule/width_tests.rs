@@ -139,7 +139,15 @@ fn dispatch(
             input,
             &mut output,
         ),
-        Some(Verb::Relate(held)) => crate::cli::relate::run(held, environment, input, &mut output),
+        Some(Verb::Relate(held)) => crate::cli::relate::run(
+            held,
+            environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("relate request"),
+            input,
+            &mut output,
+        ),
         _ => panic!("no arm for {arguments:?}"),
     }
 }

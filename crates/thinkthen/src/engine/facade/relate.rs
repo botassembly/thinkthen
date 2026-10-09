@@ -112,7 +112,8 @@ pub(crate) fn relations(
 }
 
 impl Engine {
-    /// Send shared requests and retain recoverable logical failures.
+    /// Legacy facade fixtures retain their direct relation entry.
+    #[cfg(test)]
     pub(crate) fn relate(
         &self,
         prepared: PreparedRelations,

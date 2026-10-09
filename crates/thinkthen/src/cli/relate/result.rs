@@ -1,23 +1,12 @@
 //! Complete relation details delegate to the shared native renderer.
 #[cfg(test)]
 use crate::core::RelateQuestion;
-use crate::core::{self, Framing, json_line};
+use crate::core::{self, json_line};
 #[cfg(test)]
 use crate::core::{BackendFailure, Meta, RelationEdge, RelationEntity};
-use crate::engine::facade::{Engine, Execution};
 use crate::failure::Failure;
 use serde::{Serialize, Serializer};
 use std::io::Write;
-pub(super) struct Output<'a> {
-    pub(super) details: bool,
-    pub(super) framing: Framing,
-    pub(super) spec: &'a core::RelateSpec,
-    pub(super) entities: &'a [core::RelationEntity],
-    pub(super) engine: &'a Engine,
-    pub(super) context: Option<&'a str>,
-    pub(super) originals: &'a [core::Record],
-}
-
 #[cfg(test)]
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateDetails"))]
@@ -73,17 +62,18 @@ struct Judged {
 
 pub(super) fn write(
     writer: &mut dyn Write,
-    output: &Output<'_>,
-    execution: &Execution,
+    details: bool,
+    canonical: &core::CompleteRelation,
+    originals: &[core::Record],
 ) -> Result<(), Failure> {
     let mut text = String::new();
-    if output.details {
+    if details {
         text = json_line(&Complete {
-            canonical: &details(output, execution)?,
-            originals: output.originals,
+            canonical,
+            originals,
         })? + "\n";
     } else {
-        for edge in &execution.edges {
+        for edge in &canonical.value {
             text += &(json_line(edge)? + "\n");
         }
     }
@@ -94,30 +84,6 @@ pub(super) fn write(
         Err(error) if !Failure::closed_output(&error) => Err(Failure::Output(error)),
         _ => Ok(()),
     }
-}
-
-pub(super) fn details(
-    output: &Output<'_>,
-    execution: &Execution,
-) -> Result<core::CompleteRelation, Failure> {
-    let mut events = std::collections::BTreeMap::new();
-    for logical in &execution.logical {
-        for event in &logical.answered.attempts {
-            events.insert(event.ordinal(), event.clone());
-        }
-    }
-    crate::result_json::complete::relation(
-        output.engine,
-        output.spec,
-        output.entities,
-        execution,
-        crate::result_json::complete::RelationRow {
-            lines: output.framing == Framing::Lines,
-            context_sha256: crate::asking::context::digest(output.context),
-            attempts: Some(events.into_values().collect()),
-        },
-    )
-    .map_err(|_| Failure::Defect("a complete relation result could not be constructed"))
 }
 
 struct Complete<'a> {

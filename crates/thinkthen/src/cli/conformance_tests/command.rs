@@ -102,9 +102,15 @@ fn dispatch(arguments: &[String], input: Vec<u8>) -> (Result<ExitCode, Failure>,
             input,
             &mut output,
         ),
-        Some(Command::Relate(held)) => {
-            crate::cli::relate::run(held, &environment, input, &mut output)
-        }
+        Some(Command::Relate(held)) => crate::cli::relate::run(
+            held,
+            &environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("relate request"),
+            input,
+            &mut output,
+        ),
         _ => panic!("no command runner arm for {arguments:?}"),
     };
     (result, output)
