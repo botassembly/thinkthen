@@ -16,7 +16,7 @@ The rebuilt migrated SQLite extension reproduced the unchanged held-call regress
 
 `CallOptions` retains the existing private `Deadline` after starting a relative budget. Reusing or restarting the options copies the same budget and instant. Absolute deadlines retain their existing contract. Deadline clearing and replacement continue through the same setters. The SQLite test and error conversion remain unchanged.
 
-## Lessons
+## What the build taught us
 
 Preserve the complete deadline value across composition. A remaining duration is a transport limit, not the caller's configured budget. Verify a rebuilt installed extension with the pinned host; a warm library can hide a source change.
 
@@ -31,3 +31,9 @@ The repaired source plus the isolated SQLite migration rebuilt with `cargo build
 Heavy runs used user scopes with an 8 GiB memory cap, a 1 GiB swap cap and two build jobs. Lane output totals remained below 40 GiB. Every launched job completed and was reaped.
 
 The full repository gates and fresh independent review belong to the coordinator. This repair changes no engine module, SQL error mapping, SQLite test, dependency lock, credential file or release operation.
+
+## Landing qualification
+
+The coordinator separated the shared repair from its SQLite reproduction dependency and integrated it with stage-context main at `70f5b1115`. Fresh read-only code review accepted that source. Full `sdlc/scripts/lint`, `test` and `spec` all exited zero, including the native complete public consumer, child and installed-surface smoke checks and replayed demos. The existing ratchet measured 173,815 lines after combining the two independent source changes. All owned gate sessions finished and were reaped; no product source changed after qualification.
+
+The installed SQLite reproduction was also rebuilt with the current main plus this repair in 0499 at `c98d15d13`: all existing selected legacy modules, all 255 shared SQL cases and owning-facts checks passed. The unchanged 200 ms held-call assertion passed. That SQLite code retains its separate ticket, fresh review and partial landing; it is not included in the 0509 merge.
