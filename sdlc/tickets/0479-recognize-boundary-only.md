@@ -29,6 +29,7 @@ Design and implement a caller-requested step-1-only recognition mode with caller
 - Further individually named implementation seams: `crates/thinkthen/src/public/recognize/proposals.rs`, `crates/thinkthen/tests/native_complete.rs` and `crates/thinkthen/tests/backend/recognize.rs`. Preserve implicit versus authored relation thresholds in RequestDefinition wire encoding under ADR 0126; retain default whole complete output and identity.
 - Offline reading seams: `crates/thinkthen/src/core/measure/items.rs`, `crates/thinkthen/src/core/measure/key.rs`, `crates/thinkthen/src/cli/audit/cases.rs` and `specification/audit.md`. Read and compare unclassified proposal offsets and probabilities under the resolved mode; retain the existing run-cut floor and Whole decoding. Exercise audit and diff through the existing recognition boundary tests.
 - Offline table rendering seam: `crates/thinkthen/src/cli/diff.rs`. Print an unclassified proposal with its offsets and four-place probability; preserve Whole table formatting and JSON comparison behavior.
+- Settings documentation seams: `specification/settings.md` and `sdlc/scripts/settings`. Document the admitted mode and keep the existing key inventory tied to the actual top-level and recognition reader lists after same-file helper extraction; preserve every existing missing/stale-key check.
 
 ### Added public declarations
 
