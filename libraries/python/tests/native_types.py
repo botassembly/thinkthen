@@ -40,4 +40,12 @@ def known(engine:c.Engine, question:c.QuestionSource, inputs:c.Records|c.Files)-
     call:c.CallId=decision.facts.call_id
     answer:c.AnswerId=decision.results[0].answer_id
     requests:int=decision.facts.requests_sent
+    request_bytes:int|c.Absent=decision.facts.largest_request_bytes
+    estimated_tokens:int|None|c.Absent=decision.facts.largest_request_estimated_input_tokens
+    estimate_method:str|c.Absent=decision.facts.token_estimate_method
+    persistence:c.PersistenceObservation|c.Absent=decision.facts.usage_persistence
+    if not isinstance(persistence,c.Absent):
+        state:str=persistence.state
+        observed_at:str=persistence.observed_at
+        advice:str|c.Absent=persistence.advice
     author:str|c.Absent=decision.results[0].question.name
