@@ -33,3 +33,4 @@ The CLI and MCP admit and execute every judgment call through the same public Re
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed 760ff5b25; next: MCP now admits controls through Request owners and its installed shared cases pass. Migrate CLI judgment execution next; preserve output, pipe interruption and exit codes.
