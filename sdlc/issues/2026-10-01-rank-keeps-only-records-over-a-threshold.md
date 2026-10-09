@@ -14,3 +14,5 @@ Ian ruled on 2026-10-01 that a rank cutoff is a 0.2 idea. In 0.1, `rank` orders 
 ## Reconciliation, 2026-10-08
 
 The 2026-10-01 Ian ruling retains this 0.2 proposal. The current settled [rank contract](../../specification/rank.md) defines pure ordering and refuses thresholds. The PM must reconcile that conflict before an implementation ticket changes behavior. Records cleanup cannot revoke Ian’s ruling or claim the proposed feature is implemented.
+
+Ian approved the cutoff for 0.2 on 2026-10-09. [Ticket 0510](../tickets/0510-rank-probability-threshold.md) owns the specification and ADR amendment, CLI and Rust implementation, and shared-cache behavior checks. It follows 0475 and 0476.
