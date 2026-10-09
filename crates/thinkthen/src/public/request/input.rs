@@ -258,18 +258,18 @@ fn context<'de, D: serde::Deserializer<'de>>(de: D) -> Result<Option<RecordConte
     Ok(Some(context))
 }
 #[derive(Deserialize, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "OptionSchema"))]
 #[serde(deny_unknown_fields)]
-struct OptionSchema {
+#[serde(bound(deserialize = "T: Deserialize<'de>"))]
+struct OptionSchema<T = Box<serde_json::value::RawValue>> {
     name: String,
     #[serde(
         default,
         deserialize_with = "description",
-        serialize_with = "write_description",
         skip_serializing_if = "Option::is_none"
     )]
     #[cfg_attr(test, schemars(with = "serde_json::Value"))]
-    description: Option<crate::Description>,
+    description: Option<T>,
 }
 
 #[derive(Deserialize)]
@@ -308,37 +308,55 @@ enum ContextSchema {
     Text(String),
     Object(std::collections::BTreeMap<String, serde_json::Value>),
 }
-fn description<'de, D: serde::Deserializer<'de>>(
-    de: D,
-) -> Result<Option<crate::Description>, D::Error> {
-    let value = crate::core::Json::deserialize(de)?;
-    let text = crate::core::json_line(&value).map_err(serde::de::Error::custom)?;
-    crate::Description::from_json(&text)
-        .map(Some)
-        .map_err(serde::de::Error::custom)
-}
-fn write_description<S: serde::Serializer>(
-    value: &Option<crate::Description>,
-    s: S,
-) -> Result<S::Ok, S::Error> {
-    match value {
-        Some(value) => crate::core::Json::parse(value.as_json())
-            .map_err(serde::ser::Error::custom)?
-            .serialize(s),
-        None => s.serialize_none(),
+// Canonical wire decoding retains its surrounding JSON recursion budget.
+// Compatibility descriptors retain their separate raw-description budget.
+struct WireDescription(Box<serde_json::value::RawValue>);
+impl<'de> Deserialize<'de> for WireDescription {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        let value = crate::core::Json::deserialize(de)?;
+        let text = crate::core::json_line(&value).map_err(serde::de::Error::custom)?;
+        serde_json::value::RawValue::from_string(text)
+            .map(Self)
+            .map_err(serde::de::Error::custom)
     }
 }
+fn description<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(
+    de: D,
+) -> Result<Option<T>, D::Error> {
+    T::deserialize(de).map(Some)
+}
 fn options<'de, D: serde::Deserializer<'de>>(de: D) -> Result<Option<RecordOptions>, D::Error> {
-    let options = Vec::<OptionSchema>::deserialize(de)?
+    let options = Vec::<OptionSchema<WireDescription>>::deserialize(de)?
         .into_iter()
-        .map(|option| crate::RecordOption {
+        .map(|option| OptionSchema {
             name: option.name,
-            description: option.description,
+            description: option.description.map(|value| value.0),
         })
         .collect();
-    RecordOptions::new(options)
+    record_options(options)
         .map(Some)
         .map_err(serde::de::Error::custom)
+}
+fn record_options(options: Vec<OptionSchema>) -> Result<RecordOptions, crate::Error> {
+    RecordOptions::new(
+        options
+            .into_iter()
+            .map(|option| {
+                Ok(crate::RecordOption {
+                    name: option.name,
+                    description: option
+                        .description
+                        .map(|value| crate::Description::from_json(value.get()))
+                        .transpose()?,
+                })
+            })
+            .collect::<Result<Vec<_>, crate::Error>>()?,
+    )
+}
+fn options_descriptor(source: &str) -> Result<RecordOptions, crate::Error> {
+    let options = serde_json::from_str(source)
+        .map_err(|_| crate::Error::usage("complete call requires a typed request"))?;
+    record_options(options)
 }
 fn write_options<S: serde::Serializer>(
     value: &Option<RecordOptions>,
@@ -348,11 +366,20 @@ fn write_options<S: serde::Serializer>(
         Some(value) => value
             .options()
             .iter()
-            .map(|option| OptionSchema {
-                name: option.name.clone(),
-                description: option.description.clone(),
+            .map(|option| {
+                Ok(OptionSchema {
+                    name: option.name.clone(),
+                    description: option
+                        .description
+                        .as_ref()
+                        .map(|value| {
+                            serde_json::value::RawValue::from_string(value.as_json().to_owned())
+                        })
+                        .transpose()
+                        .map_err(serde::ser::Error::custom)?,
+                })
             })
-            .collect::<Vec<_>>()
+            .collect::<Result<Vec<_>, S::Error>>()?
             .serialize(s),
         None => s.serialize_none(),
     }
@@ -375,6 +402,15 @@ impl std::fmt::Debug for RequestItem {
 }
 
 impl RequestItem {
+    /// Replace the shortlist from closed named descriptors, retaining description order.
+    /// Descriptions retain explicit null separately from omission.
+    /// # Errors
+    /// Returns Usage for malformed descriptors or invalid names and descriptions.
+    pub fn with_options_descriptor(mut self, source: &str) -> Result<Self, crate::Error> {
+        self.options = Some(options_descriptor(source)?);
+        Ok(self)
+    }
+
     /// Decode a complete-call record descriptor without reading files.
     /// This retains the existing text, document and JSON envelope grammar.
     /// # Errors

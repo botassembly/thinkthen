@@ -127,3 +127,38 @@ def test_complete_json_nesting_keeps_original_parser_limit(backend, tmp_path, de
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == [kind]
     assert backend.count() == 0
+
+
+@pytest.mark.parametrize('options', [[], [{'name': 'same'}, {'name': 'same'}],
+                                      [{'name': 'first', 'description': 42}]])
+def test_complete_shortlist_refusals_agree_between_eager_and_streamed_calls(backend, tmp_path, options):
+    from conftest import child_env, run
+    output = run(f'''
+        import json
+        from thinkthen import _thinkthen as native
+        engine = native._Engine(cache=False, max_retries=0)
+        request = json.dumps({{
+            'verb': 'choose',
+            'question': {{'role': 'atomic', 'body': {{'choose': 'Q', 'options': ['first', 'second']}}}},
+            'input': {{'kind': 'records', 'records': [{{
+                'content': {{'kind': 'text', 'value': 'private original'}},
+                'options': {options!r},
+            }}]}},
+        }})
+        try:
+            engine._complete(request, None, None)
+        except native.ThinkThenError as error:
+            assert error.kind == 'usage'
+            message = str(error)
+            assert 'private original' not in message
+        else:
+            raise AssertionError('invalid shortlist admitted')
+        batch = engine._complete_batch(request, None, None)
+        event = json.loads(batch._pull())
+        batch.close()
+        assert event['error']['kind'] == 'usage'
+        assert event['error']['message'] == message
+        print('refused')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['refused']
+    assert backend.count() == 0

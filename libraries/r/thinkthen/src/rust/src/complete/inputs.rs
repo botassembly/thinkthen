@@ -4,8 +4,7 @@ use serde_json::Value;
 use serde_json::value::RawValue;
 use thinkthen::{
     Engine, Error, ImageInput, ImageMedia, InputEvidence, InputReaderOptions, QuestionInput,
-    RawRecord, RecordContext, RecordInput, RecordOption, RecordOptions, RecordReading, RequestItem,
-    SourceItem,
+    RawRecord, RecordContext, RecordInput, RecordReading, RequestItem, SourceItem,
 };
 
 #[derive(Deserialize)]
@@ -70,11 +69,15 @@ enum Context {
     Text(String),
     Json(Box<RawValue>),
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Choice {
     name: String,
-    #[serde(default, deserialize_with = "description")]
+    #[serde(
+        default,
+        deserialize_with = "description",
+        skip_serializing_if = "Option::is_none"
+    )]
     description: Option<Box<RawValue>>,
 }
 
@@ -158,23 +161,10 @@ fn compose(
             &RawRecord::json(value.get())?,
         )?)),
     };
-    // The descriptor shortlist parser uses Value and sorts description objects.
-    // Keep authored RawValue order until that shared parser admits it directly.
     if let Some(choices) = item.options {
-        record.options = Some(RecordOptions::new(
-            choices
-                .into_iter()
-                .map(|choice| {
-                    Ok(RecordOption {
-                        name: choice.name,
-                        description: choice
-                            .description
-                            .map(|value| thinkthen::Description::from_json(value.get()))
-                            .transpose()?,
-                    })
-                })
-                .collect::<Result<Vec<_>, Error>>()?,
-        )?);
+        let source =
+            serde_json::to_string(&choices).map_err(|_| super::usage("invalid options"))?;
+        record.options = request.with_options_descriptor(&source)?.options;
     }
     Ok(RecordInput {
         seed_spans: record.seed_spans,
