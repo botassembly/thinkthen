@@ -751,6 +751,7 @@ public Presence<String> file() { return presence("file", value -> (String)value)
 public Presence<BigInteger> firstLine() { return presence("first_line", value -> Values.integer(value)); }
 public Presence<BigInteger> index() { return presence("index", value -> Values.integer(value)); }
 public Presence<Object> input() { return presence("input", value -> Values.freeze(value)); }
+public Presence<List<SessionInputSource>> inputSources() { return presence("input_sources", value -> Values.list(value, item0 -> SessionInputSource.read(item0))); }
 public Presence<BigInteger> lastLine() { return presence("last_line", value -> Values.integer(value)); }
 public Meta meta() { Object value = required("meta"); return Meta.read(value); }
 public Presence<Position> position() { return presence("position", value -> Position.read(value)); }
