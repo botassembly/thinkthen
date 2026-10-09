@@ -96,20 +96,47 @@ fn member() -> RelationEntry {
 
 #[test]
 fn relation_members_emit_success_or_failure_with_no_fabricated_success_fields() {
-    let answered = member();
+    let mut answered = member();
     assert_eq!(
         json_line(&answered).unwrap(),
         format!(
-            r#"{{"relation":"works_for","reads":"works for","method":"yes_no","direction":"source_to_target","source":{{"name":"Ada","kind":"person"}},"target":{{"name":"Acme","kind":"organization"}},"answer_id":"{}","probability":0.4,"accepted":false,"answer":{{"kind":"yes_no","probability":0.4}},"request":"saved-key"}}"#,
+            r#"{{"relation":"works_for","reads":"works for","method":"yes_no","direction":"source_to_target","source":{{"name":"Ada","kind":"person"}},"target":{{"name":"Acme","kind":"organization"}},"answer_id":"{}","probability":0.4,"accepted":false,"answer":{{"kind":"yes_no","probability":0.4}},"request":"saved-key","question":{{"verb":"decide","text":"refund?"}},"threshold":0.5,"question_sources":[],"observations":[]}}"#,
             "b".repeat(64),
         )
     );
+    answered.sources = vec![crate::core::QuestionSource {
+        origin: crate::core::Origin::Cache,
+        answered_by: crate::core::ModelName::new("actual").unwrap(),
+        batch_size: std::num::NonZeroU32::new(2),
+    }];
+    answered.observations = vec![crate::core::Observation::Answered {
+        observation_id: crate::core::ObservationId::new("b".repeat(64)).unwrap(),
+    }];
+    answered.reported_usage = Some(crate::core::ReportedUsage::new(Some(0), None));
+    let success: serde_json::Value = serde_json::from_str(&json_line(&answered).unwrap()).unwrap();
+    assert_eq!(
+        success["question_sources"],
+        serde_json::json!([
+            {"origin":"cache","answered_by":"actual","batch_size":2}
+        ])
+    );
+    assert_eq!(
+        success["observations"],
+        serde_json::json!([
+            {"observation_id":"b".repeat(64)}
+        ])
+    );
+    assert_eq!(success["usage"], serde_json::json!({"input_tokens":0}));
     let mut failed = member();
     failed.identity = MemberIdentity::Failed(FailureId::new("c".repeat(64)).unwrap());
     failed.answer = None;
     failed.probability = None;
     failed.accepted = None;
     failed.failure = Some(BackendFailure::new(BackendFailureCause::MissingProbability));
+    failed.observations = vec![crate::core::Observation::Failed {
+        failure_id: FailureId::new("c".repeat(64)).unwrap(),
+    }];
+    failed.reported_usage = Some(crate::core::ReportedUsage::new(None, Some(0)));
     let failed_json = json_line(&failed).unwrap();
     assert!(failed_json.contains(&format!(
         r#""failure_id":"{}","failure":{{"kind":"backend","cause":"missing_probability"}}"#,
@@ -118,6 +145,19 @@ fn relation_members_emit_success_or_failure_with_no_fabricated_success_fields() 
     for absent in ["answer_id", "probability", "accepted"] {
         assert!(!failed_json.contains(&format!(r#""{absent}":"#)));
     }
+    let failure: serde_json::Value = serde_json::from_str(&failed_json).unwrap();
+    assert_eq!(
+        failure["question"],
+        serde_json::json!({"verb":"decide","text":"refund?"})
+    );
+    assert_eq!(failure["threshold"], serde_json::json!(0.5));
+    assert_eq!(
+        failure["observations"],
+        serde_json::json!([
+            {"failure_id":"c".repeat(64)}
+        ])
+    );
+    assert_eq!(failure["usage"], serde_json::json!({"output_tokens":0}));
     failed.answer = answered.answer;
     assert!(json_line(&failed).is_err());
 }

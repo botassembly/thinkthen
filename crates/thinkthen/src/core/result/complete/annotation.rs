@@ -87,12 +87,21 @@ enum MemberDocument<'a> {
         answer: &'a crate::core::Answer,
         threshold: Option<crate::core::Threshold>,
         request: &'a str,
+        question_sources: &'a [crate::core::QuestionSource],
+        observations: &'a [crate::core::Observation],
+        #[serde(skip_serializing_if = "Option::is_none")]
+        usage: Option<crate::core::ReportedUsage>,
     },
     Failed {
         failure_id: &'a FailureId,
         question: crate::core::declaration::ReadableQuestion<'a, crate::core::Question>,
         failure: &'a crate::core::BackendFailure,
+        threshold: Option<crate::core::Threshold>,
         request: &'a str,
+        question_sources: &'a [crate::core::QuestionSource],
+        observations: &'a [crate::core::Observation],
+        #[serde(skip_serializing_if = "Option::is_none")]
+        usage: Option<crate::core::ReportedUsage>,
     },
 }
 
@@ -109,15 +118,22 @@ impl Serialize for AnnotationMember {
                     value: &entry.value,
                     question,
                     answer: &entry.answer,
-                    threshold: entry.threshold,
+                    threshold: self.threshold,
                     request: &entry.request,
+                    question_sources: &self.sources,
+                    observations: &self.observations,
+                    usage: self.reported_usage,
                 }
             }
             (MemberIdentity::Failed(id), AnnotatedEntry::Failed(entry)) => MemberDocument::Failed {
                 failure_id: id,
                 question,
                 failure: &entry.failure,
+                threshold: self.threshold,
                 request: &entry.request,
+                question_sources: &self.sources,
+                observations: &self.observations,
+                usage: self.reported_usage,
             },
             _ => {
                 return Err(serde::ser::Error::custom(

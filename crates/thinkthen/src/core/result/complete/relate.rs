@@ -83,6 +83,12 @@ struct EntryDocument<'a> {
     #[serde(flatten)]
     outcome: Outcome<'a>,
     request: &'a str,
+    question: &'a crate::core::Question,
+    threshold: crate::core::Threshold,
+    question_sources: &'a [crate::core::QuestionSource],
+    observations: &'a [crate::core::Observation],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<crate::core::ReportedUsage>,
 }
 impl Serialize for RelationEntry {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -124,6 +130,11 @@ impl Serialize for RelationEntry {
             target: self.target.as_ref(),
             outcome,
             request: &self.request,
+            question: &self.question,
+            threshold: self.threshold,
+            question_sources: &self.sources,
+            observations: &self.observations,
+            usage: self.reported_usage,
         }
         .serialize(serializer)
     }
