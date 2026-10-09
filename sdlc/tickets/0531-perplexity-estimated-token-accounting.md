@@ -23,3 +23,4 @@ Perplexity plans and estimated-input budgets account for the provider's repeated
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed 4d5d8b2511563e6ab0a254c530a9ca6198928d4b; next: Perplexity route accounting now agrees across plans, estimated admission and usage facts. Finish combined landing checks and changed documentation checks before whole closure.
