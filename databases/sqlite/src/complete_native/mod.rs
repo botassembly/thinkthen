@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use thinkthen::{CallOptions, Engine, Error, ErrorKind, RecordObservation, Surface};
 #[allow(
     dead_code,
-    reason = "PostgreSQL retains this compatibility dispatcher until ticket 0500"
+    reason = "DuckDB retains this compatibility dispatcher until its Request migration"
 )]
 mod execute;
 mod file_format;
@@ -32,7 +32,7 @@ pub(crate) fn failure(error: &Error) -> Value {
 
 #[allow(
     dead_code,
-    reason = "PostgreSQL retains this compatibility entry until ticket 0500"
+    reason = "DuckDB retains this compatibility entry until its Request migration"
 )]
 pub(crate) fn run(
     engine: &Engine,

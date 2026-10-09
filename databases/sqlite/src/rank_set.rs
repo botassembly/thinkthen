@@ -24,21 +24,32 @@ pub(crate) fn ranked(
             Some(context) => options.context(context),
             None => options,
         };
-        let call = engine.rank_set_with(&asked, texts, options)?;
+        let call = crate::request::run(
+            engine,
+            thinkthen::RequestFunction::Rank,
+            (*asked).clone().into(),
+            texts.into_iter().map(crate::request::text).collect(),
+            options,
+        )?;
         let facts = serde_json::to_string(call.facts())
             .map_err(|_| Failure::defect("rank facts could not be encoded"))?;
-        call.value()
-            .iter()
+        let thinkthen::RequestValue::SetRanked(rows) = call.value() else {
+            return Err(crate::request::wrong_result().into());
+        };
+        rows.iter()
             .zip(1_i64..)
             .map(|(row, place)| {
                 let key = keys
-                    .get(row.index())
+                    .get(row.ordinal())
                     .ok_or_else(|| Failure::defect("a ranked row lost its record"))?;
                 Ok(vec![
                     Value::Text(key.clone()),
                     Value::Integer(place),
-                    Value::Real(row.probability()),
-                    Value::Text(row.question_name().to_owned()),
+                    Value::Real(match row.result().result().probabilities() {
+                        thinkthen::Probabilities::YesNo { yes } => yes,
+                        _ => return Err(crate::request::wrong_result().into()),
+                    }),
+                    Value::Text(row.result().question_name().to_owned()),
                     Value::Text(facts.clone()),
                 ])
             })
