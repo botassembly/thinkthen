@@ -14,6 +14,26 @@ The constructor copies request input and gives the worker its own engine. After 
 
 `thinkthen_request_plan_json` previews canonical Requests for fixed atomic decide, choose, tag and score questions only. Other judgments and dynamic question definitions refuse; this preview limit does not limit the ten-judgment session API. It reads no key or cache and sends nothing. Its successful plan string is owned: free it with `thinkthen_free_string`.
 
+## Use a prebuilt development archive
+
+Extract the matching C archive supplied by your reviewed development build. It carries the generated `include/thinkthen.h`, static engine, shared library and relocatable `lib/pkgconfig/thinkthen.pc`. A C caller compiles its own program; it needs no Rust compiler. The package-relative static archive supplies the engine without a runtime library search path. For Linux, from the extracted directory:
+
+```sh
+PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
+  $(PKG_CONFIG_PATH="$PWD/lib/pkgconfig" pkg-config --cflags thinkthen) \
+  "$PWD/lib/libthinkthen.a" \
+  $(PKG_CONFIG_PATH="$PWD/lib/pkgconfig" pkg-config --libs --static thinkthen | sed 's/-lthinkthen//')
+./consumer
+```
+
+[examples/session.c](examples/session.c) is a complete caller using the recommended typed packet views and terminal failure facts. Supply the backend environment before a live call. The focused local package check runs that caller and the existing typed owner case against an extracted archive with a synthetic loopback backend:
+
+```sh
+python3 libraries/c/tests/installed-session.py PATH_TO_C_ARCHIVE
+```
+
+The [native package design](../../sdlc/decisions/2026-10-09-native-package-design.md) defines intended targets and runtime prerequisites. This example proves Linux static integration; other platform qualification belongs to the authorized release candidate.
+
 ## Build from source
 
 ```sh
