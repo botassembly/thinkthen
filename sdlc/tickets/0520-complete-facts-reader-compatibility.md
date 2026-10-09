@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision e94ab9b5c63ba851e308b1f0b3744371f1e1d4a8, accept
 
+Reviews: revision 2f814ce58ace6337cf270e738520a64f4a41059b, accept
+
 ## Outcome
 
 Python, TypeScript, Ruby and R public complete calls preserve the facts the engine emits instead of failing while reading them. This fixes a confirmed compatibility bug before the wider generated-results migration.
