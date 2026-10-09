@@ -29,6 +29,43 @@ fn session_owns_inputs_engine_and_transferred_packets() {
         (output.status.code(), text(&output.stderr)),
         (Some(0), String::new())
     );
+    let packets: Vec<serde_json::Value> = text(&output.stdout)
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("canonical packet JSON"))
+        .collect();
+    assert_eq!(
+        packets.first().expect("reader terminal")["kind"],
+        "terminal"
+    );
+    assert_eq!(
+        packets.first().expect("reader terminal")["failure"]["error"]["kind"],
+        "local"
+    );
+    assert_eq!(
+        packets.last().expect("settled terminal")["kind"],
+        "terminal"
+    );
+    let row = packets
+        .iter()
+        .find(|packet| packet["kind"] == "row")
+        .expect("complete row");
+    assert_eq!(row["function"], "decide");
+    let observation = packets
+        .iter()
+        .find(|packet| packet["kind"] == "observation")
+        .expect("native observation");
+    assert_eq!(observation["function"], "decide");
+    let documents = text(&output.stdout);
+    for field in [
+        "owned.txt",
+        "Evidence.",
+        "question_sha256",
+        "answer_id",
+        "observations",
+        "question_sources",
+    ] {
+        assert!(documents.contains(field), "complete packet omitted {field}");
+    }
     assert_eq!(backend.count(), 1, "only accepted owned input sends");
 }
 

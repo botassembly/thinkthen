@@ -91,7 +91,10 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
         let (state, owner) = match session.0.try_read() {
             RequestSessionRead::Result(packet) => (
                 THINKTHEN_SESSION_RESULT_V1,
-                Box::into_raw(Box::new(SessionResultHandle { _packet: packet })),
+                Box::into_raw(Box::new(SessionResultHandle {
+                    packet,
+                    json: std::sync::Mutex::new(None),
+                })),
             ),
             RequestSessionRead::Pending => (THINKTHEN_SESSION_PENDING_V1, std::ptr::null_mut()),
             RequestSessionRead::End => (THINKTHEN_SESSION_END_V1, std::ptr::null_mut()),
@@ -217,5 +220,36 @@ pub unsafe extern "C" fn thinkthen_session_finish(
             Some(RequestReaderFailure::from_json(text).map_err(|error| error.kind())?)
         };
         session.0.finish(failure).map_err(|error| error.kind())
+    })
+}
+
+/// Borrow canonical immutable packet JSON, including an owned trailing NUL.
+/// The length excludes that terminator. Bytes stay valid until result_free,
+/// even after session_free and engine_free. Concurrent access is synchronized.
+/// Immediate failure preserves both outputs and records the session diagnostic.
+/// # Safety
+/// result is live throughout the call. out and out_len are nonnull, writable,
+/// distinct addresses; alignment and partial overlaps are caller duties.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_result_json(
+    result: *const SessionResultHandle,
+    out: *mut *const c_char,
+    out_len: *mut usize,
+) -> std::ffi::c_int {
+    errors::call(|| {
+        required(out)?;
+        required(out_len)?;
+        if out.cast::<()>() == out_len.cast::<()>() {
+            return Err(ErrorKind::Usage);
+        }
+        // SAFETY: the caller keeps this independent owner live during access.
+        let result = unsafe { result.as_ref() }.ok_or(ErrorKind::Usage)?;
+        let (bytes, len) = result.json()?;
+        // SAFETY: both outputs were checked before any fallible operation.
+        unsafe {
+            *out = bytes;
+            *out_len = len;
+        }
+        Ok(())
     })
 }

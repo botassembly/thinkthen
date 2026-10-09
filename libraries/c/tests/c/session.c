@@ -1,4 +1,5 @@
 /* Owned session boundaries through the installed C header. */
+#include "platform.h"
 #include <thinkthen.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,6 +29,48 @@ static thinkthen_session *open_session(thinkthen_engine *engine, const char *jso
     free(buffer);
     return session;
 }
+struct json_reader {
+    thinkthen_session_result *result;
+    const char *bytes;
+    size_t len;
+    int code;
+};
+static THREAD_RESULT read_json(void *argument) {
+    struct json_reader *reader = argument;
+    reader->code = thinkthen_session_result_json(reader->result, &reader->bytes, &reader->len);
+    return THREAD_DONE;
+}
+static void packet_json(thinkthen_session_result *result) {
+    const char *sentinel = (const char *)(uintptr_t)7;
+    size_t extent = 99;
+    check(thinkthen_session_result_json(result, NULL, &extent) == THINKTHEN_EUSAGE && extent == 99, "live JSON validates byte output");
+    check(thinkthen_session_result_json(result, &sentinel, NULL) == THINKTHEN_EUSAGE && sentinel == (const char *)(uintptr_t)7, "live JSON validates length output");
+    union { const char *bytes; size_t len; } alias;
+    alias.bytes = (const char *)(uintptr_t)7;
+    check(thinkthen_session_result_json(result, &alias.bytes, &alias.len) == THINKTHEN_EUSAGE && alias.bytes == (const char *)(uintptr_t)7, "live JSON refuses output alias");
+    const char *diagnostic = thinkthen_session_error_message();
+    struct json_reader readers[2] = {{result, NULL, 0, 99}, {result, NULL, 0, 99}};
+    THREAD_TYPE threads[2];
+    for (size_t i = 0; i < 2; ++i)
+        if (fixture_start(&threads[i], read_json, &readers[i]) != 0) exit(1);
+    for (size_t i = 0; i < 2; ++i)
+        if (fixture_join(threads[i]) != 0) exit(1);
+    check(readers[0].code == THINKTHEN_OK && readers[1].code == THINKTHEN_OK, "concurrent JSON succeeds");
+    check(readers[0].bytes == readers[1].bytes && readers[0].len == readers[1].len, "concurrent JSON has stable storage");
+    if (!readers[0].bytes) exit(1);
+    check(readers[0].bytes[readers[0].len] == 0 && strlen(readers[0].bytes) == readers[0].len, "JSON owns NUL beyond counted bytes");
+    check(diagnostic == thinkthen_session_error_message(), "successful JSON preserves immediate diagnostic");
+    puts(readers[0].bytes);
+}
+static void retained_json(thinkthen_session *session, thinkthen_session_result *result) {
+    const char *before = NULL, *after = NULL;
+    size_t len = 0, after_len = 0;
+    check(thinkthen_session_result_json(result, &before, &len) == THINKTHEN_OK, "JSON before session free");
+    thinkthen_session_free(session);
+    check(thinkthen_session_result_json(result, &after, &after_len) == THINKTHEN_OK, "JSON after session free");
+    check(before == after && len == after_len && before[len] == 0, "borrow survives engine and session free");
+    thinkthen_session_result_free(result);
+}
 static thinkthen_session_result *drain(thinkthen_session *session) {
     thinkthen_session_result *kept = NULL;
     for (;;) {
@@ -36,8 +79,9 @@ static thinkthen_session_result *drain(thinkthen_session *session) {
         check(thinkthen_session_try_read(session, &status, &out) == THINKTHEN_OK, "read succeeds");
         if (status == THINKTHEN_SESSION_RESULT_V1) {
             check(out != NULL, "result transfers an owner");
-            if (kept) thinkthen_session_result_free(kept);
-            kept = out;
+            packet_json(out);
+            if (kept) thinkthen_session_result_free(out);
+            else kept = out;
         } else {
             check(out == NULL, "pending and end clear result output");
             if (status == THINKTHEN_SESSION_END_V1) return kept;
@@ -71,6 +115,10 @@ int main(void) {
         check(thinkthen_session_new(engine, bad_requests[i], strlen(bad_requests[i]), &out) == THINKTHEN_EUSAGE, "bad request refuses");
         check(out == (thinkthen_session *)(uintptr_t)7, "failed constructor preserves output");
     }
+    const char *bytes = (const char *)(uintptr_t)7;
+    size_t byte_len = 99;
+    check(thinkthen_session_result_json(NULL, &bytes, &byte_len) == THINKTHEN_EUSAGE, "NULL result refuses");
+    check(bytes == (const char *)(uintptr_t)7 && byte_len == 99, "JSON refusal preserves both outputs");
     const char invalid[] = {(char)0xff};
     thinkthen_session *sentinel = (thinkthen_session *)(uintptr_t)7;
     check(thinkthen_session_new(engine, invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "UTF-8 refusal");
@@ -109,10 +157,16 @@ int main(void) {
     check(thinkthen_session_finish(session, NULL, 0) == THINKTHEN_EUSAGE, "changed finish refuses");
     check(thinkthen_session_try_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed intake avoids descriptor decoding");
     thinkthen_engine_free(engine);
+    const char *untouched = (const char *)(uintptr_t)7;
+    size_t untouched_len = 99;
+    check(thinkthen_session_result_json(NULL, NULL, &untouched_len) == THINKTHEN_EUSAGE && untouched_len == 99, "JSON requires byte output");
+    check(thinkthen_session_result_json(NULL, &untouched, NULL) == THINKTHEN_EUSAGE && untouched == (const char *)(uintptr_t)7, "JSON requires length output");
+    union { const char *bytes; size_t len; } json_alias;
+    json_alias.bytes = (const char *)(uintptr_t)7;
+    check(thinkthen_session_result_json(NULL, &json_alias.bytes, &json_alias.len) == THINKTHEN_EUSAGE && json_alias.bytes == (const char *)(uintptr_t)7, "JSON rejects aliased outputs");
     result = drain(session);
     check(result != NULL, "terminal transfers independent result");
-    thinkthen_session_free(session);
-    thinkthen_session_result_free(result);
+    retained_json(session, result);
     thinkthen_session_cancel(NULL); thinkthen_session_free(NULL); thinkthen_session_result_free(NULL);
     if (getenv("SESSION_CONTROLS")) return failed;
     engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
@@ -125,7 +179,6 @@ int main(void) {
     thinkthen_engine_free(engine);
     result = drain(session);
     check(result != NULL, "owned execution settles");
-    thinkthen_session_free(session);
-    thinkthen_session_result_free(result);
+    retained_json(session, result);
     return failed;
 }
