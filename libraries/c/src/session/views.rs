@@ -1,6 +1,5 @@
 //! Primitive transport projection. All nested pointers belong to one packet owner.
 #![allow(
-    unsafe_code,
     non_camel_case_types,
     missing_docs,
     reason = "immutable C buffers and tagged primitive views"
@@ -127,14 +126,6 @@ impl Storage {
     }
 }
 
-/// Generated callers use only C integers, floats, raw pointers and records/unions
-/// composed of those types. Their absent payloads admit an all-zero representation.
-/// No reference, Rust enum, nonzero scalar or owned Rust value may call this helper.
-pub(crate) fn zero<T: Copy>() -> T {
-    // SAFETY: the private generated callers use only the zero-valid C types above.
-    unsafe { std::mem::MaybeUninit::zeroed().assume_init() }
-}
-
 #[derive(Debug)]
 enum Kind {
     Null,
@@ -150,22 +141,22 @@ pub(crate) struct Node {
     value: Kind,
 }
 struct Entries(Vec<(String, Box<RawValue>)>);
+struct Ordered;
+impl<'de> Visitor<'de> for Ordered {
+    type Value = Entries;
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("JSON object")
+    }
+    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Entries, M::Error> {
+        let mut entries = Vec::new();
+        while let Some(entry) = map.next_entry()? {
+            entries.push(entry);
+        }
+        Ok(Entries(entries))
+    }
+}
 impl<'de> Deserialize<'de> for Entries {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct Ordered;
-        impl<'de> Visitor<'de> for Ordered {
-            type Value = Entries;
-            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str("JSON object")
-            }
-            fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Entries, M::Error> {
-                let mut entries = Vec::new();
-                while let Some(entry) = map.next_entry()? {
-                    entries.push(entry);
-                }
-                Ok(Entries(entries))
-            }
-        }
         deserializer.deserialize_map(Ordered)
     }
 }
@@ -345,5 +336,5 @@ impl Projection {
 }
 
 #[cfg(test)]
-#[path = "../../tests/views/complete.rs"]
+#[path = "../ffi/session/views/ffi.rs"]
 mod tests;

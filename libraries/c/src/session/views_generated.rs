@@ -2,9 +2,10 @@
 #![allow(
     non_camel_case_types,
     missing_docs,
-    reason = "generated versioned C declarations"
+    clippy::too_many_lines,
+    reason = "generated versioned C schema objects and tagged alternatives"
 )]
-use super::views::{Node, Storage, read_json, zero};
+use super::views::{Node, Storage, read_json};
 use super::views::{
     thinkthen_complete_extensions_v1, thinkthen_complete_json_v1, thinkthen_complete_utf8_v1,
 };
@@ -126,8 +127,20 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
         file: match node.member("file") {
             None => thinkthen_complete_annotation_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_field_file_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_annotation_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -136,8 +149,14 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
         first_line: match node.member("first_line") {
             None => thinkthen_complete_annotation_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_field_first_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_annotation_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -146,8 +165,14 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
         index: match node.member("index") {
             None => thinkthen_complete_annotation_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_annotation_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -158,7 +183,7 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_annotation_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_annotation_field_input_presence_v1 {
@@ -169,8 +194,14 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
         last_line: match node.member("last_line") {
             None => thinkthen_complete_annotation_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_field_last_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_annotation_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -183,8 +214,14 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
         position: match node.member("position") {
             None => thinkthen_complete_annotation_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_field_position_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_annotation_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_position_v1(value, store)
@@ -198,8 +235,14 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
         source: match node.member("source") {
             None => thinkthen_complete_annotation_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_annotation_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -392,7 +435,7 @@ pub(crate) fn read_thinkthen_complete_annotation_member_answer_id_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_annotation_member_answer_id_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => {
@@ -406,8 +449,14 @@ pub(crate) fn read_thinkthen_complete_annotation_member_answer_id_v1(
         usage: match node.member("usage") {
             None => thinkthen_complete_annotation_member_answer_id_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_member_answer_id_field_usage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_annotation_member_answer_id_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_usage_v1(value, store)
@@ -419,7 +468,7 @@ pub(crate) fn read_thinkthen_complete_annotation_member_answer_id_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_annotation_member_answer_id_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_annotation_member_answer_id_field_value_presence_v1 {
@@ -555,7 +604,7 @@ pub(crate) fn read_thinkthen_complete_annotation_member_failure_id_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_annotation_member_failure_id_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => {
@@ -569,8 +618,14 @@ pub(crate) fn read_thinkthen_complete_annotation_member_failure_id_v1(
         usage: match node.member("usage") {
             None => thinkthen_complete_annotation_member_failure_id_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_annotation_member_failure_id_field_usage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_annotation_member_failure_id_field_usage_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -703,7 +758,10 @@ pub(crate) fn read_thinkthen_complete_annotation_value_choice_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_annotation_value_choice_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
                 }
             }
             Some(value) => thinkthen_complete_annotation_value_choice_field_value_presence_v1 {
@@ -744,7 +802,7 @@ pub(crate) fn read_thinkthen_complete_annotation_value_decision_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_annotation_value_decision_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: 0,
                 }
             }
             Some(value) => thinkthen_complete_annotation_value_decision_field_value_presence_v1 {
@@ -1049,8 +1107,20 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         images: match node.member("images") {
             None => thinkthen_complete_atomic_array_of_string_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_array_of_string_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_array_of_string_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_array_of_string_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_array_of_string_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_array_of_string_field_images_v1(
@@ -1061,8 +1131,14 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         index: match node.member("index") {
             None => thinkthen_complete_atomic_array_of_string_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_array_of_string_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_atomic_array_of_string_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -1071,12 +1147,12 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         input: match node.member("input") {
             None => thinkthen_complete_atomic_array_of_string_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_array_of_string_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_array_of_string_field_input_presence_v1 {
@@ -1087,8 +1163,20 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         members: match node.member("members") {
             None => thinkthen_complete_atomic_array_of_string_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_array_of_string_field_members_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_array_of_string_field_members_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_array_of_string_field_members_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_array_of_string_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_array_of_string_field_members_v1(
@@ -1108,8 +1196,20 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         question_name: match node.member("question_name") {
             None => thinkthen_complete_atomic_array_of_string_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_array_of_string_field_question_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_atomic_array_of_string_field_question_name_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -1124,8 +1224,14 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         source: match node.member("source") {
             None => thinkthen_complete_atomic_array_of_string_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_array_of_string_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_atomic_array_of_string_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -1137,7 +1243,7 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_array_of_string_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_array_of_string_field_threshold_presence_v1 {
@@ -1302,8 +1408,20 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         images: match node.member("images") {
             None => thinkthen_complete_atomic_decide_value_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_decide_value_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_decide_value_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_decide_value_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_decide_value_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_decide_value_field_images_v1(value, store)?,
@@ -1312,8 +1430,14 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         index: match node.member("index") {
             None => thinkthen_complete_atomic_decide_value_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_decide_value_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_atomic_decide_value_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -1322,12 +1446,12 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         input: match node.member("input") {
             None => thinkthen_complete_atomic_decide_value_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_decide_value_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_decide_value_field_input_presence_v1 {
@@ -1338,8 +1462,20 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         members: match node.member("members") {
             None => thinkthen_complete_atomic_decide_value_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_decide_value_field_members_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_decide_value_field_members_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_decide_value_field_members_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_decide_value_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_decide_value_field_members_v1(value, store)?,
@@ -1357,8 +1493,20 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         question_name: match node.member("question_name") {
             None => thinkthen_complete_atomic_decide_value_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_decide_value_field_question_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_decide_value_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -1371,8 +1519,14 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         source: match node.member("source") {
             None => thinkthen_complete_atomic_decide_value_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_decide_value_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_atomic_decide_value_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -1384,7 +1538,7 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_decide_value_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_decide_value_field_threshold_presence_v1 {
@@ -1398,7 +1552,7 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_decide_value_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_decide_value_field_value_presence_v1 {
@@ -1552,8 +1706,20 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         images: match node.member("images") {
             None => thinkthen_complete_atomic_non_zero_usize_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_non_zero_usize_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_non_zero_usize_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_non_zero_usize_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_non_zero_usize_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_non_zero_usize_field_images_v1(value, store)?,
@@ -1562,8 +1728,14 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         index: match node.member("index") {
             None => thinkthen_complete_atomic_non_zero_usize_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_non_zero_usize_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_atomic_non_zero_usize_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -1572,12 +1744,12 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         input: match node.member("input") {
             None => thinkthen_complete_atomic_non_zero_usize_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_non_zero_usize_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_non_zero_usize_field_input_presence_v1 {
@@ -1588,8 +1760,20 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         members: match node.member("members") {
             None => thinkthen_complete_atomic_non_zero_usize_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_non_zero_usize_field_members_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_non_zero_usize_field_members_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_non_zero_usize_field_members_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_non_zero_usize_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_non_zero_usize_field_members_v1(
@@ -1609,8 +1793,20 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         question_name: match node.member("question_name") {
             None => thinkthen_complete_atomic_non_zero_usize_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_non_zero_usize_field_question_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_atomic_non_zero_usize_field_question_name_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -1625,8 +1821,14 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         source: match node.member("source") {
             None => thinkthen_complete_atomic_non_zero_usize_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_non_zero_usize_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_atomic_non_zero_usize_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -1638,7 +1840,7 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_non_zero_usize_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_non_zero_usize_field_threshold_presence_v1 {
@@ -1803,8 +2005,20 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         images: match node.member("images") {
             None => thinkthen_complete_atomic_nullable_string_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_nullable_string_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_nullable_string_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_nullable_string_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_nullable_string_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_nullable_string_field_images_v1(
@@ -1815,8 +2029,14 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         index: match node.member("index") {
             None => thinkthen_complete_atomic_nullable_string_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_nullable_string_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_atomic_nullable_string_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -1825,12 +2045,12 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         input: match node.member("input") {
             None => thinkthen_complete_atomic_nullable_string_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_nullable_string_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_nullable_string_field_input_presence_v1 {
@@ -1841,8 +2061,20 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         members: match node.member("members") {
             None => thinkthen_complete_atomic_nullable_string_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_nullable_string_field_members_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_nullable_string_field_members_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_nullable_string_field_members_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_nullable_string_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_nullable_string_field_members_v1(
@@ -1862,8 +2094,20 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         question_name: match node.member("question_name") {
             None => thinkthen_complete_atomic_nullable_string_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_nullable_string_field_question_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_atomic_nullable_string_field_question_name_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -1878,8 +2122,14 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         source: match node.member("source") {
             None => thinkthen_complete_atomic_nullable_string_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_nullable_string_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_atomic_nullable_string_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -1891,7 +2141,7 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_nullable_string_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_nullable_string_field_threshold_presence_v1 {
@@ -1905,7 +2155,10 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_nullable_string_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
                 }
             }
             Some(value) => thinkthen_complete_atomic_nullable_string_field_value_presence_v1 {
@@ -2058,8 +2311,20 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         images: match node.member("images") {
             None => thinkthen_complete_atomic_boolean_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_boolean_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_boolean_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_boolean_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_boolean_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_boolean_field_images_v1(value, store)?,
@@ -2068,8 +2333,14 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         index: match node.member("index") {
             None => thinkthen_complete_atomic_boolean_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_boolean_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_atomic_boolean_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -2078,12 +2349,12 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         input: match node.member("input") {
             None => thinkthen_complete_atomic_boolean_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_boolean_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_boolean_field_input_presence_v1 {
@@ -2094,8 +2365,20 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         members: match node.member("members") {
             None => thinkthen_complete_atomic_boolean_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_boolean_field_members_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_boolean_field_members_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_boolean_field_members_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_boolean_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_boolean_field_members_v1(value, store)?,
@@ -2113,8 +2396,20 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         question_name: match node.member("question_name") {
             None => thinkthen_complete_atomic_boolean_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_boolean_field_question_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_boolean_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -2127,8 +2422,14 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         source: match node.member("source") {
             None => thinkthen_complete_atomic_boolean_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_boolean_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_atomic_boolean_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -2140,7 +2441,7 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_boolean_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_boolean_field_threshold_presence_v1 {
@@ -2298,8 +2599,20 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         images: match node.member("images") {
             None => thinkthen_complete_atomic_double_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_double_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_double_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_double_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_double_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_double_field_images_v1(value, store)?,
@@ -2308,8 +2621,14 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         index: match node.member("index") {
             None => thinkthen_complete_atomic_double_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_double_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_atomic_double_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -2318,12 +2637,12 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         input: match node.member("input") {
             None => thinkthen_complete_atomic_double_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_double_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_double_field_input_presence_v1 {
@@ -2334,8 +2653,20 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         members: match node.member("members") {
             None => thinkthen_complete_atomic_double_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_atomic_double_field_members_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_double_field_members_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_atomic_double_field_members_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_double_field_members_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_atomic_double_field_members_v1(value, store)?,
@@ -2353,8 +2684,20 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         question_name: match node.member("question_name") {
             None => thinkthen_complete_atomic_double_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_double_field_question_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_atomic_double_field_question_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -2367,8 +2710,14 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         source: match node.member("source") {
             None => thinkthen_complete_atomic_double_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_atomic_double_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_atomic_double_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -2380,7 +2729,7 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_atomic_double_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_atomic_double_field_threshold_presence_v1 {
@@ -2466,8 +2815,20 @@ pub(crate) fn read_thinkthen_complete_attempt_v1(
         request_id: match node.member("request_id") {
             None => thinkthen_complete_attempt_field_request_id_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_attempt_field_request_id_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_attempt_field_request_id_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -2485,8 +2846,14 @@ pub(crate) fn read_thinkthen_complete_attempt_v1(
         server_ms: match node.member("server_ms") {
             None => thinkthen_complete_attempt_field_server_ms_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_attempt_field_server_ms_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_attempt_field_server_ms_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -2495,8 +2862,14 @@ pub(crate) fn read_thinkthen_complete_attempt_v1(
         status: match node.member("status") {
             None => thinkthen_complete_attempt_field_status_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_attempt_field_status_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_attempt_field_status_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -2672,8 +3045,14 @@ pub(crate) fn read_thinkthen_complete_call_error_v1(
         facts: match node.member("facts") {
             None => thinkthen_complete_call_error_field_facts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_call_error_field_facts_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_call_error_field_facts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_facts_v1(value, store)
@@ -2771,8 +3150,14 @@ pub(crate) fn read_thinkthen_complete_error_v1(
         estimated_input_denial: match node.member("estimated_input_denial") {
             None => thinkthen_complete_error_field_estimated_input_denial_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_error_field_estimated_input_denial_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_error_field_estimated_input_denial_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_estimated_input_denial_v1(value, store)
@@ -2794,8 +3179,14 @@ pub(crate) fn read_thinkthen_complete_error_v1(
         send_budget_denial: match node.member("send_budget_denial") {
             None => thinkthen_complete_error_field_send_budget_denial_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_error_field_send_budget_denial_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_error_field_send_budget_denial_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_send_budget_denial_v1(value, store)
@@ -3072,8 +3463,20 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
         attempts: match node.member("attempts") {
             None => thinkthen_complete_facts_field_attempts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_facts_field_attempts_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_facts_field_attempts_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_facts_field_attempts_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_facts_field_attempts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_facts_field_attempts_v1(value, store)?,
@@ -3090,8 +3493,20 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
         estimated_cost_usd: match node.member("estimated_cost_usd") {
             None => thinkthen_complete_facts_field_estimated_cost_usd_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_facts_field_estimated_cost_usd_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_facts_field_estimated_cost_usd_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -3100,8 +3515,14 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
         held_model_mismatch: match node.member("held_model_mismatch") {
             None => thinkthen_complete_facts_field_held_model_mismatch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_facts_field_held_model_mismatch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_facts_field_held_model_mismatch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.boolean()?,
@@ -3110,8 +3531,14 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
         input_tokens: match node.member("input_tokens") {
             None => thinkthen_complete_facts_field_input_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_facts_field_input_tokens_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_facts_field_input_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -3128,7 +3555,7 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_facts_field_largest_request_estimated_input_tokens_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: 0,
                 }
             }
             Some(value) => {
@@ -3141,8 +3568,20 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
         model: match node.member("model") {
             None => thinkthen_complete_facts_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_facts_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_facts_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -3151,8 +3590,14 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
         output_tokens: match node.member("output_tokens") {
             None => thinkthen_complete_facts_field_output_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_facts_field_output_tokens_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_facts_field_output_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -3177,8 +3622,14 @@ pub(crate) fn read_thinkthen_complete_facts_v1(
         usage_persistence: match node.member("usage_persistence") {
             None => thinkthen_complete_facts_field_usage_persistence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_facts_field_usage_persistence_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_facts_field_usage_persistence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_persistence_observation_v1(value, store)
@@ -3335,8 +3786,20 @@ pub(crate) fn read_thinkthen_complete_find_v1(
         candidates: match node.member("candidates") {
             None => thinkthen_complete_find_field_candidates_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_find_field_candidates_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_find_field_candidates_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_find_field_candidates_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_find_field_candidates_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_find_field_candidates_v1(value, store)?,
@@ -3345,8 +3808,20 @@ pub(crate) fn read_thinkthen_complete_find_v1(
         file: match node.member("file") {
             None => thinkthen_complete_find_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_find_field_file_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_find_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -3355,8 +3830,14 @@ pub(crate) fn read_thinkthen_complete_find_v1(
         first_line: match node.member("first_line") {
             None => thinkthen_complete_find_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_find_field_first_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_find_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -3367,7 +3848,7 @@ pub(crate) fn read_thinkthen_complete_find_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_find_field_index_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: 0,
                 }
             }
             Some(value) => thinkthen_complete_find_field_index_presence_v1 {
@@ -3378,8 +3859,14 @@ pub(crate) fn read_thinkthen_complete_find_v1(
         last_line: match node.member("last_line") {
             None => thinkthen_complete_find_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_find_field_last_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_find_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -3392,8 +3879,14 @@ pub(crate) fn read_thinkthen_complete_find_v1(
         position: match node.member("position") {
             None => thinkthen_complete_find_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_find_field_position_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_find_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_position_v1(value, store)
@@ -3414,7 +3907,7 @@ pub(crate) fn read_thinkthen_complete_find_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_find_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_find_field_threshold_presence_v1 {
@@ -3427,7 +3920,7 @@ pub(crate) fn read_thinkthen_complete_find_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_find_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_find_field_value_presence_v1 {
@@ -3497,7 +3990,7 @@ pub(crate) fn read_thinkthen_complete_find_candidate_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_find_candidate_field_index_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: 0,
                 }
             }
             Some(value) => thinkthen_complete_find_candidate_field_index_presence_v1 {
@@ -3510,7 +4003,7 @@ pub(crate) fn read_thinkthen_complete_find_candidate_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_find_candidate_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_find_candidate_field_input_presence_v1 {
@@ -3525,8 +4018,14 @@ pub(crate) fn read_thinkthen_complete_find_candidate_v1(
         source: match node.member("source") {
             None => thinkthen_complete_find_candidate_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_find_candidate_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_find_candidate_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -3719,8 +4218,20 @@ pub(crate) fn read_thinkthen_complete_input_declaration_object_v1(
         required: match node.member("required") {
             None => thinkthen_complete_input_declaration_object_field_required_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_input_declaration_object_field_required_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_input_declaration_object_field_required_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_input_declaration_object_field_required_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_input_declaration_object_field_required_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_input_declaration_object_field_required_v1(
@@ -3932,12 +4443,12 @@ pub(crate) fn read_thinkthen_complete_label_v1(
         description: match node.member("description") {
             None => thinkthen_complete_label_field_description_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_label_field_description_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_label_field_description_presence_v1 {
@@ -4138,8 +4649,20 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         answered_by: match node.member("answered_by") {
             None => thinkthen_complete_meta_field_answered_by_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_answered_by_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_answered_by_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -4148,8 +4671,20 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         attempts: match node.member("attempts") {
             None => thinkthen_complete_meta_field_attempts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_meta_field_attempts_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_attempts_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_meta_field_attempts_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_attempts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_meta_field_attempts_v1(value, store)?,
@@ -4158,8 +4693,14 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         batch_setting: match node.member("batch_setting") {
             None => thinkthen_complete_meta_field_batch_setting_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_batch_setting_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_batch_setting_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_setting_v1(value, store)
@@ -4169,8 +4710,14 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         batch_warning: match node.member("batch_warning") {
             None => thinkthen_complete_meta_field_batch_warning_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_batch_warning_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_batch_warning_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_warning_v1(value, store)
@@ -4184,8 +4731,20 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         context_sha256: match node.member("context_sha256") {
             None => thinkthen_complete_meta_field_context_sha_256_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_context_sha_256_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_context_sha_256_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -4208,7 +4767,7 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_meta_field_origin_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_meta_field_origin_presence_v1 {
@@ -4220,8 +4779,14 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         profile_warning: match node.member("profile_warning") {
             None => thinkthen_complete_meta_field_profile_warning_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_profile_warning_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_profile_warning_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_profile_warning_v1(value, store)
@@ -4231,8 +4796,20 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         question_sha256: match node.member("question_sha256") {
             None => thinkthen_complete_meta_field_question_sha_256_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_question_sha_256_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_question_sha_256_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -4245,8 +4822,20 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         questions_sha256: match node.member("questions_sha256") {
             None => thinkthen_complete_meta_field_questions_sha_256_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_questions_sha_256_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_questions_sha_256_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -4271,8 +4860,14 @@ pub(crate) fn read_thinkthen_complete_meta_v1(
         usage: match node.member("usage") {
             None => thinkthen_complete_meta_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_meta_field_usage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_meta_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_usage_v1(value, store)
@@ -4483,8 +5078,20 @@ pub(crate) fn read_thinkthen_complete_persistence_observation_v1(
         advice: match node.member("advice") {
             None => thinkthen_complete_persistence_observation_field_advice_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_persistence_observation_field_advice_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_persistence_observation_field_advice_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -4538,8 +5145,14 @@ pub(crate) fn read_thinkthen_complete_physical_source_v1(
         first_line: match node.member("first_line") {
             None => thinkthen_complete_physical_source_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_physical_source_field_first_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_physical_source_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -4548,8 +5161,14 @@ pub(crate) fn read_thinkthen_complete_physical_source_v1(
         last_line: match node.member("last_line") {
             None => thinkthen_complete_physical_source_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_physical_source_field_last_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_physical_source_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -4626,7 +5245,10 @@ pub(crate) fn read_thinkthen_complete_position_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_position_field_file_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
                 }
             }
             Some(value) => thinkthen_complete_position_field_file_presence_v1 {
@@ -4637,8 +5259,14 @@ pub(crate) fn read_thinkthen_complete_position_v1(
         first: match node.member("first") {
             None => thinkthen_complete_position_field_first_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_position_field_first_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_position_field_first_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -4647,8 +5275,20 @@ pub(crate) fn read_thinkthen_complete_position_v1(
         images: match node.member("images") {
             None => thinkthen_complete_position_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_position_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_position_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_position_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_position_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_position_field_images_v1(value, store)?,
@@ -4657,8 +5297,14 @@ pub(crate) fn read_thinkthen_complete_position_v1(
         last: match node.member("last") {
             None => thinkthen_complete_position_field_last_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_position_field_last_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_position_field_last_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -4710,8 +5356,14 @@ pub(crate) fn read_thinkthen_complete_question_source_v1(
         batch_size: match node.member("batch_size") {
             None => thinkthen_complete_question_source_field_batch_size_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_question_source_field_batch_size_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_question_source_field_batch_size_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -4822,8 +5474,20 @@ pub(crate) fn read_thinkthen_complete_rank_member_result_v1(
         images: match node.member("images") {
             None => thinkthen_complete_rank_member_result_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_rank_member_result_field_images_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_rank_member_result_field_images_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_rank_member_result_field_images_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_rank_member_result_field_images_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_rank_member_result_field_images_v1(value, store)?,
@@ -4845,8 +5509,14 @@ pub(crate) fn read_thinkthen_complete_rank_member_result_v1(
         source: match node.member("source") {
             None => thinkthen_complete_rank_member_result_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_rank_member_result_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_rank_member_result_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -4858,7 +5528,7 @@ pub(crate) fn read_thinkthen_complete_rank_member_result_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_rank_member_result_field_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_rank_member_result_field_threshold_presence_v1 {
@@ -5089,8 +5759,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         batch: match node.member("batch") {
             None => thinkthen_complete_readable_question_2_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_batch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_2_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_v1(value, store)
@@ -5100,8 +5776,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         context_schema: match node.member("context_schema") {
             None => thinkthen_complete_readable_question_2_field_context_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_context_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_2_field_context_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -5113,8 +5795,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         item_schema: match node.member("item_schema") {
             None => thinkthen_complete_readable_question_2_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_item_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_2_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_input_declaration_v1(value, store)
@@ -5124,8 +5812,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         label_details: match node.member("label_details") {
             None => thinkthen_complete_readable_question_2_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_2_field_label_details_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_label_details_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_2_field_label_details_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_2_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_2_field_label_details_v1(
@@ -5136,8 +5836,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         model: match node.member("model") {
             None => thinkthen_complete_readable_question_2_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_2_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -5146,8 +5858,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         name: match node.member("name") {
             None => thinkthen_complete_readable_question_2_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_2_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_question_name_v1(value, store)
@@ -5161,8 +5879,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         on: match node.member("on") {
             None => thinkthen_complete_readable_question_2_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_2_field_on_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_on_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_2_field_on_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_2_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_2_field_on_v1(value, store)?,
@@ -5171,8 +5901,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         profile: match node.member("profile") {
             None => thinkthen_complete_readable_question_2_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_profile_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_2_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -5183,7 +5925,7 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_2_field_text_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_2_field_text_presence_v1 {
@@ -5198,8 +5940,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
         wording_version: match node.member("wording_version") {
             None => thinkthen_complete_readable_question_2_field_wording_version_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_2_field_wording_version_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_2_field_wording_version_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -5465,8 +6213,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         batch: match node.member("batch") {
             None => thinkthen_complete_readable_question_3_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_batch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_v1(value, store)
@@ -5476,8 +6230,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         context_schema: match node.member("context_schema") {
             None => thinkthen_complete_readable_question_3_field_context_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_context_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_3_field_context_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -5489,12 +6249,12 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         entity_definition: match node.member("entity_definition") {
             None => thinkthen_complete_readable_question_3_field_entity_definition_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_3_field_entity_definition_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => {
@@ -5507,12 +6267,12 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         instructions: match node.member("instructions") {
             None => thinkthen_complete_readable_question_3_field_instructions_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_3_field_instructions_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_3_field_instructions_presence_v1 {
@@ -5523,8 +6283,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         item_schema: match node.member("item_schema") {
             None => thinkthen_complete_readable_question_3_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_item_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_input_declaration_v1(value, store)
@@ -5538,8 +6304,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         label_details: match node.member("label_details") {
             None => thinkthen_complete_readable_question_3_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_3_field_label_details_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_label_details_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_3_field_label_details_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_3_field_label_details_v1(
@@ -5550,8 +6328,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         mode: match node.member("mode") {
             None => thinkthen_complete_readable_question_3_field_mode_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_mode_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_mode_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_recognition_mode_v1(value, store)
@@ -5561,8 +6345,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         model: match node.member("model") {
             None => thinkthen_complete_readable_question_3_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -5571,8 +6367,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         name: match node.member("name") {
             None => thinkthen_complete_readable_question_3_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_question_name_v1(value, store)
@@ -5582,8 +6384,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         on: match node.member("on") {
             None => thinkthen_complete_readable_question_3_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_3_field_on_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_on_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_3_field_on_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_3_field_on_v1(value, store)?,
@@ -5592,8 +6406,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         profile: match node.member("profile") {
             None => thinkthen_complete_readable_question_3_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_profile_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -5602,8 +6428,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         relation_threshold: match node.member("relation_threshold") {
             None => thinkthen_complete_readable_question_3_field_relation_threshold_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_relation_threshold_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_3_field_relation_threshold_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -5615,8 +6447,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         relations: match node.member("relations") {
             None => thinkthen_complete_readable_question_3_field_relations_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_3_field_relations_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_relations_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_3_field_relations_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_relations_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_3_field_relations_v1(
@@ -5627,8 +6471,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         snippet_pieces: match node.member("snippet_pieces") {
             None => thinkthen_complete_readable_question_3_field_snippet_pieces_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_snippet_pieces_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_3_field_snippet_pieces_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -5639,8 +6489,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         stage_context: match node.member("stage_context") {
             None => thinkthen_complete_readable_question_3_field_stage_context_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_stage_context_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_3_field_stage_context_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_recognition_stage_context_v1(value, store)
@@ -5658,8 +6514,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
         wording_version: match node.member("wording_version") {
             None => thinkthen_complete_readable_question_3_field_wording_version_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_3_field_wording_version_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_3_field_wording_version_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -5851,8 +6713,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         batch: match node.member("batch") {
             None => thinkthen_complete_readable_question_4_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_batch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_4_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_v1(value, store)
@@ -5862,8 +6730,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         context_schema: match node.member("context_schema") {
             None => thinkthen_complete_readable_question_4_field_context_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_context_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_4_field_context_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -5877,7 +6751,7 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_4_field_fields_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_4_field_fields_presence_v1 {
@@ -5889,8 +6763,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         item_schema: match node.member("item_schema") {
             None => thinkthen_complete_readable_question_4_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_item_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_4_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_input_declaration_v1(value, store)
@@ -5900,8 +6780,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         label_details: match node.member("label_details") {
             None => thinkthen_complete_readable_question_4_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_4_field_label_details_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_label_details_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_4_field_label_details_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_4_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_4_field_label_details_v1(
@@ -5912,8 +6804,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         model: match node.member("model") {
             None => thinkthen_complete_readable_question_4_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_4_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -5922,8 +6826,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         name: match node.member("name") {
             None => thinkthen_complete_readable_question_4_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_4_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_question_name_v1(value, store)
@@ -5933,8 +6843,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         on: match node.member("on") {
             None => thinkthen_complete_readable_question_4_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_4_field_on_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_on_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_4_field_on_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_4_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_4_field_on_v1(value, store)?,
@@ -5943,8 +6865,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         profile: match node.member("profile") {
             None => thinkthen_complete_readable_question_4_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_profile_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_4_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -5965,8 +6899,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
         wording_version: match node.member("wording_version") {
             None => thinkthen_complete_readable_question_4_field_wording_version_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_4_field_wording_version_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_4_field_wording_version_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6151,8 +7091,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         batch: match node.member("batch") {
             None => thinkthen_complete_readable_question_choose_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_batch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_choose_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_v1(value, store)
@@ -6162,8 +7108,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         context_schema: match node.member("context_schema") {
             None => thinkthen_complete_readable_question_choose_field_context_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_context_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_choose_field_context_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6175,8 +7127,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         item_schema: match node.member("item_schema") {
             None => thinkthen_complete_readable_question_choose_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_item_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_choose_field_item_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6188,8 +7146,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         label_details: match node.member("label_details") {
             None => thinkthen_complete_readable_question_choose_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_choose_field_label_details_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_label_details_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_choose_field_label_details_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_choose_field_label_details_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6202,8 +7172,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         model: match node.member("model") {
             None => thinkthen_complete_readable_question_choose_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_choose_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -6212,8 +7194,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         name: match node.member("name") {
             None => thinkthen_complete_readable_question_choose_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_choose_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_question_name_v1(value, store)
@@ -6223,8 +7211,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         on: match node.member("on") {
             None => thinkthen_complete_readable_question_choose_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_choose_field_on_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_on_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_choose_field_on_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_choose_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_choose_field_on_v1(value, store)?,
@@ -6233,8 +7233,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         profile: match node.member("profile") {
             None => thinkthen_complete_readable_question_choose_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_profile_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_choose_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -6243,8 +7255,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
         wording_version: match node.member("wording_version") {
             None => thinkthen_complete_readable_question_choose_field_wording_version_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_choose_field_wording_version_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_choose_field_wording_version_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6262,7 +7280,7 @@ pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_choose_field_text_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_choose_field_text_presence_v1 {
@@ -6445,8 +7463,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         batch: match node.member("batch") {
             None => thinkthen_complete_readable_question_decide_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_batch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_decide_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_v1(value, store)
@@ -6456,8 +7480,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         context_schema: match node.member("context_schema") {
             None => thinkthen_complete_readable_question_decide_field_context_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_context_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_decide_field_context_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6469,8 +7499,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         item_schema: match node.member("item_schema") {
             None => thinkthen_complete_readable_question_decide_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_item_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_decide_field_item_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6482,8 +7518,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         label_details: match node.member("label_details") {
             None => thinkthen_complete_readable_question_decide_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_decide_field_label_details_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_label_details_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_decide_field_label_details_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_decide_field_label_details_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6496,8 +7544,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         model: match node.member("model") {
             None => thinkthen_complete_readable_question_decide_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_decide_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -6506,8 +7566,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         name: match node.member("name") {
             None => thinkthen_complete_readable_question_decide_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_decide_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_question_name_v1(value, store)
@@ -6517,8 +7583,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         on: match node.member("on") {
             None => thinkthen_complete_readable_question_decide_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_decide_field_on_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_on_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_decide_field_on_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_decide_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_decide_field_on_v1(value, store)?,
@@ -6527,8 +7605,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         profile: match node.member("profile") {
             None => thinkthen_complete_readable_question_decide_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_profile_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_decide_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -6537,8 +7627,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         wording_version: match node.member("wording_version") {
             None => thinkthen_complete_readable_question_decide_field_wording_version_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_decide_field_wording_version_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_decide_field_wording_version_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6550,12 +7646,12 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         false_: match node.member("false") {
             None => thinkthen_complete_readable_question_decide_field_false_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_decide_field_false_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_decide_field_false_presence_v1 {
@@ -6568,7 +7664,7 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_decide_field_text_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_decide_field_text_presence_v1 {
@@ -6579,12 +7675,12 @@ pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
         true_: match node.member("true") {
             None => thinkthen_complete_readable_question_decide_field_true_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_decide_field_true_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_decide_field_true_presence_v1 {
@@ -6771,8 +7867,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         batch: match node.member("batch") {
             None => thinkthen_complete_readable_question_score_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_batch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_score_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_v1(value, store)
@@ -6782,8 +7884,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         context_schema: match node.member("context_schema") {
             None => thinkthen_complete_readable_question_score_field_context_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_context_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_score_field_context_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6795,8 +7903,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         item_schema: match node.member("item_schema") {
             None => thinkthen_complete_readable_question_score_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_item_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_score_field_item_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6808,8 +7922,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         label_details: match node.member("label_details") {
             None => thinkthen_complete_readable_question_score_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_score_field_label_details_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_label_details_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_score_field_label_details_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_score_field_label_details_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6822,8 +7948,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         model: match node.member("model") {
             None => thinkthen_complete_readable_question_score_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_score_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -6832,8 +7970,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         name: match node.member("name") {
             None => thinkthen_complete_readable_question_score_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_score_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_question_name_v1(value, store)
@@ -6843,8 +7987,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         on: match node.member("on") {
             None => thinkthen_complete_readable_question_score_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_score_field_on_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_on_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_score_field_on_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_score_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_score_field_on_v1(value, store)?,
@@ -6853,8 +8009,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         profile: match node.member("profile") {
             None => thinkthen_complete_readable_question_score_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_profile_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_score_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -6863,8 +8031,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
         wording_version: match node.member("wording_version") {
             None => thinkthen_complete_readable_question_score_field_wording_version_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_score_field_wording_version_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_score_field_wording_version_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -6882,7 +8056,7 @@ pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_score_field_text_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_score_field_text_presence_v1 {
@@ -7067,8 +8241,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         batch: match node.member("batch") {
             None => thinkthen_complete_readable_question_tag_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_batch_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_tag_field_batch_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_batch_v1(value, store)
@@ -7078,8 +8258,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         context_schema: match node.member("context_schema") {
             None => thinkthen_complete_readable_question_tag_field_context_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_context_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_tag_field_context_schema_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -7091,8 +8277,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         item_schema: match node.member("item_schema") {
             None => thinkthen_complete_readable_question_tag_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_item_schema_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_tag_field_item_schema_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_input_declaration_v1(value, store)
@@ -7102,8 +8294,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         label_details: match node.member("label_details") {
             None => thinkthen_complete_readable_question_tag_field_label_details_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_tag_field_label_details_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_label_details_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_tag_field_label_details_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_tag_field_label_details_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -7116,8 +8320,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         model: match node.member("model") {
             None => thinkthen_complete_readable_question_tag_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_model_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_tag_field_model_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -7126,8 +8342,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         name: match node.member("name") {
             None => thinkthen_complete_readable_question_tag_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_name_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_tag_field_name_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_question_name_v1(value, store)
@@ -7137,8 +8359,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         on: match node.member("on") {
             None => thinkthen_complete_readable_question_tag_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_readable_question_tag_field_on_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_on_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_readable_question_tag_field_on_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_tag_field_on_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_readable_question_tag_field_on_v1(value, store)?,
@@ -7147,8 +8381,20 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         profile: match node.member("profile") {
             None => thinkthen_complete_readable_question_tag_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_profile_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_readable_question_tag_field_profile_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -7157,8 +8403,14 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
         wording_version: match node.member("wording_version") {
             None => thinkthen_complete_readable_question_tag_field_wording_version_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_readable_question_tag_field_wording_version_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_readable_question_tag_field_wording_version_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -7176,7 +8428,7 @@ pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_readable_question_tag_field_text_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_readable_question_tag_field_text_presence_v1 {
@@ -7293,8 +8545,20 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         file: match node.member("file") {
             None => thinkthen_complete_recognition_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_field_file_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_recognition_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -7303,8 +8567,14 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         first_line: match node.member("first_line") {
             None => thinkthen_complete_recognition_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_field_first_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_recognition_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -7313,8 +8583,14 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         index: match node.member("index") {
             None => thinkthen_complete_recognition_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_recognition_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -7323,12 +8599,12 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         input: match node.member("input") {
             None => thinkthen_complete_recognition_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_recognition_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_recognition_field_input_presence_v1 {
@@ -7339,8 +8615,14 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         last_line: match node.member("last_line") {
             None => thinkthen_complete_recognition_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_field_last_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_recognition_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -7353,8 +8635,14 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         position: match node.member("position") {
             None => thinkthen_complete_recognition_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_field_position_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_recognition_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_position_v1(value, store)
@@ -7373,8 +8661,14 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         source: match node.member("source") {
             None => thinkthen_complete_recognition_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_field_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_recognition_field_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_physical_source_v1(value, store)
@@ -7820,8 +9114,20 @@ pub(crate) fn read_thinkthen_complete_recognition_proposal_v1(
         kind: match node.member("kind") {
             None => thinkthen_complete_recognition_proposal_field_kind_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_proposal_field_kind_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_recognition_proposal_field_kind_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -7830,8 +9136,14 @@ pub(crate) fn read_thinkthen_complete_recognition_proposal_v1(
         selected: match node.member("selected") {
             None => thinkthen_complete_recognition_proposal_field_selected_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_proposal_field_selected_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_recognition_proposal_field_selected_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_place_v1(value, store)
@@ -7849,8 +9161,14 @@ pub(crate) fn read_thinkthen_complete_recognition_proposal_v1(
         strength: match node.member("strength") {
             None => thinkthen_complete_recognition_proposal_field_strength_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0.0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_proposal_field_strength_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0.0,
+                }
+            }
             Some(value) => thinkthen_complete_recognition_proposal_field_strength_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -7909,8 +9227,20 @@ pub(crate) fn read_thinkthen_complete_recognition_stage_context_v1(
         boundary: match node.member("boundary") {
             None => thinkthen_complete_recognition_stage_context_field_boundary_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_stage_context_field_boundary_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_recognition_stage_context_field_boundary_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -7921,8 +9251,20 @@ pub(crate) fn read_thinkthen_complete_recognition_stage_context_v1(
         kind_edge: match node.member("kind_edge") {
             None => thinkthen_complete_recognition_stage_context_field_kind_edge_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_stage_context_field_kind_edge_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_recognition_stage_context_field_kind_edge_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -7933,8 +9275,20 @@ pub(crate) fn read_thinkthen_complete_recognition_stage_context_v1(
         relation: match node.member("relation") {
             None => thinkthen_complete_recognition_stage_context_field_relation_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognition_stage_context_field_relation_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_recognition_stage_context_field_relation_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -8044,8 +9398,20 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         file: match node.member("file") {
             None => thinkthen_complete_relation_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_field_file_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_relation_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -8054,8 +9420,14 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         first_line: match node.member("first_line") {
             None => thinkthen_complete_relation_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_field_first_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_relation_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -8064,8 +9436,14 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         index: match node.member("index") {
             None => thinkthen_complete_relation_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_field_index_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_relation_field_index_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -8074,12 +9452,12 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         input: match node.member("input") {
             None => thinkthen_complete_relation_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_relation_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_relation_field_input_presence_v1 {
@@ -8090,8 +9468,14 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         last_line: match node.member("last_line") {
             None => thinkthen_complete_relation_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_field_last_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_relation_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -8104,8 +9488,14 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         position: match node.member("position") {
             None => thinkthen_complete_relation_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_field_position_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_relation_field_position_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_position_v1(value, store)
@@ -8344,7 +9734,7 @@ pub(crate) fn read_thinkthen_complete_relation_member_answer_id_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_relation_member_answer_id_field_target_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_relation_member_answer_id_field_target_presence_v1 {
@@ -8360,8 +9750,14 @@ pub(crate) fn read_thinkthen_complete_relation_member_answer_id_v1(
         usage: match node.member("usage") {
             None => thinkthen_complete_relation_member_answer_id_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_member_answer_id_field_usage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_relation_member_answer_id_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_usage_v1(value, store)
@@ -8537,7 +9933,7 @@ pub(crate) fn read_thinkthen_complete_relation_member_failure_id_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_relation_member_failure_id_field_target_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_relation_member_failure_id_field_target_presence_v1 {
@@ -8553,8 +9949,14 @@ pub(crate) fn read_thinkthen_complete_relation_member_failure_id_v1(
         usage: match node.member("usage") {
             None => thinkthen_complete_relation_member_failure_id_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_member_failure_id_field_usage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_relation_member_failure_id_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_usage_v1(value, store)
@@ -8886,8 +10288,14 @@ pub(crate) fn read_thinkthen_complete_stopped_v1(
         at: match node.member("at") {
             None => thinkthen_complete_stopped_field_at_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_stopped_field_at_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_stopped_field_at_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -8904,8 +10312,14 @@ pub(crate) fn read_thinkthen_complete_stopped_v1(
         status: match node.member("status") {
             None => thinkthen_complete_stopped_field_status_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_stopped_field_status_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_stopped_field_status_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -8984,8 +10398,14 @@ pub(crate) fn read_thinkthen_complete_usage_v1(
         input_tokens: match node.member("input_tokens") {
             None => thinkthen_complete_usage_field_input_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_usage_field_input_tokens_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_usage_field_input_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -8994,8 +10414,14 @@ pub(crate) fn read_thinkthen_complete_usage_v1(
         output_tokens: match node.member("output_tokens") {
             None => thinkthen_complete_usage_field_output_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_usage_field_output_tokens_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_usage_field_output_tokens_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -9357,8 +10783,14 @@ pub(crate) fn read_thinkthen_complete_answer_choice_v1(
         confidence: match node.member("confidence") {
             None => thinkthen_complete_answer_choice_field_confidence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0.0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_answer_choice_field_confidence_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0.0,
+                }
+            }
             Some(value) => thinkthen_complete_answer_choice_field_confidence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -9436,8 +10868,14 @@ pub(crate) fn read_thinkthen_complete_answer_score_v1(
         confidence: match node.member("confidence") {
             None => thinkthen_complete_answer_score_field_confidence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0.0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_answer_score_field_confidence_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0.0,
+                }
+            }
             Some(value) => thinkthen_complete_answer_score_field_confidence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -9680,8 +11118,20 @@ pub(crate) fn read_thinkthen_complete_entity_v1(
         file: match node.member("file") {
             None => thinkthen_complete_entity_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_entity_field_file_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_entity_field_file_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -9690,8 +11140,14 @@ pub(crate) fn read_thinkthen_complete_entity_v1(
         first_line: match node.member("first_line") {
             None => thinkthen_complete_entity_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_entity_field_first_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_entity_field_first_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -9704,8 +11160,14 @@ pub(crate) fn read_thinkthen_complete_entity_v1(
         last_line: match node.member("last_line") {
             None => thinkthen_complete_entity_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_entity_field_last_line_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_entity_field_last_line_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -9770,8 +11232,14 @@ pub(crate) fn read_thinkthen_complete_entity_edge_v1(
         either: match node.member("either") {
             None => thinkthen_complete_entity_edge_field_either_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_entity_edge_field_either_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_entity_edge_field_either_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.boolean()?,
@@ -9989,8 +11457,14 @@ pub(crate) fn read_thinkthen_complete_find_answer_v1(
         confidence: match node.member("confidence") {
             None => thinkthen_complete_find_answer_field_confidence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0.0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_find_answer_field_confidence_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0.0,
+                }
+            }
             Some(value) => thinkthen_complete_find_answer_field_confidence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.number()?,
@@ -10104,7 +11578,10 @@ pub(crate) fn read_thinkthen_complete_name_odds_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_name_odds_field_edges_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: thinkthen_complete_name_odds_field_edges_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
                 }
             }
             Some(value) => thinkthen_complete_name_odds_field_edges_presence_v1 {
@@ -10121,7 +11598,10 @@ pub(crate) fn read_thinkthen_complete_name_odds_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_name_odds_field_kinds_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: thinkthen_complete_name_odds_field_kinds_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
                 }
             }
             Some(value) => thinkthen_complete_name_odds_field_kinds_presence_v1 {
@@ -10404,8 +11884,20 @@ pub(crate) fn read_thinkthen_complete_recognize_fields_entities_v1(
         relations: match node.member("relations") {
             None => thinkthen_complete_recognize_fields_entities_field_relations_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_recognize_fields_entities_field_relations_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_recognize_fields_entities_field_relations_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_recognize_fields_entities_field_relations_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_recognize_fields_entities_field_relations_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -10544,8 +12036,14 @@ pub(crate) fn read_thinkthen_complete_related_entity_edge_v1(
         either: match node.member("either") {
             None => thinkthen_complete_related_entity_edge_field_either_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_related_entity_edge_field_either_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_related_entity_edge_field_either_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.boolean()?,
@@ -10684,23 +12182,25 @@ pub(crate) fn read_thinkthen_complete_related_entity_edge_properties_source_fiel
     Ok(thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_v1 {
         file: match node.member("file") {
             None => return Err(ErrorKind::Defect),
-            Some(value) if value.kind() == "null" => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_file_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: zero() },
+            Some(value) if value.kind() == "null" => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_file_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: thinkthen_complete_utf8_v1 { data: std::ptr::null(), len: 0 } },
             Some(value) => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_file_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, value: store.text(value.text()?) },
         },
         first_line: match node.member("first_line") {
-            None => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_first_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, value: zero() },
+            None => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_first_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, value: 0 },
+            Some(value) if value.kind() == "null" => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_first_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: 0 },
             Some(value) => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_first_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, value: value.number()? },
         },
         kind: { let value = node.required("kind")?; store.text(value.text()?) },
         last_line: match node.member("last_line") {
-            None => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_last_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, value: zero() },
+            None => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_last_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, value: 0 },
+            Some(value) if value.kind() == "null" => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_last_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: 0 },
             Some(value) => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_last_line_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, value: value.number()? },
         },
         name: { let value = node.required("name")?; store.text(value.text()?) },
         ordinal: { let value = node.required("ordinal")?; value.number()? },
         record: match node.member("record") {
             None => return Err(ErrorKind::Defect),
-            Some(value) if value.kind() == "null" => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_record_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: zero() },
+            Some(value) if value.kind() == "null" => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_record_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: std::ptr::null() },
             Some(value) => thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_record_presence_v1 { presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, value: read_json(value, store)? },
         },
         extensions: store.extensions(node, &["file", "first_line", "kind", "last_line", "name", "ordinal", "record"])?,
@@ -10774,8 +12274,14 @@ pub(crate) fn read_thinkthen_complete_relation_rule_v1(
         single: match node.member("single") {
             None => thinkthen_complete_relation_rule_field_single_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_relation_rule_field_single_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0,
+                }
+            }
             Some(value) => thinkthen_complete_relation_rule_field_single_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: value.boolean()?,
@@ -10945,7 +12451,10 @@ pub(crate) fn read_thinkthen_complete_session_judgment_choice_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_session_judgment_choice_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
                 }
             }
             Some(value) => thinkthen_complete_session_judgment_choice_field_value_presence_v1 {
@@ -10986,7 +12495,7 @@ pub(crate) fn read_thinkthen_complete_session_judgment_decision_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_session_judgment_decision_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: 0,
                 }
             }
             Some(value) => thinkthen_complete_session_judgment_decision_field_value_presence_v1 {
@@ -11185,8 +12694,20 @@ pub(crate) fn read_thinkthen_complete_session_observation_question_v1(
         member: match node.member("member") {
             None => thinkthen_complete_session_observation_question_field_member_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_observation_question_field_member_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_session_observation_question_field_member_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -11201,8 +12722,20 @@ pub(crate) fn read_thinkthen_complete_session_observation_question_v1(
         stage: match node.member("stage") {
             None => thinkthen_complete_session_observation_question_field_stage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_observation_question_field_stage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => {
                 thinkthen_complete_session_observation_question_field_stage_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -11403,7 +12936,7 @@ pub(crate) fn read_thinkthen_complete_session_observed_row_find_v1(
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_session_observed_row_find_field_value_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: 0,
                 }
             }
             Some(value) => thinkthen_complete_session_observed_row_find_field_value_presence_v1 {
@@ -12478,8 +14011,14 @@ pub(crate) fn read_thinkthen_complete_session_packet_terminal_v1(
         facts: match node.member("facts") {
             None => thinkthen_complete_session_packet_terminal_field_facts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_packet_terminal_field_facts_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_session_packet_terminal_field_facts_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_facts_v1(value, store)
@@ -12489,8 +14028,14 @@ pub(crate) fn read_thinkthen_complete_session_packet_terminal_v1(
         failure: match node.member("failure") {
             None => thinkthen_complete_session_packet_terminal_field_failure_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_packet_terminal_field_failure_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_session_packet_terminal_field_failure_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_call_error_v1(value, store)
@@ -12848,8 +14393,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         answer_id: match node.member("answer_id") {
             None => thinkthen_complete_session_question_detail_field_answer_id_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_answer_id_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_session_question_detail_field_answer_id_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_answer_id_v1(value, store)
@@ -12863,8 +14414,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         confidence: match node.member("confidence") {
             None => thinkthen_complete_session_question_detail_field_confidence_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: 0.0,
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_confidence_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: 0.0,
+                }
+            }
             Some(value) => {
                 thinkthen_complete_session_question_detail_field_confidence_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -12879,8 +14436,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         failure: match node.member("failure") {
             None => thinkthen_complete_session_question_detail_field_failure_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_failure_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_session_question_detail_field_failure_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_failure_v1(value, store)
@@ -12890,8 +14453,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         failure_id: match node.member("failure_id") {
             None => thinkthen_complete_session_question_detail_field_failure_id_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_failure_id_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_session_question_detail_field_failure_id_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -12903,12 +14472,12 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         input: match node.member("input") {
             None => thinkthen_complete_session_question_detail_field_input_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
             Some(value) if value.kind() == "null" => {
                 thinkthen_complete_session_question_detail_field_input_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-                    value: zero(),
+                    value: std::ptr::null(),
                 }
             }
             Some(value) => thinkthen_complete_session_question_detail_field_input_presence_v1 {
@@ -12919,8 +14488,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         input_source: match node.member("input_source") {
             None => thinkthen_complete_session_question_detail_field_input_source_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_input_source_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_session_question_detail_field_input_source_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -12948,8 +14523,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         probabilities: match node.member("probabilities") {
             None => thinkthen_complete_session_question_detail_field_probabilities_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_probabilities_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_session_question_detail_field_probabilities_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -12974,8 +14555,20 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         raw_pick: match node.member("raw_pick") {
             None => thinkthen_complete_session_question_detail_field_raw_pick_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_raw_pick_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_utf8_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_session_question_detail_field_raw_pick_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: store.text(value.text()?),
@@ -12984,8 +14577,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         reported_usage: match node.member("reported_usage") {
             None => thinkthen_complete_session_question_detail_field_reported_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_reported_usage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => {
                 thinkthen_complete_session_question_detail_field_reported_usage_presence_v1 {
                     presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
@@ -13005,8 +14604,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         threshold: match node.member("threshold") {
             None => thinkthen_complete_session_question_detail_field_threshold_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_threshold_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_session_question_detail_field_threshold_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_threshold_v1(value, store)
@@ -13020,8 +14625,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         usage: match node.member("usage") {
             None => thinkthen_complete_session_question_detail_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_usage_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_session_question_detail_field_usage_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_token_usage_v1(value, store)
@@ -13031,8 +14642,14 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         value: match node.member("value") {
             None => thinkthen_complete_session_question_detail_field_value_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: std::ptr::null(),
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_question_detail_field_value_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: std::ptr::null(),
+                }
+            }
             Some(value) => thinkthen_complete_session_question_detail_field_value_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_value_v1(value, store)
@@ -13175,8 +14792,20 @@ pub(crate) fn read_thinkthen_complete_session_recognition_v1(
         proposals: match node.member("proposals") {
             None => thinkthen_complete_session_recognition_field_proposals_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_session_recognition_field_proposals_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_recognition_field_proposals_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_session_recognition_field_proposals_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_session_recognition_field_proposals_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_session_recognition_field_proposals_v1(
@@ -13187,8 +14816,20 @@ pub(crate) fn read_thinkthen_complete_session_recognition_v1(
         relations: match node.member("relations") {
             None => thinkthen_complete_session_recognition_field_relations_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1,
-                value: zero(),
+                value: thinkthen_complete_session_recognition_field_relations_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
             },
+            Some(value) if value.kind() == "null" => {
+                thinkthen_complete_session_recognition_field_relations_presence_v1 {
+                    presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
+                    value: thinkthen_complete_session_recognition_field_relations_v1 {
+                        data: std::ptr::null(),
+                        len: 0,
+                    },
+                }
+            }
             Some(value) => thinkthen_complete_session_recognition_field_relations_presence_v1 {
                 presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
                 value: read_thinkthen_complete_session_recognition_field_relations_v1(

@@ -14,6 +14,16 @@ def field(value):
     return 'r#' + value if value in ('type', 'match', 'ref', 'in', 'loop', 'mod', 'move', 'true', 'false') else value
 
 
+def empty(typ):
+    if typ.startswith('*const '):
+        return 'std::ptr::null()'
+    if typ == 'f64':
+        return '0.0'
+    if typ in ('u32', 'u64', 'i64', 'usize'):
+        return '0'
+    return typ + ' { data: std::ptr::null(), len: 0 }'
+
+
 def literal(value):
     return json.dumps(value, ensure_ascii=False)
 
@@ -177,18 +187,18 @@ class Target:
                 path = key + '_field_' + member
                 typ, read = self.shape(schema, path, 'value')
                 optional = member not in required
-                null = nullable(schema, self.definitions)
+                null = optional or nullable(schema, self.definitions)
                 if optional or null:
                     presence = ident(path + '_presence')
                     self.structure(presence, [('presence', 'u32'), ('value', typ)])
                     members.append((member, presence))
                     lines.append('        ' + field(member) + ': match node.member(' + literal(member) + ') {')
                     if optional:
-                        lines.append('            None => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, value: zero() },')
+                        lines.append('            None => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, value: ' + empty(typ) + ' },')
                     else:
                         lines.append('            None => return Err(ErrorKind::Defect),')
                     if null:
-                        lines.append('            Some(value) if value.kind() == "null" => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: zero() },')
+                        lines.append('            Some(value) if value.kind() == "null" => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_NULL_V1, value: ' + empty(typ) + ' },')
                     lines.append('            Some(value) => ' + presence + ' { presence: THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, value: ' + read + ' },\n        },')
                 else:
                     members.append((member, typ))
@@ -208,8 +218,8 @@ def render(definitions):
     for key, source in definitions.items():
         target.definition(key, source)
     return '''// Generated from Rust-derived complete result schema; do not edit.
-#![allow(non_camel_case_types, missing_docs, reason = "generated versioned C declarations")]
-use super::views::{Node, Storage, read_json, zero};
+#![allow(non_camel_case_types, missing_docs, clippy::too_many_lines, reason = "generated versioned C schema objects and tagged alternatives")]
+use super::views::{Node, Storage, read_json};
 use super::views::{thinkthen_complete_utf8_v1, thinkthen_complete_json_v1, thinkthen_complete_extensions_v1};
 use thinkthen::ErrorKind;
 pub const THINKTHEN_COMPLETE_PRESENCE_MISSING_V1: u32 = 0;
