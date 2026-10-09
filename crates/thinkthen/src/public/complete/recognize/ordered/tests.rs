@@ -159,6 +159,7 @@ fn one_deadline_spans_every_record_and_starts_no_undispatched_request() {
 
 /// A later result is queued while the coordinator is still emitting; the
 /// deadline passes; only then does the coordinator reach its stop check.
+#[allow(clippy::expect_used, reason = "fixture synchronization must succeed")]
 fn queued_before_the_check(
     later: Result<Row<usize>, &'static str>,
 ) -> (Vec<usize>, Outcome<&'static str>, usize) {
