@@ -251,6 +251,8 @@ def prepare(definitions):
 
 
 def generated(schema, language="csharp"):
+    if language == "zig":
+        return zig_generated(prepare(graph(schema, ("completeplan",))))
     if language == "r":
         path = Path(__file__).parent / "templates/r.py"
         spec = importlib.util.spec_from_file_location("result_r", path)
@@ -292,6 +294,16 @@ def generated(schema, language="csharp"):
 
 
 
+def zig_generated(definitions):
+    path = Path(__file__).parent / 'templates/zig.py'
+    spec = importlib.util.spec_from_file_location('result_zig', path)
+    target = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(target)
+    return subprocess.run(['zig', 'fmt', '--stdin'], input=target.render(definitions),
+                          text=True, capture_output=True, check=True,
+                          env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
+
+
 def bridge():
     path = ROOT / 'sdlc/scripts/check-c-exports.py'
     spec = importlib.util.spec_from_file_location('csharp_native_abi', path)
@@ -317,9 +329,15 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "zig":
+        if args.bridge:
+            parser.error("Zig reads the generated C header directly")
+        if args.output == OUTPUT:
+            filename = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
+            args.output = ROOT / 'libraries/zig/src' / filename
     if args.target == "r":
         if args.inputs or args.bridge:
             parser.error("R target generates native result conversions only")
@@ -333,6 +351,10 @@ def main():
     if args.bridge:
         result = bridge()
         args.output = ROOT / 'libraries/csharp/src/NativeBridge.g.cs'
+    elif args.inputs and args.target == 'zig':
+        schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
+        result = zig_generated(prepare(graph(schema, ('Request', 'RequestSessionDescriptor'))))
     elif args.inputs:
         path = Path(__file__).parent / 'templates/csharp.py'
         spec = importlib.util.spec_from_file_location('result_csharp', path)

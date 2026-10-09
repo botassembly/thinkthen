@@ -9,6 +9,8 @@ zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
 export THINKTHEN_ZIG="$zig"
 for tool in cargo python3 node nm bwrap flock git tar; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 export PATH="$(dirname "$zig"):$PATH"
+python3 "$root/sdlc/generators/results/generate.py" --target zig --inputs --check
+python3 "$root/sdlc/generators/results/generate.py" --target zig --check
 lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-zig.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     THINKTHEN_HEAVY_LOCK_HELD=$lock

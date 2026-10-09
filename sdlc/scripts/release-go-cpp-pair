@@ -102,7 +102,8 @@ if [ "$mode" = swift-zig ]; then
 				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \
-				./examples/decide.zig ./src/ ./src/thinkthen.zig ./src/complete.zig ./src/native.zig ./src/session.zig \
+				./examples/decide.zig ./src/ ./src/thinkthen.zig ./src/complete.zig ./src/native.zig ./src/session.zig ./src/authored.zig \
+				./src/request_generated.zig ./src/plan_generated.zig \
 				./native/ "./native/$target/" "./native/$target/include/" "./native/$target/include/thinkthen.h" \
 				"./native/$target/lib/" "./native/$target/lib/libthinkthen.a" \
 				./THINKTHEN-PACKAGE-INPUTS \
@@ -112,6 +113,7 @@ if [ "$mode" = swift-zig ]; then
 	done
 	zig_version=$(tar -xOzf "$dir/$second" ./build.zig.zon | sed -n 's/^[[:space:]]*\.version = "\([^"]*\)",$/\1/p')
 	[ "$zig_version" = "$version" ] || fail 'Zig package version differs'
+	python3 "$repo/libraries/zig/Tests/guard.py" "$dir/$second" || fail 'Zig archive contains private bytes'
 fi
 check_dart_archive() {
 	name=$1

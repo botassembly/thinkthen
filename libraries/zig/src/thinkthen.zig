@@ -1,4 +1,9 @@
 const std = @import("std");
+pub const authored = @import("authored.zig");
+pub const inputs = authored.inputs;
+pub const Question = authored.Question;
+pub const Request = authored.Request;
+pub const Plan = authored.Plan;
 pub const session = @import("session.zig");
 pub const complete = @import("complete.zig");
 pub const native = @import("native.zig");

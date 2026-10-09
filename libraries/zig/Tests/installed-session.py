@@ -32,6 +32,11 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
                         THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1',
                         THINKTHEN_API_KEY='tt-canary-273', THINKTHEN_CACHE=str(home / 'native-cache'))
         subprocess.run([str(zig), 'build', '-j2'], cwd=project, env=env, check=True, timeout=120)
+        preview_env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1')
+        preview = subprocess.run([str(project / 'zig-out/bin/session'), 'plan'], cwd=project, env=preview_env, capture_output=True, text=True, timeout=5)
+        assert preview.returncode == 0, preview.stderr
+        assert preview.stderr == 'installed Zig plan PASS\n', preview.stderr
+        assert len(backend.arrivals) == 0, backend.arrivals
         result = subprocess.run([str(project / 'zig-out/bin/session')], cwd=project, env=env,
                                 capture_output=True, text=True, timeout=5)
         assert result.returncode == 0, result.stderr

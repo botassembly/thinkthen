@@ -79,6 +79,8 @@ SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules",
 GENERATED_BINDING_SOURCES = {
     "libraries/c/include/thinkthen.h",
     "libraries/c/src/session/views_generated.rs",
+    "libraries/zig/src/request_generated.zig",
+    "libraries/zig/src/plan_generated.zig",
     "libraries/r/thinkthen/src/rust/document.rs",
     "libraries/r/thinkthen/src/rust/src/results_generated.rs",
     "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc",
