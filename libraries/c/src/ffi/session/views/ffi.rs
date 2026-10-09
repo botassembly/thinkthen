@@ -64,8 +64,10 @@ fn complete_view_retains_missing_null_and_unknown_members_at_each_object_depth()
 fn arbitrary_authored_json_keeps_order_and_exact_numeric_tokens_in_owned_views() {
     let mut store = Storage::default();
     let view = {
-        let node =
-            Node::parse(r#"{"z":1e400,"a":-0,"later":[null,true,"x"]}"#).expect("authored JSON");
+        let input = String::from(
+            r#"{"z":1e400,"a":-0,"later":[null,true,"x",{"outer":{"inner":{"leaf":"kept"}}}]}"#,
+        );
+        let node = Node::parse(&input).expect("authored JSON");
         generated::read_thinkthen_complete_decide_value_v1(&node, &mut store)
             .expect("arbitrary value")
             .value
@@ -98,7 +100,17 @@ fn arbitrary_authored_json_keeps_order_and_exact_numeric_tokens_in_owned_views()
         [
             THINKTHEN_COMPLETE_JSON_NULL_V1,
             THINKTHEN_COMPLETE_JSON_BOOLEAN_V1,
-            THINKTHEN_COMPLETE_JSON_STRING_V1
+            THINKTHEN_COMPLETE_JSON_STRING_V1,
+            THINKTHEN_COMPLETE_JSON_OBJECT_V1
         ]
     );
+    let mut nested = values[3];
+    for key in ["outer", "inner", "leaf"] {
+        let object = unsafe { (*nested).data.object };
+        let entry = unsafe { &*object.data };
+        assert_eq!(text(entry.name), key);
+        nested = entry.value;
+    }
+    assert_eq!(unsafe { (*nested).kind }, THINKTHEN_COMPLETE_JSON_STRING_V1);
+    assert_eq!(text(unsafe { (*nested).data.string }), "kept");
 }

@@ -147,27 +147,27 @@ pub(crate) fn read_presence<T>(
 }
 
 #[derive(Debug)]
-enum Kind {
+enum Kind<'a> {
     Null,
     Boolean(bool),
     Number,
     String(String),
-    Array(Vec<Node>),
-    Object(Vec<(String, Node)>),
+    Array(Vec<Node<'a>>),
+    Object(Vec<(String, Node<'a>)>),
 }
 #[derive(Debug)]
-pub(crate) struct Node {
-    raw: Box<RawValue>,
-    value: Kind,
+pub(crate) struct Node<'a> {
+    raw: &'a RawValue,
+    value: Kind<'a>,
 }
-struct Entries(Vec<(String, Box<RawValue>)>);
+struct Entries<'a>(Vec<(String, &'a RawValue)>);
 struct Ordered;
 impl<'de> Visitor<'de> for Ordered {
-    type Value = Entries;
+    type Value = Entries<'de>;
     fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("JSON object")
     }
-    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Entries, M::Error> {
+    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Entries<'de>, M::Error> {
         let mut entries = Vec::new();
         while let Some(entry) = map.next_entry()? {
             entries.push(entry);
@@ -175,17 +175,17 @@ impl<'de> Visitor<'de> for Ordered {
         Ok(Entries(entries))
     }
 }
-impl<'de> Deserialize<'de> for Entries {
+impl<'de> Deserialize<'de> for Entries<'de> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         deserializer.deserialize_map(Ordered)
     }
 }
-impl Node {
-    pub(crate) fn parse(text: &str) -> Result<Self, ErrorKind> {
+impl<'a> Node<'a> {
+    pub(crate) fn parse(text: &'a str) -> Result<Self, ErrorKind> {
         let raw = serde_json::from_str(text).map_err(|_| ErrorKind::Defect)?;
         Self::from_raw(raw)
     }
-    fn from_raw(raw: Box<RawValue>) -> Result<Self, ErrorKind> {
+    fn from_raw(raw: &'a RawValue) -> Result<Self, ErrorKind> {
         let text = raw.get();
         let value = match text.as_bytes().first() {
             Some(b'n') => Kind::Null,
@@ -194,7 +194,7 @@ impl Node {
             }
             Some(b'"') => Kind::String(serde_json::from_str(text).map_err(|_| ErrorKind::Defect)?),
             Some(b'[') => {
-                let items: Vec<Box<RawValue>> =
+                let items: Vec<&RawValue> =
                     serde_json::from_str(text).map_err(|_| ErrorKind::Defect)?;
                 Kind::Array(
                     items
@@ -247,28 +247,28 @@ impl Node {
         }
         self.raw.get().parse().map_err(|_| ErrorKind::Defect)
     }
-    pub(crate) fn array(&self) -> Result<&[Node], ErrorKind> {
+    pub(crate) fn array(&self) -> Result<&[Node<'a>], ErrorKind> {
         if let Kind::Array(value) = &self.value {
             Ok(value)
         } else {
             Err(ErrorKind::Defect)
         }
     }
-    pub(crate) fn object(&self) -> Result<&[(String, Node)], ErrorKind> {
+    pub(crate) fn object(&self) -> Result<&[(String, Node<'a>)], ErrorKind> {
         if let Kind::Object(value) = &self.value {
             Ok(value)
         } else {
             Err(ErrorKind::Defect)
         }
     }
-    pub(crate) fn member(&self, name: &str) -> Option<&Node> {
+    pub(crate) fn member(&self, name: &str) -> Option<&Node<'a>> {
         self.object()
             .ok()?
             .iter()
             .find(|(key, _)| key == name)
             .map(|(_, value)| value)
     }
-    pub(crate) fn required(&self, name: &str) -> Result<&Node, ErrorKind> {
+    pub(crate) fn required(&self, name: &str) -> Result<&Node<'a>, ErrorKind> {
         self.member(name).ok_or(ErrorKind::Defect)
     }
     pub(crate) fn is_member(&self, name: &str, value: &str) -> bool {
