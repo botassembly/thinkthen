@@ -17,3 +17,5 @@ Large-input cases also live inside source modules. Selecting integration cases a
 Unbounded nextest concurrency can starve small cache cases that pass alone. The routine profile limits test processes to two and keeps the five-second ceiling. Full shared-case replay and parity belong to release selection even when each individual corpus row is small; focused cache and other boundary regressions remain routine.
 
 Moving tests between suites also changes the binding and Polars policy checks. Their independent scans retained the old ban on ignored cases after the release split. Exact reviewed file and function pairs admit the shared-case release tests while refusing arbitrary ignored names, including names with the release prefix. The actual lint gate exercises these scans together.
+
+A table of small inputs can exceed the routine timeout through repeated command startups. Group rank cases by top limit and filter cases by threshold, preserving every input and assertion. Such tables remain routine behavior tests; their cost does not make them large-input release boundaries.
