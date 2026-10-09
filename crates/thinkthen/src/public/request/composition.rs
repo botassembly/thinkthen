@@ -11,6 +11,16 @@ pub(super) type Inputs<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
 
 impl AdmittedRequest {
+    /// Obtain typed projection for a caller composing native records.
+    /// This reads only admitted inline preparation and never opens a saved selector.
+    /// # Errors
+    /// Refuses unresolved saved selectors; projection validation retains Usage errors.
+    pub fn record_reading(&self) -> Result<RecordReading, Error> {
+        let definition = self.definition.as_ref().ok_or_else(|| {
+            Error::usage("native record reading requires an admitted inline definition")
+        })?;
+        reading(definition, &self.request.call.arguments().options)
+    }
     pub(super) fn records<'a>(
         &'a self,
         definition: &RequestDefinition,
@@ -42,32 +52,20 @@ impl AdmittedRequest {
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Box::new(rows.into_iter().map(Ok)))
             }
-            RequestInput::Text { text, images } => {
-                let item = RequestItem {
-                    original: Some(RequestOriginal::Text { text: text.clone() }),
-                    context: None,
-                    options: None,
-                    examples: None,
-                    seed_spans: None,
-                    images: images.clone(),
-                };
-                let row = compose_item(&item, &reading, context.as_ref())?;
-                Ok(Box::new(std::iter::once(Ok(row))))
-            }
-            RequestInput::Json { value, images } => {
-                let item = RequestItem {
-                    original: Some(RequestOriginal::Json {
-                        value: value.clone(),
-                    }),
-                    context: None,
-                    options: None,
-                    examples: None,
-                    seed_spans: None,
-                    images: images.clone(),
-                };
-                let row = compose_item(&item, &reading, context.as_ref())?;
-                Ok(Box::new(std::iter::once(Ok(row))))
-            }
+            RequestInput::Text { text, images } => singleton(
+                RequestOriginal::Text { text: text.clone() },
+                images,
+                &reading,
+                context.as_ref(),
+            ),
+            RequestInput::Json { value, images } => singleton(
+                RequestOriginal::Json {
+                    value: value.clone(),
+                },
+                images,
+                &reading,
+                context.as_ref(),
+            ),
             RequestInput::Source { source } => {
                 controls.admission()?;
                 let items = crate::read_inputs(
@@ -96,7 +94,15 @@ impl AdmittedRequest {
                         "the supplied feed does not match the requested name",
                     ));
                 }
-                Ok(Box::new(feed.items.map(move |item| {
+                let super::execution::FeedContents::Items(items) = feed.contents else {
+                    return super::native_feed::records(
+                        self,
+                        feed.contents,
+                        controls,
+                        image_refusal,
+                    );
+                };
+                Ok(Box::new(items.map(move |item| {
                     controls.admission()?;
                     let item = attach_shared(item?, images)?;
                     super::admission::admit_item(self.request.call.function(), &item, options)?;
@@ -106,6 +112,23 @@ impl AdmittedRequest {
             }
         }
     }
+}
+fn singleton(
+    original: RequestOriginal,
+    images: &[RequestImage],
+    reading: &RecordReading,
+    schema: Option<&crate::InputDeclaration>,
+) -> Result<Inputs<'static>, Error> {
+    let item = RequestItem {
+        original: Some(original),
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans: None,
+        images: images.to_vec(),
+    };
+    let row = compose_item(&item, reading, schema)?;
+    Ok(Box::new(std::iter::once(Ok(row))))
 }
 fn compose_item(
     item: &RequestItem,
@@ -215,12 +238,18 @@ fn authored_reading(definition: &RequestDefinition) -> Result<RecordReading, Err
             crate::LoadedQuestion::Banded(q) => question_reading(&q.0),
         },
         RequestDefinition::Rank(q) => question_reading(q),
+        RequestDefinition::DynamicChoose(q) => metadata_reading(&q.metadata),
         _ => RecordReading::new(&[], None, None),
     }
 }
 fn question_reading(q: &crate::Question) -> Result<RecordReading, Error> {
+    metadata_reading(&q.metadata)
+}
+fn metadata_reading(
+    metadata: &crate::core::declaration::QuestionMetadata,
+) -> Result<RecordReading, Error> {
     RecordReading::new(
-        &q.metadata
+        &metadata
             .reading
             .on
             .iter()

@@ -2,10 +2,14 @@
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{CallOptions, Engine, Error, ErrorKind, RecordObservation, Surface};
+#[allow(
+    dead_code,
+    reason = "PostgreSQL retains this compatibility dispatcher until ticket 0500"
+)]
 mod execute;
 mod file_format;
 mod inputs;
-mod observations;
+pub(crate) mod observations;
 mod questions;
 mod reader_error;
 pub(crate) mod settings;
@@ -26,6 +30,10 @@ pub(crate) fn failure(error: &Error) -> Value {
     serde_json::to_value(error.complete()).unwrap_or_else(|_| json!(defect().complete()))
 }
 
+#[allow(
+    dead_code,
+    reason = "PostgreSQL retains this compatibility entry until ticket 0500"
+)]
 pub(crate) fn run(
     engine: &Engine,
     prepared: &Prepared,

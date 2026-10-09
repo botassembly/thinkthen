@@ -41,22 +41,7 @@ impl Annotating {
     }
 
     fn admit_declarations(&self, text: &Text) -> Result<(), Error> {
-        let record = self.input_record(text)?;
-        for places in &self.groups {
-            match self.set.group_evidence(places, &record) {
-                Ok(_) | Err(core::PartError::Record(core::RecordError::Missed(_))) => {}
-                Err(core::PartError::Declaration(_)) => {
-                    return Err(Error::usage("the item does not match item_schema"));
-                }
-                Err(core::PartError::Record(error)) => return Err(Error::refused(error)),
-                Err(core::PartError::Reading(_)) => {
-                    return Err(Error::defect(
-                        "a checked question set could not read its parts",
-                    ));
-                }
-            }
-        }
-        Ok(())
+        admit_declarations(&self.set, &self.input_record(text)?)
     }
 
     pub(crate) fn with_context(mut self, context: Option<&str>) -> Result<Self, Error> {
@@ -92,6 +77,27 @@ impl Annotating {
             .map(|named| named.question().clone())
             .ok_or_else(|| Error::defect("a group points outside its set"))
     }
+}
+
+pub(crate) fn admit_declarations(
+    set: &core::QuestionSet,
+    record: &core::BatchRecord,
+) -> Result<(), Error> {
+    for places in set.groups() {
+        match set.group_evidence(&places, record) {
+            Ok(_) | Err(core::PartError::Record(core::RecordError::Missed(_))) => {}
+            Err(core::PartError::Declaration(_)) => {
+                return Err(Error::usage("the item does not match item_schema"));
+            }
+            Err(core::PartError::Record(error)) => return Err(Error::refused(error)),
+            Err(core::PartError::Reading(_)) => {
+                return Err(Error::defect(
+                    "a checked question set could not read its parts",
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 impl Asker for Annotating {
