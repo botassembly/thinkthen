@@ -23,7 +23,8 @@ use crate::{KEY, compile, crate_dir, run, scratch, text};
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 
 #[test]
-fn the_doors_bare_values_are_the_commands_bytes() {
+#[ignore = "release-only full shared-case parity; run sdlc/scripts/test-full-cases --run"]
+fn release_only_the_doors_bare_values_are_the_commands_bytes() {
     let written: Members = serde_json::from_str(CASES).expect("the shared cases");
     let cases: Vec<Members> = serde_json::from_str(written["cases"].get()).expect("a case list");
     let command = built_command();

@@ -76,6 +76,9 @@ fi
 	cargo fmt --check
 	cargo clippy --locked --offline --all-targets -- -D warnings
 	cargo test --locked --offline -- --nocapture
+	if [ "$profile" = full ]; then
+		cargo test --locked --offline release_only_ -- --ignored --nocapture
+	fi
 	# The rung's own backend answers the slide as the test's backends do.
 	cargo build --quiet --locked --offline --lib
 	target=${CARGO_TARGET_DIR:-target}/debug

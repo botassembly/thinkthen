@@ -53,7 +53,8 @@ struct Named {
 type Compared = Result<usize, String>;
 
 #[test]
-fn each_json_method_prints_the_commands_bytes_on_the_shared_cases() {
+#[ignore = "release-only full shared-case parity; run sdlc/scripts/test-full-cases --run"]
+fn release_only_each_json_method_prints_the_commands_bytes_on_the_shared_cases() {
     let cases: Cases = serde_json::from_str(CASES).expect("the shared cases");
     let backend = Backend::start().expect("backend");
     let (mut compared, mut failures) = (0, Vec::new());

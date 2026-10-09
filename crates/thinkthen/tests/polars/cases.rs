@@ -130,7 +130,8 @@ fn skipped(id: &str) -> bool {
 }
 
 #[test]
-fn every_shared_case_the_door_carries_matches_the_slice_form() {
+#[ignore = "release-only full shared-case parity; run sdlc/scripts/test-full-cases --run"]
+fn release_only_every_shared_case_the_door_carries_matches_the_slice_form() {
     let backend = Backend::start().expect("a backend");
     let mut ran = Vec::new();
     let cases = cases();

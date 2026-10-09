@@ -56,6 +56,9 @@ if [ "$profile" = stress ]; then
     exit 0
 fi
 cargo test "$@" --test polars
+if [ "$profile" = full ]; then
+    cargo test "$@" --test polars release_only_ -- --ignored
+fi
 cargo test "$@" --doc PolarsEngine
 fi
 

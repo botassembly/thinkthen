@@ -55,7 +55,8 @@ impl Script {
 }
 
 #[test]
-fn every_applicable_shared_case_passes_through_the_door() {
+#[ignore = "release-only full shared-case parity; run sdlc/scripts/test-full-cases --run"]
+fn release_only_every_applicable_shared_case_passes_through_the_door() {
     let written: Members = serde_json::from_str(CASES).expect("the shared cases");
     let cases: Vec<Members> = serde_json::from_str(written["cases"].get()).expect("a case list");
     let selected = selected_ids(&cases).expect("a valid shared case selector");

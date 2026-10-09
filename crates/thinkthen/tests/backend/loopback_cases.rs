@@ -53,7 +53,8 @@ struct Verbatim {
 }
 
 #[test]
-fn every_wire_case_passes_through_the_command_on_the_conformance_backend() {
+#[ignore = "release-only full shared-case parity; run sdlc/scripts/test-full-cases --run"]
+fn release_only_every_wire_case_passes_through_the_command_on_the_conformance_backend() {
     let document: Value = serde_json::from_str(CASES).expect("the shared cases");
     let cases = document["cases"].as_array().expect("a case list");
     let written: Written = serde_json::from_str(CASES).expect("the shared cases as written");
