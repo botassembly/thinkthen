@@ -370,3 +370,5 @@ pub(in crate::public) fn preview_definition_asks(
         _ => Err(Error::usage("plan requires a record question")),
     }
 }
+
+pub(in crate::public) use annotate::preview_grouped_asks as annotation_preview_asks;

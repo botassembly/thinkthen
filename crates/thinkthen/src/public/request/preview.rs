@@ -3,6 +3,8 @@ use super::execution::{apply, controls, feed_projection, image_descriptors, imag
 use super::{AdmittedRequest, RequestDefinition, RequestEnvironment, RequestFunction};
 use crate::{Engine, Error, InputFunction, LoadedQuestion, PlanEstimate};
 
+type Preview = (crate::core::PlanSummary, bool, usize, Vec<usize>);
+
 impl Engine {
     /// Preview an admitted atomic or single-question rank request without sending.
     /// Explicit sources and feeds use the same composition and admission as execution.
@@ -22,6 +24,25 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<(crate::core::PlanSummary, bool), Error> {
+        let (summary, dropped, _, _) = self.preview_request(request, environment, false)?;
+        Ok((summary, dropped))
+    }
+
+    pub(crate) fn plan_annotation_request<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        environment: RequestEnvironment<'a>,
+    ) -> Result<(crate::core::PlanSummary, usize, Vec<usize>), Error> {
+        let (summary, _, count, groups) = self.preview_request(request, environment, true)?;
+        Ok((summary, count, groups))
+    }
+
+    fn preview_request<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        environment: RequestEnvironment<'a>,
+        annotation: bool,
+    ) -> Result<Preview, Error> {
         let function = match request.request.call.function() {
             RequestFunction::Decide => InputFunction::Decide,
             RequestFunction::Choose => InputFunction::Choose,
@@ -29,6 +50,7 @@ impl Engine {
             RequestFunction::Score => InputFunction::Score,
             RequestFunction::Filter => InputFunction::Filter,
             RequestFunction::Rank => InputFunction::Rank,
+            RequestFunction::Annotate if annotation => InputFunction::Annotate,
             _ => return Err(Error::usage("plan requires an atomic or rank question")),
         };
         feed_projection(request, environment.feed.as_ref())?;
@@ -60,6 +82,7 @@ impl Engine {
             return Err(Error::usage(message.clone()));
         }
         let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
+        let mut groups = annotation_groups(&definition, annotation)?;
         let mut dropped = false;
         let asks = rows.enumerate().map(|(at, row)| {
             controls.admission()?;
@@ -67,6 +90,16 @@ impl Engine {
             self.check_record_limit(at)?;
             super::inline::validate_composed(&reading_definition, options, &row)
                 .map_err(|error| error.at_record(at))?;
+            if annotation && let RequestDefinition::Annotate(set) = &definition {
+                return crate::public::complete::annotation_preview_asks(
+                    &engine,
+                    set,
+                    row,
+                    controls.context_text(),
+                    at,
+                )
+                .map_err(|error| error.at_record(at));
+            }
             let (asks, loses_detail) = crate::public::complete::preview_definition_asks(
                 &engine,
                 function,
@@ -77,11 +110,24 @@ impl Engine {
             )
             .map_err(|error| error.at_record(at))?;
             dropped |= loses_detail;
-            Ok(asks)
+            Ok(asks.into_iter().map(|ask| (ask, 0_usize)).collect())
         });
         // Native record preparation embeds each resolved context in its own asks.
-        let summary = crate::public::plan::estimate_summary(&engine, setting, None, asks)?;
-        Ok((summary, dropped))
+        let mut count = 0_usize;
+        let summary = crate::public::plan::estimate_tagged_summary(
+            &engine,
+            setting,
+            None,
+            asks,
+            |request| {
+                count = count
+                    .checked_add(1)
+                    .ok_or_else(|| Error::usage("the planned input is too large to count"))?;
+                count_groups(&mut groups, request)?;
+                Ok(())
+            },
+        )?;
+        Ok((summary, dropped, count, groups))
     }
 }
 
@@ -121,4 +167,28 @@ fn configuration(
         ),
         _ => return Err(Error::usage("plan requires a record question")),
     })
+}
+
+fn count_groups(groups: &mut [usize], items: &[usize]) -> Result<(), Error> {
+    for group in items.iter().collect::<std::collections::BTreeSet<_>>() {
+        if let Some(total) = groups.get_mut(*group) {
+            *total = total
+                .checked_add(1)
+                .ok_or_else(|| Error::usage("the planned input is too large to count"))?;
+        }
+    }
+    Ok(())
+}
+
+fn annotation_groups(
+    definition: &RequestDefinition,
+    annotation: bool,
+) -> Result<Vec<usize>, Error> {
+    if !annotation {
+        return Ok(Vec::new());
+    }
+    match definition {
+        RequestDefinition::Annotate(set) => Ok(vec![0; set.0.groups().len()]),
+        _ => Err(Error::usage("annotation plan requires a question set")),
+    }
 }

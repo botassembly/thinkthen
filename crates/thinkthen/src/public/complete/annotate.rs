@@ -29,6 +29,21 @@ struct Annotations {
     engine: Arc<facade::Engine>,
     set: core::QuestionSet,
 }
+impl Annotations {
+    fn asks_with_groups(
+        &self,
+        input: &Prepared,
+        group_done: impl FnMut(usize, usize),
+    ) -> Result<Vec<Ask>, Error> {
+        let asks = Annotating::new(&self.engine, self.set.clone())
+            .with_typed_context(input.context.as_ref())
+            .asks_with_groups(&input.text, group_done)?;
+        if input.context.is_some() {
+            super::records::validate_context(&self.engine, &asks)?;
+        }
+        Ok(asks)
+    }
+}
 impl Asker for Annotations {
     type Input = Prepared;
     type Row = facade::Annotation;
@@ -48,14 +63,9 @@ impl Asker for Annotations {
         input.text.at
     }
     fn asks(&self, input: &Prepared) -> Result<Vec<Ask>, Error> {
-        let asks = Annotating::new(&self.engine, self.set.clone())
-            .with_typed_context(input.context.as_ref())
-            .asks(&input.text)?;
-        if input.context.is_some() {
-            super::records::validate_context(&self.engine, &asks)?;
-        }
-        Ok(asks)
+        self.asks_with_groups(input, |_, _| {})
     }
+
     fn row(
         &self,
         input: Prepared,
@@ -336,4 +346,25 @@ pub(super) fn preview_asks(
     }
     .asks(&input)?;
     Ok((asks, dropped))
+}
+
+pub(in crate::public) fn preview_grouped_asks(
+    engine: &Arc<facade::Engine>,
+    set: &QuestionSet,
+    record: RecordInput<crate::QuestionInput>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<Vec<(crate::core::pack::Ask, usize)>, Error> {
+    let (_, input) = prepare_record(&set.0, record, fallback, at)?;
+    let mut groups = Vec::new();
+    let asks = Annotations {
+        engine: Arc::clone(engine),
+        set: set.0.clone(),
+        recover_missing: false,
+        cli_groups: false,
+    }
+    .asks_with_groups(&input, |group, count| {
+        groups.extend(std::iter::repeat_n(group, count))
+    })?;
+    Ok(asks.into_iter().zip(groups).collect())
 }

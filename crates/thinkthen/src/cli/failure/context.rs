@@ -2,7 +2,7 @@
 
 use std::io;
 
-use crate::core::{BackendProfile, BatchError, LimitKind, ProfileName};
+use crate::core::{LimitKind, ProfileName};
 use crate::failure::Failure;
 
 #[derive(Debug)]
@@ -18,50 +18,6 @@ pub(crate) enum Error {
         actual: usize,
         profile: Option<ProfileName>,
     },
-}
-
-/// The limits that classify a planner refusal without storing evidence.
-#[derive(Clone)]
-pub(crate) struct Limits {
-    profile: Option<BackendProfile>,
-}
-
-impl Limits {
-    pub(crate) fn new(profile: Option<&BackendProfile>) -> Self {
-        Self {
-            profile: profile.cloned(),
-        }
-    }
-
-    pub(crate) fn refused(&self, error: BatchError, initial: bool) -> Failure {
-        match error {
-            BatchError::ContextOverLimit {
-                kind,
-                limit,
-                actual,
-            } => {
-                let profile = self.profile.as_ref().filter(|held| match kind {
-                    LimitKind::EvidenceBytes => held.max_evidence_bytes == Some(limit),
-                    LimitKind::RequestBytes => held.max_request_bytes == Some(limit),
-                    LimitKind::Questions => held.max_questions == Some(limit),
-                    LimitKind::Options => false,
-                });
-                let profile = profile.map(|held| held.name().clone());
-                Failure::Context(Error::OverLimit {
-                    initial,
-                    kind,
-                    limit,
-                    actual,
-                    profile,
-                })
-            }
-            BatchError::StructuredQuestionWithContext => {
-                Failure::Context(Error::StructuredQuestion)
-            }
-            BatchError::Profile(limit) => Failure::ProfileLimit(limit),
-            BatchError::Defect(what) => Failure::Defect(what),
-        }
-    }
 }
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {

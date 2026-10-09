@@ -77,6 +77,58 @@ impl Annotating {
         self
     }
 
+    pub(crate) fn asks_with_groups(
+        &self,
+        text: &Text,
+        mut group_done: impl FnMut(usize, usize),
+    ) -> Result<Vec<Ask>, Error> {
+        let record = self.input_record(text)?;
+        let mut asks = Vec::new();
+        for (group, places) in self.groups.iter().enumerate() {
+            let evidence =
+                self.set
+                    .group_evidence(places, &record)
+                    .map_err(|error| match error {
+                        core::PartError::Declaration(_) => {
+                            Error::usage("the item does not match item_schema")
+                        }
+                        core::PartError::Record(error) => Error::refused(error),
+                        core::PartError::Reading(error) => Error::refused(error),
+                    })?;
+            let questions = places
+                .iter()
+                .map(|&place| self.question(place))
+                .collect::<Result<Vec<_>, _>>()?;
+            let plan = quoted_plan(
+                self.backend.asked(),
+                evidence,
+                None,
+                questions,
+                self.profile.as_ref(),
+            )
+            .map_err(|error| match error {
+                core::BatchError::Profile(_) => Error::refused(error),
+                _ => Error::defect("an annotate group asks nothing"),
+            })?;
+            let grouped = pack::asks_for(self.backend.api_type(), self.backend.url(), &plan)
+                .map_err(|_| Error::defect("a request could not be written as JSON"))?;
+            group_done(group, grouped.len());
+            asks.extend(grouped);
+        }
+        if let Some(context) = &self.context {
+            let model = pack::model_json(self.backend.model().as_str())
+                .map_err(|_| Error::defect("an aggregate model could not be written"))?;
+            for ask in &mut asks {
+                ask.state = ask
+                    .state
+                    .with_context_value(context)
+                    .map_err(|_| Error::defect("an aggregate context could not be written"))?;
+                ask.key = ask.state.key(self.backend.url(), &model, &ask.question);
+            }
+        }
+        Ok(asks)
+    }
+
     fn question(&self, place: usize) -> Result<core::Question, Error> {
         self.set
             .questions()
@@ -97,11 +149,7 @@ pub(crate) fn admit_declarations(
                 return Err(Error::usage("the item does not match item_schema"));
             }
             Err(core::PartError::Record(error)) => return Err(Error::refused(error)),
-            Err(core::PartError::Reading(_)) => {
-                return Err(Error::defect(
-                    "a checked question set could not read its parts",
-                ));
-            }
+            Err(core::PartError::Reading(error)) => return Err(Error::refused(error)),
         }
     }
     Ok(())
@@ -122,53 +170,7 @@ impl Asker for Annotating {
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Error> {
-        let record = self.input_record(text)?;
-        let mut asks = Vec::new();
-        for places in &self.groups {
-            let evidence =
-                self.set
-                    .group_evidence(places, &record)
-                    .map_err(|error| match error {
-                        core::PartError::Declaration(_) => {
-                            Error::usage("the item does not match item_schema")
-                        }
-                        core::PartError::Record(error) => Error::refused(error),
-                        core::PartError::Reading(_) => {
-                            Error::defect("a checked question set could not read its parts")
-                        }
-                    })?;
-            let questions = places
-                .iter()
-                .map(|&place| self.question(place))
-                .collect::<Result<Vec<_>, _>>()?;
-            let plan = quoted_plan(
-                self.backend.asked(),
-                evidence,
-                None,
-                questions,
-                self.profile.as_ref(),
-            )
-            .map_err(|error| match error {
-                core::BatchError::Profile(_) => Error::refused(error),
-                _ => Error::defect("an annotate group asks nothing"),
-            })?;
-            asks.extend(
-                pack::asks_for(self.backend.api_type(), self.backend.url(), &plan)
-                    .map_err(|_| Error::defect("a request could not be written as JSON"))?,
-            );
-        }
-        if let Some(context) = &self.context {
-            let model = pack::model_json(self.backend.model().as_str())
-                .map_err(|_| Error::defect("an aggregate model could not be written"))?;
-            for ask in &mut asks {
-                ask.state = ask
-                    .state
-                    .with_context_value(context)
-                    .map_err(|_| Error::defect("an aggregate context could not be written"))?;
-                ask.key = ask.state.key(self.backend.url(), &model, &ask.question);
-            }
-        }
-        Ok(asks)
+        self.asks_with_groups(text, |_, _| {})
     }
 
     fn row(&self, _text: Text, answers: Vec<Answered>) -> Result<Annotation, Error> {

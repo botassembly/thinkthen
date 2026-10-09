@@ -57,19 +57,8 @@ pub(super) fn run(
         reader.next().map(|frame| {
             let (ordinal, original) =
                 frame.map_err(|placed| input_error(placed.cause, placed.at))?;
-            let mut record =
-                composition.compose(crate::RawRecord(Arc::new(original.record.clone())))?;
-            let schema = judging
-                .set
-                .questions()
-                .first()
-                .and_then(|member| member.metadata().context_schema.as_ref());
-            record.context = crate::asking::context::record(
-                &original.record,
-                judging.context_field.as_deref(),
-                schema,
-            )
-            .map_err(|error| input_error(error, Some(ordinal + 1)))?;
+            let record = compose(judging, &composition, &original.record)
+                .map_err(|error| input_error(error, Some(ordinal + 1)))?;
             held.borrow_mut().insert(ordinal, original);
             Ok(record.map_original(crate::QuestionInput::Record))
         })
@@ -207,6 +196,24 @@ pub(super) fn run(
     } else {
         0
     }))
+}
+
+pub(super) fn compose(
+    judging: &Judging<'_>,
+    composition: &crate::RecordReading,
+    original: &Record,
+) -> Result<crate::RecordInput<crate::RecordEvidence>, Failure> {
+    let mut record = composition
+        .compose(crate::RawRecord(Arc::new(original.clone())))
+        .map_err(Failure::from)?;
+    let schema = judging
+        .set
+        .questions()
+        .first()
+        .and_then(|member| member.metadata().context_schema.as_ref());
+    record.context =
+        crate::asking::context::record(original, judging.context_field.as_deref(), schema)?;
+    Ok(record)
 }
 
 fn input_error(cause: Failure, at: Option<usize>) -> crate::Error {
