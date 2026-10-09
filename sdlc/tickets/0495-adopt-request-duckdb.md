@@ -11,6 +11,8 @@ Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 Adopt shared Request and generated results in DuckDB through named typed public calls.

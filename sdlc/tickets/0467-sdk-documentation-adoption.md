@@ -8,6 +8,8 @@ Owner: builder.
 
 Reviews: revision e71fa0b01, accept
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 Objective-C, Swift, Zig and Python documentation consistently describes the implemented complete API while preserving genuine platform and publication limitations.

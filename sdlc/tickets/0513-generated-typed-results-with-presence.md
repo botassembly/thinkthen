@@ -16,6 +16,8 @@ Reviews: revision 41c61e7e979ec306ad216bfa63ad7733e576cd1c, reject
 
 Reviews: revision 7a1f13950217a608f2d54830a7b53ddad7f846c1, accept
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 Rust owns the result types. A generator emits each language's typed results from them, with explicit presence wherever missing and explicit null differ. Hand-copied result schemas and readers go.

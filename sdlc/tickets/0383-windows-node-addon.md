@@ -7,6 +7,8 @@ Milestone: 0.2
 Depends on: 0498
 Depends on: 0501
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 - The release workflow builds a `win32-x64` addon. `npm-assemble` packs five addons into the one npm package.

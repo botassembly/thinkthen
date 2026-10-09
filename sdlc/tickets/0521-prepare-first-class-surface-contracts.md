@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 The binding tickets give builders one consistent route to native user experiences with the smallest maintainable translation layers. Preparation closes contract and ownership gaps without changing product code or directing active build lanes.

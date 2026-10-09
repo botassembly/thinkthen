@@ -13,6 +13,8 @@ Reviews: revision caddaecbc, accept
 
 Reviews: revision 56af78e68, accept
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 DuckDB complete-file calls bound descriptor staging before native admission, so engine limits and cancellation can stop further file reads. This does not promise a constant bound for retained results or generic whole-set operations; their existing contracts remain.

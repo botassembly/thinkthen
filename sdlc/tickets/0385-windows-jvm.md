@@ -7,6 +7,8 @@ Milestone: 0.2
 Depends on: 0504
 Depends on: 0501
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 - On Windows, with `-Dthinkthen.library` naming ticket 0381's DLL, the binding loads it and answers from a loopback backend. The jars still neither fetch nor bundle the library, as `libraries/jvm/README.md` says.

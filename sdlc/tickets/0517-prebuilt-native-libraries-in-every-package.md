@@ -8,6 +8,8 @@ Reviews: revision 4cd756859, reject
 
 Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 The review amendment below distinguishes local packaging from native platform qualification and release actions.

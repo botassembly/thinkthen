@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0516
 
+Reviews: revision 4d59e7c6a, accept
+
 ## Outcome
 
 - On Windows the package finds `thinkthen.dll` from ticket 0381's archive, loads it and answers from a loopback backend. The package still ships no native library, as `libraries/csharp/README.md` says.
