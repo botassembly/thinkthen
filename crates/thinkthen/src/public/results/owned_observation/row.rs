@@ -159,6 +159,7 @@ fn cause(value: FailureCause) -> core::BackendFailureCause {
     schemars(rename = "sessionRecognition")
 )]
 pub(crate) struct RecognitionDocument<'a> {
+    mode: crate::RecognitionMode,
     entities: Vec<&'a core::RecognizedName>,
     #[serde(skip_serializing_if = "Option::is_none")]
     relations: Option<Vec<RecognitionEdgeDocument<'a>>>,
@@ -168,6 +169,7 @@ pub(crate) struct RecognitionDocument<'a> {
 impl<'a> RecognitionDocument<'a> {
     fn of(value: &'a crate::Recognized) -> Self {
         Self {
+            mode: value.mode(),
             entities: value.entities().iter().map(|v| &v.0).collect(),
             relations: value.relations().map(|rows| {
                 rows.iter()

@@ -13,8 +13,7 @@
         },
         "file": {
           "type": [
-            "string",
-            "null"
+            "string"
           ]
         },
         "first_line": {
@@ -187,6 +186,105 @@
             "request",
             "question_sources",
             "observations"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeAnnotationValue": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "decision",
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "choice",
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "score",
+              "type": "string"
+            },
+            "value": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "tags",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "failed",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completefailure"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
           ],
           "type": "object",
           "unevaluatedProperties": false
@@ -1710,6 +1808,22 @@
         }
       ]
     },
+    "completeEntityDocument": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completeError": {
       "properties": {
         "estimated_input_denial": {
@@ -2198,8 +2312,7 @@
         },
         "file": {
           "type": [
-            "string",
-            "null"
+            "string"
           ]
         },
         "first_line": {
@@ -3688,8 +3801,7 @@
         },
         "file": {
           "type": [
-            "string",
-            "null"
+            "string"
           ]
         },
         "first_line": {
@@ -3747,6 +3859,35 @@
         "question",
         "answer",
         "meta"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeRecognitionEdgeDocument": {
+      "properties": {
+        "either": {
+          "type": "boolean"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/completeentity"
+        },
+        "target": {
+          "$ref": "#/$defs/completeentity"
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability",
+        "either"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -3848,8 +3989,7 @@
         },
         "file": {
           "type": [
-            "string",
-            "null"
+            "string"
           ]
         },
         "first_line": {
@@ -4040,6 +4180,50 @@
         },
         {
           "const": "choice",
+          "type": "string"
+        }
+      ]
+    },
+    "completeRequestFunction": {
+      "oneOf": [
+        {
+          "const": "decide",
+          "type": "string"
+        },
+        {
+          "const": "choose",
+          "type": "string"
+        },
+        {
+          "const": "tag",
+          "type": "string"
+        },
+        {
+          "const": "score",
+          "type": "string"
+        },
+        {
+          "const": "filter",
+          "type": "string"
+        },
+        {
+          "const": "rank",
+          "type": "string"
+        },
+        {
+          "const": "find",
+          "type": "string"
+        },
+        {
+          "const": "annotate",
+          "type": "string"
+        },
+        {
+          "const": "recognize",
+          "type": "string"
+        },
+        {
+          "const": "relate",
           "type": "string"
         }
       ]
@@ -5090,8 +5274,7 @@
         },
         "file": {
           "type": [
-            "string",
-            "null"
+            "string"
           ]
         },
         "first_line": {
@@ -5616,6 +5799,961 @@
       "type": "object",
       "unevaluatedProperties": false
     },
+    "completesessionAnnotation": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnnotationValue"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completesessionJudgment": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "decision",
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "choice",
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "score",
+              "type": "string"
+            },
+            "value": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "tags",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completesessionNamedProbability": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "probability"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completesessionObservation": {
+      "oneOf": [
+        {
+          "properties": {
+            "detail": {
+              "$ref": "#/$defs/completesessionQuestionDetail"
+            },
+            "index": {
+              "format": "uint",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "kind": {
+              "const": "question",
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string"
+              ]
+            },
+            "position": {
+              "format": "uint",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "stage": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "index",
+            "position",
+            "detail"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "index": {
+              "format": "uint",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "kind": {
+              "const": "row",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completesessionObservedRow"
+            }
+          },
+          "required": [
+            "kind",
+            "index",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completesessionObservedRow": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "judgment",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completesessionJudgment"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "annotated",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completesessionAnnotation"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "recognized",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completesessionRecognition"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "find",
+              "type": "string"
+            },
+            "value": {
+              "format": "uint",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "relations",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completesessionRelationEdge"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completesessionPacket": {
+      "oneOf": [
+        {
+          "properties": {
+            "function": {
+              "const": "decide",
+              "type": "string"
+            },
+            "kind": {
+              "const": "row",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAtomic_DecideValue"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "choose",
+              "type": "string"
+            },
+            "kind": {
+              "const": "row",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAtomic_Nullable_string"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "tag",
+              "type": "string"
+            },
+            "kind": {
+              "const": "row",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAtomic_Array_of_string"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "score",
+              "type": "string"
+            },
+            "kind": {
+              "const": "row",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAtomic_double"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "filter",
+              "type": "string"
+            },
+            "kind": {
+              "const": "row",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAtomic_boolean"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "annotate",
+              "type": "string"
+            },
+            "kind": {
+              "const": "row",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnnotation"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "decide",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeAtomic_DecideValue"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "choose",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeAtomic_Nullable_string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "tag",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeAtomic_Array_of_string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "score",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeAtomic_double"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "filter",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeAtomic_boolean"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "rank",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeAtomic_NonZeroUsize"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "find",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeFind"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "annotate",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeAnnotation"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "recognize",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completeRecognition"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "relate",
+              "type": "string"
+            },
+            "kind": {
+              "const": "aggregate",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completeRelation"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "function": {
+              "$ref": "#/$defs/completeRequestFunction"
+            },
+            "kind": {
+              "const": "observation",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/completesessionObservation"
+            }
+          },
+          "required": [
+            "kind",
+            "function",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "facts": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completeFacts"
+                }
+              ]
+            },
+            "failure": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completeCallError"
+                }
+              ]
+            },
+            "kind": {
+              "const": "terminal",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completesessionProbabilities": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "yes_no",
+              "type": "string"
+            },
+            "value": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "named",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/$defs/completesessionNamedProbability"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completesessionQuestionDetail": {
+      "properties": {
+        "answer_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeAnswerId"
+            }
+          ]
+        },
+        "cached": {
+          "type": "boolean"
+        },
+        "confidence": {
+          "format": "double",
+          "type": [
+            "number"
+          ]
+        },
+        "failed_questions": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completefailure"
+            }
+          ]
+        },
+        "failure_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeFailureId"
+            }
+          ]
+        },
+        "input": true,
+        "inputs": {
+          "items": true,
+          "type": "array"
+        },
+        "model": {
+          "type": "string"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/completeObservation"
+          },
+          "type": "array"
+        },
+        "probabilities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completesessionProbabilities"
+            }
+          ]
+        },
+        "question": {
+          "$ref": "#/$defs/completeReadableQuestion"
+        },
+        "question_sha256": {
+          "type": "string"
+        },
+        "question_sources": {
+          "items": {
+            "$ref": "#/$defs/completeQuestionSource"
+          },
+          "type": "array"
+        },
+        "raw_pick": {
+          "type": [
+            "string"
+          ]
+        },
+        "reported_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeUsage"
+            }
+          ]
+        },
+        "requests": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completethreshold"
+            }
+          ]
+        },
+        "url": {
+          "type": "string"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completetokenUsage"
+            }
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completevalue"
+            }
+          ]
+        }
+      },
+      "required": [
+        "question_sha256",
+        "model",
+        "url",
+        "requests",
+        "requests_sent",
+        "cached",
+        "failed_questions",
+        "question",
+        "question_sources",
+        "observations",
+        "inputs"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completesessionRecognition": {
+      "properties": {
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/completeentity"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "$ref": "#/$defs/completeRecognitionMode"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/completeBoundaryProposal"
+          },
+          "type": [
+            "array"
+          ]
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/completeRecognitionEdgeDocument"
+          },
+          "type": [
+            "array"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "entities"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completesessionRelationEdge": {
+      "properties": {
+        "either": {
+          "type": "boolean"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/completeEntityDocument"
+        },
+        "target": {
+          "$ref": "#/$defs/completeEntityDocument"
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability",
+        "either"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completesourceRelationEndpoint": {
       "properties": {
         "file": {
@@ -5669,6 +6807,28 @@
         "number",
         "string"
       ]
+    },
+    "completetokenUsage": {
+      "properties": {
+        "input_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "output_tokens": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "input_tokens",
+        "output_tokens"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
     },
     "completevalue": {
       "anyOf": [
