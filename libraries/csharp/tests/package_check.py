@@ -1,7 +1,6 @@
 """Check local C# and native package bytes and plant stale, tampered and secret variants."""
 import hashlib
 import importlib.util
-import os
 import subprocess
 import sys
 import tempfile
@@ -14,6 +13,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
 MAJOR, MINOR, PATCH = VERSION.split(".")
 HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
@@ -91,7 +91,6 @@ def abi_check(header, package):
     spec = importlib.util.spec_from_file_location('c_abi', ROOT.parents[1] / 'sdlc/scripts/check-c-exports.py')
     abi = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(abi)
-    sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
     from children import child_env
     from toolchains import dotnet
     native = abi.header_abi(header)
@@ -126,7 +125,6 @@ def abi_check(header, package):
 
 def abi_plants(header):
     """Compile changed real declarations; the same package checker must refuse them."""
-    sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
     from children import child_env
     from toolchains import dotnet
     with tempfile.TemporaryDirectory(prefix='thinkthen-csharp-abi-plants-') as folder:

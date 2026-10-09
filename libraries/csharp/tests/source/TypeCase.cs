@@ -1,8 +1,6 @@
 using System.Text.Json;
 using ThinkThen;
 using ThinkThen.Inputs;
-using Failure = ThinkThen.Failure;
-using FailureKind = ThinkThen.FailureKind;
 
 if(args.Length>=1 && args[0]=="complete"){Console.WriteLine(NativeCases.Run(args.Length==2?args[1]:Console.ReadLine()!));return;}
 if(args.Length==1 && args[0]=="native"){NativeChecks.Run();Console.WriteLine("{\"native\":\"pass\"}");return;}
@@ -39,8 +37,5 @@ try {
  var items=r.TryGetProperty("records",out var records)?records:r.TryGetProperty("units",out var units)?units:JsonSerializer.SerializeToElement(new[]{r.GetProperty("evidence").Clone()});
  if(r.TryGetProperty("none",out var none))question["none"]=none.Clone();
  var framing=new {verb,question,items,text=items.EnumerateArray().All(v=>v.ValueKind==JsonValueKind.String),engine_settings=r.TryGetProperty("call",out var call)&&call.TryGetProperty("batch",out var size)?JsonSerializer.Serialize(new {batch=size.GetUInt64()}):"{}"};
- // Native find uses generated options.None; preserve the fixture's explicit value.
- var framed=JsonSerializer.SerializeToElement(framing);
- var data=framed.EnumerateObject().ToDictionary(p=>p.Name,p=>(object?)p.Value.Clone());
- Console.WriteLine(AsyncFixtureCases.Run(JsonSerializer.Serialize(data)));
+ Console.WriteLine(AsyncFixtureCases.Run(JsonSerializer.Serialize(framing)));
 } catch(Failure error) {Console.WriteLine(JsonSerializer.Serialize(new {failed=new {kind=error.Kind.ToString().ToLowerInvariant(),code=error.Code}}));}

@@ -17,6 +17,13 @@ static class SessionChecks
         await Task.Yield();
         yield return failure is null ? Item("unreachable") : throw failure;
     }
+    static Plan AuthoredPlan(Engine engine, InputRequestQuestionDefinition question, string original)
+    {
+        using var bytes = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(bytes)) question.Value.Write(writer);
+        if (System.Text.Encoding.UTF8.GetString(bytes.ToArray()) != original) throw new Exception("original authored spelling, order or depth changed");
+        return engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = question, Input = new InputRequestInputText { Text = "owned" } } });
+    }
     public static async Task Run()
     {
         using var engine = Engine.Open(new InputEngineSettings {
@@ -39,10 +46,7 @@ static class SessionChecks
             var parsed = engine.ParseQuestion(AuthoredQuestionKind.Atomic, original);
             var definition = ((InputRequestDefinitionAlternative0)parsed.Value).Value;
             if (definition.Batch.Value is not InputAuthoredDecideBatchAlternative0 || definition.ItemSchema.Value is not InputAuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
-            using var bytes = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(bytes)) parsed.Value.Write(writer);
-            if (System.Text.Encoding.UTF8.GetString(bytes.ToArray()) != original) throw new Exception("original authored constant spelling or order changed");
-            var plan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = parsed, Input = new InputRequestInputText { Text = "owned" } } });
+            var plan = AuthoredPlan(engine, parsed, original);
             if (plan.Requests != 1 || plan.FirstBodyUtf8.State != PresenceState.Value) throw new Exception("decoded authored constant plan");
         }
         InputRequestQuestionDefinition? deepQuestion = null;
@@ -52,10 +56,7 @@ static class SessionChecks
             deepMeaning = new string('[', depth) + "false" + new string(']', depth);
             string original = "{\"decide\":\"Is it?\",\"true\":" + deepMeaning + "}";
             deepQuestion = engine.ParseQuestion(AuthoredQuestionKind.Atomic, original);
-            using var bytes = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(bytes)) deepQuestion.Value.Write(writer);
-            if (System.Text.Encoding.UTF8.GetString(bytes.ToArray()) != original) throw new Exception("deep authored meaning changed");
-            var plan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = deepQuestion, Input = new InputRequestInputText { Text = "owned" } } });
+            var plan = AuthoredPlan(engine, deepQuestion, original);
             if (plan.Requests != 1 || plan.ToPlain()["requests"]!.GetValue<ulong>() != 1) throw new Exception("deep authored plan");
         }
         _ = engine.ParseQuestion(AuthoredQuestionKind.Set, "{\"version\":1,\"questions\":{\"first\":{\"decide\":\"Is it?\"}}}");

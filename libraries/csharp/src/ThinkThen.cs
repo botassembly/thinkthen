@@ -35,7 +35,7 @@ public sealed partial class Engine : IDisposable
  private static readonly Encoding StrictUtf8=new UTF8Encoding(false,true);
  private Engine(IntPtr pointer){engine=pointer;ownedEngine=new(pointer);}
  public static Engine Open(InputEngineSettings? settings=null) {
-  NativeLoader.Initialize();byte[] bytes=(settings??new InputEngineSettings()).ToBytes();Array.Resize(ref bytes,bytes.Length+1);
+  byte[] bytes=(settings??new InputEngineSettings()).ToBytes();Array.Resize(ref bytes,bytes.Length+1);
   IntPtr pointer=Native.thinkthen_engine_new_with(bytes);
   if(pointer==IntPtr.Zero)throw ReadFailure(pointer,Native.thinkthen_error_code(pointer));
   return new Engine(pointer);
@@ -48,7 +48,7 @@ public sealed partial class Engine : IDisposable
   if(observed!=code)throw new InvalidOperationException($"native error mismatch {code}/{observed}");
   return new Failure(code,retryable,message,facts);
  }
- private static JsonElement ReadJson(IntPtr pointer,nuint length) {
+ internal static JsonElement ReadJson(IntPtr pointer,nuint length) {
   if(pointer==IntPtr.Zero)throw new InvalidOperationException("missing native output");
   byte[] bytes=new byte[checked((int)length)];Marshal.Copy(pointer,bytes,0,bytes.Length);
   using var document=JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = int.MaxValue });return document.RootElement.Clone();

@@ -47,13 +47,12 @@ def native_parity(consumer, command):
     import sqlite3
     sys.path.insert(0, str(ROOT / "conformance"))
     import parity, c_parity, c_images
-    cases = {c["id"]: c for c in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
     named = {c["id"]: c for c in json.loads((ROOT / "conformance/named-inputs.json").read_text())["cases"]}
     failures = []
     for row in parity.required_cases(parity.inventory(), consumer).values():
         failure = None
         try:
-            value = c_parity.document(row, cases, named)
+            value = c_parity.document(row, conformance, named)
             with tempfile.TemporaryDirectory(prefix=f"thinkthen-{consumer}-parity-") as folder:
                 home = Path(folder)
                 env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": folder,
@@ -228,11 +227,10 @@ try:
         env=child_env(HOME=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
                       THINKTHEN_API_KEY="sk-native-complete-loopback",THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                       TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path))
-        for lang in ("csharp",):
-            before=sent()
-            assert type_case(["native"],env,"native complete")=={"native":"pass"}
-            assert sent()-before==22,(lang,"complete native listener count")
-            print(lang+" named native: ten functions, typed fields and physical file locations PASS",flush=True)
+        before=sent()
+        assert type_case(["native"],env,"native complete")=={"native":"pass"}
+        assert sent()-before==22,"complete native listener count"
+        print("C# named native: ten functions, typed fields and physical file locations PASS",flush=True)
 
 finally:
     shared.stop_backend(backend)

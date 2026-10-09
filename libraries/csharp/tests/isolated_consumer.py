@@ -1,5 +1,5 @@
 """Install managed nupkg and native tar in unrelated bwrap roots; count replies outside namespace."""
-import collections,json,os,pathlib,re,shutil,sys,tarfile,zipfile,xml.etree.ElementTree as ET
+import collections,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
 from backend import Backend
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
@@ -10,7 +10,6 @@ V=re.search(r'<Version>([^<]+)</Version>',(R/'ThinkThen.csproj').read_text())[1]
 dotnet=resolve_dotnet()
 mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
 release_package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
-package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
 release_c=os.environ.get('THINKTHEN_RELEASE_C_DIR')
 if bool(release_package) != bool(release_c): raise AssertionError('installed release needs both package paths')
 package=pathlib.Path(release_package) if release_package else R/f'target/scratch/managed/Botassembly.ThinkThen.{V}.nupkg'

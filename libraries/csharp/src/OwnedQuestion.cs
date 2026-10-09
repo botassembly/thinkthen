@@ -1,13 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using Microsoft.Win32.SafeHandles;
 using ThinkThen.Inputs;
 namespace ThinkThen;
-internal sealed class QuestionHandle : SafeHandleZeroOrMinusOneIsInvalid
-{
-    internal QuestionHandle(IntPtr pointer) : base(true) => SetHandle(pointer);
-    protected override bool ReleaseHandle() { Native.thinkthen_question_free(handle); return true; }
-}
 public sealed partial class Engine
 {
     private readonly object authoredErrorGuard = new();
