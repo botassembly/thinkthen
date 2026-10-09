@@ -70,6 +70,12 @@ class Attempt(Carrier):
     request_id: str | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
+class PersistenceObservation(Carrier):
+    state: Literal['disabled', 'pending', 'written', 'failed']
+    observed_at: str
+    advice: str | Absent = ABSENT
+
+@dataclass(frozen=True, repr=False, kw_only=True)
 class Facts(Carrier):
     call_id: CallId
     records: int
@@ -83,6 +89,10 @@ class Facts(Carrier):
     command_ms: int | Absent = ABSENT
     attempts: tuple[Attempt, ...] | Absent = ABSENT
     held_model_mismatch: bool | Absent = ABSENT
+    largest_request_bytes: int | Absent = ABSENT
+    largest_request_estimated_input_tokens: int | None | Absent = ABSENT
+    token_estimate_method: str | Absent = ABSENT
+    usage_persistence: PersistenceObservation | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class QuestionSource(Carrier):
@@ -1031,7 +1041,8 @@ _MODELS = {
     'ProfileWarning': {'tuned_for': 'str', 'running': 'str'},
     'BatchWarning': {'tuned_for': 'batch', 'running': 'batch'},
     'Attempt': {'ordinal': 'positive', 'request_sha256': 'Digest', 'wall_ms': 'uint', 'outcome': 'outcome', 'sdk_request_id': 'SdkRequestId', 'status?': 'uint', 'server_ms?': 'uint', 'request_id?': 'str'},
-    'Facts': {'call_id': 'CallId', 'records': 'uint', 'requests_sent': 'uint', 'cache_answers': 'uint', 'seconds': 'number', 'input_tokens?': 'uint', 'output_tokens?': 'uint', 'model?': 'str', 'estimated_cost_usd?': 'cost', 'command_ms?': 'uint', 'attempts?': '[Attempt]', 'held_model_mismatch?': 'bool'},
+    'PersistenceObservation': {'state': '=disabled|=pending|=written|=failed', 'observed_at': 'str', 'advice?': 'str'},
+    'Facts': {'largest_request_bytes?': 'uint', 'largest_request_estimated_input_tokens?': 'uint|null', 'token_estimate_method?': 'str', 'usage_persistence?': 'PersistenceObservation', 'call_id': 'CallId', 'records': 'uint', 'requests_sent': 'uint', 'cache_answers': 'uint', 'seconds': 'number', 'input_tokens?': 'uint', 'output_tokens?': 'uint', 'model?': 'str', 'estimated_cost_usd?': 'cost', 'command_ms?': 'uint', 'attempts?': '[Attempt]', 'held_model_mismatch?': 'bool'},
     'QuestionSource': {'origin': 'origin', 'answered_by': 'str', 'batch_size?': 'positive'},
     'Observed': {'observation_id': 'ObservationId'},
     'FailedObservation': {'failure_id': 'FailureId'},

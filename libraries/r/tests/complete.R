@@ -132,3 +132,12 @@ stopifnot(same_json(.tt_complete_plain(.tt_complete_decode("DecideSpec",raw)),ra
 if (nzchar(Sys.getenv("TT_BACKEND_OUT"))) cat("expect count 0\n")
 
 cat("private complete carrier fixtures: pass\n")
+
+for (raw in f$observed_facts) {
+  facts <- .tt_complete_decode("Facts", raw)
+  stopifnot(identical(facts$largest_request_bytes, raw$largest_request_bytes),
+    identical(facts$largest_request_estimated_input_tokens, raw$largest_request_estimated_input_tokens),
+    identical(facts$token_estimate_method, raw$token_estimate_method),
+    same_json(.tt_complete_plain(facts$usage_persistence), raw$usage_persistence),
+    same_json(.tt_complete_plain(facts), raw))
+}
