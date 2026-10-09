@@ -38,6 +38,8 @@ Integration with the rewritten ticket plan retained the accepted source. The 16 
 
 ## What the build taught us
 
+Combined lint found that the Python test-source ceiling omitted the newly retained context and nesting boundary regressions. The existing source tool measures 7912 non-blank lines, and the ceiling now matches it. All other library and database source ceilings were checked together and pass. This metadata repair adds no test or product behavior; the stopped lint had not reached the full test gate.
+
 Fresh review accepted the repaired binding descriptor slice at `9e9721d83f74690ba8c1768d8f104f0f162c6d5d`. Its existing installed native consumer checks cover the changed adapter, including the original JSON nesting boundary. The shared tagged-context and ordered-description translations remain named follow-up work; this slice does not complete grammar centralization.
 
 The later combined lint stopped because the SQLite source ceiling still counted the deleted grammar copy. The existing ratchet tool measures 5091 non-blank lines; the ceiling now matches that smaller source. This changes check metadata only. The stopped lint did not run the test gate, so it supplies no full-suite pass.
