@@ -15,6 +15,7 @@ mod engine;
 mod files;
 mod frame;
 mod input;
+mod request;
 mod result;
 mod stream;
 mod tally;
@@ -176,6 +177,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<tally::PyTally>()?;
     module.add_class::<stream::PyStream>()?;
     module.add_class::<complete_stream::CompleteStream>()?;
+    module.add_class::<request::Session>()?;
     module.add_class::<worker::Token>()?;
     module.add_class::<worker::Receipt>()?;
     module.add_class::<worker::Completion>()?;

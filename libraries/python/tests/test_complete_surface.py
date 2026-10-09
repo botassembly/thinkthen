@@ -6,6 +6,104 @@ import pytest
 from thinkthen import _thinkthen as native
 
 
+def test_canonical_session_keeps_async_polling_and_cleanup_responsive(backend, tmp_path):
+    from conftest import child_env, start
+    child = start('''
+        import asyncio, json, sys, threading
+        from thinkthen import _thinkthen as native
+        engine = native._Engine(cache=False, max_retries=0, batch=1, throttle=1)
+        request = {'schema': 'thinkthen.request/1', 'call': {
+            'function': 'decide', 'question': {'kind': 'text', 'text': 'Late?'},
+            'input': {'kind': 'feed', 'name': 'python'},
+        }}
+        session = engine._request_session(json.dumps(request))
+        item = json.dumps({'item': {'original': {'kind': 'text', 'text': 'note'}}})
+        async def main():
+            ticks = 0
+            while session._push(item) == 'full':
+                ticks += 1
+                await asyncio.sleep(.001)
+            stopped = threading.Event()
+            def stop():
+                sys.stdin.readline()
+                stopped.set()
+            threading.Thread(target=stop, daemon=True).start()
+            async def heartbeat():
+                nonlocal ticks
+                while not stopped.is_set():
+                    ticks += 1
+                    await asyncio.sleep(.001)
+            beat = asyncio.create_task(heartbeat())
+            while not stopped.is_set():
+                packet = session._poll()
+                if packet is not None:
+                    assert json.loads(packet)['kind'] == 'observation'
+                await asyncio.sleep(.001)
+            await beat
+            assert ticks > 0
+            assert session._push(item) == 'accepted'
+            session.cancel()
+            assert session._push(item) == 'closed'
+            session.close()
+            session.close()
+            assert json.loads(session._poll()) == {'kind': 'end'}
+            print('closed', flush=True)
+            sys.stdin.readline()
+        asyncio.run(main())
+    ''', child_env(backend, tmp_path, 'arm/held'))
+    try:
+        assert backend.wait(1) == 1
+        child.stdin.write('stop\n')
+        child.stdin.flush()
+        assert child.stdout.readline().strip() == 'closed'
+        assert backend.count() == 1
+    finally:
+        backend.release()
+        if child.poll() is None:
+            child.stdin.write('released\n')
+            child.stdin.flush()
+        _, error = child.communicate(timeout=5)
+    assert child.returncode == 0, error
+
+
+def test_canonical_session_admits_and_finishes_through_native_rules(backend, tmp_path):
+    from conftest import child_env, run
+    output = run('''
+        import json, time
+        from thinkthen import _thinkthen as native
+        engine = native._Engine(cache=False, max_retries=0)
+        request = {'schema': 'thinkthen.request/1', 'call': {
+            'function': 'decide', 'question': {'kind': 'text', 'text': 'Late?'},
+            'input': {'kind': 'feed', 'name': 'python'},
+        }}
+        for value in ('{bad', json.dumps({**request, 'unknown': True})):
+            try:
+                engine._request_session(value)
+            except native.UsageError:
+                pass
+            else:
+                raise AssertionError('invalid request admitted')
+        session = engine._request_session(json.dumps(request))
+        session._finish(json.dumps({'kind': 'invalid_input'}))
+        packets = []
+        while True:
+            packet = session._poll()
+            if packet is None:
+                time.sleep(.001)
+                continue
+            packet = json.loads(packet)
+            if packet['kind'] == 'end': break
+            packets.append(packet)
+        terminal = packets[-1]
+        assert terminal['kind'] == 'terminal'
+        assert terminal['failure']['error']['kind'] == 'usage'
+        session.close()
+        print('refused')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['refused']
+    assert backend.count() == 0
+
+
 def test_complete_surface_is_closed_immediate_and_used_by_eager_and_lazy_calls(monkeypatch,tmp_path):
     for name in ('HOME','XDG_CONFIG_HOME','XDG_CACHE_HOME','XDG_STATE_HOME'):
         monkeypatch.setenv(name,str(tmp_path/name))
