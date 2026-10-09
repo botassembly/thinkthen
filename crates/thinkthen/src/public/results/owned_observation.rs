@@ -418,6 +418,19 @@ pub(crate) struct SessionQuestionDetailDocument<'a> {
     input: Option<&'a QuestionInput>,
     #[cfg_attr(test, schemars(with = "Vec<serde_json::Value>"))]
     inputs: Vec<&'a QuestionInput>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input_source: Option<core::CompletePhysicalSource>,
+    input_sources: Vec<SessionInputSourceDocument>,
+}
+#[derive(serde::Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "sessionInputSource")
+)]
+struct SessionInputSourceDocument {
+    index: usize,
+    source: core::CompletePhysicalSource,
 }
 impl<'a> SessionQuestionDetailDocument<'a> {
     fn of(detail: QuestionDetail<'a>) -> Self {
@@ -453,6 +466,22 @@ impl<'a> SessionQuestionDetailDocument<'a> {
             },
             reported_usage: detail.reported_usage(),
             input: held.actual.input.as_deref(),
+            input_source: held
+                .actual
+                .input
+                .as_deref()
+                .and_then(crate::public::complete::physical_source),
+            input_sources: held
+                .actual
+                .input
+                .iter()
+                .chain(held.actual.inputs.iter())
+                .enumerate()
+                .filter_map(|(index, input)| {
+                    crate::public::complete::physical_source(input)
+                        .map(|source| SessionInputSourceDocument { index, source })
+                })
+                .collect(),
             inputs: held
                 .actual
                 .input

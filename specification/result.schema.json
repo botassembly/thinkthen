@@ -8096,6 +8096,25 @@
       "type": "object",
       "unevaluatedProperties": false
     },
+    "completesessionInputSource": {
+      "properties": {
+        "index": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/completePhysicalSource"
+        }
+      },
+      "required": [
+        "index",
+        "source"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completesessionJudgment": {
       "oneOf": [
         {
@@ -8874,6 +8893,19 @@
           ]
         },
         "input": true,
+        "input_source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
+        "input_sources": {
+          "items": {
+            "$ref": "#/$defs/completesessionInputSource"
+          },
+          "type": "array"
+        },
         "inputs": {
           "items": true,
           "type": "array"
@@ -8966,7 +8998,8 @@
         "question",
         "question_sources",
         "observations",
-        "inputs"
+        "inputs",
+        "input_sources"
       ],
       "type": "object",
       "unevaluatedProperties": false
@@ -10841,6 +10874,23 @@
       ],
       "type": "object"
     },
+    "sessionInputSource": {
+      "properties": {
+        "index": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/completePhysicalSource"
+        }
+      },
+      "required": [
+        "index",
+        "source"
+      ],
+      "type": "object"
+    },
     "sessionJudgment": {
       "oneOf": [
         {
@@ -11600,6 +11650,22 @@
           ]
         },
         "input": true,
+        "input_source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_sources": {
+          "items": {
+            "$ref": "#/$defs/sessionInputSource"
+          },
+          "type": "array"
+        },
         "inputs": {
           "items": true,
           "type": "array"
@@ -11707,7 +11773,8 @@
         "question",
         "question_sources",
         "observations",
-        "inputs"
+        "inputs",
+        "input_sources"
       ],
       "type": "object"
     },

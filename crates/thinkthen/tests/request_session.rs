@@ -543,6 +543,25 @@ fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
                 .count(),
             2
         );
+        let details = packets
+            .iter()
+            .filter_map(|packet| {
+                let document: Value = serde_json::from_str(&packet.to_json().unwrap()).unwrap();
+                (document["kind"] == "observation" && document["value"]["kind"] == "question")
+                    .then(|| document["value"]["detail"].clone())
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(details.len(), 2);
+        for (detail, text) in details.iter().zip(["first", "second"]) {
+            assert_eq!(detail["input"], text);
+            assert_eq!(detail["inputs"], json!([text]));
+            assert_eq!(detail["input_source"], json!({"file":"same-file"}));
+            assert_eq!(
+                detail["input_sources"],
+                json!([{"index":0,"source":{"file":"same-file"}}])
+            );
+            assert_eq!(detail["value"], json!(threshold < 0.9));
+        }
         let rows = packets
             .iter()
             .filter_map(|p| match p {

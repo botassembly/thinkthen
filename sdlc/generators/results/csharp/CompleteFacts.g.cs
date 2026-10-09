@@ -1581,6 +1581,13 @@ public sealed class SessionAnnotation : ResultObject
     public AnnotationValue Value => global::ThinkThen.Results.AnnotationValue.Read(RequiredElement("value"));
 }
 
+public sealed class SessionInputSource : ResultObject
+{
+    public SessionInputSource(JsonElement document) : base(document) { }
+    public ulong Index => RequiredElement("index").GetUInt64();
+    public PhysicalSource Source => new PhysicalSource(RequiredElement("source"));
+}
+
 public abstract class SessionJudgment : ResultObject
 {
     protected SessionJudgment(JsonElement document) : base(document) { }
@@ -2043,6 +2050,8 @@ public sealed class SessionQuestionDetail : ResultObject
     public Presence<Failure> Failure => Optional<Failure>("failure", member => new Failure(member));
     public Presence<string> FailureId => Optional<string>("failure_id", member => member.GetString()!);
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
+    public Presence<PhysicalSource> InputSource => Optional<PhysicalSource>("input_source", member => new PhysicalSource(member));
+    public IReadOnlyList<SessionInputSource> InputSources => Array.AsReadOnly(RequiredElement("input_sources").EnumerateArray().Select(item0 => new SessionInputSource(item0)).ToArray());
     public IReadOnlyList<JsonElement> Inputs => Array.AsReadOnly(RequiredElement("inputs").EnumerateArray().Select(item0 => item0.Clone()).ToArray());
     public string Model => RequiredElement("model").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
