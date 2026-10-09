@@ -35,3 +35,4 @@ The first slice removes shipped demo entry points from `libraries/jvm/kotlin/Kot
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed 2ca061f5172e01e924f6aeec0c73649b4e6a4e1f; next: Kotlin and Scala demos now live only in installed tests; facade APIs remain. Affected package, installed consumer and cancellation checks pass. Full JVM Matrix exposed a separate frozen legacy annotation admission defect now being repaired; broader API removals follow language migrations.
