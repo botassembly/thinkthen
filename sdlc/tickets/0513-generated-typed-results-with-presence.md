@@ -36,6 +36,8 @@ Reviews: revision 64f001c04883d9d8cf78053cae037d7f22795a11, accept
 
 Reviews: revision 694b09e2c64e3142bd41badfd5bcd55a66258a4a, accept
 
+Reviews: revision 0f7315aa0f9992b01e9a6508ceba1816cde77a57, accept
+
 ## Outcome
 
 Rust owns the result types, and its serializers emit every fact the native values hold. One in-repo generator turns that complete semantic graph into typed results, with explicit presence wherever missing and explicit null differ. This ticket delivers the shared graph, the generator mechanics and the generated C# reference that 0516 needs. Each host migration adds its own target template and adopts the output.

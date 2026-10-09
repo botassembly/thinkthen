@@ -387,13 +387,37 @@ def annotate_answer_rows($rows; $name; $path):
 def valid_question_text:
   type == "string" and length > 0 and (test("[[:cntrl:]]") | not);
 
+# Native QuestionText and Meaning also retain structured authored JSON.
+def valid_question_content:
+  if type == "string" then valid_question_text
+  else type == "object" or type == "array" end;
+
+# Structural presentation from ReadableQuestion and its derived schema.
+# Native declaration semantics belong to the Rust parser, not this metric.
+def valid_decision_presentation:
+  ((has("model") | not) or (.model | type) == "string")
+  and ((has("profile") | not) or (.profile | type) == "string")
+  and ((has("on") | not) or
+       (.on | type == "array" and all(.[]; type == "string")))
+  and ((has("batch") | not) or
+       (.batch | if type == "number" then . >= 1 and . <= 18446744073709551615 and floor == .
+                 else . == "max" end))
+  and ((has("name") | not) or
+       (.name | type == "string" and test("^[a-z][a-z0-9_-]{0,63}$")))
+  and ((has("wording_version") | not) or
+       (.wording_version | type == "number" and . >= 1 and . <= 4294967295 and floor == .))
+  and ((has("item_schema") | not) or (.item_schema | type) == "object")
+  and ((has("context_schema") | not) or (.context_schema | type) == "object");
+
 def valid_decision_question:
   type == "object"
   and .verb == "decide"
-  and (.text | valid_question_text)
-  and ((keys - ["false","text","true","verb"]) | length) == 0
-  and ((has("true") | not) or (.true | valid_question_text))
-  and ((has("false") | not) or (.false | valid_question_text));
+  and (.text | valid_question_content)
+  and ((keys - ["false","text","true","verb","model","profile","on","batch",
+                "name","wording_version","item_schema","context_schema"]) | length) == 0
+  and valid_decision_presentation
+  and ((has("true") | not) or (.true == null or (.true | valid_question_content)))
+  and ((has("false") | not) or (.false == null or (.false | valid_question_content)));
 
 def decision_rule($threshold):
   if ($threshold | type) == "number" and $threshold > 0 and $threshold <= 1 then
