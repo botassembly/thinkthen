@@ -29,15 +29,19 @@ def nullable(schema):
 
 def shape(schema):
     schema = dict(schema)
+    if not enum_values(schema):
+        if 'oneOf' in schema:
+            raise ValueError(f'C# target needs a typed union for {schema}')
+        if 'anyOf' in schema:
+            variants = [item for item in schema['anyOf'] if item.get('type') != 'null']
+            if len(variants) != 1:
+                raise ValueError(f'C# target needs a typed union for {schema}')
+            return shape(variants[0])
     if isinstance(schema.get('type'), list):
         kinds = [kind for kind in schema['type'] if kind != 'null']
         if len(kinds) != 1:
             raise ValueError(f'C# target needs a typed union for {schema}')
         schema['type'] = kinds[0]
-    if 'anyOf' in schema:
-        variants = [item for item in schema['anyOf'] if item.get('type') != 'null']
-        if len(variants) == 1:
-            return variants[0]
     return schema
 
 
@@ -45,7 +49,7 @@ def conversion(schema, definitions, expression='member'):
     schema = shape(schema)
     if '$ref' in schema:
         key = schema['$ref'].removeprefix('#/$defs/')
-        target = definitions[key]
+        target = shape(definitions[key])
         if 'properties' in target or enum_values(target):
             kind = name(key)
             argument = f'{expression}.GetString()!' if enum_values(target) else expression
@@ -119,6 +123,7 @@ public abstract class ResultObject
 def render(definitions):
     chunks = [SUPPORT]
     for key, schema in definitions.items():
+        schema = shape(schema)
         kind = name(key)
         values = enum_values(schema)
         if values:
