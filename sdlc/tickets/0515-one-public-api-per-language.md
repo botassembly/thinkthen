@@ -30,6 +30,10 @@ Preserve every frozen 0.1 C symbol, signature, layout, error code and accepted l
 
 The first slice removes shipped demo entry points from `libraries/jvm/kotlin/KotlinCaller.kt` and `libraries/jvm/scala/ScalaCaller.scala`, updates `libraries/jvm/tests/package_check.py`, and names any affected installed example before editing. Later API-removal slices follow their language migration and name exact files. Public symbol checks compare against the declared contract, not a list derived only from the implementation.
 
+## Surface assessment amendment
+
+One API is one coherent family of named typed calls, not one generic JSON entry point. Preserve useful bare/complete views and host-appropriate sync/async forms within that family. Each removal slice names the replacement calls and includes a short upgrade mapping in its existing README. Documentation cleanup 0467 consolidates that guidance; it does not postpone explaining a removed API. Count maintained generator/template code as well as host code when reporting the change. Keep the existing dead-code slice independent; later removals follow the corresponding installed migration.
+
 ## Progress
 
 - 2026-10-09 started

@@ -16,6 +16,20 @@ C, Zig, Ada and COBOL use fixed layouts generated from Rust. Other C-interface l
 
 [0517](../sdlc/tickets/0517-prebuilt-native-libraries-in-every-package.md) requires each package to carry its prebuilt native library for supported platforms. Installation and the first call require no manual library path. Follow the language package's normal install command; package inventories come from the shared generated definition. Public installation text continues to describe the published release until 0.2 ships.
 
+## Caller acceptance and code ownership
+
+An ordinary caller installs a package, supplies native host values to a named function, reads a native answer or complete result, handles a typed failure, cancels work where the host supports it, and releases resources through the host's normal idiom. The caller does not build transport JSON, decode result JSON or find a native library by hand. Structured JSON supplied as evidence remains valid data. Internal JSON transport does not determine the public interface.
+
+One public API means one coherent function family. Bare answers, complete details, synchronous calls and host-appropriate async calls may be views of that family. It does not mean one untyped generic call or removing useful typed methods to meet an export count. Each migration declares its recommended calls and the old names it replaces; 0515 removes the old names only after replacement parity. Frozen C compatibility remains separate.
+
+Minimize maintained logic across the engine, generator, templates and host glue together. Moving handwritten rules into per-language templates does not remove duplication. Generate declarations and mechanical conversions from Rust; host code owns naming, value conversion, representation checks, scheduling, authority and cleanup. Share transport and ownership within JVM and Dart/Flutter families. A small amount of explicit host code is appropriate when its removal would make ordinary calls, errors or cleanup harder. Record actual handwritten code removed and added, including generator/template cost, in the existing landing record; set no arbitrary line target and add no recurring measurement process.
+
+0513 completes the shared semantic graph, generator mechanics and C# reference. Host migration tickets own their target templates, outputs and installed adoption. 0505 first supplies additive complete C session views and then generated constrained-host declarations. A generated header over an incomplete old carrier is not complete typed access. Known observations, presence, partial usage and failure facts must survive native serialization before any host round trip can prove them.
+
+For an async host, a Task, Future or Promise type alone proves little. The installed held-provider case must show unrelated host work progressing and caller cancellation/cleanup returning before the provider is released. Native settlement may follow later; pending final facts stay pending. 0516 establishes the waiting and cancellation pattern; each migration proves its language's idiom without duplicating the native session test matrix. Synchronous hosts retain their normal execution model.
+
+Packaging design precedes the affected host migration. 0516 proves the first local NuGet install; 0517 owns other native assets and final distribution assembly, using 0501's common inventory. Supported targets and runtime floors come from that design, not from a language name alone. Install the final consumer artifact; a development archive, source import or generated declaration does not prove the shipped package.
+
 ## Ten first-class items by language
 
 Each table gives the expected form, not a new signature design. Named calls cover all ten functions through one API. Inputs cover the admitted typed questions, text, records, sources, images and bounded feeds in Request. Complete typed results carry every function's value and observations. The absence row always includes the distinction between a failed answer and an unresolved answer. Error kinds, retryability and facts come from Rust. Async and cancellation preserve bounded ownership; synchronous languages need not acquire an async runtime. Editor support includes generated declarations and documentation. Thinness permits naming, value conversion, scheduling and cleanup idiom only.
@@ -73,9 +87,9 @@ C# uses the [0516 pilot](../sdlc/tickets/0516-csharp-thin-first-class-pilot.md):
 | Install | Python package and native extension. |
 | Thinness | Only dataframe conversion over Python. |
 
-### Polars
+### Python Polars
 
-[Package and existing checks](polars/README.md).
+[Package and existing checks](python/README.md). Ticket 0496 owns this surface.
 
 | Item | Expected form |
 | --- | --- |
@@ -89,6 +103,23 @@ C# uses the [0516 pilot](../sdlc/tickets/0516-csharp-thin-first-class-pilot.md):
 | Editor support | Namespace declarations and documented column types. |
 | Install | Package with native extension. |
 | Thinness | Only dataframe conversion and native calls. |
+
+### Rust Polars
+
+[Package and existing checks](polars/README.md). Ticket 0504 owns the implementation under `crates/thinkthen/src/public/frame.rs` and `frame/`, plus its installed consumers.
+
+| Item | Expected form |
+| --- | --- |
+| Calls | One named Rust column API. |
+| Inputs | Native Polars columns and typed Rust values. |
+| Typed results | Native columns and Rust-owned complete results. |
+| Absence | Preserve column nulls, row identity and complete-result presence. |
+| Errors | Typed Rust Result and Error. |
+| Async and cancellation | Native cancellation; no required async runtime. |
+| Cleanup | Rust ownership and scoped resources. |
+| Editor support | Rustdoc and compiler-visible types. |
+| Install | Cargo package with the declared Polars feature. |
+| Thinness | Direct Rust conversion; no JSON result reader. |
 
 ### TypeScript
 
@@ -398,3 +429,5 @@ Test children use a cleared, explicit environment with owned cache/state directo
 The reviewer applies all ten rows to each language and checks the generated source and actual installed consumer. C# and Dart must reach the session, presence, async and cleanup shapes stated above. The reviewer treats missing observations, lost presence, duplicated rules, borrowed buffers outliving their owner and missing packaged native libraries as caller failures. No private copy of the corpus or hand-kept result field inventory stands in for this evidence.
 
 SQL and MCP retain their own surface contracts. [0519](../sdlc/tickets/0519-sql-surfaces-consistent-and-described.md) owns SQL NULL, binary image, native JSON and description behavior; this guide does not settle an additional NULL rule. [The MCP contract](../specification/mcp.md) owns its ten tools. Both surfaces use shared Rust admission and complete results.
+
+For SQL, ordinary database values and documented complete-result calls must preserve NULL, errors, native binary images and the database's supported JSON representation. Verify return types and in-database descriptions through the installed extension. For the command, preserve existing pipes, output, interruption and exit codes while moving judgment execution to Request. For MCP, retain tool discovery, generated input schemas, protocol errors, cancellation and file authority. These are 0519 and 0512 acceptance boundaries; they do not add new commands or protocol features.

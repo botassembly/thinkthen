@@ -29,3 +29,7 @@ The CLI and MCP admit and execute every call through the same public request pat
 CLI converts transport arguments into Request and uses public execution instead of private judgment pipelines; its host argument parser remains. MCP already executes Request. Remove its duplicate semantic admission while preserving protocol rendering and host authority. Do not add a new machine-readable error feature in this ticket.
 
 The first MCP slice claims `crates/thinkthen/src/mcp/admission.rs`, `crates/thinkthen/src/mcp/request.rs`, `crates/thinkthen/src/mcp/inputs.rs`, `crates/thinkthen/src/mcp/tests/admission.rs`, `crates/thinkthen/src/mcp/tests/execution.rs` and `libraries/mcp/conformance.py`. Name actual CLI files per later slice. This amendment supersedes the whole-folder claim and private argument-type removal above.
+
+## Surface assessment amendment
+
+Scope the structural check to production judgment execution and semantic admission. `cli/cache.rs` and `cli/status.rs` contain maintenance operations outside Request's ten-function dispatch; explicitly exclude those maintenance paths from this ticket's import check. This supersedes the whole-CLI private-import ban. Do not create unrelated public maintenance APIs to satisfy it. Preserve shell input/output, pipe interruption, exit codes and MCP protocol behavior through the existing outside-in cases.

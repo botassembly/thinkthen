@@ -4,8 +4,7 @@ Status: ready. Deferred to 0.3 under Ian's 2026-10-05 scope ruling; the ticket s
 
 Milestone: 0.2
 
-Depends on: 0498
-Depends on: 0504
+Depends on: 0516
 
 ## Outcome
 
@@ -21,3 +20,7 @@ Depends on: 0504
   Claim `libraries/csharp/**` and `.github/workflows/windows.yml`. Windows execution is owed to the first authorized candidate; do not close until it passes.
 - Proof: a load and smoke case on `windows-2025` that counts loopback requests. The Linux and macOS C# checks and the installed-file check stay green.
 - Defers: the main unknown, whether `NativeLibrary.SetDllImportResolver` finds the DLL the same way on every .NET version the binding supports. The builder tests each supported version and records the answer. A native NuGet package, such as the reserved `Botassembly.ThinkThen.C`, stays out of scope.
+
+## Surface assessment amendment
+
+The 2026-10-09 ruling supersedes the old 0.3 deferral, unbundled-library outcome, manual DLL placement and PATH instructions. Consume the packaged pilot from 0516 and final Windows assets from the relevant 0517 slice. The final NuGet install selects its bundled native library and declared dependencies with no user library-path setting. Check the supported runtime versions declared by the package design. Unix-only machinery may use platform-specific equivalents; required cancellation and cleanup behavior cannot pass by skipping it. Windows execution remains owed to the first authorized candidate and the ticket stays open until it passes.

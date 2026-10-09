@@ -4,6 +4,9 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Depends on: 0511
+Depends on: 0513
+
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
@@ -23,3 +26,7 @@ Adopt shared Request and generated results in R through named typed public calls
 ## 2026-10-09 amendment
 
 The thin, first-class ruling replaces the earlier generation fallback. Follow 0511 admission, 0513 generated typed results and 0515's one public API. R retains indexing, native ownership and its expected absence/error idiom; Rust owns validation and result facts. Remove copied readers after installed public cases pass. The immediate confirmed-reader repair is 0520 and does not complete this migration. Review this amendment before coding and narrow the R claim to the actual slice files.
+
+## Surface assessment amendment
+
+This migration owns R's target generation, object behavior, typed conditions, interruption and cleanup under the author guide. Extend the common 0513 generator rather than copying a reader. Apply the shared caller acceptance in the guide through an installed R consumer, including printing and documented class/field access. 0515 removes obsolete entry points after this replacement works; it is not a prerequisite for building the replacement.

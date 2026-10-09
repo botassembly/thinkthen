@@ -27,3 +27,7 @@ Objective-C uses Foundation: `NSError`, ARC, blocks for async and cancellation, 
 ## Review amendment
 
 Initial claims are `libraries/objective-c/Sources/ThinkThen.h`, `libraries/objective-c/Sources/ThinkThen.m`, `libraries/objective-c/check.sh`, `libraries/objective-c/source-package.json`, `libraries/objective-c/README.md` and `libraries/objective-c/checks/installed.py`. Select and name the existing installed consumer source before coding. Declare Apple-only package support, retaining shared results and errors. Prove callback ownership, cancellation and ARC cleanup through an installed macOS package. Remove native JSON/view copies only after their callers migrate. Linux checks cannot replace this native proof, and this ticket grants no machine or workflow permission.
+
+## Surface assessment amendment
+
+Own the Objective-C target template and generated host objects from 0513's common graph; 0504 does not build this surface again. Settle 0517's Apple package and loader design before implementation. Coordinate final artifact collection and installed-consumer routing with 0517, including removal of the Linux-only Objective-C routing assumption. A local Apple package and actual Foundation consumer must satisfy the guide; declaration generation on Linux is not native qualification.

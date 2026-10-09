@@ -5,7 +5,7 @@ Status: ready. Deferred to 0.3 under Ian's 2026-10-05 scope ruling; the ticket s
 Milestone: 0.2
 
 Depends on: 0498
-Depends on: 0504
+Depends on: 0501
 
 ## Outcome
 
@@ -21,3 +21,7 @@ Depends on: 0504
   Claim `libraries/typescript/**`, `sdlc/scripts/npm-assemble` and `.github/workflows/windows.yml`. Windows execution is owed to the first authorized candidate; do not close until it passes.
 - Proof: the load case passes on `windows-2025` and counts loopback requests. An `npm pack` listing holds all five addons, and the Linux and macOS TypeScript checks stay green.
 - Defers: the main unknown, whether the addon needs the MSVC runtime beside it. The builder checks on a clean runner and records the answer in the README.
+
+## Surface assessment amendment
+
+The 2026-10-09 ruling supersedes the old 0.3 deferral prose; this is 0.2 Windows qualification. Consume the final npm artifact and inventory from 0498, 0501 and the relevant 0517 package slice, including declared native runtime dependencies. Derive target inventory instead of retaining a second literal addon count. Install with no user library-path override or source-tree fallback and count the real call. Independent language-family completion is not a prerequisite. Windows execution still waits for the first authorized candidate; this ticket stays open until that native proof passes.
