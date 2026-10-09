@@ -203,4 +203,13 @@ fn the_committed_result_schema_is_the_one_the_rust_types_derive() {
         !changed,
         "generated result schemas differ; rewrite with {REWRITE}, then rerun"
     );
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let status = crate::test_deadline::child::command("python3", &[])
+        .env("LC_ALL", "C.UTF-8")
+        .arg("-I")
+        .arg(root.join("sdlc/generators/results/generate.py"))
+        .arg("--check")
+        .status()
+        .expect("run the result declaration generator");
+    assert!(status.success(), "generated host results differ from Rust");
 }
