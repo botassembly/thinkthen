@@ -180,11 +180,21 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
         }
         _ => return Ok(None),
     };
-    Request::new(call).admit().map(|admitted| Some(admitted.retain_cli_atomic(atomic))).map_err(native)
+    Request::new(call)
+        .admit()
+        .map(|admitted| Some(admitted.retain_cli_atomic(atomic)))
+        .map_err(native)
 }
-fn atomic_definition((resolved, tier): (crate::core::Resolved, asked::FileTier), retained: &mut Option<crate::public::request::cli_atomic::Prepared>) -> Result<RequestDefinition, Failure> {
-    let prepared = crate::public::request::cli_atomic::Prepared { resolved, batch: tier.batch, tuned: tier.tuned };
-    let definition = crate::public::request::cli_atomic::definition(&prepared).map_err(native)?;
+fn atomic_definition(
+    (resolved, tier): (crate::core::Resolved, asked::FileTier),
+    retained: &mut Option<crate::cli_atomic::Prepared>,
+) -> Result<RequestDefinition, Failure> {
+    let prepared = crate::cli_atomic::Prepared {
+        resolved,
+        batch: tier.batch,
+        tuned: tier.tuned,
+    };
+    let definition = crate::cli_atomic::definition(&prepared).map_err(native)?;
     *retained = Some(prepared);
     Ok(definition)
 }

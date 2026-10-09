@@ -17,7 +17,10 @@ pub struct AdmittedRequest {
 }
 impl AdmittedRequest {
     #[cfg(feature = "cli")]
-    pub(crate) fn retain_cli_atomic(mut self, prepared: Option<super::cli_atomic::Prepared>) -> Self {
+    pub(crate) fn retain_cli_atomic(
+        mut self,
+        prepared: Option<super::cli_atomic::Prepared>,
+    ) -> Self {
         self.cli_atomic = prepared;
         self
     }
@@ -96,11 +99,15 @@ fn selector_text(question: &RequestQuestion) -> Result<String, Error> {
         RequestQuestion::Name { name } => crate::public::named_question::named_text(name),
         RequestQuestion::Reference { reference } => {
             match crate::public::named_question::Reference::resolve(reference)? {
-                crate::public::named_question::Reference::Name(name) => crate::public::named_question::named_text(&name),
+                crate::public::named_question::Reference::Name(name) => {
+                    crate::public::named_question::named_text(&name)
+                }
                 crate::public::named_question::Reference::Path(path) => question_text(&path, false),
             }
         }
-        _ => Err(Error::defect("admitted inline question lost its definition")),
+        _ => Err(Error::defect(
+            "admitted inline question lost its definition",
+        )),
     }
 }
 pub(super) fn admit(

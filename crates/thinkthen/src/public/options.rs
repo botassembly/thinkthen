@@ -1,6 +1,7 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
 mod admission;
+pub(crate) mod cli_reader;
 mod observer;
 
 pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};
@@ -107,6 +108,7 @@ enum Due {
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
     pub(in crate::public) eager_inputs: bool,
+    cli_reader: Option<&'a cli_reader::CliReader<'a>>,
     cancel: Option<&'a CancelToken>,
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
@@ -156,6 +158,7 @@ impl<'a> CallOptions<'a> {
     pub const fn new() -> Self {
         Self {
             eager_inputs: false,
+            cli_reader: None,
             cancel: None,
             due: None,
             check: None,
@@ -170,6 +173,11 @@ impl<'a> CallOptions<'a> {
             proxy: None,
             surface: None,
         }
+    }
+
+    pub(crate) const fn cli_reader(mut self, reader: &'a cli_reader::CliReader<'a>) -> Self {
+        self.cli_reader = Some(reader);
+        self
     }
 
     /// Stop the call when this token fires.
@@ -403,6 +411,7 @@ impl<'a> CallOptions<'a> {
 /// The per-call stop state: the call's own flag and deadline, the caller's
 /// token and check, and a check's panic held until the call has joined.
 pub(crate) struct Stop<'a> {
+    pub(crate) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
     base: Cancel<'static>,
     facts: CallFacts,
     prices: Option<Prices>,
@@ -448,6 +457,7 @@ impl<'a> Stop<'a> {
             }));
         }
         let stop = Self {
+            cli_reader: options.cli_reader,
             base,
             facts,
             prices: None,

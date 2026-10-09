@@ -38,7 +38,11 @@ impl Question {
 }
 impl RecordChooseQuestion {
     #[cfg(feature = "cli")]
-    pub(crate) fn from_cli_resolved(resolved: &core::Resolved, batch: Option<core::Json>, authored_threshold: bool) -> Self {
+    pub(crate) fn from_cli_resolved(
+        resolved: &core::Resolved,
+        batch: Option<core::Json>,
+        authored_threshold: bool,
+    ) -> Self {
         Self {
             metadata: resolved.metadata().clone(),
             text: resolved.text().clone(),

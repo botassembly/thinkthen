@@ -27,11 +27,18 @@ pub(super) fn saved(verb: Verb, text: &str, typed: &Typed) -> Result<Prepared, E
 pub(crate) fn definition(prepared: &Prepared) -> Result<RequestDefinition, Error> {
     let resolved = &prepared.resolved;
     let Some(core) = resolved.question().cloned() else {
-        return Ok(crate::RecordChooseQuestion::from_cli_resolved(resolved, prepared.batch.clone(), prepared.tuned).into());
+        return Ok(crate::RecordChooseQuestion::from_cli_resolved(
+            resolved,
+            prepared.batch.clone(),
+            prepared.tuned,
+        )
+        .into());
     };
     let threshold = resolved.threshold();
     let kind = match &core {
-        crate::core::Question::Decide { .. } if threshold.is_some_and(|v| !v.is_cut()) => crate::public::NativeQuestionKind::Banded,
+        crate::core::Question::Decide { .. } if threshold.is_some_and(|v| !v.is_cut()) => {
+            crate::public::NativeQuestionKind::Banded
+        }
         crate::core::Question::Decide { .. } => crate::public::NativeQuestionKind::Decide,
         crate::core::Question::Choose { .. } => crate::public::NativeQuestionKind::Choose,
         crate::core::Question::Tag { .. } => crate::public::NativeQuestionKind::Tag,

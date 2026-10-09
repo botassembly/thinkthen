@@ -44,6 +44,7 @@ pub(crate) mod error;
 mod frame;
 mod native_batch;
 mod options;
+pub(crate) use options::cli_reader;
 mod panic;
 mod plan;
 mod proxy;
