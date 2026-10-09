@@ -26,6 +26,13 @@ One public Request edge admits every request through shared Rust grammar, limits
 - Proof: A lint fails when a binding restates an engine semantic limit or a `#[path]` reaches outside its crate. It ignores legitimate host checks and mere mentions of a constant. Shared conformance cases drive one over-limit and one malformed input through each surface and get the same core error kind.
 - Defers: Result reading goes to 0513. The CLI and MCP pipelines go to 0512.
 
+## Reviewed public declarations
+
+The first slice adds these public Request-edge methods for the separate SQL crate's shared admission and composition. The PM approved recording them on 2026-10-09 within this outcome.
+
+- `fn RequestItem::from_record_descriptor(&str) -> Result<RequestItem, Error>`
+- `fn RequestItem::compose_record(&self, &RecordReading) -> Result<RecordInput<QuestionInput>, Error>`
+
 ## Progress
 
 - 2026-10-09 started
