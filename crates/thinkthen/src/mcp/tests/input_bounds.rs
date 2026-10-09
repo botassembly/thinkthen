@@ -216,7 +216,11 @@ fn transport_image_sources_retain_the_sent_prefix_on_budget_exhaustion() {
         question: crate::RequestQuestion::Text { text: "q".into() },
         input: crate::RequestInput::Source {
             source: crate::RequestSource {
-                paths: vec![fixture.clone(), fixture, "never-open-this-tail.png".into()],
+                paths: vec![
+                    fixture.clone(),
+                    fixture.clone(),
+                    fixture.parent().unwrap().join("truncated.png"),
+                ],
                 reading: crate::ReaderOptions {
                     unit: crate::SourceUnit::File,
                     window: None,
@@ -224,7 +228,10 @@ fn transport_image_sources_retain_the_sent_prefix_on_budget_exhaustion() {
                 media: crate::ReaderMedia::Image,
             },
         },
-        options: crate::RequestOptions::default(),
+        options: crate::RequestOptions {
+            batch: Some(crate::RequestBatch::Count(1)),
+            ..crate::RequestOptions::default()
+        },
     }))
     .admit_for_transport(TransportAttachmentLimit::new(limit).unwrap())
     .unwrap();

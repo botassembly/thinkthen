@@ -187,14 +187,8 @@ impl super::admission::Options {
                 .map(|fields| fields.values().map(str::to_owned).collect()),
             context_field: self.context_field.clone(),
             options_field: self.options_field.clone(),
-            threshold: self.threshold.as_ref().map(|reading| match reading {
-                super::admission::Reading::Cut(v) => crate::RequestThreshold::Cut(*v),
-                super::admission::Reading::Rule(v) => crate::RequestThreshold::Rule(v.clone()),
-            }),
-            batch: self.batch.as_ref().map(|batch| match batch {
-                super::admission::Batch::Count(v) => crate::RequestBatch::Count(*v),
-                super::admission::Batch::Named(v) => crate::RequestBatch::Named(v.clone()),
-            }),
+            threshold: self.threshold.clone(),
+            batch: self.batch.clone(),
             attempts: self.attempts,
             deadline_ms: self.deadline_ms,
             max_requests_total: self.max_requests_total,

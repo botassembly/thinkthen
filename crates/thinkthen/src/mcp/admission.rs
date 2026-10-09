@@ -127,23 +127,11 @@ impl Invocation {
     /// Borrow the call token; native execution remains responsible for all
     /// request reservation, observed attempts, scheduling and started failures.
     pub(super) fn controls<'a>(&'a self, token: &'a CancelToken) -> Result<CallOptions<'a>, Error> {
-        let options = &self.arguments.options;
         let mut controls = CallOptions::new()
             .cancel(token)
-            .surface(crate::Surface::Mcp)
-            .attempts(options.attempts)
-            .max_requests_total(options.max_requests_total);
-        if options.proxy.is_some() {
+            .surface(crate::Surface::Mcp);
+        if self.arguments.options.proxy.is_some() {
             controls = controls.proxy(&crate::ProxyActivation::Empty);
-        }
-        if let Some(ms) = options.deadline_ms {
-            controls = controls.deadline_ms(ms)?;
-        }
-        if let Some(context) = &options.context {
-            controls = controls.context(context);
-        }
-        if let Some(batch) = &options.batch {
-            controls = controls.batch(batch.native()?);
         }
         Ok(controls)
     }
@@ -184,12 +172,8 @@ where
     Ok(paths)
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-pub(super) enum Reading {
-    Cut(f64),
-    Rule(String),
-}
+pub(super) type Reading = crate::RequestThreshold;
+
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub(super) enum Fields {
@@ -206,25 +190,4 @@ impl Fields {
     }
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-pub(super) enum Batch {
-    Count(usize),
-    Named(String),
-}
-impl Batch {
-    pub(super) fn native(&self) -> Result<crate::BatchSetting, Error> {
-        let setting = match self {
-            Self::Count(count) => crate::core::Setting::parse(&count.to_string()),
-            Self::Named(name) if name == "max" => Some(crate::core::Setting::Max),
-            Self::Named(_) => None,
-        };
-        match setting {
-            Some(crate::core::Setting::Max) => Ok(crate::BatchSetting::Max),
-            Some(crate::core::Setting::Records(count)) => Ok(crate::BatchSetting::Records(count)),
-            None => Err(Error::usage(
-                "batch requires a positive whole number or max",
-            )),
-        }
-    }
-}
+pub(super) type Batch = crate::RequestBatch;
