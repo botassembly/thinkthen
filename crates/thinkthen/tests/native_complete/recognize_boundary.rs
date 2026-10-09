@@ -66,6 +66,7 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
         .unwrap();
     assert_eq!(listener.count(), 4);
     assert_eq!(result.facts().requests_sent(), 4);
+    let captured = listener.requests();
     for (at, row) in result.value().iter().enumerate() {
         let complete = row.result();
         assert!(matches!(
@@ -91,7 +92,7 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
         assert!(json["answer"].get("pairs").is_none());
         assert_eq!(complete.probabilities().proposals().unwrap().len(), 2);
         assert_eq!(
-            String::from_utf8(listener.requests()[at].body.clone()).unwrap(),
+            String::from_utf8(captured[at].body.clone()).unwrap(),
             exchanges[at]["request"].as_str().unwrap()
         );
     }
