@@ -37,6 +37,7 @@ mod golden;
 mod plan;
 mod question_file;
 mod request_width;
+mod session;
 mod settings;
 mod source_controls;
 mod source_relate;
