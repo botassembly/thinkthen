@@ -8,6 +8,8 @@ Reviews: revision b9027d08b, accept
 
 Reviews: revision 085aac3ab, reject
 
+Reviews: revision 610ac150f, accept
+
 ## Outcome
 
 The routine suite holds only outside-in behavior tests through the public Rust API, the CLI and each installed library, and no routine test runs longer than 5 seconds. Large-input boundary cases and nested package builds run only in the release suite. In-source unit tests that an outside-in test already covers are gone.
