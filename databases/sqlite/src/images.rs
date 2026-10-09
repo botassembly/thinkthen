@@ -242,20 +242,32 @@ fn judged(context: &Context<'_>, verb: Option<thinkthen::For>) -> Result<Value, 
     }
     let input = collection(blob(context.get_raw(1))?, text)?;
     let shared = settings.context().map(str::to_owned);
+    let QuestionInput::Images(input) = input else {
+        return Err(Failure::defect("image input held no images"));
+    };
+    let mut item = crate::request::text(String::new());
+    item.original = input.text().map(|text| thinkthen::RequestOriginal::Text {
+        text: text.to_owned(),
+    });
+    item.images = input
+        .images()
+        .iter()
+        .map(|image| thinkthen::RequestImage::Bytes {
+            media: image.media(),
+            bytes: image.bytes().to_vec(),
+        })
+        .collect();
     let details =
         worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-            if let Some(shared) = shared {
-                Ok(engine
-                    .details_input_many_with(&*held, [input], options.context(&shared))
-                    .next()
-                    .ok_or_else(|| Failure::defect("image details returned no record"))??
-                    .into_parts()
-                    .1)
-            } else {
-                Ok(engine
-                    .details_input_with(&*held, &input, options)?
-                    .into_value())
-            }
+            let records = shared.is_some();
+            let options = match &shared {
+                Some(shared) => options.context(shared),
+                None => options,
+            };
+            crate::request::details(engine, &held, vec![item], options, records)?
+                .into_iter()
+                .next()
+                .ok_or_else(|| Failure::defect("image details returned no record"))
         })?;
     if verb.is_none() {
         return Ok(Value::Text(details.to_json()));

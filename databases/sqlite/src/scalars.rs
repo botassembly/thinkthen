@@ -7,8 +7,7 @@ use rusqlite::Connection;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use thinkthen::{
-    Answer, CallOptions, Details, Engine, For, Judgment, LoadedQuestion, Question, QuestionKind,
-    Settings,
+    Answer, CallOptions, Details, Engine, For, Judgment, LoadedQuestion, QuestionKind, Settings,
 };
 
 use crate::question::{call_controls, call_settings, question, question_with_settings, set, text};
@@ -56,12 +55,16 @@ fn contextual(
     evidence: String,
     options: CallOptions<'_>,
 ) -> Result<Details, Failure> {
-    Ok(engine
-        .details_many_with(held, [evidence], options)
-        .next()
-        .ok_or_else(|| Failure::defect("details returned no record"))??
-        .into_parts()
-        .1)
+    crate::request::details(
+        engine,
+        held,
+        vec![crate::request::text(evidence)],
+        options,
+        true,
+    )?
+    .into_iter()
+    .next()
+    .ok_or_else(|| Failure::defect("details returned no record"))
 }
 
 /// One ordinary detail read; all question kinds keep the same engine path.
@@ -71,7 +74,16 @@ fn scalar_details(
     evidence: &str,
     options: CallOptions<'_>,
 ) -> Result<Details, Failure> {
-    Ok(engine.details_with(held, evidence, options)?.into_value())
+    crate::request::details(
+        engine,
+        held,
+        vec![crate::request::text(evidence.to_owned())],
+        options,
+        false,
+    )?
+    .into_iter()
+    .next()
+    .ok_or_else(|| Failure::defect("details returned no record"))
 }
 
 /// Refuse a question `name` does not take, before any send.
@@ -93,21 +105,16 @@ fn only(held: &LoadedQuestion, name: &str, kind: QuestionKind) -> Result<(), Fai
     ))
 }
 
-/// The plain question inside a checked score question.
-fn plain(held: &LoadedQuestion) -> Result<&Question, Failure> {
-    match held {
-        LoadedQuestion::Question(asked) => Ok(asked),
-        LoadedQuestion::Banded(_) => Err(Failure::defect("a checked question held a band")),
-    }
-}
-
 fn plain_decide(
     engine: &Engine,
     held: &LoadedQuestion,
     evidence: &str,
     options: CallOptions<'_>,
 ) -> Result<Answer, Failure> {
-    Ok(engine.decide_with(held, evidence, options)?.into_value())
+    match scalar_details(engine, held, evidence, options)?.value() {
+        Judgment::Decision(answer) => Ok(*answer),
+        _ => Err(Failure::defect("a decide answer held no decision")),
+    }
 }
 
 fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
@@ -158,9 +165,7 @@ fn judged(
                         .clone(),
                 )
             } else {
-                Ok(engine
-                    .details_with(&*held, &evidence, options)?
-                    .into_value()
+                Ok(scalar_details(engine, &held, &evidence, options)?
                     .value()
                     .clone())
             }
@@ -204,9 +209,10 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
                         _ => Err(Failure::defect("a score answer held no score")),
                     }
                 } else {
-                    Ok(engine
-                        .score_with(plain(&held)?, &evidence, options)?
-                        .into_value())
+                    match scalar_details(engine, &held, &evidence, options)?.value() {
+                        Judgment::Score(value) => Ok(*value),
+                        _ => Err(Failure::defect("a score answer held no score")),
+                    }
                 }
             })?;
         Ok(Some(position))
@@ -290,9 +296,21 @@ fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
                 } else {
                     options
                 };
-                match engine.annotate_with(&questions, [evidence], options).next() {
-                    Some(record) => Ok(record?.value_json()),
-                    None => Err(Failure::defect("annotate returned no record")),
+                let call = crate::request::run(
+                    engine,
+                    thinkthen::RequestFunction::Annotate,
+                    (*questions).clone().into(),
+                    vec![crate::request::document(evidence)?],
+                    options,
+                )?;
+                match call.value() {
+                    thinkthen::RequestValue::Annotations(rows) => rows
+                        .first()
+                        .ok_or_else(|| Failure::defect("annotate returned no record"))?
+                        .result()
+                        .value_json()
+                        .map_err(Failure::from),
+                    _ => Err(crate::request::wrong_result().into()),
                 }
             })?;
         Ok(Some(record))

@@ -20,9 +20,22 @@ pub(crate) fn recognize_document(context: &Context<'_>) -> rusqlite::Result<Opti
         let (whole, file) = ordered_file_json(&argument, "recognize")?;
         let ask = Recognize::from_json(&whole).map_err(|error| from_file(error, file))?;
         let result = worker::run(ffi::handle_of(context), None, move |engine, options| {
-            Ok(engine.recognize_with(&ask, &evidence, options)?)
-        })?
-        .into_value();
+            let call = crate::request::run(
+                engine,
+                thinkthen::RequestFunction::Recognize,
+                ask.into(),
+                vec![crate::request::text(evidence)],
+                options,
+            )?;
+            match call.into_value() {
+                thinkthen::RequestValue::Recognized(rows) => rows
+                    .into_iter()
+                    .next()
+                    .map(|row| row.result().value().clone())
+                    .ok_or_else(|| crate::request::wrong_result().into()),
+                _ => Err(crate::request::wrong_result().into()),
+            }
+        })?;
         Ok(Some(result.to_json()))
     })?)
 }

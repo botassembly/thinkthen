@@ -321,10 +321,16 @@ fn answered(
         } else {
             options
         };
-        engine
-            .details_many_with(&*held, texts, options)
-            .map(|row| answer_columns(&row?.into_parts().1, kind))
-            .collect::<Result<Vec<_>, Failure>>()
+        crate::request::details(
+            engine,
+            &held,
+            texts.into_iter().map(crate::request::text).collect(),
+            options,
+            true,
+        )?
+        .iter()
+        .map(|row| answer_columns(row, kind))
+        .collect::<Result<Vec<_>, Failure>>()
     })?;
     if keys.len() != values.len() {
         return Err(Failure::defect("a packed call changed its row count"));
@@ -370,19 +376,32 @@ fn ranked(
         } else {
             options
         };
-        Ok(engine.rank_with(&asked, texts, options)?.into_value())
+        let call = crate::request::run(
+            engine,
+            thinkthen::RequestFunction::Rank,
+            asked.into(),
+            texts.into_iter().map(crate::request::text).collect(),
+            options,
+        )?;
+        match call.into_value() {
+            thinkthen::RequestValue::Ranked(rows) => Ok(rows),
+            _ => Err(crate::request::wrong_result().into()),
+        }
     })?;
     ranked
         .iter()
         .zip(1_i64..)
         .map(|(row, place)| {
             let key = keys
-                .get(row.index())
+                .get(row.ordinal())
                 .ok_or_else(|| Failure::defect("a ranked row lost its record"))?;
             Ok(vec![
                 Value::Text(key.clone()),
                 Value::Integer(place),
-                Value::Real(row.probability()),
+                Value::Real(match row.result().probabilities() {
+                    Probabilities::YesNo { yes } => yes,
+                    _ => return Err(crate::request::wrong_result().into()),
+                }),
             ])
         })
         .collect()
