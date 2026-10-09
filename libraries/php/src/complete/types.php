@@ -1,4 +1,0 @@
-<?php
-declare(strict_types=1);
-namespace ThinkThen\Complete;
-const ALIASES = ['Observation' => ['Observed', 'FailedObservation'], 'AtomicAnswer' => ['YesNo', 'Choice', 'Tags', 'Score', 'FindAnswer'], 'AtomicQuestion' => ['DecideQuestion', 'ChooseQuestion', 'TagQuestion', 'ScoreQuestion', 'FindQuestion'], 'AnnotationEntry' => ['AnnotationSuccess', 'AnnotationFailure'], 'RelationEntry' => ['RelationSuccess', 'RelationFailure'], 'Result' => ['DecideResult', 'ChooseResult', 'TagResult', 'ScoreResult', 'FilterResult', 'RankResult', 'FindResult', 'AnnotateResult', 'RecognizeResult', 'RelateResult'], 'QuestionSpec' => ['DecideSpec', 'ChooseSpec', 'TagSpec', 'ScoreSpec'], 'RankSpec' => ['DecideSpec', 'ScoreSpec', 'QuestionSet', 'QuestionFile'], 'Selection' => ['TextInput', 'RecordInput', 'CandidateInput', 'ImageInput', 'Files'], 'AnnotationSpec' => ['DecideMember', 'ChooseMember', 'TagMember', 'ScoreMember']];
