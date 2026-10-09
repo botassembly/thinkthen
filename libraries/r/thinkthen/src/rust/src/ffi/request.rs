@@ -28,15 +28,22 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
         None,
         move |engine, controls, account| {
             let started = account.start();
-            let outcome = engine
-                .execute_request(
-                    &admitted,
-                    RequestEnvironment {
-                        controls: controls.surface(thinkthen::Surface::R),
-                        feed: None,
-                    },
-                )
-                .map_err(|error| crate::carry(&error))?;
+            let outcome = engine.execute_request(
+                &admitted,
+                RequestEnvironment {
+                    controls: controls.surface(thinkthen::Surface::R),
+                    feed: None,
+                },
+            );
+            let outcome = match outcome {
+                Ok(outcome) => outcome,
+                Err(error) => {
+                    if let Some(facts) = error.facts() {
+                        account.include(started, facts)?;
+                    }
+                    return Err(crate::carry(&error));
+                }
+            };
             match &outcome {
                 RequestOutcome::Complete(call) => account.include(started, call.facts())?,
                 RequestOutcome::Failed { error, .. } => {
