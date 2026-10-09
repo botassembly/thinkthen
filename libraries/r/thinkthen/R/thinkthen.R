@@ -122,10 +122,11 @@ tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completi
 .tt_condition <- function(text) {
   parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
   if (!(length(parts) %in% c(3L,4L))) return(simpleError(text))
+  complete <- if (length(parts) == 4L) tt_complete_error_native(parts[[4L]]) else NULL
   structure(
     class = c(paste0("thinkthen_", parts[[1]]), "thinkthen_error", "error", "condition"),
     list(message = parts[[3]], kind = parts[[1]], retryable = identical(parts[[2]], "true"),
-         complete = if (length(parts)==4L) tt_complete_error_native(parts[[4L]]) else NULL,
+         complete = complete, facts = if (is.null(complete)) NULL else complete$facts,
          call = NULL)
   )
 }
