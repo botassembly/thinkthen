@@ -21,6 +21,16 @@ impl EngineBuilder {
         self
     }
 
+    pub(super) fn check_proxy(&self) -> Result<(), Error> {
+        if self.proxy_supplied {
+            Err(Error::usage(
+                "proxy activation is reserved and is not supported in 0.2",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
     /// Settle folders for a host that serves callers who do not own it, such
     /// as a database server. The platform default cache is off, so answers
     /// are cached only in a folder named by `THINKTHEN_CACHE` or

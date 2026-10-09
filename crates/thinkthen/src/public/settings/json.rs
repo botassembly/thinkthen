@@ -37,6 +37,7 @@ engine_fields! {
     record: String => "record", "String";
     replay: String => "replay", "String";
     profile: String => "profile", "String";
+    proxy: serde::de::IgnoredAny => "proxy", "serde_json::Value";
     timeout: u64 => "timeout", "u64";
     max_retries: u32 => "max_retries", "u32";
     batch: RequestBatch => "batch", "RequestBatch";
@@ -120,6 +121,11 @@ impl Document {
         captured: bool,
     ) -> Result<EngineBuilder, Error> {
         let values = &self.0;
+        // Reserved activation has no executable protocol; presence alone refuses.
+        if values.proxy.is_some() {
+            builder = builder.proxy(&crate::public::ProxyActivation::Null);
+        }
+        builder.check_proxy()?;
         match (
             &values.usd_per_million_input,
             &values.usd_per_million_output,
