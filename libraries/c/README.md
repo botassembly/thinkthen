@@ -2,6 +2,18 @@
 
 `libthinkthen` exports the engine to any language that can call a C library. `include/thinkthen.h` declares its functions, and [DESIGN.md](DESIGN.md) gives the ownership, threading, and error rules behind them.
 
+## Recommended development 0.2 API
+
+Use the owned `thinkthen_session_*` interface for all ten judgments. Pass length-delimited canonical Request JSON to `thinkthen_session_new`; the shared [Request contract](../../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns grammar and admission. The [session contract](../../sdlc/planning/adr/0129-owned-json-sessions.md) owns streaming, packet ordering and terminal results. These development interfaces do not describe a published 0.2 package.
+
+The constructor copies request input and gives the worker its own engine. After it returns successfully, release the request buffer and the original engine if no other call needs them. For caller-fed input, `thinkthen_session_try_push` retains an owned descriptor only on ACCEPTED; FULL requires retrying that same descriptor, and CLOSED stops the producer. Finish intake with `thinkthen_session_finish`. Read with `thinkthen_session_try_read`: RESULT transfers an independent packet owner, PENDING means try again later, and END follows the terminal packet. Inspect terminal failure and final facts even when the read itself succeeds.
+
+`thinkthen_session_result_json` borrows immutable bytes until `thinkthen_session_result_free`; never pass that borrowed pointer to `thinkthen_free_string`. A packet survives destruction of its session and engine. Cancellation signals work without waiting. Session free closes the receiver without joining native work. Free each session and packet once after concurrent operations and borrowers finish. Immediate API refusals use the borrowed calling-thread `thinkthen_session_error_message`; execution failures belong to terminal packets.
+
+`thinkthen_request_plan_json` previews canonical Requests for fixed atomic decide, choose, tag and score questions only. Other judgments and dynamic question definitions refuse; this preview limit does not limit the ten-judgment session API. It reads no key or cache and sends nothing. Its successful plan string is owned: free it with `thinkthen_free_string`.
+
+## Build from source
+
 ```sh
 cargo build --release
 mkdir -p lib
@@ -13,6 +25,12 @@ cc -std=c11 -I include examples/slide.c -L lib -lthinkthen -Wl,-rpath,"$PWD/lib"
 A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with the soname `libthinkthen.so.0`. `localize.sh` writes the release `libthinkthen.a` so that it defines only the header's `thinkthen_` functions as global names, and a program can link its own SQLite beside it. On macOS it needs the `rust-objcopy` that ships inside the Rust toolchain. `thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE` as the command does.
 
 `thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, request-byte ceiling, cache, timeout, retries, profile, batch default, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
+
+## Compatibility exports
+
+The frozen 0.1 exports retain their symbols, signatures, layouts, error codes and accepted legacy JSON behavior. Existing consumers may keep using them. The [existing header table](DESIGN.md#the-header-table) describes these families; the generated header remains the declaration authority. Shared engine construction, cancellation and cleanup functions also serve the recommended API.
+
+The bare typed calls, their `_opts` forms, later `*_with_facts` forms, collecting JSON door and older plan door remain available for compatibility. The [counted complete and batch interface](TYPED.md) retains its separate ownership rules; it does not acquire session lifetimes. No compatibility entrypoint redirects to the new session contract.
 
 `thinkthen_question_file(engine, path, &json, &length)` reads one named UTF-8 question file of at most 1 MiB and returns its validated source JSON. Pass that owned string to `thinkthen_decide_with_facts` or use it to construct a JSON-door request, then free it once with `thinkthen_free_string`. A bad file returns non-retryable `THINKTHEN_ELOCAL` without changing either output or sending a request. The existing bare question and inline JSON arguments remain literal and report typed grammar errors as `THINKTHEN_EUSAGE`.
 
@@ -36,11 +54,11 @@ consumer.exe
 
 Free owned strings and facts through `thinkthen_free_string`, and engines and tokens through their DLL free functions. Error messages and error facts remain borrowed. Windows static libraries and other bindings remain separate work. Development files are unsigned; public distribution and native runner proof remain pending.
 
-## Run facts
+## Compatibility call facts
 
 Every successful asking JSON call returns `{"value":...,"facts":...}`. `value` keeps the verb's prior bare JSON shape. `facts` reports this call's finished records, sent attempts, cache answers and elapsed seconds, with provider token counts and model only when available. A failed call still returns `NULL`; after it, `thinkthen_error_facts_json` borrows final facts from the same calling-thread and engine slot as `thinkthen_error_message`. A refusal before a call starts has no facts. The direct `{"usage":true}` process totals remain a separate shape.
 
-For typed calls, use `thinkthen_decide_with_facts`, `thinkthen_decide_many_with_facts`, `thinkthen_recognize_with_facts`, or `thinkthen_relate_with_facts`. Each also has an `_opts` form. Pass result outputs followed by `char **facts_json` and `size_t *facts_len`; free the owned facts JSON with `thinkthen_free_string`. Recognition and relation return a separate owned result JSON string. The older eight typed names remain compatible bare-result calls and do not return facts. The new forms preserve their results, options and failure codes. A failure changes no output slot; started-failure facts remain available through the borrowed error accessor.
+For compatibility typed calls that need facts, use `thinkthen_decide_with_facts`, `thinkthen_decide_many_with_facts`, `thinkthen_recognize_with_facts`, or `thinkthen_relate_with_facts`. Each also has an `_opts` form. Pass result outputs followed by `char **facts_json` and `size_t *facts_len`; free the owned facts JSON with `thinkthen_free_string`. Recognition and relation return a separate owned result JSON string. The older eight typed names remain compatible bare-result calls and do not return facts. The new forms preserve their results, options and failure codes. A failure changes no output slot; started-failure facts remain available through the borrowed error accessor.
 
 The four judgments also accept `"records":["...",...]` with one runtime question and ordered answers. The closed `"call":{"batch":10,"context":"..."}` object controls eligible record arrays; `"batch":"max"` selects maximal packing. `call.batch` outranks the engine default, which outranks a saved question's batch. A top-level `batch` remains part of the saved question. A context is shared evidence, changes request identity, and is refused on unsupported routes. With `"details":true`, `value` is an array of complete `thinkthen.result/1` record objects including each whole `input`, request and batch metadata.
 

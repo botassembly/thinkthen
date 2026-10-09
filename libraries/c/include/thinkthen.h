@@ -589,8 +589,8 @@ typedef struct thinkthen_batch thinkthen_batch;
  Error messages and failure facts are borrowed; never free their pointers.
  See thinkthen_error_message for engine and NULL-engine pointer lifetimes.
  Nonzero returns leave all outputs unchanged. Eager calls have no partial
- rows; lazy batches retain completed prefixes. Prefer *_with_facts forms.
- Version 0.1.0 names, layouts, argument types and return codes stay frozen.
+ rows; lazy batches retain completed prefixes. Bare typed, *_with_facts, collecting JSON, complete and batch forms retain their compatibility contracts. Frozen 0.1 exports keep names, layouts, signatures, codes and legacy JSON.
+ Recommended 0.2 judgments use the owned thinkthen_session_* interface and its adjacent independent session/packet contracts. Shared engine construction and cleanup also serve it.
  Reference: https://github.com/botassembly/thinkthen/blob/main/libraries/c/DESIGN.md
  DESIGN.md references below name this online reference; archives retain
  their header/library contents.
@@ -3589,7 +3589,7 @@ int thinkthen_decide_opts(const struct thinkthen_engine *engine,
  Call `thinkthen_decide_with_facts_opts` without a deadline or cancellation token.
  # Safety
  All pointers obey the corresponding options form's contract.
- Preferred typed forms: each successful call owns final facts JSON beside
+ Compatibility typed forms: each successful call owns final facts JSON beside
  its result. The facts object contains records, requests_sent, cache_answers,
  seconds, and optional input_tokens, output_tokens, and model. Free each
  returned JSON string with thinkthen_free_string. The original decide, decide_many, recognize and relate
@@ -4121,7 +4121,7 @@ int thinkthen_relate_with_facts_opts(const struct thinkthen_engine *engine,
 
 /*
  Preview canonical Request JSON without reading a key or cache or sending.
- Supports decide, choose, tag and score. Explicit sources retain native authority.
+ Supports fixed atomic decide, choose, tag and score questions only; other functions and dynamic questions refuse. Sessions support all ten judgments.
  Success owns NUL-terminated plan JSON in out and its byte length in out_len;
  free once with thinkthen_free_string. Refusal leaves both outputs unchanged
  and records the safe calling-thread thinkthen_session_error_message.
