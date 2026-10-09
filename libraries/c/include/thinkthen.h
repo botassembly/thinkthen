@@ -342,6 +342,36 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_RULE_NULL_V1 1u
 
 /*
+ Push transferred one descriptor to the session.
+ */
+#define THINKTHEN_SESSION_ACCEPTED_V1 0
+
+/*
+ Intake closed; stop advancing the producer.
+ */
+#define THINKTHEN_SESSION_CLOSED_V1 2
+
+/*
+ Terminal was read and no more output will arrive.
+ */
+#define THINKTHEN_SESSION_END_V1 2
+
+/*
+ Push retained nothing; retry the same descriptor.
+ */
+#define THINKTHEN_SESSION_FULL_V1 1
+
+/*
+ Work has not settled and no packet is ready.
+ */
+#define THINKTHEN_SESSION_PENDING_V1 1
+
+/*
+ Read transferred one independent packet owner.
+ */
+#define THINKTHEN_SESSION_RESULT_V1 0
+
+/*
  C value `THINKTHEN_SOURCE_FILE_V1`.
  */
 #define THINKTHEN_SOURCE_FILE_V1 3u
@@ -589,6 +619,16 @@ typedef struct thinkthen_question thinkthen_question;
  Immutable result owner; every nested view allocation lives until this is freed.
  */
 typedef struct thinkthen_result thinkthen_result;
+
+/*
+ Independent session owner. Free once after concurrent operations return.
+ */
+typedef struct thinkthen_session thinkthen_session;
+
+/*
+ Independent packet owner. It remains live after its session and engine are freed.
+ */
+typedef struct thinkthen_session_result thinkthen_session_result;
 
 /*
  An immutable record snapshot or explicit shared native reader selection.
@@ -4339,6 +4379,86 @@ int thinkthen_score_complete(const struct thinkthen_engine *engine,
                              const struct thinkthen_source *source,
                              const struct thinkthen_controls_v1 *controls,
                              struct thinkthen_result **out);
+
+/*
+ Signal cancellation without waiting for a provider or final facts. NULL is ignored.
+ # Safety
+ session is NULL or live throughout the call.
+ */
+void thinkthen_session_cancel(struct thinkthen_session *session);
+
+/*
+ Borrow a fixed safe UTF-8 immediate diagnostic, never NULL. Success preserves
+ it; the next immediate session failure or thread exit ends its validity.
+ Execution failures arrive as terminal packets and never change this slot.
+ */
+const char *thinkthen_session_error_message(void);
+
+/*
+ Fix input EOF or a canonical closed reader failure. NULL with zero means EOF;
+ other inputs decode kind io, utf8 or invalid_input and optional location.
+ No input bytes survive return. A changed finish refuses without changing intake.
+ # Safety
+ session is live and failure_json has failure_len readable UTF-8 bytes.
+ */
+int32_t thinkthen_session_finish(struct thinkthen_session *session,
+                                 const char *failure_json,
+                                 size_t failure_len);
+
+/*
+ Close the output receiver and release this owner without joining native work.
+ NULL is ignored. Free once after all concurrent operations return.
+ # Safety
+ session is NULL or an unfreed owner no operation is using.
+ */
+void thinkthen_session_free(struct thinkthen_session *session);
+
+/*
+ Admit length-delimited UTF-8 request JSON and create an owned native session.
+ Inputs may be freed or overwritten after return. The engine may be freed
+ after construction; the worker owns its engine. Immediate errors leave out
+ unchanged and record only the calling-thread session error slot.
+ # Safety
+ engine is live, request_json points at request_len readable bytes (NULL
+ requires zero), and out is writable. Extents must fit Rust slices.
+ */
+int32_t thinkthen_session_new(const struct thinkthen_engine *engine,
+                              const char *request_json,
+                              size_t request_len,
+                              struct thinkthen_session **out);
+
+/*
+ Release an independent packet owner. NULL is ignored.
+ # Safety
+ result is NULL or an unfreed owner no operation or borrowed view is using.
+ */
+void thinkthen_session_result_free(struct thinkthen_session_result *result);
+
+/*
+ Admit one owned descriptor through the shared native decoder without waiting.
+ ACCEPTED retains decoded data; FULL and CLOSED retain nothing. Check native
+ capacity before decoding or allocating retained content. A concurrent closure
+ returns CLOSED without publishing. On OK status always receives a value.
+ # Safety
+ session is live, descriptor_json has descriptor_len readable UTF-8 bytes
+ (NULL requires zero), and status is nonnull and writable.
+ */
+int32_t thinkthen_session_try_push(struct thinkthen_session *session,
+                                   const char *descriptor_json,
+                                   size_t descriptor_len,
+                                   uint32_t *status);
+
+/*
+ Transfer one owned packet without waiting for native work.
+ RESULT transfers an owner; PENDING and END write NULL to out. Validate both
+ output slots before popping. A result survives session_free and engine_free.
+ # Safety
+ session is live. status and out are writable, nonnull, distinct addresses.
+ Alignment, readable/writable ranges and partial overlaps are caller duties.
+ */
+int32_t thinkthen_session_try_read(struct thinkthen_session *session,
+                                   uint32_t *status,
+                                   struct thinkthen_session_result **out);
 
 /*
  Clone an explicit native text/image reader selection.

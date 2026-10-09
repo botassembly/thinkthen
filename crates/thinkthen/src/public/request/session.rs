@@ -82,7 +82,49 @@ pub enum RequestReaderFailure {
         location: Option<SourceLocation>,
     },
 }
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+enum ReaderFailureDocument {
+    Io {
+        #[serde(default, deserialize_with = "super::present")]
+        location: Option<LocationDocument>,
+    },
+    Utf8 {
+        #[serde(default, deserialize_with = "super::present")]
+        location: Option<LocationDocument>,
+    },
+    InvalidInput {
+        #[serde(default, deserialize_with = "super::present")]
+        location: Option<LocationDocument>,
+    },
+}
 impl RequestReaderFailure {
+    /// Decode the closed host reader failure without carrying host diagnostics.
+    /// # Errors
+    /// Refuses duplicate or unknown controls, explicit nulls and bad locations.
+    pub fn from_json(text: &str) -> Result<Self, Error> {
+        let document: ReaderFailureDocument = serde_json::from_str(text)
+            .map_err(|_| Error::usage("invalid session reader failure"))?;
+        let location = match &document {
+            ReaderFailureDocument::Io { location }
+            | ReaderFailureDocument::Utf8 { location }
+            | ReaderFailureDocument::InvalidInput { location } => location,
+        }
+        .as_ref()
+        .map(|location| {
+            SourceLocation::new(
+                location.file.clone(),
+                location.first_line,
+                location.last_line,
+            )
+        })
+        .transpose()?;
+        Ok(match document {
+            ReaderFailureDocument::Io { .. } => Self::Io { location },
+            ReaderFailureDocument::Utf8 { .. } => Self::Utf8 { location },
+            ReaderFailureDocument::InvalidInput { .. } => Self::InvalidInput { location },
+        })
+    }
     pub(super) fn error(&self) -> Error {
         match self {
             Self::Io { .. } => Error::local("session input could not be read"),
@@ -101,6 +143,16 @@ pub enum RequestSessionPush {
     Full(RequestSessionDescriptor),
     /// Stop reading and dispose of this unaccepted descriptor.
     Closed(RequestSessionDescriptor),
+}
+/// JSON admission retains no caller bytes on any status.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum RequestSessionPushStatus {
+    /// The decoded descriptor transferred to the session.
+    Accepted,
+    /// Retry the same bytes without advancing the producer.
+    Full,
+    /// Stop advancing the producer and dispose of the unaccepted bytes.
+    Closed,
 }
 /// A nonblocking read distinguishes unsettled work from final exhaustion.
 #[derive(Debug)]
@@ -135,6 +187,27 @@ impl RequestSession {
             return Err(Error::usage("this session has no caller-supplied feed"));
         }
         Ok(self.queue.push(descriptor))
+    }
+    /// Admit length-delimited host JSON through the canonical descriptor decoder.
+    /// Capacity and closure are checked before decoding; decoding never holds
+    /// the queue lock. A concurrent full or closure race discards the temporary
+    /// owned value without publishing it. No caller bytes survive this return.
+    /// # Errors
+    /// Refuses non-feed sessions and malformed descriptors when intake has room.
+    pub fn try_push_json(&self, text: &str) -> Result<RequestSessionPushStatus, Error> {
+        if !self.feed {
+            return Err(Error::usage("this session has no caller-supplied feed"));
+        }
+        match self.queue.capacity() {
+            RequestSessionPushStatus::Accepted => {}
+            status => return Ok(status),
+        }
+        let descriptor = RequestSessionDescriptor::from_json(text)?;
+        Ok(match self.queue.push(descriptor) {
+            RequestSessionPush::Accepted => RequestSessionPushStatus::Accepted,
+            RequestSessionPush::Full(_) => RequestSessionPushStatus::Full,
+            RequestSessionPush::Closed(_) => RequestSessionPushStatus::Closed,
+        })
     }
     /// Read one packet without waiting for native work.
     #[must_use]

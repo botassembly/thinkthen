@@ -23,6 +23,7 @@ mod door;
 mod failures;
 /// cbindgen:ignore
 mod plan;
+mod session;
 mod settings;
 
 use failures::Held;

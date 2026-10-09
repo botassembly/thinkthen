@@ -1,7 +1,7 @@
 //! One input cell, one output cell and independent terminal cells.
 use super::{
-    RequestReaderFailure, RequestSessionDescriptor, RequestSessionPush, RequestSessionRead,
-    RequestSessionResult, RequestSessionTerminal,
+    RequestReaderFailure, RequestSessionDescriptor, RequestSessionPush, RequestSessionPushStatus,
+    RequestSessionRead, RequestSessionResult, RequestSessionTerminal,
 };
 use crate::{CallOptions, CancelToken, Error};
 use std::sync::{Condvar, Mutex, MutexGuard};
@@ -32,6 +32,16 @@ impl Queue {
         self.wake
             .wait(state)
             .unwrap_or_else(|error| error.into_inner())
+    }
+    pub(super) fn capacity(&self) -> RequestSessionPushStatus {
+        let state = self.lock();
+        if state.intake_closed || state.finish.is_some() {
+            RequestSessionPushStatus::Closed
+        } else if state.input.is_some() {
+            RequestSessionPushStatus::Full
+        } else {
+            RequestSessionPushStatus::Accepted
+        }
     }
     pub(super) fn push(&self, descriptor: RequestSessionDescriptor) -> RequestSessionPush {
         let mut state = self.lock();
