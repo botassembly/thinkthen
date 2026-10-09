@@ -297,7 +297,13 @@ fn relation_recording_replays_without_a_key_and_keeps_the_same_identity() {
     assert!(listener.requests().is_empty());
     let live: Value = serde_json::from_slice(&recorded.stdout).expect("live details");
     let result: Value = serde_json::from_slice(&replayed.stdout).expect("details");
-    for key in ["value", "question", "answer"] {
+    let mut expected_answer = live["answer"].clone();
+    expected_answer["questions"] = crate::native_results::compatibility::retrieved_members(
+        expected_answer["questions"].clone(),
+        "replay",
+    );
+    assert_eq!(expected_answer, result["answer"]);
+    for key in ["value", "question"] {
         assert_eq!(live[key], result[key], "{key}");
     }
     assert_eq!(live["meta"]["requests"], result["meta"]["requests"]);
@@ -429,7 +435,12 @@ fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
         assert!(listener.requests().is_empty(), "{cache:?}");
         let first: Value = serde_json::from_slice(&first.stdout).expect("first details");
         let second: Value = serde_json::from_slice(&second.stdout).expect("second details");
-        assert_eq!(first["answer"], second["answer"], "{cache:?}");
+        let mut expected_answer = first["answer"].clone();
+        expected_answer["questions"] = crate::native_results::compatibility::retrieved_members(
+            expected_answer["questions"].clone(),
+            "cache",
+        );
+        assert_eq!(expected_answer, second["answer"], "{cache:?}");
         assert_eq!(
             first["meta"]["requests"], second["meta"]["requests"],
             "{cache:?}"

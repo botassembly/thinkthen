@@ -50,11 +50,10 @@ fn described_labels_make_one_exact_request_and_one_complete_result() {
     assert!(output.stderr.is_empty());
     let line = String::from_utf8_lossy(&output.stdout);
     assert!(line.contains(r#""value":["billing"]"#), "{line}");
-    assert!(
-        line.contains(
-            r#""question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]}"#
-        ),
-        "{line}"
+    let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("tag details");
+    assert_eq!(
+        row["question"],
+        serde_json::json!({"verb":"tag","text":"Which topics?","labels":["billing","urgent"],"label_details":[{"name":"billing","description":"The item concerns a charge."},{"name":"urgent","description":"The item needs prompt attention."}]})
     );
     assert!(
         line.contains(r#""answer":{"kind":"tag","probabilities":{"billing":0.91,"urgent":0.22}}"#),
@@ -301,11 +300,10 @@ fn one_structured_description_expands_every_label_and_sends_exact_bytes() {
     );
     let line = String::from_utf8_lossy(&output.stdout);
     assert!(line.contains(r#""value":["billing"]"#), "{line}");
-    assert!(
-        line.contains(
-            r#""question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]}"#
-        ),
-        "{line}"
+    let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("tag details");
+    assert_eq!(
+        row["question"],
+        serde_json::json!({"verb":"tag","text":"Which topics?","labels":["billing","urgent"],"label_details":[{"name":"billing","description":{"what":"Money and invoices."}},{"name":"urgent","description":"The item needs prompt attention."}]})
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);

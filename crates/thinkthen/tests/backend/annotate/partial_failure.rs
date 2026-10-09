@@ -78,17 +78,21 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
     let failed = row["answers"]["failed"]
         .as_object()
         .ok_or_else(|| io::Error::other("the failed answer is not an object"))?;
-    assert_eq!(
-        failed.keys().map(String::as_str).collect::<Vec<_>>(),
-        ["failure", "failure_id", "question", "request"]
+    assert!(
+        thinkthen::FailureId::new(failed["failure_id"].as_str().expect("failure identity")).is_ok()
     );
     assert_eq!(
-        failed["question"],
-        serde_json::json!({"verb": "decide", "text": "failed?"})
-    );
-    assert_eq!(
-        failed["failure"],
-        serde_json::json!({"kind": "backend", "cause": "wrong_kind"})
+        serde_json::Value::Object(failed.clone()),
+        serde_json::json!({
+            "failure":{"kind":"backend","cause":"wrong_kind"},
+            "failure_id":failed["failure_id"],
+            "observations":[{"failure_id":failed["failure_id"]}],
+            "question":{"verb":"decide","text":"failed?"},
+            "question_sources":[{"origin":"live","answered_by":"local-1","batch_size":3}],
+            "request":asked[1],
+            "threshold":0.5,
+            "usage":{"input_tokens":3,"output_tokens":1}
+        })
     );
     Ok(())
 }
