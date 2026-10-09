@@ -2,6 +2,7 @@
 use super::Json;
 use serde::Serialize;
 use serde::ser::Serializer;
+mod presentation;
 mod reading;
 mod wire;
 pub(crate) use reading::AuthoredReading;
@@ -245,5 +246,26 @@ pub(crate) struct ReadableQuestion<'a, Q: Serialize> {
     pub(crate) question: &'a Q,
     #[serde(flatten)]
     pub(crate) metadata: &'a QuestionMetadata,
+    #[serde(flatten)]
+    reading: presentation::Reading<'a>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    label_details: Option<Vec<presentation::Label<'a>>>,
+}
+impl<'a, Q: Serialize> ReadableQuestion<'a, Q> {
+    pub(crate) fn new(question: &'a Q, metadata: &'a QuestionMetadata) -> Self {
+        Self {
+            question,
+            metadata,
+            reading: presentation::Reading::of(&metadata.reading),
+            label_details: None,
+        }
+    }
+}
+impl<'a> ReadableQuestion<'a, super::Question> {
+    pub(crate) fn atomic(question: &'a super::Question, metadata: &'a QuestionMetadata) -> Self {
+        let mut document = Self::new(question, metadata);
+        document.label_details = presentation::labels(question);
+        document
+    }
 }
 mod parsing;

@@ -91,10 +91,10 @@ impl Find {
             value,
             index: self.selected(),
             candidates,
-            question: crate::core::declaration::ReadableQuestion {
-                question: &row.question,
-                metadata: &self.declarations,
-            },
+            question: crate::core::declaration::ReadableQuestion::new(
+                &row.question,
+                &self.declarations,
+            ),
             answer: &row.answer,
             threshold: row.threshold,
             meta: CompleteMeta::of(&row.meta, &self.identity),

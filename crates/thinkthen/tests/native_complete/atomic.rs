@@ -127,7 +127,7 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
     assert!(document["answer_id"].is_string());
     let tags = Question::tag_labels("Topics?")
         .unwrap()
-        .label("a", None)
+        .label("a", Some(thinkthen::Description::text("Topic.").unwrap()))
         .unwrap()
         .label("b", None)
         .unwrap()
@@ -141,6 +141,12 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
     let document: Value = serde_json::from_str(&tagged.value().to_json().unwrap()).unwrap();
     assert_eq!(document["value"], json!(["a"]));
     assert_eq!(
+        document["question"]["label_details"],
+        json!([
+            {"name":"a","description":"Topic."}, {"name":"b"}
+        ])
+    );
+    assert_eq!(
         document["answer"]["probabilities"],
         json!({"a":0.9,"b":0.1})
     );
@@ -153,20 +159,14 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
             .iter()
             .all(|source| source.batch_size() == Some(2))
     );
-    let score = Question::score("Grade?")
-        .unwrap()
-        .level("low", None)
-        .unwrap()
-        .level("high", None)
-        .unwrap()
-        .build()
-        .unwrap();
+    let score = described_score();
     let graded = engine
         .score_complete_with(&score, "Text.", CallOptions::new())
         .unwrap();
     schema::call(&graded, "completeScore");
     assert_eq!(graded.value().value(), 0.75);
     assert_eq!(graded.value().confidence(), None);
+    typed_score_document(&graded);
     assert_eq!(listener.count(), 3);
     assert_eq!(listener.questions(), 4);
     let refused = engine
@@ -183,4 +183,34 @@ fn assert_decision_document(result: &CompleteDecision) {
     assert_eq!(document["value"], true);
     assert_eq!(document["meta"]["usage"], json!({"input_tokens":887}));
     assert!(document["meta"]["attempts"][0]["sdk_request_id"].is_string());
+}
+
+#[cfg(test)]
+fn typed_score_document(graded: &thinkthen::Call<thinkthen::CompleteScore>) {
+    let document = serde_json::to_value(graded.complete().unwrap()).unwrap();
+    assert_eq!(
+        document["value"]["question"]["levels"],
+        json!(["low", "high"])
+    );
+    assert_eq!(
+        document["value"]["question"]["label_details"],
+        json!([
+            {"name":"low","description":"Lower."}, {"name":"high","description":"Higher."}
+        ])
+    );
+}
+
+#[cfg(test)]
+fn described_score() -> Question {
+    Question::score("Grade?")
+        .unwrap()
+        .level("low", Some(thinkthen::Description::text("Lower.").unwrap()))
+        .unwrap()
+        .level(
+            "high",
+            Some(thinkthen::Description::text("Higher.").unwrap()),
+        )
+        .unwrap()
+        .build()
+        .unwrap()
 }

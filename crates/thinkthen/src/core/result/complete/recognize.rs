@@ -84,10 +84,10 @@ impl Recognition {
             answer_id: self.identity.answer_id(),
             value,
             input,
-            question: crate::core::declaration::ReadableQuestion {
-                question: &self.question.document(),
-                metadata: &self.question.metadata,
-            },
+            question: crate::core::declaration::ReadableQuestion::new(
+                &self.question.document(),
+                &self.question.metadata,
+            ),
             answer: &self.answer,
             meta: CompleteMeta::of(&self.meta, &self.identity),
         }

@@ -199,6 +199,32 @@ static class Conformance
         catch (JsonException) { }
     }
 
+    static void NativePresentation(JsonObject fixture)
+    {
+        var questions = fixture["native_presentation"]!["questions"]!.AsArray();
+        var choice = (QuestionChoose)Read(questions[0]!, Question.Read);
+        Check(choice.Options.SequenceEqual(new[] { "second", "first" }), "native choice order survives");
+        Check(choice.LabelDetails.Value[0].Description.Value.GetProperty("z").ValueKind == JsonValueKind.Null && choice.LabelDetails.Value[1].Description.State == PresenceState.Missing, "native description content and absence survive");
+        Check(choice.Model.Value == "fixed" && choice.Profile.Value == "authored" && choice.Batch.Value is BatchString maximum && maximum.Value == "max" && choice.On.Value.Single() == "", "native authored reading survives");
+        var score = (QuestionScore)Read(questions[1]!, Question.Read);
+        Check(score.Levels.SequenceEqual(new[] { "low", "high" }) && score.LabelDetails.Value[0].Description.Value.GetString() == "Lower." && score.LabelDetails.Value[1].Description.Value.GetString() == "Higher.", "native typed score retains descriptions");
+        var nullScore = (QuestionScore)Read(questions[2]!, Question.Read);
+        Check(nullScore.LabelDetails.Value[0].Description.State == PresenceState.Null && nullScore.LabelDetails.Value[1].Description.Value.ValueKind == JsonValueKind.Array, "native null score description differs from absence");
+        var tag = (QuestionTag)Read(questions[3]!, Question.Read);
+        Check(tag.LabelDetails.Value[0].Description.Value.GetString() == "Topic." && tag.LabelDetails.Value[1].Description.State == PresenceState.Missing, "native tag retains described and bare labels");
+        var decision = (QuestionDecide)Read(questions[4]!, Question.Read);
+        Check(decision.Model.Value == "fixed" && decision.Profile.State == PresenceState.Missing && decision.Batch.Value is BatchInteger records && records.Value == 2 && decision.On.Value.Single() == "", "native numeric batch and absent profile survive");
+        Check(decision.ItemSchema.Value is InputDeclarationString, "native declared input remains typed");
+        for (var at = 0; at < questions.Count; at++) Retains(questions[at]!, Read(questions[at]!, Question.Read));
+        var endpoints = fixture["native_presentation"]!["endpoints"]!.AsArray();
+        for (var at = 0; at < endpoints.Count; at++)
+        {
+            var endpoint = Read(endpoints[at]!, value => new SourceRelationEndpoint(value));
+            Check(endpoint.Ordinal == (ulong)new[] { 0, 1, 2, 1 }[at], "native endpoint ordinal survives duplicate expansion");
+            Retains(endpoints[at]!, endpoint);
+        }
+    }
+
     public static void Main(string[] args)
     {
         var fixture = JsonNode.Parse(File.ReadAllText(args[0]))!.AsObject();
@@ -243,6 +269,7 @@ static class Conformance
                 Retains(source!, nativeMember);
             }
         }
+        NativePresentation(fixture);
         Variants(fixture);
         RoundTrip(fixture["facts"]!);
         // Final failure facts use exactly the same generated carrier.

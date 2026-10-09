@@ -39,6 +39,7 @@ impl Serialize for SourceRelationEndpoint {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         #[derive(Serialize)]
         struct View<'a> {
+            ordinal: usize,
             name: &'a str,
             kind: &'a str,
             record: &'a RawRecord,
@@ -46,6 +47,7 @@ impl Serialize for SourceRelationEndpoint {
             location: &'a SourceLocation,
         }
         View {
+            ordinal: self.ordinal(),
             name: self.entity().name(),
             kind: self.entity().kind(),
             record: self.record(),
