@@ -7,7 +7,7 @@ use crate::core::{Outcome, Reading, RecordValue, Setting, Value, json_line};
 use crate::failure::Failure;
 use crate::schedule::{Judged, Output};
 use std::cell::RefCell;
-use std::collections::VecDeque;
+use std::collections::BTreeMap;
 use std::process::ExitCode;
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ pub(super) fn run(
     )?;
     let engine = crate::Engine::from_cli(inner, environment.config().prices());
     let composition = composition(&admitted, reading)?;
-    let held = RefCell::new(VecDeque::new());
+    let held = RefCell::new(BTreeMap::new());
     let reader = super::native_reader::Reader::new(records);
     let ready = || reader.ready();
     let readiness = crate::public::cli_reader::CliReader::new(&ready, environment.input_pause());
@@ -41,7 +41,7 @@ pub(super) fn run(
         reader.next().map(|row| {
             let unit = row.map_err(|placed| input_error(placed.cause, placed.at))?;
             let record = compose(&composition, &unit)?;
-            held.borrow_mut().push_back(unit);
+            held.borrow_mut().insert(unit.ordinal, unit);
             Ok(record)
         })
     });
@@ -187,7 +187,7 @@ impl Renderer {
     fn receive(
         &self,
         value: crate::RequestValue,
-        held: &RefCell<VecDeque<Held>>,
+        held: &RefCell<BTreeMap<usize, Held>>,
         reading: &Reading,
         output: &mut Output<'_>,
         ended: &mut Ended,
@@ -295,7 +295,7 @@ struct Renderer {
 
 fn take(
     value: crate::RequestValue,
-    held: &RefCell<VecDeque<Held>>,
+    held: &RefCell<BTreeMap<usize, Held>>,
     rendering: &Renderer,
     reading: &Reading,
     output: &mut Output<'_>,
@@ -304,9 +304,12 @@ fn take(
     macro_rules! rows {
         ($rows:expr) => {
             for row in $rows {
-                let unit = held.borrow_mut().pop_front().ok_or(Failure::Defect(
-                    "native atomic row lost its host occurrence",
-                ))?;
+                let unit = held
+                    .borrow_mut()
+                    .remove(&row.ordinal())
+                    .ok_or(Failure::Defect(
+                        "native atomic row lost its host occurrence",
+                    ))?;
                 let judged = rendering.row(reading, unit, row.result().canonical.clone())?;
                 let replayed = judged.replayed;
                 let outcome = judged.outcome;
