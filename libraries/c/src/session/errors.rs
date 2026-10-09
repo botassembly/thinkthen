@@ -1,14 +1,40 @@
-//! Immediate failures use fixed safe messages in a separate calling-thread slot.
+//! Immediate failures own safe messages in a separate calling-thread slot.
 use crate::ffi::values as abi;
-use std::cell::Cell;
-use std::ffi::{CStr, c_char};
-use thinkthen::{ErrorKind, contained};
+use std::cell::RefCell;
+use std::ffi::{CStr, CString, c_char};
+use thinkthen::{Error, ErrorKind, contained};
 
+enum Message {
+    Fixed(&'static CStr),
+    Native(CString),
+}
+impl Message {
+    fn as_ptr(&self) -> *const c_char {
+        match self {
+            Self::Fixed(message) => message.as_ptr(),
+            Self::Native(message) => message.as_ptr(),
+        }
+    }
+}
 thread_local! {
-    static LAST: Cell<&'static CStr> = const { Cell::new(c"no session failure yet") };
+    static LAST: RefCell<Message> = const { RefCell::new(Message::Fixed(c"no session failure yet")) };
 }
 
-pub(crate) fn fail(kind: ErrorKind) -> i32 {
+pub(crate) enum Failure {
+    Kind(ErrorKind),
+    Native(Error),
+}
+impl From<ErrorKind> for Failure {
+    fn from(kind: ErrorKind) -> Self {
+        Self::Kind(kind)
+    }
+}
+
+fn fail(failure: Failure) -> i32 {
+    let kind = match &failure {
+        Failure::Kind(kind) => *kind,
+        Failure::Native(error) => error.kind(),
+    };
     let (code, message) = match kind {
         ErrorKind::Usage => (abi::THINKTHEN_EUSAGE, c"invalid session arguments or input"),
         ErrorKind::Backend => (
@@ -23,11 +49,25 @@ pub(crate) fn fail(kind: ErrorKind) -> i32 {
             c"defect: a session operation failed",
         ),
     };
-    let _ = LAST.try_with(|slot| slot.set(message));
+    let message = match failure {
+        Failure::Kind(_) => Message::Fixed(message),
+        Failure::Native(error) => {
+            CString::new(error.to_string()).map_or(Message::Fixed(message), Message::Native)
+        }
+    };
+    let _ = LAST.try_with(|slot| {
+        if let Ok(mut slot) = slot.try_borrow_mut() {
+            *slot = message;
+        }
+    });
     code
 }
 
 pub(crate) fn call(body: impl FnOnce() -> Result<(), ErrorKind>) -> i32 {
+    native_call(|| body().map_err(Failure::Kind))
+}
+
+pub(crate) fn native_call(body: impl FnOnce() -> Result<(), Failure>) -> i32 {
     guard(abi::THINKTHEN_EDEFECT, || match body() {
         Ok(()) => abi::THINKTHEN_OK,
         Err(kind) => fail(kind),
@@ -36,12 +76,17 @@ pub(crate) fn call(body: impl FnOnce() -> Result<(), ErrorKind>) -> i32 {
 
 pub(crate) fn guard<T>(fallback: T, body: impl FnOnce() -> T) -> T {
     contained(body).unwrap_or_else(|| {
-        fail(ErrorKind::Defect);
+        fail(Failure::Kind(ErrorKind::Defect));
         fallback
     })
 }
 
 pub(crate) fn message() -> *const c_char {
-    LAST.try_with(|slot| slot.get().as_ptr())
-        .unwrap_or(c"no session failure yet".as_ptr())
+    LAST.try_with(|slot| {
+        slot.try_borrow()
+            .map_or(c"defect: a session operation failed".as_ptr(), |message| {
+                message.as_ptr()
+            })
+    })
+    .unwrap_or(c"no session failure yet".as_ptr())
 }
