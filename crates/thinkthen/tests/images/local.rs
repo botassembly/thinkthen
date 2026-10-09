@@ -227,7 +227,7 @@ fn unknown_unprofiled_incompatible_routes_and_overrides_send_nothing_while_text_
 }
 
 #[test]
-fn exact_final_json_and_caller_limits_are_checked_before_sending() {
+fn caller_image_limits_are_checked_before_sending() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
     let engine = build(&listener, "llamacpp", "clef-local-0036", CLEF)
         .build()
@@ -237,14 +237,6 @@ fn exact_final_json_and_caller_limits_are_checked_before_sending() {
         .decide_input(&question(), &input(None, vec![image.clone()]))
         .unwrap();
     let base = listener.requests()[0].body.len();
-    let at_limit = input(Some(&"x".repeat(2_800_000 - base)), vec![image.clone()]);
-    engine.decide_input(&question(), &at_limit).unwrap();
-    assert_eq!(listener.requests()[0].body.len(), 2_800_000);
-    let over = input(Some(&"x".repeat(2_800_001 - base)), vec![image.clone()]);
-    assert_eq!(
-        engine.decide_input(&question(), &over).unwrap_err().kind(),
-        ErrorKind::Usage
-    );
     for profile in [
         CLEF.replace(
             "\"image_profile\":",
@@ -287,7 +279,7 @@ fn exact_final_json_and_caller_limits_are_checked_before_sending() {
         limited.choose_input(&choose, &pair()).unwrap_err().kind(),
         ErrorKind::Usage
     );
-    assert_eq!(listener.count(), 2);
+    assert_eq!(listener.count(), 1);
 }
 
 #[test]
@@ -471,4 +463,27 @@ fn server_context_rejection_returns_a_failure_and_sends_the_complete_original_pr
         body["images"],
         json!([url(RED, "image/png"), url(BLUE, "image/png")])
     );
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_local_final_image_json_limits_are_exact() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let engine = build(&listener, "llamacpp", "clef-local-0036", CLEF)
+        .build()
+        .unwrap();
+    let image = fixture(RED, ImageMedia::Png);
+    engine
+        .decide_input(&question(), &input(None, vec![image.clone()]))
+        .unwrap();
+    let base = listener.requests()[0].body.len();
+    let at_limit = input(Some(&"x".repeat(2_800_000 - base)), vec![image.clone()]);
+    engine.decide_input(&question(), &at_limit).unwrap();
+    assert_eq!(listener.requests()[0].body.len(), 2_800_000);
+    let over = input(Some(&"x".repeat(2_800_001 - base)), vec![image.clone()]);
+    assert_eq!(
+        engine.decide_input(&question(), &over).unwrap_err().kind(),
+        ErrorKind::Usage
+    );
+    assert_eq!(listener.count(), 2);
 }

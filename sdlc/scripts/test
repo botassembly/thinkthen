@@ -1,9 +1,14 @@
 #!/bin/sh
-# The full functional suite: every workspace test, the doctests, the external
-# consumer, the shell self-tests, and one replay smoke per binding. Stress
-# checks have their own entry point.
+# The routine behavior suite: workspace tests, doctests, the external consumer,
+# shell self-tests, and one replay smoke per binding. Ignored release cases run
+# through test-full-cases; stress checks have their own entry point.
 # The finished probes' self-tests run in spec (ticket 0335).
 set -eu
+# nextest enforces the routine timeout; cargo test cannot enforce it.
+if ! cargo nextest --version >/dev/null 2>&1; then
+    echo 'test: cargo-nextest is required to enforce the routine timeout' >&2
+    exit 2
+fi
 if [ "$(uname -s)" = Linux ]; then
     if [ "$(id -ru)" -eq 0 ]; then
         echo 'test: RLIMIT_NPROC does not bind real UID 0; run it as a nonroot user' >&2
@@ -55,15 +60,10 @@ fi
 smoke=$!
 trap 'code=$?; set +e; [ -z "$smoke" ] || { kill -TERM -"$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; }; scratch_clean; exit "$code"' EXIT
 
-# nextest runs the same tests in about half the time; cargo test is the fallback.
-if cargo nextest --version >/dev/null 2>&1; then
-    runner='nextest run'
-else
-    runner=test
-fi
-cargo $runner --locked --offline --workspace --all-targets
+cargo nextest run --profile default --locked --offline --workspace --all-targets
 cargo test --locked --offline --workspace --doc
-cargo $runner --locked --offline --manifest-path conformance/consumer/Cargo.toml \
+cargo nextest run --profile default --config-file "$REPO/.config/nextest.toml" \
+    --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace
 python3 conformance/parity.py --validate
 python3 -m unittest conformance.test_parity

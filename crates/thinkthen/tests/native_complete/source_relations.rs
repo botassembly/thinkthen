@@ -147,7 +147,9 @@ fn source_relations_keep_nonserializable_nonclone_originals_and_refuse_mixed_sou
     assert_eq!(listener.count(), 1);
 }
 #[test]
-fn expanded_source_edges_enforce_escaped_byte_limit_and_preserve_started_facts_without_resending() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_expanded_source_edges_enforce_escaped_byte_limit_and_preserve_started_facts_without_resending()
+ {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}}}"#)).unwrap();
     let engine = engine(&listener);
     let payload = serde_json::to_string(&"\"".repeat(400_000)).unwrap();

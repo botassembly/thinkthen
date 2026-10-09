@@ -83,7 +83,9 @@ fn display_usage_errors_and_late_open_errors_send_nothing() -> io::Result<()> {
 }
 
 #[test]
-fn original_byte_budget_counts_blanks_endings_and_all_source_occurrences() -> io::Result<()> {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_original_byte_budget_counts_blanks_endings_and_all_source_occurrences()
+-> io::Result<()> {
     const LIMIT: usize = 16 * 1024 * 1024;
     let place = folder("display-bound")?;
     let one = place.join("one");
@@ -233,7 +235,9 @@ fn invalid_flags_empty_input_and_invalid_neighbors_send_nothing() -> io::Result<
 }
 
 #[test]
-fn snapshot_counts_original_crlf_bytes_and_retains_ordinary_lazy_bound() -> io::Result<()> {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_snapshot_counts_original_crlf_bytes_and_retains_ordinary_lazy_bound()
+-> io::Result<()> {
     const LIMIT: usize = 16 * 1024 * 1024;
     let listener = Listener::answering(|_| Canned::ok(PICKED))?;
     let mut source = vec![b'a'; LIMIT / 2 - 2];

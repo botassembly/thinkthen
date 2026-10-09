@@ -318,7 +318,8 @@ fn record_descriptor_refusals_keep_usage_diagnostics() {
 }
 
 #[test]
-fn record_descriptor_limit_matches_request_admission() {
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_record_descriptor_limit_matches_request_admission() {
     let text = "x".repeat(16 * 1024 * 1024 + 1);
     let descriptor = serde_json::to_string(&json!({"text": text})).unwrap();
     let converted = RequestItem::from_record_descriptor(&descriptor).unwrap_err();

@@ -231,7 +231,11 @@ fn compiled_table_failures_pin_utf8_control_and_size() {
         "thinkthen: the CSV header has a name containing a control character\n",
     )
     .expect("control case runs");
+}
 
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_table_header_and_record_sizes_are_refused() {
     let mut header = b"marker-hostile".to_vec();
     header.resize(crate::support::MAX_RECORD_BYTES + 1, b'h');
     refused_table(&header, 2, "thinkthen: the CSV header is over 16 MiB\n")
