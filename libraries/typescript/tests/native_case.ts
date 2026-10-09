@@ -56,6 +56,18 @@ async function main() {
       case 'relate': { const v=await engine.complete.relate(q,input,control); const f:string|undefined=v.results[0]?.value[0]?.source.file; done=v; break; }
       default: throw new Error('unknown function');
     }
+  const facts=done.facts, encodedFacts=JSON.parse(JSON.stringify(facts));
+  const bytes: number | undefined = facts.largest_request_bytes;
+  const tokens: number | null | undefined = facts.largest_request_estimated_input_tokens;
+  const method: string | undefined = facts.token_estimate_method;
+  if (typeof bytes !== 'number' || (tokens !== null && typeof tokens !== 'number') || typeof method !== 'string') throw new Error('native request facts');
+  for (const key of ['largest_request_bytes','largest_request_estimated_input_tokens','token_estimate_method'] as const) {
+    if (encodedFacts[key] !== facts[key]) throw new Error('lost request facts');
+  }
+  if (facts.usage_persistence) {
+    if (!['disabled','pending','written','failed'].includes(facts.usage_persistence.state) || facts.usage_persistence.observed_at !== 'facts_snapshot') throw new Error('native persistence observation');
+    if (JSON.stringify(encodedFacts.usage_persistence) !== JSON.stringify(facts.usage_persistence)) throw new Error('lost persistence observation');
+  }
     const id:C.CallId=done.facts.call_id;
     const answer:C.AnswerId|undefined=done.results[0]?.answer_id;
     const image:number|undefined=done.inputs[0]?.images[0]?.width;

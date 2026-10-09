@@ -24,6 +24,14 @@ tryCatch({
   } else done <- method(document$question, document$input, attempts = TRUE, deadline_ms = document$deadline_ms,cancel=isTRUE(document$cancel),context=document$shared_context)
   stopifnot(inherits(done$facts$call_id,"thinkthen_CallId"))
   plain <- get(".tt_complete_plain",asNamespace("thinkthen"))
+  facts <- done$facts
+  encoded <- plain(facts)
+  stopifnot(is.numeric(facts$largest_request_bytes), is.null(facts$largest_request_estimated_input_tokens) || is.numeric(facts$largest_request_estimated_input_tokens), is.character(facts$token_estimate_method))
+  for (key in c("largest_request_bytes","largest_request_estimated_input_tokens","token_estimate_method")) stopifnot(key %in% names(encoded), identical(encoded[[key]],facts[[key]]))
+  if (!inherits(facts$usage_persistence,"thinkthen_absent")) {
+    observation <- facts$usage_persistence
+    stopifnot(inherits(observation,"thinkthen_PersistenceObservation"), observation$state %in% c("disabled","pending","written","failed"), observation$observed_at=="facts_snapshot", identical(encoded$usage_persistence,plain(observation)))
+  }
   for (result in done$results) {
     if (inherits(result,"thinkthen_RankResult") && !inherits(result$members,"thinkthen_absent")) {
       for (member in result$members) stopifnot(inherits(member,"thinkthen_RankMember"),inherits(member$result,"thinkthen_RankMemberResult"),inherits(member$result$answer_id,"thinkthen_AnswerId"),member$result$value>0,inherits(member$result$question,"thinkthen_DecideQuestion"),inherits(member$result$answer,"thinkthen_YesNo"),inherits(member$result$meta,"thinkthen_Meta"))

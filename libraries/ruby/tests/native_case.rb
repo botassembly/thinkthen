@@ -23,6 +23,15 @@ begin
   end
   raise 'native identity' unless done.facts.call_id.is_a?(ThinkThen.const_get(:Complete)::CallId)
   c = ThinkThen.const_get(:Complete)
+  facts=done.facts
+  encoded=c.to_json_value(facts)
+  raise 'native request facts' unless facts.largest_request_bytes.is_a?(Integer) && (facts.largest_request_estimated_input_tokens.nil? || facts.largest_request_estimated_input_tokens.is_a?(Integer)) && facts.token_estimate_method.is_a?(String)
+  %w[largest_request_bytes largest_request_estimated_input_tokens token_estimate_method].each { |key| raise 'lost request facts' unless encoded.fetch(key)==facts.public_send(key) }
+  unless facts.usage_persistence.equal?(c::ABSENT)
+    observation=facts.usage_persistence
+    raise 'native persistence observation' unless observation.is_a?(c::PersistenceObservation) && %w[disabled pending written failed].include?(observation.state) && observation.observed_at=='facts_snapshot'
+    raise 'lost persistence observation' unless encoded.fetch('usage_persistence')==c.to_json_value(observation)
+  end
   done.results.each do |r|
     next unless r.is_a?(c::RankResult) && !r.members.equal?(c::ABSENT)
     r.members.each do |m|
