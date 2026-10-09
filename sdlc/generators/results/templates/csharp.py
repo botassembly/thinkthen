@@ -174,6 +174,11 @@ public abstract class ResultObject
         if (!document.TryGetProperty(name, out var member)) return default;
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
     }
+    protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
+    {
+        var member = RequiredElement(name);
+        return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
+    }
     // Cloning and plain conversion retain every JSON member, including unknown nested data.
     public JsonElement ToJson() => document.Clone();
     public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText())!.AsObject();
@@ -217,7 +222,7 @@ def render(definitions):
                     prop += "Value"
                 if optional:
                     chunks.append(f'    public Presence<{field_type}> {prop} => '
-                                  f'Optional<{field_type}>({quote(member)}, member => {decode});\n')
+                                  f'{"RequiredNullable" if member in schema.get("required", []) else "Optional"}<{field_type}>({quote(member)}, member => {decode});\n')
                 else:
                     _, required_decode = conversion(field, definitions, f'RequiredElement({quote(member)})')
                     chunks.append(f'    public {field_type} {prop} => {required_decode};\n')

@@ -255,7 +255,7 @@ def generated(schema):
     roots = ('completeFacts', 'completeanswer', 'completefindAnswer',
              'completeCallError', 'completeRelationMember', 'completeObservation',
              'completeUsage', 'completeReadableQuestion', 'completesourceRelationEndpoint',
-             'completesessionPacket')
+             'completesessionPacket', 'completeplan')
     return target.render(prepare(graph(schema, roots)))
 
 

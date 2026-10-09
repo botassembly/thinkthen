@@ -26,6 +26,21 @@ static class SessionChecks
             MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative1(),
             MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative1()
         });
+        var preview = engine.Plan(Request(new InputRequestInputText { Text = "café\0preview" }));
+        if (preview.Records != 1 || preview.Requests != 1 || preview.FirstBodyUtf8.State != PresenceState.Value ||
+            !preview.FirstBodyUtf8.Value.Contains("café") || preview.EstimatedInputTokens.Lower > preview.EstimatedInputTokens.Upper)
+            throw new Exception("typed canonical plan");
+        using (var document = JsonDocument.Parse("{\"first_body_utf8\":null,\"future\":false}"))
+        {
+            var retained = new Plan(document.RootElement);
+            if (retained.FirstBodyUtf8.State != PresenceState.Null || retained.ToJson().GetProperty("future").GetBoolean())
+                throw new Exception("owned nullable plan and unknown field");
+        }
+        using (var document = JsonDocument.Parse("{}"))
+        {
+            try { _ = new Plan(document.RootElement).FirstBodyUtf8; throw new Exception("missing required plan member accepted"); }
+            catch (KeyNotFoundException) { }
+        }
         foreach (var invalid in new[] { new InputEngineSettings { Throttle = 0 }, new InputEngineSettings { Backend = "unknown-backend" }, new InputEngineSettings { Model = (string)null! } })
         {
             try { using var refused = Engine.Open(invalid); throw new Exception("invalid typed settings admitted"); }
