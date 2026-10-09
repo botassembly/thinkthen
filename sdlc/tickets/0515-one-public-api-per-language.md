@@ -12,6 +12,8 @@ Reviews: revision ec618605c3dc8027da68bd7da9a200224702b8b3, accept
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 Packages ship no dead, unshipped or demo code. The frozen 0.1 C symbols stay and are documented as compatibility exports, separate from the recommended 0.2 API.

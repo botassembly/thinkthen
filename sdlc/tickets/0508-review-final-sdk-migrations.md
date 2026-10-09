@@ -34,6 +34,8 @@ Reviews: revision 056b72947, accept
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 After the final language and database migrations, the documentation pass and the bounded cleanup, and before the full installed-package run, fresh read-only reviewers find the consequential bugs and specification drift in the final 0.2 code. Every confirmed finding gets a fix ticket or an explicit scope ruling. This is the only after-sprint review the rollout requires.

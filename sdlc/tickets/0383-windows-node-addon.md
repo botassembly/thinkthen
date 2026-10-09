@@ -9,6 +9,8 @@ Depends on: 0530
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 The final npm package carries a `win32-x64` addon beside the existing platform addons. On Windows a caller installs the package and makes a real call with no library-path setting. Linux and macOS installs behave as before. The TypeScript README names Windows as supported.

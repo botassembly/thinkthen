@@ -13,6 +13,8 @@ Reviews: revision 4cd756859, reject
 
 Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 Callers can use `rank --threshold P` to keep records whose yes probability is at least P, in the existing ranked order. The shared Request carries the same optional cutoff, so the Rust API, MCP and every migrated language get it without their own cutoff logic. Omitting it preserves current rank behavior. The cutoff reads stored probabilities and makes no extra model call.

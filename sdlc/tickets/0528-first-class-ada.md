@@ -7,6 +7,8 @@ Milestone: 0.2
 Depends on: 0505
 Depends on: 0517
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 Ada callers use one named package API with generated package specifications, fixed records and discriminated types for every known result field. Failures arrive as typed exceptions or declared status with error facts. Rust owns every rule, so the Ada JSON validator and label grammar go. Hand-mirrored specs and old public names are gone.

@@ -7,6 +7,8 @@ Milestone: 0.2
 Depends on: 0516
 Depends on: 0517
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 Go callers add one module that carries the native library, call the ten functions with Go values, cancel through `context.Context`, and read generated Go result types with explicit presence. Failures are typed errors with retained facts. Hand-copied layouts, readers and old public names are gone.

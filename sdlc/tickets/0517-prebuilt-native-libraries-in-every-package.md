@@ -10,6 +10,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 One reviewed package design says, for each language package, which platform and architecture pairs it supports, its runtime floor, its native dependencies, and how it carries and loads its prebuilt native library. Every migration builds its package to this design, so no caller sets a library path by hand.

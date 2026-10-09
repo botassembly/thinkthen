@@ -10,6 +10,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
 Reviews: revision d5ec74f1047c04be948eec94e7971870872f405d, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 One public Request edge admits every request through shared Rust grammar, limits, defaults and validation. Every surface calls it, and core refusals reach the caller. No binding, extension or host package restates an engine rule.

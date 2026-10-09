@@ -13,6 +13,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 Objective-C is Apple-only and uses Foundation: `NSError`, ARC, blocks for async and cancellation, nullability annotations and Foundation collections. A caller installs an Apple package carrying the native library and reads generated Foundation result objects. GNU Objective-C support ends.

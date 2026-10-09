@@ -15,6 +15,8 @@ Reviews: revision 56af78e68, accept
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 DuckDB complete-file calls feed descriptors to native admission through 0503's bounded session. Engine limits and cancellation stop further file reads. Retained results and generic whole-set operations keep their existing memory contracts; this ticket makes no total-memory guarantee.

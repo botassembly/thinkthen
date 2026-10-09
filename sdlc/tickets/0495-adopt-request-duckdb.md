@@ -14,6 +14,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 DuckDB admits every call through the shared Request and 0503's owned session, and returns generated results through named typed SQL functions. The extension keeps only SQL host types, file authority and cancellation idiom. Rust owns every rule.

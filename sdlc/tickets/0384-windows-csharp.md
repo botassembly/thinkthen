@@ -9,6 +9,8 @@ Depends on: 0530
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 On Windows a caller installs the final NuGet package and makes a real call. The package selects its bundled `thinkthen.dll` and declared dependencies with no user library-path setting. Linux and macOS loading is unchanged. The C# README names Windows as supported.

@@ -14,6 +14,8 @@ Reviews: revision c79e3f65e05eb4f12fa46d8f7ab003d477258c9c, accept
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 C callers read every known result field through additive complete session views generated from Rust, with explicit presence and retained failure facts. Zig reads the same views with optionals and error unions. The frozen 0.1 C ABI is unchanged. Ada (0528) and COBOL (0529) build on these views.

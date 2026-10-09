@@ -9,6 +9,8 @@ Depends on: 0530
 
 Reviews: revision 4d59e7c6a, accept
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 On Windows a Java, Kotlin or Scala caller declares the ordinary Maven dependency and makes a real call. The package selects and loads its bundled Windows native library with no `-Dthinkthen.library` setting and no preview flags. Linux and macOS loading is unchanged. The JVM README names Windows as supported.

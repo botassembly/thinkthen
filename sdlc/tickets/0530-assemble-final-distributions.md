@@ -25,6 +25,8 @@ Depends on: 0527
 Depends on: 0528
 Depends on: 0529
 
+Reviews: revision a087f6dc3, accept
+
 ## Outcome
 
 The release scripts assemble every final registry-format artifact from 0501's inventory. Each artifact installs and runs with its declared dependencies, without a checkout, warm loader state or a manual library path. An unsupported target refuses clearly.
