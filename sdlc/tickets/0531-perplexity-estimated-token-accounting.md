@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision 43719e4a80629187619d1cf48458f84429924656, accept
 
+Reviews: revision 1b97c9273a1ecc79471764386329a48fb01f69b4, accept
+
 ## Outcome
 
 Perplexity plans and estimated-input budgets account for the provider's repeated shared-state token usage across questions. Other providers retain their existing estimates. Documentation distinguishes estimated tokens, reported billable usage and caller-configured prices.
