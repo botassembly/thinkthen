@@ -62,6 +62,10 @@ enum RequestSessionPush
 RequestSessionPush::Accepted
 RequestSessionPush::Closed(RequestSessionDescriptor)
 RequestSessionPush::Full(RequestSessionDescriptor)
+enum RequestSessionPushStatus
+RequestSessionPushStatus::Accepted
+RequestSessionPushStatus::Closed
+RequestSessionPushStatus::Full
 enum RequestSessionRead
 RequestSessionRead::End
 RequestSessionRead::Pending
@@ -85,8 +89,10 @@ fn Engine::request_session(&self, Request) -> Result<RequestSession, Error>
 fn RequestSession::cancel(&self)
 fn RequestSession::finish(&self, Option<RequestReaderFailure>) -> Result<(), Error>
 fn RequestSession::try_push(&self, RequestSessionDescriptor) -> Result<RequestSessionPush, Error>
+fn RequestSession::try_push_json(&self, &str) -> Result<RequestSessionPushStatus, Error>
 fn RequestSession::try_read(&self) -> RequestSessionRead
 fn RequestSessionDescriptor::from_json(&str) -> Result<RequestSessionDescriptor, Error>
+fn RequestReaderFailure::from_json(&str) -> Result<RequestReaderFailure, Error>
 impl Drop for RequestSession
 struct RequestSession
 ```
