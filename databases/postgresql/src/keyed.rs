@@ -187,19 +187,34 @@ fn rank(
         call.within(records.len());
         let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
         let ranked = call::run(call, move |engine, options| {
-            engine
-                .rank_with(&asked, texts, options)
-                .map(thinkthen::Call::into_value)
+            let call = crate::request::run(
+                engine,
+                thinkthen::RequestFunction::Rank,
+                asked.into(),
+                texts.into_iter().map(crate::request::text).collect(),
+                options,
+            )?;
+            match call.into_value() {
+                thinkthen::RequestValue::Ranked(rows) => Ok(rows),
+                _ => Err(crate::request::wrong_result()),
+            }
         });
         let rows = ranked
             .iter()
             .zip(1_i64..)
             .map(|(row, place)| {
                 let key = keys
-                    .get(row.index())
+                    .get(row.ordinal())
                     .ok_or_else(|| call::defect("a ranked row lost its record"))
                     .or_raise();
-                (key.clone(), place, row.probability())
+                (
+                    key.clone(),
+                    place,
+                    match row.result().probabilities() {
+                        Probabilities::YesNo { yes } => yes,
+                        _ => call::raise(crate::request::wrong_result()),
+                    },
+                )
             })
             .collect::<Vec<_>>();
         TableIterator::new(rows)

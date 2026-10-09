@@ -25,6 +25,7 @@ mod question_file;
 mod rank_set;
 mod relate;
 mod removed;
+mod request;
 mod scalar;
 
 use call::OrRaise as _;
@@ -124,9 +125,21 @@ type Names = Vec<(String, i32, i32, i32, String, f64)>;
 fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognized> {
     let body = body?.to_owned();
     Some(call::run(call::read(), move |engine, options| {
-        engine
-            .recognize_with(&ask, &body, options)
-            .map(thinkthen::Call::into_value)
+        let call = request::run(
+            engine,
+            thinkthen::RequestFunction::Recognize,
+            ask.into(),
+            vec![request::text(body)],
+            options,
+        )?;
+        match call.into_value() {
+            thinkthen::RequestValue::Recognized(rows) => rows
+                .into_iter()
+                .next()
+                .map(|row| row.result().value().clone())
+                .ok_or_else(request::wrong_result),
+            _ => Err(request::wrong_result()),
+        }
     }))
 }
 

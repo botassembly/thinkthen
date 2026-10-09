@@ -132,9 +132,25 @@ fn relate(query: &str, ask: impl FnOnce(bool) -> Result<Relate, Error>) -> Edges
         held.push(id);
     }
     let edges = call::run(call::read(), move |engine, options| {
-        engine.relate_with(&ask, entities, options)
-    })
-    .into_value();
+        let items = entities
+            .into_iter()
+            .map(|entity| {
+                let value = serde_json::json!({"name":entity.name(),"kind":entity.kind()});
+                crate::request::json(value)
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        let result = crate::request::run(
+            engine,
+            thinkthen::RequestFunction::Relate,
+            ask.into(),
+            items,
+            options,
+        )?;
+        match result.value() {
+            thinkthen::RequestValue::Related(row) => Ok(row.result().value().to_vec()),
+            _ => Err(crate::request::wrong_result()),
+        }
+    });
     let pair = |entity: &Entity| {
         ids.get(&(entity.name().to_owned(), entity.kind().to_owned()))
             .cloned()
