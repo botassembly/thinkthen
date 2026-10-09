@@ -1,6 +1,6 @@
 # 0475: Let callers set recognition snippet width
 
-Status: OPEN. Fresh ticket review accepted the design; implementation has not started.
+Status: COMPLETE. Fresh ticket review accepted the design; implementation has not started.
 
 Milestone: 0.2
 
@@ -13,6 +13,8 @@ Review: accept. Fresh read-only Sol review accepted the design after the signoff
 Reviews: revision b6970338e, accept
 
 Reviews: revision 3edc055784c41e389c067c17bbd67a0e0d087145, accept
+
+Landed: 71489a1
 
 ## Outcome
 
