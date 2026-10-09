@@ -23,8 +23,6 @@ pub(super) struct Reading<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     model: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    profile: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     batch: Option<Batch>,
     #[serde(skip_serializing_if = "<[String]>::is_empty")]
     on: &'a [String],
@@ -33,7 +31,6 @@ impl<'a> Reading<'a> {
     pub(super) fn of(reading: &'a AuthoredReading) -> Self {
         Self {
             model: reading.model.as_deref(),
-            profile: reading.profile.as_deref(),
             batch: reading.batch.map(|batch| match batch {
                 Setting::Max => Batch::Max(Max::Max),
                 Setting::Records(count) => Batch::Records(count),
@@ -66,3 +63,15 @@ pub(super) fn labels(question: &Question) -> Option<Vec<Label<'_>>> {
                 .collect()
         })
 }
+
+/// Atomic semantic questions leave authored profile presentation to this view.
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub(crate) struct AuthoredProfile<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) profile: Option<&'a str>,
+}
+/// Find, recognition and relation semantic questions already serialize their profile.
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub(crate) struct SemanticProfile {}

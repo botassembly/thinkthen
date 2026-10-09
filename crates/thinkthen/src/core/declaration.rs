@@ -241,31 +241,43 @@ withheld!(
 /// Presentation only: the semantic question serializer remains unchanged.
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
-pub(crate) struct ReadableQuestion<'a, Q: Serialize> {
+pub(crate) struct ReadableQuestion<'a, Q: Serialize, P = presentation::AuthoredProfile<'a>> {
     #[serde(flatten)]
     pub(crate) question: &'a Q,
     #[serde(flatten)]
     pub(crate) metadata: &'a QuestionMetadata,
     #[serde(flatten)]
     reading: presentation::Reading<'a>,
+    #[serde(flatten)]
+    profile: P,
     #[serde(skip_serializing_if = "Option::is_none")]
     label_details: Option<Vec<presentation::Label<'a>>>,
 }
-impl<'a, Q: Serialize> ReadableQuestion<'a, Q> {
-    pub(crate) fn new(question: &'a Q, metadata: &'a QuestionMetadata) -> Self {
+/// Select the existing semantic question as the single profile serializer.
+pub(crate) type SemanticReadableQuestion<'a, Q> =
+    ReadableQuestion<'a, Q, presentation::SemanticProfile>;
+impl<'a, Q: Serialize> SemanticReadableQuestion<'a, Q> {
+    pub(crate) fn semantic(question: &'a Q, metadata: &'a QuestionMetadata) -> Self {
         Self {
             question,
             metadata,
             reading: presentation::Reading::of(&metadata.reading),
+            profile: presentation::SemanticProfile {},
             label_details: None,
         }
     }
 }
 impl<'a> ReadableQuestion<'a, super::Question> {
     pub(crate) fn atomic(question: &'a super::Question, metadata: &'a QuestionMetadata) -> Self {
-        let mut document = Self::new(question, metadata);
-        document.label_details = presentation::labels(question);
-        document
+        Self {
+            question,
+            metadata,
+            reading: presentation::Reading::of(&metadata.reading),
+            profile: presentation::AuthoredProfile {
+                profile: metadata.reading.profile.as_deref(),
+            },
+            label_details: presentation::labels(question),
+        }
     }
 }
 mod parsing;
