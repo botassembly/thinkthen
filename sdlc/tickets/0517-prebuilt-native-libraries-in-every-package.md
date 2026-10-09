@@ -24,9 +24,11 @@ One reviewed package design says, for each language package, which platform and 
   - Flutter's actual plugin targets and pub packaging for 0522.
   - Swift's Apple binary target strategy for 0523 and the Apple package for 0518.
   - Go module and CMake package layouts for 0524 and 0525, and PHP's library location for 0526.
+  - The C archive with header and prebuilt library, and the Zig package, for 0505.
+  - The Ada and COBOL packages with their prebuilt library for 0528 and 0529.
   Name each file the design changes before editing it.
 - Proof: A fresh review accepts the design against the existing target definitions and the guide. Each migration's installed package check later proves its part.
-- Defers: Each package's implementation belongs to its migration: 0516 NuGet, 0504 Maven, 0522 Flutter and pub, 0523 SwiftPM, 0524 Go, 0525 CMake, 0526 PHP and 0518 Apple. The shared inventory and final distribution assembly go to 0501. Native platform qualification goes to 0383–0385 at the first authorized candidate.
+- Defers: Each package's implementation belongs to its migration: 0516 NuGet, 0504 Maven, 0522 Flutter and pub, 0523 SwiftPM, 0524 Go, 0525 CMake, 0526 PHP, 0518 Apple, 0505 C and Zig, 0528 Ada and 0529 COBOL. The shared inventory goes to 0501 and final distribution assembly to 0530. Native platform qualification goes to 0383–0385 at the first authorized candidate.
 
 ## Progress
 

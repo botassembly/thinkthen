@@ -22,6 +22,10 @@ Depends on: 0526
 Depends on: 0527
 Depends on: 0528
 Depends on: 0529
+Depends on: 0499
+Depends on: 0512
+Depends on: 0515
+Depends on: 0530
 
 Owner: builder.
 
@@ -31,7 +35,7 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-After the language and database migrations land, the shared documentation describes the final 0.2 experience on every surface. A reader of the root README, the site or the specification finds the one recommended API per language, its install route and its real platform limits. One upgrade guide maps each removed 0.1 call to its replacement.
+After the language and database migrations land, the shared documentation describes the final 0.2 experience on every surface. A reader of the root README, the site or the specification finds the one recommended API per language, its install route and its real platform limits. The migrations that own the four files the 0462 review found stale (0518, 0523, 0505 and 0496) fix those statements. One upgrade guide maps each removed 0.1 call to its replacement.
 
 ## Evidence
 
@@ -39,7 +43,6 @@ After the language and database migrations land, the shared documentation descri
 - Keeps: Actual package versions, installed-evidence limits, admitted image functions and platform restrictions. Released install instructions stay distinct from the 0.2 target until publication; public install stays 0.1.2 until then.
 - Changes: Each migration ticket owns its own package README and old-to-new mapping. This ticket owns the cross-surface pass.
   - Claim `README.md`, `site/**`, `specification/**` and one new upgrade guide that collects each migration's old-to-new mapping.
-  - Fix any still-wrong statement in the four originally named files within this pass.
   - Explain the stable JVM runtime floor and Apple-only Objective-C support from their owning tickets, 0504 and 0518.
   - Reuse `../../libraries/BINDING-AUTHOR.md` and generated API documentation. Restate no engine limit and keep no second surface inventory.
 - Proof: A fresh review compares the text with the implementation and the retained installed cases. Run the focused documentation link, ticket and privacy checks. Replay an example only if it changes.

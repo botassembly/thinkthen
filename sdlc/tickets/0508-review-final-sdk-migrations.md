@@ -24,6 +24,11 @@ Depends on: 0526
 Depends on: 0527
 Depends on: 0528
 Depends on: 0529
+Depends on: 0499
+Depends on: 0467
+Depends on: 0484
+Depends on: 0515
+Depends on: 0530
 
 Reviews: revision 056b72947, accept
 
@@ -31,7 +36,7 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-After the final language and database migrations, and before the full installed-package run, fresh read-only reviewers find the consequential bugs and specification drift in the final 0.2 code. Every confirmed finding gets a fix ticket or an explicit scope ruling. This is the only after-sprint review the rollout requires.
+After the final language and database migrations, the documentation pass and the bounded cleanup, and before the full installed-package run, fresh read-only reviewers find the consequential bugs and specification drift in the final 0.2 code. Every confirmed finding gets a fix ticket or an explicit scope ruling. This is the only after-sprint review the rollout requires.
 
 ## Evidence
 

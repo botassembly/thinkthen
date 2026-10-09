@@ -13,7 +13,8 @@ Stacked amendments made each ticket contradict itself. A reader had to work out 
 - Each open 0.2 binding ticket holds one current Outcome and one Evidence list. Amendment sections are folded in and removed. Review lines and Progress lines stay unchanged.
 - 0504 covers the JVM family only. Dart and Flutter (0522), Swift (0523), Go (0524), C++ (0525), PHP (0526) and Rust with Rust Polars (0527) have their own tickets, so independent lanes can claim them.
 - 0505 covers the complete C session views with C and Zig. Ada (0528) and COBOL (0529) follow it.
-- 0517 is the package design and can start now. Each migration ticket owns its own packaging slice. 0501 owns the shared inventory and final distribution assembly.
+- 0499 is rewritten as SQLite's remaining Request work. SQLite's SQL conventions stay with 0519.
+- 0517 is the package design and can start now. Each migration ticket owns its own packaging slice. 0501 owns the shared inventory. 0530 assembles the final distributions after every migration.
 - 0515 removes dead code and marks the frozen C exports. Each migration ticket removes its language's old public names after its replacement passes.
 - Each migration ticket owns its README. 0467 is the cross-surface documentation pass after the migrations.
 - Every rewritten ticket gets a fresh review before work under it continues.

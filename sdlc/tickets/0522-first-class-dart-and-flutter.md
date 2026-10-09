@@ -23,4 +23,4 @@ Dart and Flutter callers install one package, call the ten functions with Dart v
   - removal of old public names after installed parity.
   One public API is one coherent family of named typed calls. Claim `libraries/dart/**`, including `libraries/dart/flutter/**`, narrowed and named per slice.
 - Proof: Shared conformance runs through an installed Dart consumer and an installed Flutter plugin consumer, covering absent, null, failures, unknown output fields, files, images and cancellation. One installed held-provider case shows another isolate task progressing, and cancel and cleanup returning before the provider is released. Pending final facts stay pending. Record handwritten code removed and added, counting templates, in the landing record.
-- Defers: Unused Dart `complete/` code and the `door.dart` probe go in 0515. Final distribution assembly belongs to 0501. Platform qualification beyond this machine waits for Ian's release hold.
+- Defers: Unused Dart `complete/` code and the `door.dart` probe go in 0515. Final distribution assembly belongs to 0530. Platform qualification beyond this machine waits for Ian's release hold.

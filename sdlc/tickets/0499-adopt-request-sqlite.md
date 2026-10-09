@@ -24,7 +24,7 @@ SQLite runs every judgment through the shared Request contract, so Rust owns all
 
 - Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). Slices A and B moved the ten complete functions and the legacy scalar, many, table, rank-set, image, document and keyed routes onto Request.
 - Keeps: SQL authority, the selected model, files and facts. All ten functions and their input, result, error, cache and replay behavior. Composed records keep file and line locations and the difference between eager admission and incremental execution. Already-composed feeds keep selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. The canonical request schema and ordinary Request filtering stay unchanged. A composed native filter feed may retain every complete observation for SQL's existing result carrier.
-- Changes:
+- Changes: Remaining slices, in order:
   - Canonical saved-selector admission through Request. Claim `databases/sqlite/**` paths per slice. Name any shared Request path and coordinate it with its writer before editing.
   - Document the supported feed combinations and refuse incompatible ones before sending.
   - Remove unused compatibility execution after parity. Keep the SQL preparation, descriptor and admission helpers that PostgreSQL imports. DuckDB's dependency on the shared dispatcher goes in 0495; coordinate any SQLite-only deletion with it.

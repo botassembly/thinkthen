@@ -5,6 +5,7 @@ Status: OPEN.
 Milestone: 0.2
 
 Depends on: 0505
+Depends on: 0517
 
 ## Outcome
 
@@ -17,10 +18,10 @@ COBOL callers use one named callable interface with generated copybooks. Results
 - Changes: Meet the caller acceptance and the COBOL section of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
   - generated copybooks from the complete C header produced by 0505, as flat fixed-width records with indicator bytes;
   - typed status records with facts, owned cancellation and explicit session and buffer release;
-  - COBOL requests may be sent as JSON through the session;
+  - generated COBOL request records, which the binding may serialize to JSON internally for the session, so callers never build JSON;
   - deletion of the label grammar and hand-mirrored copybooks once installed typed cases pass;
   - the package slice carrying the native library under 0517's design;
   - `libraries/cobol/README.md`, with a short old-to-new call mapping, and removal of old public names after parity.
   One public API is one coherent family of named typed calls. Claim `libraries/cobol/**` narrowed and named per slice.
 - Proof: An installed COBOL consumer reads every known field and failure facts through shared cases, including a value that exceeds a COBOL representation limit and receives the explicit refusal. Record handwritten code removed and added, counting generator changes, in the landing record.
-- Defers: Final distribution assembly belongs to 0501.
+- Defers: Final distribution assembly belongs to 0530.

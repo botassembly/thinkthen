@@ -23,4 +23,4 @@ C++ callers find one CMake package that carries the native library, call the ten
   - removal of old public names after installed parity.
   One public API is one coherent family of named typed calls. Claim `libraries/cpp/**` narrowed and named per slice.
 - Proof: Shared conformance runs through an installed CMake consumer, covering absent, null, failures, unknown output fields, files, images and cancellation. If the API offers async calls, one installed held-provider case shows other work progressing, and cancel and cleanup returning before the provider is released. Pending final facts stay pending. Record handwritten code removed and added, counting templates, in the landing record.
-- Defers: Dead `complete.hpp` removal goes in 0515. Final distribution assembly belongs to 0501. Native qualification beyond this machine follows Ian's release hold.
+- Defers: Dead `complete.hpp` removal goes in 0515. Final distribution assembly belongs to 0530. Native qualification beyond this machine follows Ian's release hold.
