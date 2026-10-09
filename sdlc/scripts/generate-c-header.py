@@ -30,8 +30,8 @@ def check_tool():
 
 
 def generate(root=ROOT, replacements=None):
-    subprocess.run([sys.executable, str(root / "sdlc/generators/results/generate.py"),
-                    "--target", "c", "--check"], check=True, env=tool_environment())
+    # Version staging supplies a source-only fixture. Its version edits cannot
+    # change the result graph; the command checks that graph before generating.
     check_tool()
     crate = root / 'libraries/c'
     env = tool_environment()
@@ -57,6 +57,8 @@ def main():
     parser.add_argument('--check', action='store_true', help='refuse committed header drift')
     args = parser.parse_args()
     header = ROOT / 'libraries/c/include/thinkthen.h'
+    subprocess.run([sys.executable, str(ROOT / "sdlc/generators/results/generate.py"),
+                    "--target", "c", "--check"], check=True, env=tool_environment())
     generated = generate()
     if args.check:
         if header.read_bytes() != generated:
