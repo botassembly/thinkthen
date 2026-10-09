@@ -187,7 +187,7 @@ pub(crate) struct Document<'a, T: Serialize, V: Serialize = Vec<RelationEdge<Rel
     input: Option<&'a T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     index: Option<usize>,
-    question: crate::core::declaration::ReadableQuestion<
+    question: crate::core::declaration::SemanticReadableQuestion<
         'a,
         crate::core::relate_file::RelateQuestion<'a>,
     >,
@@ -224,7 +224,7 @@ impl Relation {
             answer_id: self.identity.answer_id(),
             value,
             input,
-            question: crate::core::declaration::ReadableQuestion::new(
+            question: crate::core::declaration::SemanticReadableQuestion::semantic(
                 &self.question.question(self.lines),
                 &self.question.metadata,
             ),

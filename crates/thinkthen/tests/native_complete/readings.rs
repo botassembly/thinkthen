@@ -214,3 +214,73 @@ fn complete_score_retains_explicit_null_and_array_level_descriptions() {
     schema::check(&document, "completeScore");
     assert_eq!(listener.count(), 1);
 }
+
+#[test]
+fn saved_profiled_questions_emit_one_profile_and_preserve_native_readings() {
+    // RawRecord uses the native duplicate-rejecting JSON reader before Value can collapse keys.
+    assert!(thinkthen::RawRecord::json(r#"{"profile":"first","profile":"second"}"#).is_err());
+    let listener = Listener::answering(|_| {
+        Canned::ok(
+            r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"u001":1,"u002":0}}}}"#,
+        )
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    for profile in [None, Some("saved-profile")] {
+        let extra = profile.map_or(String::new(), |value| format!(r#", "profile":"{value}""#));
+        let find = Question::find_from_json(&format!(
+            r#"{{"find":{{"z":"Which?","a":[null,false]}},"model":"fixed","on":""{extra}}}"#
+        ))
+        .unwrap();
+        let recognition = thinkthen::RecognizeQuestionFile::from_json(&format!(
+            r#"{{"version":1,"recognize":{{"kinds":{{"person":null}}}},"model":"fixed","on":"/body"{extra}}}"#
+        )).unwrap();
+        let relation = thinkthen::Relate::from_json(&format!(
+            r#"{{"version":1,"relate":{{"relations":[{{"name":"knows","source":"person","target":"person","reads":"knows"}}]}},"model":"fixed"{extra}}}"#
+        ))
+        .unwrap();
+        let found = engine
+            .find_complete_with(&find, ["first", "second"], CallOptions::new())
+            .unwrap();
+        let recognized = engine
+            .recognize_complete_with(recognition.question(), "", CallOptions::new())
+            .unwrap();
+        let related = engine
+            .relate_complete_with(&relation, [], CallOptions::new())
+            .unwrap();
+        assert_eq!(found.value().question().profile(), profile);
+        assert_eq!(recognized.value().question().profile(), profile);
+        assert_eq!(related.value().question().profile(), profile);
+        for (function, bytes) in [
+            ("find", found.value().to_json().unwrap()),
+            ("recognize", recognized.value().to_json().unwrap()),
+            ("relate", related.value().to_json().unwrap()),
+        ] {
+            let parsed = thinkthen::RawRecord::json(&bytes)
+                .unwrap_or_else(|error| panic!("{function}: {error}"));
+            let document = serde_json::to_value(parsed).unwrap();
+            assert_eq!(document["question"]["verb"], function);
+            assert_eq!(document["question"]["model"], "fixed");
+            assert_eq!(
+                document["question"].get("profile"),
+                profile.map(|value| json!(value)).as_ref()
+            );
+            match function {
+                "find" => {
+                    assert_eq!(
+                        document["question"]["text"],
+                        json!({"z":"Which?","a":[null,false]})
+                    );
+                    assert_eq!(document["question"]["on"], json!([""]));
+                }
+                "recognize" => {
+                    assert_eq!(document["question"]["kinds"], json!({"person":null}));
+                    assert_eq!(document["question"]["on"], json!(["/body"]));
+                }
+                "relate" => assert_eq!(document["question"]["relations"][0]["reads"], "knows"),
+                _ => unreachable!(),
+            }
+        }
+    }
+    assert_eq!(listener.count(), 2);
+}

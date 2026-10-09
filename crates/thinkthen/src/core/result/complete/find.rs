@@ -52,7 +52,10 @@ pub(crate) struct Document<'a, T: Serialize> {
     index: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     candidates: Option<&'a [CandidateDocument<'a, T>]>,
-    question: crate::core::declaration::ReadableQuestion<'a, crate::core::find::FindQuestionOwned>,
+    question: crate::core::declaration::SemanticReadableQuestion<
+        'a,
+        crate::core::find::FindQuestionOwned,
+    >,
     answer: &'a crate::core::FindAnswer,
     threshold: Option<()>,
     meta: CompleteMeta<'a>,
@@ -91,7 +94,7 @@ impl Find {
             value,
             index: self.selected(),
             candidates,
-            question: crate::core::declaration::ReadableQuestion::new(
+            question: crate::core::declaration::SemanticReadableQuestion::semantic(
                 &row.question,
                 &self.declarations,
             ),
