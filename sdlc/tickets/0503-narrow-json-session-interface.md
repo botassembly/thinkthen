@@ -25,3 +25,7 @@ Implement the experiment-selected narrow engine/session interface with bounded s
 ## 2026-10-09 amendment
 
 The thin, first-class ruling replaces the fallback mechanics: C-interface languages use this owned session and generated typed results. Follow 0511 admission and coordinate 0513 result presence. Settle the handle ADR before coding, preserve frozen C compatibility, own every input and result buffer, bound input/output queues, and cancel or free without waiting for a blocked provider. Keep whole-set semantics and truthful final failure facts. This shared interface precedes 0516 and family adoption; direct languages can remain directly on Rust. Review this amendment and narrow shared execution and C handle paths per slice.
+
+## Progress
+
+- 2026-10-09 landed f6768b855; next: Slice A settles ADR0129 after a real producer-closure correction and fresh acceptance. No runtime/session implementation is claimed. Implement the reviewed owned bounded session after shared admission and generated result-view interfaces; preserve frozen C compatibility and prompt caller cancellation/free.
