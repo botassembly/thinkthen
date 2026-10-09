@@ -34,6 +34,14 @@ The final affected Clippy command passed with `--lib --test native_complete --te
 
 After the owning ticket corrected those literal declarations, the existing API inventory passed: 1884 declared items checked and four planted defects refused. The final lane measurement across `target`, `libraries` and `databases` was 36,467,156,057 bytes, below 40 GiB. Only four identified scratch folders left by this ticket's failed command cases were removed. No additional full target tree was created, and pre-existing warm outputs were preserved. All owned check scopes and process sessions completed and were reaped.
 
+## Coordinator review and qualification
+
+A fresh read-only reviewer accepted implementation `7157c3e56` and the measured source ceiling at `2e99c045c`. The later documentation correction at `72c49ec4f` changed no product Rust. Full functional tests and specifications passed, including the public consumers and existing binding smokes. Every coordinator check session finished and was reaped. No paid calls, hosted workflows or release operations ran.
+
+Full lint remains failed: its all-target Clippy configuration finds production helpers after the test module in `core/recognize_file.rs`. The focused developer command did not compile that library-test configuration. Move the existing test module below production items without changing logic or suppressing the lint, then rerun the applicable qualification before landing. The earlier lint attempts also exposed a coordinator setup error: the isolated Cargo home lacked the expected advisory cache; adding a symlink inside an already-created directory did not repair it. Replacing only that owned directory with the correct cache symlink made the offline advisory, ban and license checks pass.
+
+The native subagent service refused both a fresh repair developer and reactivation of the original developer with `agent thread limit reached`, while its agent view listed only completed children. No close-thread tool is exposed. The pushed implementation remains available; it has not landed.
+
 The full documentation gate found a missing recognition mode settings row and an existing source-list assumption: extracting the first two `.contains` lists became incorrect after same-file parser helper extraction. The settings check now reads only the actual top-level and recognize admission guards in `declaration`, preserving missing/stale checks and the existing self-test. The reference names the mode, saved key and current host availability.
 
 The focused settings check passed with 83 rows, 84 flags, nine environment names, 24 question-file keys and zero failures. Its existing self-test passed all 12 cases. Both commands used the existing compiled binary on PATH under the bounded scope. `git diff --check` passed; this correction changed no product Rust source.
