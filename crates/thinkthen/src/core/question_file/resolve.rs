@@ -23,7 +23,7 @@ use crate::core::threshold::Threshold;
 /// `filter` and `rank` ask the `decide` question of every record, so the verb
 /// in the question file is `decide` for all three. `decide` takes a cut or a
 /// band, `filter` keeps or drops and so takes a single cut, and `rank` orders
-/// and selects nothing and so takes no rule at all.
+/// accepts an optional single probability cutoff.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Cutting {
     /// Whatever the verb's own page allows.
@@ -33,6 +33,8 @@ pub(crate) enum Cutting {
     OneCut,
     /// No rule in either home.
     NoRule,
+    /// Optional rank cutoff, with no default and no band.
+    RankCut,
 }
 
 /// What a caller typed beside the question, each value absent when untyped.
@@ -256,7 +258,9 @@ pub(crate) fn resolve(
             no: no_source,
             labels: labels_source,
             threshold: threshold_source,
-            takes_threshold: verb != Verb::Score && typed.cutting != Cutting::NoRule,
+            takes_threshold: verb != Verb::Score
+                && typed.cutting != Cutting::NoRule
+                && (typed.cutting != Cutting::RankCut || threshold.is_some()),
             on: on_source,
             model: model_source,
         },
@@ -413,9 +417,8 @@ fn threshold_of(
             _ => (None, Source::Default),
         },
     };
-    // `rank` reads no rule, so the cut `decide` defaults to is not its cut
-    // either. A rule anybody named is refused below.
-    if typed.cutting == Cutting::NoRule && source == Source::Default {
+    // Rank has no default cutoff. Score and set routes admit no rule.
+    if matches!(typed.cutting, Cutting::NoRule | Cutting::RankCut) && source == Source::Default {
         return Ok((None, source));
     }
     if let Some(rule) = rule {
@@ -437,6 +440,10 @@ fn threshold_of(
             }
             Cutting::OneCut => {}
             Cutting::NoRule => return Err(QuestionFileError::RuleOnRank(source)),
+            Cutting::RankCut if !rule.is_cut() => {
+                return Err(QuestionFileError::BandOnRank(source));
+            }
+            Cutting::RankCut => {}
         }
     }
     Ok((rule, source))

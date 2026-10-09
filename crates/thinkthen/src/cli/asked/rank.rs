@@ -31,7 +31,11 @@ pub(crate) fn rank(
         no: arguments.meanings.no.clone(),
         model: arguments.common.model.clone(),
         on: fields(&arguments.common),
-        cutting: Cutting::NoRule,
+        cutting: if graded || set.is_some() {
+            Cutting::NoRule
+        } else {
+            Cutting::RankCut
+        },
         ..Typed::default()
     };
     let verb = if graded { Verb::Score } else { Verb::Decide };

@@ -99,7 +99,8 @@ pub(crate) enum Command {
     /// flight. Cut an endless stream into windows upstream. Every record is
     /// still judged, so `--top` saves no request on a completed input.
     ///
-    /// `rank` orders and never selects. A floor is `filter` in front of it. With
+    /// --threshold keeps yes probabilities at or above the cut, before --top.
+    /// Score questions and question sets take no cutoff. With
     /// no framing flag it reads lines, or JSON Lines when a pointer is given by
     /// --field or a question file's `on`.
     ///

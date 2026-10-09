@@ -312,3 +312,20 @@ fn snippet_width_is_unsigned_strict_and_recognition_only() {
     let decide = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":0}}}"#;
     assert!(Request::from_json(decide).unwrap().admit().is_err());
 }
+
+#[test]
+fn native_rank_admission_does_not_promote_the_decide_default_to_a_cutoff() {
+    let request = Request::new(RequestCall::Rank(RequestArguments {
+        question: RequestQuestion::Definition {
+            value: crate::Question::decide("Best?").unwrap().cut().into(),
+        },
+        input: RequestInput::Records { items: Vec::new() },
+        options: RequestOptions::default(),
+    }));
+    assert!(request.call.arguments().options.threshold.is_none());
+    let admitted = request.admit().unwrap();
+    let RequestDefinition::Rank(question) = admitted.resolve_question().unwrap() else {
+        panic!("rank admission");
+    };
+    assert!(question.threshold.is_none());
+}

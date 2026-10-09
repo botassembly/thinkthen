@@ -399,7 +399,7 @@ impl Question {
         Ok(ScoreBuilder(Listing::new(text)?))
     }
 
-    /// A question `rank` orders records by. It reads no rule.
+    /// A question `rank` orders records by, with no cutoff by default.
     ///
     /// # Errors
     ///

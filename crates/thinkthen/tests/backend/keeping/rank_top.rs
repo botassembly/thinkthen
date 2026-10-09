@@ -49,6 +49,34 @@ fn top_edges_keep_literal_order_across_widths_and_batch_one() -> io::Result<()> 
             assert_eq!(code(&output), 0, "{jobs}/{top}: {}", said(&output));
             assert_eq!(printed(&output), lines, "{jobs}/{top}");
             assert_eq!(listener.requests().len(), 4, "every record was judged");
+            let tied = if top == "1" {
+                expected[0].1
+            } else {
+                expected[1].1
+            };
+            for (cut, eligible) in [("0.9", tied), ("1", "")] {
+                let cut_output = over(
+                    "rank",
+                    listener.base(),
+                    &[
+                        "--jsonl",
+                        "--field",
+                        "/body",
+                        "--batch",
+                        "1",
+                        "--jobs",
+                        jobs,
+                        "--top",
+                        top,
+                        "--threshold",
+                        cut,
+                    ],
+                    RECORDS,
+                )?;
+                assert_eq!(code(&cut_output), 0, "{}", said(&cut_output));
+                assert_eq!(printed(&cut_output), eligible);
+            }
+            assert_eq!(listener.count(), 12, "cuts still judge every record");
         }
     }
     Ok(())

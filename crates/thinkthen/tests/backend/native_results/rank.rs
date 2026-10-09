@@ -76,6 +76,9 @@ fn rank_details_have_numeric_stable_positions_full_answers_and_zero_send_replay(
         assert_eq!(actual["meta"]["attempts"], json!([]));
     }
     assert_eq!(replay.len(), 2);
+    let cut = rows(&run("--replay", "1", &["--threshold", "0.8", "--top", "3"]));
+    assert_eq!(cut.len(), 2);
+    same_replay_reading(&cut, &replay);
     assert_eq!(listener.count(), 1);
     assert_eq!(
         serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap(),
@@ -89,10 +92,24 @@ fn rank_details_have_numeric_stable_positions_full_answers_and_zero_send_replay(
         &live
             .into_iter()
             .chain(replay)
+            .chain(cut)
             .map(|row| ("completeRank".into(), row))
             .collect::<Vec<_>>(),
     );
 }
+#[cfg(test)]
+fn same_replay_reading(cut: &[Value], uncut: &[Value]) {
+    for (actual, original) in cut.iter().zip(uncut) {
+        for key in ["input", "index", "value", "answer", "question"] {
+            assert_eq!(actual[key], original[key], "{key}");
+        }
+        for key in ["observations", "question_sources"] {
+            assert_eq!(actual["meta"][key], original["meta"][key], "{key}");
+        }
+        assert_eq!(actual["meta"]["attempts"], json!([]));
+    }
+}
+
 #[test]
 fn set_rank_top_preserves_all_member_observations_and_positions_outside_member_top() {
     let root = crate::input_sources::folder("complete-command-set-rank").unwrap();

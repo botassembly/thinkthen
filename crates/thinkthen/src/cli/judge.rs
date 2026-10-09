@@ -294,6 +294,9 @@ fn over_kept(
         _ => Output::streaming(writer, environment.usage()),
     };
     output.display(display.clone());
+    if matches!(keeping, Keeping::Ordered) {
+        output.rank_threshold(settled.threshold());
+    }
     let context = match keeping {
         Keeping::Passing => ReplayContext::Filter,
         Keeping::Ordered => ReplayContext::Rank,

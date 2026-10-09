@@ -11,7 +11,23 @@
 /// `None` prints every one.
 #[must_use]
 pub(crate) fn ranking(of: &[f64], top: Option<usize>) -> Vec<usize> {
-    let mut places: Vec<(usize, f64)> = of.iter().copied().enumerate().collect();
+    ranking_under(of, top, None)
+}
+
+/// Read an optional inclusive probability cutoff before selecting the top rows.
+pub(crate) fn ranking_under(
+    of: &[f64],
+    top: Option<usize>,
+    threshold: Option<crate::core::Threshold>,
+) -> Vec<usize> {
+    let mut places: Vec<(usize, f64)> = of
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, value)| {
+            threshold.is_none_or(|rule| rule.cut_value().is_some_and(|cut| *value >= cut))
+        })
+        .collect();
     places.sort_by(|(_, one), (_, other)| other.total_cmp(one));
     places
         .into_iter()

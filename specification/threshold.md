@@ -20,7 +20,7 @@ The high boundary is inclusive. The low boundary belongs to the not sure side, s
 
 A cut of 0 is refused because every probability would reach it. For `decide`, that would make every answer yes. A band low of 0 is accepted because a probability of exactly 0 is not sure unless it also reaches HIGH.
 
-A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. On `decide`, `--threshold 0.5` and no threshold at all name the same rule. `choose` has no default cut, as the command table below shows.
+A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. On `decide`, `--threshold 0.5` and no threshold at all name the same rule. `choose` and `rank` have no default cut, as the command table below shows.
 
 The rule has a second home. A question file holds it under `threshold`, and a `--threshold` typed beside `@FILE` replaces it. [question-file.md](question-file.md) gives the precedence and what each source is named in a message.
 
@@ -56,7 +56,7 @@ Repeated calls can move an answer far enough to cross a cut. In experiment 212, 
 | `recognize --relation-threshold` | yes, under its separate flag | no | each stated relation edge's probability of yes |
 | `relate` | yes | no | each relation edge's probability of yes |
 | `score` | no | no | its value is a weighted position on levels, with no command threshold |
-| `rank` | no | no | it orders by probability of yes and takes no threshold |
+| `rank` | yes, optional for plain or saved decide | no | the probability of yes for each record, before top selection; saved score and question-set routes refuse cutoffs |
 | `annotate` | no command flag | no command flag | each saved `decide`, `choose`, or `tag` question keeps its own rule; `score` has none |
 | `find` | no | no | it selects one unit and takes no threshold |
 

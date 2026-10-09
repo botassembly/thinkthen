@@ -131,7 +131,7 @@ fn a_rank_plan_names_only_sources_rank_takes() -> io::Result<()> {
 }
 
 #[test]
-fn rank_refuses_a_rule_from_either_home_and_names_the_command_that_cuts() -> io::Result<()> {
+fn rank_refuses_a_band_from_either_home() -> io::Result<()> {
     let output = refused(&[
         "rank",
         QUESTION,
@@ -139,20 +139,17 @@ fn rank_refuses_a_rule_from_either_home_and_names_the_command_that_cuts() -> io:
         "--field",
         "/body",
         "--threshold",
-        "0.9",
+        "0.2:0.9",
     ])?;
     assert_eq!(code(&output), 2);
     assert_eq!(
         said(&output),
-        concat!(
-            "thinkthen: --threshold: `rank` orders and never selects, ",
-            "so put a cut in `filter --threshold`\n",
-        )
+        "thinkthen: --threshold: `rank` takes a single cut and never a band\n"
     );
 
     let file = written(
         "cut-question.json",
-        r#"{"decide":"Does this report a payment failure?","threshold":0.9}"#,
+        r#"{"decide":"Does this report a payment failure?","threshold":"0.2:0.9"}"#,
     )?;
     let output = refused(&[
         "rank",
@@ -164,10 +161,7 @@ fn rank_refuses_a_rule_from_either_home_and_names_the_command_that_cuts() -> io:
     assert_eq!(code(&output), 5);
     assert_eq!(
         said(&output),
-        concat!(
-            "thinkthen: the question file's `threshold`: `rank` orders and never ",
-            "selects, so put a cut in `filter --threshold`\n",
-        )
+        "thinkthen: the question file's `threshold`: `rank` takes a single cut and never a band\n"
     );
     Ok(())
 }

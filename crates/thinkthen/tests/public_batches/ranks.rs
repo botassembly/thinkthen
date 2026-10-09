@@ -124,3 +124,39 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
     assert_eq!(error.to_string(), "reader failed");
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn saved_rank_cutoff_reads_yes_probabilities_and_keeps_exact_ties_and_originals() {
+    let _serial = serial();
+    let listener = Listener::answering(|body| {
+        let text = String::from_utf8_lossy(body);
+        let probability = if text.contains("below") {
+            "0.79"
+        } else {
+            "0.8"
+        };
+        Canned::ok(&format!(
+            r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"noul","noul":{probability}}}}}}}"#
+        ))
+    })
+    .unwrap();
+    let engine = engine(listener.base());
+    let question = Question::rank_from_json(r#"{"decide":"Relevant?","threshold":0.8}"#).unwrap();
+    let call = engine
+        .rank_with(
+            &question,
+            ["first", "below", "last"],
+            CallOptions::new().batch(BatchSetting::Records(
+                std::num::NonZeroUsize::new(1).unwrap(),
+            )),
+        )
+        .unwrap();
+    assert_eq!(
+        call.value()
+            .iter()
+            .map(|row| (row.input(), row.index(), row.probability()))
+            .collect::<Vec<_>>(),
+        [(&"first", 0, 0.8), (&"last", 2, 0.8)]
+    );
+    assert_eq!(listener.count(), 3);
+}

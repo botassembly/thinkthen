@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::core::{ModelName, Outcome, Withheld, ranking};
+use crate::core::{ModelName, Outcome, Threshold, Withheld, ranking_under};
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::Engine;
 use crate::engine::usage::Counters;
@@ -99,6 +99,7 @@ pub(crate) struct Output<'a> {
     run_model: Option<ModelName>,
     members: Vec<Vec<(usize, Judged)>>,
     member_scores: Vec<Vec<(usize, f64)>>,
+    rank_threshold: Option<Threshold>,
 }
 
 enum Mode<'a> {
@@ -153,6 +154,7 @@ impl Output<'_> {
             run_model: None,
             members: Vec::new(),
             member_scores: Vec::new(),
+            rank_threshold: None,
         }
     }
 
@@ -174,7 +176,12 @@ impl Output<'_> {
             run_model: None,
             members: Vec::new(),
             member_scores: Vec::new(),
+            rank_threshold: None,
         }
+    }
+
+    pub(crate) const fn rank_threshold(&mut self, threshold: Option<Threshold>) {
+        self.rank_threshold = threshold;
     }
 
     pub(crate) fn display(&mut self, arguments: crate::cli::display::Arguments) {
@@ -268,7 +275,10 @@ impl Output<'_> {
                     .ok_or(Failure::Defect("a ranked row carries no probability"))
             })
             .collect::<Result<Vec<f64>, Failure>>()?;
-        for (at, place) in ranking(&odds, *top).into_iter().enumerate() {
+        for (at, place) in ranking_under(&odds, *top, self.rank_threshold)
+            .into_iter()
+            .enumerate()
+        {
             let Some(judged) = held.get_mut(place) else {
                 continue;
             };

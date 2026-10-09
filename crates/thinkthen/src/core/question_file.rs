@@ -202,8 +202,11 @@ pub(crate) enum QuestionFileError {
     )]
     BandOnFilter(Source),
     /// A rule reached the caller that orders records and selects none.
-    #[error("{}`rank` orders and never selects, so put a cut in `filter --threshold`", named(*.0, "threshold"))]
+    #[error("{}`rank` with a score question or question set takes no threshold", named(*.0, "threshold"))]
     RuleOnRank(Source),
+    /// Rank accepts only one probability cutoff.
+    #[error("{}`rank` takes a single cut and never a band", named(*.0, "threshold"))]
+    BandOnRank(Source),
     /// The options or the levels are not a list the verb takes.
     #[error("{}{error}", named(*.origin, .key))]
     Labels {
@@ -298,7 +301,8 @@ impl QuestionFileError {
             | Self::BandOnTag(origin)
             | Self::RuleOnScore(origin)
             | Self::BandOnFilter(origin)
-            | Self::RuleOnRank(origin) => *origin,
+            | Self::RuleOnRank(origin)
+            | Self::BandOnRank(origin) => *origin,
             // The file is a good question file and the command asked for
             // another verb, so the line to fix is the one the user typed.
             Self::VerbMismatch { .. } => Source::CommandLine,

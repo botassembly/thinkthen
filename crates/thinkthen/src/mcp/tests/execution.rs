@@ -148,3 +148,69 @@ fn recognition_context_selectors_refuse_missing_null_and_nontext_before_dispatch
     }
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn rank_forwards_the_inclusive_cutoff_before_top_and_refuses_nonprobability_routes() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.79},"q2":{"type":"noul","noul":0.8},"q3":{"type":"noul","noul":0.8}}}"#)).unwrap();
+    let executor = NativeExecutor {
+        engine: Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .api_key("fake")
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .no_cache()
+            .build()
+            .unwrap(),
+        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
+    };
+    let params: CallParams = serde_json::from_value(json!({"name":"rank","arguments":{
+        "question":"Best?", "records":["below","first","last"],
+        "options":{"threshold":0.8,"top":3,"batch":"max"}
+    }}))
+    .unwrap();
+    let reply = executor
+        .execute(Invocation::admit(params).unwrap(), &CancelToken::new())
+        .unwrap();
+    let value = serde_json::to_value(tool_result(reply.object, reply.failed)).unwrap();
+    let rows = value["structuredContent"]["value"].as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    for (at, original) in ["first", "last"].iter().enumerate() {
+        assert_eq!(rows[at]["input"], *original);
+        assert_eq!(rows[at]["value"], at + 1);
+        assert_eq!(rows[at]["answer"]["probability"], 0.8);
+    }
+    assert_eq!(listener.count(), 1);
+    for (question, threshold) in [
+        (json!("Best?"), json!(0)),
+        (json!("Best?"), json!("NaN")),
+        (json!("Best?"), json!(1.01)),
+        (json!("Best?"), json!("0.2:0.8")),
+        (json!({"score":"Best?","levels":["low","high"]}), json!(0.8)),
+        (
+            json!({"score":"Best?","levels":["low","high"],"threshold":0.8}),
+            json!(0.8),
+        ),
+        (
+            json!({"version":1,"questions":{"first":{"decide":"Best?"}}}),
+            json!(0.8),
+        ),
+        (
+            json!({"version":1,"questions":{"first":{"decide":"Best?","threshold":0.8}}}),
+            json!(0.8),
+        ),
+    ] {
+        let params: CallParams = serde_json::from_value(json!({"name":"rank","arguments":{
+            "question":question,"records":["unsent"],"options":{"threshold":threshold}
+        }}))
+        .unwrap();
+        let refused = Invocation::admit(params).and_then(|invocation| {
+            executor
+                .execute(invocation, &CancelToken::new())
+                .map(|_| ())
+        });
+        assert!(refused.is_err());
+    }
+    assert_eq!(listener.count(), 1, "refused calls send nothing");
+}

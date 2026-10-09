@@ -1,7 +1,7 @@
 //! Complete-set rank and find admission, shared by fallible and original callers.
 
 use super::observation::observe_find;
-use crate::core::{self, Find, ranking};
+use crate::core::{self, Find, ranking_under};
 use crate::public::engine::{Engine, Evidence, evidence, only};
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
@@ -87,7 +87,11 @@ impl Engine {
             .facts()
             .cloned()
             .ok_or_else(|| Error::defect("a completed rank has no facts"))?;
-        let order = ranking(&rows.iter().map(|(_, yes)| *yes).collect::<Vec<_>>(), None);
+        let order = ranking_under(
+            &rows.iter().map(|(_, yes)| *yes).collect::<Vec<_>>(),
+            None,
+            question.threshold,
+        );
         // Rows arrive in input order, so a row's place is its input index.
         let mut rows: Vec<Option<(T, f64)>> = rows.into_iter().map(Some).collect();
         Ok(Call::new(

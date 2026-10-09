@@ -379,3 +379,31 @@ fn relation_member_documents(result: &thinkthen::CompleteRelated, document: &Val
         assert_eq!(document["question"]["verb"], "decide");
     }
 }
+
+#[test]
+fn rank_request_cutoff_keeps_complete_probabilities_positions_and_observations() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.79},"q2":{"type":"noul","noul":0.8},"q3":{"type":"noul","noul":0.8}},"usage":{"input_tokens":9}}"#)).unwrap();
+    let engine = engine(&listener);
+    let request = thinkthen::Request::from_json(r#"{"schema":"thinkthen.request/1","call":{"function":"rank","question":{"kind":"text","text":"Best?"},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"below"}},{"original":{"kind":"text","text":"first"}},{"original":{"kind":"text","text":"last"}}]},"options":{"threshold":0.8,"top":3,"batch":"max"}}}"#).unwrap().admit().unwrap();
+    let thinkthen::RequestOutcome::Complete(call) = engine
+        .execute_request(&request, thinkthen::RequestEnvironment::default())
+        .unwrap()
+    else {
+        panic!("completed rank");
+    };
+    let document = serde_json::to_value(call.value()).unwrap();
+    let rows = document.as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    for (at, input) in ["first", "last"].iter().enumerate() {
+        assert_eq!(rows[at]["input"], *input);
+        assert_eq!(rows[at]["value"], at + 1);
+        assert_eq!(rows[at]["answer"]["probability"], 0.8);
+        assert!(
+            !rows[at]["meta"]["question_sources"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+    }
+    assert_eq!(listener.count(), 1);
+}

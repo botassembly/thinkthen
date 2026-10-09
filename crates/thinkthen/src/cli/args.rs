@@ -369,7 +369,8 @@ pub(crate) struct RankArguments {
     #[arg(long, value_name = "N", allow_negative_numbers = true)]
     pub(crate) top: Option<String>,
 
-    /// Taken so that the tool refuses it in its own words. `rank` has no rule.
+    /// Keep records whose yes probability reaches this optional inclusive cut.
+    /// Saved score questions and question sets take no cutoff; bands refuse.
     #[arg(long, value_name = "T", hide = true, allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 

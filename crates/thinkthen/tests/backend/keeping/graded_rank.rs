@@ -218,6 +218,11 @@ fn graded_rank_refuses_typed_meanings_and_dry_run_sends_nothing() -> io::Result<
         assert!(listener.requests().is_empty());
     }
 
+    let cutoff = run("rank", &file, listener.base(), &["--threshold", "0.8"])?;
+    assert_eq!(cutoff.status.code(), Some(2));
+    assert!(cutoff.stdout.is_empty());
+    assert_eq!(listener.count(), 0);
+
     let plan = run("rank", &file, listener.base(), &["--plan"])?;
     assert_eq!(plan.status.code(), Some(0), "{:?}", plan.stderr);
     assert!(plan.stderr.is_empty());
