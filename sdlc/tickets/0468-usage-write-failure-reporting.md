@@ -26,6 +26,7 @@ SDK and SQL callers can discover failed persistence of usage counts without expo
 - Shared representation: complete invocation facts contain `usage_persistence` with `state` (`disabled`, `pending`, `written` or `failed`), `observed_at: "facts_snapshot"` and optional fixed failure `advice`. Freeze the observation when public Facts reads its owning call facts; engine methods continue to report live state. Aggregate tallies have no invented persistence observation. The enum and state calculation have one owner in engine usage counters.
 - Additional exact seams: `crates/thinkthen/src/engine/facade/state.rs`, `crates/thinkthen/src/public/results/tally.rs`, `crates/thinkthen/src/public/results/complete.schema.json` and `sdlc/ratchet.json`. Bind call facts to their owned counters at shared state construction, derive the complete schema from its serializer and measure actual source growth.
 - The existing schema generator also owns `specification/result.schema.json`; regenerate its additive complete-facts definitions from the same serializer rather than editing either schema by hand.
+- Existing fork regression seam: `crates/thinkthen/src/engine/facade/fork_tests.rs`. Prove status and finalization avoid an inherited held queue and write only the child's owned deltas, using the existing busy-parent fixture.
 - Defers: No monthly spending policy, ledger change, telemetry, new durable store or proof framework. Release management remains held.
 
 
