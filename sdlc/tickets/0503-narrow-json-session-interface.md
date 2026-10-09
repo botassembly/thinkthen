@@ -95,3 +95,4 @@ struct RequestSession
 - 2026-10-09 landed cb1c47896; next: Accepted observation packets preserve detailed native events through the existing bounded queue. Implement shared session ownership and sink dispatch after shared descriptor admission; frozen C compatibility and prompt cancel/free remain required.
 - 2026-10-09 started
 - 2026-10-09 landed 80f468ba6; next: Native owned sessions are landed; implement C exports and serialize the complete result packet graph before host adoption.
+- 2026-10-09 landed 8c834929a8a3120a8a6398a41f41bf09b7541ea1; next: Owned native and C sessions expose canonical result bytes with reviewed lifetimes and cancellation. Finish generated constrained-language views and remaining contract consumers before closing.
