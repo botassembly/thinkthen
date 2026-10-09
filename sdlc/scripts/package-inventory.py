@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Derive shipping files from package definitions and the release target matrix.
 
-Compiled JVM members come from compiler output. Installed public consumers remain
+Compiled JVM and C# members come from compiler output. Installed public consumers remain
 independent: matching this inventory alone does not establish a usable package.
 """
 import argparse
@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import sys
 import xml.etree.ElementTree as ET
+import zipfile
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -79,6 +80,60 @@ def jvm_inventory(out=None, pom=None):
     return result
 
 
+
+def csharp_inventory(out=None, target=None):
+    project = ET.parse(REPO / 'libraries/csharp/ThinkThen.csproj').getroot()
+    props = {node.tag: node.text.strip() for group in project.findall('PropertyGroup') for node in group}
+    definition = ET.parse(REPO / 'libraries/csharp/Botassembly.ThinkThen.nuspec').getroot()
+    metadata = definition.find('{*}metadata')
+    for prop, member in [('PackageId', 'id'), ('Version', 'version'), ('PackageReadmeFile', 'readme'), ('PackageLicenseFile', 'license')]:
+        if metadata.find('{*}' + member).text != props[prop]:
+            raise ValueError('C# project and nuspec differ: ' + prop)
+    if metadata.find('{*}dependencies/{*}group').get('targetFramework') != props['TargetFramework']:
+        raise ValueError('C# project and nuspec frameworks differ')
+    packed = project.findall(".//None[@Pack='true']")
+    template, = [node.get('PackagePath') for node in packed if node.get('Include') == '$(ThinkThenNativeAsset)']
+    native = {}
+    for entry in targets():
+        platform = {'darwin': 'osx', 'win32': 'win'}.get(entry['platform'], entry['platform'])
+        rid = platform + '-' + entry['arch']
+        path = template.replace('$(ThinkThenNativeRid)', rid).replace('$(ThinkThenNativeName)', entry['libraries'][0])
+        native[entry['target']] = dict(rid=rid, file=path)
+    if target is not None and target not in native:
+        raise ValueError('unsupported C# target: ' + target)
+    docs = sorted(node.get('PackagePath').strip('/') + ('/' if node.get('PackagePath').strip('/') else '') + Path(node.get('Include')).name
+                  for node in packed if '$(' not in node.get('Include'))
+    result = dict(package=props['PackageId'] + '.' + props['Version'] + '.nupkg',
+                  files=sorted(docs + [props['PackageId'] + '.' + props['Version'] + '.nupkg']), native=native)
+    if out is not None:
+        manifests = [ET.parse(path).getroot() for path in Path(out).glob('*.nuspec')]
+        manifest, = [node for node in manifests if node.find('{*}metadata/{*}id').text == props['PackageId']
+                     and node.find('{*}metadata/{*}version').text == props['Version']]
+        members = [node.get('target').lstrip('/') for node in manifest.findall('{*}files/{*}file')]
+        compiled = [member for member in members if member.startswith('lib/' + props['TargetFramework'] + '/')]
+        assets = [member for member in members if member.startswith('runtimes/')]
+        allowed = {entry['file'] for entry in native.values()} if target is None else {native[target]['file']}
+        if not compiled or len(assets) != 1 or not set(assets) <= allowed or set(members) != set(docs + compiled + assets) or len(members) != len(set(members)):
+            raise ValueError('C# compiler package manifest differs from project or target matrix')
+        result['members'] = sorted(members + [props['PackageId'] + '.nuspec'])
+    return result
+
+
+def check_csharp(package, out, target=None):
+    if out is None:
+        raise ValueError('C# package check requires --out with compiler-produced nuspec files')
+    expected = csharp_inventory(out, target)['members']
+    with zipfile.ZipFile(package) as archive:
+        names = archive.namelist()
+        products = [name for name in names if name not in ('_rels/.rels', '[Content_Types].xml')
+                    and not fnmatch.fnmatch(name, 'package/services/metadata/core-properties/*.psmdcp')]
+        if sorted(products) != expected or len(names) != len(set(names)):
+            raise ValueError(f'C# inventory differs: missing={set(expected)-set(products)}, extra={set(products)-set(expected)}')
+        for name in expected:
+            if not archive.read(name):
+                raise ValueError('empty C# product: ' + name)
+
+
 def check_npm(package, target=None):
     inventory = npm_inventory(target)
     expected = inventory['files']
@@ -94,7 +149,7 @@ def check_npm(package, target=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('package', choices=['npm', 'jvm'])
+    parser.add_argument('package', choices=['npm', 'jvm', 'csharp'])
     parser.add_argument('--target')
     parser.add_argument('--platform')
     parser.add_argument('--out', type=Path)
@@ -116,13 +171,17 @@ def main():
             raise ValueError('stale npm native-platforms.json; run package-inventory.py npm --write')
         if args.check:
             check_npm(args.check, args.target)
-    else:
+    elif args.package == 'jvm':
         inventory = jvm_inventory(args.out)
+    else:
+        inventory = csharp_inventory(args.out, args.target)
+        if args.check:
+            check_csharp(args.check, args.out, args.target)
     if args.field:
         value = inventory[args.field]
         if args.kind:
             value = value[args.kind]
-        print('\n'.join(value if isinstance(value, list) else value.values()))
+        print(value if isinstance(value, str) else '\n'.join(value if isinstance(value, list) else value.values()))
     else:
         print(json.dumps(inventory, indent=2))
 
