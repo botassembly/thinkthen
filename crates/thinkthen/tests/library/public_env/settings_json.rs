@@ -6,6 +6,8 @@ fn independent_settings_refusals_precede_environment_capture_and_hide_values() {
     for text in [
         "[]",
         "[null]",
+        r#"{"proxy":null,"proxy":{}}"#,
+        r#"{"proxy":{"private-marker":}}"#,
         r#"{"timeout":0}"#,
         r#"{"timeout":86401}"#,
         r#"{"throttle":0}"#,
@@ -41,6 +43,38 @@ fn independent_settings_refusals_precede_environment_capture_and_hide_values() {
         &[(ARGUMENT, "{}"), ("THINKTHEN_BASE_URL", "ftp://invalid")],
     );
     assert!(said.starts_with("Usage: THINKTHEN_BASE_URL:"), "{said}");
+}
+
+#[test]
+fn supplied_proxy_settings_refuse_before_capture_and_hide_opaque_values() {
+    let listener = listener();
+    for value in [
+        "null",
+        "{}",
+        "[]",
+        "false",
+        "42",
+        r#""private-marker""#,
+        r#"{"unknown":"private-marker"}"#,
+    ] {
+        let text = format!(r#"{{"proxy":{value},"replay":"/private-marker-missing-store"}}"#);
+        let error = EngineBuilder::validate_settings_json(&text).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            error.to_string(),
+            "proxy activation is reserved and is not supported in 0.2"
+        );
+        assert!(!format!("{error:?}").contains("private-marker"));
+        for base in ["ftp://invalid", listener.base()] {
+            let said = in_child(
+                "settings-json",
+                &[(ARGUMENT, &text), ("THINKTHEN_BASE_URL", base)],
+            );
+            assert_eq!(said, format!("Usage: {}", error));
+            assert!(!said.contains("private-marker"));
+        }
+    }
+    assert_eq!(listener.count(), 0);
 }
 
 #[test]

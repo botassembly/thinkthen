@@ -739,6 +739,7 @@
           "type": "string",
           "default": null
         },
+        "proxy": true,
         "record": {
           "type": "string",
           "default": null

@@ -382,11 +382,7 @@ impl EngineBuilder {
     /// when a [`EngineBuilder::shared_host`] folder is not private. Returns
     /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
-        if self.proxy_supplied {
-            return Err(Error::usage(
-                "proxy activation is reserved and is not supported in 0.2",
-            ));
-        }
+        self.check_proxy()?;
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),
             (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {
