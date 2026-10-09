@@ -208,4 +208,32 @@ fn native_context_projection_keeps_originals_and_annotation_wraps_the_typed_stat
         String::from_utf8(listener.requests()[0].body.clone()).unwrap(),
         r#"{"state":{"context":{"guide":"Private guide.","ready":false,"extra":[null,12]},"evidence":"Each question quotes the text it asks about."},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}}}"#
     );
+    let text_set = thinkthen::QuestionSet::builder()
+        .question("refund", Question::decide("Refund?").unwrap().cut())
+        .unwrap()
+        .build()
+        .unwrap();
+    for (context, expected) in [
+        (
+            Some("Explicit guide.".into()),
+            serde_json::json!({"context":"Explicit guide.","evidence":"Each question quotes the text it asks about."}),
+        ),
+        (
+            Some("".into()),
+            serde_json::json!("Each question quotes the text it asks about."),
+        ),
+        (None, serde_json::json!("Plain shared guide.")),
+    ] {
+        engine
+            .annotate_records_complete_with(
+                &text_set,
+                [input(context)],
+                CallOptions::new().context("Plain shared guide."),
+            )
+            .unwrap();
+        let requests = listener.requests();
+        let body: Value = serde_json::from_slice(&requests.last().unwrap().body).unwrap();
+        assert_eq!(body["state"], expected);
+    }
+    assert_eq!(listener.count(), 4);
 }

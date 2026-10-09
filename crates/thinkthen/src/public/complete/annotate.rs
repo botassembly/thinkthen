@@ -15,6 +15,7 @@ mod streaming;
 
 struct Prepared {
     text: Text,
+    explicit_context: bool,
     context: Option<core::Evidence>,
 }
 struct Held<T> {
@@ -36,7 +37,7 @@ impl Annotations {
         group_done: impl FnMut(usize, usize),
     ) -> Result<Vec<Ask>, Error> {
         let asks = Annotating::new(&self.engine, self.set.clone())
-            .with_typed_context(input.context.as_ref())
+            .with_typed_context(input.context.as_ref(), input.explicit_context)
             .asks_with_groups(&input.text, group_done)?;
         if input.context.is_some() {
             super::records::validate_context(&self.engine, &asks)?;
@@ -315,6 +316,7 @@ fn prepare_record<T: InputEvidence>(
             context: context.clone(),
         },
         Prepared {
+            explicit_context: record.context.is_some(),
             text: Text {
                 at,
                 input: question_input,
