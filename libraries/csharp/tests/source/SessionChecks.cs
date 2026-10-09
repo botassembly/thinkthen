@@ -26,6 +26,13 @@ static class SessionChecks
             MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative1(),
             MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative1()
         });
+        var authored = engine.ParseQuestion(AuthoredQuestionKind.Atomic,"{\"choose\":\"Which?\",\"options\":{\"first\":\"First.\",\"second\":\"Second.\"}}");
+        var choices = ((InputAuthoredOptionsAlternative1)((InputRequestDefinitionAlternative1)authored.Value).Value.Options.Value).Value;
+        if (!choices.Keys.SequenceEqual(new[] { "first", "second" })) throw new Exception("native authored order");
+        try { ((IDictionary<string,InputAuthoredDescription>)choices).Clear(); throw new Exception("parsed authored map changed"); }
+        catch (NotSupportedException) { }
+        var authoredPlan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallChoose { Question = authored, Input = new InputRequestInputText { Text = "owned" } } });
+        if (authoredPlan.Requests != 1 || authoredPlan.FirstBodyUtf8.State != PresenceState.Value || !authoredPlan.FirstBodyUtf8.Value.Contains("First.")) throw new Exception("owned authored definition");
         var preview = engine.Plan(Request(new InputRequestInputText { Text = "café\0preview" }));
         if (preview.Records != 1 || preview.Requests != 1 || preview.FirstBodyUtf8.State != PresenceState.Value ||
             !preview.FirstBodyUtf8.Value.Contains("café") || preview.EstimatedInputTokens.Lower > preview.EstimatedInputTokens.Upper)

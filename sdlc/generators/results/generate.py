@@ -259,14 +259,38 @@ def generated(schema):
     return target.render(prepare(graph(schema, roots)))
 
 
+
+def bridge():
+    path = ROOT / 'sdlc/scripts/check-c-exports.py'
+    spec = importlib.util.spec_from_file_location('csharp_native_abi', path)
+    abi = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(abi)
+    native = abi.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
+    fields = native['records']['thinkthen_string_v1']['fields']
+    types = {'const char *': 'IntPtr', 'size_t': 'nuint'}
+    lines = ['// Generated from the compiler-derived C header ABI; do not edit.',
+             'using System.Runtime.InteropServices;', 'namespace ThinkThen;',
+             '[StructLayout(LayoutKind.Sequential)]', 'internal struct StringV1 {']
+    lines += [' public ' + types[field['type']] + ' ' + name + ';' for name, field in fields.items()]
+    lines += ['}']
+    for enum, prefix, suffix, underlying in [('AuthoredQuestionKind', 'THINKTHEN_LOAD_', '_V1', 'uint'), ('FailureKind', 'THINKTHEN_E', '', 'int')]:
+        members = [(name.removeprefix(prefix).removesuffix(suffix), value) for name, value in native['constants'].items()
+                   if name.startswith(prefix) and (name.endswith(suffix) if suffix else not name.endswith('_V1'))]
+        lines += ['public enum ' + enum + ' : ' + underlying + ' { ' + ', '.join(''.join(word.title() for word in name.split('_')) + ' = ' + str(value) for name, value in members) + ' }']
+    return '\n'.join(lines) + '\n'
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
+    parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
-    if args.inputs:
+    if args.bridge:
+        result = bridge()
+        args.output = ROOT / 'libraries/csharp/src/NativeBridge.g.cs'
+    elif args.inputs:
         path = Path(__file__).parent / 'templates/csharp.py'
         spec = importlib.util.spec_from_file_location('result_csharp', path)
         target = importlib.util.module_from_spec(spec)
@@ -283,7 +307,7 @@ def main():
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(result)
-    if args.check and not args.inputs and args.schema == SCHEMA and args.output == OUTPUT:
+    if args.check and not args.inputs and not args.bridge and args.schema == SCHEMA and args.output == OUTPUT:
         path = Path(__file__).parent / 'templates/csharp.py'
         spec = importlib.util.spec_from_file_location('request_csharp', path)
         target = importlib.util.module_from_spec(spec)

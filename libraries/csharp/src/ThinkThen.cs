@@ -8,7 +8,6 @@ using System.Threading;
 namespace ThinkThen;
 
 public enum Outcome { No = 0, Yes = 1, NotSure = 2 }
-public enum FailureKind { Usage = 1, Backend = 2, Deadline = 3, Local = 4, Cancelled = 5, Defect = 6 }
 [StructLayout(LayoutKind.Sequential)]
 public struct Answer {
     public int Outcome;

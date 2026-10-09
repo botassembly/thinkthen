@@ -144,7 +144,7 @@ def abi_plants(header):
         config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
         env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
-        plants = [('field order', 'NativeAbi0.cs', 'public IntPtr data;\n public nuint len;', 'public nuint len;\n public IntPtr data;'),
+        plants = [('field order', 'NativeBridge.g.cs', 'public IntPtr data;\n public nuint len;', 'public nuint len;\n public IntPtr data;'),
                   ('enum', 'Complete.cs', 'enum Function { Decide,', 'enum Function { Decide=19,'),
                   ('return', 'NativeDetails.cs', 'extern int thinkthen_result_rank_member_details(', 'extern long thinkthen_result_rank_member_details(')]
         for name, file, before, after in plants:

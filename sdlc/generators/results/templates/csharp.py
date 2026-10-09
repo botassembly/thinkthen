@@ -359,11 +359,74 @@ def render_inputs(schema):
                 'ulong': 'writer.WriteNumberValue(' + expr + ');',
                 'uint': 'writer.WriteNumberValue(' + expr + ');',
                 'double': 'writer.WriteNumberValue(' + expr + ');'}.get(typ, expr + '.WriteTo(writer);')
+    reading = set()
+    def child_key(key, index, alt):
+        tag = next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
+        return key + '_' + (tag if tag else 'Alternative' + str(index))
+    def mark_read(value, path, wrapper=False):
+        if isinstance(value, bool):
+            return
+        if '$ref' in value:
+            key = value['$ref'].removeprefix('#/$defs/')
+            if key not in reading:
+                reading.add(key)
+                mark_read(definitions[key], key, True)
+            return
+        if isinstance(value.get('type'), list):
+            mark_read({'anyOf': [{**value, 'type': kind} for kind in value['type']]}, path + ('_Value' if wrapper else ''))
+            return
+        alternatives = value.get('oneOf', value.get('anyOf'))
+        if alternatives:
+            reading.add(path)
+            for index, alt in enumerate(alternatives):
+                child = child_key(path, index, alt)
+                reading.add(child)
+                mark_read(alt, child, True)
+        elif 'properties' in value:
+            reading.add(path)
+            for member, prop in value['properties'].items():
+                mark_read(prop, path + '_' + member)
+        elif value.get('type') == 'array':
+            mark_read(value.get('items', {}), path + ('_Value_Item' if wrapper else '_Item'))
+        elif isinstance(value.get('additionalProperties'), dict):
+            mark_read(value['additionalProperties'], path + ('_Value_Entry' if wrapper else '_Entry'))
+    mark_read({'$ref': '#/$defs/RequestDefinition'}, 'RequestDefinition')
+    def read(value, expr, path, depth=0):
+        typ = cs_type(value, path)
+        if typ.startswith('Input'):
+            return typ + '.Read(' + expr + ')'
+        if typ.startswith('IReadOnlyList'):
+            item = 'item' + str(depth)
+            return 'Array.AsReadOnly(' + expr + '.EnumerateArray().Select(' + item + ' => ' + read(value.get('items', {}), item, path + '_Item', depth + 1) + ').ToArray())'
+        if typ.startswith('IReadOnlyDictionary'):
+            item = 'entry' + str(depth)
+            return 'new System.Collections.ObjectModel.' + typ.replace('IReadOnlyDictionary', 'ReadOnlyDictionary') + '(' + expr + '.EnumerateObject().ToDictionary(' + item + ' => ' + item + '.Name, ' + item + ' => ' + read(value['additionalProperties'], item + '.Value', path + '_Entry', depth + 1) + '))'
+        return expr + {'string': '.GetString()!', 'bool': '.GetBoolean()', 'long': '.GetInt64()', 'ulong': '.GetUInt64()', 'uint': '.GetUInt32()', 'double': '.GetDouble()'}.get(typ, '.Clone()')
+    def matches(value, expr):
+        if isinstance(value, bool):
+            return 'true'
+        if '$ref' in value:
+            return matches(definitions[value['$ref'].removeprefix('#/$defs/')], expr)
+        kinds = {'string': 'String', 'boolean': 'True || ' + expr + '.ValueKind == JsonValueKind.False', 'integer': 'Number', 'number': 'Number', 'object': 'Object', 'array': 'Array', 'null': 'Null'}
+        checks = []
+        if value.get('type') in kinds:
+            checks.append('(' + expr + '.ValueKind == JsonValueKind.' + kinds[value['type']] + ')')
+        if 'const' in value:
+            checks.append(expr + '.GetRawText() == ' + quote(json.dumps(value['const'], ensure_ascii=False, separators=(',', ':'))))
+        if 'properties' in value:
+            checks.append(expr + '.ValueKind == JsonValueKind.Object')
+            for member in value.get('required', []):
+                checks.append(expr + '.TryGetProperty(' + quote(member) + ', out _)')
+            for member, prop in value['properties'].items():
+                if isinstance(prop, dict) and 'const' in prop:
+                    checks.append(expr + '.GetProperty(' + quote(member) + ').GetRawText() == ' + quote(json.dumps(prop['const'], separators=(',', ':'))))
+        return ' && '.join(checks) if checks else 'true'
     header = '''// Generated from the Rust-derived Request schema; do not edit.
 #nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 namespace ThinkThen.Inputs;
 public readonly struct InputPresence<T> {
@@ -373,6 +436,7 @@ public readonly struct InputPresence<T> {
     public static implicit operator InputPresence<T>(T value) => new(value);
 }
 public abstract class InputDocument {
+    protected JsonElement? ParsedDocument { get; init; }
     public abstract void Write(Utf8JsonWriter writer);
     internal byte[] ToBytes() { using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream)) Write(writer); return stream.ToArray(); }
 }
@@ -387,7 +451,13 @@ public abstract class InputDocument {
         typ = cname(key)
         alternatives = value.get('oneOf', value.get('anyOf'))
         if alternatives and 'properties' not in value:
-            output.append('public abstract class ' + typ + ' : InputDocument { private protected ' + typ + '() {} }')
+            declaration = 'public abstract class ' + typ + ' : InputDocument { private protected ' + typ + '() {}'
+            if key in reading:
+                declaration += ' internal static ' + typ + ' Read(JsonElement value) { '
+                for index, alt in enumerate(alternatives):
+                    declaration += 'if (' + matches(alt, 'value') + ') return ' + cname(child_key(key, index, alt)) + '.Read(value); '
+                declaration += 'throw new JsonException("Authored data does not match the native Request schema."); }'
+            output.append(declaration + ' }')
             for index, alt in enumerate(alternatives):
                 tag = next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
                 child = key + '_' + (tag if tag else 'Alternative' + str(index))
@@ -422,7 +492,22 @@ public abstract class InputDocument {
             ptype = cs_type(stripped, key + '_Value')
             lines.append('public required ' + ptype + ' Value { get; init; }')
             writes = [emit(stripped, 'Value', key + '_Value')]
-        lines.append('public override void Write(Utf8JsonWriter writer) { ' + ' '.join(writes) + ' }')
+        if key in reading:
+            assignments = ['ParsedDocument = value.Clone()']
+            if properties is not None:
+                for member, prop in properties.items():
+                    if isinstance(prop, dict) and 'const' in prop:
+                        continue
+                    ptype = cs_type(prop, key + '_' + member)
+                    pname = name(member)
+                    expr = read(prop, 'value.GetProperty(' + quote(member) + ')', key + '_' + member)
+                    if member not in required:
+                        expr = 'value.TryGetProperty(' + quote(member) + ', out _) ? (InputPresence<' + ptype + '>)(' + expr + ') : default'
+                    assignments.append(pname + ' = ' + expr)
+            elif value.get('type') != 'null' and 'const' not in value:
+                assignments.append('Value = ' + read(stripped, 'value', key + '_Value'))
+            lines.append('internal ' + ('new ' if '_base' in value else '') + 'static ' + typ + ' Read(JsonElement value) => new() { ' + ', '.join(assignments) + ' };')
+        lines.append('public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { parsed.WriteTo(writer); return; } ' + ' '.join(writes) + ' }')
         lines.append('}')
         output.append('\n'.join(lines))
     return header + '\n\n'.join(output) + '\n'

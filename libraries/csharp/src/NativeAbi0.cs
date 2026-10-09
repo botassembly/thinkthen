@@ -1,11 +1,6 @@
 using System.Runtime.InteropServices;
 namespace ThinkThen;
 [StructLayout(LayoutKind.Sequential)]
-internal struct StringV1 {
- public IntPtr data;
- public nuint len;
-}
-[StructLayout(LayoutKind.Sequential)]
 internal struct StringsV1 {
  public IntPtr data;
  public nuint len;

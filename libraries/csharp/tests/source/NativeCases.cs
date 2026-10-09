@@ -75,7 +75,7 @@ static class AsyncFixtureCases
         Throttle = Get(value,"throttle").ValueKind == JsonValueKind.Number ? Get(value,"throttle").GetInt64() : default(ThinkThen.Inputs.InputPresence<long>),
         RefreshCache = Get(value,"refresh_cache").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<bool>) : Yes(value,"refresh_cache")
     };
-    static ThinkThen.Inputs.InputRequestQuestion Question(JsonElement data)
+    static ThinkThen.Inputs.InputRequestQuestion Question(Engine engine,JsonElement data)
     {
         string reference = Text(data,"reference");
         switch(Text(data,"loader")) {
@@ -93,8 +93,12 @@ static class AsyncFixtureCases
             Find = Get(q,"find").ValueKind == JsonValueKind.String ? new ThinkThen.Inputs.InputAuthoredQuestionTextAlternative0 { Value = Text(q,"find") } : new ThinkThen.Inputs.InputAuthoredQuestionTextAlternative1 { Value = Get(q,"find").Clone() },
             Name = String(q,"name"), WordingVersion = Get(q,"wording_version").ValueKind == JsonValueKind.Number ? Get(q,"wording_version").GetInt64() : default(ThinkThen.Inputs.InputPresence<long>)
         } } };
-        File.WriteAllText("async-fixture-question.json", Get(data,"raw").ValueKind == JsonValueKind.String ? Text(data,"raw") : Get(data,"question").GetRawText());
-        return new ThinkThen.Inputs.InputRequestQuestionFile { Path = "async-fixture-question.json" };
+        var kind = Text(data,"verb") switch {
+            "annotate" => AuthoredQuestionKind.Set, "rank" => Get(q,"questions").ValueKind!=JsonValueKind.Undefined ? AuthoredQuestionKind.RankSet : AuthoredQuestionKind.Rank,
+            "choose" => Get(q,"options").ValueKind==JsonValueKind.Undefined ? AuthoredQuestionKind.DynamicChoose : AuthoredQuestionKind.Atomic,
+            "find" => AuthoredQuestionKind.Find, "recognize" => AuthoredQuestionKind.Recognize, "relate" => AuthoredQuestionKind.Relate, _ => AuthoredQuestionKind.Atomic
+        };
+        return engine.ParseQuestion(kind,Get(data,"raw").ValueKind==JsonValueKind.String ? Text(data,"raw") : q.GetRawText());
     }
     static ThinkThen.Inputs.InputRequestInput Source(JsonElement data)
     {
@@ -151,10 +155,13 @@ static class AsyncFixtureCases
         using var document = JsonDocument.Parse(raw); var data = document.RootElement; Thread? signal = null;
         try {
             using var settings = JsonDocument.Parse(Text(data,"engine_settings")); using var engine = Engine.Open(Settings(settings.RootElement));
-            var question = Question(data); var input = Yes(data,"owned_jsonl") ? null : Source(data); using var cancel = new CancellationTokenSource();
+            var question = Question(engine,data); var input = Yes(data,"owned_jsonl") ? null : Source(data); using var cancel = new CancellationTokenSource();
             string injection = Text(Get(data,"operation"),"injection"); if (injection == "cancel_token") cancel.Cancel();
             if (Yes(data,"held_cancel")) { signal = new Thread(() => { if (Console.Read() != '!') throw new Exception("missing cancellation signal"); cancel.Cancel(); Console.WriteLine("cancel-fired"); Console.Out.Flush(); }); signal.Start(); }
+            bool nullContext = Yes(data,"context_present") && Get(data,"context").ValueKind==JsonValueKind.Null;
+            if (nullContext) input = new ThinkThen.Inputs.InputRequestInputJson { Value = JsonSerializer.SerializeToElement(new Dictionary<string,object?> { ["item"] = Get(data,"items")[0].Clone(), ["context"] = null }) };
             var context = Get(data,"shared_context"); var options = new ThinkThen.Inputs.InputRequestOptions {
+                Field = nullContext ? new[] { "/item" } : default(ThinkThen.Inputs.InputPresence<IReadOnlyList<string>>), ContextField = nullContext ? "/context" : default(ThinkThen.Inputs.InputPresence<string>),
                 Attempts = true, None = Text(data,"verb") == "find" ? Yes(Get(data,"question"),"none") : default(ThinkThen.Inputs.InputPresence<bool>), Context = context.ValueKind == JsonValueKind.String ? context.GetString()! : default(ThinkThen.Inputs.InputPresence<string>),
                 DeadlineMs = injection == "expired_deadline" ? 0L : default(ThinkThen.Inputs.InputPresence<long>)
             };
@@ -221,6 +228,7 @@ static class AsyncFixtureCases
                     ["answered_by"]=source?.AnsweredBy,["observations"]=detail.Observations.Count,["sources"]=detail.QuestionSources.Count,["input"]=Optional(detail.Input),
                     ["observation_ids"]=detail.Observations.OfType<ThinkThen.Results.ObservationObservationId>().Select(v=>v.ObservationId).ToArray(),["detail_inputs"]=Array.Empty<object>(),["answer_kind"]="YesNo"
                 };
+                Location(row,Optional(detail.InputSource));
                 if(detail.Probabilities.State==ThinkThen.Results.PresenceState.Value && detail.Probabilities.Value is ThinkThen.Results.SessionProbabilitiesYesNo odds)row["probability"]=odds.Value;
                 foreach(var author in Author(detail.Question))row[author.Key]=author.Value;
                 all.Add(row);
