@@ -2,12 +2,7 @@
 .tt_complete_call <- function(verb, question, input, attempts = FALSE, deadline_ms = NULL, cancel = FALSE, context = NULL) {
   request <- jsonlite::toJSON(list(verb = verb, question = question, input = input, attempts = attempts,cancel=cancel,context=context), auto_unbox = TRUE, null = "null", digits = NA)
   held <- .tt_call(tt_complete_native(request, deadline_ms, NULL))
-  payload <- jsonlite::fromJSON(held$value, simplifyVector = FALSE)
-  rows <- payload$results
-  if (verb %in% c("find", "relate")) rows <- list(rows)
-  kind <- paste0(toupper(substr(verb, 1L, 1L)), substr(verb, 2L, nchar(verb)), "Result")
-  structure(list(results = lapply(rows, function(row) .tt_complete_decode(kind, row, TRUE)),
-                 facts = .tt_complete_decode("Facts", payload$facts, TRUE), ordinals = payload$ordinals, inputs = lapply(payload$inputs, function(v) .tt_complete_decode("NativeInput", v, TRUE))), class = "thinkthen_complete_call")
+  held$value
 }
 
 tt_decide_complete <- function(question, input, ...) .tt_complete_call("decide", question, input, ...)

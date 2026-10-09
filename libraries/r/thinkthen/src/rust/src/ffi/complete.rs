@@ -5,6 +5,8 @@ use extendr_api::prelude::*;
 #[extendr]
 fn tt_complete_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed<List> {
     let request = text_of(&request, "complete request")?;
+    let request = crate::complete::parse(&request).map_err(|e| crate::carry(&e))?;
+    let verb = request.verb.clone();
     let done = calls::call_owned(
         deadline_of(&deadline)?,
         &interrupt_pending,
@@ -12,11 +14,8 @@ fn tt_complete_native(request: Robj, deadline: Robj, completion: Robj) -> Crosse
         None,
         move |engine, options, account| {
             let started = account.start();
-            let result = crate::complete::execute(
-                engine,
-                crate::complete::parse(&request).map_err(|e| crate::carry(&e))?,
-                options.surface(thinkthen::Surface::R),
-            );
+            let result =
+                crate::complete::execute(engine, request, options.surface(thinkthen::Surface::R));
             match result {
                 Ok((value, facts)) => {
                     account.include(started, &facts)?;
@@ -31,7 +30,17 @@ fn tt_complete_native(request: Robj, deadline: Robj, completion: Robj) -> Crosse
             }
         },
     )?;
-    calls::render::envelope(done)
+    let typed = done
+        .result
+        .as_ref()
+        .ok()
+        .map(|text| crate::native_results::packet(text, &verb))
+        .transpose()?;
+    let envelope = calls::render::envelope(done)?;
+    Ok(list!(
+        tt_envelope = envelope.elt(0)?,
+        tt_complete_value = typed.unwrap_or_else(|| ().into())
+    ))
 }
 
 #[extendr]

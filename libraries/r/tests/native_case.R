@@ -24,6 +24,14 @@ tryCatch({
   } else done <- method(document$question, document$input, attempts = TRUE, deadline_ms = document$deadline_ms,cancel=isTRUE(document$cancel),context=document$shared_context)
   stopifnot(inherits(done$facts$call_id,"thinkthen_CallId"))
   plain <- get(".tt_complete_plain",asNamespace("thinkthen"))
+  stopifnot(inherits(done, "thinkthen_complete_call"))
+  for (result in done$results) {
+    stopifnot(inherits(result, "thinkthen_complete"), inherits(result$answer_id, "thinkthen_AnswerId"))
+    retained <- result$value
+    gc()
+    stopifnot(identical(result[["value"]], retained),
+              identical(capture.output(print(result)), "<complete carrier: content withheld>")))
+  }
   facts <- done$facts
   encoded <- plain(facts)
   stopifnot(is.numeric(facts$largest_request_bytes), is.null(facts$largest_request_estimated_input_tokens) || is.numeric(facts$largest_request_estimated_input_tokens), is.character(facts$token_estimate_method))

@@ -249,6 +249,14 @@ def prepare(definitions):
 
 
 def generated(schema, language="csharp"):
+    if language == "r":
+        path = Path(__file__).parent / "templates/r.py"
+        spec = importlib.util.spec_from_file_location("result_r", path)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        return subprocess.run(["rustfmt", "--edition", "2024", "--emit", "stdout"],
+                              input=target.render(prepare(graph(schema, target.ROOTS))),
+                              text=True, capture_output=True, check=True).stdout
     if language == "c":
         path = Path(__file__).parent / "templates/c.py"
         spec = importlib.util.spec_from_file_location("result_c", path)
@@ -303,9 +311,14 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "r":
+        if args.inputs or args.bridge:
+            parser.error("R target generates native result conversions only")
+        if args.output == OUTPUT:
+            args.output = ROOT / "libraries/r/thinkthen/src/rust/src/results_generated.rs"
     if args.target == "c":
         if args.inputs or args.bridge:
             parser.error("C target generates result views only")
@@ -325,7 +338,7 @@ def main():
         result = generated(json.loads(args.schema.read_text()), args.target)
     if args.check:
         if not args.output.exists() or args.output.read_text() != result:
-            print('generated C# results differ; run sdlc/generators/results/generate.py',
+            print('generated results differ; run sdlc/generators/results/generate.py',
                   file=sys.stderr)
             return 1
     else:
