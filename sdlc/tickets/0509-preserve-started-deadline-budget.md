@@ -1,12 +1,14 @@
 # 0509 — preserve-started-deadline-budget
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 4bd15dd4a, accept
 
 Reviews: revision 70f5b1115, accept
+
+Landed: 0f05a78
 
 ## Outcome
 
