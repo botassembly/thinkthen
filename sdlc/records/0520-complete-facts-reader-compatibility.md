@@ -29,6 +29,8 @@ The metadata repair starts from `6fa915274bc2704d32090eccc2eb72c08a45c7ef`. The 
 
 ## Limits and lessons
 
+Combined qualification at `dfc8094b3aa3a50ced84b49dd16f0bf2d39d5a28` passed `sdlc/scripts/lint`, `test` and `spec`. The owned run in lane 2 recorded `lint 0`, `test 0` and `spec 0` under `target/0520-combined-final/` and exited successfully. This includes the installed-package smoke checks. No candidate, release workflow or publication ran.
+
 Ordinary native calls emit numeric token estimates. The current checked arithmetic can return null only for a request byte count beyond practical body limits. Saved snapshots cover that nullable type boundary; no enormous body was allocated, and image calls are not claimed to produce null. Actual calls cover the measurements and persistence observations the engine emits.
 
 This defect came from repeated result contracts drifting behind the engine serializer. Existing raw native checks missed rejection by public eager and terminal readers. Keep those public consumer assertions when generated results replace the handwritten copies under `sdlc/tickets/0513-generated-typed-results-with-presence.md`. This repair does not begin that migration. The coordinator owns whole-repository qualification and landing.
