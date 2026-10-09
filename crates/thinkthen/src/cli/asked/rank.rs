@@ -20,7 +20,15 @@ pub(crate) fn rank(
         Some(admitted) => admitted.resolve_cli_rank(&typed),
         None => crate::cli_atomic::rank(&arguments.question, false, &typed),
     }
-    .map_err(Failure::from)?;
+    .map_err(|error| match Failure::from(error) {
+        Failure::Question(crate::core::QuestionFileError::VerbMismatch { held, .. }) => {
+            Failure::QuestionKind {
+                command: "rank",
+                held: held.word(),
+            }
+        }
+        other => other,
+    })?;
     Ok((
         prepared.resolved,
         FileTier {
