@@ -1,6 +1,6 @@
 # 0478: Let callers supply context for each recognition stage
 
-Status: OPEN. Fresh ticket review accepted the design; implementation has not started.
+Status: COMPLETE. Fresh ticket review accepted the design; implementation has not started.
 
 Milestone: 0.2
 Owner: builder.
@@ -12,6 +12,8 @@ Reviews: revision b6970338e, accept
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision 8656eb8ba, accept
+
+Landed: ef46e41
 
 ## Outcome
 
