@@ -1,0 +1,81 @@
+//! Installed-header ownership and immediate control refusals.
+use super::*;
+
+#[test]
+fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
+    let backend = Backend::start().expect("loopback");
+    let output = run_with(
+        &compile(&crate_dir().join("tests/c/session.c")),
+        &format!("{}/generic/v1", backend.origin()),
+        b"",
+        &[("SESSION_CONTROLS", Path::new("1"))],
+    );
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(backend.count(), 0, "malformed controls send nothing");
+}
+
+#[test]
+fn session_owns_inputs_engine_and_transferred_packets() {
+    let backend = Backend::start().expect("loopback");
+    let output = run(
+        &compile(&crate_dir().join("tests/c/session.c")),
+        &format!("{}/generic/v1", backend.origin()),
+        b"",
+    );
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(backend.count(), 1, "only accepted owned input sends");
+}
+
+#[test]
+fn session_cancel_and_free_return_before_the_held_provider_is_released() {
+    let gate = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let worker_gate = gate.clone();
+    let (arrived, arrival) = std::sync::mpsc::channel();
+    let (answered, answer) = std::sync::mpsc::channel();
+    let backend = conformance_backend::Listener::answering(move |body| {
+        arrived.send(()).expect("arrival signal");
+        super::sources::all_no_answers(body)
+            .after_release(worker_gate.clone())
+            .notifying(answered.clone())
+    })
+    .expect("owned held listener");
+    let base = backend.base().to_owned();
+    let mut child = start_with(
+        &compile(&crate_dir().join("tests/c/session.c")),
+        &base,
+        &[("SESSION_HELD", Path::new("1"))],
+    );
+    let mut input = child.stdin.take().expect("input");
+    let mut output = BufReader::new(child.stdout.take().expect("output"));
+    arrival
+        .recv_timeout(Duration::from_secs(60))
+        .expect("provider holds the accepted request");
+    input.write_all(b"c").expect("cancel signal");
+    for expected in ["cancelled\n", "freed\n"] {
+        let mut line = String::new();
+        output.read_line(&mut line).expect("operation return");
+        assert_eq!(
+            line, expected,
+            "operation must return while the provider stays held"
+        );
+    }
+    gate.wait();
+    answer
+        .recv_timeout(Duration::from_secs(60))
+        .expect("released listener delivered its response");
+    input.write_all(b"r").expect("exit signal");
+    drop(input);
+    let result = finished(child);
+    assert_eq!(
+        (result.status.code(), text(&result.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(backend.count(), 1);
+    drop(backend); // Retire and join all fixture listener workers.
+}
