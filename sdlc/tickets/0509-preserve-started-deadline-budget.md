@@ -17,3 +17,7 @@ Composed Request calls preserve the caller's configured deadline budget in error
 - Changes: crates/thinkthen/src/public/options.rs, crates/thinkthen/src/public/options/tests.rs and its affected test modules; crates/thinkthen/src/engine/mod.rs only if necessary to preserve the existing Deadline value. Existing outside-in deadline coverage and one new record under sdlc/records/0509-preserve-started-deadline-budget.md.
 - Proof: Run the unchanged installed SQLite held-call test against a rebuilt artifact with 0499 integrated; exercise started relative deadlines and repeated starts, absolute deadlines, clearing and zero sends. Run policy and affected tests before fresh code review; full lint, tests and specifications qualify the landing.
 - Defers: New deadline controls, SQL-specific diagnostics, release operations and unrelated binding migrations.
+
+## Progress
+
+- 2026-10-08 started
