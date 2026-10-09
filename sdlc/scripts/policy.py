@@ -617,22 +617,32 @@ def lock_tree(lock: dict, roots: tuple[str, ...] = ("thinkthen",),
     return reached
 
 
+# The two-suite decision moves these reviewed full shared-case tests to release.
+# Exact file/name pairs keep the release prefix from hiding arbitrary tests.
+RELEASE_CASES = {
+    "libraries/c/tests/door/cases.rs": "release_only_every_applicable_shared_case_passes_through_the_door",
+    "libraries/c/tests/door/bytes.rs": "release_only_the_doors_bare_values_are_the_commands_bytes",
+    "crates/thinkthen/tests/polars/cases.rs": "release_only_every_shared_case_the_door_carries_matches_the_slice_form",
+}
+
+
 def binding_test_failures(relative: str, tokens: list[str], allowed_ignore: str | None = None) -> list[str]:
-    """R2-28: no binding test is ignored except one named stress test; no early return."""
+    """R2-28: only reviewed release cases and the named stress test may be ignored; no early return."""
     held = []
     allowed_seen = False
     for place in range(len(tokens)):
         attribute = tokens[place:place + 3]
         if attribute == ["#", "[", "ignore"]:
             close = tokens.index("]", place + 3) if "]" in tokens[place + 3:] else len(tokens)
-            approved = (relative == POLARS_STRESS and allowed_ignore == POLARS_STRESS_FUNCTION
-                        and not allowed_seen
-                        and tokens[place - 4:place] == ["#", "[", "test", "]"]
-                        and tokens[place + 3:close] == ["="]
-                        and tokens[close + 1:close + 3] == ["fn", allowed_ignore])
-            if approved:
+            named = tokens[close + 1:close + 3]
+            stress = (relative == POLARS_STRESS and allowed_ignore == POLARS_STRESS_FUNCTION
+                      and not allowed_seen and named == ["fn", allowed_ignore])
+            release = relative in RELEASE_CASES and named == ["fn", RELEASE_CASES[relative]]
+            approved = (tokens[place - 4:place] == ["#", "[", "test", "]"]
+                        and tokens[place + 3:close] == ["="] and (stress or release))
+            if approved and stress:
                 allowed_seen = True
-            else:
+            if not approved:
                 held.append(f"{relative} ignores a test")
         if attribute != ["#", "[", "test"] or "{" not in tokens[place:]:
             continue
@@ -1005,7 +1015,7 @@ def check_polars_feature() -> None:
         allowed = POLARS_STRESS_FUNCTION if relative == POLARS_STRESS else None
         for failure in binding_test_failures(relative, rust_tokens(path.read_text(encoding="utf-8")), allowed):
             fail("polars", failure)
-    if not binding_test_failures("planted.rs", rust_tokens("#[test]\n#[ignore]\nfn planted() {}\n")):
+    if not binding_test_failures("planted.rs", rust_tokens("#[test]\n#[ignore]\nfn release_only_planted() {}\n")):
         fail("polars", "an ignored Polars test is refused")
     stress = (REPO / POLARS_STRESS).read_text(encoding="utf-8")
     extra = stress + "\n#[test]\n#[ignore]\nfn planted() { assert!(true); }\n"
@@ -1016,6 +1026,12 @@ def check_polars_feature() -> None:
         fail("polars", "the approved name in another file is refused")
     if not binding_test_failures(POLARS_STRESS, rust_tokens(sample.replace(POLARS_STRESS_FUNCTION, "planted")), POLARS_STRESS_FUNCTION):
         fail("polars", "another ignored name in the approved file is refused")
+    for relative, name in RELEASE_CASES.items():
+        sample = f'#[test]\n#[ignore = "release"]\nfn {name}() {{ assert!(true); }}\n'
+        if (binding_test_failures(relative, rust_tokens(sample))
+                or not binding_test_failures("planted.rs", rust_tokens(sample))
+                or not binding_test_failures(relative, rust_tokens(sample.replace(name, "release_only_planted")))):
+            fail("polars", "only the reviewed release file/name pairs may ignore a test")
     for rung in RUNGS:
         if rung_failures(rung, (REPO / "sdlc/scripts" / rung).read_text(encoding="utf-8")):
             fail("polars", f"sdlc/scripts/{rung} builds with every feature, and Polars belongs to its lane")
