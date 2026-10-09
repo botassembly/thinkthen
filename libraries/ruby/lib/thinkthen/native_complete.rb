@@ -13,13 +13,13 @@ module ThinkThen
           call = @engine.__send__(:crossing, 'complete', nil, request, cancel, deadline_ms)
           rescue ThinkThen::Error => error
             snapshot=error.instance_variable_get(:@native_complete)
-            error.instance_variable_set(:@complete,Complete.decode('CallError',JSON.parse(snapshot))) if snapshot
+            error.instance_variable_set(:@complete,Complete.decode('CallError',JSON.parse(snapshot),preserve_unknown: true)) if snapshot
             raise
           end
           held = JSON.parse(call.value)
           rows = held['results'].is_a?(Array) ? held['results'] : [held['results']]
-          Completed.new(results: rows.map { |row| Complete.decode(verb.capitalize + 'Result', row) }.freeze,
-                        facts: Complete.decode('Facts', held['facts']), ordinals: held['ordinals'].freeze, inputs: held['inputs'].map { |v| Complete.decode('NativeInput',v) }.freeze).freeze
+          Completed.new(results: rows.map { |row| Complete.decode(verb.capitalize + 'Result', row,preserve_unknown: true) }.freeze,
+                        facts: Complete.decode('Facts', held['facts'],preserve_unknown: true), ordinals: held['ordinals'].freeze, inputs: held['inputs'].map { |v| Complete.decode('NativeInput',v,preserve_unknown: true) }.freeze).freeze
         end
       end
       %w[decide choose tag score filter annotate].each do |verb|
@@ -69,17 +69,17 @@ module ThinkThen
         return nil if @ended
         event=JSON.parse(@native.pull)
         if event['row']
-          return BatchRow.new(result:Complete.decode(@kind,event['row']),ordinal:event['ordinal'],input:Complete.decode('NativeInput',event['input'])).freeze
+          return BatchRow.new(result:Complete.decode(@kind,event['row'],preserve_unknown: true),ordinal:event['ordinal'],input:Complete.decode('NativeInput',event['input'],preserve_unknown: true)).freeze
         end
         close
         if event['error']
-          error=event['error'];complete=Complete.decode('CallError',error)
+          error=event['error'];complete=Complete.decode('CallError',error,preserve_unknown: true)
           @facts=complete.facts unless complete.facts.equal?(ABSENT)
           raised=ThinkThen.const_get(error['kind'].capitalize+'Error').new(error['message'],error['kind'],error['retryable'])
           raised.instance_variable_set(:@complete,complete)
           raise raised
         end
-        @facts=Complete.decode('Facts',event['facts']);nil
+        @facts=Complete.decode('Facts',event['facts'],preserve_unknown: true);nil
       end
       def close
         @ended=true;@native.close

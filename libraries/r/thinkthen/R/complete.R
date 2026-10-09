@@ -113,35 +113,45 @@
 .tt_complete_has <- function(v, name) name %in% names(v)
 .tt_complete_object <- function(v) is.list(v) && (length(v) == 0L || !is.null(names(v))) && !anyDuplicated(names(v))
 
-.tt_complete_decode <- function(kind, value) {
+.tt_complete_decode <- function(kind, value, preserve_unknown = FALSE) {
   fail <- .tt_complete_invalid
   if (kind %in% names(.tt_complete_aliases) || grepl("|", kind, fixed = TRUE)) {
     variants <- .tt_complete_aliases[[kind]]
     if (is.null(variants)) variants <- strsplit(kind, "|", fixed = TRUE)[[1L]]
+    if (preserve_unknown && .tt_complete_object(value)) {
+      identities <- lapply(variants, function(v) {
+        shape <- .tt_complete_models[[v]]
+        sub("\\?$", "", names(shape))[unlist(shape) %in% .tt_complete_ids]
+      })
+      shared <- Reduce(intersect, identities)
+      if (sum(vapply(identities, function(keys) any(setdiff(keys, shared) %in% names(value)), TRUE)) > 1L) fail()
+    }
     for (one in variants) {
-      decoded <- tryCatch(list(ok = .tt_complete_decode(one, value)), error = function(e) NULL)
+      decoded <- tryCatch(list(ok = .tt_complete_decode(one, value, preserve_unknown)), error = function(e) NULL)
       if (!is.null(decoded)) return(decoded$ok)
     }
     fail()
   }
   if (startsWith(kind, "[")) {
     if (!is.list(value) || !is.null(names(value))) fail()
-    return(lapply(value, function(v) .tt_complete_decode(substr(kind, 2L, nchar(kind)-1L), v)))
+    return(lapply(value, function(v) .tt_complete_decode(substr(kind, 2L, nchar(kind)-1L), v, preserve_unknown)))
   }
   if (startsWith(kind, "{")) {
     if (!.tt_complete_object(value)) fail()
-    return(lapply(value, function(v) .tt_complete_decode(substr(kind, 2L, nchar(kind)-1L), v)))
+    return(lapply(value, function(v) .tt_complete_decode(substr(kind, 2L, nchar(kind)-1L), v, preserve_unknown)))
   }
   if (kind %in% names(.tt_complete_models)) {
     shape <- .tt_complete_models[[kind]]
-    if (!.tt_complete_object(value) || any(!names(value) %in% sub("\\?$", "", names(shape)))) fail()
-    held <- list()
+    if (!.tt_complete_object(value)) fail()
+    extra <- setdiff(names(value), sub("\\?$", "", names(shape)))
+    if (!preserve_unknown && length(extra)) fail()
+    held <- lapply(value[extra], .tt_complete_json)
     for (key in names(shape)) {
       name <- sub("\\?$", "", key)
       if (!.tt_complete_has(value, name)) {
         if (!endsWith(key, "?")) fail()
         held[name] <- list(.tt_absent)
-      } else held[name] <- list(.tt_complete_decode(shape[[key]], value[[name]]))
+      } else held[name] <- list(.tt_complete_decode(shape[[key]], value[[name]], preserve_unknown))
     }
     .tt_complete_check(kind, value)
     return(structure(held, class = c(paste0("thinkthen_", kind), "thinkthen_complete")))

@@ -6,8 +6,8 @@
   rows <- payload$results
   if (verb %in% c("find", "relate")) rows <- list(rows)
   kind <- paste0(toupper(substr(verb, 1L, 1L)), substr(verb, 2L, nchar(verb)), "Result")
-  structure(list(results = lapply(rows, function(row) .tt_complete_decode(kind, row)),
-                 facts = .tt_complete_decode("Facts", payload$facts), ordinals = payload$ordinals, inputs = lapply(payload$inputs, function(v) .tt_complete_decode("NativeInput", v))), class = "thinkthen_complete_call")
+  structure(list(results = lapply(rows, function(row) .tt_complete_decode(kind, row, TRUE)),
+                 facts = .tt_complete_decode("Facts", payload$facts, TRUE), ordinals = payload$ordinals, inputs = lapply(payload$inputs, function(v) .tt_complete_decode("NativeInput", v, TRUE))), class = "thinkthen_complete_call")
 }
 
 tt_decide_complete <- function(question, input, ...) .tt_complete_call("decide", question, input, ...)
@@ -35,14 +35,14 @@ print.thinkthen_complete_call <- function(x, ...) { cat('<CompleteCall: content 
     if (is.null(event)) return(NULL)
     state$pending <- FALSE
     event <- jsonlite::fromJSON(event,simplifyVector=FALSE)
-    if(!is.null(event$row)) return(structure(list(result=.tt_complete_decode(kind,event$row),ordinal=event$ordinal,input=.tt_complete_decode("NativeInput",event$input)),class="thinkthen_complete_row"))
+    if(!is.null(event$row)) return(structure(list(result=.tt_complete_decode(kind,event$row, TRUE),ordinal=event$ordinal,input=.tt_complete_decode("NativeInput",event$input, TRUE)),class="thinkthen_complete_row"))
     close()
     if(!is.null(event$error)) {
-      complete<-.tt_complete_decode("CallError",event$error)
+      complete<-.tt_complete_decode("CallError",event$error, TRUE)
       state$facts<-complete$facts
       stop(structure(list(message=event$error$message,kind=event$error$kind,retryable=event$error$retryable,complete=complete,call=NULL),class=c(paste0("thinkthen_",event$error$kind),"thinkthen_error","error","condition")))
     }
-    state$facts<-.tt_complete_decode("Facts",event$facts);NULL
+    state$facts<-.tt_complete_decode("Facts",event$facts, TRUE);NULL
   }
   pull <- function() {
     repeat {

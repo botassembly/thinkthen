@@ -509,7 +509,7 @@ export type RelationEntry = RelationSuccess | RelationFailure;
 export type Result = DecideResult | ChooseResult | TagResult | ScoreResult | FilterResult | RankResult | FindResult | AnnotateResult | RecognizeResult | RelateResult;
 export type SuccessValue = boolean | null | string | number | readonly string[];
 export type AnnotatedValue = boolean | null | string | number | readonly (string)[] | FailedField;
-export function decode<T extends keyof Models>(type: T, value: unknown): Models[T];
+export function decode<T extends keyof Models>(type: T, value: unknown, preserveUnknown?: boolean): Models[T];
 export interface Models {
   Position: Position;
   Usage: Usage;

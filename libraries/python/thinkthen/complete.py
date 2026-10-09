@@ -82,7 +82,7 @@ def _request(verb,question,source,attempts):
     return json.dumps({'verb':verb,'question':question.wire(),'input':wire,'attempts':attempts},ensure_ascii=False,separators=(',',':'))
 
 def _complete_error(error):
-    if hasattr(error,'native_complete'): error.complete=c.decode('CallError',json.loads(error.native_complete))
+    if hasattr(error,'native_complete'): error.complete=c.decode('CallError',json.loads(error.native_complete),preserve_unknown=True)
     return error
 
 @dataclass(frozen=True, repr=False)
@@ -99,15 +99,15 @@ class Batch:
     def __next__(self):
         if self._ended: raise StopIteration
         event=json.loads(self._native._pull())
-        if 'row' in event: return BatchRow(c.decode(self._kind,event['row']),event['ordinal'],c.decode('NativeInput',event['input']))
+        if 'row' in event: return BatchRow(c.decode(self._kind,event['row'],preserve_unknown=True),event['ordinal'],c.decode('NativeInput',event['input'],preserve_unknown=True))
         self._ended=True
         self.close()
         if 'error' in event:
             error=event['error'];cls={'usage':_thinkthen.UsageError,'backend':_thinkthen.BackendError,'local':_thinkthen.LocalError,'cancelled':_thinkthen.Cancelled,'deadline':_thinkthen.DeadlineError,'defect':_thinkthen.DefectError}[error['kind']]
-            raised=cls(error['message']);raised.complete=c.decode('CallError',error)
+            raised=cls(error['message']);raised.complete=c.decode('CallError',error,preserve_unknown=True)
             if raised.complete.facts is not c.ABSENT: self.facts=raised.complete.facts
             raised.kind=error['kind'];raised.retryable=error['retryable'];raise raised
-        self.facts=c.decode('Facts',event['facts']);raise StopIteration
+        self.facts=c.decode('Facts',event['facts'],preserve_unknown=True);raise StopIteration
     def close(self): self._ended=True;self._native.close()
     def cancel(self): self._native.cancel()
     def __enter__(self): return self
@@ -130,7 +130,7 @@ class Engine:
         result=call.value
         rows=result['results'] if isinstance(result['results'],list) else [result['results']]
         kind=verb.title()+'Result'
-        return Completed(tuple(c.decode(kind,row) for row in rows),c.decode('Facts',result['facts']), tuple(result['ordinals']), tuple(c.decode('NativeInput',v) for v in result['inputs']))
+        return Completed(tuple(c.decode(kind,row,preserve_unknown=True) for row in rows),c.decode('Facts',result['facts'],preserve_unknown=True), tuple(result['ordinals']), tuple(c.decode('NativeInput',v,preserve_unknown=True) for v in result['inputs']))
     def decide(self, question, source, **controls): return self._call('decide',question,source,**controls)
     def choose(self, question, source, **controls): return self._call('choose',question,source,**controls)
     def tag(self, question, source, **controls): return self._call('tag',question,source,**controls)
