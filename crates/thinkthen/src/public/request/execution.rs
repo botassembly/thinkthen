@@ -135,7 +135,7 @@ impl Engine {
     ) -> Result<RequestOutcome, Error> {
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
-        let controls = controls(options, environment.controls)?.started()?;
+        let mut controls = controls(options, environment.controls)?.started()?;
         controls.admission()?;
         let mut definition = request.resolve_question()?;
         request.admit_inline(&definition)?;
@@ -189,6 +189,7 @@ impl Engine {
         } else {
             Box::new(rows)
         };
+        controls.eager_inputs = eager && sink.is_some();
         let outcome = dispatch(
             &engine,
             request.request.call.function(),

@@ -513,6 +513,79 @@ fn file_selection_refuses_locationless_descriptors_before_sending_them() {
 }
 
 #[test]
+fn inline_provider_failure_preserves_completed_rows_and_final_facts() {
+    let calls = std::sync::atomic::AtomicUsize::new(0);
+    let listener = Listener::answering(move |body| {
+        if calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 0 {
+            response(body)
+        } else {
+            Canned::status(401, "refused")
+        }
+    })
+    .unwrap();
+    let mut arguments = request(RequestInput::Records {
+        items: vec![descriptor("first").item, descriptor("second").item],
+    })
+    .call
+    .arguments()
+    .clone();
+    arguments.options.batch = Some(RequestBatch::Count(1));
+    let session = engine(&listener)
+        .request_session(Request::new(RequestCall::Decide(arguments)))
+        .unwrap();
+    let packets = drain(&session);
+    let rows = packets
+        .iter()
+        .filter_map(|packet| match packet {
+            RequestSessionResult::Row(RequestSessionRow::Decision(row)) => Some(row),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(rows.len(), 1);
+    let QuestionInput::Record(original) = rows[0].original() else {
+        panic!("completed inline original")
+    };
+    assert_eq!(original.selected().to_json().unwrap(), "\"first\"");
+    let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+        panic!("joined provider failure")
+    };
+    assert!(terminal.error.is_some());
+    assert_eq!(terminal.facts.as_ref().unwrap().records(), 1);
+    assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 2);
+    assert_eq!(listener.count(), 2);
+}
+
+#[test]
+fn oversized_inline_session_refuses_the_whole_set_without_sending() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .model("fixed")
+        .unwrap()
+        .api_key("session-fixture")
+        .unwrap()
+        .no_cache()
+        .max_retries(0)
+        .max_requests(Some(1))
+        .unwrap()
+        .build()
+        .unwrap();
+    let session = engine
+        .request_session(request(RequestInput::Records {
+            items: vec![descriptor("first").item, descriptor("second").item],
+        }))
+        .unwrap();
+    let packets = drain(&session);
+    assert_eq!(listener.count(), 0);
+    assert_eq!(packets.len(), 1);
+    let RequestSessionResult::Terminal(terminal) = &packets[0] else {
+        panic!("whole-set admission refusal")
+    };
+    assert_eq!(terminal.error.as_ref().unwrap().kind(), ErrorKind::Usage);
+}
+
+#[test]
 fn inline_sessions_refuse_feed_controls_and_own_their_engine() {
     let engine = Engine::builder().no_cache().build().unwrap();
     let session = engine

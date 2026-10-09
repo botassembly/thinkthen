@@ -1,6 +1,7 @@
 //! Caller-side finite admission checks cancellation before pulling another input.
 use super::{CallOptions, CancelToken};
 use crate::public::{Engine, Error};
+type PreparedStream<'a, T> = Box<dyn Iterator<Item = Result<T, Error>> + 'a>;
 impl CallOptions<'_> {
     pub(crate) fn reader_admission(&self) -> Result<(), Error> {
         self.admission()?;
@@ -23,6 +24,20 @@ impl CallOptions<'_> {
     }
 }
 impl Engine {
+    pub(in crate::public) fn admit_prepared_stream<'a, T: 'a>(
+        &self,
+        records: impl Iterator<Item = Result<T, Error>> + 'a,
+        options: &CallOptions<'_>,
+    ) -> Result<PreparedStream<'a, T>, Error> {
+        if options.eager_inputs {
+            Ok(Box::new(
+                self.try_within_admission(records, options)?.map(Ok),
+            ))
+        } else {
+            Ok(Box::new(records))
+        }
+    }
+
     pub(in crate::public) fn within_admission<I: IntoIterator>(
         &self,
         records: I,

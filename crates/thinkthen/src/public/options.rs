@@ -102,6 +102,7 @@ enum Due {
 /// check stops the call, joins its workers, and then resumes on the caller.
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
+    pub(in crate::public) eager_inputs: bool,
     cancel: Option<&'a CancelToken>,
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
@@ -149,6 +150,7 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn new() -> Self {
         Self {
+            eager_inputs: false,
             cancel: None,
             due: None,
             check: None,

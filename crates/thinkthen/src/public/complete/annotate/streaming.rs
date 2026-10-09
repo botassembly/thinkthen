@@ -57,6 +57,7 @@ impl Engine {
                 .map_err(|error| error.at_record(at))?;
             Ok(Original { held, prepared })
         });
+        let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
             engine: Arc::clone(&engine),
             set: questions.0.clone(),

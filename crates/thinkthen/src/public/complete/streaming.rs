@@ -163,6 +163,7 @@ impl Engine {
                 .map_err(|error| error.at_record(at))?;
             Ok(Original { held, prepared })
         });
+        let records = self.admit_prepared_stream(records, &options)?;
         let asker = Records(Arc::clone(&engine), validates);
         let call = pull::Call {
             engine: Arc::clone(&engine),
