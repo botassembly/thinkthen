@@ -71,7 +71,7 @@ invisible(ended(single))
 receipt_caught <- 'function(e) { cat("CAUGHT", format(as.numeric(Sys.time()), digits = 15), "\\n"); cat("ON_INTERRUPT", tt_completion_read(h)$state, "\\n"); flush(stdout()) }'
 batch <- spawn(c('tt_engine(throttle = 6L)',
   'h <- tt_completion(); cat("BEFORE", tt_completion_read(h)$state, "\\n")',
-  sprintf('tryCatch(tt_decide("Q?", paste("batch", 1:200), batch = 2L, completion = h), interrupt = %s)', receipt_caught),
+  sprintf('tryCatch(tt_decide("Q?", paste("batch", 1:200), options = list(batch = 2L), completion = h), interrupt = %s)', receipt_caught),
   'for (i in 1:600) { a <- tt_completion_read(h); if (identical(a$state, "terminal")) break; Sys.sleep(0.05) }',
   'b <- tt_completion_read(h)',
   'reuse <- tryCatch(tt_decide("Q?", "reuse", completion = h), thinkthen_error = function(e) e$kind)',
@@ -115,9 +115,9 @@ check("the collected handle starts no later send", backend_count() == base + 1L)
 
 # R2-23: choose, score, and tag over 50 texts cross as one parallel
 # annotate, so more than one request is on the wire before any release.
-bulk <- c(choose = 'tt_choose("Which?", paste("c", 1:50), c("a", "b"), batch = 2L)',
-          score = 'tt_score("How much?", paste("s", 1:50), c("low", "high"), batch = 2L)',
-          tag = 'tt_tag("Which labels?", paste("t", 1:50), c("x", "y"), batch = 2L)')
+bulk <- c(choose = 'tt_choose(list(choose = "Which?", options = c("a", "b")), paste("c", 1:50), options = list(batch = 2L))',
+          score = 'tt_score(list(score = "How much?", levels = c("low", "high")), paste("s", 1:50), options = list(batch = 2L))',
+          tag = 'tt_tag(list(tag = "Which labels?", labels = c("x", "y")), paste("t", 1:50), options = list(batch = 2L))')
 for (verb in names(bulk)) {
   base <- backend_count()
   job <- spawn(c('tt_engine(throttle = 6L)', bulk[[verb]]))

@@ -42,13 +42,12 @@ check("a second tt_engine with other settings is usage naming the settings in fo
 check("equal settings a second time do nothing", grepl("TRUE", out, fixed = TRUE))
 check("no refusal sends", sent == 0L)
 
-# max_requests: rank holds its input and refuses before any request, and a
-# streaming decide sends the first record and refuses at the second.
+# Eager rank and decide admit the complete collection before sending.
 refused <- 'function(e) conditionMessage(e)'
 sent <- sent_by(out <- run(c('tt_engine(max_requests = 1L)',
   sprintf('cat(tryCatch(tt_rank("Q?", c("m1", "m2"))$value, thinkthen_usage = %s), "\\n")', refused),
   sprintf('cat(tryCatch(tt_decide("Q?", c("m1", "m2"))$value, thinkthen_usage = %s), "\\n")', refused))))
-check("max_requests = 1L refuses rank and decide over two texts", sent == 1L &&
+check("max_requests = 1L refuses rank and decide over two texts", sent == 0L &&
       lengths(regmatches(out, gregexpr("this engine answers at most 1 records in one call", out, fixed = TRUE))) == 2L)
 
 # After a verb on the default engine, which selects no throttle, a first
@@ -63,9 +62,9 @@ check("a base_url with credentials is refused without echoing them",
       grepl("a base address carries no user information", out, fixed = TRUE))
 out <- run(c(
   'r <- tryCatch(tt_decide("Q?", "secret check", deadline_ms = 0), error = function(e) e); print(r); print(conditionMessage(r))',
-  'print(tryCatch(tt_decide("", "x"), error = function(e) e)); print(tt_details("Q?", "details check")$value$meta$url)'
+  'print(tryCatch(tt_decide("", "x"), error = function(e) e)); print(tt_decide("Q?", "details check")$results[[1L]]$meta$url)'
 ))
 check("no output names the key or the URL's credentials",
       !any(grepl("tt-test-not-a-key", said, fixed = TRUE)) && !any(grepl("hunter2", said, fixed = TRUE)))
 
-finish("engine", 5L)
+finish("engine", 4L)
