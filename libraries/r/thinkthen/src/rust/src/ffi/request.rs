@@ -88,7 +88,7 @@ fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
         .admit()
         .map_err(|error| crate::carry(&error))?;
     let session = crate::engine()?
-        .request_session(request)
+        .request_session_with_surface(request, thinkthen::Surface::R)
         .map_err(|error| crate::carry(&error))?;
     Ok(ExternalPtr::new(session).into())
 }

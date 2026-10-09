@@ -33,7 +33,7 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
            (is.character(input) && length(input) != 1L)) {
     # A record vector/list is converted once. No NA row disappears or loses its position.
     if (is.data.frame(input)) input <- lapply(seq_len(nrow(input)), function(at) lapply(input, `[[`, at))
-    items <- lapply(input, function(value) list(original = .tt_selector(value, "thinkthen_input")))
+    items <- unname(lapply(input, function(value) list(original = .tt_selector(value, "thinkthen_input"))))
     input <- list(kind = "records", items = items)
   } else input <- .tt_selector(input, "thinkthen_input")
   call <- list(`function` = function_name, question = question, input = input)

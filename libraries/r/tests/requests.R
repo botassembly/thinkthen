@@ -43,6 +43,12 @@ for (verb in names(questions)) {
 call <- tt_decide(list(decide = "Duplicates?", false = NULL), c("same", "other", "same"))
 check("duplicate records retain native positions", identical(vapply(call$results, `[[`, 0, "index"), c(0, 1, 2)))
 check("absent and null remain distinct", inherits(call$results[[1]]$source, "thinkthen_absent") && is.null(call$results[[1]]$question$false))
+for (records in list(c(first = "one", second = "two"),
+                     list(first = list(body = "one", count = 1L), second = list(body = "two", count = 2L)))) {
+  call <- tt_filter("Named records?", records)
+  check("outer names do not replace record positions or inner fields", identical(vapply(call$results, `[[`, 0, "index"), c(0, 1)) &&
+    isTRUE(all.equal(lapply(call$results, function(row) row$input), unname(as.list(records)))))
+}
 file <- tempfile("native-source-")
 writeLines(c("file first", "file second"), file)
 call <- tt_decide("Files?", tt_files(file))
@@ -61,4 +67,4 @@ failed_batch <- tt_batch("decide", "Session deadline?", "not sent", list(deadlin
 failure <- tryCatch(failed_batch$next_result(), error = identity)
 check("native session failures retain their condition", inherits(failure, "thinkthen_error") && failure$kind == "deadline" && inherits(failure$complete, "thinkthen_CallError"))
 failed_batch$close()
-finish("canonical requests", 17L)
+finish("canonical requests", 21L)
