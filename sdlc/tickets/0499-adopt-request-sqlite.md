@@ -4,6 +4,9 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Depends on: 0511
+Depends on: 0513
+
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
 Reviews: revision b0fc3e13e4451a1abeb38dfc0a9ecc29abd06905, reject
@@ -18,17 +21,18 @@ Reviews: revision c0565d2c568769a1066fd6a751fc8a0568854ffc, accept
 
 ## Outcome
 
-SQLite runs every judgment through the shared Request contract, so Rust owns all admission and result rules. SQLite keeps only its host types, SQL authority and cancellation. Its SQL conventions (NULL, binary images, JSON values and in-database descriptions) belong to 0519.
+SQLite runs every judgment through the shared Request contract and reads generated result types, so Rust owns all admission and result rules. SQLite keeps only its host types, SQL authority and cancellation. Its SQL conventions (NULL, binary images, JSON values and in-database descriptions) belong to 0519.
 
 ## Evidence
 
 - Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). Slices A and B moved the ten complete functions and the legacy scalar, many, table, rank-set, image, document and keyed routes onto Request.
-- Keeps: SQL authority, the selected model, files and facts. All ten functions and their input, result, error, cache and replay behavior. Composed records keep file and line locations and the difference between eager admission and incremental execution. Already-composed feeds keep selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. The canonical request schema and ordinary Request filtering stay unchanged. A composed native filter feed may retain every complete observation for SQL's existing result carrier.
+- Keeps: SQL authority, the selected model, files and facts. All ten functions and their input, result, error, cache and replay behavior. Composed records keep file and line locations and the difference between eager admission and incremental execution. Already-composed feeds keep selector, context, attachment, function and image-route validation, cancellation, request-size admission and failure prefixes. The canonical request schema and ordinary Request filtering stay unchanged. Missing stays distinct from null, and permitted unknown result fields are tolerated. A composed native filter feed may retain every complete observation for SQL's existing result carrier.
 - Changes: Remaining slices, in order:
   - Canonical saved-selector admission through Request. Claim `databases/sqlite/**` paths per slice. Name any shared Request path and coordinate it with its writer before editing.
   - Document the supported feed combinations and refuse incompatible ones before sending.
   - Remove unused compatibility execution after parity. Keep the SQL preparation, descriptor and admission helpers that PostgreSQL imports. DuckDB's dependency on the shared dispatcher goes in 0495; coordinate any SQLite-only deletion with it.
   - The reviewed public declarations `RequestFeed::from_records`, `RequestFeed::eager`, `RequestFeed::with_image_inputs` and `AdmittedRequest::record_reading` land in the inventory together with their implementation, never ahead of it.
+- SQLite's public SQL function names stay unchanged, so it has no old-name removal. Record handwritten code removed and added in the landing record.
 - Proof: The full shared cases pass through the installed extension, including files and images, context and options, original positions, facts, failures, invalid input with zero sends, and cancellation. Raw JSON pass-through does not count.
 - Defers: SQL conventions to 0519. DuckDB to 0495. Proxy behavior is out of scope.
 
