@@ -11,7 +11,22 @@ Reviews: revision b6970338e, accept
 
 ## Outcome
 
-Add every step-1 decoded name stretch to CLI recognize `--details`, with its span probability, computed strength when available, and whether that proposal survives. Keep the bare value and default reading unchanged.
+Make proposal probabilities canonical facts in the Rust result, available through CLI recognize `--details` and the public Rust API. Include the union of decoded stretches and supplied seeds, including proposals below the final cut. Python uses its existing tolerant reader; this work does not depend on 0496. Keep the bare value and default reading unchanged. PM approved this scope in ask 2 of `repos/agents/inbox/thinkthen/2026-10-09-pm-thinkthen-binding-tickets-rewritten-on-main-new-numbers-and-order.md`.
+
+PM approved these borrowed API details within the canonical-result outcome on 2026-10-09; they land with the reviewed implementation.
+
+### Added public declarations
+
+```text
+struct RecognitionProposal<'a>
+fn RecognitionProbabilities::judged_proposals(&self) -> impl ExactSizeIterator<Item = RecognitionProposal<'a>>
+fn RecognitionProposal::range(&self) -> Range<usize>
+const fn RecognitionProposal::span_probability(&self) -> f64
+fn RecognitionProposal::selected(&self) -> Option<Range<usize>>
+fn RecognitionProposal::kind(&self) -> Option<&str>
+const fn RecognitionProposal::strength(&self) -> Option<f64>
+const fn RecognitionProposal::kept(&self) -> bool
+```
 
 ## Evidence
 
@@ -22,11 +37,11 @@ Add every step-1 decoded name stretch to CLI recognize `--details`, with its spa
 - Proof: A saved or loopback case covers a kept span, declined kind, under-cut span, edge-adjusted span, and duplicate where one proposal wins. Pin proposal order, offsets, actual probabilities and omitted uncomputed fields; pin unchanged bare output, requests and replay/cache keys. A failed record emits no partial stage result; prior completed records retain their existing behavior.
 - Defers: Calibration, alternative undecoded spans, a trace store/export API, and host SDK projection.
 
-## Consumer clarification to settle before implementation
+## Consumer scope ruling
 
 The TCGA message `2026-10-08-tcga-demo-check-seed-judgment-separately-from-the-boundary-cut.md` asks for every supplied seed's bounds, kind distribution, span probability and final disposition, including seeds below the strength cut, through CLI, Rust Request and Python. Landed 0506 adds supplied seeds to the proposal union and preserves the existing strength formula; it does not expose the missing span probability or disposition. The CLI-only scope above cannot satisfy all three requested routes.
 
-Coordinator recommendation: capture the admitted proposal union once, including supplied seeds, expose the same typed proposal facts through the canonical complete recognition result, and let CLI and the 0496 Python migration project them. Keep the existing threshold and model calls unchanged; callers inspect proposal facts separately from final kept entities. Settle this scope correction with the PM before implementation so each language migrates once. Do not claim that the current `answer.names` table supplies span probability or final disposition, or that a Python seed route is already shipped.
+PM approved canonical proposal facts in the Rust result and public Rust API on 2026-10-09, overriding the earlier CLI-only Changes and host-projection deferral above. Capture the admitted proposal union once, including supplied seeds, and project it through CLI details. Python's actual complete reader rejects unknown fields, so the approved compatibility repair adds only typed proposal fields and preserves older documents; seed admission and broader Python migration remain with 0496. Keep the existing threshold and model calls unchanged. Callers inspect proposal facts separately from final kept entities.
 
 ## Progress
 

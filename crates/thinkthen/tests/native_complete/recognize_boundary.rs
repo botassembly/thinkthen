@@ -188,6 +188,14 @@ fn proposal_cuts_use_printed_probability_and_modes_keep_distinct_ids_without_lat
         );
         assert_eq!(proposed.value().value().proposals().unwrap().len(), count);
         if count == 1 {
+            let judgment = complete
+                .value()
+                .probabilities()
+                .judged_proposals()
+                .next()
+                .unwrap();
+            assert!((judgment.span_probability() - 0.50004).abs() < 1e-8);
+            assert_eq!(judgment.strength(), Some(0.5));
             let p = &proposed.value().value().proposals().unwrap()[0];
             assert_eq!(
                 (p.text(), p.start(), p.end(), p.length(), p.probability()),

@@ -10,19 +10,7 @@ JsonValue = Union[None, bool, int, float, str, tuple["JsonValue", ...], Mapping[
 QuestionText = str | tuple[JsonValue, ...] | Mapping[str, JsonValue]
 Description = QuestionText | None
 
-class Absent:
-    def __repr__(self): return "ABSENT"
-ABSENT = Absent()
-
-class Carrier:
-    def __repr__(self): return f"<{type(self).__name__}: content withheld>"
-
-class Identity(str):
-    def __new__(cls, value):
-        if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
-            raise ValueError("invalid identity")
-        return super().__new__(cls, value)
-    def __repr__(self): return f"<{type(self).__name__}>"
+from ._carriers import ABSENT, Absent, Carrier, Identity, Span
 
 class CallId(Identity): pass
 
@@ -319,11 +307,6 @@ class NameOdds(Carrier):
     edges: Mapping[str, float] | None
 
 @dataclass(frozen=True, repr=False, kw_only=True)
-class Span(Carrier):
-    start: int
-    end: int
-
-@dataclass(frozen=True, repr=False, kw_only=True)
 class PairOdds(Carrier):
     relation: str
     source: Span
@@ -331,10 +314,21 @@ class PairOdds(Carrier):
     probability: float
 
 @dataclass(frozen=True, repr=False, kw_only=True)
+class RecognitionProposal(Carrier):
+    start: int
+    end: int
+    span_probability: float
+    kept: bool
+    selected: Span | Absent = ABSENT
+    kind: str | Absent = ABSENT
+    strength: float | Absent = ABSENT
+
+@dataclass(frozen=True, repr=False, kw_only=True)
 class RecognitionAnswer(Carrier):
     pieces: tuple[PieceOdds, ...]
     names: tuple[NameOdds, ...]
     pairs: tuple[PairOdds, ...]
+    proposals: tuple[RecognitionProposal, ...] | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class AnnotationSuccess(Carrier):
@@ -725,7 +719,7 @@ def _check(kind, value):
                 if value.get("answered_by") != next(iter(names)): _invalid()
             elif "answered_by" in value: _invalid()
         if value["failed_questions"] != sum("failure_id" in x for x in value["observations"]): _invalid()
-    if kind in ("Span", "NameOdds", "PieceOdds", "Entity"):
+    if kind in ("Span", "NameOdds", "PieceOdds", "Entity", "RecognitionProposal"):
         if value["end"] < value["start"]: _invalid()
         if kind == "Entity" and value["length"] != value["end"] - value["start"]: _invalid()
     if kind == "Position":
@@ -1064,7 +1058,8 @@ _MODELS = {
     'NameOdds': {'start': 'uint', 'end': 'uint', 'kinds': '{probability}|null', 'edges': '{probability}|null'},
     'Span': {'start': 'uint', 'end': 'uint'},
     'PairOdds': {'relation': 'str', 'source': 'Span', 'target': 'Span', 'probability': 'probability'},
-    'RecognitionAnswer': {'pieces': '[PieceOdds]', 'names': '[NameOdds]', 'pairs': '[PairOdds]'},
+    'RecognitionProposal': {'start': 'uint', 'end': 'uint', 'span_probability': 'probability', 'kept': 'bool', 'selected?': 'Span', 'kind?': 'str', 'strength?': 'probability'},
+    'RecognitionAnswer': {'pieces': '[PieceOdds]', 'names': '[NameOdds]', 'pairs': '[PairOdds]', 'proposals?': '[RecognitionProposal]'},
     'AnnotationSuccess': {'answer_id': 'AnswerId', 'value': 'SuccessValue', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'threshold', 'request': 'Digest'},
     'AnnotationFailure': {'failure_id': 'FailureId', 'question': 'AtomicQuestion', 'failure': 'Failure', 'request': 'Digest'},
     'RelationSuccess': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'answer_id': 'AnswerId', 'probability': 'probability', 'accepted': 'bool', 'answer?': 'AtomicAnswer'},

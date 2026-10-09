@@ -53,7 +53,7 @@ pub(crate) use recognize::{seed_stretches, selected_seeds};
 mod surface;
 pub(crate) use recognition_result::{
     BoundaryMode, BoundaryOdds, BoundaryProposal, PairOdds, Place, RecognitionOdds,
-    RecognizedValue, WholeRecognitionOdds,
+    RecognitionProposal, RecognizedValue, WholeRecognitionOdds,
 };
 pub use surface::{Surface, SurfaceError};
 mod recognize_file;
