@@ -1,4 +1,4 @@
-# 0505: Generate binding access for C, Zig, Ada and COBOL
+# 0505: Give C and Zig complete typed session views
 
 Status: OPEN.
 
@@ -15,30 +15,14 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Provide generated typed access for C, Zig, Ada and COBOL without hand-mirroring the post0.1 carriers.
+C callers read every known result field through additive complete session views generated from Rust, with explicit presence and retained failure facts. Zig reads the same views with optionals and error unions. The frozen 0.1 C ABI is unchanged. Ada (0528) and COBOL (0529) build on these views.
 
 ## Evidence
 
-- Starts from: PM architecture asks3/5; constrained-language readers and frozen C surface.
-- Keeps: All languages, frozen0.1 ABI, COBOL documented representation limits and named typed access.
-- Changes: After0492/0502/0503, review generated carriers versus generated JSON accessors per host, then replace post0.1 mirrors only when installed typed cases pass. Claim `libraries/c/**`, `libraries/zig/**`, `libraries/ada/**`, `libraries/cobol/**`, respecting0482 and generated-header ownership.
-- Proof: C compiler and each installed host consumer read full typed fields and failures through shared cases. Raw JSON availability alone does not satisfy parity.
-- Defers: Business policy and language removal. Size: large constrained-host migration.
-
-## Revised code-reduction estimate
-
-## 2026-10-09 amendment
-
-The thin, first-class ruling fixes this outcome to generated Rust-owned layouts for C, Zig, Ada and COBOL, including 0513's Ada specs and COBOL copybooks. Follow 0511 admission and the reviewed shared interfaces. Preserve the frozen C ABI, lifetime rules and documented host limits. Remove manual post-0.1 mirrors only after installed typed cases pass. The earlier fallback estimate below is historical; measure actual changes. Review the amendment and narrow generated declarations and host glue per slice.
-
-### Earlier fallback estimate
-
-The fallback generates layouts while retaining host value copying and native lifetime handling. At main `26fc8c900`, `libraries/ada/src/thinkthen_c*.ads` contains 1,967 nonblank lines and the seven COBOL `tt-*.cpy` carrier copybooks excluding constants contain 699. Estimate at most about 2,700 hand-maintained lines becoming generated across these named files. This is an upper bound: package declarations, imports, constants and any retained compatibility code reduce the replaceable portion. Generated carrier lines remain, so net source deletion may be small or zero after generator code is added.
-
-C already consumes the generated header. Zig can import it directly; its execution and owned-result code is not a disposable layout copy. The 0502 experiment did not establish a deletion estimate for those adapters. Preserve typed values, failure facts, representation limits and lifetimes; record actual manual code removed at landing. Do not apply the study's 25,000–35,000-line schema-reader estimate to this layout-only fallback.
-
-## Surface assessment amendment
-
-The first slice owns the additive complete C session-view contract left open by ADR 0129, its Rust storage and conversion, and header generation. Settle accessor names, presence tags, lifetimes and unknown-member retention before migrating Zig, Ada or COBOL. Claim the actual new view/conversion paths, installed C driver and generator inputs in that slice. Reuse 0513's semantic graph and the existing C header generator. Do not change compatibility layouts in place.
-
-The existing `FactsV1` omits current request-size and persistence observations, and the old metadata conversion deliberately drops partial token usage. Generating those declarations again would preserve those losses. Require typed access to every known field in the complete semantic graph, including independently present token dimensions and persistence. Unknown members may survive through an owned opaque extension representation; known fields must not require caller JSON parsing. One installed typed case must retain these fields and nested views after session destruction and before result destruction. Generate Ada specs and COBOL copybooks only after that C contract is complete, preserving documented representation limits and explicit overflow refusals.
+- Starts from: The [2026-10-09 decision](../decisions/2026-10-09-thin-first-class-bindings.md) and finding 2 of the [0521 assessment](../records/0521-surface-contract-assessment.md). `FactsV1` in `libraries/c/src/ffi/carriers/metadata.rs` lacks current request-size and persistence observations. `libraries/c/src/complete/metadata.rs` deliberately drops partial token usage. Regenerating those declarations would keep the losses. [ADR 0129](../planning/adr/0129-owned-json-sessions.md) leaves the complete C view contract open.
+- Keeps: Every frozen 0.1 C symbol, signature, layout, error code and lifetime rule. Compatibility layouts stay intact. Zig's execution and owned-result code stays unless replaced with parity.
+- Changes: Meet the caller acceptance and the C and Zig sections of `../../libraries/BINDING-AUTHOR.md`. Slices in order:
+  - Complete C session views: settle accessor names, presence tags, lifetimes and unknown-member retention. Add their Rust storage and conversion from 0513's semantic graph, and extend `sdlc/scripts/generate-c-header.py`. Every known field gets typed access, including independently present token dimensions and persistence. Unknown members may survive through an owned opaque extension. Claim the new view and conversion paths, the installed C driver and the generator inputs, named before coding.
+  - Zig: read the generated header, expose optionals and error unions, update `libraries/zig/README.md` and remove old public names after installed parity. Claim `libraries/zig/**` files named per slice.
+- Proof: An installed C consumer reads every known field and failure facts through shared cases. One installed typed case keeps these fields and nested views after session destruction and before result destruction. An installed Zig consumer passes the same cases. Raw JSON availability alone does not satisfy parity. Record handwritten code removed and added, counting generator changes, in the landing record.
+- Defers: Ada to 0528. COBOL to 0529. Dead `libraries/zig/src/complete.zig` removal and frozen-export documentation to 0515.

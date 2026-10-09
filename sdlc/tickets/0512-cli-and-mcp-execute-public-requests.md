@@ -14,24 +14,14 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-The review amendment below governs the initial slice and supersedes the undefined machine-readable CLI error feature.
-
-The CLI and MCP admit and execute every call through the same public request path as the libraries. Their private pipelines and their own argument types go.
+The CLI and MCP admit and execute every judgment call through the same public Request path as the libraries. Their private judgment pipelines and duplicate semantic admission go. Callers see the same output, exit codes and protocol behavior.
 
 ## Evidence
 
-- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). `cli/request.rs` admits through the public API, discards the result and runs a private pipeline; the CLI makes about 391 references to private engine modules. `mcp/admission.rs` and `mcp/request.rs` keep their own types and rules beside the public Request.
-- Keeps: CLI output formats, exit codes, help, MCP framing, file authority and cancellation.
-- Changes: Map CLI arguments and MCP tool input into the public Request and execute it. Derive CLI exit codes from public error kinds. Add a machine-readable CLI error output. Claim `crates/thinkthen/src/cli/**` and `libraries/mcp/**` in narrowed slices.
-- Proof: Existing CLI and MCP outside-in cases pass unchanged. A check fails when `cli/` or `mcp/` imports a private engine module.
-- Defers: New CLI features. Shell completions go to an idea.
-
-## Review amendment
-
-CLI converts transport arguments into Request and uses public execution instead of private judgment pipelines; its host argument parser remains. MCP already executes Request. Remove its duplicate semantic admission while preserving protocol rendering and host authority. Do not add a new machine-readable error feature in this ticket.
-
-The first MCP slice claims `crates/thinkthen/src/mcp/admission.rs`, `crates/thinkthen/src/mcp/request.rs`, `crates/thinkthen/src/mcp/inputs.rs`, `crates/thinkthen/src/mcp/tests/admission.rs`, `crates/thinkthen/src/mcp/tests/execution.rs` and `libraries/mcp/conformance.py`. Name actual CLI files per later slice. This amendment supersedes the whole-folder claim and private argument-type removal above.
-
-## Surface assessment amendment
-
-Scope the structural check to production judgment execution and semantic admission. `cli/cache.rs` and `cli/status.rs` contain maintenance operations outside Request's ten-function dispatch; explicitly exclude those maintenance paths from this ticket's import check. This supersedes the whole-CLI private-import ban. Do not create unrelated public maintenance APIs to satisfy it. Preserve shell input/output, pipe interruption, exit codes and MCP protocol behavior through the existing outside-in cases.
+- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). `cli/request.rs` admits through the public API, discards the result and runs a private pipeline. `mcp/admission.rs` and `mcp/request.rs` keep their own types and rules beside the public Request, although MCP already executes Request.
+- Keeps: The CLI's host argument parser, output formats, pipes, pipe interruption, exit codes and help. MCP tool discovery, generated input schemas, framing, protocol errors, file authority and cancellation. The maintenance commands in `cli/cache.rs` and `cli/status.rs` stay on their private maintenance APIs because they sit outside Request's ten-function dispatch.
+- Changes: Slices, in order:
+  - MCP first: remove duplicate semantic admission and keep protocol rendering and host authority. Claim `crates/thinkthen/src/mcp/admission.rs`, `crates/thinkthen/src/mcp/request.rs`, `crates/thinkthen/src/mcp/inputs.rs`, `crates/thinkthen/src/mcp/tests/admission.rs`, `crates/thinkthen/src/mcp/tests/execution.rs` and `libraries/mcp/conformance.py`.
+  - CLI: convert transport arguments into Request and use public execution for judgments. Name the actual CLI files before each slice.
+- Proof: Existing CLI and MCP outside-in cases pass unchanged. A check fails when production judgment execution or semantic admission in `cli/` or `mcp/` imports a private engine module. The check excludes the maintenance paths in `cli/cache.rs` and `cli/status.rs`.
+- Defers: A machine-readable CLI error output is not part of this ticket and needs no ticket under the scope freeze. New public maintenance APIs are not needed. Shell completions go to an idea.

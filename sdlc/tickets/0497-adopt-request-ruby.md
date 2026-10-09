@@ -1,4 +1,4 @@
-# 0497: Move Ruby onto the shared request contract
+# 0497: Make Ruby thin and first-class
 
 Status: OPEN.
 
@@ -15,21 +15,21 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Adopt shared Request and generated results in Ruby through named typed public calls.
+A Ruby caller installs the gem, calls the ten functions by name with ordinary Ruby values, and gets typed Ruby results and typed exceptions. Work honors the gem's declared scheduler and cancellation, and blocks clean up resources. Rust owns every rule and observation; Ruby keeps only naming, conversion, errors, scheduling and cleanup.
 
 ## Evidence
 
-- Starts from: PM architecture asks2/5 requires one ticket per direct binding; current Ruby adapter repeats admission/result construction.
-- Retained defect evidence: 0487's Ruby child-home slice reproduced two failures with the original helper and backend wrapper from `42b22e719` on the same selected binaries: `TestSurface#test_named_recognition_and_relation_plans_retain_source_model_and_bounded_answers` disagrees on recognition request bodies, and shared case `56-recognize-caller-defined-amount` receives backend status 500 through the installed native gem. The normal offline builds did not resolve them. Diagnose the actual request differences during this migration; preserve the failing cases and change expectations only if the reviewed contract establishes that they are stale. The environment cleanup is not their cause.
-- Keeps: native engine ownership and safe errors; all ten functions, input/result/error and cache/replay behavior.
-- Changes: Depends on0491, 0502 and the reviewed generation decision. Translate host arguments into Request, decode generated types, and remove the old copy after parity. Claim `libraries/ruby/**` and its installed typed consumer cases. Preserve absent versus null and tolerate permitted unknown result fields.
-- Proof: Full shared cases execute through the installed host's typed interface, including files/images where supported, context/options, original positions, facts, failures, invalid-input zero sends and cancellation. Raw JSON pass-through is insufficient.
-- Defers: Proxy and changing platform rulings without evidence. Size: medium surface migration.
-
-## 2026-10-09 amendment
-
-Follow 0511 shared admission, 0513 generated typed results and 0515's one API. Ruby owns naming, errors and cleanup idiom; Rust owns all rules and observations. Delete copied readers after installed typed cases pass, including the retained recognition failures. 0520 fixes the immediate facts-reader regression first. Review this amendment and narrow the Ruby slice files before coding.
-
-## Surface assessment amendment
-
-This migration owns Ruby target generation, object behavior, typed exceptions, host scheduling and block-scoped cleanup under the author guide. Extend 0513's common graph; do not keep a second reader. Apply the guide's shared caller acceptance through an installed gem and verify the declared scheduler/cancellation behavior with a held provider. No new async framework is required. 0515 removes obsolete entry points after replacement parity.
+- Starts from: the [2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). The Ruby adapter repeats admission and result construction, including settings, batch, deadline and relate-rule checks. Its hand-copied reader lacked facts fields added by 0461 and 0468; 0520 repaired it as a narrow bridge.
+- Retained defect evidence: 0487's Ruby child-home slice reproduced two failures with the original helper and backend wrapper from `42b22e719` on the same selected binaries. `TestSurface#test_named_recognition_and_relation_plans_retain_source_model_and_bounded_answers` disagrees on recognition request bodies, and shared case `56-recognize-caller-defined-amount` receives backend status 500 through the installed native gem. Normal offline builds did not resolve them, and the environment cleanup is not their cause. Diagnose the actual request differences here. Keep the failing cases, and change an expectation only if the reviewed contract shows it is stale.
+- Keeps: Native engine ownership and safe errors. All ten functions and their input, result, error, cache and replay behavior. Missing stays distinct from null, and permitted unknown result fields are tolerated.
+- Changes: Meet the caller acceptance and the Ruby section of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
+  - the Ruby target template and generated outputs from 0513's common graph, with no second reader;
+  - conversion of Ruby values into the shared Request, with no restated checks;
+  - typed exceptions carrying Rust error kinds and facts;
+  - the declared scheduler and cancellation behavior, with no new async framework;
+  - block-scoped cleanup;
+  - the gem README, with a short old-to-new call mapping;
+  - removal of the old public names and copied readers after installed parity.
+  One public API is one coherent family of named typed calls. Claim `libraries/ruby/**` and its installed typed consumer cases, narrowed per slice before coding.
+- Proof: The full shared cases run through the installed gem's typed interface, including files and images, context and options, original positions, facts, failures, invalid input with zero sends and the two retained recognition cases. One installed held-provider case shows the declared scheduler progressing, cancellation stopping further reads and submissions, and cleanup returning before the provider is released. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
+- Defers: The proxy and platform ruling changes need no 0.2 ticket.

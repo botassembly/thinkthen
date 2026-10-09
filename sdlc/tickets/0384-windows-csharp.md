@@ -1,28 +1,22 @@
-# 0384: Windows stage 1: the C# package loads the Windows DLL
+# 0384: Load the bundled Windows library from the C# package
 
-Status: ready. Deferred to 0.3 under Ian's 2026-10-05 scope ruling; the ticket stays open.
+Status: OPEN.
 
 Milestone: 0.2
 
 Depends on: 0516
+Depends on: 0501
 
 Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-- On Windows the package finds `thinkthen.dll` from ticket 0381's archive, loads it and answers from a loopback backend. The package still ships no native library, as `libraries/csharp/README.md` says.
-- The C# tests that need `bwrap`, `flock` or `killpg` skip on Windows with a reason. The rest pass on `windows-2025`.
-- `libraries/csharp/README.md` names Windows. Linux and macOS loading is unchanged.
+On Windows a caller installs the final NuGet package and makes a real call. The package selects its bundled `thinkthen.dll` and declared dependencies with no user library-path setting. Linux and macOS loading is unchanged. The C# README names Windows as supported.
 
 ## Evidence
 
-- Starts from: ticket 0373 (stage 0) did not build C#. `ThinkThen.cs` line 45 imports `libthinkthen.so.0` by name. The stage 1 report in `sdlc/planning/windows.md` sizes this ticket at 150 to 400 lines and 1 slice, with low to medium Linux and macOS risk: a resolver replaces the fixed name, so it touches the Linux load path. No experiment preceded this ticket.
-- Keeps: the Linux and macOS packages load the same library files as today. The package's public API.
-- Changes: a native library resolver picks `thinkthen.dll` on Windows and keeps today's name elsewhere. The README says where to put the DLL, beside the application or on `PATH`. The Unix-only tests get skips with reasons.
-  Claim `libraries/csharp/**` and `.github/workflows/windows.yml`. Windows execution is owed to the first authorized candidate; do not close until it passes.
-- Proof: a load and smoke case on `windows-2025` that counts loopback requests. The Linux and macOS C# checks and the installed-file check stay green.
-- Defers: the main unknown, whether `NativeLibrary.SetDllImportResolver` finds the DLL the same way on every .NET version the binding supports. The builder tests each supported version and records the answer. A native NuGet package, such as the reserved `Botassembly.ThinkThen.C`, stays out of scope.
-
-## Surface assessment amendment
-
-The 2026-10-09 ruling supersedes the old 0.3 deferral, unbundled-library outcome, manual DLL placement and PATH instructions. Consume the packaged pilot from 0516 and final Windows assets from the relevant 0517 slice. The final NuGet install selects its bundled native library and declared dependencies with no user library-path setting. Check the supported runtime versions declared by the package design. Unix-only machinery may use platform-specific equivalents; required cancellation and cleanup behavior cannot pass by skipping it. Windows execution remains owed to the first authorized candidate and the ticket stays open until it passes.
+- Starts from: Windows stage 0 (0373) did not build C#. `ThinkThen.cs` imports `libthinkthen.so.0` by name. The [2026-10-09 decision](../decisions/2026-10-09-thin-first-class-bindings.md) requires every package to carry its native library, which replaces the earlier manual DLL placement and PATH instructions. The [0521 assessment](../records/0521-surface-contract-assessment.md) replaced the 0.3 deferral.
+- Keeps: Linux and macOS packages load the same library files as today. The public API from 0516.
+- Changes: Consume 0516's packaged loader and the Windows native asset assembled by 0501 under 0517's package design. Unix-only test machinery (`bwrap`, `flock`, `killpg`) may use Windows equivalents. Required cancellation and cleanup cases cannot pass by skipping. Claim `libraries/csharp/**` test files named per slice and `.github/workflows/windows.yml`.
+- Proof: On `windows-2025`, install the final NuGet artifact, make one call and count its loopback requests, on each supported .NET version declared by the package design. The Linux and macOS C# checks and the installed-file check stay green. Windows execution is owed to the first authorized candidate, and the ticket stays open until it passes.
+- Defers: Candidate dispatch and publication wait for Ian's permission.

@@ -5,6 +5,7 @@ Status: OPEN.
 Milestone: 0.2
 
 Depends on: 0516
+Depends on: 0517
 
 Reviews: revision 4cd756859, reject
 
@@ -14,22 +15,18 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-The review amendment below names the Apple-only implementation and its native qualification obligation.
-
-Objective-C uses Foundation: `NSError`, ARC, blocks for async and cancellation, nullability annotations and Foundation collections.
+Objective-C is Apple-only and uses Foundation: `NSError`, ARC, blocks for async and cancellation, nullability annotations and Foundation collections. A caller installs an Apple package carrying the native library and reads generated Foundation result objects. GNU Objective-C support ends.
 
 ## Evidence
 
-- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). The binding is GNU Objective-C without Foundation, so callers free objects by hand and get no `NSError`.
-- Keeps: The shared suite's behavior.
-- Changes: Rebuild `libraries/objective-c` on the 0516 pattern. Remove `TTJSON.c` and the native view copies. Claim `libraries/objective-c/**`.
-- Proof: The shared suite passes on macOS through the installed package.
-- Defers: GNU Objective-C support, which ends here.
-
-## Review amendment
-
-Initial claims are `libraries/objective-c/Sources/ThinkThen.h`, `libraries/objective-c/Sources/ThinkThen.m`, `libraries/objective-c/check.sh`, `libraries/objective-c/source-package.json`, `libraries/objective-c/README.md` and `libraries/objective-c/checks/installed.py`. Select and name the existing installed consumer source before coding. Declare Apple-only package support, retaining shared results and errors. Prove callback ownership, cancellation and ARC cleanup through an installed macOS package. Remove native JSON/view copies only after their callers migrate. Linux checks cannot replace this native proof, and this ticket grants no machine or workflow permission.
-
-## Surface assessment amendment
-
-Own the Objective-C target template and generated host objects from 0513's common graph; 0504 does not build this surface again. Settle 0517's Apple package and loader design before implementation. Coordinate final artifact collection and installed-consumer routing with 0517, including removal of the Linux-only Objective-C routing assumption. A local Apple package and actual Foundation consumer must satisfy the guide; declaration generation on Linux is not native qualification.
+- Starts from: The [2026-10-09 decision](../decisions/2026-10-09-thin-first-class-bindings.md) and the [0521 assessment](../records/0521-surface-contract-assessment.md). The binding is GNU Objective-C without Foundation, so callers free objects by hand and get no `NSError`.
+- Keeps: Shared results and errors.
+- Changes: Follow the 0516 pattern on 0503's session. Meet the caller acceptance and the Objective-C section of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
+  - the Objective-C target template and generated Foundation objects from 0513's common graph;
+  - Foundation input conversion, `NSError` failures, block callbacks, cancellation and ARC cleanup;
+  - the Apple package slice under 0517's Apple binary design;
+  - the README, declaring Apple-only support with a short old-to-new call mapping;
+  - removal of `TTJSON.c`, the native view copies and old public names after their callers migrate.
+  One public API is one coherent family of named typed calls. Initial claims: `libraries/objective-c/Sources/ThinkThen.h`, `libraries/objective-c/Sources/ThinkThen.m`, `libraries/objective-c/check.sh`, `libraries/objective-c/source-package.json`, `libraries/objective-c/README.md` and `libraries/objective-c/checks/installed.py`. Name the installed consumer source before coding. 0501 removes the Linux-only Objective-C routing in final assembly; coordinate with it.
+- Proof: An actual Foundation consumer installs the local Apple package on macOS and passes the shared suite. It proves callback ownership, cancellation and ARC cleanup, plus one held-provider case where unrelated work progresses and cancel returns before the provider is released. Linux checks and declaration generation cannot replace this native proof. Record handwritten code removed and added, counting templates, in the landing record.
+- Defers: GNU Objective-C support, which ends here. This ticket grants no machine or workflow permission; native qualification follows Ian's release hold.

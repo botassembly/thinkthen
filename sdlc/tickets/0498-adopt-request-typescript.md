@@ -1,4 +1,4 @@
-# 0498: Move TypeScript onto the shared request contract
+# 0498: Make TypeScript thin and first-class
 
 Status: OPEN.
 
@@ -15,20 +15,19 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Adopt shared Request and generated results in TypeScript through named typed public calls.
+A TypeScript or JavaScript caller installs the npm package, imports it as CommonJS or ES modules, calls the ten functions by name with ordinary values, and gets typed results at runtime and in the editor. Async calls keep the event loop responsive and cancel cleanly. Rust owns every rule and observation; the addon keeps only naming, conversion, streams, cancellation and cleanup.
 
 ## Evidence
 
-- Starts from: PM architecture asks2/5 requires one ticket per direct binding; current TypeScript adapter repeats admission/result construction.
-- Keeps: named addon methods, CJS/ESM and streams/cancellation; all ten functions, input/result/error and cache/replay behavior.
-- Changes: Depends on0491, 0502 and the reviewed generation decision. Translate host arguments into Request, decode generated types, and remove the old copy after parity. Claim `libraries/typescript/**` and its installed typed consumer cases. Preserve absent versus null and tolerate permitted unknown result fields.
-- Proof: Full shared cases execute through the installed host's typed interface, including files/images where supported, context/options, original positions, facts, failures, invalid-input zero sends and cancellation. Raw JSON pass-through is insufficient.
-- Defers: Proxy and changing platform rulings without evidence. Size: medium surface migration.
-
-## 2026-10-09 amendment
-
-Follow 0511 admission, 0513 generated typed results and 0515's one API. TypeScript owns editor declarations, CJS/ESM, async streams, cancellation and cleanup idiom; Rust owns rules and observations. Delete copied readers after installed typed cases pass. 0520 fixes the immediate facts-reader regression first; preserve the reproduced refusal cases rather than weakening their expectations. Review this amendment and narrow actual addon/host slice files before coding.
-
-## Surface assessment amendment
-
-This migration owns TypeScript target generation and actual runtime conversion as well as declarations. Apply the guide's shared caller acceptance through both installed module forms. A held-provider case must leave the event loop responsive and let cancellation/close stop further reads and submissions before provider release; declarations or a Promise return type alone are insufficient. 0515 removes obsolete entry points after replacement parity.
+- Starts from: the [2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). The TypeScript adapter repeats admission and result construction, including settings, batch and deadline checks. Its hand-copied reader in `_complete.js` and `_complete.d.ts` lacked facts fields added by 0461 and 0468; 0520 repaired it as a narrow bridge and its reproduced refusal cases stay.
+- Keeps: Named addon methods, both module forms, async streams and cancellation. All ten functions and their input, result, error, cache and replay behavior. Missing stays distinct from null, and permitted unknown result fields are tolerated.
+- Changes: Meet the caller acceptance and the TypeScript section of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
+  - the TypeScript target template from 0513's common graph, generating both the declarations and the actual runtime conversion;
+  - conversion of JavaScript values into the shared Request, with no restated checks;
+  - typed errors carrying Rust error kinds and facts;
+  - Promise and async-stream execution, cancellation and close;
+  - the package README, with a short old-to-new call mapping;
+  - removal of the old public names and copied readers after installed parity.
+  One public API is one coherent family of named typed calls. Claim `libraries/typescript/**` and its installed typed consumer cases, narrowed per slice before coding.
+- Proof: The full shared cases run through the installed package in both module forms, including files and images, context and options, original positions, facts, failures and invalid input with zero sends. One installed held-provider case keeps the event loop responsive and shows cancellation or close stopping further reads and submissions before the provider is released. Pending final facts stay pending. Declarations or a Promise return type alone do not count, and neither does raw JSON pass-through. Record handwritten code removed and added, counting generator templates, in the landing record.
+- Defers: The Windows addon goes to 0383. The proxy and platform ruling changes need no 0.2 ticket.

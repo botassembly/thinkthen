@@ -1,10 +1,11 @@
-# 0504: Move language families onto generated binding contracts
+# 0504: Make Java, Kotlin and Scala thin and first-class
 
 Status: OPEN.
 
 Milestone: 0.2
 
 Depends on: 0516
+Depends on: 0517
 
 Reviews: revision 95fade3863f777142ecd49d4abca0efcf1790cce, accept
 
@@ -14,32 +15,20 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Migrate every remaining language family through generated request/result types and the selected session interface while preserving named typed calls.
+Java, Kotlin and Scala callers declare one Maven dependency, call the ten functions with native values, read generated typed results and handle typed failures. Each language cancels and cleans up in its own idiom. The jars run on current JDKs without preview features and carry their native libraries. Hand-copied layouts, readers and old public names are gone.
 
 ## Evidence
 
-- Starts from: PM architecture asks5/6 and0502 experiment; manual carrier copies cause recurring drift.
-- Keeps: All languages, files/images, failure facts, cache/replay and installed package behavior.
-- Changes: After0491/0492/0502/0503, land independently reviewed family slices for C#/Java/Kotlin/Scala, Dart/Flutter, Go/C++, Swift/Objective-C/PHP and Rust/dataframe consumers not owned by0496. Claim `libraries/csharp/**`, `libraries/jvm/**`, `libraries/dart/**`, `libraries/flutter/**`, `libraries/go/**`, `libraries/cpp/**`, `libraries/swift/**`, `libraries/objective-c/**`, `libraries/php/**`, `libraries/rust/**` and `libraries/polars/**`. Narrow each slice's ownership before parallel work. Each slice removes duplicated readers only after parity; no per-language paperwork beyond the shared suite.
-- Proof: Run complete shared conformance through installed typed public interfaces, including absent/null/failures, unknown output fields, located files, images and cancellation. A not-run required host case is a failure, with supported-platform rulings explicit.
-- Defers: Proxy and dropping languages. Size: large rollout; each independent family is a medium or large reviewed slice.
-
-## Revised code-reduction estimate
-
-## 2026-10-09 amendment
-
-The thin, first-class ruling supersedes the layout-only reader fallback and its estimate below. Depend on 0516's measured C# pilot, 0511 admission, 0503 session, 0513 generated results and 0514 guide. Each independently reviewed family implements async, cancellation, cleanup and naming idiom while deleting duplicated rules and readers. Objective-C follows 0518's Foundation target. Direct Python/dataframe ownership stays with 0496. Narrow each family's actual paths before parallel work, retain installed typed parity and measure actual code removed rather than promising a line target.
-
-### Earlier fallback estimate
-
-0502 selects generated native layouts, not schema-generated semantic readers. Withdraw the study's 25,000–35,000-line removal estimate for this rollout. The identifiable C# and Dart layout files contain 1,778 nonblank lines: 884 in `libraries/csharp/src/NativeAbi*.cs` and 894 in `libraries/dart/lib/src/native/abi.dart`. Estimate at most about 1,800 hand-maintained lines becoming generated in these two hosts; generated declarations remain in the package, so this does not imply a net deletion of 1,800 lines. Imports and generator support reduce the maintenance saving.
-
-The experiment's 127 C# reader lines and 1,565 Dart reader lines remain owned-copy logic unless a parity-preserving replacement is demonstrated. PHP reads the header directly; Python stays directly on Rust. Other families may remove duplicate admission and layout code, but the experiment did not measure that scope. Count actual removed hand-written code in each family landing rather than crediting speculative reader deletion. This estimate comes from the named layout files at main `26fc8c900` and the retained 0502 reader inventory.
-
-## Surface assessment amendment
-
-0516 owns the C# implementation and first packaged pilot; this ticket consumes it rather than building C# again. 0518 owns Objective-C. Each remaining family owns its target templates and generated outputs using 0513's common graph, plus native input conversion, scheduling and ownership. Apply all ten guide items through the installed public API. Carry the pilot's distinction between caller cancellation and native settlement into each host; prove scheduler progress and prompt cancellation with the existing held-provider fixture where the host promises async. Do not add an async runtime to synchronous hosts.
-
-Settle 0517's bounded package design before the affected family slice. The JVM slice owns migration from preview to stable foreign-function APIs and declares the supported JDK floor before coding. Java, Kotlin and Scala share transport and ownership while retaining their native public types and scheduling. Packaging later consumes that same runtime contract. Dart/Flutter share one implementation; the real Flutter paths are under `libraries/dart/flutter/`, not `libraries/flutter/`.
-
-Rust and Rust Polars stay direct to Rust and do not acquire a JSON session wrapper. The Rust Polars implementation is `crates/thinkthen/src/public/frame.rs` and `crates/thinkthen/src/public/frame/`; the folders under `libraries/` hold consumers. Its slice must claim those actual implementation paths, public exports, affected native tests and installed consumer files before editing. Preserve column types, null-to-row mapping, original indices and complete-set rank/find. Python pandas and Python Polars stay with 0496.
+- Starts from: The [2026-10-09 decision](../decisions/2026-10-09-thin-first-class-bindings.md) and the [0521 assessment](../records/0521-surface-contract-assessment.md). `libraries/jvm/build.sh` compiles with `--enable-preview --release 21`, so the jars break on JDK 22 and later. Native calls lock on the current thread and block virtual threads. Layouts are hand-copied from the C header.
+- Keeps: All ten functions, files and images, failure facts, cache and replay behavior, installed package checks, and the Kotlin and Scala demo removal already landed under 0515.
+- Changes: Follow the 0516 pilot pattern on 0503's session with 0513's generated results. Meet the caller acceptance and the Java, Kotlin and Scala sections of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
+  - stable foreign-function APIs with the JDK floor declared by 0517 before coding;
+  - one shared transport and ownership layer for the three languages, with each keeping its own public types and scheduling;
+  - the JVM target templates and generated outputs;
+  - native input conversion, typed errors, cancellation and cleanup;
+  - the Maven native-jar packaging slice under 0517's design;
+  - the JVM README, with a short old-to-new call mapping;
+  - removal of old public names after installed parity.
+  One public API is one coherent family of named typed calls. Claim `libraries/jvm/**` narrowed per slice, naming files before each slice.
+- Proof: Shared conformance runs through installed Java, Kotlin and Scala consumers, covering absent, null, failures, unknown output fields, located files, images and cancellation. One installed held-provider case per async idiom shows unrelated work progressing, and cancel and cleanup returning before the provider is released. Pending final facts stay pending. A required host case that does not run is a failure. Record handwritten code removed and added, counting templates, in the landing record.
+- Defers: Windows qualification to 0385. Final distribution assembly to 0501. Dart and Flutter to 0522, Swift to 0523, Go to 0524, C++ to 0525, PHP to 0526, Rust and Rust Polars to 0527, Objective-C to 0518.

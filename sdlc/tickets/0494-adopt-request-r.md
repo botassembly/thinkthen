@@ -1,4 +1,4 @@
-# 0494: Move R onto the shared request contract
+# 0494: Make R thin and first-class
 
 Status: OPEN.
 
@@ -15,20 +15,20 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Adopt shared Request and generated results in R through named typed public calls.
+An R caller installs the package, calls the ten functions by name with ordinary R values, and gets typed R results that print, index and compare the way R users expect. Rust admits every request through 0511 and owns every rule and result fact. The R package keeps only naming, value conversion, conditions, interruption and cleanup.
 
 ## Evidence
 
-- Starts from: PM architecture asks2/5 requires one ticket per direct binding; current R adapter repeats admission/result construction.
-- Keeps: R indexing and engine ownership; all ten functions, input/result/error and cache/replay behavior.
-- Changes: Depends on0491, 0466 and the reviewed generation decision. Translate host arguments into Request, decode generated types, and remove the old copy after parity. Claim `libraries/r/**` and its installed typed consumer cases. Preserve absent versus null and tolerate permitted unknown result fields.
-- Proof: Full shared cases execute through the installed host's typed interface, including files/images where supported, context/options, original positions, facts, failures, invalid-input zero sends and cancellation. Raw JSON pass-through is insufficient.
-- Defers: Proxy and changing platform rulings without evidence. Size: medium surface migration.
-
-## 2026-10-09 amendment
-
-The thin, first-class ruling replaces the earlier generation fallback. Follow 0511 admission, 0513 generated typed results and 0515's one public API. R retains indexing, native ownership and its expected absence/error idiom; Rust owns validation and result facts. Remove copied readers after installed public cases pass. The immediate confirmed-reader repair is 0520 and does not complete this migration. Review this amendment before coding and narrow the R claim to the actual slice files.
-
-## Surface assessment amendment
-
-This migration owns R's target generation, object behavior, typed conditions, interruption and cleanup under the author guide. Extend the common 0513 generator rather than copying a reader. Apply the shared caller acceptance in the guide through an installed R consumer, including printing and documented class/field access. 0515 removes obsolete entry points after this replacement works; it is not a prerequisite for building the replacement.
+- Starts from: the [2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). The R adapter repeats admission and result construction. It holds a copy of the complete-call input grammar in `libraries/r/thinkthen/src/rust/src/complete`, and its hand-copied reader lacked facts fields added by 0461 and 0468. 0520 repaired that reader as a narrow bridge; it does not complete this migration.
+- Keeps: R indexing and native engine ownership. All ten functions and their input, result, error, cache and replay behavior. Missing stays distinct from null, and permitted unknown result fields are tolerated.
+- Changes: Meet the caller acceptance and the R section of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
+  - the R target template and generated outputs from 0513's common graph, extending that generator rather than copying a reader;
+  - conversion of native R values into the shared Request, with no restated validation;
+  - typed R conditions carrying Rust error kinds and facts;
+  - interruption and cleanup in R's normal idiom; R is a synchronous host and gets no async runtime;
+  - printing and documented class and field access on results;
+  - the package README, with a short old-to-new call mapping;
+  - removal of the old public names and copied readers after installed parity.
+  One public API is one coherent family of named typed calls. Claim `libraries/r/**` and its installed typed consumer cases, narrowed to the actual files per slice before coding.
+- Proof: The full shared cases run through the installed package's typed interface. They cover files and images where supported, context and options, original positions, facts, failures, invalid input with zero sends, interruption, printing and field access. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
+- Defers: The proxy and any platform ruling change without evidence. Neither needs a ticket in 0.2.

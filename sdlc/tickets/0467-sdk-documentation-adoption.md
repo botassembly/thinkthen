@@ -1,8 +1,27 @@
-# 0467: Describe the landed complete SDK APIs
+# 0467: Describe the final 0.2 surfaces across the shared documentation
 
 Status: OPEN. SDK module comments and install READMEs still describe complete execution as pending.
 
 Milestone: 0.2
+
+Depends on: 0494
+Depends on: 0495
+Depends on: 0496
+Depends on: 0497
+Depends on: 0498
+Depends on: 0504
+Depends on: 0505
+Depends on: 0516
+Depends on: 0518
+Depends on: 0519
+Depends on: 0522
+Depends on: 0523
+Depends on: 0524
+Depends on: 0525
+Depends on: 0526
+Depends on: 0527
+Depends on: 0528
+Depends on: 0529
 
 Owner: builder.
 
@@ -12,17 +31,16 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Objective-C, Swift, Zig and Python documentation consistently describes the implemented complete API while preserving genuine platform and publication limitations.
+After the language and database migrations land, the shared documentation describes the final 0.2 experience on every surface. A reader of the root README, the site or the specification finds the one recommended API per language, its install route and its real platform limits. One upgrade guide maps each removed 0.1 call to its replacement.
 
 ## Evidence
 
-- Starts from: 0462 SDK review at7ea661c1e; Objective-C README line55, Swift README line26, Zig README line28 and Python thinkthen/_complete.py module comment retain pre-adoption claims contradicted by implemented APIs and later examples.
-- Keeps: Actual package versions, installed-evidence limits, admitted image functions and platform restrictions. Public install stays0.1.2 until publication.
-- Changes: Replace stale pre-adoption statements with current supported APIs and remaining restrictions. Update prose only, without changing examples or product outputs.
-  Claim `README.md`, `libraries/**/README.md`, `databases/**/README.md`, `specification/**` and `site/**`.
-- Proof: Fresh ticket/whole-change review against implementation and retained installed cases; focused documentation links, tickets and privacy checks. Replaying examples is necessary only if examples change.
-- Defers: No new SDK behavior, package claim unsupported by evidence, hosted workflow or publication.
-
-## Surface assessment amendment
-
-Describe the final 0.2 experience across every migrated surface, extending the earlier four-language wording. Each existing README teaches the one recommended API, native inputs/results, failure and absence behavior, cancellation/cleanup, and the actual package installation requirements. Carry forward 0515's old-to-new call mapping and explain the stable JVM runtime floor and Apple-only Objective-C support from their owning contracts. Keep released instructions distinct from the 0.2 target until publication. Reuse the author guide and generated API documentation; do not restate engine limits or maintain another surface inventory. Name actual documentation paths per slice.
+- Starts from: the 0462 SDK review at 7ea661c1e. The Objective-C README line 55, Swift README line 26, Zig README line 28 and the Python `thinkthen/_complete.py` module comment describe complete execution as pending although the APIs exist. The [2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md) then changed every surface, and the [0521 assessment](../records/0521-surface-contract-assessment.md) asked for one consolidated pass.
+- Keeps: Actual package versions, installed-evidence limits, admitted image functions and platform restrictions. Released install instructions stay distinct from the 0.2 target until publication; public install stays 0.1.2 until then.
+- Changes: Each migration ticket owns its own package README and old-to-new mapping. This ticket owns the cross-surface pass.
+  - Claim `README.md`, `site/**`, `specification/**` and one new upgrade guide that collects each migration's old-to-new mapping.
+  - Fix any still-wrong statement in the four originally named files within this pass.
+  - Explain the stable JVM runtime floor and Apple-only Objective-C support from their owning tickets, 0504 and 0518.
+  - Reuse `../../libraries/BINDING-AUTHOR.md` and generated API documentation. Restate no engine limit and keep no second surface inventory.
+- Proof: A fresh review compares the text with the implementation and the retained installed cases. Run the focused documentation link, ticket and privacy checks. Replay an example only if it changes.
+- Defers: New SDK behavior, package claims without evidence, hosted workflows and publication. None needs a ticket; publication waits for Ian's release permission.

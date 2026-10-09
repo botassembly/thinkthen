@@ -1,10 +1,8 @@
-# 0515: Keep one public API per language
+# 0515: Remove dead binding code and mark the frozen C exports
 
 Status: OPEN.
 
 Milestone: 0.2
-
-Depends on: 0511
 
 Reviews: revision 4cd756859, reject
 
@@ -16,27 +14,18 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-The review amendment below preserves frozen C compatibility independently of whether a current caller is visible.
-
-Each language has one obvious entry point. The 0.1 JSON-string calls, duplicate APIs, unused code and demo programs are removed.
+Packages ship no dead, unshipped or demo code. The frozen 0.1 C symbols stay and are documented as compatibility exports, separate from the recommended 0.2 API.
 
 ## Evidence
 
-- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). Python has five entry points. The C header has 90 functions across five generations. Unused or unshipped code includes PHP `src/complete/`, C++ `complete.hpp`, Swift `Complete.swift`, Zig `complete.zig`, most of Dart `complete/` and the probe code in `door.dart`, and demo `main` functions in the Kotlin and Scala jars.
-- Keeps: The frozen 0.1 C symbols only where a C caller needs them, documented as deprecated.
-- Changes: Remove the old calls and dead code per language, and update READMEs and examples. Claim each language folder per slice, coordinated with its migration ticket.
-- Proof: Each package's public symbol list matches the guide. Installed examples pass. Line counts before and after go in the record.
-- Defers: None.
-
-## Review amendment
-
-Preserve every frozen 0.1 C symbol, signature, layout, error code and accepted legacy JSON-door behavior under ADRs 0101 and 0125. Document compatibility exports separately from the recommended 0.2 API. Remove legacy host-language APIs under Ian's ruling only after replacement installed parity. C preservation does not depend on finding a current caller.
-
-The first slice removes shipped demo entry points from `libraries/jvm/kotlin/KotlinCaller.kt` and `libraries/jvm/scala/ScalaCaller.scala`, updates `libraries/jvm/tests/package_check.py`, and names any affected installed example before editing. Later API-removal slices follow their language migration and name exact files. Public symbol checks compare against the declared contract, not a list derived only from the implementation.
-
-## Surface assessment amendment
-
-One API is one coherent family of named typed calls, not one generic JSON entry point. Preserve useful bare/complete views and host-appropriate sync/async forms within that family. Each removal slice names the replacement calls and includes a short upgrade mapping in its existing README. Documentation cleanup 0467 consolidates that guidance; it does not postpone explaining a removed API. Count maintained generator/template code as well as host code when reporting the change. Keep the existing dead-code slice independent; later removals follow the corresponding installed migration.
+- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). The audits found unused or unshipped code in PHP `src/complete/`, C++ `include/thinkthen/complete.hpp`, Swift `Sources/ThinkThen/Complete.swift`, Zig `src/complete.zig`, most of Dart `lib/src/complete/` and the probe code in `lib/src/door.dart`, and demo `main` functions in the Kotlin and Scala jars. The C header has 90 functions across five generations.
+- Keeps: Every frozen 0.1 C symbol, signature, layout, error code and accepted legacy JSON-door behavior under ADRs 0101 and 0125. C preservation does not depend on finding a current caller. Every installed example and consumer that uses live code.
+- Changes: Slices:
+  - Kotlin and Scala demos: landed. The demos left `libraries/jvm/kotlin/KotlinCaller.kt` and `libraries/jvm/scala/ScalaCaller.scala` and now live only in installed tests.
+  - Dead code: remove the unshipped or unused files above. Confirm each is unreachable from the shipped package and its installed checks before deleting it, and claim its exact files per slice.
+  - Frozen C exports: document the compatibility exports apart from the recommended API in `libraries/c/README.md` and the generated header comments.
+- Proof: Each affected package's installed checks and examples pass after removal. `sdlc/scripts/check-c-exports.py` still finds every frozen symbol. Public symbol checks compare against the declared contract, not a list derived from the implementation. Record handwritten code removed in the landing record.
+- Defers: Removing each language's old public names after replacement parity moves to that language's migration ticket (0494–0498, 0504, 0516, 0518, 0522–0529), with a short old-to-new mapping in its README. The cross-surface upgrade guide goes to 0467.
 
 ## Progress
 

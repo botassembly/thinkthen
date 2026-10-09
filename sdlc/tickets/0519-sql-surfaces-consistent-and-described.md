@@ -14,26 +14,25 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-The review amendment below requires a reviewed SQL NULL and image contract before changing current assertions.
-
-DuckDB, SQLite and PostgreSQL treat NULL one way, take images as binary values, return native JSON types where results are JSON, and describe every function inside the database.
+DuckDB, SQLite and PostgreSQL treat NULL one way, accept images as native binary values in the complete-result calls, return the database's native JSON type where a result is JSON, and describe every public function inside the database.
 
 ## Evidence
 
-- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). SQLite raises an error for a NULL question in rank sets but returns NULL in the complete calls. Complete calls take images as JSON arrays of byte numbers. DuckDB returns VARCHAR for annotate and details. No surface registers function descriptions.
-- Keeps: Function names and current accepted inputs.
-- Changes: One NULL rule in the guide applied to all three. BLOB and bytea images. DuckDB JSON type. Function comments in each extension. Claim `databases/**` per slice.
-- Proof: Shared SQL cases cover NULL inputs, a BLOB image and the description query on each database.
-- Defers: Extension signing and registry packaging to 0517.
-
-## Review amendment
-
-The PM accepted this NULL contract in ask 5 of the 2026-10-09 thin-first-class message: required NULL scalar operands return SQL NULL; required NULL table or set operands produce zero rows; neither inspects other operands, reads files nor sends. Optional settings NULL means omitted settings; backend failures remain failures. This ruling supersedes the SQLite rank tests that expect errors. Update those assertions and record the rule in the SQL specification during implementation.
-
-Preserve valid existing image forms while defining native binary overloads and each database's actual description query in the reviewed design. SQLite function comments alone are not an interface. The initial SQLite NULL slice claims `databases/sqlite/src/many.rs`, `databases/sqlite/tests/test_rank.py`, `databases/sqlite/tests/test_values.py` and `databases/sqlite/README.md`. Claim DuckDB JSON return changes and binary input separately before coding. Count zero sends and unnecessary reads. Signing and registry submission remain outside dependencies; 0517 owns local native package inventory, not their submission. This amendment supersedes that deferral above.
-
-## Surface assessment amendment
-
-Name a complete-result binary-image call for each database and prove it through the installed extension. Existing binary image helpers and bare judgment overloads do not establish that the complete-result API accepts native bytes without caller-built JSON byte arrays. Reuse those helpers and shared Rust admission; preserve existing valid forms.
-
-Assert DuckDB's actual return type for each changed JSON-valued function and consume the value through its native JSON operations. Use each database's supported JSON representation; do not invent a distinct SQLite storage type. Check description discoverability against the actual registered public function inventory with the database's declared query. Include required-NULL calls beside malformed partner operands and count zero extension reads/sends; optional NULL settings remain omission and backend failures remain failures. These checks cover the promised outcomes using existing SQL runners.
+- Starts from: the [2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md) and the [0521 assessment](../records/0521-surface-contract-assessment.md). SQLite raises an error for a NULL question in rank sets but returns NULL in the complete calls. Complete calls take images as JSON arrays of byte numbers. DuckDB returns VARCHAR for annotate and details. No surface registers function descriptions.
+- Keeps: Function names and every current valid input form, including the existing binary image helpers. Backend failures remain failures.
+- Changes: The NULL rule, accepted by the PM in ask 5 of the 2026-10-09 thin-first-class message:
+  - a required NULL scalar operand returns SQL NULL;
+  - a required NULL table or set operand produces zero rows;
+  - neither inspects other operands, reads files nor sends;
+  - a NULL optional setting means the setting is omitted.
+  This supersedes the SQLite rank tests that expect errors. Record the rule in the SQL specification and the guide's SQL section. Slices, in order:
+  - SQLite NULL: claim `databases/sqlite/src/many.rs`, `databases/sqlite/tests/test_rank.py`, `databases/sqlite/tests/test_values.py` and `databases/sqlite/README.md`.
+  - Binary images: name one complete-result binary-image call per database, taking BLOB in DuckDB and SQLite and bytea in PostgreSQL, that reuses the existing helpers and shared Rust admission. Claim each file before coding.
+  - DuckDB JSON: return DuckDB's JSON type from each JSON-valued function. Use each database's supported JSON representation and invent no separate SQLite storage type. Claim the files before coding.
+  - Descriptions: register a description for every public function and name each database's discovery query. SQLite function comments alone are not an interface.
+- Proof: The existing SQL runners check each outcome through the installed extension.
+  - Required-NULL calls sit beside malformed partner operands and count zero extension reads and sends. Optional NULL settings behave as omitted.
+  - Each database's complete-result binary call accepts native bytes with no caller-built JSON byte array.
+  - DuckDB's actual return type is asserted for each changed function, and the value is consumed through DuckDB's JSON operations.
+  - Each discovery query returns a description for the full registered public function inventory.
+- Defers: Extension signing and registry submission stay outside this release's dependencies. Local native package inventory belongs to 0501. 0495 applies these rules during the DuckDB migration.

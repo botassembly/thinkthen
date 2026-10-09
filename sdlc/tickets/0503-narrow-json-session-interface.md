@@ -18,25 +18,18 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Implement the experiment-selected narrow engine/session interface with bounded streaming and generated typed consumers.
+C-interface languages call one owned, bounded engine session. A caller declares a call once, feeds descriptors without staging the whole input, reads results, and finishes, cancels or frees the session. Cancel and free return promptly without waiting for a blocked provider. Final facts stay truthful and arrive only when the work actually settles.
 
 ## Evidence
 
-- Starts from: PM architecture asks3/5 and0470 bounded-feed design.
-- Keeps: Whole-set admission where specified, completed prefixes where specified, frozen ABI, cancellation and failures with facts.
-- Changes: After0491/0502 decision, settle an ADR for engine/session/result handles and push/read/finish/cancel/free. Declare call once and feed descriptors without whole-array staging. Reuse0470 ownership design. Claim `crates/thinkthen/src/public/**`, `libraries/c/src/**` and `specification/request.schema.json`; adapters migrate in their own tickets.
-- Proof: Backpressure, stopped readers, cancellation, failure facts and handle lifetimes pass typed outside-in tests; no references outlive host storage.
-- Defers: Business policy and new networking. Size: large ownership/execution change.
-
-## 2026-10-09 amendment
-
-The thin, first-class ruling replaces the fallback mechanics: C-interface languages use this owned session and generated typed results. Follow 0511 admission and coordinate 0513 result presence. Settle the handle ADR before coding, preserve frozen C compatibility, own every input and result buffer, bound input/output queues, and cancel or free without waiting for a blocked provider. Keep whole-set semantics and truthful final failure facts. This shared interface precedes 0516 and family adoption; direct languages can remain directly on Rust. Review this amendment and narrow shared execution and C handle paths per slice.
-
-## Surface assessment amendment
-
-ADR 0129 owns shared session execution and lifetime rules. Its packet graph is supplied by 0513 before typed adoption; native session work need not wait for every target generator. 0470 consumes this session for DuckDB and must not build another queue or C handle family. Keep descriptor admission and sink dispatch under one writer at a time.
-
-The native cancel/free guarantee concerns prompt caller return; terminal facts still require actual settlement. 0516 owns the first host waiting and cancellation design over this interface. Its installed task-boundary proof must distinguish prompt cancellation from eventual provider cleanup and final facts. Other hosts reuse that contract through their own scheduling idiom.
+- Starts from: [the 2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md). [ADR 0129](../planning/adr/0129-owned-json-sessions.md) owns session execution and lifetime rules. The 0470 bounded-feed design supplies the ownership pattern.
+- Keeps: Whole-set admission and completed prefixes where specified, the frozen 0.1 C ABI, cancellation, and failures with facts.
+- Changes: Implement the owned session under ADR 0129: engine, session and result handles with push, read, finish, cancel and free. The session owns every input and result buffer and bounds its input and output queues. One writer at a time handles descriptor admission and sink dispatch. Admission follows 0511. 0513 supplies the result packet graph; native session work need not wait for every target generator. Claim `crates/thinkthen/src/public/**`, `libraries/c/src/**` and `specification/request.schema.json`, narrowed per slice.
+  - 0470 consumes this session for DuckDB and builds no second queue or C handle family.
+  - 0516 designs the first host wait and cancellation over this interface. Other hosts reuse that contract through their own scheduling idiom.
+  - Direct-to-Rust languages stay on Rust.
+- Proof: Typed outside-in tests cover backpressure, stopped readers, cancellation, failure facts and handle lifetimes. No reference outlives host storage. The tests distinguish prompt caller cancellation from eventual provider cleanup and final facts.
+- Defers: Host adoption belongs to 0516 and the language migrations. Business policy and new networking need no ticket.
 
 ## Progress
 

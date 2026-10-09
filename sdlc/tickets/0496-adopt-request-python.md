@@ -1,4 +1,4 @@
-# 0496: Move Python and its dataframes onto the shared contract
+# 0496: Make Python, pandas and Python Polars thin and first-class
 
 Status: OPEN.
 
@@ -15,24 +15,21 @@ Reviews: revision 4d59e7c6a, accept
 
 ## Outcome
 
-Adopt shared Request and generated results in Python, pandas and Python Polars through named typed public calls.
+A Python caller has one obvious way in. Named calls take ordinary Python values and data frames, and return Rust-owned typed results that print, compare, convert and pickle like ordinary Python objects. Async calls keep the event loop responsive and cancel cleanly. Rust owns every rule; Python keeps only naming, conversion, scheduling and cleanup.
 
 ## Evidence
 
-- Starts from: PM architecture asks2/5 requires one ticket per direct binding; current Python, pandas and Python Polars adapter repeats admission/result construction.
-- Keeps: native engine handles, mapping access, dataframe row identity; all ten functions, input/result/error and cache/replay behavior.
-- Changes: Depends on0491, 0502 and the reviewed generation decision. Translate host arguments into Request, decode generated types, and remove the old copy after parity. Claim `libraries/python/**` and its installed typed consumer cases. Preserve absent versus null and tolerate permitted unknown result fields.
-- Proof: Full shared cases execute through the installed host's typed interface, including files/images where supported, context/options, original positions, facts, failures, invalid-input zero sends and cancellation. Raw JSON pass-through is insufficient.
-- Defers: Proxy and changing platform rulings without evidence. Size: large surface migration.
-
-## 2026-10-09 amendment
-
-Follow 0511 admission, 0513 Rust-owned generated typed results and 0515's one API. Python results support repr, equality, to_dict, pickling and bool without raising, preserving distinct absence, null and failures. Python owns its naming and dataframe idiom, not copied validation or cache logic. Keep pandas and Polars row identity and all ten functions. 0520 fixes the immediate facts-reader regression first. Review this amendment and narrow each actual Python/dataframe slice before coding.
-
-## Surface assessment amendment
-
-This ticket owns Python target generation, async execution, task cancellation and context-manager cleanup as well as result behavior. Releasing the interpreter while waiting on the calling thread does not prove that an asyncio loop stays responsive. Add one installed held-provider case in the existing runner: another coroutine progresses, cancelling the caller stops further reads/submissions, and cleanup returns before the provider is released. Preserve the native distinction between cancellation and final settlement.
-
-For successful Call values, bool follows the corresponding ordinary Python value, including False, None, numeric zero and empty collections. Top-level failures remain typed exceptions; embedded failures retain their explicit failure kind and facts and are not converted into successful False or None values. Define the truth behavior of any separate failure carrier in the reviewed result design. Printing, equality, mapping conversion and pickling preserve presence and failures and do not retain an engine handle. Generated stubs describe the actual installed objects.
-
-Python pandas and Python Polars belong here. Rust Polars belongs to 0504. Preserve original row identity, null masks and whole-set semantics rather than issuing per-row aggregate calls. 0515's removal follows installed replacement parity and does not block this migration.
+- Starts from: the [2026-10-09 binding decision](../decisions/2026-10-09-thin-first-class-bindings.md) and the [0521 assessment](../records/0521-surface-contract-assessment.md). Python has five entry points. `Call` has no repr, equality, pickling or `to_dict`, and `bool(call)` raises. The hand-copied reader in `libraries/python/thinkthen/_complete.py` lacked facts fields added by 0461 and 0468; 0520 repaired it as a narrow bridge. `libraries/python/src/worker.rs` releases the interpreter while it waits on the calling thread, which does not prove an asyncio loop stays responsive.
+- Keeps: Native engine handles, mapping access, data frame row identity, null masks and whole-set semantics. All ten functions and their input, result, error, cache and replay behavior. Missing stays distinct from null, and permitted unknown result fields are tolerated.
+- Changes: Meet the caller acceptance and the Python, pandas and Python Polars sections of `../../libraries/BINDING-AUTHOR.md`. This ticket owns:
+  - the Python target template and generated `.pyi` stubs from 0513's common graph, describing the actual installed objects;
+  - conversion of Python values and frames into the shared Request, with no copied validation or cache logic;
+  - typed exceptions for top-level failures;
+  - result behavior: printing, equality, mapping conversion and pickling preserve presence and failures and hold no engine handle;
+  - truth values: `bool` of a successful value follows the ordinary Python value, including False, None, zero and empty collections; embedded failures keep their failure kind and facts and never become False or None; the reviewed result design defines the truth behavior of any separate failure carrier;
+  - asyncio execution, task cancellation and context-manager cleanup;
+  - the package README, with a short old-to-new call mapping;
+  - removal of the extra entry points and copied readers after installed parity.
+  One public API is one coherent family of named typed calls. Frames issue whole-set calls, never per-row aggregate calls. Claim `libraries/python/**` and its installed typed consumer cases, narrowed per slice before coding.
+- Proof: The full shared cases run through the installed wheel's typed interface, including files and images, context and options, original positions, facts, failures and invalid input with zero sends. One installed held-provider case in the existing runner shows another coroutine progressing, cancellation stopping further reads and submissions, and cleanup returning before the provider is released. Pending final facts stay pending. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
+- Defers: Rust Polars goes to 0527. The proxy and platform ruling changes need no 0.2 ticket.
