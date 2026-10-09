@@ -6024,6 +6024,22 @@ typedef struct thinkthen_complete_relation_field_input_presence_v1 {
   const struct thinkthen_complete_json_v1 *value;
 } thinkthen_complete_relation_field_input_presence_v1;
 
+typedef struct thinkthen_complete_session_input_source_v1 {
+  uint64_t index;
+  const struct thinkthen_complete_physical_source_v1 *source;
+  struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_session_input_source_v1;
+
+typedef struct thinkthen_complete_relation_field_input_sources_v1 {
+  const struct thinkthen_complete_session_input_source_v1 *const *data;
+  size_t len;
+} thinkthen_complete_relation_field_input_sources_v1;
+
+typedef struct thinkthen_complete_relation_field_input_sources_presence_v1 {
+  uint32_t presence;
+  struct thinkthen_complete_relation_field_input_sources_v1 value;
+} thinkthen_complete_relation_field_input_sources_presence_v1;
+
 typedef struct thinkthen_complete_relation_field_last_line_presence_v1 {
   uint32_t presence;
   uint64_t value;
@@ -6195,6 +6211,7 @@ typedef struct thinkthen_complete_relation_v1 {
   struct thinkthen_complete_relation_field_first_line_presence_v1 first_line;
   struct thinkthen_complete_relation_field_index_presence_v1 index;
   struct thinkthen_complete_relation_field_input_presence_v1 input;
+  struct thinkthen_complete_relation_field_input_sources_presence_v1 input_sources;
   struct thinkthen_complete_relation_field_last_line_presence_v1 last_line;
   const struct thinkthen_complete_meta_v1 *meta;
   struct thinkthen_complete_relation_field_position_presence_v1 position;
@@ -6244,12 +6261,6 @@ typedef struct thinkthen_complete_session_question_detail_field_input_source_pre
   uint32_t presence;
   const struct thinkthen_complete_physical_source_v1 *value;
 } thinkthen_complete_session_question_detail_field_input_source_presence_v1;
-
-typedef struct thinkthen_complete_session_input_source_v1 {
-  uint64_t index;
-  const struct thinkthen_complete_physical_source_v1 *source;
-  struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_session_input_source_v1;
 
 typedef struct thinkthen_complete_session_question_detail_field_input_sources_v1 {
   const struct thinkthen_complete_session_input_source_v1 *const *data;
