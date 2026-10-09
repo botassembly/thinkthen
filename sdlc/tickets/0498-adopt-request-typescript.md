@@ -17,3 +17,7 @@ Adopt shared Request and generated results in TypeScript through named typed pub
 - Changes: Depends on0491, 0502 and the reviewed generation decision. Translate host arguments into Request, decode generated types, and remove the old copy after parity. Claim `libraries/typescript/**` and its installed typed consumer cases. Preserve absent versus null and tolerate permitted unknown result fields.
 - Proof: Full shared cases execute through the installed host's typed interface, including files/images where supported, context/options, original positions, facts, failures, invalid-input zero sends and cancellation. Raw JSON pass-through is insufficient.
 - Defers: Proxy and changing platform rulings without evidence. Size: medium surface migration.
+
+## 2026-10-09 amendment
+
+Follow 0511 admission, 0513 generated typed results and 0515's one API. TypeScript owns editor declarations, CJS/ESM, async streams, cancellation and cleanup idiom; Rust owns rules and observations. Delete copied readers after installed typed cases pass. 0520 fixes the immediate facts-reader regression first; preserve the reproduced refusal cases rather than weakening their expectations. Review this amendment and narrow actual addon/host slice files before coding.

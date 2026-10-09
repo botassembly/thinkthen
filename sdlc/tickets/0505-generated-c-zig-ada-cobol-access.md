@@ -20,6 +20,12 @@ Provide generated typed access for C, Zig, Ada and COBOL without hand-mirroring 
 
 ## Revised code-reduction estimate
 
+## 2026-10-09 amendment
+
+The thin, first-class ruling fixes this outcome to generated Rust-owned layouts for C, Zig, Ada and COBOL, including 0513's Ada specs and COBOL copybooks. Follow 0511 admission and the reviewed shared interfaces. Preserve the frozen C ABI, lifetime rules and documented host limits. Remove manual post-0.1 mirrors only after installed typed cases pass. The earlier fallback estimate below is historical; measure actual changes. Review the amendment and narrow generated declarations and host glue per slice.
+
+### Earlier fallback estimate
+
 The fallback generates layouts while retaining host value copying and native lifetime handling. At main `26fc8c900`, `libraries/ada/src/thinkthen_c*.ads` contains 1,967 nonblank lines and the seven COBOL `tt-*.cpy` carrier copybooks excluding constants contain 699. Estimate at most about 2,700 hand-maintained lines becoming generated across these named files. This is an upper bound: package declarations, imports, constants and any retained compatibility code reduce the replaceable portion. Generated carrier lines remain, so net source deletion may be small or zero after generator code is added.
 
 C already consumes the generated header. Zig can import it directly; its execution and owned-result code is not a disposable layout copy. The 0502 experiment did not establish a deletion estimate for those adapters. Preserve typed values, failure facts, representation limits and lifetimes; record actual manual code removed at landing. Do not apply the study's 25,000–35,000-line schema-reader estimate to this layout-only fallback.

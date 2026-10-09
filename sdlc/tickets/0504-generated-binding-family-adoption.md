@@ -20,6 +20,12 @@ Migrate every remaining language family through generated request/result types a
 
 ## Revised code-reduction estimate
 
+## 2026-10-09 amendment
+
+The thin, first-class ruling supersedes the layout-only reader fallback and its estimate below. Depend on 0516's measured C# pilot, 0511 admission, 0503 session, 0513 generated results and 0514 guide. Each independently reviewed family implements async, cancellation, cleanup and naming idiom while deleting duplicated rules and readers. Objective-C follows 0518's Foundation target. Direct Python/dataframe ownership stays with 0496. Narrow each family's actual paths before parallel work, retain installed typed parity and measure actual code removed rather than promising a line target.
+
+### Earlier fallback estimate
+
 0502 selects generated native layouts, not schema-generated semantic readers. Withdraw the study's 25,000–35,000-line removal estimate for this rollout. The identifiable C# and Dart layout files contain 1,778 nonblank lines: 884 in `libraries/csharp/src/NativeAbi*.cs` and 894 in `libraries/dart/lib/src/native/abi.dart`. Estimate at most about 1,800 hand-maintained lines becoming generated in these two hosts; generated declarations remain in the package, so this does not imply a net deletion of 1,800 lines. Imports and generator support reduce the maintenance saving.
 
 The experiment's 127 C# reader lines and 1,565 Dart reader lines remain owned-copy logic unless a parity-preserving replacement is demonstrated. PHP reads the header directly; Python stays directly on Rust. Other families may remove duplicate admission and layout code, but the experiment did not measure that scope. Count actual removed hand-written code in each family landing rather than crediting speculative reader deletion. This estimate comes from the named layout files at main `26fc8c900` and the retained 0502 reader inventory.

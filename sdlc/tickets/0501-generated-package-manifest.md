@@ -17,3 +17,7 @@ Use one packaging definition to generate npm and JAR product inventories for bui
 - Changes: Derive manifest from the settled generated file layout; builders and checks consume it. Depends on direct/family migrations. Claim package generation, `libraries/typescript/package.json`, JVM packaging and existing package checks.
 - Proof: Built inventories agree with the generated definition and missing/stale product files fail installed consumers.
 - Defers: New receipt frameworks or per-language proof reports. Size: medium packaging change.
+
+## 2026-10-09 amendment
+
+Link this outcome to 0517's native-library packaging. Use one generated product inventory for both builder and installed checks, not a second manifest system. Follow final generated result and family layouts. Review the amendment and name existing npm/JVM builder and consumer files before implementation.

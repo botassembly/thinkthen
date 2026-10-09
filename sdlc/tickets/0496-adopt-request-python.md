@@ -17,3 +17,7 @@ Adopt shared Request and generated results in Python, pandas and Python Polars t
 - Changes: Depends on0491, 0502 and the reviewed generation decision. Translate host arguments into Request, decode generated types, and remove the old copy after parity. Claim `libraries/python/**` and its installed typed consumer cases. Preserve absent versus null and tolerate permitted unknown result fields.
 - Proof: Full shared cases execute through the installed host's typed interface, including files/images where supported, context/options, original positions, facts, failures, invalid-input zero sends and cancellation. Raw JSON pass-through is insufficient.
 - Defers: Proxy and changing platform rulings without evidence. Size: large surface migration.
+
+## 2026-10-09 amendment
+
+Follow 0511 admission, 0513 Rust-owned generated typed results and 0515's one API. Python results support repr, equality, to_dict, pickling and bool without raising, preserving distinct absence, null and failures. Python owns its naming and dataframe idiom, not copied validation or cache logic. Keep pandas and Polars row identity and all ten functions. 0520 fixes the immediate facts-reader regression first. Review this amendment and narrow each actual Python/dataframe slice before coding.
