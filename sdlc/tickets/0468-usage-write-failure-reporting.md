@@ -61,3 +61,4 @@ The existing held-writer, stage-failure and inherited-parent queue fixtures exer
 ## Progress
 
 - 2026-10-09 started
+- 2026-10-09 landed c11c0c1f7; next: Shared persistence observations and the C JSON status doors are landed and combined lint, test and spec pass. Adopt status in the language and SQL surfaces; retain truthful pending, failure and explicit-finish behavior.
