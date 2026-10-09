@@ -11,7 +11,7 @@ use super::{Input, Outcome, Row};
 use crate::engine::error::Error;
 use crate::engine::{Cancel, Deadline};
 
-type Port<T> = super::Port<T, T, &'static str>;
+type Port<T> = crate::cli::schedule::ordered::Port<T, T, &'static str>;
 
 fn within(budget: Duration) -> Cancel<'static> {
     Cancel::default().with_deadline(Deadline::after(budget))
@@ -30,14 +30,14 @@ fn named(stop: Error) -> &'static str {
 }
 
 /// Run `answer` over the reader's items and emit each row through `emit`.
-fn run<T: Send>(
+fn run<T: Send + 'static>(
     jobs: usize,
     cancel: &Cancel,
     start_reader: impl FnOnce(Receiver<()>, Port<T>),
     answer: &(impl Fn(T) -> Result<Row<T>, &'static str> + Sync),
     emit: impl FnMut(T) -> Result<bool, &'static str>,
 ) -> Result<Outcome<&'static str>, &'static str> {
-    super::run(
+    crate::cli::schedule::ordered::run(
         jobs,
         cancel,
         start_reader,

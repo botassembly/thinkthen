@@ -109,6 +109,7 @@ enum Due {
 /// check stops the call, joins its workers, and then resumes on the caller.
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
+    pub(in crate::public) cli_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
     cancel: Option<&'a CancelToken>,
@@ -159,6 +160,7 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn new() -> Self {
         Self {
+            cli_text_limit: None,
             eager_inputs: false,
             cli_reader: None,
             cancel: None,
@@ -175,6 +177,12 @@ impl<'a> CallOptions<'a> {
             proxy: None,
             surface: None,
         }
+    }
+
+    #[cfg(feature = "cli")]
+    pub(crate) const fn cli_text_limit(mut self, limit: usize) -> Self {
+        self.cli_text_limit = Some(limit);
+        self
     }
 
     pub(crate) const fn cli_reader(mut self, reader: &'a cli_reader::CliReader<'a>) -> Self {

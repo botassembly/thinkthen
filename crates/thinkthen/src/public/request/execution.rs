@@ -214,7 +214,7 @@ impl Engine {
             &definition,
             rows,
             controls,
-            eager && sink.is_none(),
+            eager && (sink.is_none() || request.request.call.function() == Function::Recognize),
             options,
             sink,
             release,
@@ -492,6 +492,7 @@ pub(super) fn selected_filter(
 
 #[expect(
     clippy::too_many_arguments,
+    clippy::too_many_lines,
     reason = "one typed dispatch preserves all ten existing native scheduler contracts"
 )]
 fn dispatch<'a>(
@@ -506,6 +507,20 @@ fn dispatch<'a>(
     release: Option<&dyn Fn(usize)>,
     recover: crate::public::options::AnnotationRecovery<'a>,
 ) -> Result<RequestOutcome, Error> {
+    if controls.cli_reader.is_some() {
+        let recognition = match definition {
+            RequestDefinition::Recognize(file) => Some(file.question()),
+            RequestDefinition::Recognition(ask) => Some(ask),
+            _ => None,
+        };
+        if let Some(ask) = recognition {
+            return Ok(complete(
+                engine
+                    .request_recognize_stream(ask, rows, controls, eager, sink)?
+                    .map(RequestValue::Recognized),
+            ));
+        }
+    }
     let outcome = match definition {
         RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager, sink),
         RequestDefinition::Rank(q) => Ok(complete(

@@ -82,6 +82,8 @@ impl AdmittedRequest {
         args.options.field = None;
         args.options.context_field = None;
         args.options.options_field = None;
+        args.options.examples_field = None;
+        args.options.seed_spans_field = None;
         self
     }
 

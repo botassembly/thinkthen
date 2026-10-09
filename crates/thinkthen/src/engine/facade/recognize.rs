@@ -59,13 +59,18 @@ fn asked_stages(asked: &[Asked]) -> impl Iterator<Item = &'static str> + '_ {
 
 impl Engine {
     /// Admit all first-stage/profile/context boundaries before a whole input set starts.
-    pub(crate) fn admit_recognition(&self, spec: &RecognizeSpec, text: &str) -> Result<(), Error> {
+    pub(crate) fn admit_recognition_limit(
+        &self,
+        spec: &RecognizeSpec,
+        text: &str,
+        limit: usize,
+    ) -> Result<(), Error> {
         step_one_context(
             &self.backend,
             self.profile.as_ref(),
             spec,
             text,
-            MAX_TEXT_BYTES,
+            limit,
             self.aggregate_context.as_ref(),
         )
         .map(|_| ())

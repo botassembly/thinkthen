@@ -5,7 +5,7 @@ mod find;
 mod many;
 mod rank;
 mod rank_set;
-mod recognize;
+pub(crate) mod recognize;
 pub(in crate::public) mod records;
 mod relate;
 mod streaming;

@@ -7,13 +7,16 @@ use crate::public::{
 };
 use std::sync::Arc;
 
-struct Unit<T> {
-    original: T,
-    input: Arc<QuestionInput>,
-    text: String,
-    engine: facade::Engine,
-    context: Option<String>,
-    ask: Recognize,
+pub(super) struct Prepared {
+    pub(super) input: Arc<QuestionInput>,
+    pub(super) text: String,
+    pub(super) engine: facade::Engine,
+    pub(super) context: Option<String>,
+    pub(super) ask: Recognize,
+}
+pub(super) struct Unit<T> {
+    pub(super) original: T,
+    pub(super) prepared: Prepared,
 }
 impl Engine {
     /// Recognize selected native record text while retaining each original and location.
@@ -62,7 +65,15 @@ impl Engine {
         let units = self.try_within_admission(
             records.into_iter().enumerate().map(|(at, record)| {
                 record
-                    .and_then(|record| prepare(&engine, ask, record, options.context_text()))
+                    .and_then(|record| {
+                        prepare(
+                            &engine,
+                            ask,
+                            record,
+                            options.context_text(),
+                            facade::MAX_TEXT_BYTES,
+                        )
+                    })
                     .map_err(|error| error.at_record(at))
             }),
             &options,
@@ -71,7 +82,14 @@ impl Engine {
         stop.run_call(0, |cancel| {
             let cancel = cancel.with_storage_scope();
             let mut rows = Vec::new();
-            for (at, unit) in units.enumerate() {
+            for (
+                at,
+                Unit {
+                    original,
+                    prepared: unit,
+                },
+            ) in units.enumerate()
+            {
                 cancel.stop_or_remaining().map_err(Error::from)?;
                 let before = stop.facts().attempts().map_or(0, <[_]>::len);
                 let found = super::execute(
@@ -102,7 +120,7 @@ impl Engine {
                 result.canonical.source = super::super::physical_source(&unit.input);
                 result.source_value = source_value(&result.canonical.value, &unit)?;
                 rows.push(CompleteRecord {
-                    original: unit.original,
+                    original,
                     ordinal: at,
                     result,
                 });
@@ -112,11 +130,12 @@ impl Engine {
         })
     }
 }
-fn prepare<T: InputEvidence>(
+pub(super) fn prepare<T: InputEvidence>(
     engine: &facade::Engine,
     ask: &Recognize,
     record: RecordInput<T>,
     fallback: Option<&str>,
+    limit: usize,
 ) -> Result<Unit<T>, Error> {
     if record.options.is_some() {
         return Err(Error::usage("recognize takes no per-record options"));
@@ -152,21 +171,23 @@ fn prepare<T: InputEvidence>(
         QuestionInput::Images(_) => return Err(crate::public::complete::wrong()),
     };
     engine
-        .admit_recognition(&ask.0, &text)
+        .admit_recognition_limit(&ask.0, &text, limit)
         .map_err(Error::from)?;
     Ok(Unit {
         original: record.original,
-        input,
-        text,
-        engine,
-        context,
-        ask,
+        prepared: Prepared {
+            input,
+            text,
+            engine,
+            context,
+            ask,
+        },
     })
 }
 
-fn source_value<T>(
+pub(super) fn source_value(
     value: &crate::core::RecognizedValue,
-    unit: &Unit<T>,
+    unit: &Prepared,
 ) -> Result<Option<crate::public::SourceRecognition>, Error> {
     let QuestionInput::Record(input) = unit.input.as_ref() else {
         return Ok(None);

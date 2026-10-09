@@ -37,7 +37,7 @@ mod rank_question;
 mod rank_set;
 pub use rank_set::RankSet;
 mod choice;
-mod complete;
+pub(crate) mod complete;
 mod engine;
 pub(crate) mod error;
 #[cfg(feature = "polars")]

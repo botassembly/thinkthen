@@ -330,9 +330,13 @@ fn run(
             input,
             writer,
         ),
-        Some(Command::Recognize(arguments)) => {
-            recognize::run(arguments, environment, input, writer)
-        }
+        Some(Command::Recognize(arguments)) => recognize::run(
+            arguments,
+            environment,
+            admitted.ok_or(Failure::Defect("recognize has no admitted request"))?,
+            input,
+            writer,
+        ),
         Some(Command::Relate(arguments)) => relate::run(arguments, environment, input, writer),
         Some(Command::Cache(arguments)) => match &arguments.command {
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),

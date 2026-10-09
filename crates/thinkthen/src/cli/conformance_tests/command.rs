@@ -93,9 +93,15 @@ fn dispatch(arguments: &[String], input: Vec<u8>) -> (Result<ExitCode, Failure>,
             input,
             &mut output,
         ),
-        Some(Command::Recognize(held)) => {
-            crate::cli::recognize::run(held, &environment, input, &mut output)
-        }
+        Some(Command::Recognize(held)) => crate::cli::recognize::run(
+            held,
+            &environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("recognize request"),
+            input,
+            &mut output,
+        ),
         Some(Command::Relate(held)) => {
             crate::cli::relate::run(held, &environment, input, &mut output)
         }

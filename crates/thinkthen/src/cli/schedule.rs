@@ -3,19 +3,13 @@
 
 use std::fmt;
 use std::io::Write;
-use std::process::ExitCode;
-use std::sync::mpsc::Receiver;
-use std::thread;
 
 use crate::core::{ModelName, Outcome, Withheld};
 use crate::engine::error::Error as EngineError;
-use crate::engine::facade::Engine;
 use crate::engine::usage::Counters;
 use crate::engine::{Width, Widths};
 use crate::failure::Failure;
 use crate::profile::Mismatch;
-
-type Asking<'a, T> = dyn Fn(&T) -> Result<Judged, Failure> + Sync + 'a;
 
 /// A command failure and the input line it names, when one is known.
 pub(crate) struct Placed {
@@ -195,74 +189,8 @@ pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Fail
         .map_err(Failure::WidthActive)
 }
 
-/// Answer each record of `chunks` with `row` over the engine's width and
-/// print the rows in input order. Only the many-line `recognize` runs this
-/// way; every record function asks through the question pipeline.
-pub(crate) fn over_records<T, I>(
-    engine: &Engine,
-    row: &Asking<'_, T>,
-    chunks: I,
-    cancel: &crate::engine::Cancel,
-    output: &mut Output<'_>,
-) -> Result<ExitCode, Failure>
-where
-    T: Send + 'static,
-    I: Iterator<Item = Result<(usize, T), Placed>> + Send + 'static,
-{
-    let outcome = ordered::run(
-        engine.width(cancel)?,
-        cancel,
-        |requests, events| {
-            thread::spawn(move || read_records(chunks, &requests, &events));
-        },
-        &|(at, value): (usize, T)| {
-            row(&value)
-                .map(|judged| ordered::Row {
-                    replayed: judged.replayed,
-                    value: judged,
-                })
-                .map_err(|error| Placed::at(error, at))
-        },
-        |judged| output.take(judged).map_err(Placed::from),
-        &|error: EngineError| Placed::from(error),
-        || Placed::from(Failure::Defect("the record reader ended early")),
-    )?;
-    match outcome {
-        ordered::Outcome::Complete => Ok(ExitCode::SUCCESS),
-        ordered::Outcome::Stopped {
-            finished,
-            replayed,
-            cause,
-        } => Err(Failure::Stopped {
-            at: cause.at.unwrap_or(finished + 1),
-            finished,
-            replayed,
-            recording: engine.recording(),
-            held: false,
-            cause: Box::new(cause.cause),
-        }),
-    }
-}
-
-fn read_records<T, I>(
-    mut chunks: I,
-    requests: &Receiver<()>,
-    events: &ordered::Port<(usize, T), Judged, Placed>,
-) where
-    I: Iterator<Item = Result<(usize, T), Placed>>,
-{
-    while requests.recv().is_ok() {
-        let event = match chunks.next() {
-            None => ordered::Input::End,
-            Some(Ok(value)) => ordered::Input::Item(value),
-            Some(Err(error)) => ordered::Input::Failed(error),
-        };
-        if events.send(event).is_err() {
-            return;
-        }
-    }
-}
-
-pub(super) mod ordered;
 #[cfg(test)]
 pub(crate) mod width_tests;
+
+#[cfg(test)]
+pub(crate) mod ordered;

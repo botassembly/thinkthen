@@ -130,9 +130,15 @@ fn dispatch(
                 .expect("find request");
             crate::cli::find::run(held, environment, admitted, input, &mut output)
         }
-        Some(Verb::Recognize(held)) => {
-            crate::cli::recognize::run(held, environment, input, &mut output)
-        }
+        Some(Verb::Recognize(held)) => crate::cli::recognize::run(
+            held,
+            environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("recognize request"),
+            input,
+            &mut output,
+        ),
         Some(Verb::Relate(held)) => crate::cli::relate::run(held, environment, input, &mut output),
         _ => panic!("no arm for {arguments:?}"),
     }

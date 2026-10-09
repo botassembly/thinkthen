@@ -78,9 +78,15 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
             input,
             &mut output,
         ),
-        Some(Command::Recognize(held)) => {
-            crate::cli::recognize::run(held, &environment, input, &mut output)
-        }
+        Some(Command::Recognize(held)) => crate::cli::recognize::run(
+            held,
+            &environment,
+            crate::cli::request::admit(cli.command.as_ref().expect("command"))
+                .expect("native header")
+                .expect("recognize request"),
+            input,
+            &mut output,
+        ),
         Some(Command::Relate(held)) => {
             crate::cli::relate::run(held, &environment, input, &mut output)
         }

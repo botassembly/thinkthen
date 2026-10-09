@@ -8,15 +8,15 @@ use serde::Serialize;
 
 use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
-use crate::cli::intake::{Data, Intake, Item};
+use crate::cli::intake::Intake;
 #[cfg(test)]
 use crate::core::Meta;
-use crate::core::{ModelName, Outcome, Reading, RecognizeSpec, Record, RecordValue, json_line};
+use crate::core::{ModelName, Reading, RecognizeSpec, Record};
 use crate::edge::{self, Environment};
 use crate::engine::facade::{Engine, MAX_TEXT_BYTES};
 #[cfg(test)]
 use crate::engine::facade::{Probabilities, Recognized};
-use crate::failure::{Failure, ReplayContext};
+use crate::failure::Failure;
 use crate::profile;
 use crate::schedule;
 
@@ -25,6 +25,7 @@ mod dry_run;
 mod examples;
 #[cfg(test)]
 mod legacy_schema;
+mod native;
 mod source;
 
 #[cfg(test)]
@@ -44,6 +45,7 @@ pub(crate) struct Detailed<'a> {
 
 struct Running<'a> {
     common: &'a Common,
+    environment: &'a Environment,
     max_text_bytes: usize,
     engine: Engine,
     mismatch: profile::Mismatch,
@@ -68,6 +70,7 @@ pub(crate) fn request_definition(
 pub(crate) fn run(
     arguments: &RecognizeArguments,
     environment: &Environment,
+    admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
@@ -173,56 +176,9 @@ pub(crate) fn run(
         );
     }
 
-    let source: Box<dyn Iterator<Item = Result<Item, schedule::Placed>> + Send> = if arguments
-        .context_field
-        .is_some()
-        || arguments.examples_field.is_some()
-        || arguments.seed_spans_field.is_some()
-    {
-        let mut held = Vec::new();
-        for (ordinal, item) in source.enumerate() {
-            let item = item.map_err(|placed| placed.cause)?;
-            let record = match &item.data {
-                Data::Bytes(bytes) => reading
-                    .record(bytes)
-                    .map_err(|error| Failure::record(error, reading.streams()))?,
-                Data::Record(record) => record.clone(),
-                Data::Images(_) => {
-                    return Err(Failure::Usage(
-                        "recognize accepts text only; images are unsupported",
-                    ));
-                }
-            };
-            let context = selected_context(
-                &record,
-                arguments.context_field.as_deref(),
-                &spec,
-                context.as_deref(),
-            )?;
-            let selected = examples::selected(&record, arguments.examples_field.as_deref(), &spec)
-                .map_err(|error| examples::at_record(error, ordinal))?;
-            let selected =
-                examples::seeds(&record, arguments.seed_spans_field.as_deref(), selected)?;
-            let text = reading.evidence(&record)?.as_text()?.into_owned();
-            crate::engine::facade::step_one_context(
-                &backend,
-                selected_profile.as_ref(),
-                &selected,
-                &text,
-                max_text_bytes,
-                context
-                    .as_ref()
-                    .map(crate::core::Evidence::as_json)
-                    .as_ref(),
-            )?;
-            held.push(Ok(item));
-        }
-        Box::new(held.into_iter())
-    } else {
-        Box::new(source)
-    };
     let running = Running {
         common: &arguments.common,
+        environment,
         max_text_bytes,
         engine: asking::engine(
             &arguments.common,
@@ -240,201 +196,14 @@ pub(crate) fn run(
         seed_spans_field: arguments.seed_spans_field.clone(),
         cancel: environment.cancel().with_storage_scope(),
     };
-    let streams = reading.streams();
-    if !streams && !arguments.common.located() && arguments.common.input.len() <= 1 {
-        let item = source
-            .into_iter()
-            .next()
-            .transpose()
-            .map_err(|placed| placed.cause)?
-            .ok_or(Failure::Defect("document recognize has no input"))?;
-        let judged = judged_item(&running, &reading, &spec, &item, 0)?;
-        schedule::Output::streaming(&mut writer, environment.usage()).take(judged)?;
-        return Ok(ExitCode::SUCCESS);
-    }
-    schedule::over_records(
-        &running.engine,
-        &|(ordinal, item): &(usize, Item)| judged_item(&running, &reading, &spec, item, *ordinal),
-        source
-            .enumerate()
-            .map(|(ordinal, item)| item.map(|item| (item.at, (ordinal, item)))),
-        &running.cancel,
+    native::run(
+        &running,
+        admitted,
+        &reading,
+        &spec,
+        source,
         &mut schedule::Output::streaming(&mut writer, environment.usage()),
     )
-}
-
-fn judged_item(
-    running: &Running<'_>,
-    reading: &Reading,
-    spec: &RecognizeSpec,
-    item: &Item,
-    ordinal: usize,
-) -> Result<schedule::Judged, Failure> {
-    let streams = reading.streams();
-    let record = match &item.data {
-        Data::Bytes(bytes) => reading
-            .record(bytes)
-            .map_err(|error| Failure::record(error, streams))?,
-        Data::Record(record) => record.clone(),
-        Data::Images(_) => {
-            return Err(Failure::Usage(
-                "recognize accepts text only; images are unsupported",
-            ));
-        }
-    };
-    let spec = examples::selected(&record, running.examples_field.as_deref(), spec)
-        .map_err(|error| examples::at_record(error, ordinal))?;
-    let spec = examples::seeds(&record, running.seed_spans_field.as_deref(), spec)?;
-    let location = item
-        .position
-        .as_ref()
-        .filter(|p| p.located || running.common.input.len() > 1)
-        .map(|position| {
-            let Data::Bytes(bytes) = &item.data else {
-                return Err(Failure::Usage("located recognize needs text units"));
-            };
-            let mut position = position.clone();
-            position.located = true;
-            Ok((position, reading.as_it_arrived(bytes)?.to_owned()))
-        })
-        .transpose()?;
-    let mut judged = judged_record(
-        running,
-        reading,
-        &spec,
-        record,
-        Render {
-            streams,
-            ordinal,
-            location: location
-                .as_ref()
-                .map(|(position, text)| (position, text.as_str())),
-        },
-    )?;
-    if let Some((position, _)) = location {
-        judged.position = Some(position);
-    }
-    Ok(judged)
-}
-
-fn execute(
-    running: &Running<'_>,
-    spec: &RecognizeSpec,
-    text: &str,
-    engine: &Engine,
-) -> Result<
-    (
-        crate::engine::facade::Recognition,
-        Vec<crate::core::AttemptObservation>,
-    ),
-    Failure,
-> {
-    let cancel = running
-        .cancel
-        .with_captured_attempts(running.common.details);
-    let mut events = std::collections::BTreeMap::new();
-    let recognition = engine
-        .recognize_observed(
-            spec,
-            text,
-            running.max_text_bytes,
-            &cancel,
-            |_, _, answered| {
-                for event in &answered.attempts {
-                    events.insert(event.ordinal(), event.clone());
-                }
-                Ok(())
-            },
-        )
-        .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Recognize))?;
-    Ok((recognition, events.into_values().collect()))
-}
-
-struct Render<'a> {
-    streams: bool,
-    ordinal: usize,
-    location: Option<(&'a crate::cli::intake::Position, &'a str)>,
-}
-
-fn judged_record(
-    running: &Running<'_>,
-    reading: &Reading,
-    spec: &RecognizeSpec,
-    record: Record,
-    row: Render<'_>,
-) -> Result<schedule::Judged, Failure> {
-    let evidence = reading.evidence(&record)?;
-    let text = evidence.as_text()?.into_owned();
-    let context = selected_context(
-        &record,
-        running.context_field.as_deref(),
-        spec,
-        running.context.as_deref(),
-    )?;
-    let engine = running
-        .engine
-        .clone()
-        .with_aggregate_context_value(context.clone());
-    let (recognition, events) = execute(running, spec, &text, &engine)?;
-    let replayed = !recognition.meta.live;
-    let line = if running.common.details {
-        let canonical = crate::result_json::complete::recognition(
-            &engine,
-            spec,
-            recognition,
-            crate::result_json::complete::RecognitionRow {
-                ordinal: row.ordinal,
-                input: row.streams.then_some(record),
-                context_sha256: context
-                    .as_ref()
-                    .map(|value| {
-                        value
-                            .as_text()
-                            .map(|text| asking::context::digest(Some(&text)))
-                    })
-                    .transpose()?
-                    .flatten(),
-                attempts: Some(events),
-            },
-        )
-        .map_err(|_| Failure::Defect("a complete recognition could not be constructed"))?;
-        match row.location {
-            Some((position, text)) => json_line(&source::Complete {
-                canonical: &canonical,
-                value: source::located(&canonical.value, position, text)?,
-            })?,
-            None => json_line(&canonical)?,
-        }
-    } else {
-        match row.location {
-            Some((position, text)) => {
-                let value = source::located(&recognition.value, position, text)?;
-                if row.streams {
-                    json_line(&RecordValue::new(record, value))?
-                } else {
-                    crate::cli::intake::source_value(&text, &json_line(&value)?, position)?
-                }
-            }
-            None if row.streams => json_line(&RecordValue::new(record, recognition.value))?,
-            None => json_line(&recognition.value)?,
-        }
-    };
-    let mut printed = Some(line);
-    if let Some((position, _)) = row.location
-        && (row.streams || running.common.details)
-    {
-        crate::cli::intake::source_members(&mut printed, Some(position))?;
-    }
-    Ok(schedule::Judged {
-        model: None,
-        printed,
-        position: None,
-        outcome: Outcome::Yes,
-        replayed,
-        order_value: None,
-        partial_failure: false,
-        profile_mismatch: running.mismatch.notice(),
-    })
 }
 
 fn selected_context(

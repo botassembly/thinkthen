@@ -204,6 +204,15 @@ fn refusal(mut cause: Box<dyn std::any::Any + Send + Sync>, error: crate::Error)
             };
         };
     }
+    cause = match cause.downcast::<crate::core::ExamplesError>() {
+        Ok(error) => {
+            return Failure::Recognize(super::recognize::Error::Examples {
+                record: None,
+                error: *error,
+            });
+        }
+        Err(cause) => cause,
+    };
     take!(crate::core::QuestionFileError);
     take!(crate::core::QuestionSetError);
     take!(crate::core::ReadingError);
