@@ -27,3 +27,7 @@ The CLI and MCP admit and execute every judgment call through the same public Re
   - CLI: convert transport arguments into Request and use public execution for judgments. Derive CLI exit codes from public error kinds, keeping today's codes. Name the actual CLI files before each slice.
 - Proof: Existing CLI and MCP outside-in cases pass unchanged. A check fails when production judgment execution or semantic admission in `cli/` or `mcp/` imports a private engine module. The check excludes the maintenance paths in `cli/cache.rs` and `cli/status.rs`.
 - Defers: A machine-readable CLI error output is not part of this ticket and needs no ticket under the scope freeze. New public maintenance APIs are not needed. Shell completions go to an idea.
+
+## Progress
+
+- 2026-10-09 started
