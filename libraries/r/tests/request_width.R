@@ -22,7 +22,7 @@ for (explicit in c(FALSE, TRUE)) {
   base <- backend_count()
   setup <- if (explicit) "tt_engine(throttle = 6L)" else "tt_engine()"
   job <- spawn(c(setup,
-    'a <- tt_decide("Q?", paste("record", 1:20), batch = 2L)$value',
+    'a <- tt_decide("Q?", paste("record", 1:20), options = list(batch = 2L))$value',
     'stopifnot(identical(a, rep(TRUE, 20))); cat("ANSWERS", length(a), "\\n")'))
   arrived <- backend_wait(base + cap)
   check(sprintf("the exact cap arrives: %d held, expected %d", arrived - base, cap), arrived == base + cap)
