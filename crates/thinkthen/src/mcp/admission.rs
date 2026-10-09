@@ -56,39 +56,58 @@ pub(super) struct Source {
     pub(super) media: ReaderMedia,
 }
 
-#[derive(Default, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Default)]
 pub(super) struct Options {
-    #[serde(default)]
     pub(super) cancelled: bool,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) deadline_ms: Option<i64>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) max_requests_total: Option<u64>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) context: Option<String>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) field: Option<Fields>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) context_field: Option<String>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) options_field: Option<String>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) model: Option<String>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) threshold: Option<Reading>,
-    #[serde(default)]
-    pub(super) attempts: bool,
-    #[serde(default, deserialize_with = "present")]
     pub(super) proxy: Option<Box<RawValue>>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) batch: Option<Batch>,
-    #[serde(default, deserialize_with = "present")]
-    pub(super) top: Option<usize>,
-    #[serde(default)]
-    pub(super) files_only: bool,
-    #[serde(default)]
-    pub(super) none: bool,
+    pub(super) native: crate::RequestOptions,
+}
+struct OptionsCarrier;
+impl<'de> serde::de::Visitor<'de> for OptionsCarrier {
+    type Value = Options;
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an MCP options object")
+    }
+    fn visit_map<M: serde::de::MapAccess<'de>>(self, mut map: M) -> Result<Options, M::Error> {
+        let mut fields = std::collections::BTreeMap::<String, Box<RawValue>>::new();
+        while let Some((key, value)) = map.next_entry()? {
+            if fields.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom("duplicate MCP option"));
+            }
+        }
+        // MCP always returns complete results; details is CLI output framing.
+        if fields.contains_key("details") {
+            return Err(serde::de::Error::custom("unsupported MCP option"));
+        }
+        let cancelled = fields
+            .remove("cancelled")
+            .map(|raw| serde_json::from_str(raw.get()))
+            .transpose()
+            .map_err(serde::de::Error::custom)?
+            .unwrap_or(false);
+        let proxy = fields.remove("proxy");
+        if let Some(raw) = fields.get_mut("field") {
+            let field: Fields =
+                serde_json::from_str(raw.get()).map_err(serde::de::Error::custom)?;
+            *raw = serde_json::value::to_raw_value(&match field {
+                Fields::One(field) => vec![field],
+                Fields::Many(fields) => fields,
+            })
+            .map_err(serde::de::Error::custom)?;
+        }
+        let json = serde_json::to_string(&fields).map_err(serde::de::Error::custom)?;
+        let native = serde_json::from_str(&json).map_err(serde::de::Error::custom)?;
+        Ok(Options {
+            cancelled,
+            proxy,
+            native,
+        })
+    }
+}
+impl<'de> Deserialize<'de> for Options {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        de.deserialize_map(OptionsCarrier)
+    }
 }
 
 pub(super) struct Invocation {
@@ -172,22 +191,9 @@ where
     Ok(paths)
 }
 
-pub(super) type Reading = crate::RequestThreshold;
-
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub(super) enum Fields {
     One(String),
     Many(Vec<String>),
 }
-impl Fields {
-    pub(super) fn values(&self) -> impl Iterator<Item = &str> {
-        let fields = match self {
-            Self::One(field) => std::slice::from_ref(field),
-            Self::Many(fields) => fields.as_slice(),
-        };
-        fields.iter().map(String::as_str)
-    }
-}
-
-pub(super) type Batch = crate::RequestBatch;

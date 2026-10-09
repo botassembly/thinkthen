@@ -18,6 +18,10 @@ pub(super) struct Descriptor {
     pub(super) context: Option<Box<RawValue>>,
     #[serde(default, deserialize_with = "raw")]
     pub(super) options: Option<Box<RawValue>>,
+    #[serde(default, deserialize_with = "raw")]
+    pub(super) examples: Option<Box<RawValue>>,
+    #[serde(default, deserialize_with = "raw")]
+    pub(super) seed_spans: Option<Box<RawValue>>,
 }
 #[derive(Deserialize)]
 #[serde(untagged)]
