@@ -5,6 +5,7 @@ use std::fmt;
 
 mod aggregate_reading;
 mod call;
+pub use crate::engine::usage::UsagePersistence;
 mod complete;
 mod metadata;
 mod reading;

@@ -24,6 +24,9 @@ pub struct Facts {
     pub(super) call_id: Option<CallId>,
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
+    pub(super) usage_persistence: Option<super::UsagePersistence>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
     pub(super) held_model_mismatch: bool,
     pub(super) cache_answers: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -75,6 +78,7 @@ impl Facts {
         Self {
             attempts: snapshot.attempts,
             call_id: snapshot.call_id,
+            usage_persistence: snapshot.usage_persistence,
             held_model_mismatch: snapshot.held_model_mismatch,
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
@@ -94,6 +98,14 @@ impl Facts {
             seconds: snapshot.elapsed.as_secs_f64(),
             model: snapshot.model,
         }
+    }
+
+    /// This engine's persistence observed when these facts were snapshotted.
+    /// This immutable observation cannot describe a later asynchronous write.
+    /// Aggregate tallies and calls without engine state have no observation.
+    #[must_use]
+    pub const fn usage_persistence(&self) -> Option<super::UsagePersistence> {
+        self.usage_persistence
     }
 
     /// Whether an excluded held answer reported a different model on this route.

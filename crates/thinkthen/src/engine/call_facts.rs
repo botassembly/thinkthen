@@ -17,6 +17,7 @@ impl fmt::Debug for CallFacts {
 }
 
 struct State {
+    usage: Option<Arc<super::usage::Counters>>,
     attempts: Option<Vec<crate::core::AttemptObservation>>,
     invocation: super::invocation::Context,
     started: Instant,
@@ -37,6 +38,7 @@ struct State {
 
 #[derive(Clone)]
 pub(crate) struct Snapshot {
+    pub(crate) usage_persistence: Option<super::usage::UsagePersistence>,
     pub(crate) attempts: Option<Vec<crate::core::AttemptObservation>>,
     pub(crate) call_id: Option<CallId>,
     pub(crate) elapsed: Duration,
@@ -52,6 +54,10 @@ pub(crate) struct Snapshot {
 }
 
 impl CallFacts {
+    pub(crate) fn with_usage(&self, usage: Arc<super::usage::Counters>) {
+        self.state().usage = Some(usage);
+    }
+
     pub(crate) fn capture_attempts(&self, requested: bool) {
         self.state().attempts = requested.then(Vec::new);
     }
@@ -75,6 +81,7 @@ impl CallFacts {
 
     pub(crate) fn new() -> Self {
         Self(Arc::new(Mutex::new(State {
+            usage: None,
             attempts: None,
             invocation: super::invocation::Context::default(),
             started: Instant::now(),
@@ -159,6 +166,7 @@ impl CallFacts {
             attempts
         });
         Snapshot {
+            usage_persistence: state.usage.as_ref().map(|usage| usage.persistence()),
             attempts,
             call_id: state.invocation.call_id(),
             held_model_mismatch: state.held_model_mismatch,

@@ -1,6 +1,7 @@
 //! Prepare durable bookkeeping before the last stop check, then count one send.
 
 use std::path::Path;
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, MutexGuard};
 use std::thread;
 
@@ -32,7 +33,7 @@ impl Counters {
         let month = String::with_capacity(32);
         let writer_failed = if let Some(path) = self.path.as_deref()
             && queue.writer.is_none()
-            && !queue.failed
+            && !self.shared.failed.load(Ordering::Acquire)
         {
             let (path, shared, carried) = (path.to_path_buf(), Arc::clone(&self.shared), carried());
             match thread::Builder::new().spawn(move || write_behind(&path, &shared, carried)) {
@@ -79,14 +80,14 @@ impl PreparedAttempt<'_> {
         };
         self.queue.totals = total;
         if self.path.is_some() {
-            if !self.queue.failed {
+            if !self.shared.failed.load(Ordering::Acquire) {
                 match (pending, self.queue.pending.last_mut()) {
                     (Some(next), Some((_, sum))) => *sum = next,
                     _ => self.queue.pending.push((self.month, delta)),
                 }
             }
             if self.writer_failed || self.queue.writer.is_none() {
-                self.queue.failed = true;
+                self.shared.failed.store(true, Ordering::Release);
                 self.queue.pending.clear();
             }
             self.shared.changed.notify_all();
