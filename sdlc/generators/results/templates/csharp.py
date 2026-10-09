@@ -14,6 +14,8 @@ def quote(value):
 
 
 def enum_values(schema):
+    if 'enum' in schema and all(isinstance(value, str) for value in schema['enum']):
+        return schema['enum']
     variants = schema.get('oneOf', schema.get('anyOf', []))
     if variants and all(item.get('type') == 'string' and 'const' in item
                         for item in variants):
@@ -29,6 +31,8 @@ def nullable(schema):
 
 def shape(schema):
     schema = dict(schema)
+    if 'variants' in schema:
+        return schema
     if not enum_values(schema):
         if 'oneOf' in schema:
             raise ValueError(f'C# target needs a typed union for {schema}')
@@ -45,21 +49,36 @@ def shape(schema):
     return schema
 
 
-def conversion(schema, definitions, expression='member'):
+def conversion(schema, definitions, expression='member', depth=0):
     schema = shape(schema)
     if '$ref' in schema:
         key = schema['$ref'].removeprefix('#/$defs/')
         target = shape(definitions[key])
-        if 'properties' in target or enum_values(target):
+        if 'properties' in target or enum_values(target) or 'variants' in target:
             kind = name(key)
             argument = f'{expression}.GetString()!' if enum_values(target) else expression
-            return kind, f'new {kind}({argument})'
-        return conversion(target, definitions, expression)
+            return kind, (f'global::ThinkThen.Results.{kind}.Read({expression})' if 'variants' in target else
+                          f'new {kind}({argument})')
+        return conversion(target, definitions, expression, depth)
+    if isinstance(schema.get('const'), str):
+        return 'string', f'{expression}.GetString()!'
     kind = schema.get('type')
+    if kind == 'object' and isinstance(schema.get('additionalProperties'), dict):
+        value = schema['additionalProperties']
+        if nullable(value):
+            raise ValueError('C# target needs a nullable map value alternative')
+        entry = f'entry{depth}'
+        element, decode = conversion(value, definitions, entry + '.Value', depth + 1)
+        return f'IReadOnlyDictionary<string, {element}>', (
+            f'new ReadOnlyDictionary<string, {element}>({expression}.EnumerateObject()'
+            f'.ToDictionary({entry} => {entry}.Name, {entry} => {decode}, StringComparer.Ordinal))')
     if kind == 'array':
-        element, decode = conversion(schema['items'], definitions, 'item')
+        if nullable(schema['items']):
+            raise ValueError('C# target needs a nullable array item alternative')
+        item = f'item{depth}'
+        element, decode = conversion(schema['items'], definitions, item, depth + 1)
         return f'IReadOnlyList<{element}>', (
-            f'Array.AsReadOnly({expression}.EnumerateArray().Select(item => {decode}).ToArray())')
+            f'Array.AsReadOnly({expression}.EnumerateArray().Select({item} => {decode}).ToArray())')
     if kind == 'integer':
         integers = {'uint16': ('ushort', 'GetUInt16'),
                     'uint32': ('uint', 'GetUInt32'),
@@ -83,6 +102,7 @@ SUPPORT = '''// Generated from Rust result types; do not edit.
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -122,17 +142,25 @@ public abstract class ResultObject
 
 def render(definitions):
     chunks = [SUPPORT]
+    declared = [name(key) for key, schema in definitions.items()
+                if 'properties' in schema or 'variants' in schema or enum_values(schema)]
+    if any(not kind for kind in declared) or len(set(declared)) != len(declared):
+        raise ValueError('colliding or empty C# result type names')
+    parents = {variant: name(key) for key, schema in definitions.items()
+               for variant, _ in schema.get('variants', [])}
     for key, schema in definitions.items():
         schema = shape(schema)
         kind = name(key)
         values = enum_values(schema)
-        if values:
+        if 'variants' in schema:
+            chunks.append(render_union(kind, schema['variants'], definitions))
+        elif values:
             chunks.append(f'public readonly record struct {kind}(string Value)\n{{\n')
             for value in values:
                 chunks.append(f'    public static {kind} {name(value)} => new({quote(value)});\n')
             chunks.append('}\n\n')
         elif 'properties' in schema:
-            chunks.append(f'public sealed class {kind} : ResultObject\n{{\n'
+            chunks.append(f'public sealed class {kind} : {parents.get(key, "ResultObject")}\n{{\n'
                           f'    public {kind}(JsonElement document) : base(document) {{ }}\n')
             for member, field in schema['properties'].items():
                 optional = member not in schema.get('required', []) or nullable(field)
@@ -148,4 +176,39 @@ def render(definitions):
         else:
             # Primitive references use their native C# types at the member edge.
             conversion(schema, definitions)
+    return ''.join(chunks)
+
+
+def kind_test(schema, definitions, expression):
+    schema = shape(schema)
+    if '$ref' in schema:
+        return kind_test(definitions[schema['$ref'].removeprefix('#/$defs/')],
+                         definitions, expression)
+    kinds = {'string': ('String',), 'number': ('Number',), 'integer': ('Number',),
+             'object': ('Object',), 'array': ('Array',), 'boolean': ('True', 'False')}
+    if schema.get('type') not in kinds:
+        raise ValueError(f'C# target needs a JSON kind for discriminator {schema}')
+    return ' || '.join(f'{expression}.ValueKind == JsonValueKind.{kind}'
+                       for kind in kinds[schema['type']])
+
+
+def render_union(kind, variants, definitions):
+    chunks = [f'public abstract class {kind} : ResultObject\n{{\n'
+              f'    protected {kind}(JsonElement document) : base(document) {{ }}\n'
+              f'    public static {kind} Read(JsonElement document)\n    {{\n'
+              f'        {kind}? result = null;\n']
+    for variant, (mode, member, value) in variants:
+        test = f'document.TryGetProperty({quote(member)}, out var tag{name(variant)})'
+        if mode == 'literal':
+            test += (f' && tag{name(variant)}.ValueKind == JsonValueKind.String'
+                     f' && tag{name(variant)}.GetString() == {quote(value)}')
+        chunks.append(f'        if ({test})\n        {{\n')
+        if mode == 'member':
+            expected = kind_test(definitions[variant]['properties'][member], definitions,
+                                 f'tag{name(variant)}')
+            chunks.append(f'            if (!({expected})) throw new JsonException("Invalid result identity kind.");\n')
+        chunks.append('            if (result is not null) throw new JsonException("Ambiguous result variant.");\n'
+                      f'            result = new {name(variant)}(document);\n        }}\n')
+    chunks.append('        return result ?? throw new JsonException("Unknown result variant.");\n'
+                  '    }\n}\n\n')
     return ''.join(chunks)

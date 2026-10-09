@@ -26,9 +26,183 @@ static class Conformance
         Check(JsonNode.DeepEquals(source, JsonNode.Parse(facts.ToJson().GetRawText())), "JSON ownership survives document disposal");
     }
 
+    static T Read<T>(JsonNode source, Func<JsonElement, T> read)
+    {
+        using var document = JsonDocument.Parse(source.ToJsonString());
+        return read(document.RootElement);
+    }
+
+    static void Retains(JsonNode source, ResultObject result)
+    {
+        Check(JsonNode.DeepEquals(source, result.ToPlain()), "variant retains all nested members after disposal");
+        Check(JsonNode.DeepEquals(source, JsonNode.Parse(result.ToJsonString())), "variant round trip retains JSON");
+        Check(JsonNode.DeepEquals(source, JsonNode.Parse(result.ToJson().GetRawText())), "variant owns JSON after disposal");
+    }
+
+    static void IdentityVariants<T>(Func<JsonElement, T> read,
+        params (string Member, Func<T, string> Value)[] identities) where T : ResultObject
+    {
+        foreach (var (member, value) in identities)
+        {
+            var source = new JsonObject { [member] = "future identity", ["future"] = JsonNode.Parse("{\"nested\":[null,false,0]}") };
+            var result = Read(source, read);
+            Check(value(result) == "future identity", "string identity selects its typed variant without pattern validation");
+            Retains(source, result);
+            foreach (var text in new[] { "null", "0", "{}", "[]", "true" })
+            {
+                source[member] = JsonNode.Parse(text);
+                try { Read(source, read); throw new Exception("null or wrong JSON kind selected an identity variant"); }
+                catch (JsonException) { }
+                var other = identities.Single(identity => identity.Member != member).Member;
+                source[other] = "other identity";
+                try { Read(source, read); throw new Exception("invalid identity beside a valid identity accepted"); }
+                catch (JsonException) { }
+                source.Remove(other);
+            }
+        }
+        foreach (var source in new[] {
+            new JsonObject(), new JsonObject { ["future"] = new JsonObject() },
+            new JsonObject { [identities[0].Member] = "first", [identities[1].Member] = "second" } })
+        {
+            try { Read(source, read); throw new Exception("ambiguous or unknown identity accepted"); }
+            catch (JsonException) { }
+        }
+    }
+
+    static void Variants(JsonObject fixture)
+    {
+        foreach (var row in fixture["results"]!.AsArray())
+        {
+            var source = row!["result"]!["answer"];
+            if (source is null) continue;
+            var tag = source["kind"]?.GetValue<string>();
+            if (tag is null) continue;
+            source = source.DeepClone();
+            source["future"] = JsonNode.Parse("{\"nested\":[false,null,0]}");
+            if (tag == "find")
+            {
+                var find = Read(source, value => new FindAnswer(value));
+                Check(find.Pick == source["pick"]!.GetValue<string>(), "typed find answer");
+                Check(find.Probabilities.Count == source["probabilities"]!.AsObject().Count, "find map");
+                Retains(source, find);
+                continue;
+            }
+            var answer = Read(source, Answer.Read);
+            switch (answer)
+            {
+                case AnswerYesNo yesNo:
+                    Check(yesNo.Probability == source["probability"]!.GetValue<double>(), "yes/no variant probability");
+                    break;
+                case AnswerChoice choice:
+                    Check(choice.Pick == source["pick"]!.GetValue<string>(), "choice variant pick");
+                    Check(choice.Probabilities.All(entry => entry.Value == source["probabilities"]![entry.Key]!.GetValue<double>()), "typed choice map");
+                    source["confidence"] = null;
+                    Check(((AnswerChoice)Read(source, Answer.Read)).Confidence.State == PresenceState.Null, "variant explicit null");
+                    source.AsObject().Remove("confidence");
+                    Check(((AnswerChoice)Read(source, Answer.Read)).Confidence.State == PresenceState.Missing, "variant missing confidence");
+                    source["confidence"] = 0;
+                    Check(((AnswerChoice)Read(source, Answer.Read)).Confidence.Value == 0, "variant zero confidence");
+                    source["probabilities"]!["future label"] = 0;
+                    var map = ((AnswerChoice)Read(source, Answer.Read)).Probabilities;
+                    Check(map["future label"] == 0, "map retains arbitrary keys and zero values");
+                    Check(map is System.Collections.Generic.IDictionary<string, double> mutable && mutable.IsReadOnly, "map prevents caller mutation");
+                    break;
+                case AnswerTag tagged:
+                    Check(tagged.Probabilities.Count == source["probabilities"]!.AsObject().Count, "tag variant map");
+                    break;
+                case AnswerScore score:
+                    Check(score.Level == source["level"]!.GetValue<string>(), "score variant level");
+                    Check(score.Probabilities.Count == source["probabilities"]!.AsObject().Count, "score variant map");
+                    break;
+                default: throw new Exception("known answer did not select its variant");
+            }
+            // The owned view still retains its original source after caller mutation.
+            source = JsonNode.Parse(answer.ToJsonString())!;
+            Retains(source, answer);
+        }
+        var relation = fixture["results"]!.AsArray().Single(row => row!["type"]!.GetValue<string>() == "RelateResult")!["result"]!;
+        foreach (var source in relation["answer"]!["questions"]!.AsArray())
+        {
+            var member = Read(source!, RelationMember.Read);
+            Check(member is RelationMemberAnswerId or RelationMemberFailureId, "relation identity selects typed member");
+            if (member is RelationMemberAnswerId success)
+            {
+                Check(success.Accepted && success.Probability == source!["probability"]!.GetValue<double>(), "typed successful relation member");
+                Check(success.Source.Name == source!["source"]!["name"]!.GetValue<string>(), "typed relation endpoint");
+                Retains(source!["source"]!, success.Source);
+            }
+            if (member is RelationMemberFailureId failure)
+            {
+                Check(failure.Failure.Kind == "backend" && failure.Failure.Cause == FailureCause.MissingAnswer, "typed member failure and enum literal");
+                Check(failure.Target.State == PresenceState.Null, "nullable relation endpoint");
+            }
+            Retains(source!, member);
+        }
+        foreach (var source in relation["meta"]!["observations"]!.AsArray())
+        {
+            var observation = Read(source!, Observation.Read);
+            if (source!["observation_id"] is not null)
+                Check(observation is ObservationObservationId success && success.ObservationId == source["observation_id"]!.GetValue<string>(), "success observation identity");
+            else
+                Check(observation is ObservationFailureId failure && failure.FailureId == source["failure_id"]!.GetValue<string>(), "failure observation identity");
+            Retains(source!, observation);
+        }
+        foreach (var source in fixture["errors"]!.AsArray())
+        {
+            var error = Read(source!, value => new Error(value));
+            Check(error.Kind.Value == source!["kind"]!.GetValue<string>() && !error.Retryable, "typed error kind and false retryability");
+            Retains(source!, error);
+        }
+        var callSource = new JsonObject { ["error"] = fixture["started_error"]!.DeepClone(), ["facts"] = fixture["facts"]!.DeepClone() };
+        var call = Read(callSource, value => new CallError(value));
+        Check(call.Error.Kind == FailureKind.Backend && call.Facts.State == PresenceState.Value, "typed call failure facts");
+        Retains(callSource, call);
+        Retains(callSource["error"]!, call.Error);
+        var usageSource = relation["meta"]!["usage"]!;
+        var usage = Read(usageSource, value => new Usage(value));
+        Check(usage.InputTokens.Value == 0 && usage.OutputTokens.Value == 0, "required-token assertion preserves both optional token fields");
+        foreach (var text in new[] {
+            "{\"kind\":\"initial_request\",\"limit\":0}",
+            "{\"kind\":\"additional_request\",\"limit\":0}",
+            "{\"kind\":\"retry\",\"limit\":0,\"last_status\":429}" })
+        {
+            var source = JsonNode.Parse(text)!;
+            source["future"] = new JsonObject { ["nested"] = false };
+            var denial = Read(source, EstimatedInputDenial.Read);
+            Check(source["kind"]!.GetValue<string>() switch {
+                "initial_request" => denial is EstimatedInputDenialInitialRequest initial && initial.Limit == 0,
+                "additional_request" => denial is EstimatedInputDenialAdditionalRequest additional && additional.Limit == 0,
+                "retry" => denial is EstimatedInputDenialRetry retry && retry.LastStatus == 429 && retry.Limit == 0,
+                _ => false }, "estimated input denial tag and fields");
+            Retains(source, denial);
+        }
+        foreach (var text in new[] {
+            "{\"kind\":\"before_first_send\"}", "{\"kind\":\"before_additional_send\"}",
+            "{\"kind\":\"before_retry\",\"last_status\":429}" })
+        {
+            var source = JsonNode.Parse(text)!;
+            var denial = Read(source, SendBudgetDenial.Read);
+            Check(source["kind"]!.GetValue<string>() switch {
+                "before_first_send" => denial is SendBudgetDenialBeforeFirstSend,
+                "before_additional_send" => denial is SendBudgetDenialBeforeAdditionalSend,
+                "before_retry" => denial is SendBudgetDenialBeforeRetry retry && retry.LastStatus == 429,
+                _ => false }, "send budget denial tag and fields");
+            Retains(source, denial);
+        }
+        IdentityVariants(Observation.Read,
+            ("observation_id", value => ((ObservationObservationId)value).ObservationId),
+            ("failure_id", value => ((ObservationFailureId)value).FailureId));
+        IdentityVariants(RelationMember.Read,
+            ("answer_id", value => ((RelationMemberAnswerId)value).AnswerId),
+            ("failure_id", value => ((RelationMemberFailureId)value).FailureId));
+        try { Read(JsonNode.Parse("{\"kind\":\"future_kind\"}")!, Answer.Read); throw new Exception("unknown tag accepted as known variant"); }
+        catch (JsonException) { }
+    }
+
     public static void Main(string[] args)
     {
         var fixture = JsonNode.Parse(File.ReadAllText(args[0]))!.AsObject();
+        Variants(fixture);
         RoundTrip(fixture["facts"]!);
         // Final failure facts use exactly the same generated carrier.
         RoundTrip(fixture["started_error"]!["facts"]!);
@@ -75,6 +249,6 @@ static class Conformance
         Check(attempt.Outcome == AttemptOutcome.Status && attempt.Status.Value == 429, "typed failure attempt");
         Check(JsonNode.DeepEquals(attemptSource, attempt.ToPlain()), "unknown attempt members survive");
         RoundTrip(future);
-        Console.WriteLine("Generated C# facts: presence, observations, failure and unknown round trips pass");
+        Console.WriteLine("Generated C# results: facts, variants, maps, presence and unknown round trips pass");
     }
 }
