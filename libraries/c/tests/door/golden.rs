@@ -20,7 +20,7 @@ const FACTS: &str = r#""facts":{"cache_answers":0,"estimated_cost_usd":"0.000001
 #[test]
 fn every_door_reply_keeps_its_bytes() {
     let backend = Backend::start().expect("the conformance backend");
-    let full = format!("{}/arm/full/v1", backend.origin());
+    let full = format!("{}/arm/full/capture/v1", backend.origin());
     let broken = format!("{}/arm/malformed/missing_answer/v1", backend.origin());
     let set = json!({"version":1,"questions":{
         "refund":{"decide":"Refund?","threshold":0.5},
@@ -73,18 +73,62 @@ fn every_door_reply_keeps_its_bytes() {
         .map(|(code, body)| {
             format!(
                 "{code} {}",
-                steady(&body.replace(backend.origin(), "ORIGIN"))
+                steady(
+                    &body
+                        .replace(backend.origin(), "ORIGIN")
+                        .replace("/arm/full/capture/", "/arm/full/")
+                )
             )
         })
         .collect();
-    let expected: Vec<String> = GOLDEN
+    let captured: serde_json::Value = serde_json::from_str(&backend.capture()).expect("capture");
+    assert_eq!(captured["bodies"], json!(REQUESTS));
+    assert_eq!(backend.count(), REQUESTS.len() + 2);
+    // The malformed arm sends the same encoded annotation and scalar bodies.
+    let failure_capture = Backend::start().expect("failure request capture");
+    let failure_base = format!("{}/arm/full/capture/v1", failure_capture.origin());
+    let mut failure_script = Script::default();
+    failure_script.ask("settings", &[&failure_base, SETTINGS]);
+    for request in [&asked[10], &asked[0]] {
+        failure_script.ask("call", &[&failure_base, &request.to_string()]);
+    }
+    let failure_output = run(
+        &compile(&crate_dir().join("tests/c/driver.c")),
+        "",
+        &failure_script.0,
+    );
+    assert!(
+        failure_output.status.success(),
+        "{}",
+        text(&failure_output.stderr)
+    );
+    let captured: serde_json::Value =
+        serde_json::from_str(&failure_capture.capture()).expect("capture");
+    assert_eq!(captured["bodies"], json!([ANNOTATE, DECIDE]));
+    assert_eq!(failure_capture.count(), 2);
+    assert_eq!(said, expected());
+}
+
+fn expected() -> Vec<String> {
+    GOLDEN
         .iter()
-        .map(|line| {
+        .zip([
+            &[][..], &[DECIDE], &[DECIDE], &[DECIDE], &[CHOOSE], &[SCORE], &[TAG],
+            &[RECORDS], &[RECORDS], &[RECORDS], &[FIND], &[ANNOTATE], &[TOKEN, KIND],
+            &[RELATE], &[EITHER], &[DECIDE], &[], &[], &[ANNOTATE], &[], &[DECIDE],
+        ])
+        .map(|(line, bodies)| {
+            let largest = bodies.iter().map(|body| body.len()).max().unwrap_or(0);
+            // Integer ceiling of the approved encoded-body 0.908 upper estimate.
+            let estimated = (largest * 908).div_ceil(1000);
+            let added = format!(
+                r#""largest_request_bytes":{largest},"largest_request_estimated_input_tokens":{estimated},"token_estimate_method":"encoded-body-bytes-908-v1","seconds":0"#
+            );
             line.replace("{FACTS}", FACTS)
+                .replace("\"seconds\":0", &added)
                 .replace("{VERSION}", env!("CARGO_PKG_VERSION"))
         })
-        .collect();
-    assert_eq!(said, expected);
+        .collect()
 }
 
 /// The reply with each elapsed time and request digest printed as 0. A
@@ -134,4 +178,22 @@ const GOLDEN: [&str; 21] = [
     r#"0 {"value":[{"refund":true,"team":{"failed":{"kind":"backend","cause":"missing_answer"}}}],"facts":{"cache_answers":0,"model":"jev-1.13.0","records":1,"requests_sent":1,"seconds":0}}"#,
     r#"2 the reply was refused: the response carries no answer for question `q1`"#,
     r#"0 {"cache_answers":0,"records":0,"requests_sent":1,"seconds":0}"#,
+];
+
+// Independently pinned encoded requests: wording, readings, order and framing.
+const DECIDE: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Money back.\". Refund?"}}}"#;
+const CHOOSE: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"Money back.\". Team?","criteria":{"billing":null,"other":null}}}}"#;
+const SCORE: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"The text is \"Money back.\". Severe?","criteria":["low","high"]}}}"#;
+const TAG: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Money back.\". Labels?\n\nDetermine whether the label \"billing\" applies to this item."},"q2":{"type":"noul","instructions":"The text is \"Money back.\". Labels?\n\nDetermine whether the label \"urgent\" applies to this item."}}}"#;
+const RECORDS: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Refund?"},"q2":{"type":"noul","instructions":"The text is \"two\". Refund?"}}}"#;
+const FIND: &str = r#"{"state":"[{\"id\":\"u001\",\"evidence\":\"one\"},{\"id\":\"u002\",\"evidence\":\"two\"}]","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which asks?","criteria":{"u001":null,"u002":null}}}}"#;
+const ANNOTATE: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Refund?"},"q2":{"type":"choice","instructions":"The text is \"one\". Team?","criteria":{"billing":null,"other":null}}}}"#;
+const TOKEN: &str = r#"{"state":"Ada","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: [[Ada]]","criteria":{"BEGIN":"first token of a name of two or more tokens","INSIDE":"a middle token of a name","END":"last token of a name of two or more tokens","SINGLE":"a one-token name","OUT":"not part of a name"}}}}"#;
+const KIND: &str = r#"{"state":"Ada","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: [[Ada]]","criteria":{"person":null,"none of these":"They are not a proper name, or no listed kind covers what they name."}}}}"#;
+const RELATE: &str = r#"{"state":{"entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Bea","kind":"person"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it true that i1 linked i2?"},"q2":{"type":"noul","instructions":"Is it true that i2 linked i1?"}}}"#;
+const EITHER: &str = r#"{"state":{"entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Bea","kind":"person"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it true that i1 met i2, or that i2 met i1?"}}}"#;
+
+const REQUESTS: [&str; 16] = [
+    DECIDE, DECIDE, DECIDE, CHOOSE, SCORE, TAG, RECORDS, RECORDS, RECORDS, FIND, ANNOTATE, TOKEN,
+    KIND, RELATE, EITHER, DECIDE,
 ];

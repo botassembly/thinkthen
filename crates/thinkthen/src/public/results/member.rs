@@ -13,15 +13,16 @@ use super::{Details, Written};
 
 pub(crate) fn batch_warning(question: &Question, setting: core::Setting) -> Option<BatchWarning> {
     question
-        .batch
-        .as_ref()
-        .and_then(core::Setting::of_json)
-        .or_else(|| {
-            question
-                .threshold
-                .map(|_| core::Setting::Records(std::num::NonZeroUsize::MIN))
+        .authored_threshold
+        .then(|| {
+            let saved = question
+                .batch
+                .as_ref()
+                .and_then(core::Setting::of_json)
+                .unwrap_or(core::Setting::Records(std::num::NonZeroUsize::MIN));
+            BatchWarning::between(saved, setting)
         })
-        .and_then(|saved| BatchWarning::between(saved, setting))
+        .flatten()
 }
 
 impl fmt::Debug for Details {

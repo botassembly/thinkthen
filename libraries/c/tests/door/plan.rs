@@ -32,7 +32,7 @@ fn p1_plans_with_no_key_and_no_send_and_refusals_keep_the_outputs() {
     // The exact bytes, in the crate's field order.
     let body = serde_json::to_string(BODY).expect("the body as a JSON string");
     let expected = format!(
-        r#"{{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{{"lower":93,"upper":166}},"upper_bound":false,"first_body_utf8":{body}}}"#
+        r#"{{"records":1,"requests":1,"estimated_bytes":182,"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","estimated_input_tokens":{{"lower":93,"upper":166}},"upper_bound":false,"first_body_utf8":{body}}}"#
     );
     assert_eq!(text(&output.stdout), format!("{expected}\n"));
     assert_eq!(backend.count(), 0, "a plan sent a request");
