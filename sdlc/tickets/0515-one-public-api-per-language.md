@@ -29,3 +29,7 @@ Each language has one obvious entry point. The 0.1 JSON-string calls, duplicate 
 Preserve every frozen 0.1 C symbol, signature, layout, error code and accepted legacy JSON-door behavior under ADRs 0101 and 0125. Document compatibility exports separately from the recommended 0.2 API. Remove legacy host-language APIs under Ian's ruling only after replacement installed parity. C preservation does not depend on finding a current caller.
 
 The first slice removes shipped demo entry points from `libraries/jvm/kotlin/KotlinCaller.kt` and `libraries/jvm/scala/ScalaCaller.scala`, updates `libraries/jvm/tests/package_check.py`, and names any affected installed example before editing. Later API-removal slices follow their language migration and name exact files. Public symbol checks compare against the declared contract, not a list derived only from the implementation.
+
+## Progress
+
+- 2026-10-09 started
