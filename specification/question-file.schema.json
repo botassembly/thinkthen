@@ -637,6 +637,12 @@
             "object",
             "array"
           ]
+        },
+        "usage_status": {
+          "const": true
+        },
+        "finish_usage_status": {
+          "const": true
         }
       },
       "oneOf": [
@@ -693,6 +699,16 @@
         {
           "required": [
             "relate"
+          ]
+        },
+        {
+          "required": [
+            "usage_status"
+          ]
+        },
+        {
+          "required": [
+            "finish_usage_status"
           ]
         }
       ],
@@ -1070,6 +1086,26 @@
                 ]
               }
             ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "usage_status"
+            ]
+          },
+          "then": {
+            "maxProperties": 1
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "finish_usage_status"
+            ]
+          },
+          "then": {
+            "maxProperties": 1
           }
         }
       ]

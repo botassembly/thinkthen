@@ -50,6 +50,8 @@ The JSON call keeps a question's saved calibration `profile` in `meta.question_s
 
 A call of `{"usage": true}` returns this engine's running totals of requests sent, retries, cache answers and tokens.
 
+`{"usage_status":true}` observes persistence without waiting. `{"finish_usage_status":true}` drains current deltas and reports persistence. Each accepts only true and no other member. Both return `{"state":STATE}` with the shared persistence state; failed persistence adds the shared fixed `advice`. Written covers only this engine's current deltas. Only usage-lock acquisition has the existing deadline; other filesystem work can take longer. These utilities send no model requests.
+
 ## Throttle is per loaded copy
 
 The engine's throttle is the limit on requests in flight at once. It holds per loaded copy of the engine. A process that loads two copies, such as a C host and a native extension built from another surface, can run up to twice the throttle (ADR 0047 item 5).
