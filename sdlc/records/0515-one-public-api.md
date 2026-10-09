@@ -23,3 +23,5 @@ The unchanged failing request is:
 ```
 
 Frozen C compatibility and legacy host-language APIs remain under the ticket's review amendment. This slice changes no public SDK implementation or function wrapper.
+
+The managed package self-test and all 35 registry self-test cases pass. Policy checks and the child-environment check pass. The lint prefix before the surface registry passes at `02aa3e0cbc6e6aa53124dc19ddab993aad8eaf42`. The subsequent change to `ratchet.py.json` affects the surface registry, while the prefix's checked source and runner inputs remain unchanged. At `e58338a93e6db7541654ca787ec89a83552b2107`, the existing surface registry and remaining lint commands pass: offline dependency checks and their source plant, formatting, Clippy, documentation, and the public inventory with its four planted refusals. Later changes to this record do not alter those checked inputs.
