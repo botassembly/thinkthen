@@ -115,8 +115,7 @@ impl Engine {
             });
         }
         let stages = vec!["boundary"; asks.len()];
-        let answers = self.execute(
-            spec,
+        let answers = self.recognition_stage(spec, "boundary").execute(
             &asks,
             Bound::RECOGNITION,
             &stages,
@@ -134,8 +133,7 @@ impl Engine {
         stretches.sort_unstable();
         stretches.dedup();
         let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
-        let answers = self.execute(
-            spec,
+        let answers = self.recognition_stage(spec, "kind").execute(
             &asks,
             Bound::RECOGNITION,
             &stages,
@@ -233,7 +231,13 @@ impl Engine {
         asks.add(&self.backend, &plan)?;
         let (meta, details, observe) = held;
         let stages = vec!["relation"; asks.len()];
-        let answers = self.execute(spec, &asks, bound, &stages, (meta, observe), cancel)?;
+        let answers = self.recognition_stage(spec, "relation").execute(
+            &asks,
+            bound,
+            &stages,
+            (meta, observe),
+            cancel,
+        )?;
         let cut = spec.relation_threshold.cut_value().unwrap_or(0.5);
         for (pair, answer) in planned.pairs.iter().zip(&answers) {
             let (Some(rule), Some(source), Some(target)) = (
@@ -259,10 +263,17 @@ impl Engine {
         )))
     }
 
+    fn recognition_stage(&self, spec: &RecognizeSpec, stage: &str) -> Self {
+        let mut engine = self.clone();
+        engine.aggregate_context = spec
+            .stage_context
+            .effective(stage, self.aggregate_context.as_ref());
+        engine
+    }
+
     /// Ask one step's questions; one failed question fails the text.
     fn execute(
         &self,
-        spec: &RecognizeSpec,
         asks: &Asks,
         bound: Bound,
         stages: &[&'static str],
@@ -276,12 +287,7 @@ impl Engine {
             return Err(Error::RecognizeLogical);
         }
         let mut answers = Vec::with_capacity(asks.len());
-        let mut engine = self.clone();
-        engine.aggregate_context = spec.stage_context.effective(
-            stages.first().copied().unwrap_or("boundary"),
-            self.aggregate_context.as_ref(),
-        );
-        engine.ask_each(asks, bound, cancel, |place, answered| {
+        self.ask_each(asks, bound, cancel, |place, answered| {
             let (Some(stage), Some(question)) = (stages.get(place), asks.questions().get(place))
             else {
                 return Err(Error::RecognizeLogical);
