@@ -13,9 +13,9 @@ Reviews: revision b6970338e, accept
 
 Make proposal probabilities canonical facts in the Rust result, available through CLI recognize `--details` and the public Rust API. Include the union of decoded stretches and supplied seeds, including proposals below the final cut. Python uses its existing tolerant reader; this work does not depend on 0496. Keep the bare value and default reading unchanged. PM approved this scope in ask 2 of `repos/agents/inbox/thinkthen/2026-10-09-pm-thinkthen-binding-tickets-rewritten-on-main-new-numbers-and-order.md`.
 
-### Added public declarations
-
 PM approved these borrowed API details within the canonical-result outcome on 2026-10-09; they land with the reviewed implementation.
+
+### Added public declarations
 
 ```text
 struct RecognitionProposal<'a>
