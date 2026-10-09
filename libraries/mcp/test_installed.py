@@ -47,6 +47,28 @@ class Installed(unittest.TestCase):
         return Client.launch((BINARY, 'mcp', '--url', f'http://127.0.0.1:{self.port}/{route}/v1',
                               '--max-retries', '0', *options), env=self.env)
 
+    def test_derived_schema_admits_dynamic_choose_and_matches_control_refusals(self):
+        from jsonschema import Draft202012Validator
+        with self.launch('generic', '--no-cache') as client:
+            schemas = {tool['name']: tool['inputSchema'] for tool in client.tools()}
+            dynamic = {'question': {'choose': 'Which?'},
+                       'inputs': [{'text': 'x', 'options': ['zebra', 'alpha']}]}
+            self.assertTrue(Draft202012Validator(schemas['choose']).is_valid(dynamic))
+            result = client.choose(**dynamic)
+            self.assertEqual(list(result['value'][0]['answer']['probabilities']), ['zebra', 'alpha'])
+            before = self.count()
+            for name, arguments in (
+                    ('choose', {'question': {'choose': 'Which?', 'unknown': True}, 'inputs': dynamic['inputs']}),
+                    ('choose', {'question': {'choose': 'Which?'}, 'inputs': [{'text': 'x', 'options': ['only'] }]}),
+                    ('decide', {'question': 'Q?', 'evidence': 'x', 'options': {'top': 1}}),
+                    ('rank', {'question': 'Q?', 'records': ['x'], 'options': {'threshold': 0.5}}),
+                    ('decide', {'question': 'Q?', 'evidence': 'x', 'records': ['x']})):
+                self.assertFalse(Draft202012Validator(schemas[name]).is_valid(arguments), (name, arguments))
+                with self.assertRaises(ToolError) as refusal:
+                    getattr(client, name)(**arguments)
+                self.assertEqual(refusal.exception.result['error']['kind'], 'usage')
+            self.assertEqual(self.count(), before)
+
     def test_repeated_image_rows_hit_aggregate_bound_before_later_paths_or_sends(self):
         image = self.home / 'image.png'
         image.write_bytes((ROOT / 'specification/fixtures/images/above-spike.png').read_bytes())

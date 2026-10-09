@@ -72,6 +72,7 @@ impl Request {
             call,
         }
     }
+    #[cfg(feature = "cli")]
     pub(crate) fn admit_for_transport(
         self,
         limit: transport::TransportAttachmentLimit,
@@ -119,6 +120,19 @@ pub enum RequestFunction {
     Relate,
 }
 impl RequestFunction {
+    #[cfg(feature = "cli")]
+    pub(crate) const ALL: [Self; 10] = [
+        Self::Decide,
+        Self::Choose,
+        Self::Tag,
+        Self::Score,
+        Self::Filter,
+        Self::Rank,
+        Self::Find,
+        Self::Annotate,
+        Self::Recognize,
+        Self::Relate,
+    ];
     pub(crate) fn allows_option(self, name: &str) -> bool {
         match name {
             "threshold" => matches!(self, Self::Decide | Self::Choose | Self::Tag | Self::Filter),

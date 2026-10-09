@@ -101,19 +101,7 @@ fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
         ))
     })
     .unwrap();
-    let engine = crate::Engine::builder()
-        .backend("liquid")
-        .unwrap()
-        .model("d1")
-        .unwrap()
-        .base_url(listener.base())
-        .unwrap()
-        .api_key("fake-image-key")
-        .unwrap()
-        .no_cache()
-        .max_retries(0)
-        .build()
-        .unwrap();
+    let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/images/red.png");
     let bytes = std::fs::read(&fixture).unwrap();
@@ -192,4 +180,67 @@ fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
         }
     }
     std::fs::remove_dir_all(folder).unwrap();
+}
+
+fn image_engine(listener: &conformance_backend::Listener) -> crate::Engine {
+    crate::Engine::builder()
+        .backend("liquid")
+        .unwrap()
+        .model("d1")
+        .unwrap()
+        .base_url(listener.base())
+        .unwrap()
+        .api_key("fake-image-key")
+        .unwrap()
+        .no_cache()
+        .max_retries(0)
+        .build()
+        .unwrap()
+}
+
+#[test]
+fn transport_image_sources_retain_the_sent_prefix_on_budget_exhaustion() {
+    use crate::transport::TransportAttachmentLimit;
+    use conformance_backend::{Canned, Listener};
+    let listener = Listener::answering(|_| {
+        Canned::ok(include_str!(
+            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
+        ))
+    })
+    .unwrap();
+    let engine = image_engine(&listener);
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../specification/fixtures/images/red.png");
+    let limit = std::fs::metadata(&fixture).unwrap().len() as usize;
+    let request = crate::Request::new(crate::RequestCall::Decide(crate::RequestArguments {
+        question: crate::RequestQuestion::Text { text: "q".into() },
+        input: crate::RequestInput::Source {
+            source: crate::RequestSource {
+                paths: vec![fixture.clone(), fixture, "never-open-this-tail.png".into()],
+                reading: crate::ReaderOptions {
+                    unit: crate::SourceUnit::File,
+                    window: None,
+                },
+                media: crate::ReaderMedia::Image,
+            },
+        },
+        options: crate::RequestOptions::default(),
+    }))
+    .admit_for_transport(TransportAttachmentLimit::new(limit).unwrap())
+    .unwrap();
+    let crate::RequestOutcome::Failed { completed, error } = engine
+        .execute_request(&request, crate::RequestEnvironment::default())
+        .unwrap()
+    else {
+        panic!("joined failure")
+    };
+    assert_eq!(
+        error.detail().message(),
+        "retained attachments exceed the input byte ceiling"
+    );
+    let crate::RequestValue::Decisions(rows) = completed else {
+        panic!("decision prefix")
+    };
+    assert_eq!(rows.len(), 1);
+    assert_eq!(listener.count(), 1);
 }

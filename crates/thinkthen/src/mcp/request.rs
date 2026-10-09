@@ -33,93 +33,8 @@ impl Invocation {
                 "attachments cannot accompany records, source or inputs",
             ));
         }
-        let question = if let Some(path) = &a.question_file {
-            RequestQuestion::File { path: path.clone() }
-        } else if let Some(name) = &a.question_name {
-            RequestQuestion::Name { name: name.clone() }
-        } else if let Some(reference) = &a.question_reference {
-            RequestQuestion::Reference {
-                reference: reference.clone(),
-            }
-        } else {
-            let raw = a
-                .question
-                .as_ref()
-                .ok_or_else(|| Error::usage("missing question"))?;
-            if raw.get().starts_with('"') {
-                RequestQuestion::Text {
-                    text: serde_json::from_str(raw.get())
-                        .map_err(|_| Error::usage("invalid question"))?,
-                }
-            } else {
-                RequestQuestion::Definition {
-                    value: serde_json::from_str(raw.get())
-                        .map_err(|_| Error::usage("invalid question"))?,
-                }
-            }
-        };
-        let input = if let Some(source) = &a.source {
-            RequestInput::Source {
-                source: source.native(),
-            }
-        } else if a.inputs.is_some() {
-            RequestInput::Feed {
-                name: "mcp-inputs".into(),
-                framing: crate::RequestFraming::Document,
-                reading: crate::ReaderOptions::default(),
-                images: Vec::new(),
-            }
-        } else if let Some(text) = &a.evidence
-            && a.records.is_none()
-            && !matches!(
-                self.tool.function(),
-                crate::RequestFunction::Find
-                    | crate::RequestFunction::Rank
-                    | crate::RequestFunction::Relate
-            )
-        {
-            RequestInput::Text {
-                text: text.clone(),
-                images: a
-                    .images
-                    .iter()
-                    .map(|path| crate::RequestImage::File {
-                        path: path.clone(),
-                        media: None,
-                    })
-                    .collect(),
-            }
-        } else {
-            let items = if let Some(records) = &a.records {
-                records
-                    .iter()
-                    .map(|raw| {
-                        Ok(item(
-                            Some(RequestOriginal::Json {
-                                value: crate::RawRecord::json(raw.get())?,
-                            }),
-                            Vec::new(),
-                        ))
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?
-            } else {
-                let images = a
-                    .images
-                    .iter()
-                    .map(|path| crate::RequestImage::File {
-                        path: path.clone(),
-                        media: None,
-                    })
-                    .collect();
-                vec![item(
-                    a.evidence
-                        .as_ref()
-                        .map(|text| RequestOriginal::Text { text: text.clone() }),
-                    images,
-                )]
-            };
-            RequestInput::Records { items }
-        };
+        let question = self.question_selector()?;
+        let input = self.input_selector()?;
         let arguments = RequestArguments {
             question,
             input,
@@ -154,6 +69,92 @@ impl Invocation {
             })
             .transpose()?;
         Ok((admitted, feed))
+    }
+    fn question_selector(&self) -> Result<RequestQuestion, Error> {
+        let a = &self.arguments;
+        Ok(if let Some(path) = &a.question_file {
+            RequestQuestion::File { path: path.clone() }
+        } else if let Some(name) = &a.question_name {
+            RequestQuestion::Name { name: name.clone() }
+        } else if let Some(reference) = &a.question_reference {
+            RequestQuestion::Reference {
+                reference: reference.clone(),
+            }
+        } else {
+            let raw = a
+                .question
+                .as_ref()
+                .ok_or_else(|| Error::usage("missing question"))?;
+            if raw.get().starts_with('"') {
+                RequestQuestion::Text {
+                    text: serde_json::from_str(raw.get())
+                        .map_err(|_| Error::usage("invalid question"))?,
+                }
+            } else {
+                RequestQuestion::Definition {
+                    value: serde_json::from_str(raw.get())
+                        .map_err(|_| Error::usage("invalid question"))?,
+                }
+            }
+        })
+    }
+    fn input_selector(&self) -> Result<RequestInput, Error> {
+        let a = &self.arguments;
+        Ok(if let Some(source) = &a.source {
+            RequestInput::Source {
+                source: source.native(),
+            }
+        } else if a.inputs.is_some() {
+            RequestInput::Feed {
+                name: "mcp-inputs".into(),
+                framing: crate::RequestFraming::Document,
+                reading: crate::ReaderOptions::default(),
+                images: Vec::new(),
+            }
+        } else if let Some(text) = &a.evidence
+            && a.records.is_none()
+            && !matches!(
+                self.tool,
+                crate::RequestFunction::Find
+                    | crate::RequestFunction::Rank
+                    | crate::RequestFunction::Relate
+            )
+        {
+            RequestInput::Text {
+                text: text.clone(),
+                images: a
+                    .images
+                    .iter()
+                    .map(|path| crate::RequestImage::File {
+                        path: path.clone(),
+                        media: None,
+                    })
+                    .collect(),
+            }
+        } else {
+            let items = if let Some(records) = &a.records {
+                records
+                    .iter()
+                    .map(|raw| record_item(raw))
+                    .collect::<Result<Vec<_>, Error>>()?
+            } else {
+                let images = a
+                    .images
+                    .iter()
+                    .map(|path| crate::RequestImage::File {
+                        path: path.clone(),
+                        media: None,
+                    })
+                    .collect();
+                vec![item(
+                    a.evidence
+                        .as_ref()
+                        .map(|text| RequestOriginal::Text { text: text.clone() }),
+                    images,
+                )]
+            };
+            RequestInput::Records { items }
+        })
     }
 }
 fn item(original: Option<RequestOriginal>, images: Vec<crate::RequestImage>) -> RequestItem {
@@ -249,4 +250,13 @@ impl Descriptor {
             source: self.source.as_ref().map(super::admission::Source::native),
         })
     }
+}
+
+fn record_item(raw: &serde_json::value::RawValue) -> Result<RequestItem, Error> {
+    Ok(item(
+        Some(RequestOriginal::Json {
+            value: crate::RawRecord::json(raw.get())?,
+        }),
+        Vec::new(),
+    ))
 }

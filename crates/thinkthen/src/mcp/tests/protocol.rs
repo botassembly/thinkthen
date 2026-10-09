@@ -149,6 +149,7 @@ import json,sys
 from jsonschema import Draft202012Validator
 case=json.load(sys.stdin)
 for schema,source,expected in case['cases']:
+    schema['$defs']=case['defs']
     actual=Draft202012Validator(schema).is_valid(source)
     assert actual == expected, (source,expected,actual)
 "#;
@@ -202,7 +203,11 @@ for schema,source,expected in case['cases']:
         .stdin
         .take()
         .unwrap()
-        .write_all(json!({"cases":cases}).to_string().as_bytes())
+        .write_all(
+            json!({"cases":cases,"defs":decide["inputSchema"]["$defs"]})
+                .to_string()
+                .as_bytes(),
+        )
         .unwrap();
     let output = child.wait_with_output().unwrap();
     assert!(

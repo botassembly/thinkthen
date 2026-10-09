@@ -16,6 +16,7 @@ pub struct RequestFeed<'a> {
 pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
     Records(super::composition::Inputs<'a>),
+    #[cfg(feature = "cli")]
     Descriptors(Vec<super::transport::TransportDescriptor>),
 }
 impl std::fmt::Debug for RequestFeed<'_> {
@@ -24,6 +25,7 @@ impl std::fmt::Debug for RequestFeed<'_> {
     }
 }
 impl<'a> RequestFeed<'a> {
+    #[cfg(feature = "cli")]
     pub(super) fn descriptors(
         name: String,
         descriptors: Vec<super::transport::TransportDescriptor>,

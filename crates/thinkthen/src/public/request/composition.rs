@@ -1,5 +1,7 @@
 //! One typed composition path resolves sources only after complete header admission.
-use super::transport::{AttachmentBudget, TransportDescriptor};
+use super::transport::AttachmentBudget;
+#[cfg(feature = "cli")]
+use super::transport::TransportDescriptor;
 use super::{
     AdmittedRequest, RequestDefinition, RequestEnvironment, RequestImage, RequestInput,
     RequestItem, RequestOriginal,
@@ -72,16 +74,7 @@ impl AdmittedRequest {
             ),
             RequestInput::Source { source } => {
                 controls.admission()?;
-                let options = crate::InputReaderOptions {
-                    reading: source.reading,
-                    media: source.media,
-                };
-                let items = match budget.remaining() {
-                    Some(remaining) => {
-                        crate::SourceItems::bounded_images(&source.paths, options, remaining)?
-                    }
-                    None => crate::read_inputs(&source.paths, options)?,
-                };
+                let items = read_source(source, budget.remaining())?;
                 let annotate = matches!(definition, RequestDefinition::Annotate(_)) && !explicit;
                 let rank = self.request.call.function() == super::RequestFunction::Rank;
                 Ok(super::transport::source_records(
@@ -97,17 +90,15 @@ impl AdmittedRequest {
                         "the supplied feed does not match the requested name",
                     ));
                 }
+                #[cfg(feature = "cli")]
                 if let super::execution::FeedContents::Descriptors(descriptors) = feed.contents {
-                    let rows = descriptors
-                        .iter()
-                        .enumerate()
-                        .map(|(at, descriptor)| {
-                            controls.admission()?;
-                            compose_descriptor(descriptor, &reading, context.as_ref(), &mut budget)
-                                .map_err(|error| error.at_record(at))
-                        })
-                        .collect::<Result<Vec<_>, _>>()?;
-                    return Ok(Box::new(rows.into_iter().map(Ok)));
+                    return compose_descriptors(
+                        &descriptors,
+                        &reading,
+                        context.as_ref(),
+                        &mut budget,
+                        controls,
+                    );
                 }
                 let super::execution::FeedContents::Items(items) = feed.contents else {
                     return super::native_feed::records(
@@ -401,6 +392,7 @@ fn admit_image_route(item: &RequestItem, refusal: Option<&str>) -> Result<(), Er
     Ok(())
 }
 
+#[cfg(feature = "cli")]
 fn compose_descriptor(
     descriptor: &TransportDescriptor,
     reading: &RecordReading,
@@ -442,4 +434,38 @@ fn compose_descriptor(
         row.options = Some(options.clone());
     }
     Ok(row)
+}
+
+#[cfg(feature = "cli")]
+fn compose_descriptors(
+    descriptors: &[TransportDescriptor],
+    reading: &RecordReading,
+    schema: Option<&crate::InputDeclaration>,
+    budget: &mut AttachmentBudget,
+    controls: CallOptions<'_>,
+) -> Result<Inputs<'static>, Error> {
+    let rows = descriptors
+        .iter()
+        .enumerate()
+        .map(|(at, descriptor)| {
+            controls.admission()?;
+            compose_descriptor(descriptor, reading, schema, budget)
+                .map_err(|error| error.at_record(at))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Box::new(rows.into_iter().map(Ok)))
+}
+
+fn read_source(
+    source: &super::RequestSource,
+    remaining: Option<usize>,
+) -> Result<crate::SourceItems, Error> {
+    let options = crate::InputReaderOptions {
+        reading: source.reading,
+        media: source.media,
+    };
+    match remaining {
+        Some(remaining) => crate::SourceItems::bounded_images(&source.paths, options, remaining),
+        None => crate::read_inputs(&source.paths, options),
+    }
 }

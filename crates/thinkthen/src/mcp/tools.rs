@@ -1,53 +1,10 @@
 //! Exactly the ten judging tools; no administrative or acting capabilities.
 
-use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub(super) enum Tool {
-    Decide,
-    Choose,
-    Tag,
-    Score,
-    Filter,
-    Rank,
-    Find,
-    Annotate,
-    Recognize,
-    Relate,
-}
+pub(super) type Tool = crate::RequestFunction;
 
 impl Tool {
-    pub(super) const ALL: [Self; 10] = [
-        Self::Decide,
-        Self::Choose,
-        Self::Tag,
-        Self::Score,
-        Self::Filter,
-        Self::Rank,
-        Self::Find,
-        Self::Annotate,
-        Self::Recognize,
-        Self::Relate,
-    ];
-    pub(super) const fn images(self) -> bool {
-        self.function().images()
-    }
-    pub(super) const fn function(self) -> crate::RequestFunction {
-        match self {
-            Self::Decide => crate::RequestFunction::Decide,
-            Self::Choose => crate::RequestFunction::Choose,
-            Self::Tag => crate::RequestFunction::Tag,
-            Self::Score => crate::RequestFunction::Score,
-            Self::Filter => crate::RequestFunction::Filter,
-            Self::Rank => crate::RequestFunction::Rank,
-            Self::Find => crate::RequestFunction::Find,
-            Self::Annotate => crate::RequestFunction::Annotate,
-            Self::Recognize => crate::RequestFunction::Recognize,
-            Self::Relate => crate::RequestFunction::Relate,
-        }
-    }
     fn description(self) -> &'static str {
         match self {
             Self::Decide => "Answer yes, no or unsure.",
@@ -92,7 +49,7 @@ fn input_schema(tool: Tool) -> Value {
         .unwrap_or_else(|| json!({}));
     if let Some(map) = options.get_mut("properties").and_then(Value::as_object_mut) {
         map.retain(|name, _| {
-            tool.function().allows_option(name)
+            tool.allows_option(name)
                 && !matches!(
                     name.as_str(),
                     "details" | "examples" | "examples_field" | "seed_spans" | "seed_spans_field"
@@ -115,7 +72,7 @@ fn input_schema(tool: Tool) -> Value {
         "question_name":{"type":"string","minLength":1},
         "question_reference":{"type":"string","minLength":1},
         "evidence":{"type":"string"},"records":{"type":"array"},
-        "source":source_schema(false, tool.images()),"options":options
+        "source":source_schema(false, tool.images(), &canonical),"options":options
     });
     if !matches!(tool, Tool::Decide | Tool::Filter | Tool::Rank | Tool::Find)
         && let Some(question) = properties.get_mut("question")
@@ -153,7 +110,7 @@ fn input_schema(tool: Tool) -> Value {
 
 fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
     let mut descriptor = json!({"type":"object","additionalProperties":false,"properties":{
-        "text":{"type":"string"},"json":{},"source":source_schema(true, false),
+        "text":{"type":"string"},"json":{},"source":source_schema(true, false, canonical),
         "context":canonical.pointer("/$defs/RequestItem/properties/context"),
         "options":{"$ref":"#/$defs/Authored_options"},
         "images":{"type":"array","maxItems":crate::MAX_IMAGES,"items":{"oneOf":[
@@ -174,7 +131,7 @@ fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
         if !tool.images() {
             map.remove("images");
         }
-        if !tool.function().allows_option("options_field") {
+        if !tool.allows_option("options_field") {
             map.remove("options");
         }
     }
@@ -186,14 +143,20 @@ fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
     descriptor
 }
 
-fn source_schema(file_only: bool, images: bool) -> Value {
+fn source_schema(file_only: bool, images: bool, canonical: &Value) -> Value {
     let unit = if file_only {
         json!({"const":"file"})
     } else {
-        json!({"enum":["line","window","file"],"default":"line"})
+        canonical
+            .pointer("/$defs/RequestReader/properties/unit")
+            .cloned()
+            .unwrap_or_else(|| json!({}))
     };
     let media = if images {
-        json!({"enum":["text","image"],"default":"text"})
+        canonical
+            .pointer("/$defs/RequestSource/properties/media")
+            .cloned()
+            .unwrap_or_else(|| json!({}))
     } else {
         json!({"const":"text","default":"text"})
     };

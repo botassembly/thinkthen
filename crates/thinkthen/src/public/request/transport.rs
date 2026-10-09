@@ -1,10 +1,13 @@
 //! Unresolved transport descriptors share native admission and attachment accounting.
-use super::{AdmittedRequest, RequestFeed, RequestImage, RequestInput, RequestItem, RequestSource};
+#[cfg(feature = "cli")]
+use super::{AdmittedRequest, RequestFeed, RequestItem, RequestSource};
+use super::{RequestImage, RequestInput};
 use crate::Error;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct TransportAttachmentLimit(usize);
 impl TransportAttachmentLimit {
+    #[cfg(feature = "cli")]
     pub(crate) fn new(bytes: usize) -> Result<Self, Error> {
         if bytes == 0 {
             return Err(budget_error());
@@ -12,6 +15,7 @@ impl TransportAttachmentLimit {
         Ok(Self(bytes))
     }
 }
+#[cfg(feature = "cli")]
 pub(crate) struct TransportDescriptor {
     pub(crate) item: RequestItem,
     pub(crate) source: Option<RequestSource>,
@@ -63,6 +67,7 @@ pub(super) fn preflight_input(
         RequestInput::Source { .. } => Ok(()),
     }
 }
+#[cfg(feature = "cli")]
 impl AdmittedRequest {
     pub(crate) fn admit_descriptor_feed(
         &self,
@@ -140,9 +145,9 @@ pub(crate) fn source_records<'a>(
             Ok(None) => return None,
             Ok(Some(item)) => (|| {
                 if rank && let crate::SourceItem::Text(text) = &item {
-                    remaining = remaining.checked_sub(text.record.len()).ok_or_else(|| {
-                        Error::usage("source rank reads at most 16 MiB across all input records")
-                    })?;
+                    remaining = remaining
+                        .checked_sub(text.record.len())
+                        .ok_or_else(rank_budget_error)?;
                 }
                 super::composition::source_row(item, annotate, &reading)
             })(),
@@ -151,4 +156,8 @@ pub(crate) fn source_records<'a>(
         stopped = result.is_err();
         Some(result)
     }))
+}
+
+fn rank_budget_error() -> Error {
+    Error::usage("source rank reads at most 16 MiB across all input records")
 }
