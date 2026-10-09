@@ -94,6 +94,7 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
                 Box::into_raw(Box::new(SessionResultHandle {
                     packet,
                     json: std::sync::Mutex::new(None),
+                    view: std::sync::Mutex::new(None),
                 })),
             ),
             RequestSessionRead::Pending => (THINKTHEN_SESSION_PENDING_V1, std::ptr::null_mut()),
@@ -249,6 +250,31 @@ pub unsafe extern "C" fn thinkthen_session_result_json(
         unsafe {
             *out = bytes;
             *out_len = len;
+        }
+        Ok(())
+    })
+}
+
+/// Borrow the complete immutable typed packet graph. Nested views retain every
+/// known field and unknown extension, and survive engine/session destruction.
+/// Repeated and concurrent access returns the same view. Only result_free ends
+/// all view lifetimes. Failure leaves out unchanged.
+/// # Safety
+/// result stays live during access and while using any borrowed view; out is
+/// nonnull, aligned writable pointer storage. Free only after all borrowers finish.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_result_view(
+    result: *const SessionResultHandle,
+    out: *mut *const crate::session::views_generated::thinkthen_complete_session_packet_v1,
+) -> std::ffi::c_int {
+    errors::call(|| {
+        required(out)?;
+        // SAFETY: the caller keeps the independent result owner live.
+        let result = unsafe { result.as_ref() }.ok_or(ErrorKind::Usage)?;
+        let view = result.view()?;
+        // SAFETY: required checked the caller's documented writable slot.
+        unsafe {
+            *out = view;
         }
         Ok(())
     })

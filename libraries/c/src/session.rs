@@ -1,5 +1,7 @@
 //! Owned native sessions and packets have no foreign or engine-table borrows.
 pub(crate) mod errors;
+pub mod views;
+pub mod views_generated;
 use std::ffi::{CString, c_char};
 use std::sync::Mutex;
 use thinkthen::{RequestSession, RequestSessionResult};
@@ -13,9 +15,21 @@ pub struct SessionHandle(pub(crate) RequestSession);
 pub struct SessionResultHandle {
     pub(crate) packet: RequestSessionResult,
     pub(crate) json: Mutex<Option<CString>>,
+    pub(crate) view: Mutex<Option<views::Projection>>,
 }
 
 impl SessionResultHandle {
+    pub(crate) fn view(
+        &self,
+    ) -> Result<*const views_generated::thinkthen_complete_session_packet_v1, thinkthen::ErrorKind>
+    {
+        let mut cached = self.view.lock().map_err(|_| thinkthen::ErrorKind::Defect)?;
+        if cached.is_none() {
+            let text = self.packet.to_json().map_err(|error| error.kind())?;
+            *cached = Some(views::Projection::new(&text)?);
+        }
+        Ok(cached.as_ref().ok_or(thinkthen::ErrorKind::Defect)?.root)
+    }
     pub(crate) fn json(&self) -> Result<(*const c_char, usize), thinkthen::ErrorKind> {
         let mut cached = self.json.lock().map_err(|_| thinkthen::ErrorKind::Defect)?;
         if cached.is_none() {

@@ -24,6 +24,10 @@ mod failures;
 /// cbindgen:ignore
 mod plan;
 mod session;
+/// Primitive immutable C JSON and UTF-8 views.
+pub use session::views as complete_json_views;
+/// Immutable generated complete C packet declarations.
+pub use session::views_generated as complete_session_views;
 mod settings;
 
 use failures::Held;

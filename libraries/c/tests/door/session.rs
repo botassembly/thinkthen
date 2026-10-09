@@ -53,11 +53,14 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
 
 #[test]
 fn session_owns_inputs_engine_and_transferred_packets() {
-    let backend = Backend::start().expect("loopback");
-    let output = run(
+    let backend = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok(
+        r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":0}}"#
+    )).expect("owned loopback");
+    let output = run_with(
         &compile(&crate_dir().join("tests/c/session.c")),
-        &format!("{}/generic/v1", backend.origin()),
+        backend.base(),
         b"",
+        &[("SESSION_PARTIAL", Path::new("1"))],
     );
     assert_eq!(
         (output.status.code(), text(&output.stderr)),
