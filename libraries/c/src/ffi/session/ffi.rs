@@ -45,11 +45,11 @@ pub unsafe extern "C" fn thinkthen_session_new(
     request_json: *const c_char,
     request_len: usize,
     out: *mut *mut SessionHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     errors::call(|| {
         required(out)?;
         // SAFETY: the caller keeps its engine live until this call returns.
-        let engine = unsafe { engine.as_ref() }.ok_or_else(|| ErrorKind::Usage)?;
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
         // SAFETY: the caller supplies the documented readable extent.
         let text =
             unsafe { super::text(request_json, request_len) }.map_err(|_| ErrorKind::Usage)?;
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
     session: *mut SessionHandle,
     status: *mut u32,
     out: *mut *mut SessionResultHandle,
-) -> i32 {
+) -> std::ffi::c_int {
     errors::call(|| {
         required(status)?;
         required(out)?;
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
             return Err(ErrorKind::Usage);
         }
         // SAFETY: the caller holds the session live during the operation.
-        let session = unsafe { session.as_ref() }.ok_or_else(|| ErrorKind::Usage)?;
+        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
         let (state, owner) = match session.0.try_read() {
             RequestSessionRead::Result(packet) => (
                 THINKTHEN_SESSION_RESULT_V1,
@@ -169,11 +169,11 @@ pub unsafe extern "C" fn thinkthen_session_try_push(
     descriptor_json: *const c_char,
     descriptor_len: usize,
     status: *mut u32,
-) -> i32 {
+) -> std::ffi::c_int {
     errors::call(|| {
         required(status)?;
         // SAFETY: the caller keeps its owner live and supplies readable bytes.
-        let session = unsafe { session.as_ref() }.ok_or_else(|| ErrorKind::Usage)?;
+        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
         // SAFETY: the caller promises the counted readable extent.
         let text = unsafe { super::text(descriptor_json, descriptor_len) }
             .map_err(|_| ErrorKind::Usage)?;
@@ -204,10 +204,10 @@ pub unsafe extern "C" fn thinkthen_session_finish(
     session: *mut SessionHandle,
     failure_json: *const c_char,
     failure_len: usize,
-) -> i32 {
+) -> std::ffi::c_int {
     errors::call(|| {
         // SAFETY: the caller keeps the owner live during the call.
-        let session = unsafe { session.as_ref() }.ok_or_else(|| ErrorKind::Usage)?;
+        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
         let failure = if failure_json.is_null() && failure_len == 0 {
             None
         } else {
