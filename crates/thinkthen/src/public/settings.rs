@@ -3,6 +3,7 @@
 mod backend;
 mod budgets;
 mod environment;
+pub(super) mod json;
 mod prices;
 mod server;
 mod storage;
@@ -134,7 +135,9 @@ impl EngineBuilder {
     ///
     /// Returns [`Error::Usage`] for duplicate, unknown, or invalid settings.
     pub fn validate_settings_json(text: &str) -> Result<(), Error> {
-        crate::core::engine_settings(text).map_err(Error::usage)
+        json::Document::parse(text)?
+            .apply(Self::new(), false)
+            .map(|_| ())
     }
 
     pub(crate) fn new() -> Self {

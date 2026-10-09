@@ -8,6 +8,7 @@ fn committed_request_schema_is_derived_from_deserialization_types() {
         .into_generator();
     let _descriptor = generator.subschema_for::<super::session::DescriptorDocument>();
     let _failure = generator.subschema_for::<super::session::ReaderFailureDocument>();
+    let _settings = generator.subschema_for::<crate::public::settings::json::Document>();
     let schema = generator.into_root_schema_for::<Request>();
     let text = serde_json::to_string_pretty(&schema).unwrap() + "\n";
     let path = concat!(
@@ -315,11 +316,11 @@ fn snippet_width_is_unsigned_strict_and_recognition_only() {
 }
 
 #[test]
-fn reader_failure_schema_preserves_closed_kinds_and_location_absence() {
+fn native_input_schema_preserves_closed_shapes_and_null_absence() {
     use crate::test_deadline::child::ChildEnvironment as _;
     use std::io::Write as _;
     use std::process::{Command, Stdio};
-    let cases = [
+    let mut cases = [
         r#"{"kind":"io"}"#,
         r#"{"kind":"utf8","location":{"file":"input","first_line":1,"last_line":2}}"#,
         r#"{"kind":"invalid_input","location":{"file":"input"}}"#,
@@ -332,10 +333,23 @@ fn reader_failure_schema_preserves_closed_kinds_and_location_absence() {
     ]
     .map(|text| {
         (
+            "RequestReaderFailure",
             serde_json::from_str::<serde_json::Value>(text).unwrap(),
             RequestReaderFailure::from_json(text).is_ok(),
         )
-    });
+    })
+    .to_vec();
+    cases.extend([
+        "{}", "[]", "[null]",
+        r#"{"cache":false,"batch":"max","timeout":30}"#,
+        r#"{"cache":true}"#,
+        r#"{"cache":"folder"}"#,
+        r#"{"refresh_cache":null}"#,
+        r#"{"model":null}"#,
+        r#"{"timeout":"private-timeout"}"#,
+        r#"{"max_requests":null,"max_requests_total":null,"max_estimated_input_tokens_total":null}"#,
+        r#"{"unknown":true}"#,
+    ].map(|text| ("EngineSettings", serde_json::from_str::<serde_json::Value>(text).unwrap(), crate::EngineBuilder::validate_settings_json(text).is_ok())));
     for text in [
         r#"{"kind":"io","kind":"utf8"}"#,
         r#"{"kind":"io","location":{"file":"x","file":"y"}}"#,
@@ -343,7 +357,7 @@ fn reader_failure_schema_preserves_closed_kinds_and_location_absence() {
         assert!(RequestReaderFailure::from_json(text).is_err());
     }
     let mut child = Command::new("python3").clear_environment()
-        .arg("-c").arg("import json,sys; from jsonschema import Draft202012Validator; schema=json.load(open(sys.argv[1])); validator=Draft202012Validator({'$ref':'#/$defs/RequestReaderFailure','$defs':schema['$defs']}); cases=json.load(sys.stdin); assert all(validator.is_valid(value)==expected for value,expected in cases)")
+        .arg("-c").arg("import json,sys; from jsonschema import Draft202012Validator; schema=json.load(open(sys.argv[1])); cases=json.load(sys.stdin); assert all(Draft202012Validator({'$ref':'#/$defs/'+name,'$defs':schema['$defs']}).is_valid(value)==expected for name,value,expected in cases)")
         .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/../../specification/request.schema.json"))
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
     child
