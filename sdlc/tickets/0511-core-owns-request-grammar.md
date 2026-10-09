@@ -26,6 +26,8 @@ Reviews: revision 4b505569df6b3e8fded623df2ad8edd4203ec619, accept
 
 Reviews: revision a4c93ae43c5ef2263698dc91aa1361b1ed3569d4, accept
 
+Reviews: revision 22a58d373187f746d2999220e945f8c1ef71ea42, accept
+
 ## Outcome
 
 One public Request edge admits every request through shared Rust grammar, limits, defaults and validation. Every surface calls it, and core refusals reach the caller. No binding, extension or host package restates an engine rule.
@@ -62,3 +64,4 @@ fn Engine::plan_request<'a>(&self, &'a AdmittedRequest, RequestEnvironment<'a>) 
 - 2026-10-09 landed 0ac45ca65cda6e240b8dabb32ed1c098991cafc5; next: Canonical Request planning is landed. Fix the authored rank structural schema gap exposed by generated C# inputs; finish combined checks and consumer translations.
 - 2026-10-09 landed 0ac45ca65cda6e240b8dabb32ed1c098991cafc5; next: Canonical planning and typed settings are landed. Source inspection confirms rank uses existing decide/score authored shapes and rank sets use questions; no new rank grammar is needed. Finish combined checks and remaining consumer translations.
 - 2026-10-09 landed 46e331cea5aa378fcf5f404af14b22055fb392fb; next: Reserved proxy settings now preserve presence and refuse safely before environment capture. Finish combined checks and remaining consumer translations before whole closure.
+- 2026-10-09 landed ced19b30f; next: Native settings and generated proxy input types agree. Rerun combined checks after the generated-file repair and finish consumer translations.
