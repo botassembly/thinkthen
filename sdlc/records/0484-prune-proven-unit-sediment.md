@@ -15,3 +15,5 @@ The release runner's direct cargo tests need their own isolated usage and config
 Large-input cases also live inside source modules. Selecting integration cases alone missed those boundaries; the release split must include their owning tests.
 
 Unbounded nextest concurrency can starve small cache cases that pass alone. The routine profile limits test processes to two and keeps the five-second ceiling. Full shared-case replay and parity belong to release selection even when each individual corpus row is small; focused cache and other boundary regressions remain routine.
+
+Moving tests between suites also changes the binding and Polars policy checks. Their independent scans retained the old ban on ignored cases after the release split. Exact reviewed file and function pairs admit the shared-case release tests while refusing arbitrary ignored names, including names with the release prefix. The actual lint gate exercises these scans together.
