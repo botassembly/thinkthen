@@ -26,8 +26,12 @@ Go source grows from 4,953 to 7,753 nonblank lines; 2,275 lines are generated ac
 
 ## What the build taught us
 
+The surface-attribution integration starts from `08141007d`. A copied installed-module regression observed `thinkthen/0.2.0 (c)` on both a successful Go call and a typed provider failure. The C constructor correctly identifies direct C callers; Go must select its own native surface through the additive counted constructor. `session.go` passes C-owned `go` bytes and retains their extent through the call. The existing installed consumer now captures the real User-Agent and checks retained success and failure facts after client cleanup. Facts have no surface field, so attribution is checked at the transport boundary.
+
+The focused `surface` mode passed with exactly two loopback requests, each reporting `thinkthen/0.2.0 (go)`, and no dynamic native dependency. The copied module bundles the warm C build's localized static archive, SHA-256 `0a87559d7747530492a66ed6c6bde8ab3f4edaea613862b9f841dad2f3fcc502`; no source-path native override or Rust rebuild was used. Generated result types and the package helper are unchanged. This integration adds 21 nonblank Go lines and 13 nonblank fixture Python lines. The measured ceilings are 7,774 Go and 911 fixture Python lines. Growth requires reviewer acceptance before landing. Full parity and release qualification remain outside this bounded check.
+
 Every cgo file's unconditional pkg-config declaration affected the installed package, even when the new client did not call its compatibility functions. All such declarations needed the same target selection. A cancellation signal stops intake before the blocked provider settles; the host must stop its reader separately instead of waiting for terminal facts. The held-provider cleanup test caught and fixed that delay.
 
 ## Remaining outcomes
 
-This slice leaves compatibility APIs/readers in place. Full installed conformance, image and bounded producer adoption, other Unix assets, final module archive assembly under 0530 and compatibility retirement remain owned work. The shared C session currently reports Rust surface attribution; Go preserves that native fact honestly until the common interface supplies binding attribution. No release readiness or whole-ticket completion is claimed.
+This slice leaves compatibility APIs/readers in place. Full installed conformance, image and bounded producer adoption, other Unix assets, final module archive assembly under 0530 and compatibility retirement remain owned work. Go named sessions now identify their native Go surface. No release readiness or whole-ticket completion is claimed.
