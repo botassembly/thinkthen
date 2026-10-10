@@ -379,7 +379,7 @@ class InstalledInputs(unittest.TestCase):
         (folder / 'thinkthen-0.2.0.gem').touch()
 
     def select(self, folder):
-        with patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
+        with patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
             return parity.installed_artifacts(folder, self.consumers)
 
     def test_each_group_uses_its_actual_package_and_shared_native_inputs(self):
