@@ -1,6 +1,6 @@
 # 0503: Add a bounded session interface for JSON requests
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -33,6 +33,8 @@ Reviews: revision 82d28962252b6c433abfcafa1fcddaad4aed62af, accept
 Reviews: revision 89b7a0b60844848e4da7661c15545f67babeb68e, accept
 
 Reviews: revision 088af91fc0becfa17c2a6d34810ee298f8708371, accept
+
+Landed: 1f9b622
 
 ## Outcome
 
