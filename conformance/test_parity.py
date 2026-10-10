@@ -28,7 +28,8 @@ class NativeFixtureEnvironment(unittest.TestCase):
             return launch([sys.executable, '-c', probe], **kwargs)
         with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2'}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
             native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
-                               extra_env={'THINKTHEN_API_KEY': 'fixture-only'})
+                               extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
+                               rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
 
 
 class ImageRequestArrivals(unittest.TestCase):
