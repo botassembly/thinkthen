@@ -147,34 +147,49 @@ impl AdmittedRequest {
             return Err(Error::defect("session feed lost its declaration"));
         };
         let mut budget = AttachmentBudget::new(self.attachment_limit);
-        let items = std::iter::from_fn(move || queue.next(controls));
-        let rows = items.map(move |descriptor| -> Result<Option<_>, Error> {
-            let descriptor = descriptor?;
+        let mut decoder = super::framing::Decoder::new(*framing);
+        let input_queue = std::sync::Arc::clone(&queue);
+        let descriptors = std::iter::from_fn(move || decoder.next(&input_queue, controls));
+        let mut compose = move |descriptor: super::RequestSessionDescriptor| {
             if options.files_only && descriptor.location.is_none() {
                 return Err(Error::usage(
                     "file selection requires a source location on every session descriptor",
                 ));
             }
-            let Some(item) = super::framing::item(descriptor.item, *framing)? else {
-                return Ok(None);
-            };
-            let item = attach_shared(item, images)?;
+            let item = attach_shared(descriptor.item, images)?;
             super::admission::admit_item(self.request.call.function(), &item, options)?;
             admit_image_route(&item, image_refusal.as_deref())?;
-            let mut row = compose_document(
+            let row = compose_document(
                 &item,
                 &reading,
                 schema.as_ref(),
                 &mut budget,
                 annotate && matches!(framing, super::RequestFraming::Document),
             )?;
-            if let Some(location) = descriptor.location {
-                row.original = located(row.original, location)?;
+            located_row(row, descriptor.location)
+        };
+        let rows = descriptors.map(move |descriptor| descriptor.and_then(&mut compose));
+        let rows = rows.scan(false, move |stopped, row| {
+            if *stopped {
+                return None;
             }
-            Ok(Some(row))
+            if row.is_err() {
+                *stopped = true;
+                queue.close_intake();
+            }
+            Some(row)
         });
-        Ok(Box::new(rows.filter_map(Result::transpose)))
+        Ok(Box::new(rows))
     }
+}
+fn located_row(
+    mut row: RecordInput<QuestionInput>,
+    location: Option<crate::SourceLocation>,
+) -> Result<RecordInput<QuestionInput>, Error> {
+    if let Some(location) = location {
+        row.original = located(row.original, location)?;
+    }
+    Ok(row)
 }
 fn located(input: QuestionInput, location: crate::SourceLocation) -> Result<QuestionInput, Error> {
     Ok(match input {

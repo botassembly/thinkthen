@@ -92,71 +92,82 @@ fn drain(session: &RequestSession) -> Vec<RequestSessionResult> {
 
 #[test]
 fn held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts() {
-    let release = Arc::new(Rendezvous::new(2));
-    let held = Arc::clone(&release);
-    let (sent, received) = mpsc::channel();
-    let listener = Listener::answering_with_events(
-        move |body| response(body).after_release(Arc::clone(&held)),
-        sent,
-    )
-    .unwrap();
-    let engine = engine(&listener);
-    let session = engine.request_session(request(feed())).unwrap();
-    assert!(matches!(
-        session.try_push(descriptor("first")).unwrap(),
-        RequestSessionPush::Accepted
-    ));
-    received.recv_timeout(Duration::from_secs(5)).unwrap();
-    assert!(matches!(
-        session.try_push(descriptor("second")).unwrap(),
-        RequestSessionPush::Accepted
-    ));
-    // Native scheduling may own additional in-flight inputs; the session bounds
-    // waiting transfers rather than changing those existing scheduler limits.
-    let retry = (0..100)
-        .find_map(|_| match session.try_push(descriptor("next")).unwrap() {
-            RequestSessionPush::Full(value) => Some(value),
-            RequestSessionPush::Accepted => None,
-            other => panic!("feed closed before cancellation: {other:?}"),
-        })
-        .expect("held native work eventually backpressures the one input cell");
-    session.finish(None).unwrap();
-    session.finish(None).unwrap();
-    assert_eq!(
-        session
-            .finish(Some(RequestReaderFailure::Io { location: None }))
-            .unwrap_err()
-            .kind(),
-        ErrorKind::Usage
-    );
-    let began = Instant::now();
-    session.cancel();
-    assert!(began.elapsed() < Duration::from_secs(1));
-    assert!(matches!(
-        session.try_push(retry).unwrap(),
-        RequestSessionPush::Closed(_)
-    ));
-    assert!(matches!(session.try_read(), RequestSessionRead::Pending));
-    assert!(release.wait());
-    let packets = drain(&session);
-    let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
-        panic!("terminal comes last")
-    };
-    assert_eq!(
-        terminal.error.as_ref().unwrap().kind(),
-        ErrorKind::Cancelled
-    );
-    assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
-    assert_eq!(terminal.facts.as_ref().unwrap().input_tokens(), None);
-    assert_eq!(
-        packets
-            .iter()
-            .filter(|p| matches!(p, RequestSessionResult::Terminal(_)))
-            .count(),
-        1
-    );
-    assert!(matches!(session.try_read(), RequestSessionRead::End));
-    assert_eq!(listener.count(), 1);
+    for framing in [RequestFraming::Document, RequestFraming::Csv] {
+        let release = Arc::new(Rendezvous::new(2));
+        let held = Arc::clone(&release);
+        let (sent, received) = mpsc::channel();
+        let listener = Listener::answering_with_events(
+            move |body| response(body).after_release(Arc::clone(&held)),
+            sent,
+        )
+        .unwrap();
+        let engine = engine(&listener);
+        let mut arguments = request(feed()).call.arguments().clone();
+        if let RequestInput::Feed {
+            framing: declared, ..
+        } = &mut arguments.input
+        {
+            *declared = framing;
+        }
+        let session = engine
+            .request_session(Request::new(RequestCall::Decide(arguments)))
+            .unwrap();
+        if matches!(framing, RequestFraming::Csv) {
+            framing::push(&session, descriptor("body\n"));
+        }
+        framing::push(&session, descriptor("first"));
+        received.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert!(matches!(
+            session.try_push(descriptor("second")).unwrap(),
+            RequestSessionPush::Accepted
+        ));
+        // Native scheduling may own additional in-flight inputs; the session bounds
+        // waiting transfers rather than changing those existing scheduler limits.
+        let retry = (0..100)
+            .find_map(|_| match session.try_push(descriptor("next")).unwrap() {
+                RequestSessionPush::Full(value) => Some(value),
+                RequestSessionPush::Accepted => None,
+                other => panic!("feed closed before cancellation: {other:?}"),
+            })
+            .expect("held native work eventually backpressures the one input cell");
+        session.finish(None).unwrap();
+        session.finish(None).unwrap();
+        assert_eq!(
+            session
+                .finish(Some(RequestReaderFailure::Io { location: None }))
+                .unwrap_err()
+                .kind(),
+            ErrorKind::Usage
+        );
+        let began = Instant::now();
+        session.cancel();
+        assert!(began.elapsed() < Duration::from_secs(1));
+        assert!(matches!(
+            session.try_push(retry).unwrap(),
+            RequestSessionPush::Closed(_)
+        ));
+        assert!(matches!(session.try_read(), RequestSessionRead::Pending));
+        assert!(release.wait());
+        let packets = drain(&session);
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("terminal comes last")
+        };
+        assert_eq!(
+            terminal.error.as_ref().unwrap().kind(),
+            ErrorKind::Cancelled
+        );
+        assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
+        assert_eq!(terminal.facts.as_ref().unwrap().input_tokens(), None);
+        assert_eq!(
+            packets
+                .iter()
+                .filter(|p| matches!(p, RequestSessionResult::Terminal(_)))
+                .count(),
+            1
+        );
+        assert!(matches!(session.try_read(), RequestSessionRead::End));
+        assert_eq!(listener.count(), 1);
+    }
 }
 
 #[test]
@@ -588,41 +599,53 @@ fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
 
 #[test]
 fn file_selection_refuses_locationless_descriptors_before_sending_them() {
-    let (sent, received) = mpsc::channel();
-    let listener = Listener::answering_with_events(response, sent).unwrap();
-    let mut arguments = request(feed()).call.arguments().clone();
-    arguments.options.files_only = true;
-    let session = engine(&listener)
-        .request_session(Request::new(RequestCall::Filter(arguments)))
-        .unwrap();
-    let mut first = descriptor("first");
-    first.location = Some(SourceLocation::new("first-source".into(), None, None).unwrap());
-    session.try_push(first).unwrap();
-    received.recv_timeout(Duration::from_secs(5)).unwrap();
-    session.try_push(descriptor("unlocated")).unwrap();
-    session.finish(None).unwrap();
-    let packets = drain(&session);
-    assert_eq!(
-        packets
-            .iter()
-            .filter(|packet| matches!(
-                packet,
-                RequestSessionResult::Row(RequestSessionRow::Filter(_))
-            ))
-            .count(),
-        1
-    );
-    let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
-        panic!("file selection failure")
-    };
-    assert_eq!(terminal.error.as_ref().unwrap().kind(), ErrorKind::Usage);
-    assert_eq!(
-        terminal.error.as_ref().unwrap().detail().message(),
-        "file selection requires a source location on every session descriptor"
-    );
-    assert_eq!(terminal.facts.as_ref().unwrap().records(), 1);
-    assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
-    assert_eq!(listener.count(), 1);
+    for framing in [RequestFraming::Document, RequestFraming::Csv] {
+        let (sent, received) = mpsc::channel();
+        let listener = Listener::answering_with_events(response, sent).unwrap();
+        let mut arguments = request(feed()).call.arguments().clone();
+        arguments.options.files_only = true;
+        if let RequestInput::Feed {
+            framing: declared, ..
+        } = &mut arguments.input
+        {
+            *declared = framing;
+        }
+        let session = engine(&listener)
+            .request_session(Request::new(RequestCall::Filter(arguments)))
+            .unwrap();
+        if matches!(framing, RequestFraming::Csv) {
+            framing::push(&session, descriptor("body\n"));
+            framing::push(&session, descriptor("\n"));
+        }
+        let mut first = descriptor("first");
+        first.location = Some(SourceLocation::new("first-source".into(), None, None).unwrap());
+        framing::push(&session, first);
+        received.recv_timeout(Duration::from_secs(5)).unwrap();
+        session.try_push(descriptor("unlocated")).unwrap();
+        session.finish(None).unwrap();
+        let packets = drain(&session);
+        assert_eq!(
+            packets
+                .iter()
+                .filter(|packet| matches!(
+                    packet,
+                    RequestSessionResult::Row(RequestSessionRow::Filter(_))
+                ))
+                .count(),
+            1
+        );
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("file selection failure")
+        };
+        assert_eq!(terminal.error.as_ref().unwrap().kind(), ErrorKind::Usage);
+        assert_eq!(
+            terminal.error.as_ref().unwrap().detail().message(),
+            "file selection requires a source location on every session descriptor"
+        );
+        assert_eq!(terminal.facts.as_ref().unwrap().records(), 1);
+        assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
+        assert_eq!(listener.count(), 1);
+    }
 }
 
 #[test]

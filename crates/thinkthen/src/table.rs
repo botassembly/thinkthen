@@ -23,6 +23,8 @@ impl ReadError {
     }
 }
 
+pub(crate) mod framed;
+
 const BUFFER_BYTES: usize = 8 * 1024;
 
 /// The table spelling used in diagnostics.
@@ -137,9 +139,18 @@ pub(crate) struct Rows<R> {
 
 impl<R: Read> Rows<R> {
     pub(crate) fn new(reader: R, kind: Kind) -> Result<Self, ReadError> {
+        let mut rows = Self::empty(reader, kind);
+        let header = rows
+            .parsed_row()?
+            .ok_or(ReadError::Table(Error::Empty(kind)))?;
+        rows.read_header(header)?;
+        Ok(rows)
+    }
+
+    fn empty(reader: R, kind: Kind) -> Self {
         let mut builder = ReaderBuilder::new();
         builder.delimiter(kind.delimiter());
-        let mut rows = Self {
+        Self {
             reader,
             parser: builder.build(),
             kind,
@@ -152,12 +163,7 @@ impl<R: Read> Rows<R> {
             line: 1,
             previous_cr: false,
             position: None,
-        };
-        let header = rows
-            .parsed_row()?
-            .ok_or(ReadError::Table(Error::Empty(kind)))?;
-        rows.read_header(header)?;
-        Ok(rows)
+        }
     }
 
     fn parsed_row(&mut self) -> Result<Option<Vec<Vec<u8>>>, ReadError> {
@@ -264,6 +270,31 @@ impl<R: Read> Rows<R> {
         self.header = Some(names);
         Ok(())
     }
+
+    fn record(&mut self, row: Vec<Vec<u8>>) -> Result<Record, ReadError> {
+        let header = self
+            .header
+            .as_ref()
+            .ok_or(ReadError::Table(Error::Empty(self.kind)))?;
+        if row.len() != header.len() {
+            self.stopped = true;
+            return Err(ReadError::Table(Error::FieldCount {
+                kind: self.kind,
+                expected: header.len(),
+                found: row.len(),
+            }));
+        }
+        let values = row
+            .into_iter()
+            .map(|bytes| {
+                String::from_utf8(bytes).map_err(|_| ReadError::Table(Error::RecordUtf8(self.kind)))
+            })
+            .collect::<Result<Vec<_>, _>>();
+        if values.is_err() {
+            self.stopped = true;
+        }
+        values.map(|values| Record::string_fields(header.iter().cloned().zip(values).collect()))
+    }
 }
 
 impl<R: Read> Iterator for Rows<R> {
@@ -284,28 +315,7 @@ impl<R: Read> Iterator for Rows<R> {
                 return Some(Err(error));
             }
         };
-        let header = self.header.as_ref()?;
-        if row.len() != header.len() {
-            self.stopped = true;
-            return Some(Err(ReadError::Table(Error::FieldCount {
-                kind: self.kind,
-                expected: header.len(),
-                found: row.len(),
-            })));
-        }
-        let values = row
-            .into_iter()
-            .map(|bytes| {
-                String::from_utf8(bytes).map_err(|_| ReadError::Table(Error::RecordUtf8(self.kind)))
-            })
-            .collect::<Result<Vec<_>, _>>();
-        if values.is_err() {
-            self.stopped = true;
-        }
-        Some(
-            values
-                .map(|values| Record::string_fields(header.iter().cloned().zip(values).collect())),
-        )
+        Some(self.record(row))
     }
 }
 
