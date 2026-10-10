@@ -57,6 +57,7 @@ ENGINE_SOURCES = {
     "DuckDB": "databases/duckdb/src/engines.rs", "PostgreSQL": "databases/postgresql/src/call/settings.rs",
     "SQLite": "databases/sqlite/src/settings.rs",
 }
+SHARED_SETTINGS = "crates/thinkthen/src/public/settings/json.rs"
 
 
 def prose(text):
@@ -116,7 +117,8 @@ def help_flags():
 
 def product(path):
     folders = path.parts[:-1]
-    tests = path.name == "tests.rs" or path.stem.endswith("_tests") or path.name.startswith("test_")
+    tests = (path.name in {"tests.rs", "build.rs"} or path.stem.endswith("_tests")
+             or path.name.startswith(("test_", "build-")))
     return path.suffix in SOURCE and not tests and not any(
         part in {"checks", "fixtures", "Tests", "tests", "test", "tools"}
         or part.endswith("_tests") for part in folders)
@@ -167,9 +169,11 @@ def both_ways(page, have, want, missing, stale):
     return out + [f"{page}: {name} {stale}" for name in sorted(have - want)]
 
 
-def engine_cells(page, rows):
+def engine_cells(page, rows, sources=None):
     """A builder setter and its library or SQL cell must appear together."""
     by_name = {row[0]: row for row in rows}
+    def read(path):
+        return sources[path] if sources is not None and path in sources else (REPO / path).read_text(encoding="utf-8")
     out = []
     for name, setters in ENGINE_CELLS.items():
         row = by_name.get(name)
@@ -177,7 +181,11 @@ def engine_cells(page, rows):
             out.append(f'{page}: engine setting "{name}" has no row')
             continue
         for surface, path in ENGINE_SOURCES.items():
-            source = (REPO / path).read_text(encoding="utf-8")
+            source = read(path)
+            if surface == "C" and "EngineBuilder::from_settings_json(text)" in source:
+                shared = read(SHARED_SETTINGS)
+                if "pub fn from_settings_json(" in shared and "document.apply(" in shared:
+                    source = shared
             cell = row[COLUMNS.index(surface)]
             for setter in setters:
                 method = "profile_json" if setter == "profile" and surface in ("DuckDB", "PostgreSQL", "SQLite") else setter
@@ -288,8 +296,9 @@ def self_test(flags, names, keys):
     planted = cases(text)
     # A package gate's source-like helper must not become a product setting;
     # the matching library implementation remains in the scan.
-    helpers = ("checks", "fixtures", "Tests", "tests")
-    if any(product(pathlib.Path("libraries/example") / folder / "settings.py") for folder in helpers) or not product(
+    helpers = ("checks/settings.py", "fixtures/settings.py", "Tests/settings.py", "tests/settings.py",
+               "build.rs", "build-session.py")
+    if any(product(pathlib.Path("libraries/example") / helper) for helper in helpers) or not product(
             pathlib.Path("libraries/example/src/settings.py")):
         bad += 1
         print("settings self-test: package helper/product boundary failed", file=sys.stderr)
@@ -301,7 +310,24 @@ def self_test(flags, names, keys):
         if actual != expected:
             bad += 1
             print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
-    print(f"settings self-test: {len(planted) + 1 - bad}/{len(planted) + 1} cases hold")
+    rows = table(prose(text))[1]
+    source_cases = [
+        ("Python", ENGINE_SOURCES["Python"], ".timeout(", ".missing_timeout("),
+        ("C", SHARED_SETTINGS, "builder.timeout(", "builder.missing_timeout("),
+        ("C", ENGINE_SOURCES["C"], "EngineBuilder::from_settings_json(text)", "EngineBuilder::missing_settings(text)"),
+    ]
+    for surface, path, old, new in source_cases:
+        source = (REPO / path).read_text(encoding="utf-8")
+        actual = engine_cells("settings.md", rows, {path: source.replace(old, new)})
+        expected = ([f"settings.md: C {name} source has no setter: {setter}"
+                     for name, setters in ENGINE_CELLS.items() for setter in setters]
+                    if path == ENGINE_SOURCES["C"] else
+                    [f"settings.md: {surface} Timeout source has no setter: timeout"])
+        if actual != expected:
+            bad += 1
+            print(f"settings self-test: {surface} source setter: expected {expected}, got {actual}", file=sys.stderr)
+    total = len(planted) + len(source_cases) + 1
+    print(f"settings self-test: {total - bad}/{total} cases hold")
     return bad
 
 
