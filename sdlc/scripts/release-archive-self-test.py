@@ -365,6 +365,32 @@ def main():
             raise AssertionError(("Zig private native bytes", private_result.returncode, private_result.stderr))
         expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "ada-objc-cobol-gate", str(base / "paired"), host, commit), "", success=True)
+        # Exercise the shared Dart/Flutter route with the real builder and fake native outputs.
+        flutter_env = {key: value for key, value in env.items() if not key.startswith("THINKTHEN_ARCHIVED_SOURCE_")}
+        flutter_pair = base / "flutter-pair"
+        expect(run("sh", str(REPO / "sdlc/scripts/release-pack"), host, str(flutter_pair),
+                   "c", "dart", "flutter", env=flutter_env), "", success=True)
+        expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(flutter_pair),
+                   "dart-flutter"), "", success=True)
+        # Repairing membership must still reject missing new inputs and unexpected source.
+        for removed in ("./hook/build.dart", "./native-assets.json", "./lib/src/session/client.dart", None):
+            planted = base / ("missing-dart-" + (removed.rsplit("/", 1)[-1] if removed else "unexpected"))
+            shutil.copytree(base / "paired", planted)
+            path = next(planted.glob("thinkthen-dart-*.tar.gz"))
+            replacement = planted / "replacement.tar.gz"
+            with tarfile.open(path, "r:gz") as archive, tarfile.open(replacement, "w:gz") as output:
+                for member in archive:
+                    if member.name != removed:
+                        output.addfile(member, archive.extractfile(member) if member.isfile() else None)
+                if removed is None:
+                    member = tarfile.TarInfo("./lib/unexpected.dart")
+                    output.addfile(member, io.BytesIO())
+            replacement.replace(path)
+            path.with_name(path.name + ".sha256").write_text(
+                f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n")
+            expect(run("sh", gate, "php-dart-gate", str(planted), host, commit),
+                   f"source members differ for {path.name}")
+
         for family, relative in (("swift", "Sources/ThinkThen/ThinkThen.swift"),
                                  ("zig", "src/thinkthen.zig"),
                                  ("php", "autoload.php"),
