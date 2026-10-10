@@ -7,7 +7,7 @@ The shipped extension is the C++ extension in `cpp/`, linked with the Rust stati
 - `cpp/src/thinkthen.cpp` loads the extension and registers every SQL form. `portable.cpp` holds the scalars, the `_many` tables and the `thinkthen_rank` table macro. `find.cpp`, `nested.cpp`, `plan.cpp`, `relate.cpp` and `usage.cpp` hold their own forms. `removed.cpp` registers `thinkthen_warm` and `thinkthen_probability`, which only refuse with their replacements.
 - `cpp/src/bridge.hpp` declares every Rust function the C++ side calls. Each one lives in a file named `ffi.rs` under `bridge/src/`, because `policy.py` allows `unsafe` only there.
 - `bridge/src/ffi/portable_many/ffi.rs` reads one keyed JSON object, runs the packed call or the rank, and returns its rows as JSON text for the table macro to unpack. `bridge/src/ffi/scalar/` and `portable_scalar/` run grouped scalar calls.
-- `src/engines.rs` and `src/signal.rs` are the bridge's engine registry and SIGINT handler. The rest of `src/` and the root `Cargo.toml` are the retired workspace, kept for the binding policy.
+- `bridge/src/engines.rs` and `bridge/src/signal.rs` are the bridge's engine registry and SIGINT handler. `src/` and the root `Cargo.toml` are the retired workspace, kept for the binding policy.
 
 ## Choices
 
