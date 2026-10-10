@@ -91,7 +91,7 @@ For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names
 SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person') AS recognized_names;
 ```
 
-`thinkthen_relate` runs a caller-supplied read-only `SELECT` yielding `id, name` or `id, name, kind` on the same connection. `rules` is one inline rule, a JSON array of rules, a JSON relate spec or `@file`. At most 255 distinct name/kind pairs enter a call. Equal pairs share one entity, and each answer edge expands to the ids that held its endpoints. Blank names/kinds and a 256th pair raise usage before a send.
+`thinkthen_relate` runs a caller-supplied read-only `SELECT` yielding `id, name` or `id, name, kind` on the same connection. `rules` is one inline rule, a JSON array of rules, a JSON relate spec or `@file`. Every form uses the [native relation grammar](../../specification/relate.md); empty and duplicate rule sets raise usage before a send. At most 255 distinct name/kind pairs enter a call. Equal pairs share one entity, and each answer edge expands to the ids that held its endpoints. Blank names/kinds and a 256th pair raise usage before a send.
 
 ## Price and elapsed time
 

@@ -319,7 +319,7 @@ pub(crate) struct Relater;
 type Read = (Vec<Entity>, HashMap<(String, String), Vec<Value>>);
 
 impl Relater {
-    /// One to four inline rules, or one JSON relate section, file, or `'@name'`.
+    /// Inline rules, or one JSON relate section, file, or `'@name'`.
     fn ask(argument: &str) -> Result<Relate, Failure> {
         if argument.starts_with('{') || argument.starts_with('@') {
             let (whole, file) = file_json(argument, "relate")?;
@@ -331,9 +331,6 @@ impl Relater {
         } else {
             vec![argument.to_owned()]
         };
-        if rules.is_empty() || rules.len() > 4 {
-            return Err(Failure::usage("thinkthen_relate needs one to four rules"));
-        }
         let relations = rules
             .iter()
             .map(|rule| inline(rule))
