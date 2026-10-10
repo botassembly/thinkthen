@@ -9,8 +9,7 @@ use thinkthen::{Details, Engine, Error, LoadedQuestion, Recognize};
 
 mod call;
 mod complete;
-#[path = "../../sqlite/src/complete_native/mod.rs"]
-mod complete_native;
+use thinkthen_host::complete_native;
 mod descriptions;
 #[allow(
     unsafe_code,

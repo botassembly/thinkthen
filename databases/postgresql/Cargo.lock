@@ -1335,6 +1335,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "thinkthen-host"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thinkthen",
+]
+
+[[package]]
 name = "thinkthen-postgresql"
 version = "0.2.0"
 dependencies = [
@@ -1342,6 +1351,7 @@ dependencies = [
  "pgrx",
  "serde_json",
  "thinkthen",
+ "thinkthen-host",
 ]
 
 [[package]]

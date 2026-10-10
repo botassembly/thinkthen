@@ -31,7 +31,7 @@ pub(super) struct Budget(usize);
 
 impl Budget {
     pub(super) fn new() -> Self {
-        Self(16 * 1024 * 1024 - 12) // {"edges":[]}; separators are counted between edges.
+        Self(thinkthen::Relate::max_source_output_bytes() - 12) // {"edges":[]}; separators are counted between edges.
     }
 }
 

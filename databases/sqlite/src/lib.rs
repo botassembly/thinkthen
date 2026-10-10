@@ -17,7 +17,7 @@ use thinkthen::{ErrorKind, SendBudgetDenial, contained};
 mod budget;
 mod catalog;
 mod complete;
-mod complete_native;
+use thinkthen_host::complete_native;
 #[allow(
     unsafe_code,
     reason = "the SQLite entry point, API table, and virtual-table glue (ADR 0047 item 3)"

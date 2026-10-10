@@ -23,7 +23,7 @@ impl serde::Serialize for DetailInput {
     }
 }
 
-pub(crate) struct Selection {
+pub struct Selection {
     paths: Vec<String>,
     options: ReaderOptions,
 }
@@ -33,7 +33,7 @@ impl Selection {
         dead_code,
         reason = "other hosts still use this shared compatibility conversion"
     )]
-    pub(crate) fn request_source(&self) -> thinkthen::RequestSource {
+    pub fn request_source(&self) -> thinkthen::RequestSource {
         thinkthen::RequestSource {
             framing: None,
             paths: self.paths.iter().map(std::path::PathBuf::from).collect(),
@@ -41,12 +41,12 @@ impl Selection {
             media: thinkthen::ReaderMedia::Text,
         }
     }
-    pub(crate) fn read(&self) -> Result<thinkthen::SourceRecords, Error> {
+    pub fn read(&self) -> Result<thinkthen::SourceRecords, Error> {
         thinkthen::read_files(&self.paths, self.options)
     }
 }
 
-pub(crate) fn parse(text: &str) -> Result<Selection, Error> {
+pub fn parse(text: &str) -> Result<Selection, Error> {
     let mut body: serde_json::Map<String, Value> = serde_json::from_str(text)
         .map_err(|_| usage("source takes paths, unit, and optional window"))?;
     let paths = serde_json::from_value(
@@ -76,7 +76,7 @@ fn located(source: &SourceRecord<String>, answer: Value) -> Result<Value, Error>
     dead_code,
     reason = "R and Python use the authored entry while C enters with typed preparation"
 )]
-pub(crate) fn execute(
+pub fn execute(
     engine: &Engine,
     verb: &str,
     question: &str,
@@ -91,7 +91,7 @@ pub(crate) fn execute(
     dead_code,
     reason = "C still calls this shared prepared compatibility entry"
 )]
-pub(crate) fn execute_prepared(
+pub fn execute_prepared(
     engine: &Engine,
     verb: &str,
     definition: &thinkthen::RequestDefinition,
@@ -160,7 +160,7 @@ fn execute_with_definition(
                 let record = record?;
                 bytes = bytes
                     .checked_add(record.record.len())
-                    .filter(|&bytes| bytes <= 16 * 1024 * 1024)
+                    .filter(|&bytes| bytes <= thinkthen::RawRecord::max_bytes())
                     .ok_or_else(|| usage("source rank input exceeds 16 MiB"))?;
                 Ok(record)
             });
@@ -339,18 +339,18 @@ fn relate(
     let mut bytes = 0usize;
     for source in selection.read()? {
         let source = source?;
-        if sources.len() == 255 {
+        if sources.len() == Relate::max_record_count() {
             return Err(usage("source relate takes at most 255 source records"));
         }
         bytes = bytes
             .checked_add(source.record.len())
-            .filter(|&bytes| bytes <= 16 * 1024 * 1024)
+            .filter(|&bytes| bytes <= thinkthen::RawRecord::max_bytes())
             .ok_or_else(|| usage("source relate input exceeds 16 MiB"))?;
         let entity = Entity::new(&source.record, "*")?;
         let index = if let Some(at) = entities.iter().position(|e| e == &entity) {
             at
         } else {
-            if entities.len() == 255 {
+            if entities.len() == Relate::max_record_count() {
                 return Err(usage("relate takes at most 255 distinct entities"));
             }
             entities.push(entity);
@@ -408,7 +408,7 @@ fn put(row: &mut Value, key: &str, value: Value) -> Result<(), Error> {
     dead_code,
     reason = "R and Python use the authored entry while C enters with typed preparation"
 )]
-pub(crate) fn dispatch(
+pub fn dispatch(
     engine: &Engine,
     question: &str,
     selection: &str,

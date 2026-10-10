@@ -28,7 +28,7 @@ use crate::calls::{self, Crossed};
 use crate::relate::{self};
 use crate::usage;
 
-mod complete;
+use thinkthen_host::complete;
 mod engine;
 mod request;
 mod settings;

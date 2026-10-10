@@ -20,6 +20,7 @@ name = "thinkthen0"
 crate-type = ["cdylib"]
 
 [dependencies]
+thinkthen-host = { path = "../../crates/thinkthen-host", default-features = false, features = ["host-sqlite"] }
 thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["host-sqlite"] }
 libc = "=0.2.189"
 rusqlite = { version = "=0.40.2", features = ["loadable_extension", "functions", "vtab"] }

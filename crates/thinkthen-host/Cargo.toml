@@ -1,15 +1,20 @@
 [workspace]
 
 [package]
-name = "thinkthen-polars-consumer"
-version = "0.0.0"
+name = "thinkthen-host"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.95.0"
+license = "MIT"
 publish = false
 
+[features]
+default = ["bundled-sqlite"]
+bundled-sqlite = ["thinkthen/bundled-sqlite"]
+host-sqlite = ["thinkthen/host-sqlite"]
+
 [dependencies]
-thinkthen-host = { path = "../../../crates/thinkthen-host" }
-thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["polars", "bundled-sqlite"] }
+thinkthen = { path = "../thinkthen", default-features = false }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.151", features = ["raw_value"] }
 
@@ -18,7 +23,7 @@ overflow-checks = true
 panic = "unwind"
 
 [lints.rust]
-missing_debug_implementations = "forbid"
+missing_debug_implementations = "warn"
 missing_docs = "warn"
 unexpected_cfgs = "forbid"
 unreachable_pub = "forbid"

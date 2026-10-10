@@ -1,8 +1,7 @@
 //! Client-side native evidence reader for PostgreSQL's explicit descriptor workaround.
 use std::io::{self, Read as _, Write as _};
 use thinkthen::{InputReaderOptions, SourceItem};
-#[path = "../../../sqlite/src/complete_native/file_format.rs"]
-mod file_format;
+use thinkthen_host::complete_native::file_format;
 type Descriptors = Box<dyn Iterator<Item = Result<serde_json::Value, thinkthen::Error>>>;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut source = String::new();

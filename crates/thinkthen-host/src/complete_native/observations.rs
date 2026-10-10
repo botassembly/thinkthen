@@ -2,7 +2,7 @@
 use super::defect;
 use serde_json::{Value, json};
 use thinkthen::{QuestionInput, RecordObservation};
-pub(crate) fn event(event: &RecordObservation<'_>) -> Result<Value, thinkthen::Error> {
+pub fn event(event: &RecordObservation<'_>) -> Result<Value, thinkthen::Error> {
     match event {
         RecordObservation::Question {
             index,
@@ -89,9 +89,7 @@ fn decision(answer: thinkthen::Answer) -> Value {
     dead_code,
     reason = "DuckDB owns native session snapshots; SQLite retains borrowed observation callbacks"
 )]
-pub(crate) fn owned_event(
-    event: &thinkthen::OwnedRecordObservation,
-) -> Result<Value, thinkthen::Error> {
+pub fn owned_event(event: &thinkthen::OwnedRecordObservation) -> Result<Value, thinkthen::Error> {
     use thinkthen::{ObservedRow, OwnedObservedRow as Row, OwnedRecordObservation as Event};
     match event {
         Event::Question {

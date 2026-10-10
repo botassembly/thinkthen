@@ -3,7 +3,7 @@ use super::{Prepared, usage};
 use serde_json::value::RawValue;
 use std::collections::BTreeMap;
 use thinkthen::{Error, For, Settings};
-pub(crate) fn prepare(verb: &str, source: &str, settings: &Settings) -> Result<Prepared, Error> {
+pub fn prepare(verb: &str, source: &str, settings: &Settings) -> Result<Prepared, Error> {
     let role = match verb {
         "decide" | "filter" => Some(For::Decide),
         "choose" => Some(For::Choose),
@@ -53,7 +53,7 @@ fn merge(source: &str, settings: &Settings, role: For) -> Result<String, Error> 
     dead_code,
     reason = "authorized file grammar used by PostgreSQL and DuckDB"
 )]
-pub(crate) fn parse_file(
+pub fn parse_file(
     verb: &str,
     source: &str,
     reference: &thinkthen::QuestionFileReference,
@@ -82,7 +82,7 @@ pub(crate) fn parse_file(
     dead_code,
     reason = "authorized file settings used by PostgreSQL and DuckDB"
 )]
-pub(crate) fn prepare_file(
+pub fn prepare_file(
     verb: &str,
     source: &str,
     settings: &Settings,

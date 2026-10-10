@@ -1,32 +1,32 @@
 //! Shared family edge: concrete native execution, with no host policy.
-pub(crate) mod inputs;
-pub(crate) mod questions;
-pub(crate) mod stream;
+pub mod inputs;
+pub mod questions;
+pub mod stream;
 use questions::Asked;
 use serde::Deserialize;
 use thinkthen::{Call, CallOptions, Engine, Error, ErrorKind, Facts};
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Request {
-    pub(crate) verb: String,
-    pub(crate) question: questions::Question,
-    pub(crate) input: inputs::Input,
+pub struct Request {
+    pub verb: String,
+    pub question: questions::Question,
+    pub input: inputs::Input,
     #[serde(default)]
-    pub(crate) attempts: bool,
+    pub attempts: bool,
     #[serde(default)]
-    pub(crate) cancel: bool,
-    pub(crate) context: Option<String>,
+    pub cancel: bool,
+    pub context: Option<String>,
 }
 
-pub(crate) fn usage(message: &str) -> Error {
+pub fn usage(message: &str) -> Error {
     Error::new(ErrorKind::Usage, message)
 }
 fn defect(message: &str) -> Error {
     Error::new(ErrorKind::Defect, message)
 }
 
-pub(crate) fn parse(text: &str) -> Result<Request, Error> {
+pub fn parse(text: &str) -> Result<Request, Error> {
     serde_json::from_str(text).map_err(|_| usage("complete call requires a typed request"))
 }
 
@@ -37,7 +37,7 @@ struct Packet<'a, T> {
     inputs: Vec<inputs::InputView>,
     facts: thinkthen::CompleteFacts<'a>,
 }
-pub(crate) fn written<T: serde::Serialize>(
+pub fn written<T: serde::Serialize>(
     call: Call<T>,
     ordinals: Vec<Option<usize>>,
     inputs: Vec<inputs::InputView>,
@@ -55,7 +55,7 @@ pub(crate) fn written<T: serde::Serialize>(
         .map_err(|_| defect("complete result could not be written"))?;
     Ok((value, call.facts().clone()))
 }
-pub(crate) fn rows<T, R>(
+pub fn rows<T, R>(
     call: Call<Vec<thinkthen::CompleteRecord<T, R>>>,
     inputs: Vec<inputs::InputView>,
 ) -> Result<(String, Facts), Error>
@@ -67,7 +67,7 @@ where
 }
 
 /// The only dispatch is the caller's explicit named function.
-pub(crate) fn execute(
+pub fn execute(
     engine: &Engine,
     request: Request,
     options: CallOptions<'_>,

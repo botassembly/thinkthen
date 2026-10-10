@@ -164,7 +164,7 @@ fn tt_engine_set(
 }
 
 extendr_module! {
-mod complete;
+use thinkthen_host::complete;
     fn tt_engine_set;
 fn tt_complete_error_native;
 fn tt_complete_native;

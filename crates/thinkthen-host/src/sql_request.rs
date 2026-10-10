@@ -8,7 +8,7 @@ use thinkthen::{
     RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
 };
 
-pub(super) fn run(
+pub fn run(
     engine: &Engine,
     prepared: &Prepared,
     request: &AdmittedRequest,
@@ -74,7 +74,7 @@ pub(super) fn run(
     crate::complete_native::carrier(native, Value::Array(events))
 }
 
-pub(super) fn definition(prepared: &Prepared) -> RequestDefinition {
+pub fn definition(prepared: &Prepared) -> RequestDefinition {
     match prepared {
         Prepared::Atomic(q) => RequestDefinition::Atomic(q.clone()),
         Prepared::Dynamic(q) => RequestDefinition::DynamicChoose(q.clone()),
@@ -87,11 +87,11 @@ pub(super) fn definition(prepared: &Prepared) -> RequestDefinition {
     }
 }
 
-pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
+pub fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
     request(prepared, RequestOptions::default())?.admit()
 }
 
-pub(super) fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, Error> {
+pub fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, Error> {
     let definition = definition(prepared);
     let args = RequestArguments {
         question: RequestQuestion::Definition { value: definition },
@@ -142,7 +142,7 @@ fn render(outcome: RequestOutcome) -> Result<Value, Error> {
         }
     }
 }
-pub(super) fn supplement(value: &mut Value, result: &RequestValue) -> Result<(), Error> {
+pub fn supplement(value: &mut Value, result: &RequestValue) -> Result<(), Error> {
     macro_rules! rows {
         ($rows:expr) => {
             crate::complete_native::put(

@@ -7,9 +7,7 @@
     dead_code,
     reason = "this Rust consumer calls concrete engine APIs; the host bridge is exercised by SDK consumers"
 )]
-#[path = "../../../r/thinkthen/src/rust/src/complete/mod.rs"]
-mod complete;
-#[path = "../../../python/examples/native_case/native_settings.rs"]
+use thinkthen_host::complete;
 mod native_settings;
 use complete::inputs::Original;
 use complete::questions::Asked;

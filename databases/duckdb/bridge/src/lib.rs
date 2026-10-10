@@ -6,8 +6,7 @@
 )]
 mod engines;
 
-#[path = "../../../sqlite/src/complete_native/mod.rs"]
-mod complete_native;
+use thinkthen_host::complete_native;
 mod errors;
 mod ffi;
 
