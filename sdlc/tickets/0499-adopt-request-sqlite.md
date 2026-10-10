@@ -23,6 +23,8 @@ Reviews: revision a087f6dc3, accept
 
 Reviews: revision ebe2a7ea15349037eb939a7aad66bfe38698b7ae, accept
 
+Reviews: revision 5f41abc5a408b3600f42426b5611e8132fd3ed8c, reject
+
 ## Outcome
 
 SQLite runs every judgment through the shared Request contract and reads generated result types, so Rust owns all admission and result rules. SQLite keeps only its host types, SQL authority and cancellation. Its SQL conventions (NULL, binary images, JSON values and in-database descriptions) belong to 0519.
