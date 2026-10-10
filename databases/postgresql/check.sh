@@ -586,9 +586,13 @@ from_and_to_refused() {
 check from_and_to_refused
 the_256th_row_refuses() {
 	fresh generic
-	out=$(q -c '\set VERBOSITY verbose' -c "SELECT count(*) FROM thinkthen_relate('SELECT g, ''x'' FROM generate_series(1, 256) g', ARRAY['caused_by'])")
+	same "$(q -c "SELECT count(*) FROM thinkthen_relate('SELECT g, ''x'' FROM generate_series(1, 255) g', ARRAY['caused_by'])")" 0
+	out=$(q -c '\set VERBOSITY verbose' -c "SELECT count(*) FROM thinkthen_relate('SELECT g, NULL::text FROM generate_series(1, 256) g', ARRAY['caused_by'])")
 	has "$out" "22023"
 	has "$out" "thinkthen usage: thinkthen_relate reads at most 255 rows (retryable: no)"
+	has "$(q -c "SELECT count(*) FROM thinkthen_relate('SELECT 1, NULL::text', ARRAY['caused_by'])")" 'thinkthen usage: the relate query returned a null name (retryable: no)'
+	out=$(q -c "SELECT count(*) FROM thinkthen_relate('SELECT g, ''x'' FROM generate_series(1, 257) g WHERE CASE WHEN g > 256 THEN 1/(g-257) = 1 ELSE true END', ARRAY['caused_by'])")
+	has "$out" 'thinkthen usage: thinkthen_relate reads at most 255 rows (retryable: no)'
 	same "$(bcount)" 0
 }
 check the_256th_row_refuses

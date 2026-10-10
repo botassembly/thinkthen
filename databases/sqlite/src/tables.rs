@@ -23,9 +23,6 @@ pub(crate) struct Scan {
     pub(crate) selected: Option<usize>,
 }
 
-/// The most distinct name and kind pairs one relate call takes.
-const MOST_PAIRS: usize = 255;
-
 /// One table-valued function: its schema, its hidden arguments, and its rows.
 pub(crate) trait Table {
     /// The function's name, for the panic guard.
@@ -314,17 +311,6 @@ fn named(row: &rusqlite::Row<'_>, at: usize, what: &str, id: &Value) -> Result<S
     Ok(value)
 }
 
-/// Add one distinct pair, refusing the 256th.
-fn admit(order: &mut Vec<Entity>, (name, kind): &(String, String)) -> Result<(), Failure> {
-    if order.len() == MOST_PAIRS {
-        return Err(Failure::usage(format!(
-            "thinkthen_relate takes at most {MOST_PAIRS} distinct name and kind pairs"
-        )));
-    }
-    order.push(Entity::new(name, kind)?);
-    Ok(())
-}
-
 /// `thinkthen_relate(query, rules[, settings])`: edges among selected entities.
 #[derive(Debug)]
 pub(crate) struct Relater;
@@ -386,11 +372,8 @@ impl Relater {
         let mut source_rows = 0;
         while let Some(row) = rows.next().map_err(refused)? {
             source_rows += 1;
-            if source_rows > MOST_PAIRS {
-                return Err(Failure::usage(
-                    "thinkthen_relate takes at most 255 source rows",
-                ));
-            }
+            Relate::admit_record_count(source_rows)
+                .map_err(|_| Failure::usage("thinkthen_relate takes at most 255 source rows"))?;
             let held: Value = row.get(0).map_err(refused)?;
             let pair = (
                 named(row, 1, "name", &held)?,
@@ -401,7 +384,7 @@ impl Relater {
                 },
             );
             if !ids.contains_key(&pair) {
-                admit(&mut order, &pair)?;
+                order.push(Entity::new(&pair.0, &pair.1)?);
             }
             ids.entry(pair).or_default().push(held);
         }
