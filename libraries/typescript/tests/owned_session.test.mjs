@@ -186,19 +186,21 @@ test('Client releases a rejected feed while retaining a held request and failure
     const client=new tt.Client({cache:false,throttle:2});let reads=0,closed=0;
     async function* inputs(){
       try {
-        reads++;yield 'first';
-        reads++;yield 42;
-        while(true){reads++;if(reads===3)line({pending:true});yield 'later';}
+        reads++;yield {body:'first'};
+        await new Promise(resolve=>process.stdin.once('data',resolve));
+        reads++;yield {};
+        for(let later=0;later<2;later++){reads++;if(reads===3)line({pending:true});yield {body:'later'};}
       } finally {closed++;line({closed,reads});throw Error('producer cleanup failed');}
     }
-    try{await client.decide({decide:'Question?',item_schema:{type:'string'}},inputs(),{batch:1});throw Error('failure became value');}
+    try{await client.decide('Question?',inputs(),{batch:2,field:['/body']});throw Error('failure became value');}
     catch(error){
       client.close();process.stdin.destroy();
       if(!(error instanceof tt.ClientError))throw error;
       return {kind:error.kind,closed,rows:error.results.map(row=>row.input),sends:error.facts.requests_sent,id:error.facts.call_id.length,complete:error.complete.constructor.name};
     }
-  `,{arm:'arm/held'});
+  `,{arm:'arm/held',stdin:true});
   assert.equal(await backend.wait(1),1);
+  run.proc.stdin.write('continue\n');
   try {
     assert.ok(await until(()=>run.lines.length>0,5000),'another descriptor is produced while the earlier request is held');
     assert.deepEqual(run.lines[0].value,{pending:true});
@@ -207,6 +209,6 @@ test('Client releases a rejected feed while retaining a held request and failure
   } finally {backend.release();}
   const exited=await within(run.exited,5000);assert.ok(exited);assert.equal(exited.code,0);
   assert.equal(run.lines.filter(row=>row.value.closed===1).length,1);
-  assert.deepEqual(run.lines.at(-1).value,{value:{kind:'usage',closed:1,rows:['first'],sends:1,id:64,complete:'NativeCallError'}});
+  assert.deepEqual(run.lines.at(-1).value,{value:{kind:'usage',closed:1,rows:[{body:'first'}],sends:1,id:64,complete:'NativeCallError'}});
   assert.equal(await backend.count(),1);
 });
