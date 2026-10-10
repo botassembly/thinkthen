@@ -34,7 +34,7 @@ test('Engine and Client report owned written usage without changing call facts',
   assert.equal(await backend.count(),2);
 });
 
-test('Engine and Client latch held usage writer failure with safe owned advice',async t=>{
+test('Engine and Client latch held usage writer failure with safe owned advice',{skip:process.platform!=='linux'},async t=>{
   const backend=await startBackend(t);
   for(const owner of ['Engine','Client']) {
     const {value}=await ask(backend,`
@@ -58,6 +58,20 @@ test('Engine and Client latch held usage writer failure with safe owned advice',
     assert.deepEqual(value,[{state:'pending'},failed,[failed,failed],true]);
   }
   assert.equal(await backend.count(),2);
+});
+
+test('Engine and Client report disabled usage when the environment selects no storage',async t=>{
+  const backend=await startBackend(t);
+  const {value}=await ask(backend,`
+    return [tt.Engine,tt.Client].map(Owner=>{
+      const client=new Owner({cache:false});
+      const states=[client.usagePersistence(),client.finishUsageStatus()];
+      if(client.close)client.close();
+      return states;
+    });
+  `,{env:{HOME:'',XDG_STATE_HOME:'',LOCALAPPDATA:''}});
+  assert.deepEqual(value,[[{state:'disabled'},{state:'disabled'}],[{state:'disabled'},{state:'disabled'}]]);
+  assert.equal(await backend.count(),0);
 });
 
 test('the ten Client functions retain generated values after close',async t=>{
