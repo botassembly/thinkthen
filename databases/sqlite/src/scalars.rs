@@ -535,7 +535,7 @@ pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite
         "thinkthen_usage",
         -1,
         volatile,
-        "Read or configure count-only usage reporting.",
+        "Read count-only usage totals.",
         usage,
     )?;
     connection.create_scalar_function(

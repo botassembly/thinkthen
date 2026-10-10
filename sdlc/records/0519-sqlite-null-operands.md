@@ -75,3 +75,9 @@ The warm in-place offline release-library build and Clippy with warnings denied 
 The proposed Rust ceiling rises from 5260 to 5482 for the registration wrapper, adjacent descriptions, derived table argument ranges and judgment registration helper. The Python ceiling rises from 4375 to 4413 for one installed discovery behavior. The SQLite scalar source now has 544 nonblank lines and receives a policy size warning. It retains names, purposes and callbacks together rather than adding a parallel catalog inventory; the judgment helper keeps registration functions within Clippy's limit. Existing unrelated size warnings remain. Explicit reviewer acceptance of this growth is required before landing.
 
 Descriptions belong to registrations because a separate list can silently omit a new overload or invent a removed one. SQLite's own inventories provide the independent outside-in comparison. This slice changes no other database, core module, generator, header or shared schema. No full suite, parity, load, large-input, paid-call, release or other-machine check runs.
+
+### Usage description correction
+
+Review of cd33a4bf1e25eab03e082654ba36d637c7aa35f8 found that the `thinkthen_usage` description promised configuration, while its callback accepts only zero arguments and returns cumulative count-only totals. The registration now says “Read count-only usage totals.” No callback, arity, flag or other registration changes.
+
+Focused source inspection, SQLite Rust and Python ratchets, diff whitespace and privacy checks pass for this wording correction. The accepted ceilings remain Rust 5482 and Python 4413; the scalar file remains 544 nonblank lines with its accepted size warning. The prior build and installed runtime evidence above remains applicable to unchanged behavior. No rebuild or installed check runs for the new wording, and the previously copied extension retains its earlier description.
