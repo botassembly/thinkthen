@@ -1,6 +1,6 @@
 # 0385: Load the bundled Windows library from the JVM packages
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
