@@ -1,4 +1,5 @@
 import Foundation
+import ThinkThen
 
 @main enum OwnedConsumer {
     static func expect(_ condition: Bool, _ message: String) throws {

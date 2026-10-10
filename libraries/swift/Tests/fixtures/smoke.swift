@@ -1,9 +1,15 @@
-// The replay smoke (ticket 0335): one decide through Engine(), which reads the
-// environment, with the question and text sdlc/scripts/smoke names.
 import Foundation
 
-let environment = ProcessInfo.processInfo.environment
-let engine = try Engine()
-let answer = try engine.decide(environment["THINKTHEN_TEST_SMOKE_QUESTION"]!, environment["THINKTHEN_TEST_SMOKE_TEXT"]!)
-engine.close()
-print("smoke: " + [Outcome.yes: "true", .no: "false", .unsure: "null"][answer.value.outcome]!)
+@main enum ReplaySmoke {
+    static func main() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        let client = try Client()
+        defer { client.close() }
+        let call = try await client.decide(.text(environment["THINKTHEN_TEST_SMOKE_QUESTION"]!), input: .text(environment["THINKTHEN_TEST_SMOKE_TEXT"]!))
+        for packet in call.packets {
+            if case .decideRow(let row) = packet {
+                print("smoke: " + String(decoding: try row.value.value.json.data(), as: UTF8.self))
+            }
+        }
+    }
+}

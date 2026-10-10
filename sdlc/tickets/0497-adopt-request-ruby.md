@@ -40,6 +40,10 @@ A Ruby caller installs the gem, calls the ten functions by name with ordinary Ru
 - Proof: The full shared cases run through the installed gem's typed interface, including files and images, context and options, original positions, facts, failures, invalid input with zero sends and the two retained recognition cases. One installed held-provider case shows the declared scheduler progressing, cancellation stopping further reads and submissions, and cleanup returning before the provider is released. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
 - Defers: The proxy and platform ruling changes need no 0.2 ticket.
 
+### Retained aggregate repair
+
+Closure also fixes the aggregate overwrite found during 0526 installed checks: `lib/thinkthen/session.rb` replaces `@rows` for every aggregate packet. Recognize emits incremental nonempty aggregates followed by a possibly empty remainder, so this drops earlier answers. Preserve every chunk and the completed prefix on failure, following the native session contract. Keep a small installed recognize case that yields nonempty output; do not change the shared expected answer.
+
 ## Progress
 
 - 2026-10-10 landed d943d6103; next: Ordinary Ruby recognition and file callers use native Client, aggregate values are corrected, and focused installed cases pass. Finish current full installed parity, image qualification and compatibility retirement when authorized.

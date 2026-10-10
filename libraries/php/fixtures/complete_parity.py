@@ -15,7 +15,6 @@ sys.path.insert(0,str(ROOT/'conformance'))
 import parity
 from c_parity import document, Backend, prepare, assertions, compact
 from complete_projection import project
-sys.path.insert(0, str(ROOT / 'libraries/dart/checks'))
 from session_projection import project_session
 
 
