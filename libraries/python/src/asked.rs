@@ -224,6 +224,20 @@ impl QuestionSet {
         loaded(py, thinkthen::QuestionSet::load(path)).map(Self)
     }
 
+    #[staticmethod]
+    fn _resolve(py: Python<'_>, request: &str) -> PyResult<Self> {
+        crate::guard(py, || {
+            let definition = thinkthen::Request::from_json(request)
+                .and_then(thinkthen::Request::admit)
+                .and_then(|admitted| admitted.resolve_question())
+                .map_err(|error| raised(py, &error))?;
+            match definition {
+                thinkthen::RequestDefinition::Annotate(set) => Ok(Self(set)),
+                _ => Err(usage(py, "frame annotation requires a question set")),
+            }
+        })
+    }
+
     /// Native declared kinds for dataframe column construction, including empty frames.
     fn _members(&self) -> Vec<(String, &'static str)> {
         self.0

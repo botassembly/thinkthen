@@ -68,7 +68,7 @@ def _question(verb, question, controls):
             value = getattr(question, key)
             if value is not None: selectors[key] = os.fspath(value) if key == 'path' else value
         if question.body is not None: selectors['value'] = _json(question.body)
-        if question.raw is not None: selectors['raw'] = question.raw
+        if question.raw is not None: selectors['value'] = json.loads(native._RequestSession._definition(question.raw))
         if question.none: controls['none'] = True
         kind = 'file' if 'path' in selectors else 'name' if 'name' in selectors else 'reference' if 'reference' in selectors else 'definition'
         return {'kind': kind, **selectors}

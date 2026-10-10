@@ -121,7 +121,7 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             print("series", call.value.index.tolist(), call.value.name, call.value.dtype.name,
                   call.value.tolist(), call.facts["records"], call.facts["requests_sent"],
                   [detail["index"] for detail in call.details])
-            observed.append([list(detail["requests"]) for detail in call.details])
+            observed.append([list(detail.meta.requests) for detail in call.details])
         frame = rows.to_frame().assign(number=[4, 6, 8])
         saved = {"version": 1, "batch": 1,
                  "questions": {"late": {"decide": "Is it late?"}}}
@@ -134,37 +134,37 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
                   value["late"].dtype.name, value["late"].tolist(),
                   value["failed"].isna().all(), call.facts["records"],
                   call.facts["requests_sent"], [detail["index"] for detail in call.details])
-            observed.append([list(detail["requests"]) for detail in call.details])
+            observed.append([list(detail.meta.requests) for detail in call.details])
         engine_max = tt.Engine(model="jev-latest", batch="max", cache=False)
         overridden = engine_max.annotate(saved, frame, on="body")
         print("engine", overridden.facts["records"], overridden.facts["requests_sent"])
-        observed.append([list(detail["requests"]) for detail in overridden.details])
+        observed.append([list(detail.meta.requests) for detail in overridden.details])
         partial = {"version": 1, "questions": {
             "late": {"decide": "Is it late?"}, "partial": {"decide": "Partial?"}}}
         mixed = engine.annotate(partial, frame, on="body")
-        print("partial", mixed.value["partial"].dtype.name,
+        print(json.dumps([mixed.value["partial"].dtype.name,
               [None if pd.isna(cell) else bool(cell) for cell in mixed.value["partial"]],
-              mixed.value["failed"].tolist(), mixed.facts["records"], mixed.facts["requests_sent"])
-        print("partial details", [(detail["index"], detail["member"], detail.get("answer"),
-                                   dict(detail["failed"]) if "failed" in detail else None,
-                                   detail["requests_sent"]) for detail in mixed.details])
-        observed.append([list(detail["requests"]) for detail in mixed.details])
+              mixed.value["failed"].tolist(), mixed.facts["records"], mixed.facts["requests_sent"]]))
+        print(json.dumps([(row.index, name, value.to_dict() if hasattr(value, 'failed') else value)
+                          for row in mixed.details for name, value in row.value.items()]))
+        observed.append([list(detail.meta.requests) for detail in mixed.details])
         context = engine.decide(question, rows, context="review this claim")
         print("context", context.facts["records"], context.facts["requests_sent"])
-        observed.append([list(detail["requests"]) for detail in context.details])
-        before = engine.usage()["requests_sent"]
-        try:
-            engine.annotate(saved, frame, on="body", context="forbidden")
-        except tt.UsageError as error:
-            print("refused", str(error), engine.usage()["requests_sent"] - before)
-        else:
-            raise AssertionError("annotate context was accepted")
+        observed.append([list(detail.meta.requests) for detail in context.details])
+        contextual = engine.annotate(saved, frame, on="body", context="review annotation")
+        print("annotation context", contextual.facts["records"], contextual.facts["requests_sent"])
+        observed.append([list(detail.meta.requests) for detail in contextual.details])
         print(json.dumps(observed))
         """, env)
         *lines, captured = printed.splitlines()
+        assert json.loads(lines.pop(6)) == ["boolean", [False, None, True],
+            [None, {'partial': {'failed': {'kind': 'backend', 'cause': 'missing_probability'}}}, None], 3, 1]
+        assert json.loads(lines.pop(6)) == [[0, 'late', False], [0, 'partial', False],
+            [1, 'late', True], [1, 'partial', {'failed': {'kind': 'backend', 'cause': 'missing_probability'}}],
+            [2, 'late', True], [2, 'partial', True]]
         assert lines == [
-            "series [9, 5, 7] body boolean [False, True, True] 3 1 [0, 1, 2]",
-            "series [9, 5, 7] body boolean [False, True, True] 3 3 [0, 1, 2]",
+            "series [9, 5, 7] body object [False, True, True] 3 1 [0, 1, 2]",
+            "series [9, 5, 7] body object [False, True, True] 3 3 [0, 1, 2]",
             "frame default [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
             "[False, True, True] True 3 1 [0, 1, 2]",
             "frame saved [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
@@ -172,18 +172,12 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             "frame typed [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
             "[False, True, True] True 3 1 [0, 1, 2]",
             "engine 3 1",
-            "partial boolean [False, None, True] [None, {'partial': {'failed': "
-            "{'kind': 'backend', 'cause': 'missing_probability'}}}, None] 3 1",
-            "partial details [(0, 'late', False, None, 1), (0, 'partial', False, None, 0), "
-            "(1, 'late', True, None, 0), (1, 'partial', None, "
-            "{'cause': 'missing_probability', 'kind': 'backend'}, 0), "
-            "(2, 'late', True, None, 0), (2, 'partial', True, None, 0)]",
             "context 3 1",
-            "refused annotate does not take a shared context 0",
+            "annotation context 3 3",
         ]
         requests = [json.loads(body) for body in bodies]
         assert [len(request["questions"]) for request in requests] == [
-            3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 6, 3]
+            3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 6, 3, 1, 1, 1]
         singleton = (b'{"state":"Each question quotes the text it asks about.","model":"jev-latest",'
                      b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"}}}')
         assert singleton in bodies[1:4]
@@ -201,10 +195,12 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             [[by_state(bodies[5:8])[state]] for state in states],
             each(bodies[8]),
             each(bodies[9]),
-            each(bodies[10]),
+            [question_keys(url, bodies[10], "jev-latest")[i:i+2] for i in (0, 2, 4)],
             each(bodies[11]),
+            [[by_state(bodies[12:15])[state]] for state in states],
         ]
         assert json.loads(captured) == expected_keys
+        assert all(request["state"] == "review annotation" for request in requests[12:15])
         assert bodies[0] != bodies[-1]
     assert backend.count() == 0
 
@@ -627,4 +623,45 @@ def test_saved_member_selectors_read_the_same_json_text_in_eager_feed_source_and
         print('shared annotation documents')
     """, child_env(backend, tmp_path))
     assert output.strip() == 'shared annotation documents'
+    assert backend.count() == 5
+
+
+@pytest.mark.parametrize("shape", ["pandas", "polars"])
+def test_frame_annotation_resolves_every_question_selector_and_empty_metadata(backend, tmp_path, shape):
+    printed = run("""
+        import json, os, pathlib, pandas as pd, polars as pl, thinkthen as tt
+        from thinkthen.complete import QuestionSource
+        shape = SHAPE
+        form = {'version':1, 'questions':{'late':{'decide':'Late?'},
+                'team':{'choose':'Which?', 'options':['billing','shipping']},
+                'urgent':{'score':'Urgent?', 'levels':['low','high']},
+                'tags':{'tag':'Kinds?', 'labels':['bill','ship']}}}
+        raw = json.dumps(form)
+        path = pathlib.Path(os.environ['HOME']) / 'questions.json'
+        path.write_text(raw)
+        named = pathlib.Path(os.environ['XDG_CONFIG_HOME']) / 'thinkthen' / 'questions'
+        named.mkdir(parents=True)
+        (named / 'frame.json').write_text(raw)
+        selectors = [form, QuestionSource(role='set', raw=raw), QuestionSource(role='set', path=path),
+                     QuestionSource(role='set', reference='@' + str(path)), QuestionSource(role='set', name='frame')]
+        engine = tt.Engine(cache=False)
+        for selector in selectors:
+            for values in (['one',None,'two'], [], [None,None]):
+                source = pd.DataFrame({'body':values}) if shape == 'pandas' else pl.DataFrame({'body':values}, schema={'body':pl.String})
+                got = engine.annotate(selector, source, on='body')
+                assert got.facts.requests_sent == (1 if values and values[0] is not None else 0)
+                assert got.positions == ((0,2) if values and values[0] is not None else ())
+                out = got.value
+                assert list(out.columns) == ['body', *form['questions'], 'failed']
+                if shape == 'pandas':
+                    assert [str(out[name].dtype) for name in form['questions']] == ['boolean','string','Float64','object']
+                    assert out['failed'].isna().all()
+                    assert out['late'].isna().to_list() == [value is None for value in values]
+                else:
+                    assert [out.schema[name] for name in form['questions']] == [pl.Boolean,pl.String,pl.Float64,pl.List(pl.String)]
+                    assert out['failed'].is_null().all()
+                    assert out['late'].is_null().to_list() == [value is None for value in values]
+        print('all selectors retain typed frame columns')
+    """.replace('SHAPE', repr(shape)), child_env(backend, tmp_path))
+    assert printed.strip() == 'all selectors retain typed frame columns'
     assert backend.count() == 5
