@@ -38,3 +38,7 @@ DuckDB, SQLite and PostgreSQL treat NULL one way, accept images as native binary
   - DuckDB's actual return type is asserted for each changed function, and the value is consumed through DuckDB's JSON operations.
   - Each discovery query returns a description for the full registered public function inventory.
 - Defers: Extension signing and registry submission stay outside this release's dependencies. Local native package inventory belongs to 0501. 0495 applies these rules during the DuckDB migration.
+
+## Progress
+
+- 2026-10-10 started
