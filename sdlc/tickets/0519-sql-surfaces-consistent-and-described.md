@@ -1,6 +1,6 @@
 # 0519: Make the SQL surfaces consistent and self-described
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -33,6 +33,8 @@ Reviews: revision 0b608d7a4bb41ec3a618f7778b863d0ab9db94d8, reject
 Reviews: revision 099f0c54aacf30f330615899861186e61ecb8f65, accept
 
 Reviews: revision 7f77442976806000e6cc303caf09b0ed933287b2, accept
+
+Landed: 37ae83a
 
 ## Outcome
 
