@@ -23,6 +23,8 @@ Future<void> streamCases(Engine engine, Future<void> arrived,
     await prefixAnswered.timeout(const Duration(seconds: 5));
     reader
         .addError(const FileSystemException('secret host path and diagnostic'));
+    reader.addError(const FormatException('second distinct reader failure'));
+    reader.add(descriptor('after-reader-failure'));
     await reader.close();
     try {
       await reading.timeout(const Duration(seconds: 5));

@@ -266,7 +266,8 @@ final class Engine implements Finalizable {
     }
 
     void failReader(Object error) {
-      if (cancellation?.cancelled == true) return;
+      if (readerFinished || cancellation?.cancelled == true) return;
+      readerFinished = true;
       final failure = error is InputRequestReaderFailure
           ? error
           : error is IOException
@@ -275,8 +276,12 @@ final class Engine implements Finalizable {
                   ? InputRequestReaderFailureInvalidInput()
                   : null;
       if (failure != null) {
-        readerFinished = true;
-        session.finish(failure: failure);
+        try {
+          session.finish(failure: failure);
+        } catch (error) {
+          readerFailure = error;
+          session.close();
+        }
       } else {
         readerFailure = error;
         session.close();
@@ -290,19 +295,28 @@ final class Engine implements Finalizable {
       } else {
         subscription = feed.listen(
           (descriptor) async {
+            if (readerFinished || cancellation?.cancelled == true ||
+                session._owner.pointer == nullptr) return;
             subscription!.pause();
             try {
               if (!await session.push(descriptor))
                 await subscription?.cancel();
-              else
+              else if (!readerFinished && cancellation?.cancelled != true &&
+                  session._owner.pointer != nullptr)
                 subscription?.resume();
             } catch (error) {
               failReader(error);
             }
           },
           onDone: () {
-            if (!readerFinished && session._owner.pointer != nullptr)
-              session.finish();
+            if (!readerFinished && session._owner.pointer != nullptr) {
+              try {
+                session.finish();
+                readerFinished = true;
+              } catch (error) {
+                failReader(error);
+              }
+            }
           },
           onError: (Object error) {
             failReader(error);
