@@ -19,22 +19,6 @@
   } else {
     tryCatch(list(value = expr), error = function(e) .tt_error_condition(e))
   }
-  if (is.null(held$cond) && is.null(held$interrupt) &&
-      is.list(held$value) && is.character(held$value$tt_envelope)) {
-    envelope <- jsonlite::parse_json(held$value$tt_envelope)
-    if (!is.null(envelope$error)) {
-      held <- .tt_error_condition(simpleError(envelope$error))
-      if (!is.null(held$cond)) {
-        held$cond$facts <- envelope$facts
-        held$cond$details <- envelope$details
-      }
-    } else {
-      typed <- held$value$tt_complete_value
-      held$value <- structure(list(value = if (is.null(typed)) envelope$value else typed, probability = envelope$probability,
-                                   facts = envelope$facts,
-                                   details = envelope$details), class = "thinkthen_call")
-    }
-  }
   if (is.null(held$cond) && is.null(held$interrupt) && tt_interrupt_pending()) {
     held <- list(interrupt = TRUE)
   }
@@ -65,12 +49,6 @@
   })
 }
 
-.tt_result <- function(value, native) {
-  structure(list(value = value, probability = native$probability,
-                 facts = native$facts, details = native$details),
-            class = "thinkthen_call")
-}
-
 # R catches names its formal arguments do not use. Every caught name is a
 # usage error, including the old deadline spelling and core-only settings.
 .tt_unknown <- function(...) {
@@ -79,32 +57,8 @@
   .tt_usage(paste0("unknown keyword: ", if (length(names)) names[[1L]] else "unnamed argument"))
 }
 
-.tt_settings <- function(kind, fields) {
-  if (!length(fields)) return(invisible(NULL))
-  .tt_call(tt_settings_check(.tt_json(fields), kind))
-}
-
-.tt_call_settings <- function(kind, batch, context, deadline_ms) {
-  plain <- function(value) if (is.numeric(value) && identical(class(value), "AsIs"))
-    as.numeric(value) else value
-  fields <- list()
-  if (!is.null(batch)) fields$batch <- plain(batch)
-  if (!is.null(context)) fields$context <- context
-  if (!is.null(deadline_ms)) fields$deadline_ms <- plain(deadline_ms)
-  .tt_settings(kind, fields)
-}
-
 tt_completion <- function() tt_completion_new()
 tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completion_read_native(handle)))
-
-# A JSON list's values as one vector, with null as NA.
-# With a field, each value is that field of one JSON object.
-.tt_na <- function(values, na, field = NULL) {
-  vapply(values, function(one) {
-    if (!is.null(field)) one <- one[[field]]
-    if (is.null(one)) na else one
-  }, na)
-}
 
 # One engine error as data: the interrupt marker, or its condition.
 .tt_error_condition <- function(e) {

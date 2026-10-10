@@ -28,10 +28,7 @@ importFrom(jsonlite, toJSON)
 
 export(tt_files)
 
-S3method(print, thinkthen_complete_call)
 
-S3method(print,thinkthen_complete_batch)
-S3method(print,thinkthen_complete_row)
 
 S3method(print,thinkthen_complete)
 S3method(print,thinkthen_identity)

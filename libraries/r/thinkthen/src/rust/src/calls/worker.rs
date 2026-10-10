@@ -77,7 +77,7 @@ pub(crate) fn call_owned<T: Send + 'static>(
                 );
                 held.settle(kind, snapshot.clone());
             }
-            Ok(Completed { result, snapshot })
+            Ok(Completed { result })
         },
     )
 }

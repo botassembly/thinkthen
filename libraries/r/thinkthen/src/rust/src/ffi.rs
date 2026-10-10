@@ -25,15 +25,12 @@ use extendr_api::prelude::*;
 
 use crate::calls::receipt::Receipt;
 use crate::calls::{self, Crossed};
-use crate::relate::{self};
 use crate::usage;
 
-mod complete;
 mod engine;
 mod request;
-mod settings;
 mod values;
-use values::{asked, batch_of, completion_of, context_of, required_completion, spec_of, whole_of};
+use values::{batch_of, completion_of, required_completion, whole_of};
 
 #[allow(
     improper_ctypes,
@@ -129,21 +126,6 @@ fn tt_text_utf8(value: Robj) -> Crossed<Vec<String>> {
     texts_of(&value, "a text")
 }
 
-fn positions_of(value: &Robj, count: usize) -> Crossed<Vec<usize>> {
-    if value.rtype() != Rtype::Integers || value.len() != count {
-        return Err(usage("observation positions must match the live evidence"));
-    }
-    (0..count)
-        .map(|at| {
-            let at =
-                isize::try_from(at).map_err(|_| usage("observation positions are too long"))?;
-            // SAFETY: at is inside the integer vector R handed this call.
-            let held = unsafe { INTEGER_ELT(value.get(), at) };
-            usize::try_from(held).map_err(|_| usage("observation positions must be nonnegative"))
-        })
-        .collect()
-}
-
 /// A number of length one with no class but `AsIs`, or `None` for `NULL`.
 fn number_of(value: &Robj, what: &str) -> Crossed<Option<f64>> {
     if value.is_null() {
@@ -216,212 +198,55 @@ fn tt_completion_settle_early(value: Robj, kind: Robj) -> Crossed<()> {
     Ok(())
 }
 
-/// Check a question file and name its kind.
 #[extendr]
-fn tt_question_check(body: Robj) -> Crossed<String> {
-    let asked = calls::question(&text_of(&body, "the question")?)?;
-    Ok(match asked {
-        thinkthen::LoadedQuestion::Question(held) => format!("{:?}", held.kind()).to_lowercase(),
-        thinkthen::LoadedQuestion::Banded(_) => "decide".to_owned(),
-    })
-}
-
-/// Read a question file under the crate's one 1 MiB cap.
-#[extendr]
-fn tt_question_file(path: Robj) -> Crossed<String> {
-    thinkthen::read_question_file(text_of(&path, "a question file")?).map_err(|reason| {
-        let message = match reason {
-            thinkthen::QuestionFileError::TooLarge => "the question file is too large",
-            _ => "the question file could not be read",
-        };
-        crate::packed(thinkthen::ErrorKind::Local.name(), false, message)
-    })
-}
-
-/// Validate keyword settings with the shared core grammar before a send.
-#[extendr]
-fn tt_settings_check(body: Robj, kind: Robj) -> Crossed<()> {
-    settings::check(&body, &kind)
-}
-
-#[extendr]
-#[expect(
-    clippy::too_many_arguments,
-    reason = "R's column binding passes its public controls and original positions explicitly"
-)]
-fn tt_decide_column(
-    question: Robj,
-    records: Robj,
-    positions: Robj,
-    deadline: Robj,
-    batch: Robj,
-    context: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (json, texts) = asked(&question, &records, "the evidence")?;
-    let positions = positions_of(&positions, texts.len())?;
-    calls::decide(
-        &json,
-        texts,
-        deadline_of(&deadline)?,
-        batch_of(&batch)?,
-        context_of(&context)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-        positions,
-    )
-}
-
-#[extendr]
-#[expect(
-    clippy::too_many_arguments,
-    reason = "R's column binding passes its public controls and original positions explicitly"
-)]
-fn tt_column(
-    question: Robj,
-    records: Robj,
-    positions: Robj,
-    deadline: Robj,
-    batch: Robj,
-    context: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (json, texts) = asked(&question, &records, "the evidence")?;
-    let positions = positions_of(&positions, texts.len())?;
-    calls::column(
-        &json,
-        texts,
-        deadline_of(&deadline)?,
-        batch_of(&batch)?,
-        context_of(&context)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-        positions,
-    )
-}
-
-/// Preview the same packed request bodies without reading a key or sending.
-#[extendr]
-fn tt_plan_column(question: Robj, records: Robj, batch: Robj, context: Robj) -> Crossed<List> {
-    let (json, texts) = asked(&question, &records, "the evidence")?;
-    crate::plan::preview(&json, texts, batch_of(&batch)?, context_of(&context)?)
-}
-
-#[extendr]
-fn tt_filter_places(
-    question: Robj,
-    records: Robj,
-    deadline: Robj,
-    batch: Robj,
-    context: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (json, texts) = asked(&question, &records, "the records")?;
-    calls::filter(
-        &json,
-        texts,
-        deadline_of(&deadline)?,
-        batch_of(&batch)?,
-        context_of(&context)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-    )
-}
-
-#[extendr]
-fn tt_rank_all(
-    question: Robj,
-    records: Robj,
-    deadline: Robj,
-    batch: Robj,
-    context: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (text, texts) = asked(&question, &records, "the records")?;
-    calls::rank(
-        &text,
-        texts,
-        deadline_of(&deadline)?,
-        batch_of(&batch)?,
-        context_of(&context)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-    )
-}
-
-#[extendr]
-fn tt_find_one(
-    question: Robj,
-    units: Robj,
-    none: Robj,
-    deadline: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (text, texts) = asked(&question, &units, "the units")?;
-    // tt_find checks `none` is TRUE or FALSE before it crosses.
-    let none = none.as_bool() == Some(true);
-    calls::find(
-        &text,
-        none,
-        texts,
-        deadline_of(&deadline)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-    )
-}
-
-#[extendr]
-fn tt_annotate_file(
-    path: Robj,
-    records: Robj,
-    taken: Robj,
-    deadline: Robj,
-    batch: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (path, texts) = (
-        text_of(&path, "the question set path")?,
-        texts_of(&records, "the records")?,
-    );
-    let (taken, deadline) = (
-        texts_of(&taken, "the input's names")?,
-        deadline_of(&deadline)?,
-    );
-    let set = thinkthen::QuestionSet::load(path).map_err(|error| crate::carry(&error))?;
-    calls::annotate(
-        set,
-        texts,
-        &taken,
-        deadline,
-        batch_of(&batch)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-    )
-}
-
-#[extendr]
-fn tt_details_one(
-    question: Robj,
-    evidence: Robj,
-    deadline: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (json, text) = (
-        text_of(&question, "the question")?,
-        text_of(&evidence, "the evidence")?,
-    );
-    calls::details(
-        &json,
-        text,
-        deadline_of(&deadline)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-    )
+fn tt_complete_error_native(error: Robj) -> Crossed<Robj> {
+    crate::native_results::failure(&text_of(&error, "complete error")?)
 }
 
 #[extendr]
 fn tt_usage_counters() -> Crossed<String> {
     calls::counters()
+}
+
+#[extendr]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R's engine constructor passes its public settings through this binding"
+)]
+fn tt_engine_set(
+    base_url: Robj,
+    model: Robj,
+    throttle: Robj,
+    max_requests: Robj,
+    max_requests_total: Robj,
+    max_request_bytes: Robj,
+    cache: Robj,
+    timeout: Robj,
+    max_retries: Robj,
+    record: Robj,
+    replay: Robj,
+    profile: Robj,
+    batch: Robj,
+    backend: Robj,
+    refresh_cache: Robj,
+) -> Crossed<()> {
+    engine::configure([
+        base_url,
+        model,
+        throttle,
+        max_requests,
+        max_requests_total,
+        max_request_bytes,
+        cache,
+        timeout,
+        max_retries,
+        record,
+        replay,
+        profile,
+        batch,
+        backend,
+        refresh_cache,
+    ])
 }
 
 #[extendr]
@@ -439,79 +264,16 @@ fn tt_interrupt_pending() -> bool {
     interrupt_pending()
 }
 
-#[extendr]
-fn tt_recognize_column(
-    spec: Robj,
-    path: bool,
-    texts: Robj,
-    positions: Robj,
-    deadline: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let (spec, texts) = (spec_of(&spec, path)?, texts_of(&texts, "the evidence")?);
-    let positions = positions_of(&positions, texts.len())?;
-    relate::recognize(
-        &spec,
-        texts,
-        positions,
-        deadline_of(&deadline)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-    )
-}
-
-#[extendr]
-fn tt_relate_frame(
-    spec: Robj,
-    path: bool,
-    names: Robj,
-    kinds: Robj,
-    deadline: Robj,
-    completion: Robj,
-) -> Crossed<List> {
-    let spec = spec_of(&spec, path)?;
-    let (names, kinds) = (
-        texts_of(&names, "the name column")?,
-        texts_of(&kinds, "the kind column")?,
-    );
-    relate::relate(
-        &spec,
-        names.into_iter().zip(kinds).collect(),
-        deadline_of(&deadline)?,
-        &interrupt_pending,
-        completion_of(&completion)?,
-    )
-}
-
-#[extendr]
-fn tt_source_files(question: Robj, selection: Robj, deadline: Robj) -> Crossed<List> {
-    crate::files::from_robj(question, selection, deadline, &interrupt_pending)
-}
-
 extendr_module! {
     mod thinkthen;
-    use complete;
     use request;
     fn tt_text_utf8;
-    fn tt_question_check;
-    fn tt_source_files;
-    fn tt_question_file;
-    fn tt_settings_check;
-    fn tt_decide_column;
-    fn tt_plan_column;
-    fn tt_column;
-    fn tt_filter_places;
-    fn tt_rank_all;
-    fn tt_find_one;
-    fn tt_annotate_file;
-    fn tt_details_one;
+    fn tt_engine_set;
+    fn tt_complete_error_native;
     fn tt_usage_counters;
     fn tt_usage_persistence_native;
     fn tt_finish_usage_status_native;
     fn tt_interrupt_pending;
-    fn tt_recognize_column;
-    fn tt_relate_frame;
-
     fn tt_completion_new;
     fn tt_completion_claim;
     fn tt_completion_read_native;

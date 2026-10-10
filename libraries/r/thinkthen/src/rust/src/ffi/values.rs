@@ -8,10 +8,9 @@ use thinkthen::BatchSetting;
 
 use crate::calls::Crossed;
 use crate::calls::receipt::Receipt;
-use crate::relate::Spec;
 use crate::usage;
 
-use super::{number_of, text_of, texts_of};
+use super::{number_of, text_of};
 
 pub(super) fn batch_of(value: &Robj) -> Crossed<Option<BatchSetting>> {
     if value.is_null() {
@@ -41,27 +40,6 @@ pub(super) fn batch_of(value: &Robj) -> Crossed<Option<BatchSetting>> {
     Ok(NonZeroUsize::new(count).map(BatchSetting::Records))
 }
 
-pub(super) fn context_of(value: &Robj) -> Crossed<Option<String>> {
-    if value.is_null() {
-        return Ok(None);
-    }
-    let text = text_of(value, "context")?;
-    if text.trim().is_empty() {
-        return Err(usage("context must be nonblank UTF-8 text"));
-    }
-    Ok(Some(text))
-}
-
-/// A spec argument: a path when `path` is `TRUE`, the file's JSON otherwise.
-pub(super) fn spec_of(spec: &Robj, path: bool) -> Crossed<Spec> {
-    let text = text_of(spec, "the spec")?;
-    Ok(if path {
-        Spec::Path(text)
-    } else {
-        Spec::Json(text)
-    })
-}
-
 /// A whole number of length one for a setting, or `None` for `NULL`.
 pub(super) fn whole_of<T: TryFrom<i64>>(value: &Robj, what: &str) -> Crossed<Option<T>> {
     let refused = || usage(&format!("{what} is one whole number in range"));
@@ -77,11 +55,6 @@ pub(super) fn whole_of<T: TryFrom<i64>>(value: &Robj, what: &str) -> Crossed<Opt
     )]
     let whole = held as i64;
     T::try_from(whole).map(Some).map_err(|_| refused())
-}
-
-/// A call's question text and its column of texts.
-pub(super) fn asked(question: &Robj, texts: &Robj, what: &str) -> Crossed<(String, Vec<String>)> {
-    Ok((text_of(question, "the question")?, texts_of(texts, what)?))
 }
 
 pub(super) fn completion_of(value: &Robj) -> Crossed<Option<Arc<Receipt>>> {

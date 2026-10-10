@@ -76,25 +76,6 @@ pub(crate) fn object(value: &Value, name: &str, fields: &[Field]) -> Crossed<Rob
     tagged(List::from_pairs(held).into(), name, "thinkthen_complete")
 }
 
-// InputView is the R-owned original/provenance envelope, outside the shared
-// result graph. Only its host representation is assigned here; its contents
-// and the nested result conversions remain owned by their Rust serializers.
-fn input(value: &Value) -> Crossed<Robj> {
-    object(
-        value,
-        "NativeInput",
-        &[
-            ("original", true, plain),
-            ("location", false, |value| {
-                convert("completePhysicalSource", value)
-            }),
-            ("images", true, |value| {
-                array(value, |value| convert("completeImage", value))
-            }),
-        ],
-    )
-}
-
 fn result_kind(verb: &str) -> Crossed<&'static str> {
     Ok(match verb {
         "decide" => "completeAtomic_DecideValue",
@@ -143,67 +124,6 @@ fn failed(value: &Value) -> Crossed<Robj> {
 
 pub(crate) fn failure(text: &str) -> Crossed<Robj> {
     failed(&decoded(text)?)
-}
-
-// Worker packets cross as owned bytes. Only this main-thread representation
-// seam touches R; shared generated converters retain nested facts and values.
-pub(crate) fn event(text: &str, verb: &str) -> Crossed<Robj> {
-    let value = decoded(text)?;
-    let mut fields = Vec::new();
-    if let Some(row) = value.get("row") {
-        fields.push(("row", convert(result_kind(verb)?, row)?));
-        fields.push((
-            "ordinal",
-            plain(
-                value
-                    .get("ordinal")
-                    .ok_or_else(|| crate::defect("native batch row has no ordinal"))?,
-            )?,
-        ));
-        fields.push((
-            "input",
-            input(
-                value
-                    .get("input")
-                    .ok_or_else(|| crate::defect("native batch row has no input"))?,
-            )?,
-        ));
-    }
-    if let Some(error) = value.get("error") {
-        fields.push(("error", failed(error)?));
-    }
-    if let Some(facts) = value.get("facts") {
-        fields.push(("facts", convert("completeFacts", facts)?));
-    }
-    Ok(List::from_pairs(fields).into())
-}
-
-pub(crate) fn packet(text: &str, verb: &str) -> Crossed<Robj> {
-    let value = decoded(text)?;
-    let kind = result_kind(verb)?;
-    let member = |name: &str| {
-        value
-            .get(name)
-            .ok_or_else(|| crate::defect("native complete packet has no required member"))
-    };
-    let rows = member("results")?;
-    let results = if matches!(verb, "find" | "relate") {
-        List::from_values([convert(kind, rows)?]).into()
-    } else {
-        array(rows, |row| convert(kind, row))?
-    };
-    let packet: Robj = list!(
-        results = results,
-        facts = convert("completeFacts", member("facts")?)?,
-        ordinals = plain(member("ordinals")?)?,
-        inputs = array(member("inputs")?, input)?
-    )
-    .into();
-    let mut packet = packet;
-    packet
-        .set_class(["thinkthen_complete_call"])
-        .map_err(|_| crate::defect("native complete call class could not be assigned"))?;
-    Ok(packet)
 }
 
 fn function_kind(function: thinkthen::RequestFunction) -> Crossed<&'static str> {

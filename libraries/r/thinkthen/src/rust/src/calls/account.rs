@@ -5,7 +5,7 @@ use std::sync::{Mutex, PoisonError};
 
 use serde::Serialize;
 use serde_json::value::RawValue;
-use thinkthen::{Batch, Call, Error, Facts, RecordObservation, Tally};
+use thinkthen::{Facts, RecordObservation, Tally};
 
 use crate::carry;
 
@@ -68,25 +68,6 @@ impl Account {
         Ok(())
     }
 
-    /// Run one eager call and count its facts, a failed call's too.
-    pub(crate) fn run<T>(
-        &self,
-        call: impl FnOnce() -> Result<Call<T>, Error>,
-    ) -> Result<T, String> {
-        match self.tally.run(call) {
-            Ok(done) => {
-                self.counted.store(true, Ordering::SeqCst);
-                Ok(done.into_value())
-            }
-            Err(error) => {
-                if error.facts().is_some() {
-                    self.counted.store(true, Ordering::SeqCst);
-                }
-                Err(carry(&error))
-            }
-        }
-    }
-
     pub(crate) fn start(&self) -> thinkthen::TallyStart<'_> {
         self.tally.start()
     }
@@ -101,11 +82,6 @@ impl Account {
         Ok(())
     }
 
-    /// An empty column still reports zero-work facts.
-    pub(crate) fn no_work(&self) {
-        self.counted.store(true, Ordering::SeqCst);
-    }
-
     pub(crate) fn finish(self) -> Snapshot {
         Snapshot {
             facts: self
@@ -118,27 +94,6 @@ impl Account {
                 .unwrap_or_else(PoisonError::into_inner),
         }
     }
-}
-
-/// Exhaust a lazy batch through its one terminal error, then count its facts.
-pub(crate) fn collect<T>(batch: &mut Batch<'_, T>, account: &Account) -> Result<Vec<T>, String> {
-    let started = account.tally.start();
-    let mut values = Vec::new();
-    let mut failure = None;
-    for row in batch.by_ref() {
-        match row {
-            Ok(value) => values.push(value),
-            Err(error) => {
-                failure = Some(carry(&error));
-                break;
-            }
-        }
-    }
-    if let Some(facts) = batch.facts() {
-        started.finish(facts).map_err(|error| carry(&error))?;
-        account.counted.store(true, Ordering::SeqCst);
-    }
-    failure.map_or(Ok(values), Err)
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -158,5 +113,4 @@ impl Snapshot {
 
 pub(crate) struct Completed<T> {
     pub(crate) result: Result<T, String>,
-    pub(crate) snapshot: Snapshot,
 }
