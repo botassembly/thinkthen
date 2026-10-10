@@ -60,3 +60,4 @@ Author: project manager.
 - 2026-10-10 started
 - 2026-10-10 landed 8dc6be679; next: Managed packages, JVM native classifiers, PHP and Ada archive members and Windows npm addon assembly now follow the current native package contracts. Fresh review and small assembly checks pass. Final installed distribution and platform qualification remain held.
 - 2026-10-10 landed 670c88047; next: Current typed registry consumers and the full Go route are reviewed and pass focused installed checks; assemble final artifacts and run complete installed and platform qualification at the candidate.
+- 2026-10-10 next: Fix final NuGet assembly to include every native RID and add required Windows installed SDK consumers, then build and qualify the final candidate packages.
