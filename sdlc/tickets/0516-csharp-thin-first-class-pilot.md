@@ -1,6 +1,6 @@
 # 0516: Prove the thin first-class pattern in C#
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -29,6 +29,8 @@ Reviews: revision 5df36c0f8e2d5e2d606d0883b70e5ee142f889c9, reject
 Reviews: revision 2a0356e04907ec98bb08738f327b92ece1ea2ea4, accept
 
 Reviews: revision 77255bc35804d088cb9bb6458b4aeab105a54007, accept
+
+Landed: d616bb9
 
 ## Outcome
 
