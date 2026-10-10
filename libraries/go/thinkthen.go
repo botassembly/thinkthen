@@ -4,7 +4,8 @@
 package thinkthen
 
 /*
-#cgo pkg-config: thinkthen
+#cgo !linux pkg-config: thinkthen
+#cgo linux,!amd64 pkg-config: thinkthen
 #include <stdlib.h>
 #include <pthread.h>
 #include "thinkthen.h"

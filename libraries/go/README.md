@@ -42,3 +42,25 @@ Explicit files and folders use the [library reader contract](../files.md), with 
 `DecideBatch`, `ChooseBatch`, `TagBatch`, `ScoreBatch`, `FilterBatch` and `AnnotateBatch` use the native lazy scheduler. Call `Next` until it returns nil, then read `Facts`, and always `Close` the batch before closing its engine. A dedicated pinned goroutine keeps every batch operation on its creating native thread. Completed rows remain valid after either handle closes. Started failures expose typed `Error.Complete`; absent summary metadata and aggregate observation IDs remain absent. Compatibility methods retain their signatures. The existing family gate executes all 247 required shared cases through these typed methods, including all 24 image-admission recipes, with counted loopback sends and zero-send replay checks. Whole-family review and landing remain with [ticket 0427](../../sdlc/tickets/0427-go-csharp-jvm-typed-parity.md).
 
 Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+
+### Native owned calls (0.2 development)
+
+Use `NewClient(settings)` and its ten named methods for the native request contract. Each method takes a `context.Context`, a question string or ordinary question-definition map, ordinary Go inputs, and call options. Slices become ordered records; `Item` adds per-record fields and `FileRecords` selects the native reader. The engine validates inputs and owns cache keys and replay.
+
+```go
+client, err := thinkthen.NewClient(map[string]any{"cache": false})
+if err != nil { return err }
+defer client.Close()
+call, err := client.Decide(ctx, "Is this urgent?", []string{"first", "second"}, nil)
+if err != nil { return err }
+facts := call.Terminal.Facts()
+if facts.Present && !facts.Null && facts.Err == nil {
+    // Inspect facts.Value through generated accessors.
+}
+```
+
+`OwnedCall` retains generated packets and settled terminal facts after client cleanup. Generated accessors return `Presence[T]`: inspect `Present`, `Null` and `Err` before reading `Value`. Unknown fields survive JSON round trips. JSON numbers retain their original numeric representation. `SessionError` carries the complete failed call and typed native error. Context cancellation returns the context error and promptly frees the session; it does not invent settled facts. A cancelled call retains its packet prefix and has a nil terminal while settlement is pending. Client cleanup also stops active host readers promptly.
+
+The staged Linux amd64 module carries its static native library under `native/x86_64-unknown-linux-gnu`. A consumer needs Go and a C compiler, with no pkg-config, Rust compiler or library-path setup. Other target assets and final distribution assembly still require their owning package work. Development source checks stage their own native build separately.
+
+Existing `Engine` calls remain compatibility APIs until installed migration parity permits retirement: `Engine.Decide` becomes `Client.Decide`, the generic `Call` becomes a named method, and `Files` becomes a named method with `FileRecords`. This additive slice does not retire the compatibility readers. Native session facts currently retain the shared C session's Rust surface attribution; the shared interface must supply Go attribution before final adoption.

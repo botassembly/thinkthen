@@ -79,6 +79,7 @@ SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules",
 GENERATED_BINDING_SOURCES = {
     "libraries/typescript/results_generated.js",
     "libraries/typescript/results_generated.d.ts",
+    "libraries/go/owned_results_generated.go",
     "libraries/ruby/src/ffi/results_generated.rs",
     "libraries/ruby/lib/thinkthen/results_generated.rb",
     "libraries/jvm/session/thinkthen/Results.java",
