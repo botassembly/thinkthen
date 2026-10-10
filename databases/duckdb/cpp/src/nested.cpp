@@ -55,6 +55,9 @@ unique_ptr<FunctionData> BindNested(ClientContext &context, ScalarFunction &func
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	const auto kind = function.name == "thinkthen_native_recognize" ? 8 : 9;
 	auto bound = make_uniq<NestedBind>(context.shared_from_this(), kind);
+	if (!arguments[0]->IsFoldable() || ExpressionExecutor::EvaluateScalar(context, *arguments[0]).IsNull()) {
+		return bound;
+	}
 	if (arguments[1]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[1]);
 		if (!value.IsNull()) {
@@ -90,6 +93,7 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<Group> groups;
+	bool live = false;
 	std::map<std::tuple<string, vector<string>, string>, idx_t> known;
 	std::set<std::pair<string, vector<string>>> validated;
 	std::map<string, ResolvedQuestion> resolved;
@@ -100,6 +104,7 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (evidence.IsNull() || argument.IsNull()) {
 			continue;
 		}
+		live = true;
 		const auto type = args.data[3].GetValue(row).GetValue<string>();
 		if (type != "\"NULL\"" && type != "VARCHAR") {
 			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
@@ -139,7 +144,8 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 		slots[row] = std::make_pair(place->second, position->second);
 	}
 	vector<vector<Value>> answered;
-	const auto settings = Settings(*context);
+	std::optional<SessionSettings> settings;
+	if (live) { settings.emplace(Settings(*context)); }
 	for (auto &group : groups) {
 		const auto budget = owner->Remaining(*context);
 		vector<ThinkThenText> members, texts;
@@ -153,7 +159,7 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 		                                           group.argument.text.size(), group.argument.from_file ? 1 : 0,
 		                                           members.data(), members.size(), texts.data(), texts.size(),
 		                                           reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
-		                                           bound.kind, budget, settings.Bridge(), StopFor(*context)));
+		                                           bound.kind, budget, settings->Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		answered.push_back(DecodeNested(reply.value.bytes, reply.value.len, texts.size(), bound.kind));
 	}

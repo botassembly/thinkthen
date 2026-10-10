@@ -51,7 +51,8 @@ def main() -> None:
         assert edges[0] == {"relation": "near", "source": "Maria Chen", "source_kind": "person",
                             "target": "arrived.", "target_kind": "person", "probability": 0.9,
                             "either": False}
-        assert related[1:] == [{"rows": [[None]]}, {"rows": [[None]]}]
+        assert related[1] == {"rows": [[None]]}
+        assert related[2] == related[0], "NULL optional settings omit settings"
         after_edges = backend.count()
         assert after_edges > after_names, "relations reached the loopback engine"
         invalid_rules = run(

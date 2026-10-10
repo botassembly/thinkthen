@@ -1,4 +1,5 @@
 #include "scalar_settings.hpp"
+#include "scalar_owner.hpp"
 #include "bridge.hpp"
 #include "duckdb/common/file_system.hpp"
 
@@ -38,6 +39,7 @@ bool FolderAllowed(ClientContext &context, const std::optional<string> &folder) 
 } // namespace
 
 SessionSettings Settings(ClientContext &context) {
+	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY)->AdmitBudget(context);
 	SessionSettings settings {TextSetting(context, "thinkthen_batch"),
 	                          NumericSetting(context, "thinkthen_throttle"),
 	                          NumericSetting(context, "thinkthen_max_requests"),
