@@ -891,8 +891,7 @@ def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
         except (json.JSONDecodeError, TypeError):
             package = None
         expected = {"name": NONCARGO_MANIFESTS[name][1]["name"], "version": VERSION,
-                    "source_only": name == "libraries/cobol", "native_dependency": "thinkthen-c",
-                    "bundles_native": name == "libraries/objective-c"}
+                    "source_only": False, "native_dependency": "thinkthen-c", "bundles_native": True}
         if package != expected:
             return [f"{name} manifest matches its approved native package design"]
         return []
@@ -1002,10 +1001,8 @@ def check_bindings() -> None:
                 fail("binding", "Maven dependency coordinates must not override project coordinates")
         if name == "libraries/php" and not noncargo_manifest_failures(name, source.replace('"autoload.php"', '"planted.php"', 1)):
             fail("binding", "PHP with a planted autoload path is refused")
-        if name in ("libraries/objective-c", "libraries/cobol"):
-            original, planted = ('"bundles_native": true', '"bundles_native": false') if name == "libraries/objective-c" else ('"bundles_native": false', '"bundles_native": true')
-            if not noncargo_manifest_failures(name, source.replace(original, planted, 1)):
-                fail("binding", f"{name} with a planted native packaging mode is refused")
+        if name in ("libraries/objective-c", "libraries/cobol") and not noncargo_manifest_failures(name, source.replace('"bundles_native": true', '"bundles_native": false', 1)):
+            fail("binding", f"{name} with a planted native packaging mode is refused")
         if name == "libraries/dart":
             flutter = (REPO / "libraries/dart/flutter/pubspec.yaml").read_text()
             example = (REPO / "libraries/dart/flutter/example/pubspec.yaml").read_text()

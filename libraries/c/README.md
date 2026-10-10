@@ -50,6 +50,17 @@ A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with t
 
 `thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, request-byte ceiling, cache, timeout, retries, profile, batch default, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
 
+## Upgrade from collecting calls
+
+| Earlier call | Current call |
+| --- | --- |
+| Bare typed functions, JSON calls and counted complete calls | `thinkthen_session_new`, then `thinkthen_session_try_read` |
+| Complete snapshots and lazy batches | Owned session packets and `thinkthen_session_result_view` |
+| Borrowed error-slot facts | Terminal packet failure and final facts |
+| `thinkthen_plan_json` | `thinkthen_request_plan_json` with the canonical Request |
+
+All frozen compatibility exports remain available with their original symbols, signatures, layouts, errors and lifetime rules. The [compatibility header table](DESIGN.md#the-header-table) and [counted interface](TYPED.md) describe those contracts. They retain separate ownership rules. New callers use sessions.
+
 ## Compatibility exports
 
 The frozen 0.1 exports retain their symbols, signatures, layouts, error codes and accepted legacy JSON behavior. Existing consumers may keep using them. The [existing header table](DESIGN.md#the-header-table) describes these families; the generated header remains the declaration authority. Shared engine construction, cancellation and cleanup functions also serve the recommended API.
@@ -64,7 +75,7 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 ## Counted typed calls
 
-[The typed C contract](TYPED.md) describes the unpublished 0426 work: counted question/source/image constructors, immutable image views and canonical result/2 carrier layouts. Complete execution/accessor integration awaits the native result/2 APIs. Released calls remain compatible.
+[The typed C contract](TYPED.md) describes the unpublished 0426 work: counted question/source/image constructors, immutable image views and canonical result/2 carrier layouts. These compatibility views retain their original ownership rules. Sessions expose the generated complete graph described above.
 
 ## Windows x86-64
 

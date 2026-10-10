@@ -28,6 +28,10 @@ if [ "$profile" = smoke ]; then
 	exit
 fi
 python3 tests/test_installed_consumers.py
+if [ -n "${THINKTHEN_ARTIFACT:-}" ] && [ "$profile" = routine ]; then
+    python3 tests/installed-session.py "$THINKTHEN_ARTIFACT"
+    exit
+fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the slide builds from the unpacked archive alone,
 	# found through its own pkg-config file.

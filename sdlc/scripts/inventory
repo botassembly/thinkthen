@@ -172,7 +172,8 @@ def apply_delta(items: set[str], page: str) -> set[str]:
 
 def apply_additions(items: set[str], page: str, name: str) -> set[str]:
     """Add a later ticket's reviewed declarations, and drop any it retires."""
-    added = delta_lines(page, "### Added public declarations")
+    added = (delta_lines(page, "### Added public declarations")
+             if "### Added public declarations" in page else set())
     if added & items:
         sys.exit(f"inventory: {name} adds a declaration already in the contract")
     if "### Retired public declarations" in page:
@@ -234,7 +235,7 @@ def contract() -> set[str]:
         if int(path.name[:4]) < 283:
             continue
         page = path.read_text(encoding="utf-8")
-        if "### Added public declarations" in page:
+        if "### Added public declarations" in page or "### Retired public declarations" in page:
             items = apply_additions(items, page, path.name[:4])
     return items
 

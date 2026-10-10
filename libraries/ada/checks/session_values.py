@@ -38,12 +38,20 @@ def matches(source, value):
 
 
 def ada_text(value):
-    chunks = []
+    chunks, printable = [], []
+    def flush():
+        if printable:
+            chunks.append(template.ada_string(''.join(printable)))
+            printable.clear()
     for byte in value.encode():
         if 32 <= byte <= 126:
-            chunks.append(template.ada_string(chr(byte)))
+            printable.append(chr(byte))
+            if len(printable) == 1024:
+                flush()
         else:
+            flush()
             chunks.append(f"Character'Val ({byte})")
+    flush()
     return 'Ada.Strings.Unbounded.To_Unbounded_String (' + (' & '.join(chunks) if chunks else '""') + ')'
 
 

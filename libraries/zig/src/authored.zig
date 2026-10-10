@@ -5,24 +5,26 @@ const c = tt.c;
 pub const inputs = @import("request_generated.zig");
 pub const results = @import("plan_generated.zig");
 
+pub const Role = enum(u32) { atomic = 1, set, dynamic_choose, recognize, relate, rank, rank_set, find };
 pub const Question = struct {
-    owner: tt.native.Question,
-    pub fn init(engine: *tt.Engine, role: tt.native.Role, definition: inputs.RequestDefinition) !tt.native.Outcome(Question) {
+    raw: *c.thinkthen_question,
+    pub fn init(engine: *tt.Engine, role: Role, definition: inputs.RequestDefinition) !tt.Result(Question) {
+        if (engine.closed) return error.ClosedEngine;
         const json = try std.json.Stringify.valueAlloc(engine.allocator, definition, .{ .emit_null_optional_fields = false });
         defer engine.allocator.free(json);
-        return switch (try tt.native.parse(engine, role, json)) {
-            .ok => |owner| .{ .ok = .{ .owner = owner } },
-            .failed => |failure| .{ .failed = failure },
-        };
+        var raw: ?*c.thinkthen_question = null;
+        const code = c.thinkthen_question_parse(engine.raw, @intFromEnum(role), .{ .data = json.ptr, .len = json.len }, &raw);
+        if (code != c.THINKTHEN_OK) return .{ .failed = try tt.capture(engine.allocator, engine.raw, code) };
+        return .{ .ok = .{ .raw = raw orelse return error.Defect } };
     }
     /// The generated native author view borrows this immutable question.
     pub fn author(self: Question) tt.session.Error!c.thinkthen_question_author_v1 {
         var value: c.thinkthen_question_author_v1 = undefined;
-        try tt.session.checked(c.thinkthen_question_author(self.owner.raw, &value));
+        try tt.session.checked(c.thinkthen_question_author(self.raw, &value));
         return value;
     }
     pub fn deinit(self: Question) void {
-        self.owner.deinit();
+        c.thinkthen_question_free(self.raw);
     }
 };
 
@@ -37,12 +39,14 @@ pub const Request = struct {
         self.allocator.free(self.json);
     }
     pub fn start(self: Request, engine: *tt.Engine) tt.session.Error!tt.session.Session {
+        if (engine.closed) return error.ClosedEngine;
         var raw: ?*c.thinkthen_session = null;
         try tt.session.checked(c.thinkthen_session_new_with_surface(engine.raw, self.json.ptr, self.json.len, "zig", "zig".len, &raw));
         return .{ .raw = raw orelse return error.Defect };
     }
     /// Native preview reads no key or cache and sends no request.
     pub fn plan(self: Request, engine: *tt.Engine) !Plan {
+        if (engine.closed) return error.ClosedEngine;
         var raw: [*c]u8 = null;
         var len: usize = 0;
         try tt.session.checked(c.thinkthen_request_plan_json(engine.raw, self.json.ptr, self.json.len, &raw, &len));

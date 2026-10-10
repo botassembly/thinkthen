@@ -106,7 +106,7 @@ if [ "$mode" = swift-zig ]; then
 				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \
-				./examples/decide.zig ./src/ ./src/thinkthen.zig ./src/complete.zig ./src/native.zig ./src/session.zig ./src/authored.zig \
+				./examples/decide.zig ./src/ ./src/thinkthen.zig ./src/session.zig ./src/authored.zig \
 				./src/request_generated.zig ./src/plan_generated.zig \
 				./native/ "./native/$target/" "./native/$target/include/" "./native/$target/include/thinkthen.h" \
 				"./native/$target/lib/" "./native/$target/lib/libthinkthen.a" \
@@ -225,7 +225,7 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 			{
 				printf '%s\n' ./ ./LICENSE ./README.md ./thinkthen.gpr \
 					./native/ ./native/include/ ./native/include/thinkthen.h ./native/lib/ ./native/lib/libthinkthen.a \
-					./examples/ ./examples/consumer.adb ./examples/native.adb ./examples/session_demo.adb ./THINKTHEN-PACKAGE-INPUTS
+					./examples/ ./examples/session_demo.adb ./THINKTHEN-PACKAGE-INPUTS
 				source_members libraries/ada/ libraries/ada/src
 			} | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")

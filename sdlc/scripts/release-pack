@@ -301,7 +301,7 @@ zig)
 		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
 			libraries/zig/build.zig.zon "$folder/"
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/thinkthen.zig libraries/zig/src/complete.zig libraries/zig/src/native.zig libraries/zig/src/session.zig libraries/zig/src/authored.zig \
+		cp libraries/zig/src/thinkthen.zig libraries/zig/src/session.zig libraries/zig/src/authored.zig \
 			libraries/zig/src/request_generated.zig libraries/zig/src/plan_generated.zig "$folder/src/"
 		mkdir -p "$folder/native/$TARGET"
 		tar -xzf "$OUT/$c_name" -C "$folder/native/$TARGET" ./include/thinkthen.h ./lib/libthinkthen.a
@@ -353,8 +353,7 @@ ada)
 		tar -xzf "$OUT/$c_name" -C "$folder/native" ./include/thinkthen.h ./lib/libthinkthen.a
 		cp libraries/ada/LICENSE libraries/ada/README.md libraries/ada/thinkthen.gpr "$folder/"
 		cp libraries/ada/src/*.ads libraries/ada/src/*.adb "$folder/src/"
-		cp libraries/ada/examples/consumer.adb libraries/ada/examples/native.adb \
-			libraries/ada/examples/session_demo.adb "$folder/examples/"
+		cp libraries/ada/examples/session_demo.adb "$folder/examples/"
 		;;
 objective-c)
 		mkdir -p "$folder/Sources/Foundation"
@@ -365,21 +364,13 @@ objective-c)
 		cp -R libraries/swift/CThinkThen.xcframework "$folder/"
 		;;
 cobol)
-		mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples"
+		mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples" "$folder/native"
 		cp libraries/cobol/LICENSE libraries/cobol/README.md libraries/cobol/source-package.json "$folder/"
-		cp libraries/cobol/copybooks/*.cpy "$folder/copybooks/"
-		cp libraries/cobol/src/TTJSON.c libraries/cobol/src/TTJSON.h \
-			libraries/cobol/src/tt_shape.c libraries/cobol/src/tt_engine.cob \
-			libraries/cobol/src/tt_error.cob libraries/cobol/src/tt_call.cob libraries/cobol/src/tt_files.cob \
-			libraries/cobol/src/tt_decide.cob libraries/cobol/src/tt_validate.cob \
-			libraries/cobol/src/tt_plan.cob libraries/cobol/src/tt_counted.c \
-			libraries/cobol/src/tt_complete.c libraries/cobol/src/tt_inputs.c \
-			libraries/cobol/src/tt_native.h libraries/cobol/src/tt_session.h \
-			libraries/cobol/src/tt_session.c libraries/cobol/src/tt_requests_generated.h \
-			libraries/cobol/src/tt_requests_generated.c "$folder/src/"
-		cp libraries/cobol/examples/direct.cob libraries/cobol/examples/settings.cob \
-			libraries/cobol/examples/types.cob libraries/cobol/examples/native.cob \
-			libraries/cobol/examples/session.cob "$folder/examples/"
+		cp libraries/cobol/copybooks/tt-native-generated.cpy "$folder/copybooks/"
+		cp libraries/cobol/src/tt_session.h libraries/cobol/src/tt_session.c \
+			libraries/cobol/src/tt_requests_generated.h libraries/cobol/src/tt_requests_generated.c "$folder/src/"
+		cp libraries/cobol/examples/session.cob "$folder/examples/"
+		tar -xzf "$OUT/$c_name" -C "$folder/native" ./include ./lib
 		;;
 	esac
 	# A case-blind volume, such as a default Mac one, keeps only one of two names that differ only in case.

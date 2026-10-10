@@ -632,6 +632,16 @@ def main():
             raise AssertionError("extra platform folder created collected output")
         for family in ("ada", "cobol"):
             script = (REPO / "libraries" / family / "check.sh").read_text()
+            if family == "ada":
+                # The current Ada gate installs supplied native-bearing archives
+                # in native_session.py rather than the obsolete shell dispatcher.
+                missing = base / "missing-installed-ada.tar.gz"
+                refused = run(sys.executable, str(REPO / "libraries/ada/checks/native_session.py"),
+                              env=os.environ | {"THINKTHEN_ARTIFACT": str(missing)})
+                expect(refused, "FileNotFoundError")
+                if str(missing) not in refused.stderr:
+                    raise AssertionError("Ada did not refuse the supplied missing archive")
+                continue
             if "import jsonschema" not in script:
                 # Generated session consumers no longer use the legacy source
                 # grammar. They must still unpack and test the installed package.

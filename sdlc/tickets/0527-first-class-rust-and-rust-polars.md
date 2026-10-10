@@ -49,9 +49,9 @@ A Rust caller uses one named API with typed Rust values and Rust-owned complete 
 - Proof: The full shared cases run through the existing `libraries/rust` and `libraries/polars` consumers, with and without the Polars feature. Polars cases check column types, null rows, original indices and complete-set rank and find, and invalid input with zero sends. Record handwritten code removed and added in the landing record.
 - Defers: Python pandas and Python Polars belong to 0496. The proxy needs no 0.2 ticket.
 
-### Retired public declarations
-
 The named Engine methods replace these crate-global calls. `default_engine` and `usage` remain hidden support for the four callers recorded in 0511; they leave the documented public inventory here and their implementation leaves with the last caller.
+
+### Retired public declarations
 
 ```text
 fn annotate<'a, I>(&'a QuestionSet, I) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence

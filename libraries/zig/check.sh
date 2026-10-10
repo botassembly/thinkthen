@@ -1,94 +1,53 @@
 #!/bin/sh
+# Exercise the installed owned API; full shared parity is release-only.
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
-host_home=$HOME
-export CARGO_HOME=${CARGO_HOME:-$host_home/.cargo} RUSTUP_HOME=${RUSTUP_HOME:-$host_home/.rustup}
+case ${THINKTHEN_TEST_PROFILE:-routine} in
+ routine|full|smoke) ;; stress) echo 'Zig: not run: no stress gate'; exit 77 ;;
+ *) echo 'Zig: unknown test profile' >&2; exit 2 ;;
+esac
 zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
 [ -x "$zig" ] || exit 77
 export THINKTHEN_ZIG="$zig"
-for tool in cargo python3 node nm bwrap flock git tar; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+for tool in python3 node cc flock; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 export PATH="$(dirname "$zig"):$PATH"
-python3 "$root/sdlc/generators/results/generate.py" --target zig --inputs --check
-python3 "$root/sdlc/generators/results/generate.py" --target zig --check
-lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-zig.lock}
+lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-zig.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-    THINKTHEN_HEAVY_LOCK_HELD=$lock
-    export THINKTHEN_HEAVY_LOCK_HELD
-    exec flock -w 180 -E 75 -o "$lock" /bin/sh "$0" "$@"
+    export THINKTHEN_HEAVY_LOCK_HELD="$lock"
+    exec flock -w 180 -o "$lock" /bin/sh "$0" "$@"
 fi
-# ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
-if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
-    smoke_guard
-    # The replay smoke (ticket 0335): the package module over the installed C door.
-    . "$root/sdlc/scripts/installed.sh"
-    scratch_dir smoke
-    native_install "$root" "$smoke/native"
-    HOME="$smoke" "$zig" build-exe -j2 --cache-dir "$here/target/scratch/smoke-cache" --global-cache-dir "$here/target/cache" \
-        --dep thinkthen -Mroot="$here/examples/smoke.zig" -I "$smoke/native/include" -Mthinkthen="$here/src/thinkthen.zig" \
-        -L "$smoke/native/lib" -lthinkthen -lc -rpath "$smoke/native/lib" -femit-bin="$smoke/smoke"
-    "$smoke/smoke"
-    exit
-fi
-mkdir -p "$here/target/native/include" "$here/target/native/lib" "$here/target/home" "$here/target/cache" "$here/target/scratch" "$here/target/logs"
+mkdir -p "$here/target/cache" "$here/target/scratch" "$here/target/artifacts"
+python3 "$root/sdlc/generators/results/generate.py" --target zig --inputs --check
+python3 "$root/sdlc/generators/results/generate.py" --target zig --check
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.zig.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
-if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
-    [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Zig installed: C archive missing' >&2; exit 1; }
-    . "$root/sdlc/scripts/scratch.sh"
+"$zig" fmt --check "$here/src/thinkthen.zig" "$here/src/session.zig" "$here/src/authored.zig" "$here/build.zig" \
+    "$here/Tests/session.zig" "$here/Tests/session_consumer.zig" "$here/Tests/request_fixture.zig" "$here/Tests/view_check.zig" \
+    "$here/Tests/session-build.zig" "$here/examples/decide.zig" "$here/examples/smoke.zig"
+if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     . "$root/sdlc/scripts/installed.sh"
-    installed_scratch
-    release_root=$scratch
-    mkdir "$release_root/package" "$release_root/native" "$release_root/project"
-    tar -xzf "$THINKTHEN_ARTIFACT" -C "$release_root/package"
-    tar -xzf "$THINKTHEN_C_ARTIFACT" -C "$release_root/native"
-    native=$release_root/native
-    tar -xOzf "$THINKTHEN_C_ARTIFACT" ./include/thinkthen.h | cmp - "$native/include/thinkthen.h"
-    tar -xOzf "$THINKTHEN_C_ARTIFACT" ./lib/libthinkthen.so | cmp - "$native/lib/libthinkthen.so"
-    tar -xOzf "$THINKTHEN_C_ARTIFACT" ./lib/libthinkthen.a | cmp - "$native/lib/libthinkthen.a"
-    python3 "$root/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
-    cp "$here/Tests/build.zig" "$here/Tests/portable_batch.zig" "$release_root/project/"
-    sed 's|.path = "../"|.path = "../package"|' "$here/Tests/build.zig.zon" >"$release_root/project/build.zig.zon"
-    export HOME="$here/target/home" ZIG_GLOBAL_CACHE_DIR="$here/target/cache"
-    RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$root/Cargo.toml" --package conformance-backend -j2
-    THINKTHEN_PORTABLE_ZIG_PROJECT="$release_root/project" THINKTHEN_NATIVE_ROOT="$native" \
-        python3 "$here/Tests/portable_batch.py"
-    THINKTHEN_PARITY_PACKAGE="$release_root/package" THINKTHEN_NATIVE_ROOT="$native" \
-      python3 "$here/Tests/complete_parity.py"
-    echo 'Zig installed release PASS: three literal portable sends'
-    exit 0
+    scratch_dir native
+    native_install "$root" "$native"
+    tar -czf "$here/target/artifacts/c.tar.gz" -C "$native" .
+    THINKTHEN_C_ARTIFACT="$here/target/artifacts/c.tar.gz" python3 "$here/Tests/package_local.py"
+    version=$(sed -n 's/^[[:space:]]*\.version = "\([^"]*\)",$/\1/p' "$here/build.zig.zon")
+    THINKTHEN_ARTIFACT="$here/target/artifacts/thinkthen-zig-$version-x86_64-unknown-linux-gnu.tar.gz"
+    export THINKTHEN_ARTIFACT
 fi
-case ${THINKTHEN_FOCUSED:-} in
-    portable-batch) "$zig" fmt --check "$here/Tests/portable_batch.zig" "$here/Tests/build.zig"; python3 "$here/Tests/portable_batch.py"; exit 0 ;;
-    '') ;;
-    *) echo "Zig: unknown focused selector: $THINKTHEN_FOCUSED" >&2; exit 2 ;;
-esac
-RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
-native="$root/libraries/c/target/debug"
-python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native/libthinkthen_c.so"
-cp "$root/libraries/c/include/thinkthen.h" "$here/target/native/include/thinkthen.h"
-cp "$native/libthinkthen_c.so" "$here/target/native/lib/libthinkthen.so"
-sh "$root/libraries/c/localize.sh" "$native/libthinkthen_c.a" "$here/target/native/lib/libthinkthen.a"
-ln -sf libthinkthen.so "$here/target/native/lib/libthinkthen.so.0"
-export HOME="$here/target/home" ZIG_GLOBAL_CACHE_DIR="$here/target/cache"
-"$zig" fmt --check "$here/src/thinkthen.zig" "$here/src/complete.zig" "$here/src/native.zig" "$here/Tests/native_consumer.zig" "$here/Tests/carriers.zig" "$here/build.zig" "$here/Tests/type_case.zig" "$here/Tests/settings.zig" "$here/Tests/portable_batch.zig" "$here/Tests/build.zig"
-"$zig" build -j2 -Dnative="$here/target/native" -Dlink-mode=shared --build-file "$here/build.zig" --cache-dir "$here/target/scratch/package-cache" --global-cache-dir "$here/target/cache"
-"$zig" build -j2 -Dnative="$here/target/native" -Dlink-mode=shared --build-file "$here/Tests/build.zig" --cache-dir "$here/target/scratch/tests-cache" --global-cache-dir "$here/target/cache"
-"$zig" test -j2 --cache-dir "$here/target/scratch/carrier-cache" --global-cache-dir "$here/target/cache" --dep thinkthen -Mroot="$here/Tests/carriers.zig" -I "$here/target/native/include" -Mthinkthen="$here/src/thinkthen.zig" -lc
-python3 "$here/Tests/public_types.py"
-python3 "$here/Tests/run_matrix.py"
-python3 "$here/Tests/run_matrix.py" facts
-python3 "$here/Tests/run_matrix.py" facts-allocation
-python3 "$here/Tests/run_settings.py"
-python3 "$here/Tests/portable_batch.py"
-python3 "$here/Tests/package_local.py"
-python3 "$here/Tests/guard.py" "$here/target/artifacts/thinkthen-zig-0.0.1-src.tar.gz"
-plant=$(mktemp "$here/target/logs/private-plant-XXXXXX")
-printf '%s\n' '/home/private/file' >"$plant"
-if python3 "$here/Tests/guard.py" "$plant" >"$plant.log" 2>&1; then echo 'Zig privacy plant passed' >&2; exit 1; fi
-grep -q 'rejected private byte pattern' "$plant.log"
-rm -f "$plant" "$plant.log"
+if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
+    smoke_guard
+    . "$root/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    tar -xzf "$THINKTHEN_ARTIFACT" -C "$smoke"
+    native="$smoke/native/x86_64-unknown-linux-gnu"
+    "$zig" build-exe -j2 -fllvm -flld "$native/lib/libthinkthen.a" --cache-dir "$here/target/scratch/smoke-cache" --global-cache-dir "$here/target/cache" \
+      --dep thinkthen -Mroot="$here/examples/smoke.zig" -I "$native/include" -Mthinkthen="$smoke/src/thinkthen.zig" \
+      -lc -lgcc_s -lutil -lrt -lpthread -lm -ldl -femit-bin="$smoke/consumer"
+    "$smoke/consumer"
+    exit
+fi
+python3 "$here/Tests/guard.py" "$THINKTHEN_ARTIFACT"
 python3 "$here/Tests/installed.py"
-echo 'Zig package PASS: public J1, 41 exact bodies in four installed consumers'
