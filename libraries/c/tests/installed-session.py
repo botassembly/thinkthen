@@ -45,3 +45,6 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
         print('installed C: typed owner case and documented caller PASS')
     finally:
         backend.close()
+
+    from installed_cases import run
+    run(native, root)

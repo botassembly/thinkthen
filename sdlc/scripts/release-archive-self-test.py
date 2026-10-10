@@ -399,7 +399,7 @@ def main():
                                  ("dart", "lib/src/session/client.dart"),
                                  ("ada", "src/thinkthen.ads"),
                                  ("objective-c", "Sources/ThinkThen.m"),
-                                 ("cobol", "src/tt_call.cob")):
+                                 ("cobol", "src/tt_session.c")):
             copied = source / "libraries" / family / relative
             original = copied.read_bytes()
             copied.write_bytes(original + b"\n// altered archived wrapper\n")
@@ -424,7 +424,7 @@ def main():
         fake_cp.chmod(0o755)
         for family, relative in (("ada", "src/thinkthen.ads"),
                                  ("objective-c", "Sources/ThinkThen.m"),
-                                 ("cobol", "src/tt_call.cob")):
+                                 ("cobol", "src/tt_session.c")):
             copied_env = env | {"THINKTHEN_PLANT_SOURCE": f"libraries/{family}/{relative}"}
             output = base / f"{family}-copied-change"
             expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
@@ -627,6 +627,12 @@ def main():
             raise AssertionError("extra platform folder created collected output")
         for family in ("ada", "objective-c", "cobol"):
             script = (REPO / "libraries" / family / "check.sh").read_text()
+            if "import jsonschema" not in script:
+                # Generated session consumers no longer use the legacy source
+                # grammar. They must still unpack and test the installed package.
+                if "installed_unpack" not in script or "THINKTHEN_PARITY_PACKAGE" not in script:
+                    raise AssertionError(f"{family} gate does not check the installed package")
+                continue
             installed_end = script.index("  exit 0\nfi\n")
             source_start = script.index("unset THINKTHEN_API_KEY", installed_end)
             source_only = script[installed_end:source_start]
@@ -791,10 +797,17 @@ def main():
                                       "THINKTHEN_HEAVY_LOCK_HELD": str(base / "held-lock")}
         for family in ("go", "cpp"):
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
-                   f"{family}: missing C archive")
+                   f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}
-            expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env),
-                   f"{family}: not run: Python jsonschema is unavailable")
+            result = run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env)
+            if family == "cpp":
+                # The generated C++ source check invokes Python before building;
+                # it propagates the failed generator's exit rather than a legacy
+                # jsonschema prerequisite diagnostic.
+                if result.returncode != 1:
+                    raise AssertionError(("C++ unavailable Python was not refused", result))
+            else:
+                expect(result, f"{family}: not run: Python jsonschema is unavailable")
     print("release archive self-test: gitless legacy, Go/C++, Swift/Zig and PHP/Dart inputs pass")
 
 

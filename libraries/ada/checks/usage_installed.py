@@ -142,11 +142,13 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
     work = Path(temporary)
     (work / 'OWNER').write_text('0468 Ada and COBOL installed persistence consumer\n')
     for family in families:
-        shutil.copytree(ROOT / 'libraries' / family / 'src', work / family / 'src')
+        package = Path(os.environ.get('THINKTHEN_USAGE_COBOL_PACKAGE', ROOT / 'libraries/cobol')) if family == 'cobol' else ROOT / 'libraries' / family
+        shutil.copytree(package / 'src', work / family / 'src')
     if 'cobol' in families:
-        shutil.copytree(ROOT / 'libraries/cobol/copybooks', work / 'cobol/copybooks')
-        shutil.copytree(ROOT / 'libraries/cobol/examples', work / 'cobol/examples')
-        shutil.copy2(ROOT / 'libraries/c/include/thinkthen.h', work / 'cobol/src/thinkthen.h')
+        package = Path(os.environ.get('THINKTHEN_USAGE_COBOL_PACKAGE', ROOT / 'libraries/cobol'))
+        shutil.copytree(package / 'copybooks', work / 'cobol/copybooks')
+        shutil.copytree(package / 'examples', work / 'cobol/examples')
+        shutil.copy2(Path(os.environ.get('THINKTHEN_C_HEADER', ROOT / 'libraries/c/include/thinkthen.h')), work / 'cobol/src/thinkthen.h')
     shutil.copy2(NATIVE, work / 'libthinkthen.so.0')
     (work / 'libthinkthen.so').symlink_to('libthinkthen.so.0')
     if 'ada' in families:
@@ -200,7 +202,7 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
                                 ready.register(child.stdout, selectors.EVENT_READ)
                                 assert ready.select(15), (family, mode, 'Pending not observed')
                             prefix = child.stdout.readline()
-                            assert prefix.strip() == 'PENDING', (family, mode, prefix, child.poll())
+                            assert prefix.strip() == 'PENDING', (family, mode, prefix, child.poll(), child.stderr.read() if child.poll() is not None else '')
                             if mode == 'written':
                                 fcntl.flock(lock, fcntl.LOCK_UN)
                             child.stdin.write('continue\n')

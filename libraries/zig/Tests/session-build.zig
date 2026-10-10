@@ -8,4 +8,8 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("thinkthen", module);
     pkg.linkNative(b, exe, module, null, .static);
     b.installArtifact(exe);
+    const example = b.addExecutable(.{ .name = "example", .root_module = b.createModule(.{ .root_source_file = dep.path("examples/decide.zig"), .target = target }) });
+    example.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, example, module, null, .static);
+    b.installArtifact(example);
 }
