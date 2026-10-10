@@ -179,7 +179,9 @@ def assert_required(packet,row,value,bodies,root):
         assert bodies and any(selected in q['instructions'] or json.loads(body)['state']==expect['selected_item'] for body in bodies for q in json.loads(body)['questions'].values()),(bodies,selected)
     if row['kind']=='located':
         if packet.get('native') and value['verb']=='relate':
-            paths=[root/path for path in value['paths']]
+            paths=[file for path in value['paths']
+                for file in (sorted((root/path).rglob('*')) if (root/path).is_dir() else [root/path])
+                if file.is_file()]
             for result in results:
                 assert result['input']==[path.read_text() for path in paths],result
                 assert [entry['index'] for entry in result['input_sources']]==list(range(len(paths))),result
