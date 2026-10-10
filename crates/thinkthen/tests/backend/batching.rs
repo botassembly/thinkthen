@@ -283,12 +283,21 @@ fn a_table_shares_one_request_and_filter_prints_its_kept_rows() {
     assert_eq!(text(&output.stdout), "{\"body\":\"line 2\"}\n");
 }
 
-/// Equal questions pending together share one answer, by ADR 0111 section 3: ten
-/// thousand lines of five values send one request of five questions, and
-/// every row reads its question's answer.
+/// Equal questions pending together share one answer, by ADR 0111 section 3.
 #[test]
 fn equal_records_pending_together_ask_their_question_once() {
-    let repeats: String = (0..10_000)
+    assert_equal_records_share_answers(10);
+}
+
+#[test]
+#[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
+fn release_only_ten_thousand_equal_records_ask_their_question_once() {
+    assert_equal_records_share_answers(10_000);
+}
+
+/// Five values send one request of five questions, and every row reads its answer.
+fn assert_equal_records_share_answers(records: usize) {
+    let repeats: String = (0..records)
         .map(|at| format!("line {}\n", at % 5 + 1))
         .collect();
     let listener = Listener::answering(answering).expect("a loopback listener");
@@ -300,7 +309,7 @@ fn equal_records_pending_together_ask_their_question_once() {
     let mut asked: Vec<usize> = places(&bodies[0].body).iter().map(|&(_, at)| at).collect();
     asked.sort_unstable();
     assert_eq!(asked, [1, 2, 3, 4, 5]);
-    let expected: String = (0..10_000).map(|at| row(at % 5 + 1)).collect();
+    let expected: String = (0..records).map(|at| row(at % 5 + 1)).collect();
     assert_eq!(text(&output.stdout), expected);
 }
 
