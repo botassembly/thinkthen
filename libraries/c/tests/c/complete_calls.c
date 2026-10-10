@@ -200,7 +200,8 @@ int main(void) {
         if(count==255) {
             assert(code==0 && result);
             thinkthen_relate_view_v1 view={0}; assert(thinkthen_result_relate(result,0,&view)==0);
-            assert(view.inputs.len==255 && view.value.len==0);
+            thinkthen_details_v1 details={0}; assert(thinkthen_result_details(result,0,&details)==0);
+            assert(details.inputs.len==255 && view.value.len==0);
             thinkthen_result_free(result);
         } else {
             assert(code==THINKTHEN_EUSAGE && result==NULL);
