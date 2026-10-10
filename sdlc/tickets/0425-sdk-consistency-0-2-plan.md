@@ -42,3 +42,4 @@ After the 0508 final review, one reviewed commit passes a hosted release candida
 ## Progress
 
 - 2026-10-10 started
+- 2026-10-10 next: Prepare the current reviewed candidate, run final local package and release qualification, then nonpublishing GitHub platform checks under the 2026-10-10 ruling; publishing remains on Ian’s go.
