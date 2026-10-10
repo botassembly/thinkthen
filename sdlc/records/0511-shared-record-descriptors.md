@@ -298,7 +298,7 @@ Large payloads, full parity, load, paid calls, release checks and archive instal
 
 ## Share native find and relation retained-byte admission
 
-This slice starts from `2c555819cde5d5f260ade128b5016774b7dfe479`. The native complete find and relation record collectors and the existing borrowed find intake use the existing private `SourceBudget`. Its route constructors derive the bound from `core::MAX_RECORD_BYTES` and preserve the exact caller diagnostics. No public declaration changes.
+This slice starts from `2c555819cbc2a0839e9b545e8e6a23e4cbb36325`. The native complete find and relation record collectors and the existing borrowed find intake use the existing private `SourceBudget`. Its route constructors derive the bound from `core::MAX_RECORD_BYTES` and preserve the exact caller diagnostics. No public declaration changes.
 
 Each collector charges at its prior byte-admission point. Row errors, per-record control refusal, images, relation mode checks, engine and entity counts, located-source deduplication and source retention keep their order. Checked subtraction rejects any addition that would exceed the prior cumulative bound, including integer overflow, without changing budget state on failure.
 
