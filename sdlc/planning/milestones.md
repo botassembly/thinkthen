@@ -55,7 +55,7 @@ Exit criteria, under [the done ruling](../decisions/2026-10-10-drive-0-2-to-done
 
 1. Every 0.2 language migration and SQL ticket is closed: its new API passes routine installed checks, and its old public names are deleted.
 2. The shared core tickets 0503, 0511, 0512, 0515 and 0516 are closed.
-3. At the candidate, the release suite passes: `test-full-cases --run`, `package`, `test-stress --run`, and the Windows checks owned by 0383–0385, 0474 and 0480.
+3. At the candidate, the release suite passes: `test-full-cases --run`, `package`, `test-stress --run`, and one Windows run on GitHub. Windows failures become new bug tickets.
 4. 0530 assembles every final artifact, and each installs and runs cleanly.
 5. 0467's documentation pass and 0508's final review are closed.
 6. Ian gives the go to publish.

@@ -48,6 +48,14 @@ Ian added: "I'm fine with them cutting candidates, but then also deleting code. 
 - The coordinator may push candidate tags and dispatch release workflows whenever the work is ready, as long as no run publishes to a registry. This lifts the 2026-10-08 hold on candidates and dispatches. Publishing still needs Ian.
 - Deleted code stays recoverable in Git, so deletion needs no extra caution beyond review.
 
+### No ticket waits on Windows
+
+Ian added: "You can close tickets without running them on Windows."
+
+- No ticket stays open only for a Windows run. Close it on its Linux checks and review.
+- Windows runs once, at the candidate, on GitHub. A Windows failure there becomes a new bug ticket.
+- 0383–0385 close when their Windows packaging is built and reviewed.
+
 ## Why
 
 On 2026-10-09 and 2026-10-10 the coordinator landed 149 slices and closed four tickets. Every migration ticket said "full installed parity, platform qualification and compatibility retirement remain held." Platform qualification needs a candidate, and candidates wait for Ian, so no migration ticket could close. Each language kept its old API next to the new one, and the Rust source ceiling rose from 181,586 to 187,880 lines. All three lanes reached the 40 GB cap, and the cap stopped builds while 254 GB of disk sat free. The process asked for permission where the rulings already gave it.
