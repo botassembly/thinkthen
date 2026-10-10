@@ -11,6 +11,8 @@ Reviews: revision a087f6dc3, accept
 
 Reviews: revision 829ffbd655bfa88202b57031823b2edb4ea31836, accept
 
+Reviews: revision 4255c4ab84a30d82b94b246eaa0324d5baa0cdaa, accept
+
 ## Outcome
 
 A Rust caller uses one named API with typed Rust values and Rust-owned complete results. A Rust Polars caller passes native columns and gets native columns back, with column types, nulls and original row positions intact. Both call Rust directly and gain no JSON session wrapper.
