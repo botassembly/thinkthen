@@ -18,7 +18,7 @@ with zipfile.ZipFile(artifacts / "thinkthen-swift-0.0.1.zip", "w") as archive:
     for path in members:
         archive.write(path, "thinkthen-swift-0.0.1/" + str(path.relative_to(package)))
 with tarfile.open(artifacts / "thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz", "w:gz", dereference=True) as archive:
-    archive.add(package / "Sources/CThinkThen/include/thinkthen.h", "Sources/CThinkThen/include/loader.h", "include/thinkthen.h")
+    archive.add(package / "Sources/CThinkThen/include/thinkthen.h", "include/thinkthen.h")
     for name in ("libthinkthen.so", "libthinkthen.so.0"):
         archive.add(package / "target/native/lib" / name, "lib/" + name)
 print("Swift local source/native archives prepared")
