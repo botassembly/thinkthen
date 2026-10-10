@@ -324,16 +324,6 @@ pub(crate) type StepOne = (Vec<Piece>, Asks, Vec<Request>);
 /// Refuse a text over `limit` bytes, then split it into pieces and pack
 /// every step-1 question. A kind question the profile refuses stops the text
 /// here, before any request.
-pub(crate) fn step_one(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    spec: &RecognizeSpec,
-    text: &str,
-    limit: usize,
-) -> Result<StepOne, Error> {
-    step_one_context(backend, profile, spec, text, limit, None)
-}
-
 pub(crate) fn step_one_context(
     backend: &Backend,
     profile: Option<&BackendProfile>,

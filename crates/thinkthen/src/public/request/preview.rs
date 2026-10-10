@@ -195,6 +195,19 @@ fn annotation_groups(
 }
 
 impl AdmittedRequest {
+    pub(crate) fn plan_find<'a>(
+        &'a self,
+        engine: &Engine,
+        environment: RequestEnvironment<'a>,
+    ) -> Result<(crate::core::Find, crate::core::PlanSummary), Error> {
+        let (definition, rows, controls) = route_preview(self, environment)?;
+        let question = match &definition {
+            RequestDefinition::Find(file) => file.question(),
+            RequestDefinition::Atomic(LoadedQuestion::Question(question)) => question,
+            _ => return Err(Error::usage("find plan requires a find question")),
+        };
+        engine.preview_find_records(question, rows, controls)
+    }
     pub(crate) fn plan_recognition<'a>(
         &'a self,
         backend: &crate::core::Backend,

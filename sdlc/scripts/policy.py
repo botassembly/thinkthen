@@ -1869,11 +1869,18 @@ def check_doors() -> None:
             fail("doors", f"the door control {text!r} in {relative} stays allowed")
 
 
-# Ticket 0085: the command reaches the engine through the one facade. Only
-# the facade builds the production HTTP pool, and no command file names the
-# scheduler, request, recorder, or transport modules underneath it.
+# Tickets 0085 and 0512: only the facade builds the HTTP pool. CLI and MCP
+# judgments admit and execute public Requests; CLI host conversion retains
+# private construction, cancellation, error, accounting and maintenance types.
 FACADE = "crates/thinkthen/src/engine/facade.rs"
 CLI = "crates/thinkthen/src/cli/"
+MCP = "crates/thinkthen/src/mcp/"
+MAINTENANCE = {CLI + "cache.rs", CLI + "status.rs"}
+HOST_ENGINE = frozenset({
+    "Cancel", "Deadline", "Width", "Widths", "WidthActive", "backoff", "error",
+    "estimated_total", "limits", "usage",
+})
+HOST_FACADE = frozenset({"Engine", "Settings", "Storage", "Key", "Roots", "RootsError", "MAX_TEXT_BYTES"})
 LIBRARY_ROOT = "crates/thinkthen/src/lib.rs"
 LOW_MODULES = frozenset({
     "annotate_schedule", "http", "prepared_request", "recorder", "request", "schedule", "workers",
@@ -1883,11 +1890,18 @@ LOW_ALIASES = LOW_MODULES - {"annotate_schedule", "schedule"}
 
 
 def without_test_modules(tokens: list[str]) -> list[str]:
-    """Drop each `#[cfg(test)] mod name { ... }` block from one token list."""
+    """Drop test-only modules and imports from one token list."""
     kept = []
     place = 0
-    marker = ["#", "[", "cfg", "(", "test", ")", "]", "mod"]
+    attribute = ["#", "[", "cfg", "(", "test", ")", "]"]
+    marker = attribute + ["mod"]
     while place < len(tokens):
+        if tokens[place:place + len(attribute)] == attribute and tokens[place + 7:place + 8] == ["use"]:
+            place += 8
+            while place < len(tokens) and tokens[place] != ";":
+                place += 1
+            place += 1
+            continue
         if tokens[place:place + len(marker)] != marker or place + 9 >= len(tokens) \
                 or tokens[place + 9] != "{":
             kept.append(tokens[place])
@@ -1904,7 +1918,7 @@ def without_test_modules(tokens: list[str]) -> list[str]:
 
 
 def facade_failures(sources: dict[str, list[str]]) -> list[str]:
-    """Name each second pool builder and each command path under the facade."""
+    """Name pool builders and production judgments beneath public Request."""
     held = []
     for relative, tokens in sorted(sources.items()):
         if is_test_source(relative):
@@ -1916,23 +1930,44 @@ def facade_failures(sources: dict[str, list[str]]) -> list[str]:
             for path, _ in rust_use_paths(tokens):
                 if path[:1] == ("engine",) and len(path) > 1 and path[1] in LOW_MODULES:
                     held.append(f"{relative} re-exports engine::{path[1]}")
-        if not relative.startswith(CLI):
+        if not relative.startswith((CLI, MCP)) or relative in MAINTENANCE:
             continue
-        for place, token in enumerate(tokens):
-            if token == "engine" and tokens[place + 1:place + 2] == ["::"] \
-                    and tokens[place + 2:place + 3] and tokens[place + 2] in LOW_MODULES:
-                held.append(f"{relative} names engine::{tokens[place + 2]}")
-            if token == "crate" and tokens[place + 1:place + 2] == ["::"] \
-                    and tokens[place + 2:place + 3] and tokens[place + 2] in LOW_ALIASES:
-                held.append(f"{relative} names crate::{tokens[place + 2]}")
-        for path, alias in rust_use_paths(tokens):
+        imports = rust_use_paths(tokens)
+        facade_names = {"facade"}
+        for path, alias in imports:
+            if path == ("crate", "engine", "facade"):
+                facade_names.add(alias or "facade")
             if path[:2] != ("crate", "engine"):
                 continue
-            if len(path) > 2 and path[2] in LOW_MODULES:
-                held.append(f"{relative} imports engine::{path[2]}")
-            if len(path) == 2 and alias is not None or path[2:] == ("*",):
-                held.append(f"{relative} aliases or globs the engine")
+            if not judgment_engine_path(path[2:], relative.startswith(MCP)):
+                continue
+            held.append(f"{relative} imports private judgment path {'::'.join(path)}")
+        for place, token in enumerate(tokens):
+            if tokens[place + 1:place + 2] != ["::"] or not tokens[place + 2:place + 3]:
+                continue
+            member = tokens[place + 2]
+            if member == "{":
+                continue
+            if token == "engine":
+                path = [member]
+                if tokens[place + 3:place + 4] == ["::"] and tokens[place + 4:place + 5]:
+                    if tokens[place + 4] != "{":
+                        path.append(tokens[place + 4])
+                if judgment_engine_path(tuple(path), relative.startswith(MCP)):
+                    held.append(f"{relative} names private judgment path engine::{'::'.join(path)}")
+            if token in facade_names and member not in HOST_FACADE:
+                held.append(f"{relative} names private judgment path {token}::{member}")
+            if token == "crate" and member in LOW_ALIASES:
+                held.append(f"{relative} names crate::{member}")
     return sorted(set(held))
+
+
+def judgment_engine_path(path: tuple[str, ...], mcp: bool) -> bool:
+    if mcp or not path or path[0] in {"*", "self"}:
+        return True
+    if path[0] == "facade":
+        return len(path) > 1 and path[1] not in HOST_FACADE
+    return path[0] not in HOST_ENGINE
 
 
 def check_facade() -> None:
@@ -1968,8 +2003,20 @@ def check_facade() -> None:
         changed = without_test_modules(rust_tokens(text_sources.get(relative, "") + "\n" + text))
         if not facade_failures({**sources, relative: changed}):
             fail("facade", f"the planted facade bypass {text[-60:]!r} in {relative} is refused")
+    for relative, text in (
+        (CLI + "find.rs", "use crate::engine::facade::{Engine, Asks};"),
+        (CLI + "find.rs", "use crate::engine::facade as hidden; hidden::Bound::WHOLE;"),
+        (CLI + "find.rs", "crate::engine::facade::relations();"),
+        (CLI + "request.rs", "use crate::engine::pipeline::Asker;"),
+        (CLI + "request.rs", "use crate::{engine as hidden};"),
+        (MCP + "admission.rs", "use crate::engine::facade::Engine;"),
+        (MCP + "request.rs", "use crate::engine::{pipeline as hidden};"),
+        (MCP + "request.rs", "crate::engine::future_judgment::admit();"),
+    ):
+        if not facade_failures({relative: rust_tokens(text)}):
+            fail("facade", f"the planted private judgment import {text!r} is refused")
     controls = (
-        ("crates/thinkthen/src/cli/find.rs", "use crate::engine::facade::{Engine, Found};"),
+        ("crates/thinkthen/src/cli/find.rs", "use crate::engine::facade::Engine;"),
         ("crates/thinkthen/src/cli/judge.rs", "use crate::schedule::Output;"),
         ("crates/thinkthen/src/cli/find.rs", "// crate::engine::http::Client::new stays below"),
         ("crates/thinkthen/src/engine/http/tests.rs", "Client::new(Duration::ZERO, false)"),
@@ -1977,6 +2024,14 @@ def check_facade() -> None:
          "crate::engine::http::Client::new(Duration::ZERO, false)"),
         ("crates/thinkthen/src/engine/http.rs",
          "#[cfg(test)]\nmod more { fn f() { Client::new(Duration::ZERO, false); } }"),
+    )
+    controls += (
+        (CLI + "cache.rs", "use crate::engine::store::{preview, prune};"),
+        (CLI + "status.rs", "crate::engine::usage::read();"),
+        (CLI + "request.rs", "use crate::{Request, RequestCall, RequestOptions};"),
+        (MCP + "request.rs", "use crate::{Engine, Request, RequestOptions};"),
+        (CLI + "construction.rs", "use crate::engine::facade::{Engine, Settings, Storage};"),
+        (CLI + "find.rs", "#[cfg(test)] use crate::engine::facade::Asks;"),
     )
     for relative, text in controls:
         changed = without_test_modules(rust_tokens(text_sources.get(relative, "") + "\n" + text))
