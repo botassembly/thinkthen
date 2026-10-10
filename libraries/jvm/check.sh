@@ -13,9 +13,6 @@ usage_home
 for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 # Resolve the supported compiler floor before any native build or package work.
 python3 "$here/tests/toolchains.py" --stable
-[ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || {
-    echo 'JVM stable check: full shared parity needs the migrated installed corpus runner' >&2; exit 2;
-}
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     . "$root/sdlc/scripts/installed.sh"
     installed_unpack
@@ -35,4 +32,7 @@ export THINKTHEN_JDK_HOME THINKTHEN_KOTLIN_HOME THINKTHEN_SCALA_HOME
 jars=$package/jars
 [ -d "$jars" ] || jars=$package
 python3 "$here/tests/session_installed.py" --jars "$jars" --out "$consumer"
+if [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then
+    python3 "$here/tests/public_types.py" --jars "$jars" --out "$consumer/shared"
+fi
 echo 'JVM stable package PASS: installed Java, Kotlin and Scala consumers'

@@ -157,7 +157,11 @@ def inputs(definitions):
     for key, source in sorted(definitions.items()):
         typ = name(key)
         if 'variants' in source:
-            lines.append(f'public sealed interface {typ} extends Values.Value permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {}')
+            lines += [f'public sealed interface {typ} extends Values.Value permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {', f'static {typ} fromJson(Object value) {{ Map<String,Object> object = Values.object(value);']
+            for child, tag in source['variants']:
+                lines.append(f'if ({condition(tag)}) return {name(child)}.fromJson(value);')
+            # Selection only chooses the host carrier; native admission owns invalid shapes.
+            lines += [f'return {name(source["variants"][0][0])}.fromJson(value);', '}', '}']
             continue
         values = enum_values(source)
         if values:
@@ -188,7 +192,8 @@ def inputs(definitions):
                 constant = resolved.get('const', values[0] if values and len(values) == 1 else None)
                 if constant is not None:
                     lines.append(f'put({json.dumps(field)}, {json.dumps(constant)});')
-        lines += ['}', f'protected {typ} self() {{ return this; }}']
+        clear = ' '.join(f'result.omit({json.dumps(field)});' for field in source['properties'])
+        lines += ['}', f'public static {typ} fromJson(Object value) {{ {typ} result = new {typ}(); {clear} Values.object(value).forEach(result::extension); return result; }}', f'protected {typ} self() {{ return this; }}']
         for field, spec in source['properties'].items():
             if isinstance(spec, dict) and 'const' in spec:
                 continue

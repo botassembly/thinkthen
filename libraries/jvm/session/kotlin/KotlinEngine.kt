@@ -43,6 +43,7 @@ class KotlinEngine private constructor(private val engine: Engine) : AutoCloseab
     suspend fun recognize(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.recognize(question, input, options) }
     suspend fun relate(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.relate(question, input, options) }
     fun plan(request: Inputs.Request): Results.Plan = try { Results.Plan.read(engine.plan(request).json()) } catch (error: Throwable) { throw convertFailure(error) }
+    fun startSession(request: Inputs.Request): OwnedSession = nativeResult { OwnedSession(engine.startSession(request)) }
     suspend fun execute(request: Inputs.Request): OwnedCall = await { engine.execute(request) }
     override fun close() = engine.close()
 }
@@ -65,3 +66,13 @@ class NativeFailure internal constructor(error: thinkthen.NativeFailure) : Runti
     val facts: Results.Facts? = error.facts()?.let { Results.Facts.read(it) }
 }
 private fun <T> nativeResult(action: () -> T): T = try { action() } catch (error: Throwable) { throw convertFailure(error) }
+
+/** One producer and one reader; pending reads remain distinct from end. */
+class OwnedSession internal constructor(private val native: thinkthen.OwnedSession) : AutoCloseable {
+    fun tryPush(descriptor: Inputs.RequestSessionDescriptor): Int = nativeResult { native.tryPush(descriptor) }
+    fun finish(failure: Inputs.RequestReaderFailure? = null) = nativeResult { native.finish(failure) }
+    fun cancel() = native.cancel()
+    fun tryRead(): Read = nativeResult { val read = native.tryRead(); Read(read.packet()?.let { Results.SessionPacket.read(it.json()) }, read.ended()) }
+    override fun close() = native.close()
+    data class Read(val packet: Results.SessionPacket?, val ended: Boolean)
+}

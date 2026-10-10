@@ -47,6 +47,7 @@ final class ScalaEngine private (private val engine: Engine) extends AutoCloseab
   def relate(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call = relate(question, input, null)
   def relate(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call = run(engine.relate(ScalaEngine.transport(question), ScalaEngine.transport(input), if (options == null) null else ScalaEngine.transport(options)))
   def plan(request: Inputs.Request): Results.Plan = try Results.Plan.read(engine.plan(ScalaEngine.transport(request)).json()) catch { case error: Throwable => throw ScalaEngine.failure(error) }
+  def startSession(request: Inputs.Request): OwnedSession = ScalaEngine.native(new OwnedSession(engine.startSession(ScalaEngine.transport(request))))
   def execute(request: Inputs.Request): Call = run(engine.execute(ScalaEngine.transport(request)))
   override def close(): Unit = engine.close()
 }
@@ -59,13 +60,13 @@ final class SessionFailure(val call: OwnedCall) extends RuntimeException(call.te
   def failure: Results.CallError = call.terminal.failure.get
 }
 object ScalaEngine {
-  private def native[T](action: => T): T = try action catch { case error: Throwable => throw failure(error) }
+  private[scala] def native[T](action: => T): T = try action catch { case error: Throwable => throw failure(error) }
   private def failure(error: Throwable): Throwable = error match {
     case native: Engine.SessionFailure => new SessionFailure(OwnedCall.read(native.call()))
     case native: thinkthen.NativeFailure => new NativeFailure(native)
     case other => other
   }
-  private def transport(value: Values.Value): java.util.Map[String, Any] = javaValue(value.json()).asInstanceOf[java.util.Map[String, Any]]
+  private[scala] def transport(value: Values.Value): java.util.Map[String, Any] = javaValue(value.json()).asInstanceOf[java.util.Map[String, Any]]
   private def javaMap[K](value: scala.collection.Map[K, Any]): java.util.Map[K, Any] =
     value.iterator.map { case (key, item) => key -> javaValue(item) }.toMap.asJava
   private def javaValue(value: Any): Any = value match {
@@ -84,3 +85,13 @@ final class NativeFailure private[scala](error: thinkthen.NativeFailure) extends
   val retryable: Boolean = error.retryable()
   val facts: Option[Results.Facts] = Option(error.facts()).map(Results.Facts.read)
 }
+
+/** One producer and one reader over the shared owner. */
+final class OwnedSession private[scala] (private val native: thinkthen.OwnedSession) extends AutoCloseable {
+  def tryPush(descriptor: Inputs.RequestSessionDescriptor): Int = ScalaEngine.native(native.tryPush(ScalaEngine.transport(descriptor)))
+  def finish(failure: Inputs.RequestReaderFailure = null): Unit = ScalaEngine.native(native.finish(if (failure == null) null else ScalaEngine.transport(failure)))
+  def cancel(): Unit = native.cancel()
+  def tryRead(): OwnedSession.Read = ScalaEngine.native { val read = native.tryRead(); OwnedSession.Read(Option(read.packet()).map(packet => Results.SessionPacket.read(packet.json())), read.ended()) }
+  override def close(): Unit = native.close()
+}
+object OwnedSession { final case class Read(packet: Option[Results.SessionPacket], ended: Boolean) }
