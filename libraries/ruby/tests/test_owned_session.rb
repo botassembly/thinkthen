@@ -57,11 +57,13 @@ class TestOwnedSession < Minitest::Test
       T::Client.open(cache: false) do |client|
         preview = client.plan("decide", "Question?", ["one", "two"], batch: 1)
         say [preview.fetch("records"), preview.fetch("requests")]
+        say client.plan("decide", "Question?", {body: "one"}, batch: 1).fetch("records")
         say [T.const_defined?(:Engine, false), T.const_defined?(:Complete, false), T.respond_to?(:decide)]
         say client.inspect
       end
     RUBY
       assert_equal [2, 2], child.hear
+      assert_equal 1, child.hear
       assert_equal [false, false, false], child.hear
       assert_equal "<ThinkThen::Client>", child.hear
       status, errors = child.finish

@@ -95,7 +95,7 @@ module ThinkThen
     end
     def plan(verb, question, input, **options)
       raise UsageError.new("client is closed", "usage") if @closed
-      source = input.is_a?(Source) ? {kind: "source", source: input.source} : {kind: "records", items: Array(input).map { |value| Client.descriptor(value) }}
+      source = input.is_a?(Source) ? {kind: "source", source: input.source} : {kind: "records", items: (input.is_a?(Array) ? input : [input]).map { |value| Client.descriptor(value) }}
       @native.plan(Client.dump(Client.request(verb, question, source, options)))
     end
     FUNCTIONS.each do |verb|
