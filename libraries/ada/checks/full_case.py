@@ -25,7 +25,7 @@ source = source.replace('-- REQUEST', f'Request : constant T_RequestCall_{verb} 
 source = source.replace('-- SETTINGS', 'Ada.Strings.Unbounded.To_String (' + ada_text(sys.argv[3]) + '),')
 source = source.replace('CALL_NAME', verb.title())
 source = source.replace('-- CANCEL', 'Cancel (Owner);' if cancel else '')
-source = source.replace('HELD_CANCEL', str(bool(held)))
+source = source.replace('HELD_CANCEL', "Standard.Boolean'(" + str(bool(held)) + ')')
 path = home / 'thinkthen-sessions-parity_case.adb'
 path.write_text(source)
 objects = home / 'ada-objects'
