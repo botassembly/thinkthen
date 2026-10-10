@@ -52,6 +52,58 @@ class TestOwnedSession < Minitest::Test
     end
   end
 
+  def test_preview_and_retired_names_use_the_single_native_family
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        preview = client.plan("decide", "Question?", ["one", "two"], batch: 1)
+        say [preview.fetch("records"), preview.fetch("requests")]
+        say client.plan("decide", "Question?", {body: "one"}, batch: 1).fetch("records")
+        say [T.const_defined?(:Engine, false), T.const_defined?(:Complete, false), T.respond_to?(:decide)]
+        say client.inspect
+      end
+    RUBY
+      assert_equal [2, 2], child.hear
+      assert_equal 1, child.hear
+      assert_equal [false, false, false], child.hear
+      assert_equal "<ThinkThen::Client>", child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 0, backend.count
+    end
+  end
+
+  def test_a_child_after_fork_owns_its_engine_and_parent_counters_hold
+    lines, count = TestBackend.run(<<~RUBY)
+      require "timeout"
+      client = T::Client.new(cache: false)
+      client.decide("Is it urgent?", "before the fork")
+      before = client.usage
+      reader, writer = IO.pipe
+      pid = Process.fork do
+        reader.close
+        T::Client.open(cache: false) do |owned|
+          value = owned.decide("Is it urgent?", "in the forked child").value
+          writer.write(JSON.generate([value, owned.usage[:requests_sent]]))
+        end
+        writer.close
+        exit!(0)
+      end
+      writer.close
+      begin
+        forked = Timeout.timeout(5) { reader.read }
+      rescue Timeout::Error
+        Process.kill("KILL", pid)
+        raise
+      ensure
+        Process.wait(pid)
+      end
+      say [forked, client.usage == before]
+      client.close
+    RUBY
+    assert_equal [["[true,1]", true]], lines
+    assert_equal 2, count
+  end
+
   def test_saved_question_selectors_keep_native_lookup_and_literal_strings
     TestBackend.with(<<~RUBY) do |backend, child|
       require "fileutils"

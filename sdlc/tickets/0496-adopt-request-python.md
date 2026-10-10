@@ -15,6 +15,8 @@ Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 10aeeed436ed0826dc4812a99b2ecc502f928a1c, reject
+
 ## Outcome
 
 A Python caller has one obvious way in. Named calls take ordinary Python values and data frames, and return Rust-owned typed results that print, compare, convert and pickle like ordinary Python objects. Async calls keep the event loop responsive and cancel cleanly. Rust owns every rule; Python keeps only naming, conversion, scheduling and cleanup.
