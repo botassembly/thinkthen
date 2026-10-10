@@ -5,6 +5,9 @@ use super::{
 };
 use crate::{complete_native, engines};
 
+#[path = "../../../../../sqlite/src/complete/request.rs"]
+mod request;
+
 /// Execute one named complete call; C++ retains readable ranges through return.
 /// # Safety
 /// All counted ranges and the stop callback follow the existing bridge contract.
@@ -41,13 +44,17 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
             } else {
                 complete_native::prepare(verb, question, &call)?
             };
+            // Explicit files reach this call only after DuckDB authorizes readers.
+            complete_native::Inputs::parse(inputs, false)?;
+            let request = request::admit(&prepared)?;
             Ok::<_, thinkthen::Error>((
                 call,
                 prepared,
-                complete_native::Inputs::parse(inputs, false)?,
+                complete_native::Inputs::parse_request(inputs)?,
+                request,
             ))
         })();
-        let (call, prepared, inputs) = match parsed {
+        let (call, prepared, inputs, request) = match parsed {
             Ok(value) => value,
             Err(error) => return Ok(complete_native::admission(&error).to_string().into_bytes()),
         };
@@ -74,9 +81,10 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
                 batch.as_deref(),
                 context.as_deref(),
             )?;
-            Ok(complete_native::run(
+            Ok(request::run(
                 &engine,
                 &prepared,
+                &request,
                 inputs,
                 options,
                 thinkthen::Surface::Duckdb,
