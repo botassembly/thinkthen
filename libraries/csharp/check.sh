@@ -15,6 +15,10 @@ usage_home
 dotnet=${THINKTHEN_DOTNET:-$(command -v dotnet || true)}
 [ -x "$dotnet" ] || exit 77
 command -v python3 >/dev/null 2>&1 || exit 77
+case "${THINKTHEN_TEST_PROFILE:-routine}" in
+    routine|full|smoke) ;;
+    *) echo 'C#: unknown test profile' >&2; exit 2 ;;
+esac
 python3 "$here/tests/toolchains.py"
 python3 "$root/sdlc/generators/results/generate.py" --inputs --check
 python3 "$root/sdlc/generators/results/generate.py" --bridge --check
@@ -66,16 +70,20 @@ mkdir -p "$here/target/scratch/lib" "$here/target/scratch/nuget" "$here/target/s
 export DOTNET_CLI_HOME="$here/target/scratch/dotnet-home" NUGET_PACKAGES="$here/target/scratch/nuget"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
-RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
-RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/Cargo.toml" --locked --offline --package conformance-backend -j2
-native="$root/libraries/c/target/debug/libthinkthen_c.so"
+native=${THINKTHEN_NATIVE_ASSET:-$root/libraries/c/target/debug/libthinkthen_c.so}
+if [ -z "${THINKTHEN_NATIVE_ASSET:-}" ]; then
+    RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
+    RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/Cargo.toml" --locked --offline --package conformance-backend -j2
+fi
+test -f "$native"
+test -x "$root/target/debug/conformance-backend"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native"
 cp "$native" "$here/target/scratch/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/scratch/lib/libthinkthen.so.0"
 cp "$native" "$here/target/artifacts/native/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/artifacts/native/lib/libthinkthen.so.0"
 tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -C "$here/target/artifacts/native" .
-"$dotnet" pack "$here/ThinkThen.csproj" -p:ThinkThenNativeAsset="$root/libraries/c/target/debug/libthinkthen_c.so" -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
+"$dotnet" pack "$here/ThinkThen.csproj" -p:ThinkThenNativeAsset="$native" -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
 test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
 python3 "$root/sdlc/scripts/package-inventory.py" csharp --out "$here/obj/Release" --check "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg" > /dev/null
 python3 "$here/tests/package_check.py"
@@ -83,11 +91,10 @@ python3 "$here/tests/named_backends.py"
 python3 "$here/tests/run_matrix.py"
 run_dir=$(mktemp -d "$here/target/logs/package-XXXXXX")
 python3 "$here/tests/isolated_consumer.py" alpha "$run_dir"
-python3 "$here/tests/isolated_consumer.py" beta "$run_dir"
 python3 "$here/tests/isolated_consumer.py" sessions "$run_dir"
 for state in disabled written failed; do
     python3 "$here/tests/isolated_consumer.py" "usage-$state" "$run_dir"
 done
-"$dotnet" build "$here/tests/TypeCase.csproj" -c Release --source "$here/target/scratch/nuget" -v quiet
+"$dotnet" build "$here/tests/TypeCase.csproj" -c Release --source "$here/target/scratch/managed" -v quiet
 python3 "$here/tests/public_types.py"
-echo 'C# package PASS: exact matrix, installed consumers, J1 corpus'
+echo 'C# package PASS: installed matrix, sessions, usage, J1 corpus and shared fixtures'

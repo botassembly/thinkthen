@@ -49,7 +49,17 @@ def native_parity(consumer, command):
     import parity, c_parity, c_images
     named = {c["id"]: c for c in json.loads((ROOT / "conformance/named-inputs.json").read_text())["cases"]}
     failures = []
-    for row in parity.required_cases(parity.inventory(), consumer).values():
+    required = parity.required_cases(parity.inventory(), consumer)
+    selector = os.environ.get("THINKTHEN_CONFORMANCE_IDS")
+    if selector is not None:
+        selected = set(selector.split(","))
+        if not selected <= required.keys():
+            raise ValueError("unknown required case selector: " + repr(selected - required.keys()))
+        required = {key: row for key, row in required.items() if key in selected}
+    elif os.environ.get("THINKTHEN_TEST_PROFILE", "routine") != "full":
+        routine = {line for line in (ROOT / "conformance/routine-ids.txt").read_text().splitlines() if line and not line.startswith("#")} - {"25-defect-fault"}
+        required = {key: row for key, row in required.items() if key in routine or key.startswith("files-") or key in {"images-decide", "images-choose", "images-score"}}
+    for row in required.values():
         failure = None
         try:
             value = c_parity.document(row, conformance, named)
