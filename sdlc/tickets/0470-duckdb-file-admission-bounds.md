@@ -41,3 +41,4 @@ DuckDB complete-file calls feed descriptors to native admission through 0503's b
 ## Progress
 
 - 2026-10-10 started
+- 2026-10-10 landed 4b08e6986; next: Reviewed DuckDB file admission design is landed. Implement shared 0503 owned feed controls and eager session admission first, then the calling-thread DuckDB producer; release checks remain held.
