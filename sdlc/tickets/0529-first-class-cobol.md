@@ -9,6 +9,8 @@ Depends on: 0517
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision a6cb8f0877aa288a450715b79102570b8b8273af, accept
+
 ## Outcome
 
 COBOL callers use one named callable interface with generated copybooks. Results arrive as flat fixed-width records with indicator bytes for presence, and failures as typed status records with retained facts. Rust owns every rule, so the COBOL label grammar goes. Hand-mirrored copybooks and old public names are gone.
