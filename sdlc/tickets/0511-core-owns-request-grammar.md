@@ -1,6 +1,6 @@
 # 0511: Let core own the whole request grammar
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -59,6 +59,8 @@ Reviews: revision 127d97271e1f49497bfb46fb05c59b98a4a124d7, accept
 Reviews: revision c11ef289778fd2df6662f8a2b6cc13d0ece8833f, accept
 
 Reviews: revision 5c9a07a2aebe8950394df71007a74f8763e9af99, accept
+
+Landed: 68685a7
 
 ## Outcome
 
