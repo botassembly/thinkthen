@@ -39,7 +39,10 @@ static RequestInput input(const Json& v) {
         }
         if(value.contains("images")) {
             std::vector<RequestImage> images;
-            for(const auto& image:value.at("images")) images.emplace_back(RequestImageFile().set_path(text(image.at("path"))).set_media(ImageMedia(text(image.at("media")))));
+            for(const auto& image:value.at("images")) {
+                if(text(image.at("kind"))=="bytes") images.emplace_back(RequestImageBytes().set_bytes(text(image.at("bytes"))).set_media(ImageMedia(text(image.at("media")))));
+                else images.emplace_back(RequestImageFile().set_path(text(image.at("path"))).set_media(ImageMedia(text(image.at("media")))));
+            }
             item.set_images(images);
         }
         if(value.contains("options")) {

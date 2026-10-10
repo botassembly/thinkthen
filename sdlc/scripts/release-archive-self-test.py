@@ -393,7 +393,7 @@ def main():
             expect(run("sh", gate, "php-dart-gate", str(planted), host, commit),
                    f"source members differ for {path.name}")
 
-        for family, relative in (("swift", "Sources/ThinkThen/ThinkThen.swift"),
+        for family, relative in (("swift", "Sources/ThinkThen/OwnedSession.swift"),
                                  ("zig", "src/thinkthen.zig"),
                                  ("php", "autoload.php"),
                                  ("dart", "lib/src/session/client.dart"),

@@ -1,24 +1,27 @@
-"""Build disposable source and native archives from the checked-out package."""
+"""Assemble the SwiftPM source package with its matching native bundle asset."""
 from pathlib import Path
+import argparse
 import platform
+import shutil
 import tarfile
-import zipfile
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--native', type=Path, required=True)
+parser.add_argument('--out', type=Path, required=True)
+args = parser.parse_args()
 package = Path(__file__).resolve().parents[2]
-artifacts = package / "target/artifacts"
-artifacts.mkdir(parents=True, exist_ok=True)
-members = [package / name for name in ("LICENSE", "README.md", "Package.swift", "Examples/main.swift",
-    "Sources/CThinkThen/include/thinkthen.h", "Sources/CThinkThen/include/loader.h", "Sources/CThinkThen/module.modulemap", "Sources/CThinkThen/bridge.c",
-    "Sources/ThinkThen/ThinkThen.swift", "Sources/ThinkThen/Complete.swift", "Tests/TypeCase/main.swift")]
-members.extend(sorted(path for path in (package / "Sources/ThinkThen").glob("*.swift") if path not in members))
+out = args.out.resolve()
+out.mkdir(parents=True, exist_ok=True)
+for name in ('LICENSE', 'README.md', 'Package.swift'):
+    shutil.copyfile(package / name, out / name)
+for name in ('Sources', 'Examples', 'Tests/TypeCase'):
+    shutil.copytree(package / name, out / name, dirs_exist_ok=True, ignore=shutil.ignore_patterns('*.so'))
+shutil.copyfile(package.parent / 'c/include/thinkthen.h', out / 'Sources/CThinkThen/include/thinkthen.h')
 triple = {'x86_64': 'x86_64-unknown-linux-gnu', 'aarch64': 'aarch64-unknown-linux-gnu'}[platform.machine()]
-members.extend(sorted(path for path in (package / 'Sources/ThinkThen/Native').rglob('*') if path.is_file()))
-assert all(path.is_file() for path in members)
-with zipfile.ZipFile(artifacts / "thinkthen-swift-0.0.1.zip", "w") as archive:
-    for path in members:
-        archive.write(path, "thinkthen-swift-0.0.1/" + str(path.relative_to(package)))
-with tarfile.open(artifacts / "thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz", "w:gz", dereference=True) as archive:
-    archive.add(package / "Sources/CThinkThen/include/thinkthen.h", "include/thinkthen.h")
-    for name in ("libthinkthen.so", "libthinkthen.so.0"):
-        archive.add(package / "target/native/lib" / name, "lib/" + name)
-print("Swift local source/native archives prepared")
+asset = out / 'Sources/ThinkThen/Native' / triple / 'libthinkthen.so'
+asset.parent.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(args.native, asset)
+archive = out.parent / 'thinkthen-swift-0.2.0.tar.gz'
+with tarfile.open(archive, 'w:gz') as packed:
+    for child in sorted(out.iterdir()): packed.add(child, './' + child.name)
+print(archive)

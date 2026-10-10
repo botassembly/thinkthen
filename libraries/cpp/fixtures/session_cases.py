@@ -1,4 +1,5 @@
 """Shared cases through installed owned C++ calls; full inventory is release-only."""
+import base64
 import json
 import os
 from pathlib import Path
@@ -33,7 +34,7 @@ def descriptor(v,home):
         if v.get('image_reader') or v.get('source_unit')==4:source['media']='image'
         input={'kind':'source','source':source}
     else:
-        images=[{'kind':'file','path':str(ROOT/path),'media':v.get('media','image/png')} for path in v.get('image_paths',[])]
+        images=[{'kind':'bytes','bytes':base64.b64encode((ROOT/path).read_bytes()).decode(),'media':v.get('media','image/png')} for path in v.get('image_paths',[])]
         items=[]
         for i,value in enumerate(v['items']):
             item={}
