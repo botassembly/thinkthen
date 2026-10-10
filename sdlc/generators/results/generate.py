@@ -344,9 +344,28 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc', 'swift'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == 'swift':
+        if args.bridge:
+            parser.error('Swift imports the generated C header')
+        sys.path.insert(0, str(Path(__file__).parent / 'templates'))
+        import swift
+        schema = json.loads((ROOT / 'specification/request.schema.json').read_text()) if args.inputs else json.loads(args.schema.read_text())
+        if args.inputs:
+            schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
+        result = swift.render(prepare(graph(schema, swift.INPUT_ROOTS if args.inputs else swift.ROOTS)), args.inputs)
+        if args.inputs:
+            result += 'public let ownedRequestVersion = ' + json.dumps(schema['$defs']['RequestVersion']['oneOf'][0]['const']) + '\n'
+        output = ROOT / 'libraries/swift/Sources/ThinkThen' / ('InputsGenerated.swift' if args.inputs else 'ResultsGenerated.swift')
+        if args.check:
+            if not output.exists() or output.read_text() != result:
+                print('generated Swift types differ', file=sys.stderr)
+                return 1
+        else:
+            output.write_text(result)
+        return 0
     if args.target == "objc":
         if args.inputs or args.bridge:
             parser.error("Objective-C generates owned Foundation results only")
