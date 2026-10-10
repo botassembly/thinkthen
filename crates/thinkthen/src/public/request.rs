@@ -138,6 +138,20 @@ pub enum RequestFunction {
     Relate,
 }
 impl RequestFunction {
+    pub(crate) const fn from_input(function: super::InputFunction) -> Self {
+        match function {
+            super::InputFunction::Decide => Self::Decide,
+            super::InputFunction::Choose => Self::Choose,
+            super::InputFunction::Score => Self::Score,
+            super::InputFunction::Tag => Self::Tag,
+            super::InputFunction::Filter => Self::Filter,
+            super::InputFunction::Rank => Self::Rank,
+            super::InputFunction::Annotate => Self::Annotate,
+            super::InputFunction::Find => Self::Find,
+            super::InputFunction::Recognize => Self::Recognize,
+            super::InputFunction::Relate => Self::Relate,
+        }
+    }
     #[cfg(feature = "cli")]
     pub(crate) const ALL: [Self; 10] = [
         Self::Decide,

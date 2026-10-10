@@ -59,13 +59,11 @@ pub(super) fn validate<T>(
     if row.options.is_some() && function != super::RequestFunction::Choose {
         return Err(Error::usage("item options apply only to choose"));
     }
-    if (row.examples.is_some() || row.seed_spans.is_some())
-        && function != super::RequestFunction::Recognize
-    {
-        return Err(Error::usage(
-            "item recognition controls apply only to recognize",
-        ));
-    }
+    row.admit_recognition_controls(
+        function,
+        "item recognition controls apply only to recognize",
+        "item recognition controls apply only to recognize",
+    )?;
     let images = match input {
         QuestionInput::Record(record) => record.images(),
         QuestionInput::Images(images) => images.images(),

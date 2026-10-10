@@ -22,6 +22,21 @@ pub struct RecordInput<T> {
 }
 
 impl<T> RecordInput<T> {
+    pub(crate) fn admit_recognition_controls(
+        &self,
+        function: super::request::RequestFunction,
+        examples_refusal: &str,
+        seeds_refusal: &str,
+    ) -> Result<(), Error> {
+        if self.examples.is_some() && !function.allows_option("examples") {
+            return Err(Error::usage(examples_refusal));
+        }
+        if self.seed_spans.is_some() && !function.allows_option("seed_spans") {
+            return Err(Error::usage(seeds_refusal));
+        }
+        Ok(())
+    }
+
     /// Transform the original while retaining every independent per-record control.
     #[must_use]
     pub fn map_original<U>(self, map: impl FnOnce(T) -> U) -> RecordInput<U> {
