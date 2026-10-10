@@ -55,3 +55,4 @@ fn Engine::request_session_with_surface(&self, Request, Surface) -> Result<Reque
 - 2026-10-10 landed af99382f6; next: Installed native R CSV and TSV feeds pass with controls, provenance, failure prefixes and once-only cleanup. Finish remaining consumer adoption and final installed qualification; compatibility retirement remains held.
 - 2026-10-10 landed 079a1ca19; next: The R source consumer now exercises all ten named calls with typed originals, locations and request facts. Finish remaining old consumer shapes; current installed parity and compatibility retirement remain held.
 - 2026-10-10 landed 220bfd7f1; next: Ordinary R calls and file consumers now use native typed results; the embedded-NUL condition bug is fixed and focused callers pass. Deliberate compatibility coverage remains until current installed parity and platform qualification.
+- 2026-10-10 started
