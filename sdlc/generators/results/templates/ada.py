@@ -36,7 +36,7 @@ def render(definitions):
             specs.append(f'type {name} (Kind : {name}_Kind := {arms[0][0]}) is record\ncase Kind is\n' + '\n'.join(f'when {tag} => V_{i} : {typ};' for i, (tag, typ) in enumerate(arms)) + '\nend case;\nend record;')
             body = f'case Value.Kind is\n' + '\n'.join(f'when {tag} => return Encode (Value.V_{i});' for i, (tag, _) in enumerate(arms)) + '\nend case;'
         elif alternatives:
-            return emit(key, alternatives[0]) if False else scalar(key, name, alternatives[0])
+            return scalar(key, name, alternatives[0])
         elif 'properties' in schema:
             fields, entries = [], []
             for member, value in schema['properties'].items():

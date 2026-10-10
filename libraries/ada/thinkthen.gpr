@@ -5,6 +5,10 @@ project ThinkThen is
    for Library_Dir use "lib";
    for Object_Dir use "obj";
    for Library_Kind use "static";
+   package Linker is
+      for Linker_Options use (ThinkThen'Project_Dir & "native/lib/libthinkthen.a",
+                             "-ldl", "-lpthread", "-lm");
+   end Linker;
    package Compiler is
       for Default_Switches ("Ada") use ("-gnat2022", "-O2", "-gnatwa");
    end Compiler;

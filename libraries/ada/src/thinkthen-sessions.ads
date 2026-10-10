@@ -13,6 +13,12 @@ package Thinkthen.Sessions is
    for Error_Status use (Success => 0, Usage => 1, Backend => 2, Deadline => 3,
                         Local => 4, Cancelled => 5, Defect => 6);
    Native_Error : exception;
+   Usage_Error : exception;
+   Backend_Error : exception;
+   Deadline_Error : exception;
+   Local_Error : exception;
+   Cancelled_Error : exception;
+   Defect_Error : exception;
    Representation_Overflow : exception;
    procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request);
    procedure Push (Owner : in out Session; Item : Thinkthen.Requests.T_RequestSessionDescriptor;

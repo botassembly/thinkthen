@@ -1,5 +1,4 @@
 with Interfaces.C.Strings;
-with System;
 package body Thinkthen.Sessions is
    use Interfaces.C;
    use Interfaces.C.Strings;
@@ -9,9 +8,20 @@ package body Thinkthen.Sessions is
    type View_Access is access constant thinkthen_complete_session_packet_v1;
    procedure Check (Code : int) is
    begin
-      if Code /= 0 then
-         raise Native_Error with int'Image (Code) & ": " & Value (thinkthen_session_error_message);
-      end if;
+      if Code = 0 then return; end if;
+      declare
+         Message : constant String := Value (thinkthen_session_error_message);
+      begin
+         case Code is
+            when K_THINKTHEN_EUSAGE => raise Usage_Error with Message;
+            when K_THINKTHEN_EBACKEND => raise Backend_Error with Message;
+            when K_THINKTHEN_EDEADLINE => raise Deadline_Error with Message;
+            when K_THINKTHEN_ELOCAL => raise Local_Error with Message;
+            when K_THINKTHEN_ECANCELLED => raise Cancelled_Error with Message;
+            when K_THINKTHEN_EDEFECT => raise Defect_Error with Message;
+            when others => raise Native_Error with Message;
+         end case;
+      end;
    end Check;
    procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request) is
       JSON : constant String := Thinkthen.Requests.Encode (Request);
@@ -19,18 +29,20 @@ package body Thinkthen.Sessions is
       Surface : chars_ptr := New_String ("ada");
       Client : Engine_Access := Engine_Access (thinkthen_engine_new);
       Code : int;
+      New_Handle : aliased Session_Access := null;
    begin
-      Close (Owner);
       if Client = null then
          raise Native_Error with "native engine construction failed";
       end if;
       Code := thinkthen_session_new_with_surface (Client, Bytes, size_t (JSON'Length),
-                                                  Surface, 3, Owner.Handle'Address);
+                                                  Surface, 3, New_Handle'Address);
       Free (Bytes);
       Free (Surface);
       thinkthen_engine_free (Client);
       Client := null;
       Check (Code);
+      Close (Owner);
+      Owner.Handle := New_Handle;
    exception
       when others =>
          Free (Bytes);
@@ -91,9 +103,11 @@ package body Thinkthen.Sessions is
    end Finalize;
    procedure Try_Read (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status) is
       Native_Status : aliased Unsigned_32;
+      New_Handle : aliased Packet_Access := null;
    begin
+      Check (thinkthen_session_try_read (Owner.Handle, Native_Status'Access, New_Handle'Address));
       Close (Value);
-      Check (thinkthen_session_try_read (Owner.Handle, Native_Status'Access, Value.Handle'Address));
+      Value.Handle := New_Handle;
       Status := Read_Status'Val (Native_Status);
    end Try_Read;
    function View (Value : Packet) return access constant thinkthen_complete_session_packet_v1 is
