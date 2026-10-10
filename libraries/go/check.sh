@@ -1,5 +1,5 @@
 #!/bin/sh
-# Stage the Go module and run its installed routine consumers offline.
+# Stage the Go module and run its installed consumers offline.
 set -eu
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
