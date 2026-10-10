@@ -23,6 +23,8 @@ Reviews: revision 98c24b737627d4d9c95281bb011e847f4e86fcbc, accept
 
 Reviews: revision d6f67f987207f23c198708853b29be632f14b277, accept
 
+Reviews: revision 06ac4871424869c5bde0924bba32fb7d2ccba648, accept
+
 ## Outcome
 
 Java, Kotlin and Scala callers declare one Maven dependency, call the ten functions with native values, read generated typed results and handle typed failures. Each language cancels and cleans up in its own idiom. The jars run on current JDKs without preview features and carry their native libraries. Hand-copied layouts, readers and old public names are gone.
