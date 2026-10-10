@@ -44,7 +44,7 @@ def main():
                 TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),
                 THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
                 THINKTHEN_API_KEY='tt-canary-291')
-            for mode in ('surface', 'named', 'presence', 'failure', 'zero', 'destroy'):
+            for mode in ('surface', 'poll', 'named', 'presence', 'failure', 'zero', 'destroy'):
                 before = server.attempts
                 result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
                     str(work / 'consumer.php'), mode], capture_output=True, env=env, timeout=5)
@@ -54,6 +54,7 @@ def main():
                     assert server.attempts == before + 1, 'attributed call request count'
                     agents = [json.loads(line) for line in (work / 'barrier/user-agents.jsonl').read_text().splitlines()]
                     assert agents == ['thinkthen/0.2.0 (php)'], agents
+                if mode == 'poll': assert server.attempts == before + 3, 'poll generator request count'
                 if mode == 'zero': assert server.attempts == before, 'rejected input sent a request'
                 print(result.stdout.decode(), end='')
         finally:

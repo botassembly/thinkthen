@@ -60,6 +60,26 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     }
     check($retained['decide']->results[0]->value === true, 'true value');
     check($retained['decide']->results[0]->meta->question_sources[0] instanceof ThinkThen\Results\NativeQuestionSource, 'typed nested optional source array');
+} elseif ($mode === 'poll') {
+    $produced = 0;
+    $input = (function() use (&$produced) {
+        foreach (['poll-first', 'no', 'poll-third'] as $item) { ++$produced; yield $item; }
+    })();
+    $operation = $client->start('decide', 'Is it?', $input);
+    check($produced === 0, 'start consumed producer');
+    $rows = []; $terminal = null; $deadline = microtime(true) + 3;
+    while ($terminal === null) {
+        $before = $produced; $packet = $operation->poll();
+        check($produced <= $before + 1, 'poll consumed more than one producer item');
+        if ($packet?->kind === 'row') $rows[] = $packet->value;
+        if ($packet?->kind === 'terminal') $terminal = $packet;
+        if (microtime(true) > $deadline) throw new RuntimeException('poll did not finish generator');
+        usleep(1000);
+    }
+    $client->close();
+    check($produced === 3 && array_map(fn($r) => $r->value, $rows) === [true, false, true], 'poll generator answers/order');
+    check($terminal->facts instanceof ThinkThen\Results\NativeFacts && $terminal->facts->requests_sent === 3 && !$terminal->has('failure'), 'poll typed terminal/count');
+    foreach ($rows as $row) check($row instanceof ThinkThen\Results\NativeAtomicDecideValue && is_string($row->answer_id), 'poll retained typed answer');
 } elseif ($mode === 'presence') {
     $annotated = $client->annotate(['version' => 1, 'questions' => [
         'ok' => ['decide' => 'Is it urgent?'], 'tags' => ['tag' => 'Which?', 'labels' => ['first', 'second']],
@@ -108,7 +128,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     try { $client->decide('Is it?', 'precancel', cancel: $token); throw new RuntimeException('cancel admitted'); }
     catch (ThinkThen\CancelledFailure) {}
 } elseif ($mode === 'destroy') {
-    $operation = $client->start('decide', 'Is it?', 'hold-php');
+    $operation = $client->start('decide', 'Is it?', (function() { yield 'hold-php'; })());
     $deadline = microtime(true) + 3;
     while (!file_exists(getenv('TT_BARRIER').'/arrived-hold-php')) {
         $operation->poll();

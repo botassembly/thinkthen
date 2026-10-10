@@ -1,8 +1,25 @@
 #include <thinkthen/client.hpp>
 #include <fstream>
+#include <clocale>
+#include <locale>
 #include <iostream>
 using namespace tt;
 using namespace tt::inputs;
+class CommaDecimal : public std::numpunct<char> {
+    char do_decimal_point() const override { return ','; }
+};
+class CallerLocale {
+    std::locale previous = std::locale();
+    std::string numeric = std::setlocale(LC_NUMERIC, nullptr);
+public:
+    CallerLocale() {
+        std::locale::global(std::locale(previous, new CommaDecimal));
+        // Use an installed C locale when available; the facet always exercises writing.
+        for (const char* name : {"de_DE.UTF-8", "fr_FR.UTF-8", "de_DE.utf8", "fr_FR.utf8"})
+            if (std::setlocale(LC_NUMERIC, name)) break;
+    }
+    ~CallerLocale() { std::locale::global(previous); std::setlocale(LC_NUMERIC, numeric.c_str()); }
+};
 static Json read(const char* path) { std::ifstream file(path); return Json::parse(file); }
 static RequestItem item(const Json& value) { return RequestItem().set_original(RequestOriginalJson().set_value(value)); }
 static RequestInput evidence(const std::string& verb,const Json& original) {
@@ -75,7 +92,33 @@ int main(int argc,char** argv) {
             if(!escaped.as_SessionPacketTerminal() || escaped.document().at("future").get<bool>()) return 14;
             std::cout<<"values-pass\n"; return 0;
         }
-        std::string verb=argv[1]; Client client;
+        std::string verb=argv[1];
+        const std::locale originalLocale;
+        const std::string originalNumeric=std::setlocale(LC_NUMERIC,nullptr);
+        std::optional<CallerLocale> locale;
+        if(verb=="locale") locale.emplace();
+        Client client;
+        if(verb=="locale") {
+            Json original{{"nested",Json::Array{Json{{"number",0.5}},1.25}}};
+            auto input=RequestInputRecords().set_items({item(original)});
+            auto call=client.decide(RequestQuestionText().set_text("Is it?"),input); call.finish();
+            auto packets=call.collect(); client.close(); call.close();
+            bool answered=false;
+            for(const auto& packet:packets) {
+                if(auto row=packet.as_SessionPacketDecideRow()) {
+                    if(row->value().value->document().at("input")!=original) return 40;
+                    if(!row->value().value->value().value->value().get<bool>()) return 41;
+                    auto answer=row->value().value->answer().value->as_AnswerYesNo();
+                    if(!answer || *answer->probability().value!=0.9) return 45;
+                    answered=true;
+                }
+                if(Json::parse(packet.document().dump())!=packet.document()) return 42;
+                std::cout<<packet.document().dump()<<'\n';
+            }
+            locale.reset();
+            if(std::locale()!=originalLocale || originalNumeric!=std::setlocale(LC_NUMERIC,nullptr)) return 44;
+            return answered && packets.back().as_SessionPacketTerminal() ? 0:43;
+        }
         if(verb=="failure") {
             auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("backend-failure")); call.finish();
             try { call.collect(); return 15; }

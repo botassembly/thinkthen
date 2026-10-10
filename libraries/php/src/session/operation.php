@@ -43,6 +43,12 @@ final class Operation
     {
         if ($this->session === null) throw new UsageFailure('operation is closed');
         if ($this->token?->cancelled) $this->ffi->thinkthen_session_cancel($this->session);
+        $packet = $this->readPacket();
+        if ($this->terminal === null && $this->producer !== null) $this->feed();
+        return $packet;
+    }
+    private function readPacket(): ?\ThinkThen\Results\Node
+    {
         $status = $this->ffi->new('uint32_t');
         $owner = $this->ffi->new('struct thinkthen_session_result *');
         $this->check($this->ffi->thinkthen_session_try_read($this->session, \FFI::addr($status), \FFI::addr($owner)));
@@ -66,7 +72,6 @@ final class Operation
             while ($this->terminal === null) {
                 $this->poll();
                 if ($this->terminal !== null) break;
-                if ($this->producer !== null) $this->feed();
                 usleep(1000);
             }
             if ($this->terminal->has('failure')) {
