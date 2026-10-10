@@ -4,7 +4,8 @@ use crate::public::{
     Call, CallOptions, CompleteAnnotated, CompleteChoice, CompleteDecision, CompleteFilter,
     CompleteFound, CompleteRank, CompleteRecognized, CompleteRecord, CompleteRelated,
     CompleteScore, CompleteSetRank, CompleteTags, DecisionQuestion, DetailQuestion, Engine, Error,
-    InputEvidence, Question, QuestionSet, RankSet, Recognize, RecordInput, Relate, Surface,
+    InputEvidence, Question, QuestionSet, RankSet, Recognize, RecordInput, Relate, RequestCall,
+    RequestValue, Surface,
 };
 use polars::prelude::Series;
 
@@ -96,10 +97,18 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteChoice>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.choose_records_complete_with(
-            question,
+        let call = super::request::complete_records(
+            self,
+            question.question().clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Choose,
+            |value| match value {
+                RequestValue::Choices(rows) => Ok(rows),
+                _ => Err(Error::defect(
+                    "a choose column returned another result kind",
+                )),
+            },
         )?;
         Ok((call, positions))
     }
@@ -121,10 +130,16 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteTags>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.tag_records_complete_with(
-            question,
+        let call = super::request::complete_records(
+            self,
+            question.question().clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Tag,
+            |value| match value {
+                RequestValue::Tags(rows) => Ok(rows),
+                _ => Err(Error::defect("a tag column returned another result kind")),
+            },
         )?;
         Ok((call, positions))
     }
@@ -146,7 +161,17 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteScore>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = super::request::score_records(self, question, records, options)?;
+        let call = super::request::complete_records(
+            self,
+            question.clone().into(),
+            records,
+            options,
+            RequestCall::Score,
+            |value| match value {
+                RequestValue::Scores(rows) => Ok(rows),
+                _ => Err(Error::defect("a score column returned another result kind")),
+            },
+        )?;
         Ok((call, positions))
     }
 

@@ -1,10 +1,10 @@
 //! Native column conversion delegates admission and execution to Request.
 use super::column::text;
 use crate::{
-    Call, CallOptions, CompleteRecord, CompleteScore, Engine, Error, InputEvidence, Question,
-    QuestionInput, RecordInput, Request, RequestArguments, RequestCall, RequestDefinition,
-    RequestEnvironment, RequestFeed, RequestFraming, RequestInput, RequestOptions, RequestOutcome,
-    RequestQuestion, RequestValue, Surface,
+    Call, CallOptions, CompleteRecord, Engine, Error, InputEvidence, Question, QuestionInput,
+    RecordInput, Request, RequestArguments, RequestCall, RequestDefinition, RequestEnvironment,
+    RequestFeed, RequestFraming, RequestInput, RequestOptions, RequestOutcome, RequestQuestion,
+    RequestValue, Surface,
 };
 use polars::prelude::Series;
 
@@ -128,17 +128,19 @@ pub(super) fn project<R>(
     Ok(())
 }
 
-/// Retain caller-owned originals while shared Request admits native score evidence.
+/// Retain caller-owned originals while shared Request admits native evidence.
 #[allow(
     clippy::type_complexity,
-    reason = "the existing complete API retains generic originals and native scores"
+    reason = "the existing complete API retains generic originals and native results"
 )]
-pub(super) fn score_records<T: InputEvidence>(
+pub(super) fn complete_records<T: InputEvidence, R>(
     engine: &Engine,
-    question: &Question,
+    definition: RequestDefinition,
     records: Vec<RecordInput<T>>,
     controls: CallOptions<'_>,
-) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error> {
+    function: fn(RequestArguments) -> RequestCall,
+    unpack: fn(RequestValue) -> Result<Vec<CompleteRecord<QuestionInput, R>>, Error>,
+) -> Result<Call<Vec<CompleteRecord<T, R>>>, Error> {
     let mut originals = Vec::with_capacity(records.len());
     let rows = records.into_iter().map(|record| {
         Ok(record.map_original(|original| {
@@ -149,34 +151,32 @@ pub(super) fn score_records<T: InputEvidence>(
     });
     let call = execute_feed(
         engine,
-        question.clone().into(),
-        RequestCall::Score,
+        definition,
+        function,
         controls,
         RequestFeed::from_records("column", rows).eager(),
     )?;
     call.try_map(|value| {
-        let RequestValue::Scores(rows) = value else {
-            return Err(Error::defect("a score column returned another result kind"));
-        };
+        let rows = unpack(value)?;
         let mut originals = originals.into_iter();
         let values = rows
             .into_iter()
             .enumerate()
             .map(|(at, row)| {
                 if row.ordinal() != at {
-                    return Err(Error::defect("a score column changed its occurrence order"));
+                    return Err(Error::defect("a typed column changed its occurrence order"));
                 }
                 Ok(CompleteRecord {
                     original: originals
                         .next()
-                        .ok_or_else(|| Error::defect("a score column lost its original"))?,
+                        .ok_or_else(|| Error::defect("a typed column lost its original"))?,
                     ordinal: at,
                     result: row.into_parts().1,
                 })
             })
             .collect::<Result<Vec<_>, Error>>()?;
         if originals.next().is_some() {
-            return Err(Error::defect("a score column lost an answer"));
+            return Err(Error::defect("a typed column lost an answer"));
         }
         Ok(values)
     })
