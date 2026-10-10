@@ -380,7 +380,7 @@ fn source_preview_preserves_count_refusal_and_unread_tail() {
 
 #[test]
 #[ignore = "release suite: cumulative source boundary retains more than 16 MiB"]
-fn canonical_source_preview_bounds_originals_before_projection_and_unread_tail() {
+fn release_only_canonical_source_preview_bounds_originals_before_projection_and_unread_tail() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
     let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
