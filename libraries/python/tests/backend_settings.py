@@ -1,19 +1,7 @@
 import json
 
-import pathlib
-
 import sys
-
-import pytest
-
-from conftest import Backend, clean_env, private_windows_configuration, run
-
-ROWS = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance/binding-backends.json").read_text())["backends"]
-
-SLOTS = ("generic_systemone", "generic_decisions", "generic_custom", "capture_systemone", "capture_decisions", "capture_custom", "other", "non_post")
-
-def paths(slot, count=1):
-    return {**dict.fromkeys(SLOTS, 0), slot: count, "overflow": False}
+from conftest import clean_env, private_windows_configuration
 
 def isolated(folder, **extra):
     return clean_env(home=folder, **extra)
@@ -36,4 +24,3 @@ def _answer(question):
     names = [str(index) for index in range(len(question["criteria"]))]
     return {"type": "score", "probabilities": {
         name: float(index == 0) for index, name in enumerate(names)}}
-

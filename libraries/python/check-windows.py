@@ -86,7 +86,6 @@ def main():
         run(str(python), '-m', 'pytest', '-q', '-p', 'no:cacheprovider', '-m', 'not stress', 'tests', cwd=checked)
         run(str(python), '-m', 'mypy', '--strict', 'tests/native_types.py', cwd=checked)
         run('cargo', 'clippy', '--locked', '--offline', '--all-targets', '--', '-D', 'warnings')
-        run('cargo', 'clippy', '--locked', '--offline', '--all-targets', '--features', 'probe', '--', '-D', 'warnings')
         run('cargo', 'test', '--locked', '--offline', '--no-default-features', '--lib')
         older = venv('pandas2', 'requirements-pandas2.txt')
         run(str(older), '-m', 'pip', 'install', '--no-index', '--no-deps', str(wheels[0]))

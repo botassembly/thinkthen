@@ -158,7 +158,6 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<engine::Engine>()?;
     module.add_class::<files::SourceIterator>()?;
     module.add_function(wrap_pyfunction!(files::_read_files, module)?)?;
-    module.add_function(wrap_pyfunction!(files::_spec_source, module)?)?;
     module.add_class::<request::Session>()?;
     module.add_class::<native_result::NativeResult>()?;
     module.add_function(wrap_pyfunction!(

@@ -8,7 +8,6 @@ ABSENT = Absent()
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class QuestionSource:
-    role: str
     body: object | None = None
     path: str | None = None
     name: str | None = None

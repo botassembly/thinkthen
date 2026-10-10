@@ -1,6 +1,6 @@
 """Named calls keep credentials private, native limits and actual settlement."""
 import pytest
-from conftest import child_env, run, FAKE
+from conftest import child_env, run, FAKE, REPO
 
 @pytest.mark.parametrize('arm', ['arm/401', 'arm/503', 'arm/refuse'])
 def test_named_failure_messages_and_result_reprs_do_not_expose_credentials(backend,tmp_path,arm):
@@ -53,13 +53,16 @@ def test_native_preview_sends_nothing_and_module_calls_own_an_engine(backend,tmp
 def test_installed_recognize_keeps_nonempty_aggregate_before_empty_final(backend,tmp_path):
     from pathlib import Path
     import json
-    case=next(case for case in json.loads((Path(__file__).resolve().parents[3]/'conformance/cases.json').read_text())['cases'] if case['id']=='44-recognize-C12-relations')
+    case=next(case for case in json.loads((REPO/'conformance/cases.json').read_text())['cases'] if case['id']=='44-recognize-C12-relations')
     output=run(f"""
         import thinkthen as tt
         with tt.Engine(cache=False,max_retries=0,model='jev-1.13.0') as engine:
             done=engine.recognize({case['exchanges'][0]['evidence']!r},{case['question']!r})
             assert [entity.text for row in done.results for entity in row.value.entities]==['Amara','Kestrel Labs']
             assert done.facts.requests_sent>0
+            entities=done.results[0].value.entities
+            plan=engine.plan('relate',{{'version':1,'relate':{{'relations':[{{'name':'works','source':'person','target':'organization'}}]}}}},entities)
+            assert plan['records']==len(entities)
         print('kept')
     """,child_env(backend,tmp_path,'case/44-recognize-C12-relations'))
     assert output.splitlines()==['kept']

@@ -11,7 +11,7 @@ with tt.Engine(cache=False) as engine:
     print(answer.results[0].answer_id, answer.facts.requests_sent)
 ```
 
-`decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find` and `annotate` take a question followed by their input. `recognize` and `relate` take their input first and an optional authored question second. Pass `options`, `levels` or `labels` beside question text, or pass an authored question dictionary, a path object or `QuestionSource(name="name", role="atomic")`. Plain strings remain question text for atomic calls. Enum, Literal and the optional Pydantic authoring forms convert to the same native declaration.
+`decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find` and `annotate` take a question followed by their input. `recognize` and `relate` take their input first and an optional authored question second. Pass `options`, `levels` or `labels` beside question text, or pass an authored question dictionary, a path object or `QuestionSource(name="name")`. Plain strings remain question text for atomic calls. Enum, Literal and the optional Pydantic authoring forms convert to the same native declaration.
 
 `Result.value` presents the ordinary answer. `Result.results` retains every Rust-owned generated result, including probabilities, sources, image facts, reading choices, identifiers and model provenance. `details=True` presents those generated rows as the value. `Result.facts` contains actual final settlement. Printing withholds content; equality, `to_dict()` and pickling preserve absence, null, false, wide integers and permitted extension fields. Embedded failures remain typed failures and cannot become false answers.
 

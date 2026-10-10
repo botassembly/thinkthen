@@ -19,6 +19,8 @@ VERBS = ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate
 
 
 def _json(value):
+    if isinstance(value, native._NativeResult):
+        return value.to_dict()
     if isinstance(value, Mapping):
         return {key: _json(item) for key, item in value.items()}
     if isinstance(value, (tuple, list)):
@@ -50,6 +52,8 @@ def _item(value, verb=None):
             out['options'] = [{'name': name, **({} if description is c.ABSENT else {'description': _json(description)})}
                               for name, description in value.options]
         return out
+    if verb == 'relate' and isinstance(value, native._NativeResult):
+        value = {'name': value.text, 'kind': value.kind}
     if verb == 'relate' and isinstance(value, tuple):
         value = {'name': value[0], 'kind': value[1]}
     return {'original': _original(value)}
@@ -210,9 +214,6 @@ class Operation:
             self.session = engine._engine._request_session(_dump(request), self.surface)
         except native.ThinkThenError as error:
             self._close_producer()
-            if hasattr(error, 'native_complete'):
-                error.complete = native._restore_native_result('completeCallError', error.native_complete)
-                error.facts = getattr(error.complete, 'facts', None)
             raise
         self.engine = engine
         self.verb = verb

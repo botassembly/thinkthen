@@ -9,7 +9,7 @@ LIBRARY = __import__('os').environ.get('THINKTHEN_FRAME_LIBRARY')
 
 def main():
     document = json.loads(sys.stdin.readline())
-    question = tt.QuestionSource(**document['question'])
+    question = tt.QuestionSource(**{key:value for key,value in document['question'].items() if key!='role'})
     framed = document['input']
     if framed['kind'] == 'files':
         reading = framed['options']['reading']

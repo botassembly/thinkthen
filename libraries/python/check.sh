@@ -15,7 +15,7 @@ host=$(python_host)
 [ -n "$host" ] || { echo 'not run: no supported Python'; exit 77; }
 scratch_dir scratch
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
-    artifact=$THINKTHEN_ARTIFACT
+    artifact=$(realpath "$THINKTHEN_ARTIFACT")
 else
     RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" PYO3_PYTHON=$host \
         maturin build --quiet --locked --offline -o "$scratch/wheel"
@@ -37,6 +37,15 @@ for old in ('Judge','Call','Stream','Tally','Completion','complete','details'):
 for name in ('judge','stream','complete','_complete','frames'):
     assert not Path(thinkthen.__file__).with_name(name+'.py').exists(),name
 PY
+if [ "$profile" = smoke ]; then
+    smoke_guard
+    THINKTHEN_API_KEY=sk-smoke-loopback "$python" - <<'PY'
+import os, thinkthen as tt
+print(f"smoke: {tt.decide(os.environ['THINKTHEN_TEST_SMOKE_QUESTION'], os.environ['THINKTHEN_TEST_SMOKE_TEXT']).value}")
+PY
+    exit
+fi
+export THINKTHEN_TEST_REPO="$repo"
 CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target} "$python" -m pytest -q -p no:cacheprovider --tb=short "$scratch/tests" -m 'not stress'
 "$python" -m mypy --strict tests/native_types.py
 if [ "$profile" = routine ]; then

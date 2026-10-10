@@ -46,15 +46,3 @@ pub(crate) fn _read_files(py: Python<'_>, selection: &str) -> PyResult<SourceIte
         Ok(SourceIterator(std::sync::Mutex::new(records)))
     })
 }
-
-#[pyfunction]
-pub(crate) fn _spec_source(py: Python<'_>, path: &str) -> PyResult<String> {
-    thinkthen::read_question_file(path).map_err(|_| {
-        crate::raise(
-            py,
-            thinkthen::ErrorKind::Local,
-            "the question file could not be read",
-            false,
-        )
-    })
-}

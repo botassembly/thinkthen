@@ -2,10 +2,10 @@
 import json
 import pathlib
 import pytest
-from conftest import child_env, run
+from conftest import child_env, run, REPO
 from backend_settings import configuration, isolated
 
-CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/cases.json"
+CORPUS = REPO / "conformance/cases.json"
 
 
 @pytest.mark.parametrize("shape", ["pandas", "polars"])
