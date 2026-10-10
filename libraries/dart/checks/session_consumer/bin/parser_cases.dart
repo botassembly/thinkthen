@@ -12,8 +12,8 @@ void main(List<String> args) {
   if (row['refund']!.value != null ||
       row['team']!.asObject.failed.kind != 'backend' ||
       row['team']!.asObject.failed.cause != 'missing_probability' ||
-      row['severity']!.asNumber is! num ||
-      row['topics']!.asArray is! List<String>) {
+      row['severity']!.asNumber != 1.2 ||
+      row['topics']!.asArray.join(',') != 'billing,urgent') {
     throw StateError('null and failed collapsed');
   }
   final later = AnnotatedField.read({
