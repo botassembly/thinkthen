@@ -4,7 +4,10 @@ import {startBackend,ask as backendAsk,child as backendChild,within,sleep,INDEX}
 
 const face=process.env.THINKTHEN_OWNED_MODULE || 'esm';
 const framed=body=>`const api = ${face==='cjs'?`(await import('node:module')).createRequire(${JSON.stringify(INDEX)})('thinkthen')`:"tt"};\n${body.replace(/\btt\./g,'api.')}`;
-const ask=(backend,body,options)=>backendAsk(backend,framed(body),options);
+const ask=async(backend,body,options)=>{
+  const reply=await backendAsk(backend,framed(body),options);
+  assert.equal(reply.error,undefined,JSON.stringify(reply.error));return reply;
+};
 const child=(backend,body,options)=>backendChild(backend,framed(body),options);
 
 test('the ten Client functions retain generated values after close',async t=>{
@@ -37,7 +40,7 @@ test('the ten Client functions retain generated values after close',async t=>{
     if(!(held[1][1].results[0].answer instanceof tt.Results.NativeAnswerChoice) || !Object.values(held[1][1].results[0].answer.probabilities).every(v=>typeof v==='number'))throw Error('lost choice probabilities');
     if(typeof held[0][1].facts.largest_request_bytes!=='number' || !(held[0][1].facts.input_tokens>0) || !held[0][1].facts.token_estimate_method || !(held[0][1].facts.usage_persistence instanceof tt.Results.NativePersistenceObservation))throw Error('lost observed cost facts');
     return held.map(([verb,done])=>[verb,done.results.length,done.facts.requests_sent]);
-  `);
+  `,{arm:'arm/full/capture'});
   assert.deepEqual(value.map(row=>row[0]),['decide','choose','tag','score','filter','rank','find','annotate','recognize','relate']);
   assert.ok(value.every(([,rows,sends])=>rows>0 && sends>0));
   assert.ok(await backend.count()>=10);
@@ -48,6 +51,7 @@ test('Client retains false, null, missing, extensions and physical positions',as
   const {value}=await ask(backend,`
     const client=new tt.Client({cache:false});
     const no=await client.decide({decide:'Question?',threshold:0.95},'text');
+    if(no.facts.has('input_tokens') || no.facts.has('output_tokens'))throw Error('invented observed tokens');
     const nil=await client.decide({decide:'Question?',true:null},'text');
     const uncertain=await client.decide({decide:'Question?',threshold:'0.2:0.95'},'text');
     const {writeFileSync}=await import('node:fs');
