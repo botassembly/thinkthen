@@ -61,8 +61,10 @@ def test_installed_recognize_keeps_nonempty_aggregate_before_empty_final(backend
             assert [entity.text for row in done.results for entity in row.value.entities]==['Amara','Kestrel Labs']
             assert done.facts.requests_sent>0
             entities=done.results[0].value.entities
-            plan=engine.plan('relate',{{'version':1,'relate':{{'relations':[{{'name':'works','source':'person','target':'organization'}}]}}}},entities)
-            assert plan['records']==len(entities)
+            import os
+            with tt.Engine(cache=False,base_url=os.environ['THINKTHEN_BASE_URL'].replace('/case/44-recognize-C12-relations/','/generic/')) as relations:
+                linked=relations.relate(entities,relations={{'works':('person','organization')}})
+                assert linked.facts.requests_sent>0
         print('kept')
     """,child_env(backend,tmp_path,'case/44-recognize-C12-relations'))
     assert output.splitlines()==['kept']
