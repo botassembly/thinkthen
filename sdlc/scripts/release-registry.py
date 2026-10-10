@@ -42,7 +42,7 @@ package_inventory = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package_inventory)
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-# Stage 1 Windows ships only the command; these wrapper packages stay on Linux x86.
+# Linux x86-64 supplies the managed packages; C archives supply each native target.
 TARGET = "x86_64-unknown-linux-gnu"
 GROUP, ARTIFACT = "io.github.botassembly", "thinkthen-jvm"
 NUGET_ID, PUB_NAME = "Botassembly.ThinkThen", "thinkthen_dart"
@@ -96,6 +96,13 @@ def archive_files(platform, family, v, target=TARGET):
                     f"{name} holds an unsafe path: {member.name}")
             files[relative] = archive.extractfile(member).read()
     return files
+
+
+def native_asset(platform, v, target, library):
+    native = archive_files(platform, 'c', v, target)
+    member = ('bin/' if library.endswith('.dll') else 'lib/') + library
+    require(member in native and native[member], f"C archive lacks native asset {member}")
+    return native[member]
 
 
 def field(root, path):
@@ -168,8 +175,24 @@ def pack(platform, out, sha):
     nupkg_name = f"{NUGET_ID}.{v}.nupkg"
     require(nupkg_name in csharp, f"C# archive lacks {nupkg_name}")
     check_nupkg(csharp[nupkg_name], v)
+    with zipfile.ZipFile(io.BytesIO(csharp[nupkg_name])) as package:
+        members = {name: package.read(name) for name in package.namelist()}
+    definition = package_inventory.csharp_inventory()
+    for target, asset in definition['native'].items():
+        library = asset['file'].rsplit('/', 1)[-1]
+        members[asset['file']] = native_asset(platform, v, target, library)
+    # NuGet's package metadata must describe the new native file extensions.
+    content_types = ET.fromstring(members['[Content_Types].xml'])
+    namespace = content_types.tag.removesuffix('Types')
+    extensions = {node.get('Extension') for node in content_types}
+    for asset in definition['native'].values():
+        extension = pathlib.PurePosixPath(asset['file']).suffix.lstrip('.')
+        if extension not in extensions:
+            ET.SubElement(content_types, namespace + 'Default', Extension=extension, ContentType='application/octet')
+            extensions.add(extension)
+    members['[Content_Types].xml'] = ET.tostring(content_types, encoding='utf-8', xml_declaration=True)
     (out / "nuget").mkdir(parents=True)
-    (out / "nuget" / nupkg_name).write_bytes(csharp[nupkg_name])
+    deterministic_zip(out / "nuget" / nupkg_name, sorted(members.items()))
 
     jvm = archive_files(platform, "jvm", v)
     definition = package_inventory.jvm_inventory(pom=jvm['pom.xml'], target=TARGET)
@@ -184,14 +207,12 @@ def pack(platform, out, sha):
         suffix = '' if kind == 'door' else '-' + kind
         (base / f"{stem}{suffix}.jar").write_bytes(jvm[filename])
     for classifier, asset in definition['native'].items():
-        native = archive_files(platform, 'c', v, asset['target'])
         library = asset['files'][0].rsplit('/', 1)[-1]
-        member = ('bin/' if library.endswith('.dll') else 'lib/') + library
-        require(member in native and native[member], f"C archive lacks native asset {member}")
+        native = native_asset(platform, v, asset['target'], library)
         with zipfile.ZipFile(io.BytesIO(jvm[asset['jar']])) if asset['target'] == TARGET else contextlib.nullcontext() as selected:
             if selected is not None:
-                require(set(selected.namelist()) == set(asset['files']) and all(selected.read(name) == native[member] for name in asset['files']), 'JVM native classifier differs from C archive')
-        deterministic_zip(base / f"{stem}-{classifier}.jar", [(name, native[member]) for name in asset['files']])
+                require(set(selected.namelist()) == set(asset['files']) and all(selected.read(name) == native for name in asset['files']), 'JVM native classifier differs from C archive')
+        deterministic_zip(base / f"{stem}-{classifier}.jar", [(name, native) for name in asset['files']])
     sources = sorted(p for p in (REPO / "libraries/jvm/session").rglob("*")
                      if p.suffix in (".java", ".kt", ".scala") and p.is_file())
     sources.append(REPO / 'libraries/jvm/door/thinkthen/Json.java')
