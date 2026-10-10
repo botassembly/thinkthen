@@ -85,7 +85,7 @@ def input_render(definitions):
     bodies=[]
     for key,raw in definitions.items():
         n=name(key);s=shape(raw)
-        lines += [f'class {n} : public Node {{ public:']
+        lines += [f'class {n} : public Node {{', f'    {n}(const Json& value, int):Node(value) {{}}', f'public: static {n} from_document(const Json& value) {{ return {n}(value,0); }}']
         if 'variants' in s:
             for child,_ in s['variants']:
                 cn=name(child); lines += [f'    {n}(const {cn}& value);']
