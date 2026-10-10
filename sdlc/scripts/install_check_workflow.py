@@ -15,6 +15,7 @@ PUBLISH_STEP = {
 }
 RUNNERS = ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26']
 PORTABLE = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'rubygems']
+WINDOWS = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'nuget', 'maven', 'c']
 LINUX = ['nuget', 'maven', 'pub', 'packagist', 'go', 'c', 'sqlite', 'duckdb', 'postgresql']
 R_IMAGE = 'rocker/r-ver:4.6.1@sha256:268e4c559c905a78519793f1a8c9ec5c8051a6ac98a16cbf489135ccdad330bb'
 
@@ -59,8 +60,8 @@ def install_workflow(name, doc):
             or inputs['version'].get('required') is not True):
         out.append(f'{name}: dispatch must require only a string version')
     jobs = doc.get('jobs') or {}
-    if set(jobs) != {'portable', 'homebrew', 'linux', 'r-universe'}:
-        out.append(f'{name}: jobs must retain all eighteen channels and forty-seven Unix cells')
+    if set(jobs) != {'portable', 'homebrew', 'linux', 'windows', 'r-universe'}:
+        out.append(f'{name}: jobs must retain all public channels on Unix and Windows')
     for job, spec in jobs.items():
         if spec.get('permissions') != {'contents': 'read'}:
             out.append(f'{name}: job {job} must have only contents: read')
@@ -71,20 +72,22 @@ def install_workflow(name, doc):
         matrix = ((spec.get('strategy') or {}).get('matrix') or {})
         expected = {'portable': {'runner': RUNNERS, 'channel': PORTABLE},
                     'homebrew': {'runner': ['ubuntu-24.04', 'macos-26']},
-                    'linux': {'channel': LINUX}, 'r-universe': {}}.get(job)
+                    'linux': {'channel': LINUX}, 'windows': {'channel': WINDOWS}, 'r-universe': {}}.get(job)
         if expected is not None and (matrix != expected or spec.get('runs-on') != (
-                '${{ matrix.runner }}' if job in ('portable', 'homebrew') else 'ubuntu-24.04')):
+                '${{ matrix.runner }}' if job in ('portable', 'homebrew') else 'windows-2025' if job == 'windows' else 'ubuntu-24.04')):
             out.append(f'{name}: job {job} must retain its accepted channel and runner matrix')
         if job == 'r-universe' and spec.get('container') != R_IMAGE:
             out.append(f'{name}: R-universe must use the pinned Linux R 4.6.1 image')
-        channel = '${{ matrix.channel }}' if job in ('portable', 'linux') else job
+        channel = '${{ matrix.channel }}' if job in ('portable', 'linux', 'windows') else job
         env = {'VERSION': '${{ inputs.version }}'}
-        if job in ('portable', 'linux'):
+        if job in ('portable', 'linux', 'windows'):
             env['CHANNEL'] = channel
             command = 'python3 sdlc/scripts/install-check "$CHANNEL" "$VERSION"'
         else:
             command = f'python3 sdlc/scripts/install-check {channel} "$VERSION"'
         expected_step = {'name': 'Install and replay', 'env': env, 'run': command}
+        if job == 'windows':
+            expected_step['shell'] = 'bash'
         steps = spec.get('steps') or []
         if not steps or steps[-1] != expected_step or 'defaults' in spec or 'defaults' in doc:
             out.append(f'{name}: job {job} must end with the exact unconditional install and replay step using version through env')

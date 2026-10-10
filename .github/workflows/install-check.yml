@@ -108,6 +108,66 @@ jobs:
           VERSION: ${{ inputs.version }}
           CHANNEL: ${{ matrix.channel }}
         run: python3 sdlc/scripts/install-check "$CHANNEL" "$VERSION"
+  windows:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [download, cargo-install, cargo-add, pip, uv, npm, nuget, maven, c]
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Require the dispatched release version and commit
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+        run: |
+          [ "$REF" = "refs/tags/v$VERSION" ]
+          [ "$(git rev-parse HEAD)" = "$SHA" ]
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+          architecture: x64
+      - name: Set up Rust
+        if: matrix.channel == 'cargo-install' || matrix.channel == 'cargo-add'
+        shell: bash
+        run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Set up uv
+        if: matrix.channel == 'uv'
+        shell: bash
+        run: python3 -m pip install uv==0.9.17
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: matrix.channel == 'npm'
+        with:
+          node-version: '22.22.3'
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        if: matrix.channel == 'nuget'
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        if: matrix.channel == 'maven'
+        with:
+          distribution: temurin
+          java-version: '22'
+      - name: Require Maven 3
+        if: matrix.channel == 'maven'
+        shell: bash
+        run: mvn --version | head -1 | grep 'Apache Maven 3\.'
+      - name: Select x64 MSVC
+        if: matrix.channel == 'c'
+        shell: bash
+        run: python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
+      - name: Install and replay
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ matrix.channel }}
+        run: python3 sdlc/scripts/install-check "$CHANNEL" "$VERSION"
   r-universe:
     permissions:
       contents: read

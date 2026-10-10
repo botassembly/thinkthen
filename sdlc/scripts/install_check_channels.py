@@ -1,5 +1,6 @@
 """Channel installers for a clean, explicitly dispatched consumer check."""
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -111,7 +112,7 @@ def python(check, uv=False):
     else:
         venv = check.root / 'venv'
         check.run(sys.executable, '-m', 'venv', venv)
-        executable = venv / 'bin/python'
+        executable = venv / ('Scripts/python.exe' if check.windows else 'bin/python')
         check.run(executable, '-m', 'pip', 'install', '--only-binary=:all:', f'thinkthen=={check.version}')
         command = [executable]
     installed = check.run(*command, '-c', 'from importlib.metadata import version; print(version("thinkthen"))')
@@ -122,7 +123,7 @@ def rust(check, library=False):
     if not library:
         destination = check.root / 'cargo-bin'
         check.run('cargo', '+1.95.0', 'install', 'thinkthen', '--version', check.version, '--locked', '--root', destination)
-        installed, reply = check.command_replay(destination / 'bin/thinkthen')
+        installed, reply = check.command_replay(destination / ('bin/thinkthen.exe' if check.windows else 'bin/thinkthen'))
         return installed, reply, 'installed binary'
     check.run('cargo', '+1.95.0', 'init', '--name', 'installcheck', '--bin', check.project)
     check.run('cargo', '+1.95.0', 'add', f'thinkthen@={check.version}')
@@ -173,7 +174,7 @@ def maven(check):
         raise Failure("Maven POM is missing the supported stable JDK floor")
     source = write_consumer(check.project, 'java', 'InstallCheck.java')
     check.run('javac', '--release', jdk, '-cp', str(jar), source)
-    return installed, check.response('java', '--enable-native-access=ALL-UNNAMED', '-cp', f'{check.project}:{check.project / "dependencies/*"}', 'InstallCheck', check.sample), 'resolved Maven POM metadata'
+    return installed, check.response('java', '--enable-native-access=ALL-UNNAMED', '-cp', os.pathsep.join((str(check.project), str(check.project / 'dependencies/*'))), 'InstallCheck', check.sample), 'resolved Maven POM metadata'
 
 
 def pub(check):
@@ -240,9 +241,14 @@ def r_universe(check):
 def c(check):
     native = check.c_archive()
     source = write_consumer(check.project, 'c', 'consumer.c')
-    flags = check.run('pkg-config', '--cflags', '--libs', 'thinkthen').split()
-    check.run('gcc', source, '-o', 'consumer', *flags)
-    command = check.project / 'consumer'
+    command = check.project / ('consumer.exe' if check.windows else 'consumer')
+    if check.windows:
+        check.run('cl.exe', '/nologo', '/TC', '/std:c11', '/MD', '/D_CRT_SECURE_NO_WARNINGS',
+                  '/I' + str(native / 'include'), source, '/Fe' + str(command),
+                  '/link', native / 'lib/thinkthen.dll.lib')
+    else:
+        flags = check.run('pkg-config', '--cflags', '--libs', 'thinkthen').split()
+        check.run('gcc', source, '-o', command, *flags)
     installed = check.run(command, '--version')
     return installed, native_call(check, [command]), 'installed C header version'
 
@@ -342,9 +348,17 @@ def postgresql(check):
 
 
 def download(check):
-    script = check.fetch('https://raw.githubusercontent.com/botassembly/thinkthen/main/install.sh', check.root / 'install.sh')
-    check.run('sh', script, '--version', check.version)
-    installed, reply = check.command_replay(check.root / '.local/bin/thinkthen')
+    name = 'install.ps1' if check.windows else 'install.sh'
+    script = check.fetch(f'https://raw.githubusercontent.com/botassembly/thinkthen/v{check.version}/{name}', check.root / name)
+    if check.windows:
+        destination = check.root / 'command'
+        check.env['THINKTHEN_INSTALL_DIR'] = str(destination)
+        check.run('pwsh', '-NoProfile', '-NonInteractive', '-File', script, '-Version', check.version)
+        command = destination / 'thinkthen.exe'
+    else:
+        check.run('sh', script, '--version', check.version)
+        command = check.root / '.local/bin/thinkthen'
+    installed, reply = check.command_replay(command)
     return installed, reply, 'installed binary'
 
 
