@@ -44,9 +44,9 @@ const MEANS = [
 ];
 const QUIET = flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code carries the answer. It works on one document only.');
 // The shared flags every record function takes. find takes none of them.
-const RECORD_FLAGS = ['--csv', '--tsv', '--image-media', '--context-field', '--batch', '--jobs'];
+const RECORD_FLAGS = ['--image', '--csv', '--tsv', '--image-media', '--context-field', '--batch', '--jobs'];
 // recognize and relate do not batch records.
-const SET_FLAGS = ['--csv', '--tsv', '--image-media', '--jobs'];
+const SET_FLAGS = ['--image', '--csv', '--tsv', '--image-media', '--jobs'];
 
 // The failure codes every function shares, from specification/channels.md.
 // A function's own list puts its answers first and then these.
@@ -283,6 +283,14 @@ export const FUNCTIONS = [
     args: 'KIND... or @FILE',
     argsNote: 'The file is a question file.',
     options: [
+      flag('--mode whole or boundary_only', lower(setting('Recognition mode').allowed), setting('Recognition mode').default, 'Selects full recognition or span proposals alone. boundary_only returns text, offsets and span probability without kinds, strength or relations. It refuses authored relations, relation threshold and kind/edge or relation context. A call value replaces the saved mode.'),
+      flag('--boundary-context TEXT', 'literal text, including empty text', lower(setting('Recognition stage context').default), 'Replaces context for the questions that find spans. A call value replaces the saved stage value. Empty text clears context for this stage.'),
+      flag('--kind-edge-context TEXT', 'literal text, including empty text', lower(setting('Recognition stage context').default), 'Replaces context for the questions that classify and adjust spans. A call value replaces the saved stage value. Empty text clears context for both question kinds.'),
+      flag('--relation-context TEXT', 'literal text, including empty text', lower(setting('Recognition stage context').default), 'Replaces context for relation questions. A call value replaces the saved stage value. Empty text clears context for this stage.'),
+      flag('--examples FILE', 'a readable UTF-8 bracket-text or JSON Lines file', lower(setting('Recognition examples').default), 'Supplies tagged examples to the questions that find spans, without changing context. Bracket text uses [TEXT | KIND]; JSON Lines accepts those strings or structured text and entity spans. This supplies examples, not a measured accuracy claim.'),
+      flag('--examples-field POINTER', lower(setting('Recognition examples pointer').allowed), lower(setting('Recognition examples pointer').default), 'Selects replacement examples from each original JSON or table record. Requires JSON or table framing. A missing member retains shared examples; an empty array clears them; null refuses.'),
+      flag('--seed-spans-field POINTER', lower(setting('Recognition seeds pointer').allowed), lower(setting('Recognition seeds pointer').default), 'Selects unconfirmed spans from each original JSON or table record. Each start/end pair uses zero-based Unicode scalar offsets and excludes its end. A missing member retains shared proposals; an empty array clears them; null refuses. A supplied kind is a hint and cannot force the answer.'),
+      flag('--snippet-pieces N', lower(setting('Recognition snippet pieces').allowed), setting('Recognition snippet pieces').default, 'Controls the tokenizer pieces shown on each side of a marked token, span or request group. Zero shows only the marked stretch. A call value replaces the saved width. Encoded request limits still apply; this does not guarantee model-window fit.'),
       flag('--instructions TEXT', 'nonblank task wording', 'none', 'Defines what the recognition questions ask. It overrides the same saved field.'),
       flag('--entity-definition TEXT', 'a nonblank span definition', 'none', 'Defines the literal entity spans. Any supplied wording or label description selects caller-defined entities.'),
       flag('--kind KIND=DESCRIPTION', 'a kind and what it means, and it may repeat', 'none', 'One kind and what it means. With no kinds, every name has the kind `ENTITY`.'),
@@ -291,7 +299,7 @@ export const FUNCTIONS = [
       flag('--relation-threshold T', CUT_TAKES, setting('Relation threshold').number, 'Keeps relation edges whose probability reaches this cut.'),
       flag('--max-text-bytes N', `${setting('Recognize text limit').allowed}`, `${setting('Recognize text limit').default} bytes`, 'The largest text it takes, in UTF-8 bytes. A longer text exits 2 before any request.'),
     ],
-    shared: SET_FLAGS,
+    shared: [...SET_FLAGS, '--context-field'],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
@@ -1275,7 +1283,7 @@ export const RECIPE_PAGES = [
     "publication": "ready",
     "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/rules-propose-model-confirms",
-    "issue": "sdlc/issues/2026-10-03-draft-function-extract.md",
+    "issue": "sdlc/issues/closed/2026-10-03-draft-function-extract.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": RULES_MEASURED,
@@ -1606,7 +1614,7 @@ export const RECIPE_PAGES = [
     "publication": "ready",
     "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/verify-a-claim",
-    "issue": "sdlc/issues/2026-10-03-draft-function-verify.md",
+    "issue": "sdlc/issues/closed/2026-10-03-draft-function-verify.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [
@@ -1796,7 +1804,7 @@ export const RECIPE_PAGES = [
     "publication": "ready",
     "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/ask-your-cache-with-duckdb",
-    "issue": "sdlc/issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md",
+    "issue": "sdlc/issues/closed/2026-10-05-recipe-ask-your-cache-with-duckdb.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [
