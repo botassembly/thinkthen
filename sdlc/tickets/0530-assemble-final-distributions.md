@@ -73,6 +73,8 @@ Reviews: revision 45c570919b1d928aa71486a37d88d52a2e32d622, accept
 
 Reviews: revision d10f7824f2c03cbf233f8c1f30e0cd54914b1223, accept
 
+Reviews: revision 95aef2cdc74b22c1b9cff16bc3d803eec3064acb, accept
+
 ## Outcome
 
 The release scripts assemble every final registry-format artifact from 0501's inventory. Each artifact installs and runs with its declared dependencies, without a checkout, warm loader state or a manual library path. An unsupported target refuses clearly.
