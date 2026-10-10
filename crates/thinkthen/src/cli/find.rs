@@ -77,37 +77,12 @@ pub(crate) fn run(
         });
     }
     if common.dry_run {
-        let inner = crate::cli::construction::engine(
-            common,
-            environment,
-            Folders::of(common, environment)?,
-            (backend.clone(), profile.clone()),
-            None,
-            false,
-        )?;
-        let native = crate::Engine::from_cli(inner, environment.config().prices());
-        let composition = composition(common)?;
-        let rows = composed(&composition, &units);
-        let admitted = admitted.with_composed_feed("cli-find-plan");
-        let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
-        if let Some(context) = context.as_deref() {
-            controls = controls.context(context);
-        }
-        let (find, summary) = admitted
-            .plan_find(
-                &native,
-                crate::RequestEnvironment {
-                    controls,
-                    feed: Some(crate::RequestFeed::from_records("cli-find-plan", rows)),
-                },
-            )
-            .map_err(Failure::from)?;
         return planned(
-            &find,
-            summary,
-            (&backend, environment.key_variable()),
-            context.is_some(),
+            admitted,
+            (common, environment),
+            (&backend, profile.as_ref(), context.as_deref()),
             (&reading, sources),
+            &units,
             writer,
         );
     }
@@ -230,25 +205,50 @@ fn display(arguments: &FindArguments, common: &Common) -> Result<Display, Failur
 
 /// Print the plan. `target` is the backend and its first key variable.
 fn planned(
-    find: &crate::core::Find,
-    summary: crate::core::PlanSummary,
-    (backend, key_env): (&Backend, &str),
-    context: bool,
+    admitted: crate::AdmittedRequest,
+    (common, environment): (&Common, &Environment),
+    (backend, profile, context): (&Backend, Option<&crate::core::BackendProfile>, Option<&str>),
     (reading, sources): (&Reading, Option<crate::core::Sources>),
+    units: &[Unit],
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    let inner = crate::cli::construction::engine(
+        common,
+        environment,
+        Folders::of(common, environment)?,
+        (backend.clone(), profile.cloned()),
+        None,
+        false,
+    )?;
+    let native = crate::Engine::from_cli(inner, environment.config().prices());
+    let composition = composition(common)?;
+    let rows = composed(&composition, units);
+    let admitted = admitted.with_composed_feed("cli-find-plan");
+    let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
+    if let Some(context) = context {
+        controls = controls.context(context);
+    }
+    let (find, summary) = admitted
+        .plan_find(
+            &native,
+            crate::RequestEnvironment {
+                controls,
+                feed: Some(crate::RequestFeed::from_records("cli-find-plan", rows)),
+            },
+        )
+        .map_err(Failure::from)?;
     let mut document = match context {
-        true => PlanDocument::of_body(
+        Some(_) => PlanDocument::of_body(
             backend,
             summary
                 .first_body()
                 .ok_or(Failure::Defect("a find preview has no request"))?
                 .to_vec(),
         ),
-        false => PlanDocument::of(backend, find.plan()),
+        None => PlanDocument::of(backend, find.plan()),
     }
     .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
-    .key_env(key_env);
+    .key_env(environment.key_variable());
     if summary.first_body() != Some(document.request_body()) {
         return Err(Failure::Defect(
             "the disclosed request changed after preparation",
