@@ -166,6 +166,7 @@ def native_parity(consumer, command):
 
 failures=False
 for lang,main,runtime in (("java","thinkthen.SessionCases",""),("kotlin","SessionCasesKt",str(KOTLIN / "lib/kotlin-stdlib.jar")+":"+str(KOTLIN / "lib/kotlinx-coroutines-core-jvm.jar")),("scala","SessionCases",str(SCALA / "lib/scala.jar"))):
-    failures |= native_parity(lang,java+["-cp",f"{classes}:{classpath}"+(f":{runtime}" if runtime else ""),main])
+    installed_cp = os.pathsep.join(str(jar) for jar in package_jars if jar.name == "thinkthen-" + ("door" if lang == "java" else lang) + ".jar" or jar.name.startswith("thinkthen-natives-"))
+    failures |= native_parity(lang,java+["-cp",f"{classes}:{installed_cp}"+(f":{runtime}" if runtime else ""),main])
 print("Focused shared cases only" if selected else "All required installed shared cases executed",flush=True)
 raise SystemExit(failures)

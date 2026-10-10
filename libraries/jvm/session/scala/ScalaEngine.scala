@@ -1,31 +1,18 @@
 package thinkthen.scala
 import thinkthen.Engine
 import thinkthen.Inputs
-import thinkthen.Values
 import scala.concurrent.{Future, Promise}
 import scala.jdk.CollectionConverters.*
 /** A Scala Future and explicit cancellation over the shared JVM session. */
 final case class Call(result: Future[OwnedCall], cancel: () => Boolean)
 final class ScalaEngine private (private val engine: Engine) extends AutoCloseable {
-  def this(settings: Map[String, Any]) = this(ScalaEngine.native(new Engine(ScalaEngine.javaMap(settings), Engine.Surface.SCALA)))
-  def this() = this(Map.empty[String, Any])
   def this(settings: Inputs.EngineSettings) = this(ScalaEngine.native(new Engine(ScalaEngine.transport(settings), Engine.Surface.SCALA)))
-  private def javaMap[K](value: scala.collection.Map[K, Any]): java.util.Map[K, Any] = ScalaEngine.javaMap(value)
+  def this() = this(new Inputs.EngineSettings())
   private def run(native: java.util.concurrent.CompletableFuture[Engine.OwnedCall]): Call = {
     val result = Promise[OwnedCall]()
     native.whenComplete((value, error) => { try { if (error == null) result.trySuccess(OwnedCall.read(value)) else result.tryFailure(ScalaEngine.failure(error)) } catch { case error: Throwable => result.tryFailure(ScalaEngine.failure(error)) }; () })
     Call(result.future, () => native.cancel(false))
   }
-  def decide(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.decide(javaMap(question), javaMap(input), javaMap(options)))
-  def choose(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.choose(javaMap(question), javaMap(input), javaMap(options)))
-  def tag(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.tag(javaMap(question), javaMap(input), javaMap(options)))
-  def score(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.score(javaMap(question), javaMap(input), javaMap(options)))
-  def filter(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.filter(javaMap(question), javaMap(input), javaMap(options)))
-  def rank(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.rank(javaMap(question), javaMap(input), javaMap(options)))
-  def find(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.find(javaMap(question), javaMap(input), javaMap(options)))
-  def annotate(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.annotate(javaMap(question), javaMap(input), javaMap(options)))
-  def recognize(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.recognize(javaMap(question), javaMap(input), javaMap(options)))
-  def relate(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.relate(javaMap(question), javaMap(input), javaMap(options)))
   def decide(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call = decide(question, input, null)
   def decide(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call = run(engine.decide(ScalaEngine.transport(question), ScalaEngine.transport(input), if (options == null) null else ScalaEngine.transport(options)))
   def choose(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call = choose(question, input, null)
@@ -68,7 +55,13 @@ object ScalaEngine {
     case native: thinkthen.NativeFailure => new NativeFailure(native)
     case other => other
   }
-  private[scala] def transport(value: Values.Value): java.util.Map[String, Any] = javaValue(value.json()).asInstanceOf[java.util.Map[String, Any]]
+  private[scala] def transport(value: Inputs.EngineSettings): Inputs.EngineSettings = Inputs.EngineSettings.fromJson(javaValue(value.json()))
+  private[scala] def transport(value: Inputs.Request): Inputs.Request = Inputs.Request.fromJson(javaValue(value.json()))
+  private[scala] def transport(value: Inputs.RequestQuestion): Inputs.RequestQuestion = Inputs.RequestQuestion.fromJson(javaValue(value.json()))
+  private[scala] def transport(value: Inputs.RequestInput): Inputs.RequestInput = Inputs.RequestInput.fromJson(javaValue(value.json()))
+  private[scala] def transport(value: Inputs.RequestOptions): Inputs.RequestOptions = Inputs.RequestOptions.fromJson(javaValue(value.json()))
+  private[scala] def transport(value: Inputs.RequestSessionDescriptor): Inputs.RequestSessionDescriptor = Inputs.RequestSessionDescriptor.fromJson(javaValue(value.json()))
+  private[scala] def transport(value: Inputs.RequestReaderFailure): Inputs.RequestReaderFailure = Inputs.RequestReaderFailure.fromJson(javaValue(value.json()))
   private def javaMap[K](value: scala.collection.Map[K, Any]): java.util.Map[K, Any] =
     value.iterator.map { case (key, item) => key -> javaValue(item) }.toMap.asJava
   private def javaValue(value: Any): Any = value match {

@@ -19,9 +19,8 @@ public final class Engine implements AutoCloseable {
     public OwnedSession startSession(Inputs.Request request) { return startSession(Values.object(request.json())); }
     public Results.Plan plan(Inputs.Request request) { return plan(Values.object(request.json())); }
     public CompletableFuture<OwnedCall> execute(Inputs.Request request) { return execute(Values.object(request.json())); }
-    public Engine(Map<String,?> settings) { this(settings, Surface.JAVA); }
     /** Shared transport construction for the Kotlin and Scala facade packages. */
-    public Engine(Map<String,?> settings, Surface surface) {
+    private Engine(Map<String,?> settings, Surface surface) {
         this.surface = Objects.requireNonNull(surface);
         try (Arena arguments = Arena.ofConfined()) {
             byte[] bytes = NativeSession.utf8(Json.write(settings));
@@ -43,7 +42,7 @@ public final class Engine implements AutoCloseable {
             facts.equals(MemorySegment.NULL) ? null : Json.parse(facts.reinterpret(Long.MAX_VALUE).getString(0)));
     }
     private void live() { if (pointer.equals(MemorySegment.NULL)) throw new IllegalStateException("Engine is closed"); }
-    public synchronized OwnedSession startSession(Map<String,?> request) {
+    private synchronized OwnedSession startSession(Map<String,?> request) {
         live();
         try (Arena arguments = Arena.ofConfined()) {
             var bytes = NativeSession.bytes(arguments, request);
@@ -54,7 +53,7 @@ public final class Engine implements AutoCloseable {
             return new OwnedSession(output.get(ValueLayout.ADDRESS, 0));
         }
     }
-    public synchronized Results.Plan plan(Map<String,?> request) {
+    private synchronized Results.Plan plan(Map<String,?> request) {
         live();
         try (Arena arguments = Arena.ofConfined()) {
             var bytes = NativeSession.bytes(arguments, request);
@@ -77,7 +76,7 @@ public final class Engine implements AutoCloseable {
         public Results.CallError failure() { return call.terminal().failure().value(); }
     }
     /** Future cancellation stops the native session and releases its owner promptly. */
-    public CompletableFuture<OwnedCall> execute(Map<String,?> request) {
+    private CompletableFuture<OwnedCall> execute(Map<String,?> request) {
         var result = new CompletableFuture<OwnedCall>();
         final OwnedSession session;
         try {
@@ -138,16 +137,6 @@ public final class Engine implements AutoCloseable {
         if (options != null) call.put("options", options);
         return execute(Map.of("schema", RequestVersion.VALUE, "call", call));
     }
-    public CompletableFuture<OwnedCall> decide(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("decide", question, input, options); }
-    public CompletableFuture<OwnedCall> choose(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("choose", question, input, options); }
-    public CompletableFuture<OwnedCall> tag(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("tag", question, input, options); }
-    public CompletableFuture<OwnedCall> score(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("score", question, input, options); }
-    public CompletableFuture<OwnedCall> filter(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("filter", question, input, options); }
-    public CompletableFuture<OwnedCall> rank(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("rank", question, input, options); }
-    public CompletableFuture<OwnedCall> find(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("find", question, input, options); }
-    public CompletableFuture<OwnedCall> annotate(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("annotate", question, input, options); }
-    public CompletableFuture<OwnedCall> recognize(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("recognize", question, input, options); }
-    public CompletableFuture<OwnedCall> relate(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("relate", question, input, options); }
     /** Observe persistence without waiting for the usage writer. */
     public synchronized UsagePersistence usagePersistence() {
         live(); return NativeSession.usage(pointer, "thinkthen_engine_usage_persistence_v1");

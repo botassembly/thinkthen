@@ -1,9 +1,8 @@
 {
   "directory": [
-    "kotlin",
     "session",
     "tests"
   ],
   "extension": ".kt",
-  "max": 1852
+  "max": 1658
 }

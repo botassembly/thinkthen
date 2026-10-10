@@ -1,5 +1,7 @@
 {
-  "directory": ".",
+  "directory": [
+    "."
+  ],
   "extension": ".py",
-  "max": 1554
+  "max": 664
 }
