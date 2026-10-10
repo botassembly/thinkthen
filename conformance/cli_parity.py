@@ -18,6 +18,7 @@ import sys
 import tempfile
 
 import c_parity
+from children import child_env
 import parity
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -363,9 +364,7 @@ def run_case(binary, row, value, home):
             signal_home.mkdir()
             run_case(binary, row, {**value, "cli_signal":signum, "items":["first evidence", "queued evidence"]}, signal_home)
         return
-    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
-           "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
-           "XDG_STATE_HOME": str(home / "state"), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
+    env = child_env(home=home, LANG="C.UTF-8", LC_ALL="C.UTF-8")
     c_parity.prepare(home, value)
     steps = metadata_steps(value)
     if row.get("cli_boundary") == "image-record-admission":

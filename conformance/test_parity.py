@@ -16,6 +16,21 @@ from conformance import parity
 from conformance import c_images
 
 
+class NativeFixtureEnvironment(unittest.TestCase):
+    def test_compiler_child_owns_folders_and_preserves_explicit_settings(self):
+        sys.path.append(str(parity.ROOT / 'libraries/python/tests'))
+        sys.path.insert(0, str(parity.ROOT / 'conformance'))
+        import parity as native_parity
+        import native_fixture
+        launch = subprocess.run
+        def compiler(args, **kwargs):
+            probe = "import os; assert os.environ.get('FAKE_SERVICE_API_KEY') is None; assert os.environ['APPDATA'] == os.environ['XDG_CONFIG_HOME']; assert os.environ['LOCALAPPDATA'] == os.environ['HOME'] + '/local'; assert os.environ['THINKTHEN_API_KEY'] == 'fixture-only'; assert os.environ['CARGO_BUILD_JOBS'] == '2'"
+            return launch([sys.executable, '-c', probe], **kwargs)
+        with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2'}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
+            native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
+                               extra_env={'THINKTHEN_API_KEY': 'fixture-only'})
+
+
 class ImageRequestArrivals(unittest.TestCase):
     def setUp(self):
         corpus = json.loads((c_images.ROOT / 'conformance/cases.json').read_text())

@@ -12,6 +12,8 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "conformance/children"))
+from children import child_env
 FUNCTIONS = ['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']
 ERRORS = {'usage': 1, 'backend': 2, 'local': 4, 'cancelled': 5, 'deadline': 3, 'defect': 6}
 
@@ -557,7 +559,7 @@ def main(*, consumer='c', header=None, library=None, compile_consumer=None,
                 try:
                     with tempfile.TemporaryDirectory(prefix='case-', dir=scratch) as owned:
                         home = Path(owned)
-                        child = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(home), 'XDG_CONFIG_HOME': str(home / 'config'), 'XDG_CACHE_HOME': str(home / 'cache'), 'XDG_STATE_HOME': str(home / 'state'), 'ASAN_OPTIONS': 'detect_leaks=1'}
+                        child = child_env(home=home, ASAN_OPTIONS='detect_leaks=1')
                         backend = Backend(ROOT / 'target/debug/conformance-backend', child)
                         try:
                             value = ready[at]
