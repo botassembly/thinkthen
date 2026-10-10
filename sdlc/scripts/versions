@@ -87,7 +87,6 @@ PLACES = [
     *[(p, r'<PackageReference Include="Botassembly\.ThinkThen" Version="([^"]+)"', WHOLE) for p in
       ("libraries/csharp/tests/Installed.csproj", "libraries/csharp/tests/Smoke.csproj")],
     *[(p, rf'(?m)^  {name}:\n(?:    .*\n)*?    version: "([^"]+)"$', WHOLE) for p, name in (
-        ("libraries/dart/flutter/pubspec.lock", "thinkthen_dart"),
         ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_dart"),
         ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_flutter"),
         ("libraries/dart/checks/consumers/alpha/pubspec.lock", "thinkthen_dart"),

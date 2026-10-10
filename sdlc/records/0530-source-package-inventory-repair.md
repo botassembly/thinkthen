@@ -29,3 +29,13 @@ At starting revision `73af2637d581be49248ed8e4531e8d22682b9f33`, the managed pac
 The existing managed pair self-test retains its package and provenance refusals. Its successful assembly and verification use the real POM with dependency coordinates. Three added assembly cases reject duplicate, missing and wrong project group identifiers even when a dependency supplies the expected identifier. This change adds no checker, receipt mechanism, native build or release action. Neither source ceiling changes; the scripts remain below the existing file size limit.
 
 A fresh read-only reviewer accepted `ea740b17b7853f17403a12a728b96c2316fe2fdc` and reproduced the existing managed self-test, including the three dependency boundary cases. Integration preserves the independently reviewed root Rust ceiling of 183258. Reading a document's descendants does not identify its owner: project and dependency coordinates require their own semantic parents.
+
+## Remove the obsolete Flutter library lock from version inputs
+
+At starting revision `377e3fe9aba186aff78bc5ded3f2030a517d83ff`, `versions --self-test` raised `FileNotFoundError` while copying `libraries/dart/flutter/pubspec.lock`. Ticket 0522 had removed that library lock as part of native asset packaging. The version input inventory still required it, so the same stale entry also made the real version check reject the checkout.
+
+`sdlc/scripts/versions` removes that single obsolete entry. The fixture continues to copy every required version input. The three existing Dart and Flutter manifests, the example's two package lock entries and both existing standalone consumer lock entries remain required. All existing negative cases remain unchanged, including the Flutter consumer lock mismatch and refused writes.
+
+The existing self-test passed all 29 cases. Its planted C header parse failure printed the expected generator diagnostic. The real read-only version check passed with `73 places read 0.2.0`. Offline policy passed for 268 resolved packages; its size warnings concern unchanged files. The existing external privacy list found no matches in tracked paths or files, and whitespace checks passed. Handwritten Python source removes one line and adds none, reducing nonblank source in `versions` from 389 to 388. No source ceiling changes. This repair uses no native or release build.
+
+Fresh read-only review accepts `eabbfeb0f4f9e5191ebf872cbfac00f33a8b6c04`. The reviewer reproduced all 29 self-tests and the 73-place version check and confirmed that the three manifests, four consumer lock entries and meaningful refusal cases remain. The repair removes a stale library-lock requirement rather than weakening consumer version coverage.
