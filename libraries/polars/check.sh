@@ -8,6 +8,9 @@ cd -- "$(dirname -- "$0")/../.."
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "polars: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
+if [ "$profile" = routine ]; then
+    export THINKTHEN_CONFORMANCE_IDS="${THINKTHEN_CONFORMANCE_IDS:-$PWD/conformance/routine-ids.txt}"
+fi
 
 # The probe: every crate the root lock names must already be in cargo's cache.
 if ! cargo fetch --locked --offline >/dev/null 2>&1; then
@@ -42,10 +45,12 @@ root,source,installed=map(Path,sys.argv[1:])
 consumer=installed/'consumer'
 shutil.copytree(root/'libraries/polars/consumer',consumer,ignore=shutil.ignore_patterns('target'))
 manifest=consumer/'Cargo.toml'
-shutil.copytree(root/'crates/thinkthen-host',installed/'thinkthen-host',ignore=shutil.ignore_patterns('target'))
-host=installed/'thinkthen-host/Cargo.toml'
-host.write_text(host.read_text().replace('../thinkthen\"',str(source)+'\"'))
-manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen-host',str(installed/'thinkthen-host')).replace('../../../crates/thinkthen',str(source)))
+shared=installed/'rust/consumer/src'
+shared.mkdir(parents=True)
+shutil.copyfile(root/'libraries/rust/consumer/src/fixture.rs',shared/'fixture.rs')
+manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(source)))
+main=consumer/'src/main.rs'
+main.write_text(main.read_text().replace('../../../rust/consumer/src/fixture.rs',str(shared/'fixture.rs')))
 RUSTFRAME
     consumer="$installed/consumer/Cargo.toml"
 else

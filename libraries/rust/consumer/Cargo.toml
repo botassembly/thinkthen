@@ -1,14 +1,14 @@
 [workspace]
 
 [package]
-name = "thinkthen-polars-consumer"
+name = "thinkthen-rust-consumer"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.95.0"
 publish = false
 
 [dependencies]
-thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["polars", "bundled-sqlite"] }
+thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.151", features = ["raw_value"] }
 

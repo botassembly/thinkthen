@@ -1,13 +1,6 @@
 //! Explicit immutable inputs shared by native and foreign image doors.
 
 mod calls;
-mod defaults;
-mod many;
-pub use defaults::{
-    choose_input, choose_input_with, decide_input, decide_input_with, details_input,
-    details_input_with, score_input, score_input_with,
-};
-
 use serde::Serialize;
 use std::sync::Arc;
 

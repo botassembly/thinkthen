@@ -369,12 +369,12 @@ fn a_parents_concurrent_question_never_waits_for_a_forked_child() {
 }
 
 #[test]
-fn a_default_engine_from_the_parent_answers_in_the_child() {
+fn an_environment_engine_from_the_parent_answers_in_the_child() {
     let backend = Backend::start().expect("backend");
     let base = format!("{}/generic/v1", backend.origin());
     let output = run::output(
         Command::new(std::env::current_exe().expect("this test binary"))
-            .args(["--exact", "--ignored", "default_engine_child"])
+            .args(["--exact", "--ignored", "environment_engine_child"])
             .env_clear()
             .env(CHILD, "1")
             .env("THINKTHEN_BASE_URL", &base)
@@ -397,14 +397,15 @@ fn a_default_engine_from_the_parent_answers_in_the_child() {
 /// The process half of the proof above. It does nothing unless named.
 #[test]
 #[ignore = "the process half; its parent runs it with --ignored"]
-fn default_engine_child() {
+fn environment_engine_child() {
     if std::env::var_os(CHILD).is_none() {
         return;
     }
+    let engine = Engine::from_env().expect("environment engine");
     assert_eq!(
-        answer(thinkthen::decide(&decide(), "parent")),
+        answer(engine.decide(&decide(), "parent")),
         Some(Answer::Yes)
     );
-    in_child(|| answer(thinkthen::decide(&decide(), "child")) == Some(Answer::Yes))
+    in_child(|| answer(engine.decide(&decide(), "child")) == Some(Answer::Yes))
         .expect("the process engine answered in the child");
 }

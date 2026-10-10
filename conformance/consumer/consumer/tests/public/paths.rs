@@ -1,6 +1,6 @@
-//! The convenience path against the explicit engine, each failure cause, and the deadline.
+//! Environment settings against the explicit engine, each failure cause, and the deadline.
 //!
-//! The convenience functions build their engine from the environment, so that
+//! The environment-built engines build from the environment, so that
 //! half runs in a child process with a cleared environment, a loopback
 //! address, and a fake key. No test changes its own environment.
 
@@ -29,12 +29,12 @@ fn folder(name: &str) -> PathBuf {
 }
 
 #[test]
-fn the_convenience_path_equals_the_explicit_engine() {
+fn the_environment_engine_equals_the_explicit_builder() {
     let backend = Backend::start().expect("backend");
     let base = format!("{}/generic/v1", backend.origin());
     let output = crate::run::output(
         Command::new(std::env::current_exe().expect("this test binary"))
-            .args(["--exact", "--ignored", "paths::convenience_child"])
+            .args(["--exact", "--ignored", "paths::environment_engine_child"])
             .args(["--test-threads", "1"])
             .env_clear()
             .env(CHILD, &base)
@@ -60,7 +60,7 @@ fn the_convenience_path_equals_the_explicit_engine() {
     clippy::too_many_lines,
     reason = "one child compares both engine paths and their cached second round"
 )]
-fn convenience_child() {
+fn environment_engine_child() {
     let Ok(base) = std::env::var(CHILD) else {
         return;
     };
@@ -70,6 +70,7 @@ fn convenience_child() {
         .and_then(|builder| builder.cache_at(folder("explicit-cache")))
         .and_then(thinkthen::EngineBuilder::build)
         .expect("the explicit engine");
+    let environment = Engine::from_env().expect("environment engine");
     let (decide, team, set) = questions();
     let score = Question::score("How severe is this?")
         .and_then(|builder| builder.level("low", None))
@@ -91,7 +92,8 @@ fn convenience_child() {
             Some(thinkthen::Answer::Yes)
         );
         assert_eq!(
-            thinkthen::decide(&decide, "a note")
+            environment
+                .decide(&decide, "a note")
                 .ok()
                 .map(thinkthen::Call::into_value),
             Some(thinkthen::Answer::Yes)
@@ -100,8 +102,9 @@ fn convenience_child() {
             .details(&score, "a note")
             .expect("the engine details")
             .into_value();
-        let other = thinkthen::details(&score, "a note")
-            .expect("the convenience details")
+        let other = environment
+            .details(&score, "a note")
+            .expect("the environment details")
             .into_value();
         assert_eq!(one.to_json(), other.to_json());
         assert_eq!(one.to_scalar_json(), other.to_scalar_json());
@@ -116,41 +119,43 @@ fn convenience_child() {
                 .choose(&team, "a note")
                 .expect("the engine chooses")
                 .into_value(),
-            thinkthen::choose(&team, "a note")
-                .expect("the convenience chooses")
+            environment
+                .choose(&team, "a note")
+                .expect("the environment chooses")
                 .into_value()
         );
         assert_eq!(
             rows(explicit.filter(&decide, records), |kept| kept),
-            rows(thinkthen::filter(&decide, records), |kept| kept)
+            rows(environment.filter(&decide, records), |kept| kept)
         );
         let parts = thinkthen::Row::into_parts;
         assert_eq!(
             rows(explicit.decide_many(&decide, records), parts),
-            rows(thinkthen::decide_many(&decide, records), parts)
+            rows(environment.decide_many(&decide, records), parts)
         );
         assert_eq!(
             explicit
                 .rank(&rank, records)
                 .expect("the engine ranks")
                 .into_value(),
-            thinkthen::rank(&rank, records)
+            environment
+                .rank(&rank, records)
                 .expect("the convenience ranks")
                 .into_value()
         );
         let values = |record: thinkthen::AnnotatedRecord<&str>| record.values().to_vec();
         assert_eq!(
             rows(explicit.annotate(&set, records), values),
-            rows(thinkthen::annotate(&set, records), values)
+            rows(environment.annotate(&set, records), values)
         );
         for (one, other) in [
             (
                 explicit.decide(&decide, "  "),
-                thinkthen::decide(&decide, "  "),
+                environment.decide(&decide, "  "),
             ),
             (
                 explicit.decide_with(&decide, "a note", CallOptions::new().cancel(&token)),
-                thinkthen::decide_with(&decide, "a note", CallOptions::new().cancel(&token)),
+                environment.decide_with(&decide, "a note", CallOptions::new().cancel(&token)),
             ),
         ] {
             let (one, other) = (one.expect_err("refused"), other.expect_err("refused"));
@@ -160,10 +165,7 @@ fn convenience_child() {
             );
         }
     }
-    assert_eq!(
-        explicit.usage(),
-        thinkthen::usage().expect("the process engine")
-    );
+    assert_eq!(explicit.usage(), environment.usage());
     assert_eq!(
         explicit.usage().requests_sent(),
         6,
@@ -172,11 +174,6 @@ fn convenience_child() {
     assert!(
         explicit.usage().cache_answers() > 0,
         "the second round came from the cache"
-    );
-    let (first, again) = (thinkthen::default_engine(), thinkthen::default_engine());
-    assert!(
-        std::ptr::eq(first.expect("built"), again.expect("built")),
-        "one lazy engine"
     );
 }
 

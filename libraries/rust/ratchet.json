@@ -2,8 +2,9 @@
   "directory": [
     "src",
     "examples",
-    "tests"
+    "tests",
+    "consumer/src"
   ],
   "extension": ".rs",
-  "max": 409
+  "max": 730
 }

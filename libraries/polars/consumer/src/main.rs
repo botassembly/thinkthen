@@ -3,36 +3,14 @@
     clippy::print_stdout,
     reason = "the conformance child writes its actual native projection"
 )]
-#[allow(
-    dead_code,
-    reason = "this Rust consumer calls concrete engine APIs; the host bridge is exercised by SDK consumers"
-)]
-use thinkthen_host::complete;
-mod native_settings;
-use complete::inputs::Original;
-use complete::questions::Asked;
-use serde::Deserialize;
+#[path = "../../../rust/consumer/src/fixture.rs"]
+mod fixture;
+use fixture::{Fixture, Original};
 use std::io::Write;
+use thinkthen::RequestDefinition as Asked;
 use thinkthen::polars::prelude::{NamedFrom, Series};
 use thinkthen::{Call, CallOptions, CancelToken, CompleteRecord, Error, LoadedQuestion};
 
-#[derive(Deserialize)]
-struct Fixture {
-    verb: String,
-    question: Box<serde_json::value::RawValue>,
-    input: Box<serde_json::value::RawValue>,
-    settings: serde_json::Map<String, serde_json::Value>,
-    #[serde(default)]
-    cancel: bool,
-    #[serde(default)]
-    held_cancel: bool,
-    #[serde(default)]
-    incremental: bool,
-    #[serde(default)]
-    batch_probe: bool,
-    deadline_ms: Option<i64>,
-    shared_context: Option<String>,
-}
 fn records<R>(
     call: Call<Vec<CompleteRecord<Original, R>>>,
     check: impl Fn(&R),
@@ -43,8 +21,7 @@ where
     for row in call.value() {
         check(row.result());
     }
-    let inputs = call.value().iter().map(|r| r.original().view()).collect();
-    complete::rows(call, inputs)
+    fixture::written(call)
 }
 fn streamed<R>(
     mut batch: thinkthen::Batch<'_, CompleteRecord<Original, R>>,
@@ -58,11 +35,11 @@ where
         println!("ready");
         std::io::stdout()
             .flush()
-            .map_err(|_| complete::usage("fixture output failed"))?;
+            .map_err(|_| fixture::usage("fixture output failed"))?;
         let mut ready = String::new();
         std::io::stdin()
             .read_line(&mut ready)
-            .map_err(|_| complete::usage("fixture input failed"))?;
+            .map_err(|_| fixture::usage("fixture input failed"))?;
     }
     let mut results = Vec::new();
     let mut failure = None;
@@ -79,27 +56,13 @@ where
         }
     }
     let facts = batch.facts().and_then(thinkthen::Facts::complete);
-    #[derive(serde::Serialize)]
-    struct Packet<'a, T> {
-        results: &'a T,
-        ordinals: Vec<Option<usize>>,
-        inputs: Vec<complete::inputs::InputView>,
-        facts: Option<thinkthen::CompleteFacts<'a>>,
-    }
-    let packet = Packet {
-        ordinals: results.iter().map(|r| Some(r.ordinal())).collect(),
-        inputs: results.iter().map(|r| r.original().view()).collect(),
-        results: &results,
-        facts,
-    };
-    let prefix = serde_json::to_string(&packet)
-        .map_err(|_| complete::usage("invalid native fixture result"))?;
+    let prefix = fixture::packet(&results, facts)?;
     if let Some(error) = failure {
-        let snapshot = complete::stream::failure(&error)?;
+        let snapshot = fixture::failure(&error)?;
         return Ok(format!(
             "{{\"error\":{snapshot},\"facts\":{},\"completed\":{prefix}}}",
             serde_json::to_string(&error.facts().and_then(thinkthen::Facts::complete))
-                .map_err(|_| complete::usage("invalid native facts"))?
+                .map_err(|_| fixture::usage("invalid native facts"))?
         ));
     }
     Ok(prefix)
@@ -109,7 +72,7 @@ where
     reason = "the consumer compiles all ten concrete native APIs and their known fields in one dispatch"
 )]
 fn run(f: Fixture) -> Result<String, Error> {
-    let engine = native_settings::engine(f.settings)?;
+    let engine = fixture::engine(f.settings.clone())?;
     let token = CancelToken::new();
     if f.cancel {
         token.cancel();
@@ -127,50 +90,28 @@ fn run(f: Fixture) -> Result<String, Error> {
     } else {
         options
     };
-    // Caller fixtures are JSON. Every known response is reached through its concrete Rust type.
-    #[derive(serde::Serialize)]
-    struct Written<'a> {
-        verb: &'a str,
-        question: &'a serde_json::value::RawValue,
-        input: &'a serde_json::value::RawValue,
-        attempts: bool,
-        context: Option<&'a str>,
-    }
-    let written = Written {
-        verb: &f.verb,
-        question: &f.question,
-        input: &f.input,
-        attempts: true,
-        context: f.shared_context.as_deref(),
-    };
-    let text = serde_json::to_string(&written).map_err(|_| complete::usage("invalid fixture"))?;
-    let request = complete::parse(&text)?;
+    let request = f.request()?;
+    let admitted = fixture::admit(request.clone())?;
+    let asked = admitted.resolve_question()?;
     let options = if let Some(context) = f.shared_context.as_deref() {
         options.context(context)
     } else {
         options
     };
-    let asked = complete::questions::load(&request.verb, request.question)?;
-    let inputs = complete::inputs::prepare(
-        (!f.incremental).then_some(&engine),
-        request.input,
-        asked.reading(),
-        request.verb == "annotate",
-    )?
-    .collect::<Result<Vec<_>, _>>()?;
+    let inputs = fixture::inputs(&admitted)?.collect::<Result<Vec<_>, _>>()?;
     let column = Series::new(
         "original".into(),
         inputs
             .iter()
             .map(|i| {
                 serde_json::to_string(&i.original)
-                    .map_err(|_| complete::usage("invalid original frame value"))
+                    .map_err(|_| fixture::usage("invalid original frame value"))
             })
             .collect::<Result<Vec<_>, Error>>()?,
     );
     let inputs = inputs.into_iter().map(Some).collect();
     if f.incremental {
-        return match (request.verb.as_str(), asked) {
+        return match (f.verb.as_str(), asked) {
             ("decide", Asked::Atomic(LoadedQuestion::Question(q))) => streamed(
                 engine
                     .decide_input_column_batch(&q, &column, inputs, options)?
@@ -198,7 +139,7 @@ fn run(f: Fixture) -> Result<String, Error> {
                 },
                 f.batch_probe,
             ),
-            ("choose", Asked::Dynamic(q)) => streamed(
+            ("choose", Asked::DynamicChoose(q)) => streamed(
                 engine
                     .choose_dynamic_input_column_batch(&q, &column, inputs, options)?
                     .0,
@@ -234,7 +175,7 @@ fn run(f: Fixture) -> Result<String, Error> {
                 },
                 f.batch_probe,
             ),
-            ("annotate", Asked::Set(q)) => streamed(
+            ("annotate", Asked::Annotate(q)) => streamed(
                 engine
                     .annotate_input_column_batch(&q, &column, inputs, options)?
                     .0,
@@ -243,12 +184,12 @@ fn run(f: Fixture) -> Result<String, Error> {
                 },
                 f.batch_probe,
             ),
-            _ => Err(complete::usage(
+            _ => Err(fixture::usage(
                 "batch question does not match the named function",
             )),
         };
     }
-    let result = match (request.verb.as_str(), asked) {
+    let result = match (f.verb.as_str(), asked) {
         ("decide", Asked::Atomic(LoadedQuestion::Question(q))) => records(
             engine
                 .decide_input_column_complete(&q, &column, inputs, options)?
@@ -275,7 +216,7 @@ fn run(f: Fixture) -> Result<String, Error> {
                 let _ = r.question();
             },
         ),
-        ("choose", Asked::Dynamic(q)) => records(
+        ("choose", Asked::DynamicChoose(q)) => records(
             engine
                 .choose_dynamic_input_column_complete(&q, &column, inputs, options)?
                 .0,
@@ -317,7 +258,7 @@ fn run(f: Fixture) -> Result<String, Error> {
                 let _ = r.probabilities();
             },
         ),
-        ("rank", Asked::SetRank(q)) => records(
+        ("rank", Asked::RankSet(q)) => records(
             engine
                 .rank_set_input_column_complete(&q, &column, inputs, options)?
                 .0,
@@ -333,7 +274,7 @@ fn run(f: Fixture) -> Result<String, Error> {
                 }
             },
         ),
-        ("annotate", Asked::Set(q)) => records(
+        ("annotate", Asked::Annotate(q)) => records(
             engine
                 .annotate_input_column_complete(&q, &column, inputs, options)?
                 .0,
@@ -344,21 +285,21 @@ fn run(f: Fixture) -> Result<String, Error> {
                 }
             },
         ),
-        ("find", Asked::Find(q, _)) => {
-            let views = inputs.iter().flatten().map(|i| i.original.view()).collect();
+        ("find", Asked::Find(q)) => {
+            let question = if f.options.none {
+                q.question().clone().offering_none()?
+            } else {
+                q.question().clone()
+            };
             let call = engine
-                .find_input_column_complete(&q, &column, inputs, options)?
+                .find_input_column_complete(&question, &column, inputs, options)?
                 .0;
             let _: &thinkthen::AnswerId = call.value().answer_id();
-            let at = match call.value().selection() {
-                thinkthen::FindSelection::None => None,
-                thinkthen::FindSelection::Unit(at) => Some(at),
-            };
-            complete::written(call, vec![at], views)
+            fixture::written(call)
         }
-        ("recognize", Asked::Recognize(q, _)) => records(
+        ("recognize", Asked::Recognize(q)) => records(
             engine
-                .recognize_input_column_complete(&q, &column, inputs, options)?
+                .recognize_input_column_complete(q.question(), &column, inputs, options)?
                 .0,
             |r| {
                 for entity in r.value().entities() {
@@ -368,7 +309,6 @@ fn run(f: Fixture) -> Result<String, Error> {
             },
         ),
         ("relate", Asked::Relate(q)) => {
-            let views = inputs.iter().flatten().map(|i| i.original.view()).collect();
             let call = engine
                 .relate_input_column_complete(&q, &column, inputs, options)?
                 .0;
@@ -377,12 +317,10 @@ fn run(f: Fixture) -> Result<String, Error> {
                 let _ = member.target();
                 let _ = member.probabilities();
             }
-            complete::written(call, vec![None], views)
+            fixture::written(call)
         }
         _ => {
-            return Err(complete::usage(
-                "question does not match the named function",
-            ));
+            return Err(fixture::usage("question does not match the named function"));
         }
     }?;
     let _: Option<&thinkthen::CallId> = result.1.call_id();
@@ -396,7 +334,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match run(fixture) {
         Ok(packet) => println!("{packet}"),
         Err(error) => {
-            let snapshot = complete::stream::failure(&error)?;
+            let snapshot = fixture::failure(&error)?;
             let facts = error.facts().and_then(thinkthen::Facts::complete);
             println!(
                 "{{\"error\":{snapshot},\"facts\":{}}}",
