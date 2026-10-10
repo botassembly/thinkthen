@@ -90,6 +90,33 @@ fn all_ten_complete_calls_expose_actual_values_identities_attempts_and_owned_vie
     assert_eq!(backend.count(), 1, "none retains one actual find request");
 }
 #[test]
+fn complete_relation_counts_source_occurrences_and_stops_before_the_unread_suffix() {
+    let backend = Backend::start().expect("loopback");
+    let path = super::scratch("relate-count").join("names.txt");
+    for count in [0, 255, 256] {
+        let mut bytes = "Ada\n".repeat(count).into_bytes();
+        if count != 255 {
+            bytes.push(0xff);
+        }
+        std::fs::write(&path, bytes).unwrap();
+        let count = count.to_string();
+        let output = run_with(
+            &compile(&crate_dir().join("tests/c/complete_calls.c")),
+            &format!("{}/generic/v1", backend.origin()),
+            b"",
+            &[
+                ("TYPED_SOURCE", path.as_path()),
+                ("TYPED_RELATE_BOUND", std::path::Path::new(&count)),
+            ],
+        );
+        assert_eq!(
+            (output.status.code(), text(&output.stderr)),
+            (Some(0), String::new())
+        );
+    }
+    assert_eq!(backend.count(), 0);
+}
+#[test]
 fn complete_failure_snapshots_keep_actual_stops_and_final_joined_facts() {
     for (code, arm, sends) in [
         (1, "generic", 0),

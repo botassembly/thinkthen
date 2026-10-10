@@ -142,6 +142,37 @@ fn source_inventory_survives_rejected_edges_and_zero_relation_questions() {
     }
 }
 #[test]
+fn source_inventory_counts_occurrences_before_deduplication_and_leaves_the_refused_tail_unread() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
+    let engine = engine(&listener);
+    let call = engine
+        .relate_records_complete_with(
+            &ask(),
+            (1..=255).map(|at| item("Ada", at, "source.jsonl", "null")),
+            CallOptions::new(),
+        )
+        .unwrap();
+    assert_eq!(call.value().original().len(), 255);
+    assert_eq!(call.value().result().input_sources().unwrap().count(), 255);
+    let pulls = AtomicUsize::new(0);
+    let rows = std::iter::from_fn(|| {
+        let at = pulls.fetch_add(1, Ordering::Relaxed) + 1;
+        assert!(at <= 256, "refusal must leave the suffix unread");
+        Some(Ok(item("Ada", at, "source.jsonl", "null")))
+    });
+    let error = engine
+        .try_relate_records_complete_with(&ask(), rows, CallOptions::new())
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.detail().message(),
+        "source relate takes at most 255 source records"
+    );
+    assert!(error.facts().is_none());
+    assert_eq!(pulls.load(Ordering::Relaxed), 256);
+    assert_eq!(listener.count(), 0);
+}
+#[test]
 fn source_relations_keep_nonserializable_nonclone_originals_and_refuse_mixed_sources_before_sending()
  {
     struct Original {

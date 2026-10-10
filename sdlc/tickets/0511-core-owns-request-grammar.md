@@ -66,6 +66,7 @@ The first slice adds these public Request-edge methods for the separate SQL crat
 
 ```text
 struct ImageAdmission
+fn Relate::admit_record_count(usize) -> Result<(), Error>
 fn ImageAdmission::new(usize) -> Result<ImageAdmission, Error>
 fn ImageAdmission::push(&mut self, usize) -> Result<(), Error>
 fn ImageInput::admit_length(usize) -> Result<(), Error>

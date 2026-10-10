@@ -104,7 +104,9 @@ where
     let records = records.into_iter();
     let (lower, upper) = records.size_hint();
     // Eager feeds expose their finite extent; lazy feeds still stop at the refusal boundary.
-    let limit = upper.filter(|upper| *upper == lower).unwrap_or(256);
+    let limit = upper
+        .filter(|upper| *upper == lower)
+        .unwrap_or(crate::core::RelateSpec::MAX_ENTITIES + 1);
     let mut records = records.take(limit).enumerate();
     let mut count = 0;
     loop {
@@ -119,14 +121,10 @@ where
         let (original, input, pair) = row?;
         check(at)?;
         count = at + 1;
-        if count > 255
-            && matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some())
-        {
-            return Err(Error::usage(
-                "source relate takes at most 255 source records",
-            ));
+        if matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some()) {
+            Relate::admit_record_count(count)?;
         }
-        if count <= 256 {
+        if count <= crate::core::RelateSpec::MAX_ENTITIES + 1 {
             pairs.push(pair);
             inputs.push(input);
             originals.push(original);
@@ -140,10 +138,8 @@ where
     if located && !inputs.iter().all(|input| matches!(input.as_ref(), QuestionInput::Record(record) if record.location().is_some())) {
             return Err(Error::usage("source relate takes a source for every record"));
         }
-    if located && pairs.len() > 255 {
-        return Err(Error::usage(
-            "source relate takes at most 255 source records",
-        ));
+    if located {
+        Relate::admit_record_count(pairs.len())?;
     }
     let distinct = if located {
         unique(&pairs)
