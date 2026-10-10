@@ -69,10 +69,12 @@ def main():
         else:
             command = [str(scala / 'bin/scalac'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-classpath', str(jars / inventory['jars']['door']), '-d', str(classes), *map(str, sorted((ROOT / 'libraries/jvm/session/scala').glob('*.scala')))]
         subprocess.run(command, check=True, env=env)
+        if kind != "door":
+            shutil.copytree(out / "classes" / "door", classes, dirs_exist_ok=True)
         with zipfile.ZipFile(jars / filename, 'w', zipfile.ZIP_DEFLATED) as jar:
             for file in sorted(classes.rglob('*')):
                 if file.is_file(): jar.write(file, file.relative_to(classes))
-            if kind == 'door': jar.writestr('META-INF/thinkthen/product-inventory.json', json.dumps(inventory))
+            jar.writestr('META-INF/thinkthen/product-inventory.json', json.dumps(inventory))
     classifier, selected = next((name,asset) for name,asset in inventory['native'].items() if asset['target'] == args.target)
     with zipfile.ZipFile(jars / ('thinkthen-' + classifier + '.jar'), 'w', zipfile.ZIP_DEFLATED) as jar:
         for resource in selected['files']: jar.write(args.native, resource)

@@ -36,7 +36,7 @@ def inspect(name, source):
                 for member in inventory.jvm_inventory(TARGET)['members'][name]}
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     assert manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "bad JAR manifest"
-    if name == "door" and "META-INF/thinkthen/product-inventory.json" in members:
+    if "META-INF/thinkthen/product-inventory.json" in members:
         assert json.loads(members.pop("META-INF/thinkthen/product-inventory.json")) == inventory.jvm_inventory(), "stale embedded JVM inventory"
     assert members == expected, f"stale or extra {name} JAR member"
     assert not any("ProbeDoor" in member or "TypeCase" in member for member in members), "diagnostic class escaped product JAR"

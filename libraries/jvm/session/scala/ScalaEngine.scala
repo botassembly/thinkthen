@@ -6,8 +6,8 @@ import scala.jdk.CollectionConverters.*
 /** A Scala Future and explicit cancellation over the shared JVM session. */
 final case class Call(result: Future[OwnedCall], cancel: () => Boolean)
 final class ScalaEngine private (private val engine: Engine) extends AutoCloseable {
-  def this() = this(new Inputs.EngineSettings())
   def this(settings: Inputs.EngineSettings) = this(ScalaEngine.native(new Engine(ScalaEngine.transport(settings), Engine.Surface.SCALA)))
+  def this() = this(new Inputs.EngineSettings())
   private def run(native: java.util.concurrent.CompletableFuture[Engine.OwnedCall]): Call = {
     val result = Promise[OwnedCall]()
     native.whenComplete((value, error) => { try { if (error == null) result.trySuccess(OwnedCall.read(value)) else result.tryFailure(ScalaEngine.failure(error)) } catch { case error: Throwable => result.tryFailure(ScalaEngine.failure(error)) }; () })

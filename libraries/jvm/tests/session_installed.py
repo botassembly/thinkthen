@@ -56,9 +56,9 @@ def main():
     scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
     for filename in ('SessionKotlin.kt','SessionScala.scala'):
         shutil.copyfile(ROOT / 'libraries/jvm/tests' / filename,work / filename)
-    kotlin_cp = os.pathsep.join(map(str,(feed / 'thinkthen-door.jar',feed / 'thinkthen-kotlin.jar',kotlin / 'lib/kotlinx-coroutines-core-jvm.jar')))
+    kotlin_cp = os.pathsep.join(map(str,(feed / 'thinkthen-kotlin.jar',kotlin / 'lib/kotlinx-coroutines-core-jvm.jar')))
     subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target',str(JDK_FLOOR),'-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),'-d',str(work / 'app')],check=True,env=env)
-    subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-door.jar') + os.pathsep + str(feed / 'thinkthen-scala.jar'),'-d',str(work / 'app'),str(work / 'SessionScala.scala')],check=True,env=env)
+    subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-scala.jar'),'-d',str(work / 'app'),str(work / 'SessionScala.scala')],check=True,env=env)
     backend_source = ROOT / 'libraries/csharp/tests/backend.py'
     spec = importlib.util.spec_from_file_location('shared_package_backend',backend_source)
     backend = importlib.util.module_from_spec(spec); spec.loader.exec_module(backend)
@@ -83,10 +83,11 @@ def main():
         assert all('malformed' not in str(item) and 'preview' not in str(item) for item in server.arrivals),server.arrivals
         print('Installed Java ten functions, counted zero-send refusals, held cancellation and owned results PASS')
         runtime = command[:command.index('--')]
+        native_cp = ":".join("/work/feed/" + jar.name for jar in feed.glob("thinkthen-natives-*.jar"))
         for language, sdk, mainclass, runtime_cp in (
             ('kotlin',kotlin,'SessionKotlinKt','/kotlin/lib/kotlin-stdlib.jar:/kotlin/lib/kotlinx-coroutines-core-jvm.jar'),
             ('scala',scala,'SessionScala','/scala/lib/scala.jar')):
-            consumer = runtime + ['--ro-bind',str(sdk),'/' + language,'--','/jdk/bin/java','--enable-native-access=ALL-UNNAMED','-XX:ActiveProcessorCount=2','-Xmx1g','-cp','/work/feed/*:/work/app:' + runtime_cp,mainclass]
+            consumer = runtime + ['--ro-bind',str(sdk),'/' + language,'--','/jdk/bin/java','--enable-native-access=ALL-UNNAMED','-XX:ActiveProcessorCount=2','-Xmx1g','-cp','/work/feed/thinkthen-' + language + '.jar:/work/app:' + native_cp + ':' + runtime_cp,mainclass]
             actual = subprocess.run(consumer,env=env,capture_output=True,timeout=25)
             (logs / (language + '-consumer.log')).write_bytes(actual.stdout + actual.stderr)
             assert actual.returncode == 0,(actual.stdout,actual.stderr)

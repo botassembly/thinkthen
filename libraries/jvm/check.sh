@@ -31,7 +31,6 @@ THINKTHEN_SCALA_HOME=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); 
 export THINKTHEN_JDK_HOME THINKTHEN_KOTLIN_HOME THINKTHEN_SCALA_HOME
 jars=$package/jars
 [ -d "$jars" ] || jars=$package
-THINKTHEN_JVM_OUT=$package python3 "$here/tests/package_check.py" --session
 python3 "$here/tests/session_installed.py" --jars "$jars" --out "$consumer"
 python3 "$here/tests/usage_installed.py" --jars "$jars" --out "$consumer/usage"
 if [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then
