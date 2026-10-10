@@ -61,6 +61,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
   THINKTHEN_PARITY_PACKAGE="$wrapper" THINKTHEN_C_HEADER="$consumer/include/thinkthen.h" \
     THINKTHEN_C_LIBRARY="$consumer/lib/libthinkthen.so" python3 "$ROOT/checks/native_parity.py"
+  THINKTHEN_SESSION_PACKAGE="$wrapper" THINKTHEN_C_HEADER="$consumer/include/thinkthen.h" \
+    THINKTHEN_C_LIBRARY="$consumer/lib/libthinkthen.so" \
+    python3 "$ROOT/checks/session.py"
   echo 'COBOL installed release PASS: five legacy rows and owned native results for direct and named backends'
   exit 0
 fi
@@ -74,6 +77,7 @@ export TT_NATIVE="$CARGO_TARGET_DIR/debug/libthinkthen_c.so"
 export TT_HEADER="$REPO/libraries/c/include/thinkthen.h"
 TARGET="$ROOT/checks/target"
 mkdir -p "$TARGET"
+python3 "$REPO/sdlc/generators/results/generate.py" --target cobol --check
 python3 "$ROOT/checks/privacy.py"
 for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
 cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --lib -j2
@@ -109,4 +113,7 @@ python3 "$ROOT/checks/failure.py"
 python3 "$ROOT/checks/run_matrix.py"
 python3 "$ROOT/checks/negative.py"
 python3 "$ROOT/checks/native_parity.py"
+if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ]; then
+  THINKTHEN_C_LIBRARY="$TT_NATIVE" python3 "$ROOT/checks/session.py"
+fi
 echo 'COBOL package gate passed'

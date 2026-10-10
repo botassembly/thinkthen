@@ -116,6 +116,10 @@ The proposed Python ceiling rises from 9169 to 9191. The change adds 147 and rem
 
 Fresh read-only review accepts `7e4c2e655d6b1ddc0a547b0c0e10f1802372ee96`, explicitly including Python 9191, eighteen stub lines and the documented Object Series annotation migration. The reviewer reproduced seventeen installed cases and strict Mypy, verified packaged files and hashes, and checked nulls, positions, typed ownership, pickle, replay, cancellation and retained DataFrame behavior. Rust remains 12367. This bounded acceptance does not establish final parity or the later native `input_sources` field.
 
+## What the build taught us
+
+Native annotation document conversion must agree across eager records, feeds, files and frames. Question metadata must use the same native selector resolution as execution; host assumptions about selector shapes can break named questions before admission.
+
 ## Explicit DataFrame canonical calls
 
 This slice starts at `8a8d7f2b4`. Direct pandas and Polars DataFrame calls with `on=` use the existing native Operation for all ten verbs. Native owned rows retain null masks, original positions, whole-set execution, cache identity and terminal facts. Presentation preserves typed annotation columns, recognition output and collision checks. Empty and all-null annotation types come from existing Rust QuestionSet members through a narrow Python wrapper accessor. Multiple selected columns and explicit field, context and shortlist selectors retain complete records for Rust projection. Explicit Item values use shared canonical conversion. No host question grammar, generator or handwritten complete reader changes; curried Judge and complete frame compatibility retain their owners.

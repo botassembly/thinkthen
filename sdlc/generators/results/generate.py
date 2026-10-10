@@ -330,7 +330,7 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
     if args.target == "ada":
@@ -338,6 +338,22 @@ def main():
         import ada
         ada.generate(ROOT, graph, prepare, child_env(), args.check)
         return
+    if args.target == "cobol":
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import cobol
+        schema = json.loads((ROOT / "specification/request.schema.json").read_text())
+        schema["$defs"]["Request"] = {key: value for key, value in schema.items() if key != "$defs"}
+        definitions = prepare(graph(schema, ("Request", "RequestSessionDescriptor")))
+        for filename, result in cobol.outputs(ROOT, definitions).items():
+            output = ROOT / "libraries/cobol" / filename
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print(f"generated COBOL records differ: {output}", file=sys.stderr)
+                    return 1
+            else:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(result)
+        return 0
     if args.target == "dart":
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import dart
