@@ -19,6 +19,7 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+import xml.etree.ElementTree as ET
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -26,6 +27,7 @@ TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
 TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "crates/thinkthen/Cargo.toml", "composer.json", "libraries/php/composer.json", "libraries/go/go.mod",
+        "libraries/csharp/ThinkThen.csproj", "libraries/csharp/Botassembly.ThinkThen.nuspec",
         "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/session/thinkthen/Engine.java",
         "libraries/jvm/door/thinkthen/Json.java", "libraries/jvm/session/kotlin/KotlinEngine.kt",
         "libraries/jvm/session/scala/ScalaEngine.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
@@ -38,13 +40,19 @@ def version():
 
 
 def archive(folder, family, files, target=TARGET):
-    name = f"thinkthen-{family}-{version()}-{target}.tar.gz"
+    extension = "zip" if "-windows-" in target else "tar.gz"
+    name = f"thinkthen-{family}-{version()}-{target}.{extension}"
     buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
-        for member, data in {"THINKTHEN-PACKAGE-INPUTS": b"source_commit=0\n", **files}.items():
-            info = tarfile.TarInfo(f"./{member}")
-            info.size = len(data)
-            tar.addfile(info, io.BytesIO(data))
+    members = {"THINKTHEN-PACKAGE-INPUTS": b"source_commit=0\n", **files}
+    if extension == "zip":
+        with zipfile.ZipFile(buffer, "w") as bundle:
+            for member, data in members.items(): bundle.writestr(member, data)
+    else:
+        with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+            for member, data in members.items():
+                info = tarfile.TarInfo(f"./{member}")
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
     (folder / name).write_bytes(buffer.getvalue())
     (folder / f"{name}.sha256").write_text(f"{hashlib.sha256(buffer.getvalue()).hexdigest()}  {name}\n")
 
@@ -56,6 +64,10 @@ def nupkg(identity, v):
                          f'packaging/2013/05/nuspec.xsd"><metadata><id>{identity}</id><version>{v}</version>'
                          f'</metadata></package>')
         package.writestr("lib/net8.0/ThinkThen.dll", b"dll")
+        package.writestr("README.md", b"readme")
+        package.writestr("LICENSE", b"MIT\n")
+        package.writestr("[Content_Types].xml", '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="dll" ContentType="application/octet"/><Default Extension="so" ContentType="application/octet"/></Types>')
+        package.writestr("runtimes/linux-x64/native/libthinkthen.so", b"native-" + TARGET.encode())
     return buffer.getvalue()
 
 
@@ -96,14 +108,8 @@ def tree(root, plant):
             with zipfile.ZipFile(buffer, 'w') as package:
                 for name in asset['files']: package.writestr(name, native)
             files['jvm'][asset['jar']] = buffer.getvalue()
-        if '-windows-' in asset['target']:
-            name = f"thinkthen-c-{v}-{asset['target']}.zip"
-            buffer = io.BytesIO()
-            with zipfile.ZipFile(buffer, 'w') as package: package.writestr('bin/' + library, native)
-            (platform / name).write_bytes(buffer.getvalue())
-            (platform / (name + '.sha256')).write_text(hashlib.sha256(buffer.getvalue()).hexdigest() + '  ' + name + '\n')
-        else:
-            archive(platform, 'c', {'lib/' + library: native}, asset['target'])
+        member = ('bin/' if library.endswith('.dll') else 'lib/') + library
+        archive(platform, 'c', {member: native}, asset['target'])
     plant(root, files)
     for family, members in files.items():
         archive(platform, family, members)
@@ -310,6 +316,7 @@ def main():
     pack_cases = [
         ("pack", keep, None),
         ("missing-native-jar", lambda r, f: f['jvm'].pop('thinkthen-natives-linux-x64.jar'), 'JVM archive lacks thinkthen-natives-linux-x64.jar'),
+        ("missing-native-member", lambda r, f: archive(r / 'platform', 'c', {'bin/other.dll': b'other'}, 'x86_64-pc-windows-msvc'), 'C archive lacks native asset bin/thinkthen.dll'),
         ("missing-native-target", lambda r, f: (r / 'platform' / f'thinkthen-c-{v}-x86_64-pc-windows-msvc.zip').unlink(), f'thinkthen-c-{v}-x86_64-pc-windows-msvc.zip is missing or linked'),
         ("nupkg-id", lambda r, f: f["csharp"].update({f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Other.ThinkThen", v)}),
          "nupkg identity differs"),
@@ -349,7 +356,18 @@ def main():
         expected_pub = ["thinkthen_dart/README.md", "thinkthen_dart/lib/thinkthen_dart.dart", "thinkthen_dart/pubspec.yaml"]
         with zipfile.ZipFile(base / f"{stem}-sources.jar") as sources:
             source_names = sorted(sources.namelist())
+        definition = json.loads(subprocess.check_output([sys.executable, str(REPO / "sdlc/scripts/package-inventory.py"), "csharp"]))
+        with zipfile.ZipFile(root / "out/nuget" / definition['package']) as package:
+            nuget = {name: package.read(name) for name in package.namelist()}
+        with zipfile.ZipFile(io.BytesIO(nupkg("Botassembly.ThinkThen", v))) as package:
+            expected_nuget = {name: package.read(name) for name in package.namelist()}
+        types = ET.fromstring(nuget.pop('[Content_Types].xml'))
+        expected_nuget.pop('[Content_Types].xml')
+        expected_nuget.update({asset['file']: ('native-' + target).encode() for target, asset in definition['native'].items()})
         checks = [
+            ("nuget-native-assets-and-managed-bytes", nuget, expected_nuget),
+            ("nuget-native-content-types", {node.get('Extension'): node.get('ContentType') for node in types},
+             {'dll': 'application/octet', 'so': 'application/octet', 'dylib': 'application/octet'}),
             ("maven-layout", layout, sorted(f"{a}{s}" for a in artifacts for s in ("", ".md5", ".sha1"))),
             ("maven-sources", source_names, sorted(["door/thinkthen/Json.java", "session/thinkthen/Engine.java", "session/kotlin/KotlinEngine.kt", "session/scala/ScalaEngine.scala"])),
             ("nuget-file", [p.name for p in (root / "out/nuget").iterdir()], [f"Botassembly.ThinkThen.{v}.nupkg"]),
