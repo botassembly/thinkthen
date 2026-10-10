@@ -160,9 +160,13 @@ fn source_schema(file_only: bool, images: bool, canonical: &Value) -> Value {
     } else {
         json!({"const":"text","default":"text"})
     };
+    let framing = canonical
+        .pointer("/$defs/RequestSource/properties/framing")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
     let mut source = json!({"type":"object","additionalProperties":false,"required":if file_only { vec!["paths","unit"] } else { vec!["paths"] },
         "properties":{"paths":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
-            "unit":unit,"window":{"type":"integer","minimum":1},"media":media}});
+            "unit":unit,"window":{"type":"integer","minimum":1},"media":media,"framing":framing}});
     if file_only
         && let Some(properties) = source.get_mut("properties").and_then(Value::as_object_mut)
     {

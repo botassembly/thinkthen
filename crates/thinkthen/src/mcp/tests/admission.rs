@@ -147,3 +147,38 @@ fn inline_records_keep_original_value_types_and_authored_candidate_order() {
         r#"{"options":{"zebra":"first","alpha":"second"},"text":"x"}"#
     );
 }
+
+#[test]
+fn source_framing_discovery_uses_native_values_and_invalid_controls_send_nothing() {
+    let canonical: Value = serde_json::from_str(include_str!(
+        "../../../../../specification/request.schema.json"
+    ))
+    .unwrap();
+    let list = super::super::tools::list(&json!({"type":"object"}));
+    for tool in list["tools"].as_array().unwrap() {
+        assert_eq!(
+            tool["inputSchema"]["properties"]["source"]["properties"]["framing"],
+            canonical["$defs"]["RequestSource"]["properties"]["framing"]
+        );
+    }
+    let backend = Backend::start().unwrap();
+    for controls in [
+        json!({"framing":"csv","unit":"file"}),
+        json!({"framing":"tsv","unit":"window","window":2}),
+        json!({"framing":"lines","unit":"file","media":"image"}),
+        json!({"framing":"document"}),
+        json!({"framing":null}),
+        json!({"framing":""}),
+        json!({"framing":{}}),
+    ] {
+        let mut source = controls;
+        source["paths"] = json!(["missing-private"]);
+        assert_eq!(
+            admit("decide", json!({"question":"q","source":source}))
+                .unwrap_err()
+                .kind(),
+            crate::ErrorKind::Usage
+        );
+    }
+    assert_eq!(backend.count(), 0);
+}
