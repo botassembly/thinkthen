@@ -50,12 +50,13 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
     auto name = expr.function.name;
     const string prefix = "thinkthen_native_", suffix = "_complete";
     const auto verb = name.substr(prefix.size(), name.size() - prefix.size() - suffix.size());
-    const auto session = Settings(*context);
+    std::optional<SessionSettings> session;
     for (idx_t row = 0; row < args.size(); ++row) {
         auto question = args.data[0].GetValue(row);
         if (question.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
         auto inputs = args.data[1].GetValue(row);
         if (inputs.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
+        if (!session) { session.emplace(Settings(*context)); }
         auto settings = args.data[2].GetValue(row);
         string failure;
         const bool binary = inputs.type().id() == LogicalTypeId::LIST;
@@ -74,8 +75,8 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
         auto images = binary ? ImageMembers(inputs) : vector<std::pair<string, string>>();
         auto views = ImageViews(images);
         RustReply reply(binary
-            ? thinkthen_cpp_complete_images(View(content), views.data(), views.size(), View(controls), selection.value, owner->Remaining(*context), session.Bridge(), StopFor(*context))
-            : thinkthen_cpp_complete(View(verb), View(content), View(input), View(controls), selection.value, owner->Remaining(*context), session.Bridge(), StopFor(*context)));
+            ? thinkthen_cpp_complete_images(View(content), views.data(), views.size(), View(controls), selection.value, owner->Remaining(*context), session->Bridge(), StopFor(*context))
+            : thinkthen_cpp_complete(View(verb), View(content), View(input), View(controls), selection.value, owner->Remaining(*context), session->Bridge(), StopFor(*context)));
         Checked(reply.value);
         result.SetValue(row, Value(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
         } catch (const Exception &error) {

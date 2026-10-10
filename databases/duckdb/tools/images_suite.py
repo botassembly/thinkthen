@@ -74,6 +74,19 @@ def complete_images_keep_native_blobs_facts_replay_and_local_refusals():
         bad = "[{media:'image/png',data:'private-image-evidence'::BLOB,file:NULL}]"
         missing, trace = folder + "/unread-question.json", Path(folder) / "null.trace"
         wrap = ['strace','-f','-e','trace=openat,newfstatat,statx,access,readlink','-o',str(trace)] if sys.platform == 'linux' else None
+        nulls = [f"SELECT thinkthen_decide_complete(NULL, {partner}, 'bad') IS NULL" for partner in
+                 (bad, "'{bad}'", "[]::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[]")]
+        nulls += [f"SELECT thinkthen_decide_complete({literal('@' + missing)}, {partner}, 'bad') IS NULL"
+                  for partner in ("NULL::VARCHAR", "NULL::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[]")]
+        got = run(["SET thinkthen_refresh_cache=2", *nulls,
+                   "SELECT thinkthen_decide_complete('Is red visible?', '{bad}')"], backend.base, extra=extra)
+        expect([rows(r) for r in got[1:-1]], [[[True]]] * len(nulls), 'required NULL precedes malformed session settings')
+        expect('thinkthen_refresh_cache is 0 or 1' in got[-1].get('error', ''), True, 'live rows still validate session settings')
+        probe = folder + '/null-record/.probe'
+        got = run([f"SET thinkthen_record={literal(folder + '/null-record')}", *nulls], backend.base, extra=extra, wrap=wrap)
+        expect([rows(r) for r in got[1:]], [[[True]]] * len(nulls), 'required NULL skips recording settings')
+        if wrap:
+            expect(sum(f'"{probe}"' in line for line in trace.read_text().splitlines()), 0, 'NULL rows never probe recording folder')
         got = run([f"SELECT thinkthen_decide_complete(NULL, {bad}, 'bad') IS NULL",
                    f"SELECT thinkthen_decide_complete({literal('@' + missing)}, NULL, 'bad') IS NULL",
                    f"SELECT thinkthen_decide_complete('Is red visible?', {bad})",
