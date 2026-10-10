@@ -2,6 +2,11 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
+if [ "$(uname -s)" = Darwin ]; then
+  python3 "$REPO/sdlc/generators/results/generate.py" --target objc --check
+  exec python3 "$ROOT/checks/foundation_installed.py"
+fi
+# Preserve the legacy consumer until the Foundation replacement is qualified.
 case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) echo 'GNU Objective-C gate unavailable on this host' >&2; exit 77 ;; esac
 case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 77 ;; *) exit 2 ;; esac
 for tool in gcc cargo flock nm python3 cmp; do

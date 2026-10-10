@@ -1,78 +1,34 @@
-# ThinkThen GNU Objective-C
+# ThinkThen Foundation
 
-A Linux x86_64/glibc GNU Objective-C 13 source package. No Foundation or GNUstep. This is not an Apple Objective-C or supported release claim.
+The 0.2 Objective-C API targets Apple Foundation, ARC and blocks. The package definition is [Package.swift](Package.swift). Distribution assembles the matching prebuilt `CThinkThen.xcframework` beside that manifest under the [Apple package design](../../sdlc/decisions/2026-10-09-native-package-design.md). A consuming SwiftPM project depends on `ThinkThenFoundation` and imports `ThinkThenFoundation.h`. It needs no separate C archive, Rust compiler or native library path.
 
-## Build from a checkout and use in another project
+The Foundation implementation lives in `Sources/Foundation`. Its generated result classes come from Rust's shared result graph. `TTPresence` distinguishes a missing member, explicit null and a value. Generated classes retain unknown members in `rawFields`. Failures carry the native typed `TTCallError` under `TTFailureDetailsKey` in `NSError.userInfo`, including retryability and final facts. Caller cancellation completes with a cancellation error while native final facts remain pending.
 
-Clone the ThinkThen repository at the matching source pin. From the checkout, build the native C library with Rust 1.95, an installed Cargo registry, and no network:
-
-```
-git clone https://github.com/botassembly/thinkthen.git
-cd thinkthen
-CARGO_NET_OFFLINE=true cargo build --locked --offline --release -j2 --manifest-path libraries/c/Cargo.toml
-```
-
-The result is `libraries/c/target/release/libthinkthen_c.so` (if Cargo uses a different target directory, use that directory). Install the **matching** `libraries/c/include/thinkthen.h`, `LICENSE`, and shared library into a separate native directory; name the shared library `libthinkthen.so` and point `libthinkthen.so.0` at it. Copy `libraries/objective-c/Sources/` and your chosen example into the consuming project's source tree, then compile from that project:
-
-```
-gcc -std=gnu11 -x objective-c -I /absolute/native/include -I /absolute/objc/Sources \
-  /absolute/objc/Sources/ThinkThen.m /absolute/objc/Sources/TTJSON.c \
-  /absolute/objc/Examples/consumer.m -L /absolute/native/lib \
-  -Wl,-rpath,/absolute/native/lib -lthinkthen -lobjc -pthread -lm -o example
-./example
+```objc
+NSError *error = nil;
+TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
+TTTask *task = [client decide:@{@"kind":@"text", @"text":@"Does this mention a refund?"}
+    input:@{@"kind":@"text", @"text":@"Please refund my order."}
+    options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
+        if (failure) { NSLog(@"%@", failure.localizedDescription); return; }
+        NSLog(@"%@", call.terminal.facts.value.callId.value);
+    } error:&error];
+// Keep task when the caller needs cancellation.
+[task cancel];
 ```
 
-On Ubuntu 24.04 the GNU Objective-C compiler and runtime are `gobjc gcc libobjc4`; no Foundation is required. Running this checkout's `check.sh` also requires Node and Python with `jsonschema`. A consuming project must install or name the matching native library and its runtime search path. The archive instructions below describe the files each GitHub release ships.
+`decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate` share this named call family. Question selectors, input selectors and options use Foundation dictionaries, arrays, strings, numbers and `NSNull`. Rust owns their admission. `TTImageBytes(data, media)` accepts an `NSData` attachment and performs the internal base64 conversion. Authored JSON values remain ordinary Foundation values.
 
-## Install from independently supplied archives
+A feed supplies one descriptor at a time through `TTFeed`; its input selector names a native feed. The callback returns nil at EOF or nil with a native reader-failure dictionary. It runs on the task's private callback queue and must return promptly. A task keeps one descriptor while native intake is full and drains native output on the same timer. `TTSession` also exposes explicit nonblocking push, finish, read, cancel and close for callers that own their scheduling. ARC releases native owners. Completion runs on the private callback queue; dispatch UI changes to the main queue.
 
-Unpack the release's `thinkthen-objective-c-0.1.2-x86_64-unknown-linux-gnu.tar.gz` and the *separate matching* `thinkthen-c-0.1.2-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest. The C archive supplies `include/thinkthen.h` and `lib/libthinkthen.so` (soname `libthinkthen.so.0`); the wrapper takes its C header from there and ships none. Never use a C library from another build. GNU Objective-C (`gobjc` version 4:13.2.0-7ubuntu1; gobjc-13 13.3.0), GCC, libobjc4, glibc, pthreads and the separately built Rust C native library are required. On Ubuntu 24.04 install `gobjc gcc libobjc4` (native build requires Rust 1.95 and offline locked Cargo dependencies). Example:
+| Legacy call | Foundation call |
+| --- | --- |
+| `TTClient create`, `createWithSettings:length:failure:` | `TTFoundationClient initWithSettings:error:` |
+| `decide:...answer:facts:failure:`, `many:...` | `decide:input:options:feed:completion:error:` |
+| `recognize:...`, `relate:...` | Named `recognize` and `relate` with generated results |
+| `json:...`, `files:...` | Named function with a Foundation input selector |
+| `TTToken fire`, manual `dealloc`, `free`, `tt_json_free` | `TTTask cancel`, ARC |
 
-```
-gcc -std=gnu11 -x objective-c -I native/include -I package/Sources \
-  package/Sources/ThinkThen.m package/Sources/TTJSON.c package/Examples/consumer.m \
-  -L native/lib -Wl,-rpath,/absolute/path/to/native/lib -lthinkthen -lobjc -pthread -lm -o example
-```
+GNU Objective-C support ends with the qualified Foundation migration. The original GNU sources, consumer checks and source-only descriptor remain protected in this checkout until the actual Apple installed consumer passes; the Apple package excludes them. Their retained Linux checks prove only the legacy implementation.
 
-The release workflow builds the source package and the native archive on GitHub Actions `ubuntu-24.04`, checks their hashes and ABI, and attaches both to the GitHub release for direct download.
-
-## Contract
-
-`TTOutcomeNo`, `TTOutcomeYes`, `TTOutcomeNotSure` and `TTErrorKind` (usage, backend, deadline, local, cancelled, defect) name the domain; `TTFailure` owns a same-thread copied message and failure-facts JSON plus a retryable bit. Initialize it to zero and clear it after use. `createWithSettings:length:failure:` validates configured construction. `tt_failure_clear` frees that message. Scalar and bulk output use `TTDecision` and `TTOutcome`; the C ABI `thinkthen_answer` and raw error integers remain inside the binding. A failed call leaves every `TTDecision` untouched. Returned JSON strings are host-owned and freed with `free`; parsed `TTJSON` trees are freed with `tt_json_free`. Evidence uses counted bytes and may contain NUL; every untrusted C-string input has a length-aware variant (`decideBytes`, `manyBytes`, `jsonBytes`, `recognizeBytes`, `relateBytes`) that refuses interior NUL before crossing the ABI. The non-Bytes methods accept only trusted, terminated C strings.
-
-Every typed `decide`, `many`, `recognize`, and `relate` selector, including its counted `*Bytes` form, sets a required `char **facts` to host-owned facts JSON text alongside the former value on success; free it with `free` and read it with `tt_json_parse`, ignoring members you do not know. `recognize` and `relate` return their value as host-owned JSON text too, and take `deadline:` and `token:` like `decide`, `many` and `json`. A failed call leaves both outputs untouched. `tt_field_read` reads one annotate answer member from a parsed row: JSON null is `TTFieldUnresolved`, `{"failed":{"kind":...,"cause":...}}` is `TTFieldFailed` with its `TTErrorKind` and borrowed cause, and any other value is `TTFieldValue`; it returns 0 for any other object. `plan:question:texts:lengths:count:settings:failure:` previews a decide, choose, score or tag call through `thinkthen_plan_json` and returns the result schema's `plan` object as host-owned JSON text; it needs no key and sends nothing. A question that starts with `{` is a question object. `max_requests_total` in `createWithSettings:` caps the process's live sends.
-
-Ownership: create clients/tokens; join all callers before deallocating either. The facade tracks in-flight native calls and waits before native release, but callers must stop initiating new calls and stop calling `fire` before teardown. It cannot make concurrent use-after-free of the Objective-C object safe. Error copying occurs on the calling native thread, before tracking release.
-
-The JSON door accepts question-file grammar: bare label arrays and ordered label→description objects for options/labels/kinds; structured `{ "what", "not_for", "examples" }` descriptions pass through without modification. For native callers, validate the question against `specification/question-file.schema.json` at the application boundary (the pinned file is not included in this minimal source archive). `TTJSON` parses JSON and rejects duplicate keys and malformed or truncated input; it checks no answer shape. Unresolved annotate fields are `TTJSONNull`; failure is an object `{"failed":{"kind":...,"cause":...}}`, never null. Entity offsets count **zero-based Unicode code points**, end exclusive; not UTF-16 units. The product check runs the current J1 corpus through the public GNU Objective-C JSON door. No C structs added.
-
-This proof tests synthetic answers, ownership, UTF-8, native cancellation, response shapes and counted requests, not answer quality, Rust allocator instrumentation, other operating systems or Apple Objective-C runtimes.
-
-`createWithSettings:length:failure:` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
-
-Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
-
-Typed 0.2 host descriptors are available through `TTComplete.h`. Ten named request builders prepare explicit questions/question files and record/file/image sources; known answer, metadata, fact, identity, location, span and edge fields have typed carriers. This is independent carrier preparation, not complete-call runtime parity. The host descriptor codec is not the native wire format. Existing engine calls remain the executable compatibility API. Adoption of the real 0426 constructors, complete calls, result views and failure snapshots is still required; no legacy result is promoted to result/2.
-
-Compile `Sources/TTComplete.c` with `Sources/TTJSON.c` when using `ttc_atomic_read` or `ttc_facts_read`. Descriptors borrow caller storage; parsed field strings borrow the `TTJSON` tree, and probability entries use caller-provided storage. Release the tree only after those borrows finish. Invalid field reads leave outputs unchanged.
-
-
-## Complete native calls (0428 integration)
-
-The additive complete API uses C's native question grammar and readers for all ten named functions. Bare and generic JSON calls remain available. Known result fields are typed; arbitrary original JSON is retained as counted content.
-
-Question input is explicit: construct a typed descriptor, parse saved JSON with a loader role, load an exact file, load a configured name, or load a reference. The eight roles are atomic, question set, per-record choose, recognize, record relate, rank, rank set and find. A string is never guessed to be a path. Native declarations, named/versioned authors, record context, options, rank members, observations, answer/request/call IDs, final facts and owned failure snapshots remain distinct.
-
-Records may carry explicit text or JSON, per-record context and ordered candidate replacements. Images use explicit PNG/JPEG media and preserve original compressed bytes, order and duplicates. Decide, choose and score admit native image routes; the other seven functions refuse before sending. File sources explicitly select line, window, whole file, image file or JSONL. Physical filename/line ranges and absent image line coordinates come from the native reader.
-
-Complete results copy all borrowed native views before `thinkthen_result_free`. They survive destruction of the engine, question, source and input buffers. Presence remains explicit, including absent aggregate IDs/meta, nullable selections and independently unknown reported token dimensions. Cost strings are copied without floating-point conversion. Failures retain the six native kinds, safe messages, available stop details and final facts/attempts.
-
-Decide, choose, tag, score, filter and annotate also have owned lazy native batches. Start/next/facts/free belong to the creating thread; keep the engine live until the batch closes. Starting clones question/source/context/cancellation state. Returned rows own independent snapshots. Rank, find, recognize and relate retain aggregate complete calls. No host parser, cache, scheduler or model-routing policy is added.
-
-This is an unpublished integration API. The family ticket and root review own final qualification; the shared consumer reports actual failures instead of counting generic JSON as typed parity.
-
-Include `TTNativeAPI.h`, and compile `TTNativeAPI.m` plus `TTNativeViews.c` with the existing sources. `TTQuestion`, `TTSource` and `TTImage` own native handles and release them in `dealloc`. The `TTClient (Complete)` category supplies counted constructors/loaders and ten `FUNCTIONComplete:source:controls:output:failure:` selectors. Success and native failure outputs own `TTNativeResult` snapshots; free each with `tt_native_result_free` after every reader finishes. `tt_native_FUNCTION`, summary/details/author/observation/rank-member/located getters return checked typed views borrowing that host snapshot. `tt_native_failure_kind` maps its six native errors.
-
-The six `FUNCTIONBatch:source:controls:output:failure:` selectors return `TTBatch`. Keep the client live until batch `dealloc`; `next:failure:`, `facts:failure:` and `dealloc` run on its creating thread. Completed row snapshots outlive the batch and client. Failed calls leave success outputs unchanged. Counted input descriptors must stay initialized/readable through construction. Native constructors clone all nested buffers. Existing ABI/static and ASan/UBSan checks remain in the family gate.
-
-Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+Run `python3 sdlc/generators/results/generate.py --target objc --check` for generated freshness. On macOS, `check.sh` installs the supplied assembled Apple package into an unrelated SwiftPM consumer and exercises packet ownership, ARC cleanup and held-provider cancellation. It refuses a missing XCFramework instead of starting a native build. The current implementation has actual Apple SDK compile evidence; installed package, current native linkage and shared execution parity still require a matching Apple artifact. See [the implementation record](../../sdlc/records/0518-foundation-owned-surface.md).

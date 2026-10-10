@@ -1,5 +1,12 @@
 #import "TTResultPrivate.h"
 #import <CoreFoundation/CoreFoundation.h>
+static id TTFreeze(id value) {
+    if ([value isKindOfClass:NSDictionary.class]) return TTMap(value, ^id(id item) { return TTFreeze(item); });
+    if ([value isKindOfClass:NSArray.class]) return TTArray(value, ^id(id item) { return TTFreeze(item); });
+    if ([value isKindOfClass:NSString.class] || [value isKindOfClass:NSNumber.class]) return [value copy];
+    if (value == NSNull.null || [value isKindOfClass:TTResultNode.class]) return value;
+    TTInvalidResult();
+}
 @interface TTPresence ()
 @property(nonatomic) TTPresenceState state;
 @property(nonatomic, strong, nullable) id value;
@@ -8,7 +15,7 @@
 @end
 @implementation TTResultNode
 - (instancetype)initWithFields:(NSDictionary *)fields {
-    if ((self = [super init])) _rawFields = [fields copy];
+    if ((self = [super init])) _rawFields = TTFreeze(fields);
     return self;
 }
 - (TTPresence *)presence:(NSString *)key required:(BOOL)required convert:(id (^)(id))convert {

@@ -1,0 +1,4 @@
+module ThinkThen {
+    umbrella header "ThinkThenFoundation.h"
+    export *
+}

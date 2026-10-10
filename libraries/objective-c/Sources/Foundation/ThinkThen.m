@@ -1,14 +1,22 @@
-#import "ThinkThen.h"
+#import "ThinkThenFoundation.h"
 #import <thinkthen.h>
 NSErrorDomain const TTErrorDomain = @"io.github.botassembly.thinkthen";
 NSString * const TTFailureDetailsKey = @"ThinkThenFailureDetails";
+NSDictionary<NSString *, id> *TTImageBytes(NSData *bytes, NSString *media) {
+    return @{@"kind":@"bytes", @"bytes":[bytes base64EncodedStringWithOptions:0], @"media":media};
+}
 static NSError *TTImmediate(int code) {
     return [NSError errorWithDomain:TTErrorDomain code:code userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:thinkthen_session_error_message()] ?: @"Native session failure"}];
 }
 static BOOL TTCheck(int code, NSError **error) { if (!code) return YES; if (error) *error = TTImmediate(code); return NO; }
 static NSData *TTEncode(id object, NSError **error) {
     // Foundation owns representation checks; native Request owns admission.
-    return [NSJSONSerialization dataWithJSONObject:object options:NSJSONWritingFragmentsAllowed error:error];
+    @try { return [NSJSONSerialization dataWithJSONObject:object options:NSJSONWritingFragmentsAllowed error:error]; }
+    @catch (NSException *exception) {
+        (void)exception;
+        if (error) *error = [NSError errorWithDomain:TTErrorDomain code:THINKTHEN_EUSAGE userInfo:@{NSLocalizedDescriptionKey:@"Input has an unsupported Foundation representation"}];
+        return nil;
+    }
 }
 @interface TTSession () {
     struct thinkthen_session *_native;
@@ -174,7 +182,7 @@ static NSData *TTEncode(id object, NSError **error) {
     if (!TTCheck(thinkthen_session_new_with_surface(_native, data.bytes, data.length, "objective-c", 11, &session), error)) return nil;
     return [[TTSession alloc] initWithNative:session];
 }
-- (TTTask *)start:(NSString *)verb question:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+- (TTTask *)start:(NSString *)verb question:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
     NSMutableDictionary *call = [@{@"function":verb, @"question":question, @"input":input} mutableCopy];
     if (options) call[@"options"] = options;
     TTSession *session = [self startRequest:@{@"schema":TTRequestVersion, @"call":call} error:error];
@@ -182,14 +190,14 @@ static NSData *TTEncode(id object, NSError **error) {
     if (!feed && ![session finish:nil error:error]) { [session close]; return nil; }
     return [[TTTask alloc] initWithSession:session feed:feed completion:completion];
 }
-- (TTTask *)decide:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)choose:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)tag:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)score:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)filter:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)rank:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)find:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)annotate:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)recognize:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error]; }
-- (TTTask *)relate:(id)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)decide:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)choose:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)tag:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)score:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)filter:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)rank:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)find:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)annotate:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)recognize:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error]; }
+- (TTTask *)relate:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(NSDictionary *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error]; }
 @end
