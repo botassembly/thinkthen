@@ -9,6 +9,7 @@ profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
+python3 "$repo/sdlc/generators/results/generate.py" --target typescript --check
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
@@ -24,8 +25,9 @@ complete_public_types() {
         output=$project/target/complete-public/$extension
         mkdir -p "$output"
         cp "$project/tests/complete_public.test.ts" "$output/complete_public.test.$extension"
+        cp "$project/tests/owned_types.test.ts" "$output/owned_types.test.$extension"
         "$tsc" --strict --target ES2022 \
-            --module NodeNext --moduleResolution NodeNext --rootDir "$output" --outDir "$output" "$output/complete_public.test.$extension"
+            --module NodeNext --moduleResolution NodeNext --rootDir "$output" --outDir "$output" "$output/complete_public.test.$extension" "$output/owned_types.test.$extension"
         node "$output/complete_public.test.$(printf '%s' "$extension" | sed 's/ts$/js/')"
     done
 }
@@ -58,7 +60,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
     complete_public_types
-    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/conformance.test.mjs tests/examples.test.mjs)
+    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/conformance.test.mjs tests/examples.test.mjs tests/owned_session.test.mjs)
+    (cd "$project" && THINKTHEN_OWNED_MODULE=cjs node --test --test-timeout=30000 tests/owned_session.test.mjs)
     # Ticket 0374: the installed addon keeps its own panic hook, and the token cap variable
     # refuses before any send, counted at the test's own backend.
     own_panic_hook "$project/node_modules/thinkthen/thinkthen-$expected.node"

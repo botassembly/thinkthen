@@ -35,3 +35,7 @@ export const {
   relate,
 } = cjs;
 export default cjs;
+
+export const Client = cjs.Client;
+export const Results = cjs.Results;
+export const ClientError = cjs.ClientError;

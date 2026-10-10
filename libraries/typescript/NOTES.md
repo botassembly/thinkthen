@@ -28,3 +28,5 @@ The port notes of ticket 0107. The tag `surfaces-wave7-frozen-2026-09-24b` keeps
 
 - **Tried:** `questionFile(path)` through the native file edge and the existing question value. It bounds the actual read to 1 MiB plus one byte and maps named-file failures to non-retryable Local without a send.
 - **Saw:** passing the validated source directly from the branded question avoids JavaScript's parse/stringify reordering of numeric description keys. A captured rich-question request and the shared case-01 digest protect that path; selected case 30 protects Local refusal. Literal strings and typed objects remain separate.
+
+The owned Client slice retains compatibility APIs. The TypeScript generator derives runtime classes, field conversion, alternatives and declarations from the shared complete session graph. Generated result files have exact source-size exemptions and remain included in the JavaScript and TypeScript ratchets. Native Number tokens above the host safe integer range retain raw tokens rather than rounding indices or integer observations.

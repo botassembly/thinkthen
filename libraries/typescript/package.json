@@ -46,7 +46,11 @@
     "_complete.d.ts",
     "LICENSE",
     "native-platforms.json",
-    "thinkthen-*.node"
+    "thinkthen-*.node",
+    "native.js",
+    "native.d.ts",
+    "results_generated.js",
+    "results_generated.d.ts"
   ],
   "scripts": {
     "build": "./build-addon.sh",
