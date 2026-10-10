@@ -4,6 +4,8 @@
 
 ## Functions
 
+Required SQL NULL operands return SQL NULL for scalar calls and zero rows for table calls before inspecting partner operands, reading files or sending. Optional NULL settings are omitted.
+
 The ordinary judgment signature is `question, input[, members][, settings]`. `settings` is PostgreSQL `json`; use `::json` for a positional literal. Its accepted keys and value rules are in [settings](../../specification/settings.md). Optional named parameters use `DEFAULT NULL`, so a call can use `threshold => '0.3:0.7'`, `context => 'reference text'`, `model => 'judge-b'`, `batch => 'max'`, or `deadline_ms => 3000` without filling earlier slots. A named field and the same settings key together refuse before sending. `choose`, `score`, and `tag` accept a `members text[]` parameter; omit it when the JSON question or settings names the list.
 
 | Function | Returns |
@@ -27,7 +29,7 @@ The ordinary judgment signature is `question, input[, members][, settings]`. `se
 
 Each `_many` input is one `jsonb` object from caller keys to text. Join `d.key = CAST(s.id AS text)`; no array position is inferred. PostgreSQL `jsonb` normalizes repeated object keys before the extension sees them. A scalar judges one row per call; `_many` gives the engine the whole keyed set and packs it according to `batch`. The four keyed functions preserve SQL `NULL` on unresolved values and retain the key. Decide and choose report probability on the row; score and tag refuse a probability request. `thinkthen_plan` returns `records`, `requests`, `estimated_bytes`, an `estimated_input_tokens` lower/upper band, `upper_bound`, and `first_body_utf8`. The plan has no key requirement and no network call; `requests` is before cache answers, refusal splits and retries.
 
-`thinkthen_rank` orders one keyed `jsonb` object by the probability of yes. `rank` runs 1, 2, 3 with no gaps, and `probability` is the yes probability that orders the rows. All the records go to one engine call, packed according to `batch`. Its question is nonblank literal text, including a literal `@` or `{`. Settings take `model`, `batch`, `context` and `deadline_ms`; `threshold`, `true`, `false`, `options`, `levels`, `labels` and `none` raise `usage` before a send. Equal probabilities come back in bytewise key order, not the order written, because the extension reads the object into a sorted map. An empty object or a SQL `NULL` object returns no rows without a send, and a `NULL` question raises `usage`. Build the object with `jsonb_object_agg`, and `ORDER BY rank` again after a join:
+`thinkthen_rank` orders one keyed `jsonb` object by the probability of yes. `rank` runs 1, 2, 3 with no gaps, and `probability` is the yes probability that orders the rows. All the records go to one engine call, packed according to `batch`. Its question is nonblank literal text, including a literal `@` or `{`. Settings take `model`, `batch`, `context` and `deadline_ms`; `threshold`, `true`, `false`, `options`, `levels`, `labels` and `none` raise `usage` before a send. Equal probabilities come back in bytewise key order, not the order written, because the extension reads the object into a sorted map. An empty object returns no rows without a send. A required SQL `NULL` question or input returns no rows before inspecting partners, reading files or sending. Build the object with `jsonb_object_agg`, and `ORDER BY rank` again after a join:
 
 ```sql
 SELECT t.id, refund.rank, refund.probability
@@ -70,7 +72,7 @@ SELECT id, team FROM (
 SELECT id, team FROM judged WHERE team = 'billing';
 ```
 
-The domain rejects a different non-`NULL` label. A stored `NULL` can represent a choice below the cut or an exact tie. The domain permits `NULL`. With a valid question, `NULL` evidence also returns SQL `NULL` without a judgment; a `NULL` question instead raises `usage` during question parsing. A failed ThinkThen call raises its named error; do not replace the error with `NULL` merely to pass the domain. The constraint belongs to the stored column, and the function keeps its existing `text` result.
+The domain rejects a different non-`NULL` label. A stored `NULL` can represent a choice below the cut or an exact tie. The domain permits `NULL`. A required `NULL` question or evidence returns SQL `NULL` before inspecting partners, reading files or sending. A failed ThinkThen call raises its named error; do not replace the error with `NULL` merely to pass the domain. The constraint belongs to the stored column, and the function keeps its existing `text` result.
 
 ## Run facts
 
@@ -232,8 +234,7 @@ order and rejecting duplicates, authored thresholds/on and non-decide kinds.
 Questions are text, keyed input is jsonb and settings is json; facts is jsonb.
 Preserve the authored set as text, including text returned by
 `thinkthen_question_file(path)`, rather than converting the set to jsonb.
-The existing privileged/confined `@file` door also applies. NULL questions
-raises Usage; NULL keyed input yields no rows; NULL settings uses defaults.
+The existing privileged/confined `@file` door also applies. NULL questions or keyed input yields no rows before inspecting partners, reading files or sending; NULL settings uses defaults.
 PUBLIC execution is revoked by the extension default.
 
 ## Complete native calls (0.2 development)

@@ -17,10 +17,11 @@ fn judged(
     settings: Option<RawJson>,
     named: Named<'_>,
 ) -> Option<thinkthen::Details> {
-    let input = input?.to_owned();
+    let (question, input) = (question?, input?);
+    let input = input.to_owned();
     let (settings, call) = forms::controls(settings.as_ref(), named);
     let contextual = settings.context().is_some();
-    let question = forms::question(question, members, verb, &settings);
+    let question = forms::question(Some(question), members, verb, &settings);
     Some(
         call::run(call, move |engine, options| {
             details(engine, &question, &input, options, contextual)
@@ -30,7 +31,7 @@ fn judged(
 }
 
 crate::descriptions::describe! {
-["Return a boolean decision, or NULL when unsure. ", crate::descriptions::SCALAR_TEXT].concat();
+["Return a boolean decision, or NULL when unsure. ", &crate::descriptions::scalar_text()].concat();
 [name = "thinkthen_decide", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
@@ -64,7 +65,7 @@ fn decide(
 }
 
 crate::descriptions::describe! {
-["Return one chosen member, or NULL when unsure. ", crate::descriptions::SCALAR_TEXT].concat();
+["Return one chosen member, or NULL when unsure. ", &crate::descriptions::scalar_text()].concat();
 [name = "thinkthen_choose", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
@@ -99,7 +100,7 @@ fn choose(
 }
 
 crate::descriptions::describe! {
-["Return a numeric score using the authored levels. ", crate::descriptions::SCALAR_TEXT].concat();
+["Return a numeric score using the authored levels. ", &crate::descriptions::scalar_text()].concat();
 [name = "thinkthen_score", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
@@ -134,7 +135,7 @@ fn score(
 }
 
 crate::descriptions::describe! {
-["Return every matching authored label as text[]. ", crate::descriptions::SCALAR_TEXT].concat();
+["Return every matching authored label as text[]. ", &crate::descriptions::scalar_text()].concat();
 [name = "thinkthen_tag", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
@@ -169,7 +170,7 @@ fn tag(
 }
 
 crate::descriptions::describe! {
-"Return detailed judgment JSON as jsonb. Judge text with a literal/JSON question or privileged/confined @file. NULL question returns NULL after controls validation; NULL input returns NULL after question validation; NULL optional settings uses defaults. Evidence files must be read by the client. Failures raise SQL errors.";
+["Return detailed judgment JSON as jsonb. ", &crate::descriptions::scalar_text()].concat();
 [name = "thinkthen_details", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
@@ -186,6 +187,7 @@ fn details_sql(
     deadline_ms: default!(Option<i64>, "NULL"),
 ) -> Option<pgrx::datum::JsonB> {
     call::guarded(|| {
+        let (question, input) = (question?, input?);
         let named = Named {
             threshold,
             context,
@@ -195,9 +197,9 @@ fn details_sql(
         };
         let (settings, call) = forms::controls(settings.as_ref(), named);
         let contextual = settings.context().is_some();
-        let verb = forms::plan_verb(question?, &settings);
-        let asked = forms::question(question, None, verb, &settings);
-        let input = input?.to_owned();
+        let verb = forms::plan_verb(question, &settings);
+        let asked = forms::question(Some(question), None, verb, &settings);
+        let input = input.to_owned();
         let held = call::run(call, move |engine, options| {
             details(engine, &asked, &input, options, contextual)
         })

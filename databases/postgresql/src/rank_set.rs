@@ -9,7 +9,7 @@ use crate::files::Given;
 use crate::forms::{self, Named};
 
 crate::descriptions::describe! {
-"Rank keyed jsonb text records with an authored ordered decide-question set, returning key, rank, selecting probability, question name and count facts. Set text may use privileged/confined @files. NULL set raises Usage; NULL input gives no rows after controls and set validation; NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client.";
+["Rank keyed jsonb text records with an authored ordered decide-question set, returning key, rank, selecting probability, question name and count facts. Set text may use privileged/confined @files. ", crate::descriptions::REQUIRED_TABLE, "NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client."].concat();
 [name = "thinkthen_rank_set", parallel_restricted];
 #[allow(clippy::type_complexity, reason = "pgrx reads the named SQL tuple")]
 fn rank_set(
@@ -27,6 +27,9 @@ fn rank_set(
     ),
 > {
     call::guarded(|| {
+        let (Some(questions), Some(input)) = (questions, input) else {
+            return TableIterator::new(Vec::new());
+        };
         let (_, call) = forms::controls(settings.as_ref(), Named::default());
         if let Some(raw) = &settings {
             let fields: serde_json::Value = serde_json::from_str(&raw.0)
@@ -43,13 +46,13 @@ fn rank_set(
             }
         }
         let set = Given::read(
-            questions,
+            Some(questions),
             "rank question set",
             call::file_directory().as_deref(),
         )
         .and_then(|given| given.parse(RankSet::from_json))
         .or_raise();
-        let records = forms::keyed(input);
+        let records = forms::keyed(Some(input));
         call.within(records.len());
         if records.is_empty() {
             return TableIterator::new(Vec::new());
