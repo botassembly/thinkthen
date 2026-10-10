@@ -135,3 +135,20 @@ The focused installed consumer, strict R all-target Clippy, Rust formatting, Pyt
 ## What the build taught us
 
 An installed consumer can drift after a shared decoder gains support even when its host adapter already forwards the contract correctly. Adopt the shared behavior through encoded fixtures at the public call boundary and count actual listener traffic. An owning lockfile must include new unconditional core dependencies before a locked offline installation can consume them.
+
+
+## Adopt named source consumers
+
+This bounded consumer slice starts from `da83799b5c272d1f226410184a7e4c8f6ac96b4a`. The file consumer still invoked the previous `tt_files(question, paths)` execution API and inspected its former result shapes. It now calls each named function with `tt_files(paths)` as its source selector. Filter and rank use native decision definitions; annotation uses the native question set. The existing native Request path supplies admission and execution without adapter changes.
+
+The installed consumer checks typed calls, facts and answer identities for all ten functions. Each call's request facts equal the owned loopback listener's observed increase. Results retain both physical documents and exact whole file bytes through generated source fields, find candidates and relation input sources. The retained line cases verify duplicate occurrences, zero-based record indexes, physical lines past blanks and scalar span offsets past an accent and an emoji. Invalid reader options fail through the named decision call with no listener increase.
+
+The preceding consumer fails against the retained installed package with `failed: source call sent`. The migrated consumer passes 56 checks with exactly 18 actual requests. Red and green output lives in `target/0494-source-{red,green}.log`. The installed native library SHA-256 is `704e7316dc6387bb6fde499866519719512ab2270cecb68cc2945a317258f842`; it predates later shared source repairs and therefore establishes only this consumer adoption, not final installed package qualification. No package rebuild, native implementation, generated source or template change accompanies this slice.
+
+R parsing through the executed consumer, source policy, whitespace and both owning source ratchets pass. Source policy reports existing size warnings in unchanged files; its output lives in `target/0494-source-policy.log`.
+
+Handwritten R consumer source adds 24 nonblank lines and removes 15. The proposed R ceiling changes from 3156 to exactly 3165. Binding Rust stays at current main's 5954. Fresh reviewer acceptance is required for the R increase. Full routine, full installed parity, large inputs, load, supported-platform package qualification and compatibility retirement remain held. Other previous consumer shapes remain in their owning files and require separate bounded adoption.
+
+## What the build taught us
+
+Source input is now a selector for the same named function family. Generated fields preserve physical provenance separately from whole originals; aggregate functions expose it through candidates or indexed input sources. Migrate the owning consumer at that boundary instead of rebuilding the old source result frame in R.
