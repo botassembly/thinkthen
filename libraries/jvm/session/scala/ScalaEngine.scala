@@ -5,15 +5,15 @@ import thinkthen.Values
 import scala.concurrent.{Future, Promise}
 import scala.jdk.CollectionConverters.*
 /** A Scala Future and explicit cancellation over the shared JVM session. */
-final case class Call(result: Future[Engine.OwnedCall], cancel: () => Boolean)
+final case class Call(result: Future[OwnedCall], cancel: () => Boolean)
 final class ScalaEngine private (private val engine: Engine) extends AutoCloseable {
-  def this(settings: Map[String, Any]) = this(new Engine(ScalaEngine.javaMap(settings), Engine.Surface.SCALA))
+  def this(settings: Map[String, Any]) = this(ScalaEngine.native(new Engine(ScalaEngine.javaMap(settings), Engine.Surface.SCALA)))
   def this() = this(Map.empty[String, Any])
-  def this(settings: Inputs.EngineSettings) = this(new Engine(ScalaEngine.transport(settings), Engine.Surface.SCALA))
+  def this(settings: Inputs.EngineSettings) = this(ScalaEngine.native(new Engine(ScalaEngine.transport(settings), Engine.Surface.SCALA)))
   private def javaMap[K](value: scala.collection.Map[K, Any]): java.util.Map[K, Any] = ScalaEngine.javaMap(value)
   private def run(native: java.util.concurrent.CompletableFuture[Engine.OwnedCall]): Call = {
-    val result = Promise[Engine.OwnedCall]()
-    native.whenComplete((value, error) => { if (error == null) result.trySuccess(value) else result.tryFailure(error); () })
+    val result = Promise[OwnedCall]()
+    native.whenComplete((value, error) => { try { if (error == null) result.trySuccess(OwnedCall.read(value)) else result.tryFailure(ScalaEngine.failure(error)) } catch { case error: Throwable => result.tryFailure(ScalaEngine.failure(error)) }; () })
     Call(result.future, () => native.cancel(false))
   }
   def decide(question: Map[String, Any], input: Map[String, Any], options: Map[String, Any] = Map.empty): Call = run(engine.decide(javaMap(question), javaMap(input), javaMap(options)))
@@ -46,10 +46,25 @@ final class ScalaEngine private (private val engine: Engine) extends AutoCloseab
   def recognize(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call = run(engine.recognize(ScalaEngine.transport(question), ScalaEngine.transport(input), if (options == null) null else ScalaEngine.transport(options)))
   def relate(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call = relate(question, input, null)
   def relate(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call = run(engine.relate(ScalaEngine.transport(question), ScalaEngine.transport(input), if (options == null) null else ScalaEngine.transport(options)))
+  def plan(request: Inputs.Request): Results.Plan = try Results.Plan.read(engine.plan(ScalaEngine.transport(request)).json()) catch { case error: Throwable => throw ScalaEngine.failure(error) }
+  def execute(request: Inputs.Request): Call = run(engine.execute(ScalaEngine.transport(request)))
   override def close(): Unit = engine.close()
 }
 
+final case class OwnedCall(packets: List[Results.SessionPacket], terminal: Results.SessionPacketTerminal)
+object OwnedCall {
+  private[scala] def read(value: Engine.OwnedCall): OwnedCall = OwnedCall(value.packets().asScala.toList.map(packet => Results.SessionPacket.read(packet.json())), Results.SessionPacketTerminal.read(value.terminal().json()))
+}
+final class SessionFailure(val call: OwnedCall) extends RuntimeException(call.terminal.failure.get.error.message) {
+  def failure: Results.CallError = call.terminal.failure.get
+}
 object ScalaEngine {
+  private def native[T](action: => T): T = try action catch { case error: Throwable => throw failure(error) }
+  private def failure(error: Throwable): Throwable = error match {
+    case native: Engine.SessionFailure => new SessionFailure(OwnedCall.read(native.call()))
+    case native: thinkthen.NativeFailure => new NativeFailure(native)
+    case other => other
+  }
   private def transport(value: Values.Value): java.util.Map[String, Any] = javaValue(value.json()).asInstanceOf[java.util.Map[String, Any]]
   private def javaMap[K](value: scala.collection.Map[K, Any]): java.util.Map[K, Any] =
     value.iterator.map { case (key, item) => key -> javaValue(item) }.toMap.asJava
@@ -62,4 +77,10 @@ object ScalaEngine {
     case items: Iterable[?] => items.iterator.map(javaValue).toList.asJava
     case scalar => scalar
   }
+}
+
+final class NativeFailure private[scala](error: thinkthen.NativeFailure) extends RuntimeException(error.getMessage, error) {
+  val code: Int = error.code()
+  val retryable: Boolean = error.retryable()
+  val facts: Option[Results.Facts] = Option(error.facts()).map(Results.Facts.read)
 }
