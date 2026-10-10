@@ -111,7 +111,7 @@ fn execute(
     let records = records(originals, sources)?;
     let request = admitted.with_composed_feed("cli-relate");
     let native = crate::Engine::from_cli(engine.clone(), environment.config().prices());
-    let token = crate::CancelToken::new();
+    let token = crate::CancelToken::from_flag(environment.cancel().flag());
     let signal = || environment.cancel().fired();
     let mut controls = crate::CallOptions::new()
         .cli_cancel(&token, environment.cancel().deadline())

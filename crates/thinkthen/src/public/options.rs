@@ -85,6 +85,10 @@ impl CancelToken {
         Arc::clone(&self.0)
     }
 
+    fn any(tokens: [Option<&Self>; 2]) -> bool {
+        tokens.into_iter().flatten().any(Self::is_cancelled)
+    }
+
     /// Whether the token has fired.
     #[must_use]
     pub fn is_cancelled(&self) -> bool {
@@ -112,7 +116,8 @@ pub struct CallOptions<'a> {
     pub(in crate::public) cli_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
-    cancel: Option<&'a CancelToken>,
+    // Keep local call stops separate from actual process signals.
+    cancel: [Option<&'a CancelToken>; 2],
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     send_budget: Option<(&'a SendBudget, Option<u64>)>,
@@ -163,7 +168,7 @@ impl<'a> CallOptions<'a> {
             cli_text_limit: None,
             eager_inputs: false,
             cli_reader: None,
-            cancel: None,
+            cancel: [None, None],
             due: None,
             check: None,
             send_budget: None,
@@ -193,7 +198,7 @@ impl<'a> CallOptions<'a> {
     /// Stop the call when this token fires.
     #[must_use]
     pub const fn cancel(mut self, value: &'a CancelToken) -> Self {
-        self.cancel = Some(value);
+        self.cancel[0] = Some(value);
         self
     }
 
@@ -204,7 +209,7 @@ impl<'a> CallOptions<'a> {
         value: &'a CancelToken,
         deadline: Option<Deadline>,
     ) -> Self {
-        self.cancel = Some(value);
+        self.cancel[1] = Some(value);
         self.due = match deadline {
             Some(deadline) => Some(Due::Started(deadline)),
             None => None,
@@ -425,7 +430,7 @@ pub(crate) struct Stop<'a> {
     base: Cancel<'static>,
     facts: CallFacts,
     prices: Option<Prices>,
-    token: Option<&'a CancelToken>,
+    token: [Option<&'a CancelToken>; 2],
     settle_success_on_cancel: bool,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     observer: Option<Observer<'a>>,
@@ -453,7 +458,7 @@ impl<'a> Stop<'a> {
         };
         let mut base = Cancel::default()
             .with_deadline(deadline)
-            .with_token(options.cancel.map(CancelToken::flag))
+            .with_token(options.cancel.map(|token| token.map(CancelToken::flag)))
             .with_send_budget(
                 options
                     .send_budget
@@ -479,7 +484,7 @@ impl<'a> Stop<'a> {
             attempts,
             panic: Mutex::new(None),
         };
-        if stop.token.is_some_and(CancelToken::is_cancelled) {
+        if CancelToken::any(stop.token) {
             return Err(Error::cancelled());
         }
         Ok(stop)
@@ -511,7 +516,7 @@ impl<'a> Stop<'a> {
     /// reads as `true`, and its payload waits in [`Stop::finish`].
     pub(crate) fn interrupted(&self) -> bool {
         self.drain_attempts();
-        if self.token.is_some_and(CancelToken::is_cancelled) {
+        if CancelToken::any(self.token) {
             return true;
         }
         let Some(check) = self.check else {
@@ -565,9 +570,7 @@ impl<'a> Stop<'a> {
         if let Some(payload) = held {
             resume_unwind(payload);
         }
-        if self.token.is_some_and(CancelToken::is_cancelled)
-            && !(self.settle_success_on_cancel && result.is_ok())
-        {
+        if CancelToken::any(self.token) && !(self.settle_success_on_cancel && result.is_ok()) {
             return Err(Error::cancelled());
         }
         result

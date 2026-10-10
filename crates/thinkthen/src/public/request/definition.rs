@@ -319,15 +319,14 @@ pub(super) fn validate_wire_definition(text: &str) -> Result<(), Error> {
     if question
         .get("kind")
         .is_some_and(|raw| raw.get() == "\"definition\"")
+        && let Some(value) = question.get("value")
     {
-        if let Some(value) = question.get("value") {
-            RequestDefinition::from_authored_json(value.get()).map_err(|error| {
-                match error.to_string().as_str() {
-                    "the question declaration uses an unsupported feature" => error,
-                    _ => Error::usage("invalid canonical request"),
-                }
-            })?;
-        }
+        RequestDefinition::from_authored_json(value.get()).map_err(|error| {
+            match error.to_string().as_str() {
+                "the question declaration uses an unsupported feature" => error,
+                _ => Error::usage("invalid canonical request"),
+            }
+        })?;
     }
     Ok(())
 }

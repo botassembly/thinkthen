@@ -134,10 +134,12 @@ pub(super) fn run(
     let ended = RefCell::new(Ended::default());
     let output = RefCell::new(output);
     let token = crate::CancelToken::new();
+    let signal_token = crate::CancelToken::from_flag(running.cancel.flag());
     let downstream = crate::edge::Downstream::default();
     let signal = || running.cancel.fired() || token.is_cancelled() || downstream.gone();
     let mut controls = crate::CallOptions::new()
-        .cli_cancel(&token, running.cancel.deadline())
+        .cancel(&token)
+        .cli_cancel(&signal_token, running.cancel.deadline())
         .interrupt(&signal)
         .surface(crate::Surface::Cli)
         .attempts(running.common.details)

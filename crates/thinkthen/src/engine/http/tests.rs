@@ -228,7 +228,7 @@ fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
     assert!(!shown.contains(&url), "{shown}");
     assert!(!shown.contains("sk-test-value"), "{shown}");
     let token = Arc::new(AtomicBool::new(false));
-    let cancel = crate::engine::Cancel::default().with_token(Some(Arc::clone(&token)));
+    let cancel = crate::engine::Cancel::default().with_token([Some(Arc::clone(&token)), None]);
     let counts = Counters::new(None);
     let client = Client::new(
         Duration::from_secs(1),
@@ -268,7 +268,7 @@ fn cancellation_after_reservation_refunds_both_process_charges() {
     });
     let token = Arc::new(AtomicBool::new(false));
     let stopped = crate::engine::Cancel::default()
-        .with_token(Some(Arc::clone(&token)))
+        .with_token([Some(Arc::clone(&token)), None])
         .with_process_budget(selected.clone());
     let counts = Counters::new(None);
     let client = Client::new(

@@ -17,7 +17,7 @@ impl CallOptions<'_> {
                 "proxy activation is reserved and is not supported in 0.2",
             ));
         }
-        if self.cancel.is_some_and(CancelToken::is_cancelled) {
+        if CancelToken::any(self.cancel) {
             return Err(Error::cancelled());
         }
         Ok(())

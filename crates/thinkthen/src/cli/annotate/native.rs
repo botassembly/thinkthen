@@ -75,10 +75,12 @@ pub(super) fn run(
     let ended = RefCell::new(Ended::default());
     let output = RefCell::new(output);
     let token = crate::CancelToken::new();
+    let signal_token = crate::CancelToken::from_flag(judging.cancel().flag());
     let downstream = crate::edge::Downstream::default();
     let signal = || judging.cancel().fired() || token.is_cancelled() || downstream.gone();
     let mut controls = crate::CallOptions::new()
-        .cli_cancel(&token, judging.cancel().deadline())
+        .cancel(&token)
+        .cli_cancel(&signal_token, judging.cancel().deadline())
         .interrupt(&signal)
         .surface(crate::Surface::Cli)
         .attempts(judging.details())
