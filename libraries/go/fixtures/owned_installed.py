@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
                 with (state / '.lock').open('w') as lock:
                     (state / '.lock').chmod(0o600)
                     if mode == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
-                    result = subprocess.run([str(home/'consumer-bin'), mode], env=run_env | {'XDG_STATE_HOME': str(state.parent)}, cwd=consumer, text=True, capture_output=True, timeout=5)
+                    result = subprocess.run([str(home/'consumer-bin'), mode], env=child_env(home=str(home / mode), THINKTHEN_API_KEY='tt-canary-274', THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1'), cwd=consumer, text=True, capture_output=True, timeout=5)
                     assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.stdout, result.stderr)
                 assert server.attempts == before + 1, server.attempts
                 print('GO_USAGE_INSTALLED_PASS', mode, 'requests=1')
