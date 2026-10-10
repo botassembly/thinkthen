@@ -13,6 +13,8 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
+sys.path.insert(0, str(ROOT / 'libraries/jvm/tests'))
+from toolchains import JDK, KOTLIN, SCALA, stable
 
 
 def maven_package(jars, inventory, classifier):
@@ -42,13 +44,16 @@ def main():
     parser.add_argument('--native', type=Path, required=True)
     parser.add_argument('--target', required=True)
     args = parser.parse_args()
+    stable()
+    if not args.native.is_file():
+        raise ValueError('JVM package needs a matching native library')
+    if not args.out.is_absolute() or args.out.is_symlink():
+        raise ValueError("JVM package output must be an absolute real directory")
     out = args.out.resolve()
     if out.exists() and any(out.iterdir()):
         raise ValueError("Session package output must be empty")
     out.mkdir(parents=True, exist_ok=True)
-    jdk = Path(os.environ['THINKTHEN_JDK_HOME'])
-    kotlin = Path(os.environ['THINKTHEN_KOTLIN_HOME'])
-    scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
+    jdk, kotlin, scala = JDK, KOTLIN, SCALA
     env = child_env(keep=('LANG','LC_ALL'), JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'), JAVA_OPTS='-Xmx1g -XX:ActiveProcessorCount=2')
     inventory = json.loads(subprocess.check_output([sys.executable, str(ROOT / 'sdlc/scripts/package-inventory.py'), 'jvm'], env=env))
     subprocess.run([sys.executable, str(ROOT / 'sdlc/generators/results/generate.py'), '--target', 'jvm', '--check'], check=True, env=env)
