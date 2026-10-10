@@ -1,6 +1,6 @@
 # 0498: Make TypeScript thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -23,6 +23,8 @@ Reviews: revision 1e3f62bf0bb0a432af7f41f4dda5468937946439, accept
 Reviews: revision 620e1ab3d3ce821961fd09749c095c24ba273084, accept
 
 Reviews: revision 3ae78f7f0277734567814792d7da49164639d0f9, accept
+
+Landed: 68f67a6
 
 ## Outcome
 
