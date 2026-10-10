@@ -319,3 +319,94 @@ pub unsafe extern "C" fn thinkthen_session_result_view(
         Ok(())
     })
 }
+
+/// Observe this engine's live usage persistence without waiting for a writer.
+/// On success assign both outputs; Failed is an observation, not an operation
+/// error. Advice is a static counted UTF-8 view, or NULL with zero length.
+/// Success preserves the calling-thread session diagnostic.
+/// # Safety
+/// engine is live for the call. Both outputs are nonnull, aligned, writable,
+/// nonoverlapping slots. Destruction waits for concurrent callers to return.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_engine_usage_persistence_v1(
+    engine: *const Door,
+    out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
+    out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
+) -> std::ffi::c_int {
+    // SAFETY: forward the caller's documented engine and output obligations.
+    unsafe {
+        usage_status(
+            engine,
+            out_state,
+            out_advice,
+            thinkthen::Engine::usage_persistence,
+        )
+    }
+}
+
+/// Finish this engine's current usage deltas and observe their persistence.
+/// Only usage-lock acquisition has a deadline; other filesystem work can take
+/// longer. Written covers current deltas only, not future calls or other engines.
+/// Failed carries static native safe advice readable after engine destruction
+/// while the library remains loaded. Every nonzero return preserves outputs.
+/// # Safety
+/// The engine and output obligations of usage_persistence_v1 apply.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_engine_finish_usage_status_v1(
+    engine: *const Door,
+    out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
+    out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
+) -> std::ffi::c_int {
+    // SAFETY: forward the caller's documented engine and output obligations.
+    unsafe {
+        usage_status(
+            engine,
+            out_state,
+            out_advice,
+            thinkthen::Engine::finish_usage_status,
+        )
+    }
+}
+
+unsafe fn usage_status(
+    engine: *const Door,
+    out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
+    out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
+    observe: fn(&thinkthen::Engine) -> thinkthen::UsagePersistence,
+) -> std::ffi::c_int {
+    use crate::session::views_generated as view;
+    use thinkthen::UsagePersistence;
+    errors::call(|| {
+        required(out_state)?;
+        required(out_advice)?;
+        if out_state.cast::<()>() == out_advice.cast::<()>() {
+            return Err(ErrorKind::Usage);
+        }
+        // SAFETY: outputs are checked before observing the caller's live engine.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        let observed = observe(&engine.0.engine);
+        let kind = match observed {
+            UsagePersistence::Disabled => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1,
+            UsagePersistence::Pending => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1,
+            UsagePersistence::Written => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1,
+            UsagePersistence::Failed => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1,
+        };
+        let advice = observed.advice().map_or(
+            crate::session::views::thinkthen_complete_utf8_v1 {
+                data: std::ptr::null(),
+                len: 0,
+            },
+            |text| crate::session::views::thinkthen_complete_utf8_v1 {
+                data: text.as_ptr().cast(),
+                len: text.len(),
+            },
+        );
+        // SAFETY: both outputs are writable, distinct slots; nothing fallible
+        // remains after the observation and static projection have succeeded.
+        unsafe {
+            *out_state = view::thinkthen_complete_usage_persistence_v1 { kind };
+            *out_advice = advice;
+        }
+        Ok(())
+    })
+}

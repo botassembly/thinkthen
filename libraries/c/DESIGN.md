@@ -168,3 +168,7 @@ The compatibility doors return open-size results as JSON text. [0426 slice A](TY
 - A checked throttle constructor landed as `thinkthen_engine_new_with` in ticket 0148.
 - Partial rows, which need an engine capability that exposes a stopped call's finished judgments.
 - Windows 0.2 distributes the DLL and its import library only. Raw Cargo static output is never shipped. Stage 3 owns COFF static localization, static-link coexistence and metadata in [the static-library issue](../../sdlc/issues/2026-10-05-windows-static-library-waits-for-stage-3.md). No native localization experiment has run. Stage 2 bindings remain separate.
+
+## Live persistence observations
+
+The owned-session engine exports `thinkthen_engine_usage_persistence_v1` and `thinkthen_engine_finish_usage_status_v1` project one native observation into the generated persistence carrier. They reuse native state calculation and fixed advice; they allocate no status owner and route no JSON request. Output validation precedes engine access and finalization. The existing session guard contains panics; every nonzero return preserves outputs and uses the calling-thread session diagnostic. Failed is a successful observation, not a failed judgment. Static counted advice survives engine destruction while the library remains loaded and needs no free. Observation never waits for a writer. Explicit finalization retains the native usage-lock deadline without promising bounded filesystem work. The caller keeps the engine live and supplies nonoverlapping aligned writable outputs.

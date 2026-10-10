@@ -14,6 +14,24 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
         (output.status.code(), text(&output.stderr)),
         (Some(0), String::new())
     );
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let output = run_with(
+            &compile(&crate_dir().join("tests/c/session.c")),
+            &format!("{}/generic/v1", backend.origin()),
+            b"",
+            &[
+                ("SESSION_CONTROLS", Path::new("1")),
+                ("SESSION_USAGE_DISABLED", Path::new("1")),
+                ("HOME", Path::new("")),
+                ("XDG_STATE_HOME", Path::new("")),
+            ],
+        );
+        assert_eq!(
+            (output.status.code(), text(&output.stderr)),
+            (Some(0), String::new())
+        );
+    }
     for (schema, item) in [
         (
             "context_schema",

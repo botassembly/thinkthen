@@ -101,7 +101,32 @@ static void answer(thinkthen_engine *tt, const char *verb, size_t count) {
     char *out = NULL;
     size_t out_len = 0;
     int rc = THINKTHEN_EUSAGE;
-    if (strcmp(verb, "call") == 0) {
+    if (strcmp(verb, "usage_native") == 0 || strcmp(verb, "finish_native") == 0 || strcmp(verb, "free_native") == 0) {
+        thinkthen_complete_usage_persistence_v1 state = {99};
+        thinkthen_complete_utf8_v1 advice = {NULL, 0};
+        if (strcmp(verb, "usage_native") == 0 &&
+            (thinkthen_engine_finish_usage_status_v1(tt, &state, NULL) != THINKTHEN_EUSAGE || state.kind != 99))
+            fail("invalid finalization changed its output");
+        const char *diagnostic = thinkthen_session_error_message();
+        rc = strcmp(verb, "usage_native") == 0
+             ? thinkthen_engine_usage_persistence_v1(tt, &state, &advice)
+             : thinkthen_engine_finish_usage_status_v1(tt, &state, &advice);
+        if (rc != THINKTHEN_OK) fail("native usage observation refused");
+        if (diagnostic != thinkthen_session_error_message()) fail("observation changed diagnostic");
+        char line[256];
+        int length = snprintf(line, sizeof line, "%u %.*s", state.kind,
+                              (int)advice.len, advice.data ? advice.data : "");
+        if (length < 0 || (size_t)length >= sizeof line) fail("native advice length");
+        if (strcmp(verb, "free_native") == 0) {
+            thinkthen_engine_free(tt);
+            if (state.kind != THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1 ||
+                advice.len != strlen("check the usage folder permissions and free space") ||
+                memcmp(advice.data, "check the usage folder permissions and free space", advice.len))
+                fail("native advice survives engine destruction");
+        }
+        said(THINKTHEN_OK, line, (size_t)length);
+        return;
+    } else if (strcmp(verb, "call") == 0) {
         out = thinkthen_call(tt, fields[1]);
         rc = out == NULL ? thinkthen_error_code(tt) : THINKTHEN_OK;
     } else if (strcmp(verb, "facts") == 0) {
@@ -244,6 +269,7 @@ int main(void) {
             said(thinkthen_error_code(NULL), message, strlen(message));
         } else {
             answer(tt, verb, count);
+            if (strcmp(verb, "free_native") == 0) tt = NULL;
         }
         fflush(stdout);
         for (size_t place = 0; place < count; place++) {
