@@ -163,4 +163,5 @@ def native_cases(binary):
     print(CONSUMER+' complete shared cases: %d/%d passed'%(len(rows)-failed,len(rows)))
     if failed:raise SystemExit(1)
 
-native_cases(Path(sys.argv[1]))
+if __name__ == "__main__":
+    native_cases(Path(sys.argv[1]))
