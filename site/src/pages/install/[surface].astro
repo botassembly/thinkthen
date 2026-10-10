@@ -41,7 +41,7 @@ const backendSample = ['env', 'builder', 'code'].includes(route) ? installSample
 const backendConstructor = {
   python: 'Engine(backend=)', typescript: 'new Client({backend})', ruby: 'Client.open(backend:)', r: 'tt_engine(backend =)',
   c: '"backend" in thinkthen_engine_new_with JSON', cpp: 'Client(settings)', 'objective-c': 'initWithSettings:error:',
-  cobol: 'TT-ENGINE-NEW settings JSON', ada: 'Configure settings JSON', java: 'Engine(settings)',
+  cobol: '"backend" in thinkthen_engine_new_with JSON', ada: 'Configure settings JSON', java: 'Engine(settings)',
   kotlin: 'KotlinEngine(settings)', scala: 'ScalaEngine(settings)', csharp: 'Engine.Open(InputEngineSettings)',
   go: 'NewClient(EngineSettings)', swift: 'Client(settings:)', zig: 'generated engine settings',
   php: 'Client(settings)', dart: 'Engine.open(settings:)',
