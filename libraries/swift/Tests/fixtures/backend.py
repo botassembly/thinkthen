@@ -27,6 +27,10 @@ class Backend(http.server.ThreadingHTTPServer):
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Connection", "close")
+        super().end_headers()
+
     def do_POST(self):
         request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         question = request['questions']['q1']
@@ -53,7 +57,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
-        self.send_header('Connection', 'close')
         self.end_headers()
         try: self.wfile.write(body)
         except BrokenPipeError: pass
