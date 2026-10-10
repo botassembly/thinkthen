@@ -38,11 +38,7 @@ pub unsafe extern "C" fn thinkthen_image_clone(
                     abi::THINKTHEN_IMAGE_PNG_V1 => thinkthen::ImageMedia::Png,
                     _ => return Err(Failure::usage("invalid image media")),
                 };
-                if len > thinkthen::MAX_IMAGE_BYTES {
-                    return Err(Failure::usage(
-                        "image exceeds the 25165824 compressed byte SDK limit",
-                    ));
-                }
+                thinkthen::ImageInput::admit_length(len)?;
                 let filename = read::optional_string(filename)?;
                 let native = thinkthen::ImageInput::new(media, read::slice(bytes, len)?)?;
                 Ok(ImageHandle { native, filename })

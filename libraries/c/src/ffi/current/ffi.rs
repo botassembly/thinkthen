@@ -86,8 +86,8 @@ pub unsafe extern "C" fn thinkthen_source_records(
                     .iter()
                     .enumerate()
                     .map(|(index, record)| {
-                        if record.images.len > thinkthen::MAX_IMAGES {
-                            return Err(Failure::usage("image evidence requires 1 to 8 images"));
+                        if record.images.len != 0 {
+                            thinkthen::ImageAdmission::new(record.images.len)?;
                         }
                         let input = current::Input {
                             original: read::optional_content(record.original)?,

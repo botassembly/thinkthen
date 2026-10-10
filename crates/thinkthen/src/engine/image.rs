@@ -20,11 +20,7 @@ pub(crate) fn decode(
     media: ImageMedia,
     bytes: &[u8],
 ) -> Result<(NonZeroU32, NonZeroU32), ImageError> {
-    if bytes.len() > MAX_IMAGE_BYTES {
-        return Err(ImageError(
-            "image exceeds the 25165824 compressed byte SDK limit",
-        ));
-    }
+    admit_length(bytes.len())?;
     let format = match media {
         ImageMedia::Jpeg => ImageFormat::Jpeg,
         ImageMedia::Png => ImageFormat::Png,
@@ -129,6 +125,31 @@ fn png_container(bytes: &[u8]) -> Result<(), ImageError> {
     if ended { Ok(()) } else { Err(malformed()) }
 }
 
+pub(crate) fn admit_length(length: usize) -> Result<(), ImageError> {
+    if length > MAX_IMAGE_BYTES {
+        return Err(ImageError(
+            "image exceeds the 25165824 compressed byte SDK limit",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn admit_count(count: usize) -> Result<(), ImageError> {
+    if count == 0 || count > MAX_IMAGES {
+        return Err(ImageError("image evidence requires 1 to 8 images"));
+    }
+    Ok(())
+}
+
+pub(crate) fn add_length(total: usize, length: usize) -> Result<usize, ImageError> {
+    total
+        .checked_add(length)
+        .filter(|total| *total <= MAX_IMAGE_BYTES)
+        .ok_or(ImageError(
+            "image evidence exceeds the 25165824 compressed byte SDK limit",
+        ))
+}
+
 /// Shared original-input bounds, including replay's restored ordered set.
 pub(crate) fn validate_set(
     lengths: impl Iterator<Item = usize>,
@@ -138,16 +159,9 @@ pub(crate) fn validate_set(
     let mut total = 0usize;
     for length in lengths {
         count += 1;
-        total = total
-            .checked_add(length)
-            .filter(|total| *total <= MAX_IMAGE_BYTES)
-            .ok_or(ImageError(
-                "image evidence exceeds the 25165824 compressed byte SDK limit",
-            ))?;
+        total = add_length(total, length)?;
     }
-    if count == 0 || count > MAX_IMAGES {
-        return Err(ImageError("image evidence requires 1 to 8 images"));
-    }
+    admit_count(count)?;
     if text_bytes > crate::core::MAX_RECORD_BYTES {
         return Err(ImageError("image text exceeds the 16 MiB SDK limit"));
     }

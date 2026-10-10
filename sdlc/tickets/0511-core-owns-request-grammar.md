@@ -61,6 +61,10 @@ The first slice adds these public Request-edge methods for the separate SQL crat
 ### Added public declarations
 
 ```text
+struct ImageAdmission
+fn ImageAdmission::new(usize) -> Result<ImageAdmission, Error>
+fn ImageAdmission::push(&mut self, usize) -> Result<(), Error>
+fn ImageInput::admit_length(usize) -> Result<(), Error>
 fn Question::admit_find_units<'a>(&self, impl IntoIterator<Item = Result<&'a str, Error>>) -> Result<(), Error>
 fn RequestItem::from_record_descriptor(&str) -> Result<RequestItem, Error>
 fn RequestItem::compose_record(&self, &RecordReading) -> Result<RecordInput<QuestionInput>, Error>

@@ -8,8 +8,8 @@ use std::sync::OnceLock;
 mod images;
 mod request;
 pub use images::{
-    ImageEvidence, ImageInput, ImageMedia, InputEvidence, InputFunction, MAX_IMAGE_BYTES,
-    MAX_IMAGES, QuestionInput,
+    ImageAdmission, ImageEvidence, ImageInput, ImageMedia, InputEvidence, InputFunction,
+    MAX_IMAGE_BYTES, MAX_IMAGES, QuestionInput,
 };
 pub use images::{
     choose_input, choose_input_with, decide_input, decide_input_with, details_input,

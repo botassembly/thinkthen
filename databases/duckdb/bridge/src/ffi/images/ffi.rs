@@ -2,7 +2,7 @@
 
 use std::ffi::c_void;
 use std::io::{self, BufReader, Read};
-use thinkthen::{ImageEvidence, ImageInput, ImageMedia, QuestionInput};
+use thinkthen::{ImageAdmission, ImageEvidence, ImageInput, ImageMedia, QuestionInput};
 
 use super::{BridgeSettings, BridgeStop, BridgeText, Reply, reply_boundary, text};
 use crate::{engines, errors::RowError};
@@ -15,7 +15,7 @@ pub(crate) struct BridgeImage {
 }
 
 fn image(media: &str, data: &BridgeText) -> Result<ImageInput, String> {
-    if data.len > thinkthen::MAX_IMAGE_BYTES || data.bytes.is_null() {
+    if ImageInput::admit_length(data.len).is_err() || data.bytes.is_null() {
         return Err(RowError::usage("invalid counted image bytes or exceeded SDK limit").text);
     }
     let media = match media {
@@ -33,20 +33,19 @@ pub(super) fn input(
     count: usize,
     ancillary: &BridgeText,
 ) -> Result<QuestionInput, String> {
-    if !(1..=thinkthen::MAX_IMAGES).contains(&count) || images.is_null() {
+    let mut admission = ImageAdmission::new(count).map_err(|error| RowError::from(error).text)?;
+    if images.is_null() {
         return Err(RowError::usage("image evidence requires 1 to 8 images").text);
+    }
+    if count > isize::MAX as usize / std::mem::size_of::<BridgeImage>() {
+        return Err(RowError::usage("image array exceeds host slice range").text);
     }
     // SAFETY: C++ retains this array of count BridgeImage entries through return.
     let images = unsafe { std::slice::from_raw_parts(images, count) };
-    if images
-        .iter()
-        .try_fold(0usize, |sum, held| sum.checked_add(held.data.len))
-        .is_none_or(|sum| sum > thinkthen::MAX_IMAGE_BYTES)
-    {
-        return Err(RowError::usage(
-            "image evidence exceeds the 25165824 compressed byte SDK limit",
-        )
-        .text);
+    for held in images {
+        admission
+            .push(held.data.len)
+            .map_err(|error| RowError::from(error).text)?;
     }
     let images = images
         .iter()
