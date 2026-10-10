@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate result declarations from the existing Rust-derived result schema."""
 import argparse
+import os
 import importlib.util
 import json
 from pathlib import Path
@@ -329,9 +330,32 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "dart":
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import dart
+        schema = json.loads((ROOT / "specification/request.schema.json").read_text()) if args.inputs else json.loads(args.schema.read_text())
+        result = dart.render(prepare(graph(schema, dart.INPUT_ROOTS if args.inputs else dart.ROOTS)), args.inputs)
+        if args.bridge:
+            path = ROOT / "sdlc/scripts/check-c-exports.py"
+            spec = importlib.util.spec_from_file_location("dart_abi", path)
+            abi = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(abi)
+            result = dart.bridge(abi.header_abi(ROOT / "libraries/c/include/thinkthen.h"))
+        if args.inputs:
+            result += "const requestVersion = " + json.dumps(schema["$defs"]["RequestVersion"]["oneOf"][0]["const"]) + ";\n"
+        output = ROOT / "libraries/dart/lib/src/session" / ("abi_generated.dart" if args.bridge else "inputs_generated.dart" if args.inputs else "results_generated.dart")
+        result = subprocess.run([os.environ.get("TT_DART", "dart"), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True).stdout
+        if args.check:
+            if not output.exists() or output.read_text() != result:
+                print("generated Dart types differ", file=sys.stderr)
+                return 1
+        else:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(result)
+        return 0
     if args.target == "cpp":
         if args.bridge:
             parser.error("C++ reads the installed native header")

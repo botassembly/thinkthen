@@ -82,3 +82,11 @@ Results copy summaries/facts/attempts, every observation and its details/author,
 The older private JSON carrier readers retain their own boundary restrictions; complete views above do not use them. The canonical consumer is AOT-compiled and statically calls the named public methods. `complete_parity.py dart` reuses the shared suite and counted owned loopback backend. Flutter runs its own facade separately.
 
 Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+
+## Development owned session caller
+
+Ticket 0522 adds `package:thinkthen_dart/thinkthen_session.dart` for the reviewed caller slice. Its ten named `Engine` methods return `Future<OwnedCall>` with generated typed packets, answers, observations and terminal facts. Generated `Presence` keeps absent fields separate from present null. Wide integers use `BigInt`; caller-authored JSON remains ordinary Dart maps and lists. Rust admits every request. `imageBytes` converts a Dart `Uint8List` to the generated attachment descriptor; callers supply file paths through generated source and image types.
+
+Open an engine with the reviewed local native library and generated `InputEngineSettings`, pass generated `InputRequestQuestion` and `InputRequestInput` values, await a named method, and call `close` in `finally`. Supply `Cancellation` to stop a call explicitly. An owned session supports bounded `push`, `read`, and the `packets` stream; call `finish` after intake and `close` after use. Native finalizers backstop forgotten cleanup. `NativeFailure` describes admission failures, and `SessionFailure` retains the complete call and native terminal failure facts.
+
+The old `Door` entry point remains during the package migration. The proposed replacement maps `Door.decide` and the other old judgment methods to the same named `Engine` methods. The next slice owns automatic build-time native assets, installed plugin acceptance and the public API switch. This development entry point still takes a local native library path; it does not claim ordinary pub installation or platform qualification.
