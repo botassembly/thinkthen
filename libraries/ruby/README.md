@@ -4,11 +4,11 @@ These calls require the development 0.2 gem; the public release remains 0.1.2. I
 
 ```ruby
 require "thinkthen"
-answer = ThinkThen::Client.open(cache: false) do |client|
+decision = ThinkThen::Client.open(cache: false) do |client|
   client.decide("Is this urgent?", "Please respond today")
 end
-puts answer.value
-puts answer.facts.requests_sent
+puts decision.value
+puts decision.facts.requests_sent
 ```
 
 `Client` has the ten named methods: `decide`, `filter`, `rank`, `find`, `choose`, `score`, `tag`, `annotate`, `recognize`, and `relate`. Questions accept literal text, ordinary hashes containing the native definition, or `Client.question_file`, `question_name`, and `question_reference` selectors. Strings are literal wording; references are explicit. Rust validates questions, settings and reading options.
