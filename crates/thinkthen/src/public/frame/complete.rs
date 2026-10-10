@@ -1,24 +1,12 @@
 //! Complete collections retain original row identities across nullable columns.
 use super::column::text;
+use super::request;
 use crate::public::{
-    Call, CallOptions, Edge, Engine, Entity, Error, Evidence, Question, Recognize, Recognized,
-    RecordInput, Relate,
+    Call, CallOptions, Edge, Engine, Entity, Error, FindSelection, Question, Recognize, Recognized,
+    RecordInput, Relate, RequestCall, RequestValue,
 };
-use polars::prelude::{DataFrame, IntoSeries, NamedFrom, Series};
+use polars::prelude::{DataFrame, NamedFrom, Series};
 
-struct Indexed(usize, String);
-impl Evidence for Indexed {
-    fn evidence(&self) -> &str {
-        &self.1
-    }
-}
-fn present(texts: &Series) -> Result<Vec<Indexed>, Error> {
-    Ok(text(texts)?
-        .iter()
-        .enumerate()
-        .filter_map(|(at, cell)| cell.map(|cell| Indexed(at, cell.to_owned())))
-        .collect())
-}
 fn frame(columns: Vec<Series>) -> Result<DataFrame, Error> {
     DataFrame::new(
         columns.first().map_or(0, |column| column.len()),
@@ -32,16 +20,16 @@ pub(super) fn filter(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<Series>, Error> {
-    let mut batch = engine.filter_with(question, text(texts)?.iter().flatten(), options);
-    let mut values = polars::prelude::StringChunkedBuilder::new(texts.name().clone(), texts.len());
-    for row in batch.by_ref() {
-        values.append_value(row?);
-    }
-    let facts = batch
-        .facts()
-        .cloned()
-        .ok_or_else(|| Error::defect("filter lost its facts"))?;
-    Ok(Call::new(values.finish().into_series(), facts))
+    request::execute(engine, question, texts, RequestCall::Filter, options)?.try_map(|value| {
+        let RequestValue::Filtered(rows) = value else {
+            return Err(Error::defect("filter returned another result kind"));
+        };
+        let originals = rows
+            .iter()
+            .map(|row| request::original(row.original()))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Series::new(texts.name().clone(), originals))
+    })
 }
 pub(super) fn rank(
     engine: &Engine,
@@ -49,28 +37,42 @@ pub(super) fn rank(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<DataFrame>, Error> {
-    engine
-        .rank_with(question, present(texts)?, options)?
-        .try_map(|rows| {
-            frame(vec![
-                Series::new(
-                    "index".into(),
-                    rows.iter()
-                        .map(|row| row.input().0 as u64)
-                        .collect::<Vec<_>>(),
-                ),
-                Series::new(
-                    "record".into(),
-                    rows.iter()
-                        .map(|row| row.input().1.as_str())
-                        .collect::<Vec<_>>(),
-                ),
-                Series::new(
-                    "probability".into(),
-                    rows.iter().map(|row| row.probability()).collect::<Vec<_>>(),
-                ),
-            ])
-        })
+    let positions = request::positions(texts)?;
+    crate::public::engine::only(question, &[crate::public::question::Kind::Rank], "rank")?;
+    request::execute(engine, question, texts, RequestCall::Rank, options)?.try_map(|value| {
+        let RequestValue::Ranked(rows) = value else {
+            return Err(Error::defect("rank returned another result kind"));
+        };
+        let indices = rows
+            .iter()
+            .map(|row| {
+                positions
+                    .get(row.ordinal())
+                    .copied()
+                    .map(|at| at as u64)
+                    .ok_or_else(|| Error::defect("rank lost a column position"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let originals = rows
+            .iter()
+            .map(|row| request::original(row.original()))
+            .collect::<Result<Vec<_>, _>>()?;
+        let probabilities = rows
+            .iter()
+            .map(|row| {
+                row.result()
+                    .canonical
+                    .answer()
+                    .yes()
+                    .ok_or_else(|| Error::defect("rank lost its probability"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        frame(vec![
+            Series::new("index".into(), indices),
+            Series::new("record".into(), originals),
+            Series::new("probability".into(), probabilities),
+        ])
+    })
 }
 pub(super) fn find(
     engine: &Engine,
@@ -78,36 +80,49 @@ pub(super) fn find(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<DataFrame>, Error> {
-    engine
-        .find_with(question, present(texts)?, options)?
-        .try_map(|found| {
-            let rows = found.candidates();
-            let selected = found.selected().map(|row| row.0);
-            frame(vec![
-                Series::new(
-                    "index".into(),
-                    rows.iter()
-                        .map(|row| row.input().map(|row| row.0 as u64))
-                        .collect::<Vec<_>>(),
-                ),
-                Series::new(
-                    "unit".into(),
-                    rows.iter()
-                        .map(|row| row.input().map(|row| row.1.as_str()))
-                        .collect::<Vec<_>>(),
-                ),
-                Series::new(
-                    "probability".into(),
-                    rows.iter().map(|row| row.probability()).collect::<Vec<_>>(),
-                ),
-                Series::new(
-                    "selected".into(),
-                    rows.iter()
-                        .map(|row| row.input().is_some_and(|row| Some(row.0) == selected))
-                        .collect::<Vec<_>>(),
-                ),
-            ])
-        })
+    let positions = request::positions(texts)?;
+    request::execute(engine, question, texts, RequestCall::Find, options)?.try_map(|value| {
+        let RequestValue::Found(found) = value else {
+            return Err(Error::defect("find returned another result kind"));
+        };
+        let rows = found.candidates();
+        let indices = rows
+            .iter()
+            .enumerate()
+            .map(|(at, row)| {
+                row.input()
+                    .map(|_| {
+                        positions
+                            .get(at)
+                            .copied()
+                            .map(|at| at as u64)
+                            .ok_or_else(|| Error::defect("find lost a column position"))
+                    })
+                    .transpose()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let originals = rows
+            .iter()
+            .map(|row| row.input().map(request::original).transpose())
+            .collect::<Result<Vec<_>, _>>()?;
+        frame(vec![
+            Series::new("index".into(), indices),
+            Series::new("unit".into(), originals),
+            Series::new(
+                "probability".into(),
+                rows.iter().map(|row| row.probability()).collect::<Vec<_>>(),
+            ),
+            Series::new(
+                "selected".into(),
+                rows.iter()
+                    .enumerate()
+                    .map(|(at, row)| {
+                        row.input().is_some() && found.selection() == FindSelection::Unit(at)
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+        ])
+    })
 }
 
 pub(super) fn recognize(
