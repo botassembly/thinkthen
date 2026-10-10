@@ -17,6 +17,7 @@ Usage:
 """
 
 import base64
+import contextlib
 import importlib.util
 import hashlib
 import io
@@ -67,19 +68,27 @@ def version():
     raise Refusal("crates/thinkthen/Cargo.toml names no version")
 
 
-def archive_files(platform, family, v):
+def archive_files(platform, family, v, target=TARGET):
     """The members of one checksummed family archive, by file name."""
-    name = f"thinkthen-{family}-{v}-{TARGET}.tar.gz"
+    extension = "zip" if "-windows-" in target else "tar.gz"
+    name = f"thinkthen-{family}-{v}-{target}.{extension}"
     path = platform / name
     require(path.is_file() and not path.is_symlink(), f"{name} is missing or linked")
     data = path.read_bytes()
     sidecar = platform / f"{name}.sha256"
     require(sidecar.is_file() and sidecar.read_text() == f"{hashlib.sha256(data).hexdigest()}  {name}\n",
             f"{name} differs from its checksum")
+    if extension == "zip":
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            require(len(archive.namelist()) == len(set(archive.namelist())), "duplicate ZIP member")
+            require(all(not name.startswith("/") and ".." not in name.split("/") for name in archive.namelist()), "unsafe ZIP member")
+            return {name: archive.read(name) for name in archive.namelist()}
     files = {}
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
         for member in archive.getmembers():
             if member.isdir():
+                continue
+            if family == "c" and member.issym() and member.linkname in ("libthinkthen.so", "libthinkthen.dylib"):
                 continue
             require(member.isfile(), f"{name} holds a link or device: {member.name}")
             relative = member.name.removeprefix("./")
@@ -163,7 +172,7 @@ def pack(platform, out, sha):
     (out / "nuget" / nupkg_name).write_bytes(csharp[nupkg_name])
 
     jvm = archive_files(platform, "jvm", v)
-    definition = package_inventory.jvm_inventory(pom=jvm['pom.xml'])
+    definition = package_inventory.jvm_inventory(pom=jvm['pom.xml'], target=TARGET)
     for name in definition['files']:
         require(name in jvm, f"JVM archive lacks {name}")
     check_pom(jvm["pom.xml"], v)
@@ -174,9 +183,18 @@ def pack(platform, out, sha):
     for kind, filename in definition['jars'].items():
         suffix = '' if kind == 'door' else '-' + kind
         (base / f"{stem}{suffix}.jar").write_bytes(jvm[filename])
-    sources = sorted(p for folder in definition["jars"]
-                     for p in (REPO / "libraries/jvm" / folder).rglob("*")
+    for classifier, asset in definition['native'].items():
+        native = archive_files(platform, 'c', v, asset['target'])
+        library = asset['files'][0].rsplit('/', 1)[-1]
+        member = ('bin/' if library.endswith('.dll') else 'lib/') + library
+        require(member in native and native[member], f"C archive lacks native asset {member}")
+        with zipfile.ZipFile(io.BytesIO(jvm[asset['jar']])) if asset['target'] == TARGET else contextlib.nullcontext() as selected:
+            if selected is not None:
+                require(set(selected.namelist()) == set(asset['files']) and all(selected.read(name) == native[member] for name in asset['files']), 'JVM native classifier differs from C archive')
+        deterministic_zip(base / f"{stem}-{classifier}.jar", [(name, native[member]) for name in asset['files']])
+    sources = sorted(p for p in (REPO / "libraries/jvm/session").rglob("*")
                      if p.suffix in (".java", ".kt", ".scala") and p.is_file())
+    sources.append(REPO / 'libraries/jvm/door/thinkthen/Json.java')
     require(sources, "no JVM sources to pack")
     deterministic_zip(base / f"{stem}-sources.jar",
                       [(p.relative_to(REPO / "libraries/jvm").as_posix(), p.read_bytes()) for p in sources])
@@ -203,7 +221,8 @@ def maven_artifacts(maven):
     v = version()
     base = maven / GROUP.replace(".", "/") / ARTIFACT / v
     stem = f"{ARTIFACT}-{v}"
-    names = [f"{stem}.pom", f"{stem}.jar", *(f"{stem}-{kind}.jar" for kind in ("kotlin", "scala", "sources", "javadoc"))]
+    classifiers = package_inventory.jvm_inventory(pom=(base / f"{stem}.pom").read_bytes())["native"]
+    names = [f"{stem}.pom", f"{stem}.jar", *(f"{stem}-{kind}.jar" for kind in ("kotlin", "scala", "sources", "javadoc", *classifiers))]
     for name in names:
         data = (base / name).read_bytes() if (base / name).is_file() else None
         require(data is not None, f"Maven bundle lacks {name}")

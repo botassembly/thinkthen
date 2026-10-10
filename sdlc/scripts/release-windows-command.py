@@ -15,6 +15,7 @@ windows_c = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(windows_c)
 
 
+
 TARGET = "x86_64-pc-windows-msvc"
 
 
@@ -68,7 +69,7 @@ def check(archive):
 
 
 def platform(folder, version):
-    """Reject stage 2 artifacts and incomplete Windows command bundles."""
+    """Check command bundles and the optional addon contribution to final npm assembly."""
     name = f"thinkthen-{version}-{TARGET}.zip"
     c_name = f"thinkthen-c-{version}-{TARGET}.zip"
     wheel = f"thinkthen-{version}-cp310-abi3-win_amd64.whl"
@@ -76,6 +77,17 @@ def platform(folder, version):
               "thinkthen-first-run.tar.gz", "thinkthen-first-run.tar.gz.sha256"}
     if folder.is_symlink() or not folder.is_dir():
         raise ValueError("Windows platform folder is missing or linked")
+    _spec = importlib.util.spec_from_file_location("package_inventory", Path(__file__).with_name("package-inventory.py"))
+    package_inventory = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(package_inventory)
+    addon = folder / (package_inventory.npm_definition()['name'] + '-' + version + '.tgz')
+    addon_sum = addon.with_name(addon.name + '.sha256')
+    if addon.exists() or addon.is_symlink() or addon_sum.exists() or addon_sum.is_symlink():
+        wanted |= {addon.name, addon_sum.name}
+        if any(path.is_symlink() or not path.is_file() for path in (addon, addon_sum)):
+            raise ValueError("npm addon contribution or checksum is missing or linked")
+        if addon_sum.read_text().strip() != f"{hashlib.sha256(addon.read_bytes()).hexdigest()}  {addon.name}":
+            raise ValueError("npm addon contribution differs from its checksum")
     if {path.name for path in folder.iterdir()} != wanted:
         raise ValueError("Windows platform must hold exactly the command ZIP, C ZIP, Python wheel and first-run sample with checksums")
     check(folder / name)

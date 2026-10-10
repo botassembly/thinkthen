@@ -32,7 +32,7 @@ class Observer:
         self.calls = []
         self.versions = tools.PACKAGES.copy()
         self.provider = f"libncurses5-dev (= {tools.PACKAGES['libncurses-dev']}), ncurses-dev"
-        self.java_version = "21.0.12"
+        self.java_version = "22.0.2"
         self.cc_owner = "gcc-13-x86-64-linux-gnu"
         self.probe_failures = 0
 
@@ -166,13 +166,11 @@ def main():
                 must_fail(lambda: tools.setup("managed", root / "wrong-java", SHA, False,
                                               github_env, github_path, observer), "selected JDK java differs")
                 assert not any(args[0].endswith(("/kotlinc", "/scalac")) for args, _ in observer.calls)
-                observer.java_version = "21.0.12"
-                # Rehearsal run 36809341385: the runner's PATH javac is the image's own JDK.
+                observer.java_version = "22.0.2"
+                # A runner-provided stable JDK may be selected from PATH.
                 del os.environ["THINKTHEN_JDK_HOME"]
-                executable(root / "bin/javac")
-                with patch.object(tools, "APT_JDK", root / "jdk"):
+                with patch.object(tools.shutil, "which", return_value=str(root / "jdk/bin/javac")):
                     assert tools.check_jdk(observer) == root / "jdk"
-                (root / "bin/javac").unlink()
                 os.environ["THINKTHEN_JDK_HOME"] = str(root / "jdk")
                 (root / "kotlin/lib/kotlin-stdlib.jar").unlink()
                 observer.calls.clear()
@@ -224,7 +222,7 @@ def acquisition_cli(root):
     process_dir = root / "processes"
     process_dir.mkdir()
     log = root / "process-log"
-    package = "openjdk-21-jdk"
+    package = "bubblewrap"
     version = tools.PACKAGES[package]
     process = process_dir / "apt-cache"
     process.write_text("#!/usr/bin/env python3\nimport os, sys\n"
@@ -254,7 +252,7 @@ def acquisition_cli(root):
                "for key in tools.RELEASES}\n"
                "import os\n"
                "tools.package_version = lambda name, run=tools.command: "
-               "tools.MANAGED[name] if pathlib.Path(os.environ['OBSERVE_INSTALLED']).exists() else None\n"
+               "tools.SMOKE[name] if pathlib.Path(os.environ['OBSERVE_INSTALLED']).exists() else None\n"
                "def setup(mode, job, sha, acquire, *handoff):\n"
                "    job.mkdir()\n"
                "    return {'mode': mode, 'packages': tools.ensure_packages(mode, job, acquire, get=tools.fetch)}\n"
@@ -292,7 +290,7 @@ def acquisition_cli(root):
         Path(env["OBSERVE_INSTALLED"]).unlink(missing_ok=True)
         log.unlink(missing_ok=True)
         env.update(OBSERVE_PLAN=plan, OBSERVE_METADATA=metadata)
-        command = [sys.executable, "-c", wrapper, str(script), "managed",
+        command = [sys.executable, "-c", wrapper, str(script), "smoke",
                    str(root / ("acquire-" + label)), SHA, "--acquire"]
         # Use the real CLI argument parser and acquisition path. Intercept
         # setup after package selection to avoid unrelated SDK work.

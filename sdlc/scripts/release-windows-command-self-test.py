@@ -82,6 +82,7 @@ exec '{sys.executable}' "$@"''',
         "cargo fetch --locked --manifest-path Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/c/Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/python/Cargo.toml",
+        "cargo fetch --locked --manifest-path libraries/typescript/Cargo.toml",
         "python3 -m pip install --disable-pip-version-check maturin==1.15.0 jsonschema==4.25.1"]
 
 
@@ -271,7 +272,15 @@ def main():
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET, str(mapped), "command", env=mapped_env))
         expect(run("python3", str(SCRIPT), "check", str(mapped / archive.name)))
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET,
-                   str(base / "unsupported"), "typescript", env=env), 2, "not a Windows stage 1 command part")
+                   str(base / "unsupported"), "ruby", env=env), 2, "not a Windows stage 1 command part")
+        addon_pack = source / 'libraries/typescript/target/pack'
+        addon_pack.mkdir(parents=True)
+        addon = addon_pack / f'thinkthen-{VERSION}.tgz'
+        addon.write_bytes(b'synthetic win32-x64 addon package')
+        packed_addon = base / 'packed-addon'
+        expect(run('sh', str(scripts / 'release-pack'), '--reuse', TARGET, str(packed_addon), 'typescript', env=env))
+        assert (packed_addon / addon.name).read_bytes() == addon.read_bytes()
+        assert (packed_addon / (addon.name + '.sha256')).read_text() == f'{hashlib.sha256(addon.read_bytes()).hexdigest()}  {addon.name}\n'
         # Five-target collection includes Windows and refuses bad Windows assets before copying.
         platforms = base / "platforms"
         for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
@@ -288,6 +297,9 @@ def main():
         wheel = windows / f"thinkthen-{VERSION}-cp310-abi3-win_amd64.whl"
         wheel.write_bytes(b"wheel fixture")
         checksum(wheel)
+        addon = windows / f"thinkthen-{VERSION}.tgz"
+        addon.write_bytes(b"synthetic Windows addon contribution")
+        checksum(addon)
         npm = base / "npm"
         npm.mkdir()
         version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -316,7 +328,9 @@ def main():
                     member.external_attr = 0o100644 << 16
                     out.writestr(member, data)
             checksum(c_zip)
-        mutations = (("missing C ZIP", lambda: c_zip.unlink(), "exactly the command ZIP"),
+        mutations = (("missing addon checksum", lambda: addon.with_name(addon.name + ".sha256").unlink(), "npm addon contribution or checksum is missing"),
+                     ("bad addon checksum", lambda: addon.with_name(addon.name + ".sha256").write_text("bad"), "npm addon contribution differs"),
+                     ("missing C ZIP", lambda: c_zip.unlink(), "exactly the command ZIP"),
                      ("missing C checksum", lambda: c_zip.with_name(c_zip.name + ".sha256").unlink(), "exactly the command ZIP"),
                      ("bad C checksum", lambda: c_zip.with_name(c_zip.name + ".sha256").write_text("bad"), "C ZIP differs"),
                      ("malformed C", malformed_c, "not a zip file"),

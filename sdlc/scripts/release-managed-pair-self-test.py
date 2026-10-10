@@ -115,7 +115,7 @@ def fixture(base):
     nupkg = base / f"Botassembly.ThinkThen.{VERSION}.nupkg"
     nuspec = f"<package><metadata><id>Botassembly.ThinkThen</id><version>{VERSION}</version></metadata></package>".encode()
     write_zip(nupkg, {"Botassembly.ThinkThen.nuspec": nuspec,
-                      "lib/net8.0/ThinkThen.dll": b"DLL", "README.md": source["libraries/csharp/README.md"],
+                      "lib/net8.0/ThinkThen.dll": b"DLL", "runtimes/linux-x64/native/libthinkthen.so": b"fixture shared library", "README.md": source["libraries/csharp/README.md"],
                       "LICENSE": source["libraries/csharp/LICENSE"], "_rels/.rels": b"rels",
                       "[Content_Types].xml": b"types",
                       "package/services/metadata/core-properties/abc.psmdcp": b"props"})
@@ -140,7 +140,19 @@ def fixture(base):
         inventory_members[kind] = sorted(name for name in files if not name.endswith('/') and name != 'META-INF/MANIFEST.MF')
         write_zip(path, files)
         managed[kind] = sha(path.read_bytes())
-    save_json(jars / 'product-inventory.json', {'members': inventory_members})
+    spec = importlib.machinery.SourceFileLoader('package_inventory', str(HELPER.with_name('package-inventory.py'))).load_module()
+    definition = spec.jvm_inventory()
+    door = jars / 'thinkthen-door.jar'
+    files = read_zip(door.read_bytes())
+    files.pop('META-INF/MANIFEST.MF')
+    files['META-INF/thinkthen/product-inventory.json'] = json.dumps(definition).encode()
+    write_zip(door, files)
+    managed['door'] = sha(door.read_bytes())
+    classifier, asset = next((name, asset) for name, asset in definition['native'].items() if asset['target'] == TARGET)
+    path = jars / asset['jar']
+    write_zip(path, {name: b'fixture shared library' for name in asset['files']})
+    managed[classifier] = sha(path.read_bytes())
+    save_json(jars / 'product-inventory.json', dict(definition, members=inventory_members))
     save_json(base / "managed.json", managed)
     return source
 
@@ -359,6 +371,12 @@ def main():
     case("wrong inner package member", lambda base, source: mutate_outer(
         base, "csharp", lambda files: files.__setitem__(
             f"Botassembly.ThinkThen.{VERSION}.nupkg", extra_nupkg(files))))
+    inner_rejection("missing NuGet native asset", "nupkg",
+                    lambda data: changed_zip(data, remove="runtimes/linux-x64/native/libthinkthen.so"),
+                    "nupkg inventory differs")
+    inner_rejection("missing JVM native resource", "natives-linux-x64",
+                    lambda data: changed_zip(data, remove=f"META-INF/thinkthen/native/{TARGET}/libthinkthen.so"),
+                    "JVM native asset differs from captured C")
     for required in ("_rels/.rels", "[Content_Types].xml"):
         inner_rejection(f"missing required {required}", "nupkg",
                         lambda data, required=required: changed_zip(data, remove=required),

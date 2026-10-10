@@ -110,11 +110,15 @@ def xml_field(data, name, parents=("project",)):
     return matches[0].text.strip()
 
 
-def check_nupkg(data, version, source):
+def check_nupkg(data, version, source, target, native):
     members, dirs = zip_members(data, "nupkg")
     require(not dirs, "unexpected nupkg directory")
     fixed = {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE",
              "_rels/.rels", "[Content_Types].xml"}
+    native_name = package_inventory.csharp_inventory(target=target)["native"][target]["file"]
+    fixed.add(native_name)
+    require(native_name in members, "nupkg inventory differs")
+    require(members[native_name] == native, "nupkg native asset differs from captured C")
     other = set(members) - fixed
     require(fixed <= set(members) and len(other) == 1 and all(re.fullmatch(
         r"package/services/metadata/core-properties/[0-9a-fA-F-]+\.psmdcp", name) for name in other),
@@ -133,7 +137,10 @@ def check_nupkg(data, version, source):
 def check_jar(data, kind, inventory):
     members, dirs = zip_members(data, f"{kind} JAR")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
-    require(manifest is not None and manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
+    require(manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
+    if kind == "door":
+        embedded = members.pop("META-INF/thinkthen/product-inventory.json", None)
+        require(embedded is not None and json.loads(embedded) == {key: value for key, value in inventory.items() if key != "members"}, "JAR product inventory differs")
     expected = set(inventory['members'][kind])
     allowed_dirs = {'META-INF/'} | {str(parent) + '/' for member in expected for parent in Path(member).parents if str(parent) != '.'}
     require(dirs <= allowed_dirs, f'{kind} JAR directory inventory differs')
@@ -141,6 +148,12 @@ def check_jar(data, kind, inventory):
     require(not any(token in value for value in members.values() for token in
                     (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275",
                      b"-----BEGIN PRIVATE KEY-----")), f"private {kind} JAR byte")
+
+
+def check_native(data, kind, definition, native):
+    members, dirs = zip_members(data, kind)
+    require(not dirs and set(members) == set(definition["native"][kind]["files"]) and
+            all(value == native for value in members.values()), "JVM native asset differs from captured C")
 
 
 def check_source(path, receipt_path, selected):
@@ -172,7 +185,7 @@ def check(args):
     require(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", args.version) is not None,
             "invalid version")
     source_receipt = receipt(args.source_receipt, ("commit", "sha256"))
-    managed = receipt(args.managed_receipt, ("nupkg", "door", "kotlin", "scala"))
+
     require(re.fullmatch(r"[0-9a-f]{40}", source_receipt["commit"]) is not None,
             "invalid captured source commit")
     source_bytes = check_source(args.source_tar, args.source_receipt, source_receipt["commit"])
@@ -182,8 +195,12 @@ def check(args):
     manifest = (f"source_commit={source_receipt['commit']}\ntarget={args.target}\n"
                 f"version={args.version}\nc_archive={c_name}\nc_sha256={c_receipt['sha256']}\n").encode()
     nupkg = f"Botassembly.ThinkThen.{args.version}.nupkg"
-    definition = package_inventory.jvm_inventory(pom=source['libraries/jvm/pom.xml'])
-    kinds = definition['jars']
+    definition = package_inventory.jvm_inventory(pom=source['libraries/jvm/pom.xml'], target=args.target)
+    native_kinds = {kind: asset['jar'] for kind, asset in definition['native'].items() if asset['target'] == args.target}
+    managed = receipt(args.managed_receipt, ('nupkg', *definition['jars'], *native_kinds))
+    with tarfile.open(args.c_archive) as archive:
+        native = archive.extractfile('./lib/libthinkthen.so').read()
+    kinds = {**definition['jars'], **native_kinds}
     inner = {"nupkg": nupkg, **kinds}
     outer = {"csharp": f"thinkthen-csharp-{args.version}-{args.target}.tar.gz",
              "jvm": f"thinkthen-jvm-{args.version}-{args.target}.tar.gz"}
@@ -203,9 +220,9 @@ def check(args):
             data = regular(path)
             pinned(data, managed[kind], kind)
             if kind == "nupkg":
-                check_nupkg(data, args.version, source)
+                check_nupkg(data, args.version, source, args.target, native)
             else:
-                check_jar(data, kind, inventory)
+                check_jar(data, kind, inventory) if kind in definition["jars"] else check_native(data, kind, definition, native)
         require(tuple(xml_field(source["libraries/jvm/pom.xml"], key) for key in
                       ("groupId", "artifactId", "version")) ==
                 ("io.github.botassembly", "thinkthen-jvm", args.version), "source POM identity differs")
@@ -240,7 +257,7 @@ def check(args):
             require(files[member] == source[f"libraries/{family}/{member}"], f"{family} {member} differs")
         if family == "csharp":
             pinned(files[nupkg], managed["nupkg"], "nupkg")
-            check_nupkg(files[nupkg], args.version, source)
+            check_nupkg(files[nupkg], args.version, source, args.target, native)
         else:
             require(files["pom.xml"] == source["libraries/jvm/pom.xml"], "JVM POM differs from source")
             require(tuple(xml_field(files["pom.xml"], key) for key in ("groupId", "artifactId", "version")) ==
@@ -248,7 +265,7 @@ def check(args):
             inventory = json.loads(files['product-inventory.json'])
             for kind in kinds:
                 pinned(files[inner[kind]], managed[kind], f"{kind} JAR")
-                check_jar(files[inner[kind]], kind, inventory)
+                check_jar(files[inner[kind]], kind, inventory) if kind in definition["jars"] else check_native(files[inner[kind]], kind, definition, native)
     return True
 
 

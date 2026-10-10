@@ -8,6 +8,7 @@ checks the exit code and the refusal sentence. Signing cases need gpg.
 import base64
 import contextlib
 import hashlib
+import importlib.util
 import json
 import io
 import os
@@ -18,15 +19,16 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
 TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "crates/thinkthen/Cargo.toml", "composer.json", "libraries/php/composer.json", "libraries/go/go.mod",
-        "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/door/thinkthen/Door.java",
-        "libraries/jvm/door/thinkthen/Json.java", "libraries/jvm/kotlin/KotlinCaller.kt",
-        "libraries/jvm/scala/ScalaCaller.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
+        "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/session/thinkthen/Engine.java",
+        "libraries/jvm/door/thinkthen/Json.java", "libraries/jvm/session/kotlin/KotlinEngine.kt",
+        "libraries/jvm/session/scala/ScalaEngine.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
         "libraries/dart/lib/thinkthen_dart.dart")
 
 
@@ -35,8 +37,8 @@ def version():
                 if line.startswith('version = "'))
 
 
-def archive(folder, family, files):
-    name = f"thinkthen-{family}-{version()}-{TARGET}.tar.gz"
+def archive(folder, family, files, target=TARGET):
+    name = f"thinkthen-{family}-{version()}-{target}.tar.gz"
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
         for member, data in {"THINKTHEN-PACKAGE-INPUTS": b"source_commit=0\n", **files}.items():
@@ -83,6 +85,25 @@ def tree(root, plant):
         "dart": {"pubspec.yaml": (root / "libraries/dart/pubspec.yaml").read_bytes(), "pubspec.lock": b"lock",
                  "README.md": b"readme", "lib/thinkthen_dart.dart": b"library;"},
     }
+    spec = importlib.util.spec_from_file_location('inventory', REPO / 'sdlc/scripts/package-inventory.py')
+    inventory = importlib.util.module_from_spec(spec); spec.loader.exec_module(inventory)
+    definition = inventory.jvm_inventory()
+    for classifier, asset in definition['native'].items():
+        library = asset['files'][0].rsplit('/', 1)[-1]
+        native = ('native-' + asset['target']).encode()
+        if asset['target'] == TARGET:
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w') as package:
+                for name in asset['files']: package.writestr(name, native)
+            files['jvm'][asset['jar']] = buffer.getvalue()
+        if '-windows-' in asset['target']:
+            name = f"thinkthen-c-{v}-{asset['target']}.zip"
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w') as package: package.writestr('bin/' + library, native)
+            (platform / name).write_bytes(buffer.getvalue())
+            (platform / (name + '.sha256')).write_text(hashlib.sha256(buffer.getvalue()).hexdigest() + '  ' + name + '\n')
+        else:
+            archive(platform, 'c', {'lib/' + library: native}, asset['target'])
     plant(root, files)
     for family, members in files.items():
         archive(platform, family, members)
@@ -246,12 +267,50 @@ def nuget_cases(nupkg):
     return out
 
 
+def jvm_contract_cases():
+    """Read scalar fields and propagate inventory failures through both workflow steps."""
+    with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
+        root = pathlib.Path(tmp)
+        for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, root / name)
+        env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
+        command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
+        definition = json.loads(subprocess.check_output(command, cwd=root, env=env))
+        for field, expected in (("jdk", str(definition["jdk"])), ("files", "\n".join(definition["files"])),
+                                ("jars", "\n".join(definition["jars"].values()))):
+            result = subprocess.run(command + ["--field", field], cwd=root, env=env, capture_output=True, text=True)
+            assert (result.returncode, result.stdout, result.stderr) == (0, expected + "\n", ""), (field, result)
+        workflow = yaml.safe_load((root / ".github/workflows/release.yml").read_text())
+        steps = [step for job in workflow["jobs"].values() for step in job.get("steps", [])
+                 if step.get("id") == "jvm-contract"]
+        assert len(steps) == 2
+        pom = root / "libraries/jvm/pom.xml"
+        original = pom.read_text()
+        for step in steps:
+            for broken in (False, True):
+                pom.write_text(original.replace(f'<thinkthen.session.jdk>{definition["jdk"]}</',
+                                                "<thinkthen.session.jdk>invalid</") if broken else original)
+                output = root / "output"
+                output.write_text("")
+                result = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
+                                        cwd=root, env=env, capture_output=True, text=True)
+                if broken:
+                    assert result.returncode != 0 and "invalid literal for int()" in result.stderr, result
+                    assert output.read_text() == "", output.read_text()
+                else:
+                    assert result.returncode == 0 and output.read_text() == f'jdk={definition["jdk"]}\n', result
+
+
 def main():
+    jvm_contract_cases()
     v = version()
     bad = 0
     stem = f"thinkthen-jvm-{v}"
     pack_cases = [
         ("pack", keep, None),
+        ("missing-native-jar", lambda r, f: f['jvm'].pop('thinkthen-natives-linux-x64.jar'), 'JVM archive lacks thinkthen-natives-linux-x64.jar'),
+        ("missing-native-target", lambda r, f: (r / 'platform' / f'thinkthen-c-{v}-x86_64-pc-windows-msvc.zip').unlink(), f'thinkthen-c-{v}-x86_64-pc-windows-msvc.zip is missing or linked'),
         ("nupkg-id", lambda r, f: f["csharp"].update({f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Other.ThinkThen", v)}),
          "nupkg identity differs"),
         ("nupkg-version", lambda r, f: f["csharp"].update({f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Botassembly.ThinkThen", "9.9.9")}),
@@ -285,15 +344,14 @@ def main():
         root = pathlib.Path(tmp) / "pack"
         base = root / "out/maven/io/github/botassembly/thinkthen-jvm" / v
         layout = sorted(p.name for p in base.iterdir())
-        artifacts = [f"{stem}{suffix}" for suffix in ("-javadoc.jar", "-kotlin.jar", "-scala.jar", "-sources.jar", ".jar", ".pom")]
+        artifacts = [f"{stem}{suffix}" for suffix in ("-javadoc.jar", "-kotlin.jar", "-scala.jar", "-sources.jar", ".jar", ".pom", *("-" + name + ".jar" for name in json.loads(subprocess.check_output([sys.executable, str(REPO / "sdlc/scripts/package-inventory.py"), "jvm"]))["native"]))]
         pub = sorted(p.relative_to(root / "out/pub").as_posix() for p in (root / "out/pub").rglob("*") if p.is_file())
         expected_pub = ["thinkthen_dart/README.md", "thinkthen_dart/lib/thinkthen_dart.dart", "thinkthen_dart/pubspec.yaml"]
         with zipfile.ZipFile(base / f"{stem}-sources.jar") as sources:
             source_names = sorted(sources.namelist())
         checks = [
             ("maven-layout", layout, sorted(f"{a}{s}" for a in artifacts for s in ("", ".md5", ".sha1"))),
-            ("maven-sources", source_names, ["door/thinkthen/Door.java", "door/thinkthen/Json.java",
-                                             "kotlin/KotlinCaller.kt", "scala/ScalaCaller.scala"]),
+            ("maven-sources", source_names, sorted(["door/thinkthen/Json.java", "session/thinkthen/Engine.java", "session/kotlin/KotlinEngine.kt", "session/scala/ScalaEngine.scala"])),
             ("nuget-file", [p.name for p in (root / "out/nuget").iterdir()], [f"Botassembly.ThinkThen.{v}.nupkg"]),
             ("pub-files", pub, expected_pub),
         ]
@@ -320,7 +378,7 @@ def main():
         if shutil.which("gpg"):
             signed = run(root, "maven-sign", "out/maven", "rehearse")
             checks.append(("rehearse-sign", (signed.returncode, signed.stdout.strip(), sorted(p.name for p in base.iterdir())),
-                           (0, "release-registry: rehearsal signed and verified 6 Maven files with a throwaway key", layout)))
+                           (0, "release-registry: rehearsal signed and verified 11 Maven files with a throwaway key", layout)))
             (base / f"{stem}.jar.sha1").write_text("0" * 40)
             stale = run(root, "maven-sign", "out/maven", "rehearse")
             checks.append(("rehearse-stale-checksum", (stale.returncode, stale.stderr.strip()),

@@ -241,22 +241,30 @@ cpp)
 		cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
 		;;
 csharp)
-		mkdir -p "$folder/feed"
+		mkdir -p "$folder/feed" "$folder/c"
+		tar -xzf "$OUT/$c_name" -C "$folder/c"
+		native_properties=$(python3 sdlc/scripts/package-inventory.py csharp --target "$TARGET")
+		native_rid=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["rid"])' "$TARGET")
+		native_name=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["file"].split("/")[-1])' "$TARGET")
 		DOTNET_CLI_HOME="$stage/dotnet-home" NUGET_PACKAGES="$stage/nuget" \
 		DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
 		${THINKTHEN_DOTNET:-dotnet} pack libraries/csharp/ThinkThen.csproj -c Release \
-			--source "$folder/feed" -o "$folder" -v quiet
+			--source "$folder/feed" -o "$folder" -v quiet \
+			-p:ThinkThenNativeAsset="$folder/c/lib/$native_name" -p:ThinkThenNativeRid="$native_rid" -p:ThinkThenNativeName="$native_name"
 		[ -f "$folder/Botassembly.ThinkThen.$V.nupkg" ] || { echo 'release-pack: C# nupkg missing' >&2; exit 1; }
+		rm -r "$folder/c"
 		rmdir "$folder/feed"
 		# The release workflow's managed pair packs the same four files (ticket 0375).
 		cp libraries/csharp/LICENSE libraries/csharp/README.md "$folder/"
 		;;
 jvm)
 		scratch_dir jvm_out
-		THINKTHEN_JVM_OUT=$jvm_out sh libraries/jvm/build.sh
-		THINKTHEN_JVM_OUT=$jvm_out python3 libraries/jvm/tests/package_check.py
-		for file in $(python3 sdlc/scripts/package-inventory.py jvm --field files); do
-			case $file in *.jar|product-inventory.json) cp "$jvm_out/jars/$file" "$folder/" ;; *) cp "libraries/jvm/$file" "$folder/" ;; esac
+		mkdir -p "$jvm_out/native"
+		tar -xzf "$OUT/$c_name" -C "$jvm_out/native"
+		THINKTHEN_JVM_OUT=$jvm_out/product THINKTHEN_JVM_NATIVE="$jvm_out/native/lib/libthinkthen.$dl" THINKTHEN_JVM_TARGET="$TARGET" sh libraries/jvm/build.sh
+		THINKTHEN_JVM_OUT=$jvm_out/product python3 libraries/jvm/tests/package_check.py --session
+		for file in $(python3 sdlc/scripts/package-inventory.py jvm --target "$TARGET" --field files); do
+			case $file in *.jar|product-inventory.json) cp "$jvm_out/product/jars/$file" "$folder/" ;; *) cp "libraries/jvm/$file" "$folder/" ;; esac
 		done
 		;;
 swift)
@@ -282,13 +290,8 @@ zig)
 		tar -xzf "$OUT/$c_name" -C "$folder/native/$TARGET" ./include/thinkthen.h ./lib/libthinkthen.a
 		;;
 php)
-		mkdir -p "$folder/examples" "$folder/src/complete" "$folder/src/native"
-		cp libraries/php/LICENSE libraries/php/README.md libraries/php/composer.json \
-			libraries/php/autoload.php "$folder/"
-		cp libraries/php/examples/direct.php "$folder/examples/"
-		cp libraries/php/src/ThinkThen.php "$folder/src/"
-		cp libraries/php/src/complete/models.php "$folder/src/complete/"
-		cp libraries/php/src/native/abi.h libraries/php/src/native/*.php "$folder/src/native/"
+		cp libraries/php/LICENSE libraries/php/README.md libraries/php/composer.json libraries/php/autoload.php "$folder/"
+		cp -R libraries/php/src libraries/php/examples "$folder/"
 		;;
 dart)
 		mkdir -p "$folder"
@@ -550,9 +553,9 @@ EOF
 }
 
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
-	[ $# -gt 0 ] || set -- command c python first-run
+	[ $# -gt 0 ] || set -- command c python typescript first-run
 	for part in "$@"; do
-		case $part in command | c | python | first-run | crate) ;;
+		case $part in command | c | python | typescript | first-run | crate) ;;
 		*) echo "release-pack: $part is not a Windows stage 1 command part" >&2; exit 2 ;; esac
 	done
 else

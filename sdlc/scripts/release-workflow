@@ -194,16 +194,11 @@ def version(command, expected):
 
 dotnet = selected("THINKTHEN_DOTNET", "dotnet")
 version([dotnet, "--version"], r"^8\.0\.131$")
-jdk = "THINKTHEN_JDK_HOME"
-for name, args, expected in (("javac", ["-version"], r"javac 21\.0\.12(?:\.1)?\b"),
-                             ("jar", ["--version"], r"jar 21\.0\.12(?:\.1)?\b"),
-                             ("java", ["-version"], r"(?:openjdk|java) version .21\.0\.12(?:\.1)?\b")):
-    version([selected(jdk, name), *args], expected)
-package = subprocess.run(["dpkg-query", "-W", "-f=${Version}", "openjdk-21-jdk"],
-                         text=True, capture_output=True, timeout=20)
-if package.returncode or package.stdout != "21.0.12.1+1-1~24.04.4":
-    raise SystemExit("managed-tools: selected Noble JDK package is unqualified")
-print(f"managed-tools: openjdk-21-jdk {package.stdout}")
+import importlib.util
+spec = importlib.util.spec_from_file_location("language_tools", "sdlc/scripts/release-language-tools.py")
+tools = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(tools)
+tools.check_jdk()
 for variable, name, args, expected, runtime in (
     ("THINKTHEN_KOTLIN_HOME", "kotlinc", ["-version"], r"kotlinc-jvm 2\.4\.20\b", "lib/kotlin-stdlib.jar"),
     ("THINKTHEN_SCALA_HOME", "scalac", ["-version"], r"Scala compiler version 3\.9\.0\b", "lib/scala.jar")):
@@ -240,10 +235,13 @@ managed-build)
 	DOTNET_CLI_HOME="$managed_stage/dotnet-home" NUGET_PACKAGES="$managed_stage/nuget" \
 	DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
 	"${THINKTHEN_DOTNET:-dotnet}" pack "$managed_stage/src/libraries/csharp/ThinkThen.csproj" -c Release \
-		--source "$managed_stage/feed" -o "$managed_stage/csharp" -v quiet
-	THINKTHEN_JVM_OUT="$managed_stage/jvm" sh "$managed_stage/src/libraries/jvm/build.sh"
+		--source "$managed_stage/feed" -o "$managed_stage/csharp" -v quiet \
+		-p:ThinkThenNativeAsset="$managed_stage/c/lib/libthinkthen.so" \
+		-p:ThinkThenNativeRid="$(python3 sdlc/scripts/package-inventory.py csharp --target "$4" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["rid"])' "$4")" \
+		-p:ThinkThenNativeName="$(python3 sdlc/scripts/package-inventory.py csharp --target "$4" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["file"].split("/")[-1])' "$4")"
+	THINKTHEN_JVM_NATIVE="$managed_stage/c/lib/libthinkthen.so" THINKTHEN_JVM_TARGET="$4" THINKTHEN_JVM_OUT="$managed_stage/jvm" sh "$managed_stage/src/libraries/jvm/build.sh"
 	THINKTHEN_JVM_OUT="$managed_stage/jvm" THINKTHEN_RELEASE_C_DIR="$managed_stage/c" \
-		python3 "$managed_stage/src/libraries/jvm/tests/package_check.py"
+		python3 "$managed_stage/src/libraries/jvm/tests/package_check.py" --session
 	nupkg=$managed_stage/csharp/Botassembly.ThinkThen.$version.nupkg
 	[ -f "$nupkg" ] && [ ! -L "$nupkg" ] || fail 'fresh nupkg is missing'
 	python3 - "$nupkg" "$managed_stage/jvm/jars" "$2/managed.json" <<'PY'
@@ -254,7 +252,12 @@ def pin(path):
         raise SystemExit(f"managed output is missing or linked: {path}")
     return hashlib.sha256(path.read_bytes()).hexdigest()
 values = {"nupkg": pin(nupkg)}
-values.update({kind: pin(jars / f"thinkthen-{kind}.jar") for kind in ("door", "kotlin", "scala")})
+import importlib.util
+spec = importlib.util.spec_from_file_location("inventory", "sdlc/scripts/package-inventory.py")
+inventory = importlib.util.module_from_spec(spec); spec.loader.exec_module(inventory)
+definition = inventory.jvm_inventory(target="x86_64-unknown-linux-gnu")
+values.update({kind: pin(jars / name) for kind, name in definition["jars"].items()})
+values.update({kind: pin(jars / asset["jar"]) for kind, asset in definition["native"].items() if asset["target"] == "x86_64-unknown-linux-gnu"})
 receipt.write_text(json.dumps(values) + "\n")
 PY
 	chmod 444 "$2/managed.json"
@@ -278,6 +281,7 @@ PYWIN
 		cargo fetch --locked --manifest-path Cargo.toml
 		cargo fetch --locked --manifest-path libraries/c/Cargo.toml
 		cargo fetch --locked --manifest-path libraries/python/Cargo.toml
+		cargo fetch --locked --manifest-path libraries/typescript/Cargo.toml
 		python3 -m pip install --disable-pip-version-check 'maturin==1.15.0' 'jsonschema==4.25.1'
 		exit 0
 	fi
