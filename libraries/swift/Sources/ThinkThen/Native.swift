@@ -104,7 +104,35 @@ func nativeChecked(_ engine: OpaquePointer?, _ code: Int32) throws {
     throw try NativeFailure(snapshot:NativeResult(taking:raw))
 }
 
+public enum UsagePersistence: Sendable {
+    case disabled, pending, written, failed
+    init(_ kind: UInt32) throws {
+        switch kind {
+        case UInt32(THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1): self = .disabled
+        case UInt32(THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1): self = .pending
+        case UInt32(THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1): self = .written
+        case UInt32(THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1): self = .failed
+        default: throw NativeConversion.invalidDiscriminator
+        }
+    }
+}
+public struct UsageStatus: Sendable {
+    public let state: UsagePersistence
+    public let advice: String?
+}
+
 extension Engine {
+    public func usagePersistence() throws -> UsageStatus { try usageStatus(thinkthen_engine_usage_persistence_v1) }
+    public func finishUsageStatus() throws -> UsageStatus { try usageStatus(thinkthen_engine_finish_usage_status_v1) }
+    private func usageStatus(_ operation: (OpaquePointer?, UnsafeMutablePointer<thinkthen_complete_usage_persistence_v1>?, UnsafeMutablePointer<thinkthen_complete_utf8_v1>?) -> Int32) throws -> UsageStatus {
+        let h = try open(); var state = thinkthen_complete_usage_persistence_v1(); var advice = thinkthen_complete_utf8_v1()
+        let code = operation(h,&state,&advice)
+        if code != 0 {
+            throw DoorFailure(code:code,retryable:false,message:String(cString:thinkthen_session_error_message()))
+        }
+        let copied = try nativeCopy(thinkthen_string_v1(data:advice.data,len:advice.len))
+        return UsageStatus(state:try UsagePersistence(state.kind),advice:advice.data == nil ? nil : copied)
+    }
     public func question(_ spec: thinkthen_question_spec_v1, author: thinkthen_question_author_v1? = nil, task: thinkthen_recognition_task_v1? = nil) throws -> NativeQuestion {
         let h = try open(); var spec = spec; let author = author; var out: OpaquePointer? = nil
         let code = withUnsafePointer(to:&spec) { s in

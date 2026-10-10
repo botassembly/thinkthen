@@ -23,11 +23,43 @@ import CThinkThen
         if text, let s = value as? String { return .text(s) }
         return .json(String(decoding:try JSONSerialization.data(withJSONObject:value,options:[.fragmentsAllowed]),as:UTF8.self))
     }
+    static func usage(_ mode: String, _ settings: String) throws {
+        let engine = try Engine(settingsJSON:settings)
+        defer { engine.close() }
+        if mode == "usage-disabled" {
+            let observed = try engine.usagePersistence(); let finished = try engine.finishUsageStatus()
+            precondition(observed.state == .disabled && finished.state == .disabled)
+            print("USAGE_PASS disabled"); return
+        }
+        let question = try engine.parseQuestion(role:.atomic,json:"{\"decide\":\"Is it?\"}")
+        let source = try engine.records([NativeRecord(original:.text("consumer-swift"))])
+        let answer = try engine.decide(question,source:source)
+        try emit(answer)
+        precondition(answer.summary.facts?.requests_sent == 1)
+        let observed = try engine.usagePersistence()
+        if mode == "usage-failed" { precondition(observed.state == .pending && observed.advice == nil) }
+        let finished = try engine.finishUsageStatus()
+        let expected: UsagePersistence = mode == "usage-failed" ? .failed : .written
+        precondition(finished.state == expected)
+        let advice = mode == "usage-failed" ? "check the usage folder permissions and free space" : nil
+        precondition(finished.advice == advice)
+        let repeated = try engine.usagePersistence(); let drained = try engine.finishUsageStatus()
+        precondition(repeated.state == expected && repeated.advice == advice && drained.state == expected && drained.advice == advice)
+        engine.close()
+        precondition(finished.state == expected && finished.advice == advice)
+        do { _ = try engine.usagePersistence(); preconditionFailure("closed engine admitted observation") }
+        catch let failure as DoorFailure { precondition(failure.code == 1) }
+        do { _ = try engine.finishUsageStatus(); preconditionFailure("closed engine admitted finalization") }
+        catch let failure as DoorFailure { precondition(failure.code == 1) }
+        try emit(answer)
+        print("USAGE_PASS \(mode)")
+    }
     static func main() {
         var cancellation: Thread? = nil
         let joined = DispatchSemaphore(value:0)
         do {
             guard CommandLine.arguments.count == 3 else { throw NativeConversion.invalidExtent }
+            if CommandLine.arguments[1].hasPrefix("usage-") { try usage(CommandLine.arguments[1],CommandLine.arguments[2]); return }
             let v = try JSONSerialization.jsonObject(with:Data(contentsOf:URL(fileURLWithPath:CommandLine.arguments[1]))) as! [String:Any]
             let settings = CommandLine.arguments[2]
             let settingValues = try JSONSerialization.jsonObject(with:Data(settings.utf8)) as! [String:Any]
