@@ -1,6 +1,6 @@
 # thinkthen-cpp
 
-This C++17 header-only package wraps the separately installed ThinkThen C library. It owns C++ argument, result and error lifetimes; Rust owns question grammar and judgment. The package and its installed consumers have passed locally on Linux x86_64. Final release archives and other hosts need separate qualification.
+This C++17 header-only CMake package installs its matching native library and header with the C++ headers. It owns C++ argument, result and error lifetimes; Rust owns question grammar and judgment. The package and its installed consumers have passed locally on Linux x86_64. Final release archives and other hosts need separate qualification.
 
 Build the matching native C artifacts from this checkout, then install the CMake package into a local prefix:
 
@@ -16,11 +16,44 @@ cmake --build target/thinkthen-cpp --parallel 2
 cmake --install target/thinkthen-cpp
 ```
 
-A separate CMake project can set `CMAKE_PREFIX_PATH` to that prefix and call `find_package(thinkthen-cpp CONFIG REQUIRED)`. Link `thinkthen::thinkthen_cpp_shared` or `thinkthen::thinkthen_cpp_static`; both provide `<thinkthen/door.hpp>`. Shared mode needs the installed library directory in the runtime loader path. Static-C mode still depends on Linux system libraries. The package config uses `PACKAGE_PREFIX_DIR` and also resolves a multi-component `lib/x86_64-linux-gnu` installation. It does not ship a shim library or download a native binary.
+A separate CMake project can set `CMAKE_PREFIX_PATH` to that prefix and call `find_package(thinkthen-cpp CONFIG REQUIRED)`. Link `thinkthen::thinkthen_cpp_shared` or `thinkthen::thinkthen_cpp_static`; both provide `<thinkthen/client.hpp>`. Shared mode needs the installed library directory in the runtime loader path. Static-C mode still depends on Linux system libraries. The package config uses `PACKAGE_PREFIX_DIR` and also resolves a multi-component `lib/x86_64-linux-gnu` installation. It does not ship a shim library or download a native binary.
 
 `sh libraries/cpp/check.sh 0` checks the current 31-export native ABI, parser boundaries, the 55-case schema and 30 executable public corpus cases, four installed shared/static/multilib/sanitized consumers with 16 exact request bodies each, and planted failures. It uses only a counted loopback backend. The C++ sanitizer checks the C++ consumer, not Rust allocations.
 
 For Linux x86-64, `sdlc/scripts/release-pack TARGET OUT c go cpp` produces versioned Go, C++ and C archives from one clean source commit. Run `sdlc/scripts/release-go-cpp-pair OUT` before using the files together. Unpack the C++ source and the matching C archive into separate folders, then pass the C archive's `include/thinkthen.h`, `lib/libthinkthen.so`, and `lib/libthinkthen.a` to CMake through the three `THINKTHEN_` inputs above. The C++ archive's `THINKTHEN-PACKAGE-INPUTS` records the exact C archive digest. Each GitHub release ships these archives, and an installed `find_package` consumer check covers them. No CMake registry package is published.
+
+The owned caller API uses `tt::Client` and ten named methods: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each starts a native-owned session and returns a move-only `tt::Call`. The native engine admits the generated input values and owns validation, defaults, files, images, cache and replay behavior.
+
+```cpp
+#include <thinkthen/client.hpp>
+using namespace tt::inputs;
+
+tt::Client client;
+auto call = client.decide(
+    RequestQuestionText().set_text("Does the customer ask for money back?"),
+    RequestInputText().set_text("Please refund my order."));
+call.finish();
+for (const auto& packet : call.collect()) {
+    if (auto row = packet.as_SessionPacketDecideRow()) {
+        auto value = row->value().value->value();
+        // Presence distinguishes an absent value, explicit null and a present value.
+        (void)value;
+    }
+}
+```
+
+`collect` blocks explicitly. An event loop uses `poll`, whose state is `pending`, `result` or `end`; a worker can own a moved call and use `collect`. A single host thread owns each call. `try_push` admits one generated feed descriptor without waiting and returns false when the native queue is full. `finish` declares input EOF. `cancel` signals stop without waiting; `close` and destruction cancel and free the native owner without joining the provider. Closing the client leaves existing calls valid. Generated C++ packet values own their data after native result cleanup.
+
+Generated input builders accept standard strings, vectors, ordered member lists, booleans and integers. Generated result classes expose known fields and typed alternatives. Each field returns `tt::results::Presence<T>` with `absent`, `null` or `value` state. `document()` retains unknown extensions and unrestricted authored JSON. Integer conversion preserves all signed and unsigned 64-bit values. `tt::SessionFailure` retains the generated `CallError`, including native kind, retryability and facts; immediate admission errors throw `tt::NativeFailure` with the actual native error kind.
+
+The focused installed consumer covers all ten named calls, presence, null, false, unknown fields, wide integers, native failure facts, document files, rejected image admission and held-provider cancellation and destruction. Successful image results and complete shared parity remain required before the migration retires legacy calls. The existing headers remain available during this bounded migration slice.
+
+| Previous call | Owned caller form |
+| --- | --- |
+| `tt::create` and `tt::call` | `tt::Client` and its named methods |
+| `tt::many` | `Client::decide` with generated records or a bounded feed |
+| `tt::native` typed calls | Named `Client` calls with generated input and result types |
+| External cancel token and joined worker | Owned `Call::cancel`, `close` and RAII cleanup |
 
 `tt::Engine`, `tt::CancelToken`, and `tt::OwnedString` are move-only RAII owners. Join worker and canceller threads before freeing the token or engine. `tt::create(settings)` accepts the current C settings JSON. `tt::call` returns the JSON success envelope, including `value` and `facts`. The typed `decide`, `many`, `recognize`, and `relate` helpers each return `CallResult<T>` with the former value in `.value` and that call's facts object in `.facts` as `tt::Json`. `specification/result.schema.json` describes every JSON value; read the members you need and ignore the rest. Recognize and relate values stay JSON, and entity offsets count Unicode scalars, not UTF-16 units. `call`, `recognize` and `relate` take the same `deadline` milliseconds and cancel token as `decide` and `many`. `tt::plan(engine, verb, question, input, settings)` previews a `decide`, `choose`, `score` or `tag` call through `thinkthen_plan_json` and returns the result schema's `plan` object; the question is a JSON string of bare text or one question object. It needs no key, reads no cache and sends nothing. `tt::create(settings)` passes engine settings such as `max_requests_total` to the C constructor unchanged. The package offers no probability option on score or tag, so it has no probability refusal to make.
 
