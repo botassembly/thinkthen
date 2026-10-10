@@ -67,6 +67,11 @@ def native_request(document):
         source={'kind':'records','items':items}
     options={'attempts':True}
     if q.get('none'):options['none']=True
+    if source['kind']=='records' and any('context' in item and not isinstance(item['context'],(str,dict)) for item in source['items']):
+        for item in source['items']:
+            original=item['original'];original=original.get('value',original.get('text'))
+            item['original']={'kind':'json','value':{'item':original,'context':item.pop('context')}}
+        options.update(field=['/item'],context_field='/context')
     if document.get('shared_context') is not None:options['context']=document['shared_context']
     if document.get('deadline_ms') is not None:options['deadline_ms']=document['deadline_ms']
     return {**document,'question':selector,'input':source,'options':options}
@@ -160,6 +165,9 @@ def assert_required(packet,row,value,bodies,root):
         # Complete records retain caller originals; selected evidence is pinned below.
         if 'selected_item' in expect:
             original=value['items'][result['index']] if packet.get('native') else packet['inputs'][0]['original']
+            if packet.get('native') and value['verb']=='annotate' and isinstance(original,str):
+                try:original=json.loads(original)
+                except ValueError:pass
             assert result['input']==original,(result,original)
     if packet.get('native') and value['verb']=='find':
         for result in results:

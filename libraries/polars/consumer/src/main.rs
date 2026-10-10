@@ -331,7 +331,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
     let result = serde_json::from_str(&input)
-        .map_err(|_| fixture::usage("invalid canonical request"))
+        .map_err(|error| fixture::usage(&error.to_string()))
         .and_then(run);
     match result {
         Ok(packet) => println!("{packet}"),

@@ -97,9 +97,16 @@ pub(super) fn inputs<'a>(request: &'a AdmittedRequest) -> Result<Inputs<'a>, Err
     match &request.request().call.arguments().input {
         RequestInput::Records { items }
         | RequestInput::Units { items }
-        | RequestInput::Entities { items } => Ok(Box::new(
-            items.iter().map(move |item| item.compose_record(&reading)),
-        )),
+        | RequestInput::Entities { items } => Ok(Box::new(items.iter().map(move |item| {
+            let mut row = item.compose_record(&reading)?;
+            if matches!(request.request().call, RequestCall::Annotate(_))
+                && item.images.is_empty()
+                && let Some(thinkthen::RequestOriginal::Text { text }) = &item.original
+            {
+                row.original = QuestionInput::annotation_document(text)?;
+            }
+            Ok(row)
+        }))),
         RequestInput::Source { source } => {
             let jsonl = matches!(source.framing, Some(thinkthen::RequestFraming::Jsonl));
             let sources = thinkthen::read_inputs(
