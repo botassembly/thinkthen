@@ -7,9 +7,9 @@ import scala.jdk.CollectionConverters.*
 /** A Scala Future and explicit cancellation over the shared JVM session. */
 final case class Call(result: Future[OwnedCall], cancel: () => Boolean)
 final class ScalaEngine private (private val engine: Engine) extends AutoCloseable {
-  def this(settings: Map[String, Any]) = this(new Engine(ScalaEngine.javaMap(settings), Engine.Surface.SCALA))
+  def this(settings: Map[String, Any]) = this(ScalaEngine.native(new Engine(ScalaEngine.javaMap(settings), Engine.Surface.SCALA)))
   def this() = this(Map.empty[String, Any])
-  def this(settings: Inputs.EngineSettings) = this(new Engine(ScalaEngine.transport(settings), Engine.Surface.SCALA))
+  def this(settings: Inputs.EngineSettings) = this(ScalaEngine.native(new Engine(ScalaEngine.transport(settings), Engine.Surface.SCALA)))
   private def javaMap[K](value: scala.collection.Map[K, Any]): java.util.Map[K, Any] = ScalaEngine.javaMap(value)
   private def run(native: java.util.concurrent.CompletableFuture[Engine.OwnedCall]): Call = {
     val result = Promise[OwnedCall]()
@@ -59,6 +59,7 @@ final class SessionFailure(val call: OwnedCall) extends RuntimeException(call.te
   def failure: Results.CallError = call.terminal.failure.get
 }
 object ScalaEngine {
+  private def native[T](action: => T): T = try action catch { case error: Throwable => throw failure(error) }
   private def failure(error: Throwable): Throwable = error match {
     case native: Engine.SessionFailure => new SessionFailure(OwnedCall.read(native.call()))
     case native: thinkthen.NativeFailure => new NativeFailure(native)

@@ -51,10 +51,10 @@ object SessionScala {
       val records = new Inputs.RequestInputRecords().items(List(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(original))).asJava)
       val nested = Await.result(engine.decide(authored, records, new Inputs.RequestOptions().field(List("/body").asJava).details(true)).result, 10.seconds)
       val row = nested.packets.collectFirst { case value: Results.SessionPacketDecideRow => value }.get
-      val reading = row.value.value.get.json.asInstanceOf[java.util.Map[String, Any]]
+      val reading = row.value.value.json.asInstanceOf[java.util.Map[String, Any]]
       assert(reading.get("ok") == false && reading.get("number") == new java.math.BigDecimal("7.5"))
       assert(reading.get("values").asInstanceOf[java.util.List[Any]].get(1) == null)
-      val retained = row.value.input.get.asInstanceOf[java.util.Map[String, Any]]
+      val retained = row.value.input.get.get.asInstanceOf[java.util.Map[String, Any]]
       assert(retained.get("metadata").asInstanceOf[java.util.List[Any]].get(0).asInstanceOf[java.util.Map[String, Any]].containsKey("present"))
       assert(nested.terminal.facts.get.requestsSent.toInt == 1)
       try { Await.result(engine.decide(authored, records, new Inputs.RequestOptions().extension("field", List(7))).result, 10.seconds); throw new AssertionError("invalid field admitted") }

@@ -9,8 +9,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 /** Coroutine facade over the shared owned JVM sessions. */
 class KotlinEngine private constructor(private val engine: Engine) : AutoCloseable {
-    constructor(settings: Map<String, Any?> = emptyMap()) : this(Engine(settings, Engine.Surface.KOTLIN))
-    constructor(settings: Inputs.EngineSettings) : this(Engine(settings, Engine.Surface.KOTLIN))
+    constructor(settings: Map<String, Any?> = emptyMap()) : this(nativeResult { Engine(settings, Engine.Surface.KOTLIN) })
+    constructor(settings: Inputs.EngineSettings) : this(nativeResult { Engine(settings, Engine.Surface.KOTLIN) })
     private suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): OwnedCall {
         currentCoroutineContext().ensureActive()
         val call = start()
@@ -64,3 +64,4 @@ class NativeFailure internal constructor(error: thinkthen.NativeFailure) : Runti
     val retryable: Boolean = error.retryable()
     val facts: Results.Facts? = error.facts()?.let { Results.Facts.read(it) }
 }
+private fun <T> nativeResult(action: () -> T): T = try { action() } catch (error: Throwable) { throw convertFailure(error) }
