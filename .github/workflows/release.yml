@@ -79,7 +79,9 @@ jobs:
       - name: Read the JVM runtime floor
         id: jvm-contract
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: echo "jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)" >> "$GITHUB_OUTPUT"
+        run: |
+          jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)
+          echo "jdk=$jdk" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         with: {distribution: temurin, java-version: "${{ steps.jvm-contract.outputs.jdk }}"}
@@ -264,7 +266,9 @@ jobs:
       - name: Read the JVM runtime floor
         id: jvm-contract
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: echo "jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)" >> "$GITHUB_OUTPUT"
+        run: |
+          jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)
+          echo "jdk=$jdk" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         with: {distribution: temurin, java-version: "${{ steps.jvm-contract.outputs.jdk }}"}

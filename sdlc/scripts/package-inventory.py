@@ -188,7 +188,9 @@ def main():
         value = inventory[args.field]
         if args.kind:
             value = value[args.kind]
-        print(value if isinstance(value, str) else '\n'.join(value if isinstance(value, list) else value.values()))
+        if isinstance(value, dict):
+            value = list(value.values())
+        print('\n'.join(value) if isinstance(value, list) else value)
     else:
         print(json.dumps(inventory, indent=2))
 

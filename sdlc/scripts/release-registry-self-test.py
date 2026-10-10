@@ -19,6 +19,7 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TARGET = "x86_64-unknown-linux-gnu"
@@ -266,7 +267,43 @@ def nuget_cases(nupkg):
     return out
 
 
+def jvm_contract_cases():
+    """Read scalar fields and propagate inventory failures through both workflow steps."""
+    with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
+        root = pathlib.Path(tmp)
+        for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, root / name)
+        env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
+        command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
+        definition = json.loads(subprocess.check_output(command, cwd=root, env=env))
+        for field, expected in (("jdk", str(definition["jdk"])), ("files", "\n".join(definition["files"])),
+                                ("jars", "\n".join(definition["jars"].values()))):
+            result = subprocess.run(command + ["--field", field], cwd=root, env=env, capture_output=True, text=True)
+            assert (result.returncode, result.stdout, result.stderr) == (0, expected + "\n", ""), (field, result)
+        workflow = yaml.safe_load((root / ".github/workflows/release.yml").read_text())
+        steps = [step for job in workflow["jobs"].values() for step in job.get("steps", [])
+                 if step.get("id") == "jvm-contract"]
+        assert len(steps) == 2
+        pom = root / "libraries/jvm/pom.xml"
+        original = pom.read_text()
+        for step in steps:
+            for broken in (False, True):
+                pom.write_text(original.replace(f'<thinkthen.session.jdk>{definition["jdk"]}</',
+                                                "<thinkthen.session.jdk>invalid</") if broken else original)
+                output = root / "output"
+                output.write_text("")
+                result = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
+                                        cwd=root, env=env, capture_output=True, text=True)
+                if broken:
+                    assert result.returncode != 0 and "invalid literal for int()" in result.stderr, result
+                    assert output.read_text() == "", output.read_text()
+                else:
+                    assert result.returncode == 0 and output.read_text() == f'jdk={definition["jdk"]}\n', result
+
+
 def main():
+    jvm_contract_cases()
     v = version()
     bad = 0
     stem = f"thinkthen-jvm-{v}"
