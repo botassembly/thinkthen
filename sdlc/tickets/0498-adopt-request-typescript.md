@@ -42,6 +42,10 @@ A TypeScript or JavaScript caller installs the npm package, imports it as Common
 - Proof: The full shared cases run through the installed package in both module forms, including files and images, context and options, original positions, facts, failures and invalid input with zero sends. One installed held-provider case keeps the event loop responsive and shows cancellation or close stopping further reads and submissions before the provider is released. Pending final facts stay pending. Declarations or a Promise return type alone do not count, and neither does raw JSON pass-through. Record handwritten code removed and added, counting generator templates, in the landing record.
 - Defers: Native Windows qualification goes to 0383 at the first authorized candidate. Final assembly goes to 0530. The proxy and platform ruling changes need no 0.2 ticket.
 
+### Retained aggregate repair
+
+Closure also fixes the aggregate overwrite found during 0526 installed checks: `native.js` replaces `#rows` for every aggregate packet. Recognize emits incremental nonempty aggregates followed by a possibly empty remainder, so this drops earlier answers. Preserve every chunk and the completed prefix on failure, following the native session contract. Keep a small installed recognize case that yields nonempty output; do not change the shared expected answer. The same defect is owned by 0496 and 0497 for Python and Ruby.
+
 ## Progress
 
 - 2026-10-10 landed 84de81b66; next: The recorded refusal bug is already fixed by 61c9154e2 and 84de81b66. Seventeen existing refusal, routing, profile and secrecy cases pass against current JavaScript and the warm addon; no new code was needed. Final current installed parity and Windows qualification remain held.
