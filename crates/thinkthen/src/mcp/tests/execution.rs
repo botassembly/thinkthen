@@ -315,3 +315,66 @@ fn recognition_item_controls_refuse_null_and_invalid_edges_without_sends() {
     }
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn framed_table_sources_execute_logical_rows_and_keep_original_positions() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
+    .unwrap();
+    let executor = NativeExecutor {
+        engine: Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .api_key("fake")
+            .unwrap()
+            .no_cache()
+            .max_retries(0)
+            .build()
+            .unwrap(),
+        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
+    };
+    let folder = std::env::temp_dir().join(format!("thinkthen-mcp-framing-{}", std::process::id()));
+    std::fs::create_dir(&folder).unwrap();
+    for (framing, bytes, last) in [
+        ("csv", "id,body\n1,\"Alpha.\nBeta.\"\n", 3),
+        ("tsv", "id\tbody\n1\tAlpha.\n", 2),
+    ] {
+        let path = folder.join(framing);
+        std::fs::write(&path, bytes).unwrap();
+        let params: CallParams = serde_json::from_value(json!({"name":"decide","arguments":{
+            "question":"Fits?","source":{"paths":[path],"framing":framing},
+            "options":{"field":"/body","batch":1}
+        }}))
+        .unwrap();
+        let reply = executor
+            .execute(Invocation::admit(params).unwrap(), &CancelToken::new())
+            .unwrap();
+        assert!(!reply.failed);
+        let value = serde_json::to_value(tool_result(reply.object, reply.failed)).unwrap();
+        let call = &value["structuredContent"];
+        assert_eq!(call["facts"]["requests_sent"], 1);
+        assert_eq!(call["value"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            call["value"][0]["input"],
+            json!({"id":"1","body":if framing == "csv" {"Alpha.\nBeta."} else {"Alpha."}})
+        );
+        assert_eq!(
+            call["value"][0]["source"],
+            json!({"file":path,"first_line":2,"last_line":last})
+        );
+        std::fs::write(&path, "body,body\nfirst,second\n").unwrap();
+        let params: CallParams = serde_json::from_value(json!({"name":"decide","arguments":{
+            "question":"Fits?","source":{"paths":[path],"framing":"csv"}
+        }}))
+        .unwrap();
+        let refused =
+            Invocation::admit(params).and_then(|call| executor.execute(call, &CancelToken::new()));
+        match refused {
+            Err(error) => assert_eq!(error.kind(), crate::ErrorKind::Usage),
+            Ok(reply) => assert!(reply.failed),
+        }
+    }
+    assert_eq!(listener.count(), 2, "invalid headers send nothing");
+    std::fs::remove_dir_all(folder).unwrap();
+}

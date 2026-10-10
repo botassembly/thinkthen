@@ -50,6 +50,8 @@ impl std::fmt::Debug for Arguments {
 #[serde(deny_unknown_fields)]
 pub(super) struct Source {
     pub(super) paths: Vec<PathBuf>,
+    #[serde(default, deserialize_with = "present")]
+    pub(super) framing: Option<crate::RequestFraming>,
     #[serde(flatten)]
     pub(super) reading: ReaderOptions,
     #[serde(default)]
