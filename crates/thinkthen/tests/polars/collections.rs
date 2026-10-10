@@ -63,6 +63,28 @@ fn filter_and_rank_keep_nullable_duplicate_row_positions() {
     // Native rank shares identical pending judgments while retaining both occurrences.
     assert_eq!(ranked.facts().requests_sent(), 2);
     assert_eq!(listener.count(), 5);
+    assert_eq!(
+        ranked
+            .value()
+            .column("record")
+            .expect("records")
+            .str()
+            .expect("text")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some("strong"), Some("strong"), Some("weak")]
+    );
+    let states = listener
+        .requests()
+        .iter()
+        .map(|request| {
+            serde_json::from_slice::<serde_json::Value>(&request.body).expect("body")["state"]
+                .clone()
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(states[0], states[2]);
+    assert_eq!(states[0], states[3]);
+    assert_eq!(states[1], states[4]);
 }
 
 #[test]
