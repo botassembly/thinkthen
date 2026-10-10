@@ -101,3 +101,9 @@ The additive `Engine` methods `decide_series_complete`, `choose_series_complete`
 For explicit images, selected JSON, per-record context/candidates or physical source inputs, use the matching `*_input_column_complete` method with the actual Series and a parallel `Vec<Option<RecordInput<T>>>`. The method checks that the row count and null positions match before any send. The Series supplies presentation; the typed record carries exact admitted evidence and provenance. The six row-wise `*_input_column_batch` methods keep native pull behavior and return the same position map. `choose_dynamic_input_column_complete` and its batch route accept a whole ordered candidate list per record.
 
 Use the existing native `read_inputs` and `RecordReading` for located inputs. Associate those typed inputs with the frame column; no frame method opens a second reader. Collect a whole logical lazy frame before rank or find, as the retained `rank_lazy` and `find_lazy` helpers do. A native compact ordinal is not a dataframe presentation index.
+
+## Migration to native ownership
+
+The named `PolarsEngine` methods retain their signatures and native column results. Complete methods retain typed originals separately from nullable presentation columns; their returned position maps preserve each original row. Replace a host `complete` request or handwritten result reader with these named typed methods. Native `Request` admission owns the question and record reading, and native complete values own answers and call facts.
+
+The installed frame consumer now links only the unpacked `thinkthen` crate. It no longer depends on the legacy host complete dispatcher or a copied settings adapter. Its small caller fixture shares framing with the direct Rust consumer, while actual frame methods continue to test native Series associations. Routine checks select the shared routine cases; full parity and platform checks belong to the candidate.

@@ -1,8 +1,7 @@
 {
   "directory": [
-    "src",
-    "examples/native_case"
+    "src"
   ],
   "extension": ".rs",
-  "max": 10933
+  "max": 10563
 }

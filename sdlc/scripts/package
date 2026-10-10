@@ -69,32 +69,20 @@ CARGO_TARGET_DIR="$built" \
 # 0431: the actual complete Rust consumer also links the unpacked crate.
 # Keep its caller framing and the ten concrete native APIs, then execute the
 # unchanged shared matrix against that archive-built executable.
-mkdir -p "$isolated/consumer/consumer/src" "$isolated/consumer/consumer/examples" "$isolated/consumer/fork-probe/src"
-cp -R crates/thinkthen-host "$isolated/consumer/thinkthen-host"
-cp conformance/consumer/Cargo.toml conformance/consumer/Cargo.lock "$isolated/consumer/"
-cp conformance/consumer/consumer/Cargo.toml "$isolated/consumer/consumer/"
-cp conformance/consumer/consumer/src/lib.rs "$isolated/consumer/consumer/src/"
-cp conformance/consumer/fork-probe/Cargo.toml "$isolated/consumer/fork-probe/"
-cp conformance/consumer/fork-probe/src/lib.rs "$isolated/consumer/fork-probe/src/"
-cp libraries/python/examples/native_case/*.rs "$isolated/consumer/consumer/examples/"
-mv "$isolated/consumer/consumer/examples/main.rs" "$isolated/consumer/consumer/examples/native_case.rs"
-python3 - "$REPO" "$source" "$isolated/consumer" <<'RUSTPACKAGE'
+cp -R libraries/rust/consumer "$isolated/consumer"
+python3 - "$source" "$isolated/consumer/Cargo.toml" <<'RUSTPACKAGE'
 import sys
 from pathlib import Path
-root,source,consumer=map(Path,sys.argv[1:])
-for member in ('consumer','fork-probe'):
-    manifest=consumer/member/'Cargo.toml'
-    manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen-host',str(consumer/'thinkthen-host')).replace('../../../crates/thinkthen',str(source)).replace('../../backend',str(root/'conformance/backend')))
-host=consumer/'thinkthen-host/Cargo.toml'
-host.write_text(host.read_text().replace('../thinkthen\"',str(source)+'\"'))
+source,manifest=map(Path,sys.argv[1:])
+manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(source)))
 RUSTPACKAGE
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$built" \
-    cargo build --quiet --locked --offline --manifest-path "$isolated/consumer/Cargo.toml" --package consumer --example native_case
+    cargo build --quiet --locked --offline --manifest-path "$isolated/consumer/Cargo.toml"
 # The shared native fixture starts the test backend from the repository target,
 # while the unpacked consumer above stays in its separate build folder.
 CARGO_TARGET_DIR="$REPO/target" cargo build --quiet --locked --offline --package conformance-backend
-python3 - "$REPO" "$built/debug/examples/native_case" "$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml)" >"$isolated/native-source.log" <<'RUSTPACKAGE'
+python3 - "$REPO" "$built/debug/thinkthen-rust-consumer" "$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml)" >"$isolated/native-source.log" <<'RUSTPACKAGE'
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))

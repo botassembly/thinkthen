@@ -49,8 +49,8 @@ def native_request(document):
         selector={'kind':'definition','value':json.loads(q['raw']) if 'raw' in q else q['body']}
     source=document['input']
     if source['kind']=='files':
-        if source.get('jsonl'):raise ValueError('native source JSONL requires its owning feed consumer')
-        source={'kind':'source','source':{'paths':source['paths'],**source['options']}}
+        # JSONL framing belongs to the native explicit source reader.
+        source={'kind':'source','source':{'paths':source['paths'],**source['options'],**({'framing':'jsonl'} if source.get('jsonl') else {})}}
     else:
         items=[]
         for record in source['records']:
@@ -67,6 +67,11 @@ def native_request(document):
         source={'kind':'records','items':items}
     options={'attempts':True}
     if q.get('none'):options['none']=True
+    if source['kind']=='records' and any('context' in item and not isinstance(item['context'],(str,dict)) for item in source['items']):
+        for item in source['items']:
+            original=item['original'];original=original.get('value',original.get('text'))
+            item['original']={'kind':'json','value':{'item':original,'context':item.pop('context')}}
+        options.update(field=['/item'],context_field='/context')
     if document.get('shared_context') is not None:options['context']=document['shared_context']
     if document.get('deadline_ms') is not None:options['deadline_ms']=document['deadline_ms']
     return {**document,'question':selector,'input':source,'options':options}
@@ -160,6 +165,9 @@ def assert_required(packet,row,value,bodies,root):
         # Complete records retain caller originals; selected evidence is pinned below.
         if 'selected_item' in expect:
             original=value['items'][result['index']] if packet.get('native') else packet['inputs'][0]['original']
+            if packet.get('native') and value['verb']=='annotate' and isinstance(original,str):
+                try:original=json.loads(original)
+                except ValueError:pass
             assert result['input']==original,(result,original)
     if packet.get('native') and value['verb']=='find':
         for result in results:
@@ -201,7 +209,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
     selected=os.environ.get('THINKTHEN_CONFORMANCE_IDS')
     if selected:
-        ids=Path(selected).read_text().splitlines() if Path(selected).is_file() else selected.split(',')
+        ids=selected.split(',') if ',' in selected else Path(selected).read_text().splitlines() if Path(selected).is_file() else [selected]
         rows=[r for r in rows if r['id'] in ids]
     # The static consumers compile their actual public accessors before executing cells.
     source=Path(command[-1])
@@ -211,10 +219,9 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
     elif consumer=='typescript':
         if typescript_compiler is None:raise ValueError('the TypeScript consumer needs its selected compiler')
         compiler=[command[0],str(typescript_compiler),'--strict','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','--rootDir',str(source.parent),'--outDir',str(source.parent),str(source.with_suffix('.ts'))]
-    elif consumer=='rust':
-        compiler=['cargo','build','--locked','--offline','--manifest-path',str(rust_manifest or root/'libraries/python/Cargo.toml')]
-        if rust_manifest is None:compiler+=['--example','native_case']
-        else:compiler+=['--target-dir',str(root/'libraries/python/target')]
+    elif consumer=='rust' and rust_manifest is not None:
+        compiler=['cargo','build','--locked','--offline','--manifest-path',str(rust_manifest),
+                  '--target-dir',str(source.parent.parent)]
     if compiler:
         with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
             env=child_env(keep=('CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS'), home=tmp, LANG='C.UTF-8', LC_ALL='C.UTF-8')
@@ -286,7 +293,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                         def invoke(given):
                             invocation_count=int(backend.read('count'))
                             framed=request(step,root,home,given)
-                            if consumer=='r':framed=native_request(framed)
+                            if consumer in ('r','rust','rust-polars'):framed=native_request(framed)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
                             if framed['batch_probe'] or (consumer=='r' and framed['held_cancel']):
                                 child=subprocess.Popen(command,cwd=home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)

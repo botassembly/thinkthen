@@ -102,25 +102,6 @@ fn methods(e: &Engine, o: CallOptions<'_>) -> Result<(), Error> {
     let _: Counters = e.usage();
     Ok(())
 }
-fn conveniences(o: CallOptions<'_>) -> Result<(), Error> {
-    let (q, token) = (yes_no(), CancelToken::new());
-    let o = o.cancel(&token).deadline_after(std::time::Duration::from_secs(1))?;
-    let _: &'static Engine = default_engine()?;
-    let _: Call<Answer> = decide(&q, "t")?;
-    let _: Call<Option<Desk>> = choose(&desk(), "t")?;
-    let _: Call<Vec<Desk>> = tag_with(&desks(), "t", o)?;
-    let _: Call<f64> = score_with(&q, "t", o)?;
-    let _ = filter(&q, ["a"]).count();
-    let _ = decide_many_with(&q, ["a"], o).count();
-    let _ = rank_with(&q, ["a"], o)?;
-    let _ = find(&q, ["a"])?;
-    let _ = annotate_with(&QuestionSet::from_json("{}")?, ["a"], o).count();
-    let _ = recognize(&Recognize::builder().build()?, "t")?;
-    let _ = relate_with(&Relate::builder().build()?, Vec::new(), o)?;
-    let _: Call<Details> = details_with(&banded(), "t", o)?;
-    let _: Counters = usage()?;
-    Ok(())
-}
 fn descriptions() -> Result<Description, Error> {
     let loaded: LoadedQuestion = Question::from_json("{}")?;
     let _: ChooseQuestion<Desk> = yes_no().into_choose::<Desk>()?;
