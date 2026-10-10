@@ -1,5 +1,5 @@
 """Install managed nupkg and native tar in unrelated bwrap roots; count replies outside namespace."""
-import collections,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
+import collections,fcntl,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
 from backend import Backend
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
@@ -36,14 +36,28 @@ cmd=['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--dir',
 env={'PATH':'/usr/bin:/bin','HOME':'/work/home','XDG_CONFIG_HOME':'/work/home','XDG_CACHE_HOME':'/work/home','DOTNET_CLI_HOME':'/work/home','NUGET_PACKAGES':'/work/nuget','DOTNET_CLI_TELEMETRY_OPTOUT':'1','DOTNET_SKIP_FIRST_TIME_EXPERIENCE':'1','DOTNET_NOLOGO':'1','DOTNET_MULTILEVEL_LOOKUP':'0','THINKTHEN_CACHE':'/work/cache','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1','THINKTHEN_API_KEY':'tt-canary-290'}
 if mode=='portable': env['TT_PORTABLE_BATCH']='1'
 if mode=='sessions': env['TT_SESSIONS']='1'
+usage_lock = None
+if mode.startswith('usage-'):
+ env['TT_USAGE']=mode.removeprefix('usage-')
+ env['XDG_STATE_HOME']='/work/state'
+ if mode=='usage-disabled': env.update(HOME='relative', XDG_STATE_HOME='')
+ if mode=='usage-failed':
+  state=work/'state/thinkthen';state.mkdir(parents=True,mode=0o700)
+  usage_lock=(state/'.lock').open('w');os.chmod(state/'.lock',0o600);fcntl.flock(usage_lock,fcntl.LOCK_EX)
 try:
  result=run(cmd,timeout=100,env=env)
  (work/'consumer.log').write_bytes(result.stdout+result.stderr)
  counted={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,'pid':result.pid,'pgid':result.pgid,'exit':result.exit,'signals':result.signals}
  (work/'receipt.json').write_text(json.dumps(counted,indent=2)+'\n')
  assert result.exit==0,(result.exit,result.stdout[-1500:],result.stderr[-1500:])
- bodies=(barrier/'wire-requests.jsonl').read_bytes().splitlines()
- if mode=='sessions':
+ wire=barrier/'wire-requests.jsonl'
+ bodies=wire.read_bytes().splitlines() if wire.exists() else []
+ if mode.startswith('usage-'):
+  assert b'INSTALLED_CSHARP_USAGE_PASS' in result.stdout,result.stdout
+  wanted=[] if mode=='usage-disabled' else ['consumer-csharp']
+  assert server.arrivals==wanted and server.attempts==server.connections==len(wanted),counted
+  print('installed C# live usage status, safe advice, retained answers/facts and exact sends PASS',flush=True)
+ elif mode=='sessions':
   assert b'INSTALLED_CSHARP_SESSION_PASS' in result.stdout,result.stdout
   assert server.user_agents and set(server.user_agents)=={f'thinkthen/{V} (csharp)'},server.user_agents
   required=collections.Counter(['session-owned','hold-session-task','hold-session-drain'])
@@ -68,4 +82,6 @@ try:
   assert collections.Counter(json.dumps(body,sort_keys=True) for body in parsed)==collections.Counter(json.dumps(body,sort_keys=True) for body in expected),(parsed,expected)
   print('C# observed bodies:',json.dumps(parsed,sort_keys=True),flush=True)
   print('isolated installed consumer',mode,'PASS 2 exact arrivals',flush=True)
-finally:server.close()
+finally:
+ if usage_lock is not None: usage_lock.close()
+ server.close()

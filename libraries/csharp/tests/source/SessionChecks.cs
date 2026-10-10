@@ -4,6 +4,31 @@ using ThinkThen.Results;
 using System.Text.Json;
 static class SessionChecks
 {
+    public static async Task Usage(string mode)
+    {
+        var engine = Engine.Open(new InputEngineSettings { Cache = new InputCacheDocumentAlternative1 { Value = new InputDisabledCache() }, MaxRetries = 0 });
+        var initial = engine.UsagePersistence();
+        var expected = mode == "disabled" ? UsagePersistenceState.Disabled : UsagePersistenceState.Written;
+        if (initial.State != expected || initial.Advice is not null) throw new Exception("initial persistence");
+        OwnedCall? call = null;
+        string? facts = null;
+        if (mode != "disabled")
+        {
+            call = await engine.DecideAsync(Question, new InputRequestInputText { Text = "consumer-csharp" });
+            facts = call.Terminal.Facts.Value.ToJsonString();
+            if (call.Packets.OfType<SessionPacketDecideRow>().Single().Value.Answer is not AnswerYesNo { Probability: .9 }) throw new Exception("persistence lost answer");
+            if (mode == "failed" && (engine.UsagePersistence().State != UsagePersistenceState.Pending || call.Terminal.Facts.Value.UsagePersistence.Value.State != ThinkThen.Results.UsagePersistence.Pending)) throw new Exception("held persistence");
+        }
+        var finished = engine.FinishUsageStatus();
+        if (mode == "failed") expected = UsagePersistenceState.Failed;
+        if (finished.State != expected || engine.UsagePersistence() != finished || engine.FinishUsageStatus() != finished) throw new Exception("latched persistence");
+        if (finished.Advice != (mode == "failed" ? "check the usage folder permissions and free space" : null)) throw new Exception("safe native advice");
+        engine.Dispose();
+        if (finished.State != expected || (call is not null && call.Terminal.Facts.Value.ToJsonString() != facts)) throw new Exception("persistence ownership or facts changed");
+        try { _ = engine.UsagePersistence(); throw new Exception("disposed engine observed"); }
+        catch (ObjectDisposedException) { }
+        Console.WriteLine("INSTALLED_CSHARP_USAGE_PASS");
+    }
     static InputRequestQuestionText Question => new() { Text = "Is it?" };
     static InputRequest Request(InputRequestInput input) => new() { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = Question, Input = input, Options = new InputRequestOptions { Batch = new InputRequestBatchAlternative0 { Value = 1 } } } };
     static InputRequestSessionDescriptor Item(string text) => new() { Item = new InputRequestItem { Original = new InputRequestOriginalText { Text = text } } };

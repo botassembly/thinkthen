@@ -32,6 +32,8 @@ Read and push wait through cancellable timer delays after Pending or Full. Each 
 
 An explicit `Cancel` retains the output receiver. Call `ReadAsync` with a fresh token to drain completed packets and eventual native terminal facts. Disposal relinquishes unread output; it does not promise that settlement has finished. A named convenience call disposes its session when cancelled.
 
+`Engine.UsagePersistence()` observes live persistence without waiting for the writer or filesystem. `Engine.FinishUsageStatus()` finishes current usage deltas; only usage-lock acquisition has a deadline, and other filesystem work may take longer. Both return an immutable `UsagePersistenceStatus` with generated `UsagePersistenceState` and optional native safe advice, retained after disposal. Failed persistence leaves successful answers and their recorded call-facts snapshot intact. Written covers this engine's current deltas only, not future calls or other engines.
+
 Use `Engine.Open(InputEngineSettings)` for native defaults and typed settings. Nullable budget alternatives preserve explicit null. `Engine.Plan(InputRequest)` returns the generated owned `Plan` with unsigned token bounds and explicit nullable body presence. It forwards native canonical Request preview for decide, choose, tag and score without key reads, cache reads or sends. Native admission refuses unsupported functions.
 
 The migration maps earlier callers to these public doors:

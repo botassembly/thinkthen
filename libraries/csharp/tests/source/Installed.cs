@@ -1,6 +1,7 @@
 using ThinkThen;
 using ThinkThen.Inputs;
 using ThinkThen.Results;
+if (Environment.GetEnvironmentVariable("TT_USAGE") is string usageMode) { await SessionChecks.Usage(usageMode); return; }
 if (Environment.GetEnvironmentVariable("TT_SESSIONS") == "1") { await SessionChecks.Run(); return; }
 foreach (string forbidden in new[] { "/usr/bin/cargo", "/usr/bin/rustc", "/home", "/Users" })
     if (File.Exists(forbidden) || Directory.Exists(forbidden)) throw new Exception("source/compiler visible");
