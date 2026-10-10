@@ -288,6 +288,9 @@ def main():
         wheel = windows / f"thinkthen-{VERSION}-cp310-abi3-win_amd64.whl"
         wheel.write_bytes(b"wheel fixture")
         checksum(wheel)
+        addon = windows / f"thinkthen-{VERSION}.tgz"
+        addon.write_bytes(b"synthetic Windows addon contribution")
+        checksum(addon)
         npm = base / "npm"
         npm.mkdir()
         version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -316,7 +319,9 @@ def main():
                     member.external_attr = 0o100644 << 16
                     out.writestr(member, data)
             checksum(c_zip)
-        mutations = (("missing C ZIP", lambda: c_zip.unlink(), "exactly the command ZIP"),
+        mutations = (("missing addon checksum", lambda: addon.with_name(addon.name + ".sha256").unlink(), "npm addon contribution or checksum is missing"),
+                     ("bad addon checksum", lambda: addon.with_name(addon.name + ".sha256").write_text("bad"), "npm addon contribution differs"),
+                     ("missing C ZIP", lambda: c_zip.unlink(), "exactly the command ZIP"),
                      ("missing C checksum", lambda: c_zip.with_name(c_zip.name + ".sha256").unlink(), "exactly the command ZIP"),
                      ("bad C checksum", lambda: c_zip.with_name(c_zip.name + ".sha256").write_text("bad"), "C ZIP differs"),
                      ("malformed C", malformed_c, "not a zip file"),

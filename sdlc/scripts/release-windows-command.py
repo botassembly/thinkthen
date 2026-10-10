@@ -13,9 +13,6 @@ import importlib.util
 _spec = importlib.util.spec_from_file_location("windows_c", Path(__file__).with_name("release-windows-c.py"))
 windows_c = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(windows_c)
-_spec = importlib.util.spec_from_file_location("package_inventory", Path(__file__).with_name("package-inventory.py"))
-package_inventory = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(package_inventory)
 
 
 
@@ -80,6 +77,9 @@ def platform(folder, version):
               "thinkthen-first-run.tar.gz", "thinkthen-first-run.tar.gz.sha256"}
     if folder.is_symlink() or not folder.is_dir():
         raise ValueError("Windows platform folder is missing or linked")
+    _spec = importlib.util.spec_from_file_location("package_inventory", Path(__file__).with_name("package-inventory.py"))
+    package_inventory = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(package_inventory)
     addon = folder / (package_inventory.npm_definition()['name'] + '-' + version + '.tgz')
     addon_sum = addon.with_name(addon.name + '.sha256')
     if addon.exists() or addon.is_symlink() or addon_sum.exists() or addon_sum.is_symlink():
