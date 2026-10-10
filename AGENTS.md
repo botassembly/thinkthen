@@ -1,6 +1,6 @@
 # Agent instructions for thinkthen
 
-Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification and `sdlc/planning/milestones.md`. Read status, order and lanes through pm. Load workspace role skills from `repos/agents/skills/`.
+Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification and `sdlc/planning/milestones.md`. Read status, order and lanes in pm. Load role skills from `repos/agents/skills/`.
 
 ## Build and review
 
@@ -10,7 +10,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 - Require explicit reviewer acceptance for a source-ceiling increase before landing, and lower the ceiling when deleting source.
 - Keep the handwritten complete readers in Python, Ruby, R and JavaScript unchanged except for confirmed regressions until their generated migrations replace them.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` for file caps and the adapter-word boundary.
-- Run checks that read Git history after committing the changes, and finish them before committing again.
+- Run Git-history checks after committing; finish them before the next commit.
 - Beelink is primary. M5 may run experiments and Mac-specific checks, including before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
 - Cap each lane at 40 GB, including `libraries/` and `databases/`. Delete its regenerable output and caches at the cap or when a build needs room. Preserve other lanes' active work. Keep 50 GB free and branch-specific source copies.
 - Delete dead code, scaffolding tests and old language APIs once replacements pass routine installed checks. Close migrations after those checks, API deletion, one `lint` and `test` run and fresh code review. Qualify platforms at the candidate: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`.
