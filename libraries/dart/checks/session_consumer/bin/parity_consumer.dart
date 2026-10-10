@@ -128,7 +128,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
             options: fixture['candidate_orders'] != null
                 ? Presence.present([
                     for (final name in fixture['candidate_orders'][i])
-                      InputOptionSchema.read(name)
+                      InputOptionSchema(name: name)
                   ])
                 : const Presence.absent())
     ];
