@@ -43,3 +43,4 @@ Closure also fixes the aggregate overwrite found during 0526 installed checks: `
 ## Progress
 
 - 2026-10-10 landed 5959fcd40d3eda08d3cdf14b5b8b6ae87eacca9b; next: Python producer cleanup now preserves active native failures, completed rows and facts while standalone cleanup errors remain visible. Six red/green cases, three retained cases and fresh review pass in shared 0498 slice E. Current installed-wheel parity and platform qualification remain held.
+- 2026-10-10 started
