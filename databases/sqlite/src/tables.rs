@@ -47,8 +47,17 @@ pub(crate) trait Table {
         filters: &Filters<'_>,
         _: &Mutex<Store>,
     ) -> Result<Scan, Failure> {
+        let rows = if filters
+            .iter()
+            .take(Self::REQUIRED)
+            .any(|value| matches!(value, ValueRef::Null))
+        {
+            Vec::new()
+        } else {
+            Self::rows(db, &arguments::<Self>(mask, filters)?)?
+        };
         Ok(Scan {
-            rows: Arc::new(Self::rows(db, &arguments::<Self>(mask, filters)?)?),
+            rows: Arc::new(rows),
             selected: None,
         })
     }

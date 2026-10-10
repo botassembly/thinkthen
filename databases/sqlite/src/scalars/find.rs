@@ -39,7 +39,7 @@ fn units(argument: &str) -> Result<Vec<String>, Failure> {
 /// `thinkthen_find(question, units_json[, settings])`.
 pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_find", || {
-        if (0..context.len()).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
+        if (0..2).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
             return Ok(None);
         }
         let argument = text(context.get_raw(0), "the question")?

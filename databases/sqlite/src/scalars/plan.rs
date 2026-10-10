@@ -38,6 +38,9 @@ fn verb(argument: &str, source: &str) -> Result<For, Failure> {
 
 pub(super) fn plan(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_plan", || {
+        if (0..2).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
+            return Ok(None);
+        }
         let Some(argument) = text(context.get_raw(0), "the question")? else {
             return Ok(None);
         };

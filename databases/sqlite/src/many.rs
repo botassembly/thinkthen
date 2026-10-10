@@ -238,6 +238,16 @@ fn scan(
             given += 1;
         }
     }
+    if values[..2]
+        .iter()
+        .any(|value| matches!(value, ValueRef::Null))
+    {
+        return Ok(selected(
+            Arc::new(Vec::new()),
+            Arc::new(HashMap::new()),
+            None,
+        ));
+    }
     let question = required(&values, 0, "the question")?;
     let packed = required(&values, 1, "the keyed records")?;
     let settings = match values[2] {
