@@ -11,6 +11,8 @@ Reviews: revision a087f6dc3, accept
 
 Reviews: revision 419c4d625474638ad8a59d7e7398e5ff0bcaaa71, reject
 
+Reviews: revision 5744e732b106b3532ec5cd37213a8e2625f5304a, reject
+
 ## Outcome
 
 Swift callers add one SwiftPM dependency that carries the native library, call the ten functions with Swift values, and use `async`/`await` with task cancellation. Results are generated Swift types with optionals plus explicit presence, and failures are typed thrown errors. Hand-copied layouts, readers and old public names are gone.
