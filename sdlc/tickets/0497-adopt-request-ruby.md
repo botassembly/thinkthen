@@ -43,3 +43,4 @@ A Ruby caller installs the gem, calls the ten functions by name with ordinary Ru
 ## Progress
 
 - 2026-10-10 landed d943d6103; next: Ordinary Ruby recognition and file callers use native Client, aggregate values are corrected, and focused installed cases pass. Finish current full installed parity, image qualification and compatibility retirement when authorized.
+- 2026-10-10 landed 4e920a8b6; next: Ruby exposes native file, saved-name and reference question selectors with typed aggregate results; focused installed and cancellation callers pass. Finish full installed parity, image qualification and compatibility retirement when authorized.
