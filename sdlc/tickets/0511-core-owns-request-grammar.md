@@ -108,6 +108,20 @@ fn RequestSource::read_framed<'a>(&self, CallOptions<'a>) -> Result<Box<(dyn Ite
 
 ## Progress
 
+### Remaining caller ownership at the closure audit
+
+The closure audit starts at `b13c802b7`. These are live consumers, not unused imports. Host translation preserves the existing accepted wire grammar and diagnostics; it does not duplicate native admission. Language migration tickets still own deleting their old public APIs.
+
+- DuckDB `bridge/src/lib.rs` imports SQLite `complete_native`; `bridge/src/ffi/complete/ffi.rs` imports SQLite `complete/request.rs`. The shared SQL host adapter owns question/descriptor translation, observations and SQL envelopes; execution already enters `Engine::execute_request`.
+- PostgreSQL `src/lib.rs` imports SQLite `complete_native`; `src/complete.rs` imports SQLite `complete/request.rs`; `src/bin/thinkthen_read_inputs.rs` imports SQLite `complete_native/file_format.rs`. Server file authority and SQL value conversion remain PostgreSQL responsibilities. Shared framing and record admission remain native responsibilities.
+- SQLite `src/complete_native` owns the same SQL host adapter today. Its input parser already calls `RequestItem::from_record_descriptor`, `RequestItem::compose_record`, `RecordReading` and native file readers. The adapter must have one package owner rather than compilation through another database's source paths.
+- Ruby `src/call.rs` imports R `complete` and `source`; Python `src/engine.rs` imports R `complete`, and Python `src/files.rs` imports R `source`. The legacy envelope and result writer must retain one host-adapter owner until 0494, 0496 and 0497 remove these public APIs.
+- C `src/call.rs` imports R `source`. The frozen 0.1 C translation stays under 0515; shared parsing, source reading and its existing diagnostics stay in the host adapter. Canonical C sessions already enter the public Request edge.
+- Python `examples/native_case/main.rs` and Rust Polars `consumer/src/main.rs` import R `complete`; the Polars fixture also imports Python `native_settings.rs`. These are test consumers of legacy native results. Their family migrations own replacing the legacy result fixtures; shared fixture conversion needs a normal dependency or a fixture-local owner.
+- R `complete` and `source` retain the legacy translation definitions used above. Native typed APIs own question parsing, record composition and execution limits. The source relation writer still restates its output-byte bound and must derive that bound from its native owner.
+
+Same-crate path declarations, host pointer representability, file authority, SQL argument conversion and frozen C duplicate-key translation are retained. Pure `core` imports no host adapter, reader, process or Request decoder.
+
 - 2026-10-09 started
 - 2026-10-09 landed 2dbccdf0e; next: Shared SQL record descriptors are landed. Continue named consumer migrations and remove remaining duplicated request grammar and cross-crate includes; this first slice does not complete the whole ticket.
 - 2026-10-09 landed 48363919e; next: SQL and shared binding record descriptors now delegate original/image composition to Request. Preserve the documented legacy tagged-context and ordered-description translations until canonical grammar expresses them; finish remaining consumer grammar and cross-crate includes.
