@@ -198,7 +198,7 @@ fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
         (Failure::NoKey("THINKTHEN_API_KEY".to_owned()), 4, "unset"),
         (Failure::Defect("a plan asks nothing"), 70, "defect"),
         (Failure::FindCount { none: false }, 2, "2 to 255"),
-        (Failure::FindCount { none: true }, 2, "2 to 254"),
+        (Failure::FindCount { none: true }, 2, "1 to 254"),
         (Failure::FindTooLarge, 2, "16 MiB"),
     ];
 
