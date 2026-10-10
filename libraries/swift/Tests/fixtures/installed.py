@@ -43,10 +43,12 @@ for command in (['git', 'init', '-q', str(package)], ['git', '-C', str(package),
                 ['git', '-C', str(package), '-c', 'user.name=Package Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Prepare installed package'],
                 ['git', '-C', str(package), 'tag', version]):
     subprocess.run(command, env=env, check=True)
+(work / 'empty-tool').write_bytes(b'')
 swift = Path(shutil.which('swift')).resolve()
 toolchain = swift.parents[2]
 base = ['bwrap', '--unshare-all', '--share-net', '--die-with-parent', '--ro-bind', '/usr', '/usr', '--symlink', 'usr/bin', '/bin',
         '--ro-bind', '/lib', '/lib', '--ro-bind', '/lib64', '/lib64', '--ro-bind', str(toolchain), '/swift',
+        '--ro-bind', str(work / 'empty-tool'), '/usr/bin/cargo', '--ro-bind', str(work / 'empty-tool'), '/usr/bin/rustc',
         '--bind', str(work), '/work', '--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp', '--chdir', '/work/consumer', '--']
 env = child_env(home='/work/home', PATH='/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
                 SWIFTPM_MODULECACHE_OVERRIDE='/work/cache/modules', XDG_CACHE_HOME='/work/cache', THINKTHEN_API_KEY='tt-canary-294')

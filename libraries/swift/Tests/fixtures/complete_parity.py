@@ -81,10 +81,6 @@ def native_parity(consumer, command):
                         if row["kind"] in ("images", "image-location"):
                             settings["record"] = str(home / "recorded")
                         def invoke(given):
-                            framing = {**step, "engine_settings": c_parity.compact(given)}
-                            if step.get("caption_files"):
-                                framing["items"] = [""] * len(step["items"])
-                            framed = c_parity.compact(framing) + "\n"
                             input_file = home / "fixture.json"
                             input_file.write_text(c_parity.compact(step))
                             args = command + [str(input_file), c_parity.compact(given)]
