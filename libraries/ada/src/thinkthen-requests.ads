@@ -1215,6 +1215,34 @@ function Encode (Value : T_RequestInput_entities) return String;
 subtype T_RequestInput_value_RequestInput_entities is T_RequestInput_entities;
 type T_RequestInput_source_field_kind is null record;
 function Encode (Value : T_RequestInput_source_field_kind) return String;
+type T_RequestFraming_value_0 is null record;
+function Encode (Value : T_RequestFraming_value_0) return String;
+type T_RequestFraming_value_1 is null record;
+function Encode (Value : T_RequestFraming_value_1) return String;
+type T_RequestFraming_value_2 is null record;
+function Encode (Value : T_RequestFraming_value_2) return String;
+type T_RequestFraming_value_3 is null record;
+function Encode (Value : T_RequestFraming_value_3) return String;
+type T_RequestFraming_value_4 is null record;
+function Encode (Value : T_RequestFraming_value_4) return String;
+type T_RequestFraming_Kind is (T_RequestFraming_arm_0, T_RequestFraming_arm_1, T_RequestFraming_arm_2, T_RequestFraming_arm_3, T_RequestFraming_arm_4);
+type T_RequestFraming (Kind : T_RequestFraming_Kind := T_RequestFraming_arm_0) is record
+case Kind is
+when T_RequestFraming_arm_0 => V_0 : T_RequestFraming_value_0;
+when T_RequestFraming_arm_1 => V_1 : T_RequestFraming_value_1;
+when T_RequestFraming_arm_2 => V_2 : T_RequestFraming_value_2;
+when T_RequestFraming_arm_3 => V_3 : T_RequestFraming_value_3;
+when T_RequestFraming_arm_4 => V_4 : T_RequestFraming_value_4;
+end case;
+end record;
+function Encode (Value : T_RequestFraming) return String;
+subtype T_RequestSource_field_framing is T_RequestFraming;
+type T_RequestSource_Optional_T_framing (Present : Boolean := False) is record
+case Present is
+when True => Value : T_RequestSource_field_framing;
+when False => null;
+end case;
+end record;
 subtype T_RequestSource_field_media is T_ReaderMedia;
 type T_RequestSource_Optional_T_media (Present : Boolean := False) is record
 case Present is
@@ -1270,6 +1298,7 @@ when False => null;
 end case;
 end record;
 type T_RequestSource is record
+T_framing : T_RequestSource_Optional_T_framing;
 T_media : T_RequestSource_Optional_T_media;
 T_paths : T_RequestSource_field_paths;
 T_reading : T_RequestSource_Optional_T_reading;
@@ -1282,27 +1311,6 @@ T_source : T_RequestInput_source_field_source;
 end record;
 function Encode (Value : T_RequestInput_source) return String;
 subtype T_RequestInput_value_RequestInput_source is T_RequestInput_source;
-type T_RequestFraming_value_0 is null record;
-function Encode (Value : T_RequestFraming_value_0) return String;
-type T_RequestFraming_value_1 is null record;
-function Encode (Value : T_RequestFraming_value_1) return String;
-type T_RequestFraming_value_2 is null record;
-function Encode (Value : T_RequestFraming_value_2) return String;
-type T_RequestFraming_value_3 is null record;
-function Encode (Value : T_RequestFraming_value_3) return String;
-type T_RequestFraming_value_4 is null record;
-function Encode (Value : T_RequestFraming_value_4) return String;
-type T_RequestFraming_Kind is (T_RequestFraming_arm_0, T_RequestFraming_arm_1, T_RequestFraming_arm_2, T_RequestFraming_arm_3, T_RequestFraming_arm_4);
-type T_RequestFraming (Kind : T_RequestFraming_Kind := T_RequestFraming_arm_0) is record
-case Kind is
-when T_RequestFraming_arm_0 => V_0 : T_RequestFraming_value_0;
-when T_RequestFraming_arm_1 => V_1 : T_RequestFraming_value_1;
-when T_RequestFraming_arm_2 => V_2 : T_RequestFraming_value_2;
-when T_RequestFraming_arm_3 => V_3 : T_RequestFraming_value_3;
-when T_RequestFraming_arm_4 => V_4 : T_RequestFraming_value_4;
-end case;
-end record;
-function Encode (Value : T_RequestFraming) return String;
 subtype T_RequestInput_feed_field_framing is T_RequestFraming;
 type T_RequestInput_feed_Optional_T_framing (Present : Boolean := False) is record
 case Present is

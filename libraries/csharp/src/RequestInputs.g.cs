@@ -966,10 +966,11 @@ public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} par
 }
 
 public sealed class InputRequestSource : InputDocument {
+public InputPresence<InputRequestFraming> Framing { get; init; }
 public InputPresence<InputReaderMedia> Media { get; init; }
 public required IReadOnlyList<string> Paths { get; init; }
 public InputPresence<InputRequestReader> Reading { get; init; }
-public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } writer.WriteStartObject(); if (Media.IsPresent) { writer.WritePropertyName("media"); if (Media.Value is null) writer.WriteNullValue(); else Media.Value.Write(writer); } writer.WritePropertyName("paths"); writer.WriteStartArray(); foreach (var item in Paths) { WriteText(writer, item); } writer.WriteEndArray(); if (Reading.IsPresent) { writer.WritePropertyName("reading"); if (Reading.Value is null) writer.WriteNullValue(); else Reading.Value.Write(writer); } writer.WriteEndObject(); }
+public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } writer.WriteStartObject(); if (Framing.IsPresent) { writer.WritePropertyName("framing"); if (Framing.Value is null) writer.WriteNullValue(); else Framing.Value.Write(writer); } if (Media.IsPresent) { writer.WritePropertyName("media"); if (Media.Value is null) writer.WriteNullValue(); else Media.Value.Write(writer); } writer.WritePropertyName("paths"); writer.WriteStartArray(); foreach (var item in Paths) { WriteText(writer, item); } writer.WriteEndArray(); if (Reading.IsPresent) { writer.WritePropertyName("reading"); if (Reading.Value is null) writer.WriteNullValue(); else Reading.Value.Write(writer); } writer.WriteEndObject(); }
 }
 
 public abstract class InputRequestThreshold : InputDocument { private protected InputRequestThreshold() {} }

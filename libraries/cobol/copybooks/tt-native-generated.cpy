@@ -4744,6 +4744,7 @@
  02 v-m-location usage pointer.
 01 tt-n-cobol-RequestSource based.
  02 v-reserved usage binary-double unsigned.
+ 02 v-m-framing usage pointer.
  02 v-m-media usage pointer.
  02 v-m-paths usage pointer.
  02 v-m-reading usage pointer.

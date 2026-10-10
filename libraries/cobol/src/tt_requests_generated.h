@@ -716,6 +716,7 @@ typedef struct thinkthen_cobol_RequestSessionDescriptor {
 } thinkthen_cobol_RequestSessionDescriptor;
 typedef struct thinkthen_cobol_RequestSource {
  uint64_t reserved;
+ const void * m_framing;
  const void * m_media;
  const void * m_paths;
  const void * m_reading;

@@ -76,20 +76,15 @@ impl AdmittedRequest {
             ),
             RequestInput::Source { source } => {
                 controls.admission()?;
-                if source.framing.is_some() {
-                    return super::source::records(
-                        source,
-                        reading,
-                        controls,
-                        annotate,
-                        self.request.call.function() == super::RequestFunction::Rank,
-                    );
-                }
-                let items = read_source(source, budget.remaining())?;
                 let rank = self.request.call.function() == super::RequestFunction::Rank;
-                Ok(super::transport::source_records(
-                    reading, items, controls, annotate, rank,
-                ))
+                super::source::records(
+                    source,
+                    reading,
+                    controls,
+                    annotate,
+                    rank,
+                    budget.remaining(),
+                )
             }
             RequestInput::Feed { name, images, .. } => {
                 let feed = environment
@@ -587,7 +582,7 @@ fn compose_descriptors(
     Ok(Box::new(rows.into_iter().map(Ok)))
 }
 
-fn read_source(
+pub(super) fn read_source(
     source: &super::RequestSource,
     remaining: Option<usize>,
 ) -> Result<crate::SourceItems, Error> {

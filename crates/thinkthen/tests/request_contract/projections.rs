@@ -463,7 +463,6 @@ fn located_find_keeps_duplicate_occurrences_and_separates_the_none_candidate() {
                 .collect::<serde_json::Map<_, _>>();
             Canned::ok(&json!({"model":"fixed","answers":{"q1":{"type":"choice","probabilities":probabilities}}}).to_string())
         }).unwrap();
-        let engine = engine(&listener);
         let mut arguments = args(
             RequestDefinition::Find(FindQuestionFile::from_json(r#"{"find":"Which?"}"#).unwrap()),
             RequestInput::Source {
@@ -476,7 +475,7 @@ fn located_find_keeps_duplicate_occurrences_and_separates_the_none_candidate() {
             },
         );
         arguments.options.none = true;
-        let session = engine
+        let session = engine(&listener)
             .request_session(Request::new(RequestCall::Find(arguments)))
             .unwrap();
         let mut documents = vec![];

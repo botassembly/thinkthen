@@ -1096,6 +1096,36 @@ function Encode (Value : T_RequestInput_source_field_kind) return String is
 begin
 return """source""";
 end Encode;
+function Encode (Value : T_RequestFraming_value_0) return String is
+begin
+return """document""";
+end Encode;
+function Encode (Value : T_RequestFraming_value_1) return String is
+begin
+return """lines""";
+end Encode;
+function Encode (Value : T_RequestFraming_value_2) return String is
+begin
+return """jsonl""";
+end Encode;
+function Encode (Value : T_RequestFraming_value_3) return String is
+begin
+return """csv""";
+end Encode;
+function Encode (Value : T_RequestFraming_value_4) return String is
+begin
+return """tsv""";
+end Encode;
+function Encode (Value : T_RequestFraming) return String is
+begin
+case Value.Kind is
+when T_RequestFraming_arm_0 => return Encode (Value.V_0);
+when T_RequestFraming_arm_1 => return Encode (Value.V_1);
+when T_RequestFraming_arm_2 => return Encode (Value.V_2);
+when T_RequestFraming_arm_3 => return Encode (Value.V_3);
+when T_RequestFraming_arm_4 => return Encode (Value.V_4);
+end case;
+end Encode;
 function Encode (Value : T_RequestSource_field_paths_element) return String is
 begin
 return Quote (To_String (Unbounded_String (Value)));
@@ -1145,6 +1175,7 @@ end Encode;
 function Encode (Value : T_RequestSource) return String is
 Result : Unbounded_String := To_Unbounded_String ("{");
 begin
+if Value.T_framing.Present then Add (Result, "framing", Encode (Value.T_framing.Value)); end if;
 if Value.T_media.Present then Add (Result, "media", Encode (Value.T_media.Value)); end if;
 Add (Result, "paths", Encode (Value.T_paths));
 if Value.T_reading.Present then Add (Result, "reading", Encode (Value.T_reading.Value)); end if;
@@ -1158,36 +1189,6 @@ Add (Result, "kind", Encode (Value.T_kind));
 Add (Result, "source", Encode (Value.T_source));
 Append (Result, "}");
 return To_String (Result);
-end Encode;
-function Encode (Value : T_RequestFraming_value_0) return String is
-begin
-return """document""";
-end Encode;
-function Encode (Value : T_RequestFraming_value_1) return String is
-begin
-return """lines""";
-end Encode;
-function Encode (Value : T_RequestFraming_value_2) return String is
-begin
-return """jsonl""";
-end Encode;
-function Encode (Value : T_RequestFraming_value_3) return String is
-begin
-return """csv""";
-end Encode;
-function Encode (Value : T_RequestFraming_value_4) return String is
-begin
-return """tsv""";
-end Encode;
-function Encode (Value : T_RequestFraming) return String is
-begin
-case Value.Kind is
-when T_RequestFraming_arm_0 => return Encode (Value.V_0);
-when T_RequestFraming_arm_1 => return Encode (Value.V_1);
-when T_RequestFraming_arm_2 => return Encode (Value.V_2);
-when T_RequestFraming_arm_3 => return Encode (Value.V_3);
-when T_RequestFraming_arm_4 => return Encode (Value.V_4);
-end case;
 end Encode;
 function Encode (Value : T_RequestInput_feed_field_images) return String is
 Result : Unbounded_String := To_Unbounded_String ("[");

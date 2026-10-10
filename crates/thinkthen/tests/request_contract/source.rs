@@ -71,8 +71,9 @@ fn canonical_source_framing_admits_before_opening_and_plans_table_rows() {
         Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"source","source":source},"options":{"field":["/body"]}}}).to_string()).unwrap().admit()
     };
     let source = json!({"paths":[path,path],"framing":"csv"});
+    let admitted = request(source).unwrap();
     let actual = engine
-        .plan_request(&request(source).unwrap(), RequestEnvironment::default())
+        .plan_request(&admitted, RequestEnvironment::default())
         .unwrap();
     let expected = engine
         .plan(
@@ -89,5 +90,29 @@ fn canonical_source_framing_admits_before_opening_and_plans_table_rows() {
         assert_eq!(request(source).unwrap_err().kind(), ErrorKind::Usage);
     }
     assert_eq!(listener.count(), 0);
+    let RequestOutcome::Complete(done) = engine
+        .execute_request(&admitted, RequestEnvironment::default())
+        .unwrap()
+    else {
+        panic!("source decisions");
+    };
+    let RequestValue::Decisions(rows) = done.value() else {
+        panic!("decisions");
+    };
+    assert_eq!(rows.len(), 4);
+    let QuestionInput::Record(original) = rows[0].original() else {
+        panic!("located source original");
+    };
+    assert_eq!(
+        (
+            original.location().unwrap().first_line(),
+            original.location().unwrap().last_line()
+        ),
+        (Some(2), Some(3))
+    );
+    assert_eq!(
+        serde_json::to_value(original.original()).unwrap(),
+        json!({"body":"Alpha.\nBeta."})
+    );
     std::fs::remove_dir_all(folder).unwrap();
 }

@@ -583,6 +583,7 @@ class RequestSessionDescriptor : public Node { public:
 };
 class RequestSource : public Node { public:
     RequestSource():Node(Json(Json::Object{})) {}
+    RequestSource& set_framing(const RequestFraming& value);
     RequestSource& set_media(const ReaderMedia& value);
     RequestSource& set_paths(const std::vector<std::string>& value);
     RequestSource& set_reading(const RequestReader& value);
@@ -895,6 +896,7 @@ inline RequestReader& RequestReader::set_unit(const SourceUnit& value) { set_mem
 inline RequestReader& RequestReader::set_window(const uint64_t& value) { set_member("window",results::encode(value)); return *this; }
 inline RequestSessionDescriptor& RequestSessionDescriptor::set_item(const RequestItem& value) { set_member("item",results::encode(value)); return *this; }
 inline RequestSessionDescriptor& RequestSessionDescriptor::set_location(const SessionSourceLocation& value) { set_member("location",results::encode(value)); return *this; }
+inline RequestSource& RequestSource::set_framing(const RequestFraming& value) { set_member("framing",results::encode(value)); return *this; }
 inline RequestSource& RequestSource::set_media(const ReaderMedia& value) { set_member("media",results::encode(value)); return *this; }
 inline RequestSource& RequestSource::set_paths(const std::vector<std::string>& value) { set_member("paths",results::encode(value)); return *this; }
 inline RequestSource& RequestSource::set_reading(const RequestReader& value) { set_member("reading",results::encode(value)); return *this; }

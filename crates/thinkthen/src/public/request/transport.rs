@@ -162,7 +162,7 @@ pub(crate) fn source_records<'a>(
     }))
 }
 
-fn rank_budget_error() -> Error {
+pub(super) fn rank_budget_error() -> Error {
     Error::usage("source rank reads at most 16 MiB across all input records")
 }
 
