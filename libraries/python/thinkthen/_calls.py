@@ -274,7 +274,11 @@ class Operation:
             if kind == 'row': self.results.append(packet.value)
             if kind == 'aggregate':
                 value = packet.value
-                self.results = list(value) if isinstance(value, list) else [value]
+                chunk = list(value) if isinstance(value, list) else [value]
+                if self.verb == 'recognize':
+                    self.results.extend(chunk)
+                else:
+                    self.results = chunk
         if self.producer is not None:
             if self.pending is None:
                 try:
