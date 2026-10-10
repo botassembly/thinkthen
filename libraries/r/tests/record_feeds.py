@@ -112,6 +112,45 @@ fault <- tryCatch(batch$next_result(),thinkthen_error=identity)
 stopifnot(inherits(fault,"thinkthen_usage"),batch$facts()$requests_sent==1,
           !grepl("private malformed",conditionMessage(fault),fixed=TRUE))
 batch$close()
+for(framing in c("csv","tsv")) {
+  sep <- if(framing=="csv") "," else "\\t"
+  header <- paste0("body",sep,"policy\\r\\n")
+  raw_table <- paste0('"Route this note.\\nsaid ""yes"""',sep,"local policy\\r\\n")
+  at <- 0L
+  closes <- 0L
+  reader <- textConnection("cleanup owner")
+  feed <- tt_feed(function() {
+    at <<- at+1L
+    if(at==1L) return(header)
+    if(at==2L) return("\\r\\n")
+    if(at==3L) return(tt_record(raw_table,list(file=paste0("rows.",framing),first_line=3L,last_line=4L),
+                               options=lapply(fixture$question$options,function(name) list(name=name))))
+    NULL
+  },close=function() {closes <<- closes+1L; close(reader)},framing=framing)
+  result <- tt_choose(list(choose=fixture$question$choose),feed,
+                      options=list(field=list("/body"),context_field="/policy"))
+  row <- result$results[[1]]
+  stopifnot(inherits(result,"thinkthen_Call"),inherits(row,"thinkthen_ChooseResult"),
+            inherits(result$facts,"thinkthen_Facts"),length(result$results)==1L,
+            result$facts$requests_sent==1,row$value=="billing",at==4L,closes==1L,
+            identical(row$input,list(body='Route this note.\\nsaid "yes"',policy="local policy")),
+            row$source$first_line==3,row$source$last_line==4)
+  rm(feed,result); gc(); stopifnot(closes==1L)
+  batch <- tt_batch("choose",list(choose=fixture$question$choose),
+                    tt_feed(framing=framing),list(field=list("/body"),context_field="/policy"))
+  stopifnot(batch$push(header)=="accepted")
+  batch$poll()
+  while(batch$push(tt_record(raw_table,options=lapply(fixture$question$options,function(name) list(name=name))))=="full") batch$poll()
+  prefix <- batch$next_result()
+  stopifnot(prefix$value=="billing",inherits(row$answer_id,"thinkthen_AnswerId"),
+            inherits(prefix$answer_id,"thinkthen_AnswerId"),grepl("^[a-f0-9]{64}$",unclass(row$answer_id)),
+            batch$push(paste0("private",sep,"extra",sep,"field\\n"))=="accepted")
+  batch$finish()
+  fault <- tryCatch(batch$next_result(),thinkthen_error=identity)
+  stopifnot(inherits(fault,"thinkthen_usage"),batch$facts()$requests_sent==1,
+            !grepl("private",conditionMessage(fault),fixed=TRUE))
+  batch$close()
+}
 cat("r: bounded record feeds passed\\n")
 '''
         env = child_env(("R_LIBS", "LANG", "LC_ALL"), home=home,
@@ -122,27 +161,45 @@ cat("r: bounded record feeds passed\\n")
         print(result.stdout, end="")
         print(result.stderr, end="", file=sys.stderr)
         assert result.returncode == 0, result.returncode
-        assert len(sends) == 6, len(sends)
+        assert len(sends) == 10, len(sends)
         for body in sends[4:]:
             assert b"Route this note." in body and b"local policy" in body
             question = json.loads(body)["questions"]["q1"]
             assert list(question["criteria"]) == fixture["question"]["options"]
-            assert b"rows.jsonl" not in body
+            assert all(path not in body for path in (b"rows.jsonl", b"rows.csv", b"rows.tsv"))
             assert b"private malformed" not in body
         header_code = '''library(thinkthen)
 tt_engine(cache=FALSE,max_retries=0L,model="fixed",batch=1L)
+missing <- tt_plan("Missing numbers?",c(NaN,NA_real_))
+stopifnot(missing$records==0,missing$length==2,length(missing$positions)==0L)
 at <- 0L
-for(framing in c("csv","tsv","lines")) {
+for(framing in "lines") {
   fault <- tryCatch(tt_decide("Header?",tt_feed(function() {at <<- at+1L; "never"},framing=framing),
                              options=list(field=list("/body"))),thinkthen_error=identity)
   stopifnot(inherits(fault,"thinkthen_usage"),at==0L)
+}
+for(framing in c("csv","tsv")) {
+  sep <- if(framing=="csv") "," else "\\t"
+  closes <- 0L
+  fault <- tryCatch(tt_decide("Bad header?",tt_feed(function() paste0("private",sep,"private\\n"),
+                            close=function() closes <<- closes+1L,framing=framing)),thinkthen_error=identity)
+  stopifnot(inherits(fault,"thinkthen_usage"),fault$facts$requests_sent==0,closes==1L,
+            length(fault$completed)==0L,!grepl("private",conditionMessage(fault),fixed=TRUE))
+  fault <- tryCatch(tt_decide("Header?",tt_feed(function() {at <<- at+1L; "never"},
+                             framing=framing,reading=list(unit="file"))),thinkthen_error=identity)
+  stopifnot(inherits(fault,"thinkthen_usage"),at==0L)
+  batch <- tt_batch("decide","Cancel?",tt_feed(function() stop("must not read"),framing=framing))
+  batch$cancel()
+  fault <- tryCatch(batch$next_result(),thinkthen_error=identity)
+  stopifnot(inherits(fault,"thinkthen_cancelled"),fault$facts$requests_sent==0)
+  batch$close()
 }
 '''
         result = subprocess.run(["Rscript", "--vanilla", "-e", header_code], env=env,
                                 text=True, capture_output=True, timeout=10)
         assert result.returncode == 0, (result.stdout, result.stderr)
-        assert len(sends) == 6, len(sends)
-        print("r: table/line projection headers refuse before reads with zero listener sends")
+        assert len(sends) == 10, len(sends)
+        print("r: table header, reader-unit and cancellation refusals send zero listener requests")
         held_code = '''library(thinkthen)
 tt_engine(cache=FALSE,max_retries=0L,model="fixed",batch=1L)
 at <- 0L
@@ -177,7 +234,7 @@ batch$close()
             child.stdin = None
             output, error = child.communicate(timeout=10)
             assert child.returncode == 0, (output, error)
-            assert len(sends) == 7, len(sends)
+            assert len(sends) == 11, len(sends)
             print("r: Full/Closed and cancellation before provider release passed")
         finally:
             released.set()
