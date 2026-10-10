@@ -1,6 +1,6 @@
 # 0505: Give C and Zig complete typed session views
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -21,6 +21,8 @@ Reviews: revision c0cd6549072ad748dbc3f000c654af1cec044551, reject
 Reviews: revision cc9633836627b8f30bda0920a055a5b9f8f125d8, accept
 
 Reviews: revision 5819f54a3b2b3c99d40af1aa3e201df92acfd0c4, accept
+
+Landed: 76a11a0
 
 ## Outcome
 
