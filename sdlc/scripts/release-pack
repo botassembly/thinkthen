@@ -273,10 +273,20 @@ swift)
 		cp libraries/swift/LICENSE libraries/swift/README.md libraries/swift/Package.swift "$folder/"
 		cp libraries/swift/Examples/main.swift "$folder/Examples/"
 		cp libraries/swift/Sources/CThinkThen/module.modulemap "$folder/Sources/CThinkThen/"
+		cp libraries/swift/Sources/CThinkThen/bridge.c "$folder/Sources/CThinkThen/"
 		cp libraries/c/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
-		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift libraries/swift/Sources/ThinkThen/Complete.swift \
-			libraries/swift/Sources/ThinkThen/Native.swift libraries/swift/Sources/ThinkThen/NativeResult.swift \
-			libraries/swift/Sources/ThinkThen/NativeViews.swift libraries/swift/Sources/ThinkThen/NativeQuestionViews.swift "$folder/Sources/ThinkThen/"
+		cp libraries/swift/Sources/CThinkThen/include/loader.h "$folder/Sources/CThinkThen/include/"
+		cp libraries/swift/Sources/ThinkThen/*.swift "$folder/Sources/ThinkThen/"
+		case $TARGET in
+		*-apple-darwin)
+			[ -d libraries/swift/CThinkThen.xcframework ] || { echo 'release-pack: Swift needs the matching assembled universal CThinkThen.xcframework' >&2; exit 1; }
+			cp -R libraries/swift/CThinkThen.xcframework "$folder/" ;;
+		*-unknown-linux-gnu)
+			mkdir -p "$folder/Sources/ThinkThen/Native/$TARGET"
+			cp libraries/swift/Sources/ThinkThen/Native/README.txt "$folder/Sources/ThinkThen/Native/"
+			tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$folder/Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ;;
+		*) echo 'release-pack: unsupported Swift native target' >&2; exit 1 ;;
+		esac
 		cp libraries/swift/Tests/TypeCase/main.swift "$folder/Tests/TypeCase/"
 		;;
 zig)

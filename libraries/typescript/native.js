@@ -80,7 +80,7 @@ class Operation {
       if(this.#closed) return;
       if(value.done){this.#native.finish(null);this.#iterator=undefined;}
       else this.#pending={text:dump({item:descriptor(value.value)})};
-    }).catch(()=>{if(!this.#closed){this.#native.finish('{"kind":"invalid_input"}');const iterator=this.#iterator;this.#iterator=undefined;try{iterator?.return?.()?.catch?.(()=>{});}catch{/* Retain the native reader failure. */}}}).finally(()=>{if(this.#pending instanceof Promise)this.#pending=undefined;});
+    }).catch(()=>{if(!this.#closed){this.#native.finish('{"kind":"invalid_input"}');this.#releaseProducer();}}).finally(()=>{if(this.#pending instanceof Promise)this.#pending=undefined;});
   }
   async next() {
     if(this.#done) return {done:true,value:undefined};
@@ -108,7 +108,7 @@ class Operation {
         if(this.#pending?.text) {
           const status=crossing(()=>this.#native.push(this.#pending.text));
           if(status!=='full') this.#pending=undefined;
-          if(status==='closed') this.#iterator=undefined;
+          if(status==='closed') this.#releaseProducer();
         }
         this.#feed();
         await new Promise(resolve=>setTimeout(resolve,1));
@@ -117,13 +117,16 @@ class Operation {
   }
   async result(){try {while(!(await this.next()).done){}return new Completed(this.#rows,this.terminal);} finally {this.close();}}
   cancel(){this.#native?.cancel();this.close();}
+  #releaseProducer(){
+    const iterator=this.#iterator;this.#iterator=undefined;
+    try {iterator?.return?.()?.catch?.(()=>{});}
+    catch { /* Cleanup retains the call failure. */ }
+  }
   close(){
     if(this.#closed)return;this.#closed=true;
     this.#signal?.removeEventListener('abort',this.#abort);
-    try {
-      const returned=this.#iterator?.return?.();
-      if(returned?.catch)returned.catch(()=>{});
-    } catch { /* Cleanup retains the call failure. */ } finally {this.#iterator=undefined;this.#native?.close();this.#remove?.(this);}
+    try {this.#releaseProducer();}
+    finally {this.#native?.close();this.#remove?.(this);}
   }
   async return(){this.#done=true;this.close();return {done:true,value:undefined};}
 }

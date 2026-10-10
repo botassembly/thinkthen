@@ -9,6 +9,12 @@ Depends on: 0517
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 419c4d625474638ad8a59d7e7398e5ff0bcaaa71, reject
+
+Reviews: revision 5744e732b106b3532ec5cd37213a8e2625f5304a, reject
+
+Reviews: revision f966b8c83c8b57d755370f651aca196456d87f02, accept
+
 ## Outcome
 
 Swift callers add one SwiftPM dependency that carries the native library, call the ten functions with Swift values, and use `async`/`await` with task cancellation. Results are generated Swift types with optionals plus explicit presence, and failures are typed thrown errors. Hand-copied layouts, readers and old public names are gone.
@@ -32,3 +38,4 @@ Swift callers add one SwiftPM dependency that carries the native library, call t
 - 2026-10-10 landed 00ad0813e; next: Swift exposes owned native usage observation and finalization in the shared reviewed 0505 batch. Its corrected thread diagnostic and focused installed status checks pass. The canonical batch record is 0505; final installed Apple and distribution qualification remain held.
 - 2026-10-10 landed 00ad0813e; next: Owned usage-status observation is landed, but the full Swift migration remains implementation work: generated Swift session inputs and results, typed failures, async calls and task cancellation, and the SwiftPM native package. Complete that implementation before final installed and Apple qualification.
 - 2026-10-10 started
+- 2026-10-10 landed 6c626cd550aba87c912f2e028b0b910554289d08; next: Swift now exposes generated typed values, ten async calls, owned sessions, cancellation and retained failures. Focused native consumer and bridge checks pass with fresh review. Actual versioned SwiftPM build/load, final distribution contents, Apple linkage, full installed parity and compatibility retirement remain unproved; the consumer build stopped at the lane cap.
