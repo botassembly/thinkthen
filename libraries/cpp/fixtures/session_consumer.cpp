@@ -61,6 +61,8 @@ int main(int argc,char** argv) {
         auto q=question(v.at("question"));auto in=input(v.at("input"));
         auto opts=v.at("options");RequestOptions options;options.set_attempts(true);
         if(opts.contains("deadline_ms")) options.set_deadline_ms(opts.at("deadline_ms").get<int64_t>());
+        if(opts.contains("field")) { std::vector<std::string> fields; for(const auto& field:opts.at("field")) fields.push_back(text(field)); options.set_field(fields); }
+        if(opts.contains("context_field")) options.set_context_field(text(opts.at("context_field")));
         if(opts.contains("none")) options.set_none(opts.at("none").get<bool>());
         if(opts.contains("context")) options.set_context(text(opts.at("context")));
         auto verb=text(v.at("verb"));

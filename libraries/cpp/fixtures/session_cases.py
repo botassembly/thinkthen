@@ -52,6 +52,14 @@ def descriptor(v,home):
         options['none']=definition.pop('none',False)
     if injection=='expired_deadline':options['deadline_ms']=0
     if v.get('shared_context') is not None:options['context']=v['shared_context']
+    # A null/non-context value is original JSON data, not a valid ContextSchema
+    # descriptor. Select it through the shared native reading rule to test the
+    # declaration's exact refusal, preserving the canonical assertion.
+    if v.get('context_present') and not isinstance(v.get('context'), (str,dict)):
+        for item in input['items']:
+            original=item['original'].get('value',item['original'].get('text'))
+            item['original']={'kind':'json','value':{'item':original,'context':item.pop('context')}}
+        options.update(field=['/item'],context_field='/context')
     return {'verb':v['verb'],'question':question,'input':input,'options':options,'cancel':injection=='cancel_token','held_cancel':v.get('held_cancel',False)}
 
 def native_cases(binary):
