@@ -24,6 +24,12 @@ use observation::observe_row;
 pub struct Relate(pub(crate) RelateSpec);
 
 impl Relate {
+    /// The largest admitted raw record set, before deduplication.
+    #[must_use]
+    pub const fn max_record_count() -> usize {
+        RelateSpec::MAX_ENTITIES
+    }
+
     /// Admit a whole-set record count before retaining or deduplicating source occurrences.
     ///
     /// # Errors

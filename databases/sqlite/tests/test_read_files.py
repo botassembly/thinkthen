@@ -128,10 +128,13 @@ def test_relate_retains_255_source_row_cap_before_deduplication():
     held = child("""
 db = connect()
 db.execute('CREATE TABLE entities(id INTEGER,name TEXT,kind TEXT)')
-db.executemany('INSERT INTO entities VALUES (?,?,?)', [(n,'same','*') for n in range(256)])
-say(error=run(db, "SELECT * FROM thinkthen_relate('SELECT id,name,kind FROM entities','supports=*:*')"))
+db.executemany('INSERT INTO entities VALUES (?,?,?)', [(n,'same','*') for n in range(255)])
+sql = "SELECT * FROM thinkthen_relate('SELECT id,name,kind FROM entities','supports=*:*')"
+accepted = run(db, sql)
+db.execute('INSERT INTO entities VALUES (255,?,?)', (b'bad name', b'bad kind'))
+say(accepted=accepted, error=run(db, sql))
 """, environment(backend))
-    expect(held['error'], 'thinkthen usage: thinkthen_relate takes at most 255 source rows (retryable: no)', 'source row cap')
+    expect(held, {'accepted': [], 'error': 'thinkthen usage: thinkthen_relate takes at most 255 source rows (retryable: no)'}, 'raw source cap before cell reads')
     expect(backend.close(), 0, 'oversized source set sends nothing')
 
 

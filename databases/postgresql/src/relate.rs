@@ -10,9 +10,6 @@ use thinkthen::{Entity, Error, Relate, RelationRule};
 
 use crate::call::{self, OrRaise as _};
 
-/// SPI reads at most this many rows, and the last one refuses.
-const ROW_LIMIT: i64 = 256;
-
 /// One row: its id, name, and kind.
 type Row = (i64, String, String);
 
@@ -85,12 +82,13 @@ fn rows(query: &str) -> Result<(bool, Vec<Row>), Error> {
             .map_err(ran)?
             .columns()
             .map_err(ran)?;
+        let row_limit = Relate::max_record_count() + 1;
         let wrapped = match columns {
             2 => format!(
-                "SELECT a.i::bigint, a.n::text, '{ANY}'::text FROM ({query}) AS a(i, n) LIMIT {ROW_LIMIT}"
+                "SELECT a.i::bigint, a.n::text, '{ANY}'::text FROM ({query}) AS a(i, n) LIMIT {row_limit}"
             ),
             3 => format!(
-                "SELECT a.i::bigint, a.n::text, a.k::text FROM ({query}) AS a(i, n, k) LIMIT {ROW_LIMIT}"
+                "SELECT a.i::bigint, a.n::text, a.k::text FROM ({query}) AS a(i, n, k) LIMIT {row_limit}"
             ),
             _ => {
                 return Err(call::usage(
@@ -99,12 +97,8 @@ fn rows(query: &str) -> Result<(bool, Vec<Row>), Error> {
             }
         };
         let table = client.select(&wrapped, None, &[]).map_err(ran)?;
-        if i64::try_from(table.len()).unwrap_or(i64::MAX) >= ROW_LIMIT {
-            return Err(call::usage(format!(
-                "thinkthen_relate reads at most {} rows",
-                ROW_LIMIT - 1
-            )));
-        }
+        Relate::admit_record_count(table.len())
+            .map_err(|_| call::usage("thinkthen_relate reads at most 255 rows"))?;
         let mut out = Vec::with_capacity(table.len());
         for row in table {
             out.push((
