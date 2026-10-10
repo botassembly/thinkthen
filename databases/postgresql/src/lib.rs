@@ -11,6 +11,7 @@ mod call;
 mod complete;
 #[path = "../../sqlite/src/complete_native/mod.rs"]
 mod complete_native;
+mod descriptions;
 #[allow(
     unsafe_code,
     reason = "the one FFI module: interrupt flags, the signal mask, and descriptor opens"
@@ -71,7 +72,9 @@ fn jsonb(text: &str) -> JsonB {
     )
 }
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+"Apply an authored question set to one text input and return annotations as jsonb. NULL input returns NULL after controls and set validation; NULL set raises Usage; NULL settings uses defaults. Questions may use privileged/confined @files; evidence files must be read by the client. Failures raise SQL errors.";
+[parallel_restricted];
 fn thinkthen_annotate(
     set: Option<&str>,
     input: Option<&str>,
@@ -102,9 +105,12 @@ fn thinkthen_annotate(
         value.map(|text| jsonb(&text))
     })
 }
+}
 
+crate::descriptions::describe! {
+"Return this backend session's cumulative requests, cache answers and token counts. Reads totals without building an engine or sending.";
+[parallel_restricted];
 /// This backend's totals. Tests read differences around a call (0095).
-#[pg_extern(parallel_restricted)]
 fn thinkthen_usage() -> TableIterator<
     'static,
     (
@@ -125,9 +131,12 @@ fn thinkthen_usage() -> TableIterator<
         ))
     })
 }
+}
 
+crate::descriptions::describe! {
+"Return this backend session's usage persistence state and advice as jsonb. Observation builds no engine, reads no evidence and sends nothing.";
+[parallel_restricted];
 /// Current usage persistence for this backend; no engine is built by observation.
-#[pg_extern(parallel_restricted)]
 fn thinkthen_usage_status() -> JsonB {
     call::guarded(|| {
         let state = call::usage_status();
@@ -137,6 +146,7 @@ fn thinkthen_usage_status() -> JsonB {
         };
         JsonB(value)
     })
+}
 }
 
 type Names = Vec<(String, i32, i32, i32, String, f64)>;
@@ -186,12 +196,14 @@ fn names(body: Option<&str>, ask: Recognize) -> Names {
         .collect()
 }
 
+crate::descriptions::describe! {
+"Recognize names of the supplied kinds in text; return text, character offsets, kind and strength as rows. NULL body gives no rows after kind validation. Failures raise SQL errors.";
+[parallel_restricted];
 /// Every name of the given kinds in the text, as rows.
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the columns from the signature, not an alias"
 )]
-#[pg_extern(parallel_restricted)]
 fn thinkthen_recognize(
     body: Option<&str>,
     kinds: Option<Array<'_, &str>>,
@@ -216,13 +228,16 @@ fn thinkthen_recognize(
         TableIterator::new(names(body, ask.build().or_raise()))
     })
 }
+}
 
+crate::descriptions::describe! {
+"Recognize names using an authored JSON spec or privileged/confined @file; return names, character offsets, kinds and strengths. NULL body gives no rows after spec validation. Failures raise SQL errors.";
+[name = "thinkthen_recognize", parallel_restricted];
 /// Every name a version-one recognize spec asks for, as rows.
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the columns from the signature, not an alias"
 )]
-#[pg_extern(name = "thinkthen_recognize", parallel_restricted)]
 fn thinkthen_recognize_spec(
     body: Option<&str>,
     spec: Option<&str>,
@@ -244,13 +259,16 @@ fn thinkthen_recognize_spec(
         TableIterator::new(names(body, ask))
     })
 }
+}
 
+crate::descriptions::describe! {
+"Return relations between names recognized in text using an authored JSON spec or privileged/confined @file. NULL body gives no rows after spec validation. Failures raise SQL errors.";
+[parallel_restricted];
 /// The spec's relations over one text, as rows.
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the inline name! tuple; an alias hides the columns"
 )]
-#[pg_extern(parallel_restricted)]
 fn thinkthen_relations(
     body: Option<&str>,
     spec: Option<&str>,
@@ -293,15 +311,19 @@ fn thinkthen_relations(
         TableIterator::new(rows)
     })
 }
+}
 
-/// R1-10: a test build's panic becomes XX000, and the session lives.
 #[cfg(feature = "panic-probe")]
-#[pg_extern]
+crate::descriptions::describe! {
+"Test-build probe: raise a defect SQL error while preserving the session. Sends nothing.";
+[];
+/// R1-10: a test build's panic becomes XX000, and the session lives.
 #[allow(clippy::panic, reason = "the probe's whole job is one panic")]
 fn thinkthen_panic_probe() {
     call::guarded(|| {
         panic!("the panic probe fired");
     })
+}
 }
 
 /// Register the settings. Nothing else runs here: the engine builds on a
@@ -357,6 +379,8 @@ END
 $thinkthen_guard$;
 
 REVOKE ALL ON FUNCTION thinkthen_guard_public() FROM PUBLIC;
+COMMENT ON FUNCTION thinkthen_guard_public() IS
+    'Internal extension event-trigger guard: revoke default PUBLIC execution on newly created extension-owned functions. Runs no model call and reads no evidence file.';
 
 CREATE EVENT TRIGGER thinkthen_guard_public
     ON ddl_command_end

@@ -102,8 +102,10 @@ fn found(
     })))
 }
 
+crate::descriptions::describe! {
+"Find one original unit in an ordered text[]; return zero-based index, value, probability and candidates as jsonb. Settings may admit explicit none. NULL question or units returns NULL before checking partners; NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client.";
+[name = "thinkthen_find", parallel_restricted];
 /// Find one original unit, or explicit none, in an ordered text array.
-#[pg_extern(name = "thinkthen_find", parallel_restricted)]
 fn thinkthen_find(
     question: Option<&str>,
     units: Option<Array<'_, &str>>,
@@ -111,9 +113,12 @@ fn thinkthen_find(
 ) -> Option<JsonB> {
     call::guarded(|| found(question, units, settings))
 }
+}
 
+crate::descriptions::describe! {
+"Removed positional none overload: always raise Usage, including NULL arguments. Put none and deadline in the settings object; sends nothing.";
+[name = "thinkthen_find", parallel_restricted];
 /// The removed positional none form fails with its replacement spelling.
-#[pg_extern(name = "thinkthen_find", parallel_restricted)]
 fn thinkthen_find_none(
     question: Option<&str>,
     units: Option<Array<'_, &str>>,
@@ -125,4 +130,5 @@ fn thinkthen_find_none(
             "find's none and deadline moved into the settings object",
         ))
     })
+}
 }

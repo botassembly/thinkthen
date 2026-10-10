@@ -44,7 +44,9 @@ fn probability(detail: &Details) -> Option<f64> {
     }
 }
 
-#[pg_extern(name = "thinkthen_decide_many", parallel_restricted)]
+crate::descriptions::describe! {
+["Judge keyed jsonb text records and return original keys with decisions and yes probabilities. ", crate::descriptions::KEYED_TEXT].concat();
+[name = "thinkthen_decide_many", parallel_restricted];
 fn decide_many(
     question: Option<&str>,
     input: Option<JsonB>,
@@ -74,12 +76,15 @@ fn decide_many(
         TableIterator::new(rows)
     })
 }
+}
 
+crate::descriptions::describe! {
+["Judge keyed jsonb text records and return original keys with choices and selected probabilities. ", crate::descriptions::KEYED_TEXT].concat();
+[name = "thinkthen_choose_many", parallel_restricted];
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the named SQL columns from this inline tuple"
 )]
-#[pg_extern(name = "thinkthen_choose_many", parallel_restricted)]
 fn choose_many(
     question: Option<&str>,
     input: Option<JsonB>,
@@ -106,8 +111,11 @@ fn choose_many(
         TableIterator::new(rows)
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_score_many", parallel_restricted)]
+crate::descriptions::describe! {
+["Judge keyed jsonb text records and return original keys with numeric scores. ", crate::descriptions::KEYED_TEXT].concat();
+[name = "thinkthen_score_many", parallel_restricted];
 fn score_many(
     question: Option<&str>,
     input: Option<JsonB>,
@@ -127,8 +135,11 @@ fn score_many(
         TableIterator::new(rows)
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_tag_many", parallel_restricted)]
+crate::descriptions::describe! {
+["Judge keyed jsonb text records and return original keys with matching label arrays. ", crate::descriptions::KEYED_TEXT].concat();
+[name = "thinkthen_tag_many", parallel_restricted];
 fn tag_many(
     question: Option<&str>,
     input: Option<JsonB>,
@@ -148,12 +159,15 @@ fn tag_many(
         TableIterator::new(rows)
     })
 }
+}
 
+crate::descriptions::describe! {
+"Rank keyed jsonb text records by probability of yes; return key, gap-free rank and probability. Input ties use bytewise key order. Question is literal text. NULL question raises Usage; NULL input gives no rows after controls and question validation; NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client.";
+[name = "thinkthen_rank", parallel_restricted];
 /// Order keyed records by the probability of yes, best first. The question is
 /// literal text and takes only `model` among question fields. Ties come back
 /// in bytewise key order, because `forms::keyed` reads the object into a
 /// sorted map.
-#[pg_extern(name = "thinkthen_rank", parallel_restricted)]
 fn rank(
     question: Option<&str>,
     input: Option<JsonB>,
@@ -220,8 +234,11 @@ fn rank(
         TableIterator::new(rows)
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_plan", parallel_restricted)]
+crate::descriptions::describe! {
+"Estimate native batching for keyed jsonb text records and return a jsonb plan without sending. NULL question returns NULL; NULL input plans zero records; NULL settings uses defaults. Questions may use privileged/confined @files. Failures raise SQL errors; evidence files must be read by the client.";
+[name = "thinkthen_plan", parallel_restricted];
 fn plan(
     question: Option<&str>,
     input: Option<JsonB>,
@@ -244,4 +261,5 @@ fn plan(
             .or_raise();
         Some(JsonB(written))
     })
+}
 }

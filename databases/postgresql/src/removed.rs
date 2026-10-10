@@ -12,7 +12,9 @@ fn context_moved() -> Error {
     )
 }
 
-#[pg_extern(name = "thinkthen_warm", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; pack records with thinkthen_decide_many. Reads no file and sends nothing.";
+[name = "thinkthen_warm", parallel_restricted];
 fn warm(_question: Option<&str>, _input: Option<&str>) -> i64 {
     call::guarded(|| {
         call::raise(call::usage(
@@ -20,8 +22,11 @@ fn warm(_question: Option<&str>, _input: Option<&str>) -> i64 {
         ))
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_warm", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; pack records with thinkthen_decide_many. Reads no file and sends nothing.";
+[name = "thinkthen_warm", parallel_restricted];
 fn warm_context(_question: Option<&str>, _input: Option<&str>, _context: Option<&str>) -> i64 {
     call::guarded(|| {
         call::raise(call::usage(
@@ -29,8 +34,11 @@ fn warm_context(_question: Option<&str>, _input: Option<&str>, _context: Option<
         ))
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_probability", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; order records with thinkthen_rank. Reads no file and sends nothing.";
+[name = "thinkthen_probability", parallel_restricted];
 fn probability(_question: Option<&str>, _input: Option<&str>) -> Option<f64> {
     call::guarded(|| {
         call::raise(call::usage(
@@ -38,8 +46,11 @@ fn probability(_question: Option<&str>, _input: Option<&str>) -> Option<f64> {
         ))
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_decide", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; pass a keyed jsonb object to thinkthen_decide_many. Reads no file and sends nothing.";
+[name = "thinkthen_decide", parallel_restricted];
 fn decide_array(_question: Option<&str>, _inputs: Option<Array<'_, &str>>) -> i64 {
     call::guarded(|| {
         call::raise(call::usage(
@@ -47,8 +58,11 @@ fn decide_array(_question: Option<&str>, _inputs: Option<Array<'_, &str>>) -> i6
         ))
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_decide", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; pass a keyed jsonb object to thinkthen_decide_many. Reads no file and sends nothing.";
+[name = "thinkthen_decide", parallel_restricted];
 fn decide_array_context(
     _question: Option<&str>,
     _inputs: Option<Array<'_, &str>>,
@@ -60,8 +74,11 @@ fn decide_array_context(
         ))
     })
 }
+}
 
-#[pg_extern(name = "thinkthen_decide", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
+[name = "thinkthen_decide", parallel_restricted];
 fn decide_context(
     _question: Option<&str>,
     _input: Option<&str>,
@@ -69,8 +86,11 @@ fn decide_context(
 ) -> Option<bool> {
     call::guarded(|| call::raise(context_moved()))
 }
+}
 
-#[pg_extern(name = "thinkthen_choose", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
+[name = "thinkthen_choose", parallel_restricted];
 fn choose_context(
     _question: Option<&str>,
     _input: Option<&str>,
@@ -79,8 +99,11 @@ fn choose_context(
 ) -> Option<String> {
     call::guarded(|| call::raise(context_moved()))
 }
+}
 
-#[pg_extern(name = "thinkthen_score", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
+[name = "thinkthen_score", parallel_restricted];
 fn score_context(
     _question: Option<&str>,
     _input: Option<&str>,
@@ -89,8 +112,11 @@ fn score_context(
 ) -> Option<f64> {
     call::guarded(|| call::raise(context_moved()))
 }
+}
 
-#[pg_extern(name = "thinkthen_tag", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
+[name = "thinkthen_tag", parallel_restricted];
 fn tag_context(
     _question: Option<&str>,
     _input: Option<&str>,
@@ -99,8 +125,11 @@ fn tag_context(
 ) -> Option<Vec<String>> {
     call::guarded(|| call::raise(context_moved()))
 }
+}
 
-#[pg_extern(name = "thinkthen_details", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
+[name = "thinkthen_details", parallel_restricted];
 fn details_context(
     _question: Option<&str>,
     _input: Option<&str>,
@@ -108,8 +137,11 @@ fn details_context(
 ) -> Option<JsonB> {
     call::guarded(|| call::raise(context_moved()))
 }
+}
 
-#[pg_extern(name = "thinkthen_try_details", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
+[name = "thinkthen_try_details", parallel_restricted];
 fn try_details_context(
     _question: Option<&str>,
     _input: Option<&str>,
@@ -117,8 +149,11 @@ fn try_details_context(
 ) -> Option<JsonB> {
     call::guarded(|| call::raise(context_moved()))
 }
+}
 
-#[pg_extern(name = "thinkthen_probability", parallel_restricted)]
+crate::descriptions::describe! {
+"Removed overload: always raise Usage, including NULL arguments; order records with thinkthen_rank. Reads no file and sends nothing.";
+[name = "thinkthen_probability", parallel_restricted];
 fn probability_context(
     _question: Option<&str>,
     _input: Option<&str>,
@@ -129,4 +164,5 @@ fn probability_context(
             "thinkthen_probability was removed; order records with thinkthen_rank",
         ))
     })
+}
 }

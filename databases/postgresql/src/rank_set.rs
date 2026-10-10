@@ -8,8 +8,10 @@ use crate::ffi::RawJson;
 use crate::files::Given;
 use crate::forms::{self, Named};
 
+crate::descriptions::describe! {
+"Rank keyed jsonb text records with an authored ordered decide-question set, returning key, rank, selecting probability, question name and count facts. Set text may use privileged/confined @files. NULL set raises Usage; NULL input gives no rows after controls and set validation; NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client.";
+[name = "thinkthen_rank_set", parallel_restricted];
 #[allow(clippy::type_complexity, reason = "pgrx reads the named SQL tuple")]
-#[pg_extern(name = "thinkthen_rank_set", parallel_restricted)]
 fn rank_set(
     questions: Option<&str>,
     input: Option<JsonB>,
@@ -93,4 +95,5 @@ fn rank_set(
                 }),
         )
     })
+}
 }
