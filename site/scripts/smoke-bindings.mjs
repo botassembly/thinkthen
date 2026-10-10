@@ -257,8 +257,9 @@ const BINDINGS = {
       fs.mkdirSync(pkg, { recursive: true });
       const source = path.join(repo, 'libraries/typescript');
       const manifest = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
-      const addon = `thinkthen-${process.platform}-${process.arch}.node`;
-      if (!manifest.files.includes(addon)) throw new Error(`typescript package does not ship ${addon}`);
+      const assets = JSON.parse(fs.readFileSync(path.join(source, 'native-platforms.json'), 'utf8'));
+      const addon = assets[`${process.platform}-${process.arch}`];
+      if (!addon) throw new Error(`typescript package has no addon for ${process.platform}-${process.arch}`);
       for (const f of ['package.json', ...manifest.files.filter((f) => !f.endsWith('.node'))]) {
         fs.mkdirSync(path.dirname(path.join(pkg, f)), { recursive: true });
         fs.copyFileSync(path.join(source, f), path.join(pkg, f));
