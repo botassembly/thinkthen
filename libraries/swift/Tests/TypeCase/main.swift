@@ -2,17 +2,17 @@ import Foundation
 import ThinkThen
 
 @main enum SharedConsumer {
-    static func run(_ fixture: [String: Any], settings: String) async throws -> OwnedCall {
+    static func run(_ fixture: [String: Any], settings: String, originalJSON: JSONValue) async throws -> OwnedCall {
         let client = try Client(settings: InputEngineSettings.read(JSONValue.parse(Data(settings.utf8))))
         defer { client.close() }
         let verb = fixture["verb"] as! String
         func value(_ object: Any) throws -> JSONValue {
             try JSONValue.parse(JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed]))
         }
-        var definition = fixture["question"] as! [String: Any]
-        if let metadata = fixture["metadata"] as? [String: Any] { definition.merge(metadata) { _, new in new } }
-        if verb == "find" { definition.removeValue(forKey: "none") }
-        let question: InputRequestQuestion
+        let preserved: [String: JSONValue]
+        if case .orderedObject(let members) = originalJSON.kind { preserved = Dictionary(members.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last }) }
+        else { throw JSONConversionError("Fixture is not an object") }
+                let question: InputRequestQuestion
         switch fixture["loader"] as? String {
         case "named", "load_named": question = .name(fixture["reference"] as! String)
         case "reference", "load_reference": question = .reference(fixture["reference"] as! String)
@@ -22,10 +22,19 @@ import ThinkThen
             else if let raw = fixture["raw"] as? String {
                 try Data(raw.utf8).write(to: URL(fileURLWithPath: "raw-question.json"))
                 question = .file("raw-question.json")
-            } else { question = .definition(InputRequestQuestionDefinition(value: try InputRequestDefinition.read(value(definition)))) }
+            } else {
+                var authored = preserved["question"]!
+                if case .orderedObject(let members) = authored.kind {
+                    var members = verb == "find" ? members.filter { $0.key != "none" } : members
+                    if let metadata = preserved["metadata"], case .orderedObject(let extra) = metadata.kind { members += extra }
+                    authored = .orderedObject(members)
+                }
+                let role: QuestionGrammar = verb == "recognize" ? .recognize : verb == "relate" ? .relate : verb == "annotate" ? .set : verb == "rank" ? ((fixture["question"] as! [String: Any])["questions"] == nil ? .rank : .rankSet) : verb == "find" ? .find : .atomic
+                question = try client.parseQuestion(role, authored: authored)
+            }
         }
         let injection = (fixture["operation"] as? [String: Any])?["injection"] as? String
-        let input: InputRequestInput
+        var input: InputRequestInput
         if let paths = fixture["paths"] as? [String], !paths.isEmpty {
             let unit = fixture["source_unit"] as? Int ?? 3
             var source: [String: Any] = ["paths": paths, "reading": ["unit": unit == 2 ? "window" : (unit == 1 || unit == 5 ? "line" : "file")]]
@@ -51,9 +60,15 @@ import ThinkThen
             input = try InputRequestInput.read(value(["kind": verb == "find" ? "units" : verb == "relate" ? "entities" : "records", "items": records]))
         }
         var options: [String: Any] = ["attempts": true]
-        if let context = fixture["shared_context"] { options["context"] = context }
+        if let context = fixture["shared_context"] as? String { options["context"] = context }
         if verb == "find" { options["none"] = (fixture["question"] as? [String: Any])?["none"] as? Bool ?? false }
         if injection == "expired_deadline" { options["deadline_ms"] = 0 }
+        if fixture["context_present"] as? Bool == true, fixture["context"] is NSNull, fixture["contexts"] is NSNull || fixture["contexts"] == nil {
+            let first = (fixture["items"] as! [Any])[0]
+            input = .json(InputRequestInputJson(value: try value(["item": first, "context": NSNull()])))
+            options["field"] = ["/item"]
+            options["context_field"] = "/context"
+        }
         let typedOptions = Presence.value(try InputRequestOptions.read(value(options)))
         let worker = Task {
             switch verb {
@@ -81,10 +96,12 @@ import ThinkThen
         return try await worker.value
     }
     static func main() async throws {
-        let fixture = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))) as! [String: Any]
+        let bytes = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
+        let originalJSON = try JSONValue.parse(bytes)
+        let fixture = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
         let payload: JSONValue
         do {
-            let call = try await run(fixture, settings: CommandLine.arguments[2])
+            let call = try await run(fixture, settings: CommandLine.arguments[2], originalJSON: originalJSON)
             payload = .object(["packets": .array(call.packets.map(\.json))])
         } catch let failure as SessionFailure {
             payload = .object(["packets": .array(failure.call.packets.map(\.json))])

@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[4]
 HERE = Path(__file__).resolve().parent
@@ -23,7 +24,7 @@ args.out.mkdir(parents=True, exist_ok=True)
 work = Path(tempfile.mkdtemp(prefix='installed-', dir=args.out.resolve()))
 package = work / 'package'
 shutil.copytree(args.package, package)
-version = json.loads((ROOT / 'sdlc/release-version.json').read_text())['version'] if (ROOT / 'sdlc/release-version.json').exists() else '0.2.0'
+version = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
 for name in ('home', 'cache', 'barrier', 'consumer/Sources/Owned', 'consumer/Sources/Parity'):
     (work / name).mkdir(parents=True, exist_ok=True)
 shutil.copyfile(HERE / 'owned_consumer.swift', work / 'consumer/Sources/Owned/main.swift')
@@ -63,12 +64,23 @@ try:
         assert result.returncode == 0 and b'OWNED_SWIFT_PASS' in result.stdout, (result.stdout, result.stderr)
         assert server.arrivals == ['hold-owned-swift', 'owned-swift', 'status-401'] and server.attempts == server.connections == 3, server.arrivals
         print(result.stdout.decode(), end='')
+        asset = work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native/x86_64-unknown-linux-gnu/libthinkthen.so'
+        if not asset.exists():
+            asset = next((work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native').glob('*/libthinkthen.so'))
+        hidden = asset.with_suffix('.missing')
+        asset.rename(hidden)
+        try:
+            refused = subprocess.run(base + ['/work/consumer/.build/debug/Owned', settings, '/work/barrier'], env=env, capture_output=True, timeout=5)
+            assert refused.returncode != 0 and b'ThinkThen native package could not be loaded' in refused.stderr, (refused.stdout, refused.stderr)
+            assert server.attempts == 3, server.arrivals
+            print('Missing bundled native asset refuses locally with zero extra requests')
+        finally:
+            hidden.rename(asset)
     finally:
         (work / 'barrier/release-hold-owned-swift').touch()
         server.close()
     # Retain the installed executable and its resource bundle for shared cases.
     installed = args.out / 'installed'
-    if installed.exists(): shutil.rmtree(installed)
     shutil.copytree(work / 'consumer/.build/debug', installed, symlinks=False)
     print('Installed versioned SwiftPM dependency PASS; bundled native loading, three counted requests')
 finally:
