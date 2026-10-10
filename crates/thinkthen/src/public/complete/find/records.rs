@@ -46,7 +46,7 @@ impl Engine {
     {
         let options = options.started()?;
         options.admission()?;
-        let mut bytes = 0usize;
+        let mut bytes = crate::public::SourceBudget::find();
         let maximum =
             crate::core::Find::maximum(question.kind == crate::public::question::Kind::FindNone);
         let units = units
@@ -75,7 +75,10 @@ impl Engine {
     }
 }
 
-fn prepare<T: InputEvidence>(unit: RecordInput<T>, bytes: &mut usize) -> Result<Unit<T>, Error> {
+fn prepare<T: InputEvidence>(
+    unit: RecordInput<T>,
+    bytes: &mut crate::public::SourceBudget,
+) -> Result<Unit<T>, Error> {
     if unit.context.is_some() || unit.options.is_some() || unit.examples.is_some() {
         return Err(Error::usage(
             "find takes one whole-set call context and no per-record controls",
@@ -94,10 +97,7 @@ fn prepare<T: InputEvidence>(unit: RecordInput<T>, bytes: &mut usize) -> Result<
         ),
         QuestionInput::Images(_) => return Err(super::super::wrong()),
     };
-    *bytes = bytes
-        .checked_add(size)
-        .filter(|size| *size <= 16 * 1024 * 1024)
-        .ok_or_else(|| Error::usage("find input exceeds 16 MiB"))?;
+    bytes.charge(size)?;
     Ok(Unit {
         original: unit.original,
         text,

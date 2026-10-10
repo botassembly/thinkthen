@@ -259,7 +259,7 @@ where
     let none = question.kind == Kind::FindNone;
     let maximum = Find::maximum(none);
     let mut held = Vec::new();
-    let mut bytes = 0usize;
+    let mut bytes = crate::public::SourceBudget::find();
     let mut units = units.into_iter();
     loop {
         options.admission()?;
@@ -270,10 +270,7 @@ where
         if held.len() == maximum {
             return Err(Error::usage(count_message(none)));
         }
-        bytes = bytes
-            .checked_add(unit.evidence().len())
-            .filter(|&bytes| bytes <= 16 * 1024 * 1024)
-            .ok_or_else(|| Error::usage("find input exceeds 16 MiB"))?;
+        bytes.charge(unit.evidence().len())?;
         held.push(unit);
     }
     for unit in &held {

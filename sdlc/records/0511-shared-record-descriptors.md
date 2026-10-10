@@ -295,3 +295,17 @@ The C boundary regression first failed because canonical complete calls eagerly 
 Fresh read-only review accepted `011355dcf90f4602663bf0f5e2d11e7bdf34dee1`, including the lazy C intake, owned result storage and approved cancellation order. The reviewer reproduced the four native cases and accepted Rust growth of 37 lines and C growth of 31 lines. Integration preserves the separately accepted seven-line fixture-helper change and measures root Rust at 187065.
 
 Large payloads, full parity, load, paid calls, release checks and archive installation qualification were not run. No clinical reasoning, configuration changes or additional public API family is introduced.
+
+## Share native find and relation retained-byte admission
+
+This slice starts from `2c555819cde5d5f260ade128b5016774b7dfe479`. The native complete find and relation record collectors and the existing borrowed find intake use the existing private `SourceBudget`. Its route constructors derive the bound from `core::MAX_RECORD_BYTES` and preserve the exact caller diagnostics. No public declaration changes.
+
+Each collector charges at its prior byte-admission point. Row errors, per-record control refusal, images, relation mode checks, engine and entity counts, located-source deduplication and source retention keep their order. Checked subtraction rejects any addition that would exceed the prior cumulative bound, including integer overflow, without changing budget state on failure.
+
+The focused native find cases and relation cases pass. The existing release-only relation boundary stays ignored. Strict native library and focused test Clippy, locked offline policy, formatting, whitespace and the exact source ratchet pass. Logs live under `target/0511-retained-*.log`. Cargo uses two jobs, mold and scoped memory limits. Full routine, parity, large inputs, load, paid calls and release qualification remain outside this slice.
+
+The proposed root ceiling increases by six nonblank lines to 187071. Two private route constructors replace three cumulative-byte predicates; the existing charging implementation owns arithmetic and refusal. Existing source size warnings are unchanged. Fresh reviewer acceptance is required for the small growth.
+
+### What the build taught us
+
+Retained originals and rendered evidence can use the same byte-admission owner while charging at different points. Reuse the private budget and preserve each route's timing and diagnostic instead of adding another limit or public validation door.

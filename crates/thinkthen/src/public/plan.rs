@@ -93,7 +93,7 @@ impl PlanEstimate {
     }
 }
 
-/// Original-byte admission shared by native source preview and rank composition.
+/// Original-byte admission shared by native source and whole-set composition.
 pub(crate) struct SourceBudget {
     remaining: usize,
     message: &'static str,
@@ -116,6 +116,18 @@ impl SourceBudget {
         Self {
             remaining: crate::core::MAX_RECORD_BYTES,
             message: "source rank reads at most 16 MiB across all input records",
+        }
+    }
+    pub(crate) fn find() -> Self {
+        Self {
+            remaining: crate::core::MAX_RECORD_BYTES,
+            message: "find input exceeds 16 MiB",
+        }
+    }
+    pub(crate) fn relate() -> Self {
+        Self {
+            remaining: crate::core::MAX_RECORD_BYTES,
+            message: "relate input exceeds 16 MiB",
         }
     }
     pub(crate) fn charge(&mut self, bytes: usize) -> Result<(), Error> {
