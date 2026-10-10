@@ -78,3 +78,4 @@ Author: project manager.
 - 2026-10-10 landed f415310b07a536a24cb4c90c5f98c8f6a0ac5bf7; next: NuGet now assembles all five native RIDs from captured C archives; finish the Windows installed SDK job and qualify final packages.
 - 2026-10-10 landed 8aadd204de37aa071373cfc341a5745e8bc324e7; next: The required Windows SDK candidate job is reviewed and landed; build fresh local packages and run the complete installed release checkpoint.
 - 2026-10-10 landed d83c883d3; next: All local parts are built; rebuild the Python wheel with the reviewed Polars repair, resume package smoke and run the complete installed release suite.
+- 2026-10-10 landed e7ba3aadf0cdec9e5aea744c7faf4084c6a23894; next: Rebuild final packages with the reviewed native admission repair, then finish installed qualification without repeating unchanged checks.
