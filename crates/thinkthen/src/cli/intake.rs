@@ -117,7 +117,7 @@ impl Source {
             *self = match kind {
                 Some(kind) => match Rows::new(reader, *kind) {
                     Ok(rows) => Self::Table(Box::new(rows)),
-                    Err(error) => return Some(Err(error)),
+                    Err(error) => return Some(Err(error.into())),
                 },
                 None => Self::Text(TextSource {
                     source: *source,
@@ -133,7 +133,7 @@ impl Source {
             Self::Attached(_) => None,
             Self::Pending { .. } => None,
             Self::Table(rows) => rows.next().map(|row| {
-                row.map(|record| Piece {
+                row.map_err(Failure::from).map(|record| Piece {
                     position: None,
                     data: Data::Record(record),
                     advance: 1,
@@ -253,7 +253,9 @@ impl Intake {
             .into_iter()
             .enumerate()
             .map(|(source, (file, reader))| match kind {
-                Some(kind) => Rows::new(reader, kind).map(|rows| Source::Table(Box::new(rows))),
+                Some(kind) => Rows::new(reader, kind)
+                    .map(|rows| Source::Table(Box::new(rows)))
+                    .map_err(Failure::from),
                 None => Ok(Source::Text(TextSource {
                     source,
                     file,

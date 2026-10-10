@@ -25,6 +25,8 @@ mod core;
 
 mod chunks;
 
+mod table;
+
 mod config;
 
 #[cfg(windows)]
@@ -57,7 +59,7 @@ mod cli;
 #[cfg(feature = "cli")]
 pub(crate) use cli::schedule;
 #[cfg(feature = "cli")]
-pub(crate) use cli::{args, asking, edge, failure, judge, profile, table};
+pub(crate) use cli::{args, asking, edge, failure, judge, profile};
 
 #[cfg(feature = "cli")]
 pub use cli::entry;

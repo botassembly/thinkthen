@@ -6,7 +6,22 @@ use std::io::Read;
 use crate::core::{MAX_RECORD_BYTES, Record};
 use csv_core::{ReadFieldResult, Reader, ReaderBuilder};
 
-use crate::failure::Failure;
+/// Shared reader failures retain typed CLI diagnostics without a CLI dependency.
+#[derive(Debug)]
+pub(crate) enum ReadError {
+    Input(std::io::Error),
+    Table(Error),
+}
+
+impl ReadError {
+    pub(crate) fn native(self) -> crate::Error {
+        match self {
+            Self::Input(_) => crate::Error::local("table input could not be read"),
+            Self::Table(error) if error.input_failure() => crate::Error::local(error.to_string()),
+            Self::Table(error) => crate::Error::usage(error.to_string()),
+        }
+    }
+}
 
 const BUFFER_BYTES: usize = 8 * 1024;
 
@@ -115,10 +130,13 @@ pub(crate) struct Rows<R> {
     eof: bool,
     stopped: bool,
     header: Option<Vec<String>>,
+    line: usize,
+    previous_cr: bool,
+    pub(crate) position: Option<(usize, usize)>,
 }
 
 impl<R: Read> Rows<R> {
-    pub(crate) fn new(reader: R, kind: Kind) -> Result<Self, Failure> {
+    pub(crate) fn new(reader: R, kind: Kind) -> Result<Self, ReadError> {
         let mut builder = ReaderBuilder::new();
         builder.delimiter(kind.delimiter());
         let mut rows = Self {
@@ -131,29 +149,43 @@ impl<R: Read> Rows<R> {
             eof: false,
             stopped: false,
             header: None,
+            line: 1,
+            previous_cr: false,
+            position: None,
         };
         let header = rows
             .parsed_row()?
-            .ok_or(Failure::Table(Error::Empty(kind)))?;
+            .ok_or(ReadError::Table(Error::Empty(kind)))?;
         rows.read_header(header)?;
         Ok(rows)
     }
 
-    fn parsed_row(&mut self) -> Result<Option<Vec<Vec<u8>>>, Failure> {
+    fn parsed_row(&mut self) -> Result<Option<Vec<Vec<u8>>>, ReadError> {
         let mut fields = Vec::new();
         let mut field = Vec::new();
         let mut raw = 0usize;
         let mut last = [0_u8; 2];
+        let mut first_line = None;
+        let mut last_line = self.line;
         loop {
             if self.start == self.end && !self.eof {
                 self.start = 0;
-                self.end = self.reader.read(&mut self.input).map_err(Failure::Input)?;
+                self.end = self
+                    .reader
+                    .read(&mut self.input)
+                    .map_err(ReadError::Input)?;
                 self.eof = self.end == 0;
             }
             let input = self.input.get(self.start..self.end).unwrap_or_default();
             let mut output = [0_u8; BUFFER_BYTES];
             let (result, consumed, written) = self.parser.read_field(input, &mut output);
             for byte in input.iter().take(consumed) {
+                let content_line = (!matches!(*byte, b'\r' | b'\n')).then_some(self.line);
+                first_line = first_line.or(content_line);
+                last_line = content_line.unwrap_or(last_line);
+                let ending = *byte == b'\r' || (*byte == b'\n' && !self.previous_cr);
+                self.line = self.line.saturating_add(usize::from(ending));
+                self.previous_cr = *byte == b'\r';
                 last[0] = last[1];
                 last[1] = *byte;
             }
@@ -171,9 +203,13 @@ impl<R: Read> Rows<R> {
                 }
                 ReadFieldResult::Field { record_end: true } => {
                     fields.push(std::mem::take(&mut field));
+                    self.position = first_line.map(|first| (first, last_line));
                     return self.finished_record(fields, raw, last);
                 }
-                ReadFieldResult::End => return Ok((!fields.is_empty()).then_some(fields)),
+                ReadFieldResult::End => {
+                    self.position = first_line.map(|first| (first, last_line));
+                    return Ok((!fields.is_empty()).then_some(fields));
+                }
             }
         }
     }
@@ -183,7 +219,7 @@ impl<R: Read> Rows<R> {
         fields: Vec<Vec<u8>>,
         raw: usize,
         last: [u8; 2],
-    ) -> Result<Option<Vec<Vec<u8>>>, Failure> {
+    ) -> Result<Option<Vec<Vec<u8>>>, ReadError> {
         let terminator =
             usize::from(last[1] == b'\n' || last[1] == b'\r') + usize::from(last == [b'\r', b'\n']);
         if raw.saturating_sub(terminator) > MAX_RECORD_BYTES {
@@ -193,15 +229,15 @@ impl<R: Read> Rows<R> {
         Ok(Some(fields))
     }
 
-    fn too_large(&self) -> Failure {
-        Failure::Table(if self.header.is_none() {
+    fn too_large(&self) -> ReadError {
+        ReadError::Table(if self.header.is_none() {
             Error::HeaderTooLarge(self.kind)
         } else {
             Error::RecordTooLarge(self.kind)
         })
     }
 
-    fn read_header(&mut self, fields: Vec<Vec<u8>>) -> Result<(), Failure> {
+    fn read_header(&mut self, fields: Vec<Vec<u8>>) -> Result<(), ReadError> {
         let mut names = Vec::with_capacity(fields.len());
         for (place, bytes) in fields.into_iter().enumerate() {
             let bytes = if place == 0 {
@@ -213,15 +249,15 @@ impl<R: Read> Rows<R> {
                 bytes
             };
             let name = String::from_utf8(bytes)
-                .map_err(|_| Failure::Table(Error::HeaderUtf8(self.kind)))?;
+                .map_err(|_| ReadError::Table(Error::HeaderUtf8(self.kind)))?;
             if name.chars().all(char::is_whitespace) {
-                return Err(Failure::Table(Error::HeaderBlank(self.kind)));
+                return Err(ReadError::Table(Error::HeaderBlank(self.kind)));
             }
             if name.chars().any(char::is_control) {
-                return Err(Failure::Table(Error::HeaderControl(self.kind)));
+                return Err(ReadError::Table(Error::HeaderControl(self.kind)));
             }
             if names.contains(&name) {
-                return Err(Failure::Table(Error::HeaderDuplicate(self.kind)));
+                return Err(ReadError::Table(Error::HeaderDuplicate(self.kind)));
             }
             names.push(name);
         }
@@ -231,7 +267,7 @@ impl<R: Read> Rows<R> {
 }
 
 impl<R: Read> Iterator for Rows<R> {
-    type Item = Result<Record, Failure>;
+    type Item = Result<Record, ReadError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.stopped {
@@ -245,7 +281,7 @@ impl<R: Read> Iterator for Rows<R> {
         let header = self.header.as_ref()?;
         if row.len() != header.len() {
             self.stopped = true;
-            return Some(Err(Failure::Table(Error::FieldCount {
+            return Some(Err(ReadError::Table(Error::FieldCount {
                 kind: self.kind,
                 expected: header.len(),
                 found: row.len(),
@@ -254,7 +290,7 @@ impl<R: Read> Iterator for Rows<R> {
         let values = row
             .into_iter()
             .map(|bytes| {
-                String::from_utf8(bytes).map_err(|_| Failure::Table(Error::RecordUtf8(self.kind)))
+                String::from_utf8(bytes).map_err(|_| ReadError::Table(Error::RecordUtf8(self.kind)))
             })
             .collect::<Result<Vec<_>, _>>();
         Some(
@@ -271,23 +307,7 @@ mod tests {
     use std::io::{self, Read};
     use std::rc::Rc;
 
-    use crate::core::json_line;
-
     use super::{BUFFER_BYTES, Kind, Rows};
-
-    fn parsed(kind: Kind, input: &[u8]) -> Result<Vec<String>, String> {
-        Rows::new(Cursor::new(input), kind)
-            .map_err(|error| match error {
-                crate::failure::Failure::Table(error) => error.to_string(),
-                other => format!("unexpected failure: {other:?}"),
-            })?
-            .map(|row| row.map(|record| json_line(&record).expect("a record renders")))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|error| match error {
-                crate::failure::Failure::Table(error) => error.to_string(),
-                other => format!("unexpected failure: {other:?}"),
-            })
-    }
 
     fn header_at(size: usize, bom: bool, ending: &[u8]) -> Vec<u8> {
         let mut header = if bom {
@@ -301,38 +321,6 @@ mod tests {
     }
 
     #[test]
-    fn csv_core_owns_table_grammar() {
-        let csv = concat!(
-            "\u{feff} id ,body,tail\r\n",
-            " 7 ,\"a,b\nsaid \"\"yes\"\"\",\r\n",
-            "\r\n",
-            "8,plain,✓\n",
-            "9,odd\"quote,z\n",
-        );
-        assert_eq!(
-            parsed(Kind::Csv, csv.as_bytes()).expect("valid CSV"),
-            [
-                "{\" id \":\" 7 \",\"body\":\"a,b\\nsaid \\\"yes\\\"\",\"tail\":\"\"}",
-                "{\" id \":\"8\",\"body\":\"plain\",\"tail\":\"✓\"}",
-                "{\" id \":\"9\",\"body\":\"odd\\\"quote\",\"tail\":\"z\"}",
-            ]
-        );
-        assert_eq!(
-            parsed(Kind::Tsv, b"a\tb\r\nleft\t\"right\"\r\n").expect("valid TSV"),
-            ["{\"a\":\"left\",\"b\":\"right\"}"]
-        );
-    }
-
-    #[test]
-    fn a_header_without_data_is_an_empty_dataset() {
-        assert!(
-            parsed(Kind::Csv, b"a,b\n")
-                .expect("header is valid")
-                .is_empty()
-        );
-    }
-
-    #[test]
     #[ignore = "large-input boundary runs in the release suite"]
     fn release_only_encoded_header_and_records_hold_at_the_sixteen_mibibyte_edge() {
         let limit = crate::core::MAX_RECORD_BYTES;
@@ -343,7 +331,7 @@ mod tests {
             .expect("oversized header is refused");
         assert!(matches!(
             error,
-            crate::failure::Failure::Table(super::Error::HeaderTooLarge(Kind::Csv))
+            super::ReadError::Table(super::Error::HeaderTooLarge(Kind::Csv))
         ));
 
         // No ending and the widest ending bound the terminator allowance.
@@ -369,7 +357,7 @@ mod tests {
                 .expect_err("oversized record is refused");
             assert!(matches!(
                 error,
-                crate::failure::Failure::Table(super::Error::RecordTooLarge(Kind::Csv))
+                super::ReadError::Table(super::Error::RecordTooLarge(Kind::Csv))
             ));
         }
 

@@ -245,3 +245,12 @@ fn refusal(mut cause: Box<dyn std::any::Any + Send + Sync>, error: crate::Error)
     let _cause = cause;
     Failure::Native(error.kind(), error.detail().message().to_owned())
 }
+
+impl From<crate::table::ReadError> for Failure {
+    fn from(error: crate::table::ReadError) -> Self {
+        match error {
+            crate::table::ReadError::Input(error) => Self::Input(error),
+            crate::table::ReadError::Table(error) => Self::Table(error),
+        }
+    }
+}

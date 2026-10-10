@@ -21,7 +21,7 @@ required-features = ["cli"]
 
 [features]
 default = ["cli", "bundled-sqlite"]
-cli = ["dep:clap", "dep:csv-core", "dep:signal-hook"]
+cli = ["dep:clap", "dep:signal-hook"]
 # ADR 0111: the question store's SQLite. Every build names one. A build
 # bundles its own, except the SQLite extension, which runs on its host's.
 bundled-sqlite = ["rusqlite/bundled"]
@@ -37,7 +37,7 @@ base64 = "=0.22.1"
 jpeg-decoder = { version = "=0.3.2", default-features = false }
 arc-swap = "=1.7.1"
 clap = { version = "4.6.7", features = ["derive"], optional = true }
-csv-core = { version = "0.1.13", optional = true }
+csv-core = "0.1.13"
 polars = { version = "0.55.2", default-features = false, optional = true }
 polars-core = { version = "0.55.2", default-features = false, optional = true, features = ["dtype-struct"] }
 # ADR 0111: the question cache. The bundled-sqlite or host-sqlite feature picks its SQLite.
