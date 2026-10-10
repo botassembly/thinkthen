@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use super::Judging;
 use super::asker::{self, Framed};
 use crate::core::adapters::built_in;
-use crate::core::{PlanDocument, PlanSummary, Reading, json_line};
+use crate::core::{PlanDocument, PlanSummary, Reading, Setting, json_line};
 use crate::edge;
 use crate::failure::Failure;
 use crate::schedule::Placed;
@@ -17,7 +17,7 @@ pub(super) fn dry_run(
     admitted: crate::AdmittedRequest,
     reading: &Reading,
     inputs: impl Iterator<Item = Result<Framed, Placed>>,
-    inputs_cap: Option<usize>,
+    setting: Option<Setting>,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
     let parser = asker::Parser::of(judging, reading);
@@ -56,11 +56,11 @@ pub(super) fn dry_run(
     if let Some(context) = judging.context.as_deref() {
         controls = controls.context(context);
     }
-    if let Some(inputs) = inputs_cap {
-        controls = controls.batch(crate::BatchSetting::Records(
-            std::num::NonZeroUsize::new(inputs)
-                .ok_or(Failure::Defect("a plan has no input capacity"))?,
-        ));
+    if let Some(setting) = setting {
+        controls = controls.batch(match setting {
+            Setting::Max => crate::BatchSetting::Max,
+            Setting::Records(count) => crate::BatchSetting::Records(count),
+        });
     }
     let (summary, count, group_requests) = native
         .plan_annotation_request(

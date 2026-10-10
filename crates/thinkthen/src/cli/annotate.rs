@@ -83,10 +83,6 @@ pub(crate) fn run(
         input,
         set.first_part().is_some(),
     )?;
-    let inputs_cap = setting.and_then(|setting| match setting {
-        Setting::Records(most) => Some(most.get()),
-        Setting::Max => None,
-    });
     let engine = crate::cli::construction::engine(
         &arguments.common,
         environment,
@@ -97,14 +93,7 @@ pub(crate) fn run(
     )?;
     let judging = Judging::new(arguments, environment, engine, set, mismatch)?;
     if arguments.common.dry_run {
-        return plan::dry_run(
-            &judging,
-            admitted,
-            &reading,
-            inputs,
-            inputs_cap,
-            &mut writer,
-        );
+        return plan::dry_run(&judging, admitted, &reading, inputs, setting, &mut writer);
     }
     let mut output = Output::streaming(&mut writer, environment.usage());
     native::run(&judging, admitted, &reading, inputs, setting, &mut output)
