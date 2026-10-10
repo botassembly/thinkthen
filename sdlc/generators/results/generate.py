@@ -492,6 +492,15 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import jvm
         import jvm_languages
+        import jvm_usage
+        for filename, lines in jvm_usage.outputs(ROOT).items():
+            output = ROOT / "libraries/jvm/session" / filename
+            source = "\n".join(lines) + "\n"
+            if args.check and (not output.exists() or output.read_text() != source):
+                print("generated JVM usage status differs", file=sys.stderr)
+                return 1
+            if not args.check:
+                output.write_text(source)
         request_schema = json.loads((ROOT / "specification/request.schema.json").read_text())
         request_schema["$defs"]["Request"] = {key: value for key, value in request_schema.items() if key != "$defs"}
         input_definitions = prepare(graph(request_schema, jvm.INPUT_ROOTS))

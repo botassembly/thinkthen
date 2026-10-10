@@ -39,6 +39,26 @@ final class NativeSession {
         MemorySegment message = (MemorySegment)call("thinkthen_session_error_message", ValueLayout.ADDRESS, new MemoryLayout[]{});
         throw new NativeFailure(code, false, message.reinterpret(Long.MAX_VALUE).getString(0), null);
     }
+    static UsagePersistence usage(MemorySegment engine, String function) {
+        try (Arena outputs = Arena.ofConfined()) {
+            var state = outputs.allocate(NativeUsageLayouts.STATE);
+            var advice = outputs.allocate(NativeUsageLayouts.ADVICE);
+            int code = (int)call(function, ValueLayout.JAVA_INT,
+                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, engine, state, advice);
+            if (code != 0) {
+                var message = (MemorySegment)call("thinkthen_error_message", ValueLayout.ADDRESS,
+                    new MemoryLayout[]{ValueLayout.ADDRESS}, engine);
+                throw new NativeFailure(code, false, message.reinterpret(Long.MAX_VALUE).getString(0), null);
+            }
+            var data = advice.get(ValueLayout.ADDRESS, NativeUsageLayouts.ADVICE_DATA);
+            long length = advice.get(SIZE, NativeUsageLayouts.ADVICE_LEN);
+            if (length < 0 || length > Integer.MAX_VALUE || (data.equals(MemorySegment.NULL) && length != 0))
+                throw new IllegalStateException("Invalid native usage advice view");
+            String copied = data.equals(MemorySegment.NULL) ? null :
+                new String(data.reinterpret(length).toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8);
+            return new UsagePersistence(UsagePersistence.State.read(state.get(ValueLayout.JAVA_INT, NativeUsageLayouts.STATE_KIND)), copied);
+        }
+    }
     static Object copied(MemorySegment pointer, long length) {
         if (length > Integer.MAX_VALUE) throw new IllegalStateException("Result exceeds Java array size");
         return Json.parseOwned(new String(pointer.reinterpret(length).toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8));

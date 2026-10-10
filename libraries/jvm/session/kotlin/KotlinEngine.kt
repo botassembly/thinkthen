@@ -45,6 +45,8 @@ class KotlinEngine private constructor(private val engine: Engine) : AutoCloseab
     fun plan(request: Inputs.Request): Results.Plan = try { Results.Plan.read(engine.plan(request).json()) } catch (error: Throwable) { throw convertFailure(error) }
     fun startSession(request: Inputs.Request): OwnedSession = nativeResult { OwnedSession(engine.startSession(request)) }
     suspend fun execute(request: Inputs.Request): OwnedCall = await { engine.execute(request) }
+    fun usagePersistence(): UsagePersistence = nativeResult { UsagePersistence.read(engine.usagePersistence()) }
+    fun finishUsageStatus(): UsagePersistence = nativeResult { UsagePersistence.read(engine.finishUsageStatus()) }
     override fun close() = engine.close()
 }
 

@@ -49,6 +49,8 @@ final class ScalaEngine private (private val engine: Engine) extends AutoCloseab
   def plan(request: Inputs.Request): Results.Plan = try Results.Plan.read(engine.plan(ScalaEngine.transport(request)).json()) catch { case error: Throwable => throw ScalaEngine.failure(error) }
   def startSession(request: Inputs.Request): OwnedSession = ScalaEngine.native(new OwnedSession(engine.startSession(ScalaEngine.transport(request))))
   def execute(request: Inputs.Request): Call = run(engine.execute(ScalaEngine.transport(request)))
+  def usagePersistence(): UsagePersistence = ScalaEngine.native(UsagePersistence.read(engine.usagePersistence()))
+  def finishUsageStatus(): UsagePersistence = ScalaEngine.native(UsagePersistence.read(engine.finishUsageStatus()))
   override def close(): Unit = engine.close()
 }
 
