@@ -381,6 +381,16 @@ cobol)
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
+			if [ "$1" = swift ] && [ "$relative" = "Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ]; then
+				native_input=$(mktemp "$stage/swift-native.XXXXXX")
+				tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$native_input" || {
+					echo 'release-pack: Swift native input extraction failed' >&2; exit 1;
+				}
+				cmp -s "$native_input" "$copied" || {
+					echo 'release-pack: Swift native library differs from C archive' >&2; exit 1;
+				}
+				continue
+			fi
 			# The wrapper's C header is copied from the one C header.
 			case $relative in native/*) continue ;; Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
 			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$member" | cmp -s - "$copied" || {

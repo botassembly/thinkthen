@@ -219,7 +219,7 @@ def pack_routing(root):
     source = root / 'source'
     scripts = source / 'sdlc/scripts'
     scripts.mkdir(parents=True)
-    for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py', 'release-bounded.py', 'release-owned-job.py'):
+    for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py', 'release-bounded.py', 'release-owned-job.py', 'package-inventory.py'):
         shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
     for manifest in ('crates/thinkthen/Cargo.toml', 'libraries/c/Cargo.toml'):
         path = source / manifest
@@ -234,6 +234,13 @@ def pack_routing(root):
     (python / 'build-wheel.sh').write_text(
         f'#!/bin/sh\nmkdir -p libraries/python/target/release-wheel\n'
         f'printf "wheel fixture" >libraries/python/target/release-wheel/thinkthen-{VERSION}-cp310-abi3-win_amd64.whl\n')
+    typescript = source / 'libraries/typescript'
+    typescript.mkdir()
+    for name in ('build-addon.sh', 'package.json'):
+        shutil.copyfile(REPO / 'libraries/typescript' / name, typescript / name)
+    workflow = source / '.github/workflows'
+    workflow.mkdir(parents=True)
+    shutil.copyfile(REPO / '.github/workflows/release.yml', workflow / 'release.yml')
     tools = root / 'tools'
     tools.mkdir()
     saved_dll = root / 'saved.dll'
@@ -251,14 +258,24 @@ def pack_routing(root):
         'cygpath': '#!/bin/sh\nprintf "%s\\n" "$2"\n',
         'cargo': f'#!{sys.executable}\n' +
             "import os, pathlib, shutil, sys\n" +
-            "args=sys.argv[1:]; assert args[0]=='build' and '--locked' in args\n" +
+            "args=sys.argv[1:]; assert 'build' in args and '--locked' in args\n" +
             "assert os.environ.get('CARGO_NET_OFFLINE')=='true'\n" +
             "profile='release' if '--release' in args else 'debug'\n" +
             "out=pathlib.Path(os.environ['CARGO_TARGET_DIR'])\n" +
             f"if '--package' in args: out=out/{C.TARGET!r}\n" +
             "out=out/profile; out.mkdir(parents=True,exist_ok=True)\n" +
             f"shutil.copyfile({str(saved_dll)!r},out/'thinkthen_c.dll')\n" +
+            f"shutil.copyfile({str(saved_dll)!r},out/'thinkthen_typescript.dll')\n" +
             f"shutil.copyfile({str(saved_command)!r},out/'thinkthen.exe')\n",
+        'node': f'#!{sys.executable}\nimport sys\n' +
+            "assert sys.argv[1]=='-p'\n" +
+            "expression=sys.argv[2]\n" +
+            "assert expression in ('process.platform', 'require(\"./native-platforms.json\")[process.platform + \"-\" + process.arch]')\n" +
+            "print('win32' if expression=='process.platform' else 'thinkthen-win32-x64.node')\n",
+        'npm': f'#!{sys.executable}\nimport pathlib, sys\n' +
+            "assert sys.argv[1:]==['pack','--silent','--offline','--pack-destination','target/pack']\n" +
+            f"assert pathlib.Path('thinkthen-win32-x64.node').read_bytes()==pathlib.Path({str(saved_dll)!r}).read_bytes()\n" +
+            f"pathlib.Path('target/pack/thinkthen-{VERSION}.tgz').write_bytes(b'npm fixture')\n",
         'lib.exe': f'#!{sys.executable}\n' +
             "import pathlib, shutil, sys\n" +
             "assert '/MACHINE:X64' in sys.argv\n" +
@@ -294,6 +311,7 @@ def pack_routing(root):
         f'thinkthen-{VERSION}-{C.TARGET}.zip', f'thinkthen-{VERSION}-{C.TARGET}.zip.sha256',
         f'thinkthen-c-{VERSION}-{C.TARGET}.zip', f'thinkthen-c-{VERSION}-{C.TARGET}.zip.sha256',
         f'thinkthen-{VERSION}-cp310-abi3-win_amd64.whl', f'thinkthen-{VERSION}-cp310-abi3-win_amd64.whl.sha256',
+        f'thinkthen-{VERSION}.tgz', f'thinkthen-{VERSION}.tgz.sha256',
         'thinkthen-first-run.tar.gz', 'thinkthen-first-run.tar.gz.sha256'}
     assert not list(scratch.iterdir())
     # Real tool failure propagates through the real packer and cleans scratch.
