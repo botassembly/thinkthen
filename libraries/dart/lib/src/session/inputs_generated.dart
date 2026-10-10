@@ -2236,6 +2236,68 @@ final class InputRequestReader extends NativeObject {
       : const Presence.absent();
 }
 
+sealed class InputRequestReaderFailure extends NativeObject {
+  InputRequestReaderFailure(super.json);
+  factory InputRequestReaderFailure.read(Object? value) {
+    final map = readObject(value);
+    if (map["kind"] == "io") return InputRequestReaderFailureIo.read(map);
+    if (map["kind"] == "utf8") return InputRequestReaderFailureUtf8.read(map);
+    if (map["kind"] == "invalid_input")
+      return InputRequestReaderFailureInvalidInput.read(map);
+    throw FormatException("Unknown InputRequestReaderFailure alternative");
+  }
+}
+
+final class InputRequestReaderFailureInvalidInput
+    extends InputRequestReaderFailure {
+  InputRequestReaderFailureInvalidInput._(super.json);
+  factory InputRequestReaderFailureInvalidInput.read(Object? value) =>
+      InputRequestReaderFailureInvalidInput._(readObject(value));
+  InputRequestReaderFailureInvalidInput(
+      {Presence<InputSessionSourceLocation> location = const Presence.absent()})
+      : super({
+          "kind": "invalid_input",
+          if (location.isPresent) "location": location.value
+        });
+  String get kind => json["kind"] as String;
+  Presence<InputSessionSourceLocation> get location =>
+      json.containsKey("location")
+          ? Presence.present(InputSessionSourceLocation.read(json["location"]))
+          : const Presence.absent();
+}
+
+final class InputRequestReaderFailureIo extends InputRequestReaderFailure {
+  InputRequestReaderFailureIo._(super.json);
+  factory InputRequestReaderFailureIo.read(Object? value) =>
+      InputRequestReaderFailureIo._(readObject(value));
+  InputRequestReaderFailureIo(
+      {Presence<InputSessionSourceLocation> location = const Presence.absent()})
+      : super(
+            {"kind": "io", if (location.isPresent) "location": location.value});
+  String get kind => json["kind"] as String;
+  Presence<InputSessionSourceLocation> get location =>
+      json.containsKey("location")
+          ? Presence.present(InputSessionSourceLocation.read(json["location"]))
+          : const Presence.absent();
+}
+
+final class InputRequestReaderFailureUtf8 extends InputRequestReaderFailure {
+  InputRequestReaderFailureUtf8._(super.json);
+  factory InputRequestReaderFailureUtf8.read(Object? value) =>
+      InputRequestReaderFailureUtf8._(readObject(value));
+  InputRequestReaderFailureUtf8(
+      {Presence<InputSessionSourceLocation> location = const Presence.absent()})
+      : super({
+          "kind": "utf8",
+          if (location.isPresent) "location": location.value
+        });
+  String get kind => json["kind"] as String;
+  Presence<InputSessionSourceLocation> get location =>
+      json.containsKey("location")
+          ? Presence.present(InputSessionSourceLocation.read(json["location"]))
+          : const Presence.absent();
+}
+
 final class InputRequestSessionDescriptor extends NativeObject {
   InputRequestSessionDescriptor._(super.json);
   factory InputRequestSessionDescriptor.read(Object? value) =>
