@@ -199,7 +199,10 @@ if [ -n "$flutter_seen" ]; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" dart-flutter
 fi
 if [ -n "$ada_objc_cobol_pair" ]; then
-	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" ada-objective-c-cobol
+	case $(uname -s) in
+	Darwin) sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" foundation ;;
+	*) sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" ada-objective-c-cobol ;;
+	esac
 fi
 
 # The conformance loopback backend, as the surfaces rung starts it.
