@@ -114,20 +114,21 @@ if [ "$mode" = swift-zig ]; then
 	[ "$zig_version" = "$version" ] || fail 'Zig package version differs'
 	python3 "$repo/libraries/zig/Tests/guard.py" "$dir/$second" || fail 'Zig archive contains private bytes'
 fi
+# Read recursively copied inputs independently from the committed source tree.
+source_members() {
+	prefix=$1
+	shift
+	git ls-tree -r -t --format='%(objecttype) %(path)' HEAD -- "$@" >"$work/source-tree" || fail 'cannot list committed source'
+	awk -v prefix="$prefix" 'index($2, prefix) == 1 { print "./" substr($2, length(prefix) + 1) ($1 == "tree" ? "/" : "") }' "$work/source-tree"
+}
 check_dart_archive() {
 	name=$1
 	tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
-	printf '%s\n' ./ ./CHANGELOG.md ./LICENSE ./README.md ./pubspec.yaml \
-		./pubspec.lock ./lib/ ./lib/thinkthen_dart.dart ./lib/src/ \
-		./lib/src/allocator.dart ./lib/src/door.dart ./lib/src/typed.dart \
-		./lib/thinkthen_complete.dart ./lib/src/native/ \
-		./lib/src/native/abi.dart \
-		./lib/src/native/api.dart ./lib/src/native/batch.dart \
-		./lib/src/native/engine.dart ./lib/src/native/execution.dart ./lib/src/native/functions.dart \
-		./lib/src/native/input.dart ./lib/src/native/question.dart ./lib/src/native/question_adapter.dart \
-		./lib/src/native/result.dart ./lib/src/native/views.dart \
-		./lib/src/native/value_views.dart ./lib/src/native/observation_views.dart \
-		./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
+	{
+		printf '%s\n' ./ ./CHANGELOG.md ./LICENSE ./README.md ./pubspec.yaml \
+			./pubspec.lock ./native-assets.json ./THINKTHEN-PACKAGE-INPUTS
+		source_members libraries/dart/ libraries/dart/lib libraries/dart/hook
+	} | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
 	tar -xOzf "$dir/$name" ./pubspec.yaml >"$work/package-metadata"
 	grep -Fxq 'name: thinkthen_dart' "$work/package-metadata" || fail 'Dart pub identity differs'
@@ -160,10 +161,9 @@ fi
 if [ "$mode" = dart-flutter ]; then
 	check_dart_archive "$first"
 	tar -tzf "$dir/$second" | LC_ALL=C sort >"$work/members" || fail "cannot list $second"
+	{
 	printf '%s\n' ./ ./THINKTHEN-PACKAGE-INPUTS ./flutter/ \
-		./flutter/README.md ./flutter/pubspec.yaml ./flutter/pubspec.lock \
-		./flutter/lib/ ./flutter/lib/thinkthen_flutter.dart \
-		./flutter/lib/thinkthen_complete_flutter.dart \
+		./flutter/README.md ./flutter/pubspec.yaml \
 		./flutter/example/ ./flutter/example/.metadata ./flutter/example/README.md \
 		./flutter/example/pubspec.yaml ./flutter/example/pubspec.lock \
 		./flutter/example/analysis_options.yaml ./flutter/example/lib/ \
@@ -175,7 +175,9 @@ if [ "$mode" = dart-flutter ]; then
 		./flutter/example/linux/flutter/generated_plugins.cmake \
 		./flutter/example/linux/runner/ ./flutter/example/linux/runner/CMakeLists.txt \
 		./flutter/example/linux/runner/main.cc ./flutter/example/linux/runner/my_application.cc \
-		./flutter/example/linux/runner/my_application.h | LC_ALL=C sort >"$work/expected-members"
+		./flutter/example/linux/runner/my_application.h
+	source_members libraries/dart/ libraries/dart/flutter/lib libraries/dart/flutter/linux
+	} | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $second"
 	python3 - "$dir/$first" "$dir/$second" "$version" <<'PY' || fail 'private package metadata or archive member type differs'
 import sys
@@ -245,9 +247,10 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 				./src/tt_call.cob ./src/tt_complete.c ./src/tt_native.h ./src/tt_counted.c \
 				./src/tt_decide.cob ./src/tt_engine.cob ./src/tt_error.cob \
 				./src/tt_files.cob ./src/tt_inputs.c ./src/tt_plan.cob \
-				./src/tt_shape.c ./src/tt_validate.cob ./examples/ \
+				./src/tt_shape.c ./src/tt_validate.cob ./src/tt_session.h ./src/tt_session.c \
+				./src/tt_requests_generated.h ./src/tt_requests_generated.c ./examples/ \
 				./examples/direct.cob ./examples/settings.cob ./examples/types.cob \
-				./examples/native.cob ./THINKTHEN-PACKAGE-INPUTS \
+				./examples/native.cob ./examples/session.cob ./THINKTHEN-PACKAGE-INPUTS \
 				| LC_ALL=C sort >"$work/expected-members" ;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
