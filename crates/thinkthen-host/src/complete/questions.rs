@@ -9,17 +9,17 @@ use thinkthen::{
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Question {
-    pub(crate) role: String,
+pub struct Question {
+    pub role: String,
     #[serde(default)]
-    pub(crate) none: bool,
-    pub(crate) body: Option<Box<RawValue>>,
-    pub(crate) raw: Option<String>,
-    pub(crate) path: Option<String>,
-    pub(crate) name: Option<String>,
-    pub(crate) reference: Option<String>,
+    pub none: bool,
+    pub body: Option<Box<RawValue>>,
+    pub raw: Option<String>,
+    pub path: Option<String>,
+    pub name: Option<String>,
+    pub reference: Option<String>,
 }
-pub(crate) enum Asked {
+pub enum Asked {
     Atomic(LoadedQuestion),
     Dynamic(RecordChooseQuestion),
     Rank(thinkthen::Question),
@@ -30,14 +30,14 @@ pub(crate) enum Asked {
     Relate(Relate),
 }
 impl Asked {
-    pub(crate) fn reading(&self) -> Option<&RecordReading> {
+    pub fn reading(&self) -> Option<&RecordReading> {
         match self {
             Self::Find(_, r) | Self::Recognize(_, r) => Some(r),
             _ => None,
         }
     }
 }
-pub(crate) fn load(verb: &str, q: Question) -> Result<Asked, Error> {
+pub fn load(verb: &str, q: Question) -> Result<Asked, Error> {
     validate(&q)?;
     let body = q.body.as_deref().map(RawValue::get).or(q.raw.as_deref());
     macro_rules! read {

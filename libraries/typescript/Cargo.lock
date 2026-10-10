@@ -679,6 +679,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "thinkthen-host"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thinkthen",
+]
+
+[[package]]
 name = "thinkthen-typescript"
 version = "0.2.0"
 dependencies = [
@@ -688,6 +697,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thinkthen",
+ "thinkthen-host",
 ]
 
 [[package]]

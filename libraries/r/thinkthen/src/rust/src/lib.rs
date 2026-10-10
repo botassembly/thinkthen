@@ -15,7 +15,7 @@
 pub mod ffi;
 
 mod calls;
-mod complete;
+use thinkthen_host::complete;
 mod files;
 mod native_results;
 mod plan;

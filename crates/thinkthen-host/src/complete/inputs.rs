@@ -9,7 +9,7 @@ use thinkthen::{
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Input {
+pub struct Input {
     kind: InputKind,
     #[serde(default, deserialize_with = "present")]
     records: Option<Option<Vec<Item>>>,
@@ -33,7 +33,7 @@ enum InputKind {
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Item {
+pub struct Item {
     content: Content,
     #[serde(default)]
     images: Vec<Image>,
@@ -87,7 +87,7 @@ fn description<'de, D: serde::Deserializer<'de>>(
     Box::<RawValue>::deserialize(reader).map(Some)
 }
 
-pub(crate) struct Original {
+pub struct Original {
     pub(super) value: Box<RawValue>,
     pub(super) input: QuestionInput,
 }
@@ -178,8 +178,8 @@ fn compose(
     })
 }
 
-pub(crate) type Rows<'a> = Box<dyn Iterator<Item = Result<RecordInput<Original>, Error>> + 'a>;
-pub(crate) fn iter<'a>(
+pub type Rows<'a> = Box<dyn Iterator<Item = Result<RecordInput<Original>, Error>> + 'a>;
+pub fn iter<'a>(
     engine: &'a Engine,
     input: Input,
     reading: Option<&RecordReading>,
@@ -188,7 +188,7 @@ pub(crate) fn iter<'a>(
     prepare(Some(engine), input, reading, annotation)
 }
 // Frame batches prepare their actual column before native pulling owns admission.
-pub(crate) fn prepare<'a>(
+pub fn prepare<'a>(
     engine: Option<&'a Engine>,
     input: Input,
     reading: Option<&RecordReading>,
@@ -311,7 +311,7 @@ fn source(
         options: record.options,
     })
 }
-pub(crate) fn read(
+pub fn read(
     engine: &Engine,
     input: Input,
     reading: Option<&RecordReading>,
@@ -321,14 +321,14 @@ pub(crate) fn read(
 }
 
 #[derive(Serialize)]
-pub(crate) struct InputView {
+pub struct InputView {
     original: Box<RawValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     location: Option<thinkthen::SourceLocation>,
     images: Vec<ImageInput>,
 }
 impl Original {
-    pub(crate) fn view(&self) -> InputView {
+    pub fn view(&self) -> InputView {
         let (location, images) = match &self.input {
             QuestionInput::Text(_) => (None, Vec::new()),
             QuestionInput::Record(record) => (record.location().cloned(), record.images().to_vec()),

@@ -11,6 +11,7 @@ publish = false
 thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 
 [dev-dependencies]
+thinkthen-host = { path = "../../../crates/thinkthen-host" }
 conformance-backend = { path = "../../backend" }
 rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }

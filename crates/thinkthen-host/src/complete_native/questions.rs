@@ -8,7 +8,7 @@ use thinkthen::{
 };
 
 #[derive(Debug)]
-pub(crate) enum Prepared {
+pub enum Prepared {
     Atomic(LoadedQuestion),
     Dynamic(RecordChooseQuestion),
     Filter(Question),
@@ -20,7 +20,7 @@ pub(crate) enum Prepared {
     Relate(Relate),
 }
 impl Prepared {
-    pub(crate) fn parse(verb: &str, source: &str) -> Result<Self, Error> {
+    pub fn parse(verb: &str, source: &str) -> Result<Self, Error> {
         if source.starts_with('@') {
             return Err(usage(
                 "the question reference was not read by this database",
@@ -29,7 +29,7 @@ impl Prepared {
         Self::content(verb, source)
     }
     /// Parse only supplied content, never an embedded file reference.
-    pub(crate) fn content(verb: &str, source: &str) -> Result<Self, Error> {
+    pub fn content(verb: &str, source: &str) -> Result<Self, Error> {
         match verb {
             "annotate" => QuestionSet::from_json(source).map(Self::Annotate),
             "rank" => {
@@ -67,11 +67,7 @@ impl Prepared {
             _ => Err(usage("unknown SQL complete function")),
         }
     }
-    pub(crate) fn configured(
-        mut self,
-        verb: &str,
-        settings: &thinkthen::Settings,
-    ) -> Result<Self, Error> {
+    pub fn configured(mut self, verb: &str, settings: &thinkthen::Settings) -> Result<Self, Error> {
         let expected = match verb {
             "decide" | "filter" => Some(thinkthen::QuestionKind::Decide),
             "choose" => Some(thinkthen::QuestionKind::Choose),
@@ -122,7 +118,7 @@ impl Prepared {
         }
         Ok(self)
     }
-    pub(crate) fn reading(&self) -> Option<&RecordReading> {
+    pub fn reading(&self) -> Option<&RecordReading> {
         match self {
             Self::Find(_, r) | Self::Recognize(_, r) => Some(r),
             _ => None,

@@ -4,8 +4,7 @@ use crate::engine::{Arg, Engine, Held, batch, context};
 use crate::{guard, input, raised, result, worker};
 use pyo3::prelude::*;
 
-#[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
-mod source;
+use thinkthen_host::source;
 
 #[pyclass(name = "_SourceIterator", module = "thinkthen._thinkthen")]
 pub(crate) struct SourceIterator(std::sync::Mutex<thinkthen::SourceRecords>);

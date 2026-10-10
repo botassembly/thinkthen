@@ -3,8 +3,7 @@ use crate::calls::render;
 use crate::calls::{Crossed, Pending, call_owned};
 use extendr_api::prelude::*;
 
-#[path = "source/mod.rs"]
-mod source;
+use thinkthen_host::source;
 
 pub(crate) fn execute(
     question: String,

@@ -4,8 +4,7 @@ use pgrx::datum::{Array, Json};
 use pgrx::prelude::*;
 use thinkthen::Surface;
 
-#[path = "../../sqlite/src/complete/request.rs"]
-mod request;
+use thinkthen_host::sql_request as request;
 
 fn invoke(
     verb: &'static str,

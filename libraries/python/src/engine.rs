@@ -16,8 +16,7 @@ use crate::tally::PyTally;
 use crate::worker::{Token, run_observed, run_tallied};
 use crate::{guard, raised, usage};
 
-#[path = "../../r/thinkthen/src/rust/src/complete/mod.rs"]
-pub(crate) mod complete;
+pub(crate) use thinkthen_host::complete;
 mod complete_calls;
 mod convert;
 mod operations;

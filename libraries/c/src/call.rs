@@ -20,8 +20,7 @@ use crate::failures::Failure;
 mod canonical;
 mod legacy;
 mod records;
-#[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
-pub(crate) mod source;
+pub(crate) use thinkthen_host::source;
 
 const VERBS: [&str; 10] = [
     "decide",

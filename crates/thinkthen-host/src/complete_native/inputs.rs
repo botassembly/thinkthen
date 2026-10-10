@@ -10,19 +10,19 @@ use thinkthen::{
 type Fields = BTreeMap<String, Box<RawValue>>;
 pub(super) type Records<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
-pub(crate) struct Inputs {
+pub struct Inputs {
     raw: Fields,
     native_record: Option<thinkthen::RequestItem>,
     native_request: bool,
-    pub(crate) framing: Option<thinkthen::RequestFraming>,
-    pub(crate) incremental: bool,
-    pub(crate) attempts: bool,
-    pub(crate) cancelled: bool,
+    pub framing: Option<thinkthen::RequestFraming>,
+    pub incremental: bool,
+    pub attempts: bool,
+    pub cancelled: bool,
 }
 impl Inputs {
     /// Carry one native host record without a JSON descriptor or byte array.
     #[allow(dead_code, reason = "native BLOB complete inputs enter through SQLite")]
-    pub(crate) fn from_record(record: thinkthen::RequestItem) -> Self {
+    pub fn from_record(record: thinkthen::RequestItem) -> Self {
         Self {
             raw: Fields::new(),
             native_record: Some(record),
@@ -38,7 +38,7 @@ impl Inputs {
         dead_code,
         reason = "only SQLite uses shared Request image-route admission before ticket 0500"
     )]
-    pub(crate) fn image_inputs(&self) -> Result<bool, Error> {
+    pub fn image_inputs(&self) -> Result<bool, Error> {
         if let Some(record) = &self.native_record {
             return Ok(!record.images.is_empty());
         }
@@ -77,7 +77,7 @@ impl Inputs {
         dead_code,
         reason = "only SQLite adopts native request controls before PostgreSQL ticket 0500"
     )]
-    pub(crate) fn parse_request(source: &str) -> Result<Self, Error> {
+    pub fn parse_request(source: &str) -> Result<Self, Error> {
         let mut inputs = Self::parse(source, true)?;
         inputs.native_request = true;
         Ok(inputs)
@@ -87,7 +87,7 @@ impl Inputs {
         dead_code,
         reason = "only SQLite defers readers through Request before PostgreSQL ticket 0500"
     )]
-    pub(crate) fn deferred_records(&self, reading: Option<&RecordReading>) -> Records<'_> {
+    pub fn deferred_records(&self, reading: Option<&RecordReading>) -> Records<'_> {
         let reading = reading.cloned();
         Box::new(
             std::iter::once_with(move || self.records(reading.as_ref())).flat_map(|result| {
@@ -98,7 +98,7 @@ impl Inputs {
             }),
         )
     }
-    pub(crate) fn parse(source: &str, server_files: bool) -> Result<Self, Error> {
+    pub fn parse(source: &str, server_files: bool) -> Result<Self, Error> {
         let raw = fields(source)?;
         if raw.keys().any(|key| {
             !matches!(
@@ -150,7 +150,7 @@ impl Inputs {
             cancelled,
         })
     }
-    pub(crate) fn records(&self, reading: Option<&RecordReading>) -> Result<Records<'_>, Error> {
+    pub fn records(&self, reading: Option<&RecordReading>) -> Result<Records<'_>, Error> {
         if let Some(record) = &self.native_record {
             let default = RecordReading::new(&[], None, None)?;
             return Ok(Box::new(std::iter::once(
@@ -169,10 +169,7 @@ impl Inputs {
         })))
     }
     /// Parse SQL reading through the native validators before advancing readers.
-    pub(crate) fn record_reading(
-        &self,
-        reading: Option<&RecordReading>,
-    ) -> Result<RecordReading, Error> {
+    pub fn record_reading(&self, reading: Option<&RecordReading>) -> Result<RecordReading, Error> {
         Ok(if let Some(value) = self.raw.get("reading") {
             let given: Value =
                 serde_json::from_str(value.get()).map_err(|_| usage("reading is one object"))?;
@@ -223,7 +220,7 @@ impl Inputs {
         })
     }
     /// Validate ordered file paths before a host opens content.
-    pub(crate) fn file_paths(&self) -> Result<Vec<String>, Error> {
+    pub fn file_paths(&self) -> Result<Vec<String>, Error> {
         let value = fields(self.raw.get("files").ok_or_else(defect)?.get())?;
         serde_json::from_str(
             value

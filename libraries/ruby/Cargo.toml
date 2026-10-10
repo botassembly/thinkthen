@@ -17,6 +17,7 @@ crate-type = ["cdylib"]
 name = "thinkthen_ruby"
 
 [dependencies]
+thinkthen-host = { path = "../../crates/thinkthen-host" }
 thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 magnus = { version = "=0.7.1", features = ["rb-sys"] }
 rb-sys = "=0.9.130"

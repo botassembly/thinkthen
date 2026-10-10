@@ -1,9 +1,7 @@
 //! The calls a worker runs: owned inputs in, plain Rust values out.
 
-#[path = "../../r/thinkthen/src/rust/src/complete/mod.rs"]
-pub(crate) mod complete;
-#[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
-mod source;
+pub(crate) use thinkthen_host::complete;
+use thinkthen_host::source;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};

@@ -1,6 +1,6 @@
 //! Explicit SQL file formats select the shared logical framing grammar.
 use thinkthen::{Error, ErrorKind, RequestFraming};
-pub(crate) fn framing(format: Option<&str>) -> Result<Option<RequestFraming>, Error> {
+pub fn framing(format: Option<&str>) -> Result<Option<RequestFraming>, Error> {
     let Some(source) = format else {
         return Ok(None);
     };
@@ -20,7 +20,7 @@ pub(crate) fn framing(format: Option<&str>) -> Result<Option<RequestFraming>, Er
     dead_code,
     reason = "only PostgreSQL and DuckDB transport native reader descriptors"
 )]
-pub(crate) fn descriptor(
+pub fn descriptor(
     source: thinkthen::SourceRecord<thinkthen::RawRecord>,
 ) -> Result<serde_json::Value, Error> {
     let original = serde_json::to_string(&source.record)

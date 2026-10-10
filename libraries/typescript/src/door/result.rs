@@ -1,8 +1,7 @@
 //! Owned JSON snapshots of one Rust call's facts and ordered questions.
 
 use std::sync::Mutex;
-#[path = "../../../r/thinkthen/src/rust/src/source/mod.rs"]
-mod source;
+use thinkthen_host::source;
 use crate::complete;
 
 use serde_json::{Value, json};

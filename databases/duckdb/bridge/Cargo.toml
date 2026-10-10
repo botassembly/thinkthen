@@ -15,6 +15,7 @@ crate-type = ["staticlib"]
 test-hooks = []
 
 [dependencies]
+thinkthen-host = { path = "../../../crates/thinkthen-host" }
 thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 libc = "0.2.189"
 serde = "1.0.228"

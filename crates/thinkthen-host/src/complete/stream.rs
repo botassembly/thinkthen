@@ -10,7 +10,7 @@ use thinkthen::{
     Batch, CallOptions, CancelToken, CompleteRecord, Engine, Error, Facts, LoadedQuestion,
 };
 
-pub(crate) fn failure(error: &Error) -> Result<String, Error> {
+pub fn failure(error: &Error) -> Result<String, Error> {
     #[derive(Serialize)]
     struct Failed<'a> {
         kind: thinkthen::ErrorKind,
@@ -49,7 +49,7 @@ struct State {
     credit: Option<Sender<()>>,
     worker: Option<JoinHandle<()>>,
 }
-pub(crate) struct Session {
+pub struct Session {
     state: Mutex<State>,
     output: Mutex<Receiver<String>>,
     stop: CancelToken,
@@ -61,7 +61,7 @@ impl std::fmt::Debug for Session {
     }
 }
 impl Session {
-    pub(crate) fn start(
+    pub fn start(
         engine: Engine,
         text: String,
         deadline: Option<i64>,
@@ -109,7 +109,7 @@ impl Session {
             caller,
         })
     }
-    pub(crate) fn advance(&self) -> Result<(), Error> {
+    pub fn advance(&self) -> Result<(), Error> {
         let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         state
             .credit
@@ -118,7 +118,7 @@ impl Session {
             .send(())
             .map_err(|_| usage("complete batch is exhausted"))
     }
-    pub(crate) fn poll(&self) -> Result<Option<String>, Error> {
+    pub fn poll(&self) -> Result<Option<String>, Error> {
         if self.caller.as_ref().is_some_and(CancelToken::is_cancelled) {
             self.stop.cancel();
         }
@@ -133,10 +133,10 @@ impl Session {
             Err(RecvTimeoutError::Disconnected) => Err(usage("complete batch is exhausted")),
         }
     }
-    pub(crate) fn cancel(&self) {
+    pub fn cancel(&self) {
         self.stop.cancel();
     }
-    pub(crate) fn close(&self) {
+    pub fn close(&self) {
         self.stop.cancel();
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         state.credit.take();
