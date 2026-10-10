@@ -59,6 +59,12 @@ module ThinkThen
     def self.question_file(path)
       Question.new({kind: "file", path: path}).freeze
     end
+    def self.question_name(name)
+      Question.new({kind: "name", name: name}).freeze
+    end
+    def self.question_reference(reference)
+      Question.new({kind: "reference", reference: reference}).freeze
+    end
     def self.files(paths, framing: nil, media: "text", **reading)
       source = {paths: Array(paths), reading: reading, media: media}
       source[:framing] = framing unless framing.nil?
