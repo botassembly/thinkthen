@@ -103,7 +103,8 @@ def consume(npm, registry, work):
             reply = json.dumps({'model': 'jev-1.13.0', 'answers': {
                 name: {'type': 'noul', 'noul': 0.9} for name in body['questions']}}).encode()
             self.send_response(200)
-            self.send_header('Connection', 'close')
+            self.send_header("Connection", "close")
+            self.close_connection = True
             self.send_header('Content-Length', str(len(reply)))
             self.end_headers()
             self.wfile.write(reply)
