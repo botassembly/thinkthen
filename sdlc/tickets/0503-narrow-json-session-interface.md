@@ -119,3 +119,4 @@ fn RequestSession::finish_native_reader_error(&self, Error) -> Result<(), Error>
 - 2026-10-09 landed 13f861f58bf0e7af5719fdd6c85587937ebd1117; next: Reader failures derive from their actual admitted decoder. Finish canonical Request preview forwarding; fixed C views belong to 0505.
 - 2026-10-09 landed 0ac45ca65cda6e240b8dabb32ed1c098991cafc5; next: Native and C owned sessions, typed reader failures and canonical Request preview are landed. Finish combined checks before closure; fixed C views belong to 0505.
 - 2026-10-09 landed f350ab3cb; next: Native session validation messages now reach C callers safely; finish combined checks and installed generated SDK adoption.
+- 2026-10-10 landed 17c2110af; next: Owned eager feeds, native reading and native reader errors are landed with reviewed default compatibility and prompt cancellation. DuckDB can now adopt the same bounded session; final installed and platform qualification remain held.
