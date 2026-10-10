@@ -37,6 +37,14 @@ pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
     for packet in packets {
         match packet.get("kind").and_then(Value::as_str) {
             Some("row") => rows.push(packet.get("value").ok_or_else(defect)?.clone()),
+            Some("aggregate") if verb == "recognize" => rows.extend(
+                packet
+                    .get("value")
+                    .and_then(Value::as_array)
+                    .ok_or_else(defect)?
+                    .iter()
+                    .cloned(),
+            ),
             Some("aggregate") => aggregate = Some(packet.get("value").ok_or_else(defect)?.clone()),
             Some("observation") => {
                 observations.push(packet.get("value").ok_or_else(defect)?.clone())
