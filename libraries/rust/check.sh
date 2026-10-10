@@ -26,12 +26,13 @@ project=installed/'consumer'
 manifest=(root/'libraries/python/Cargo.toml').read_text()
 start=manifest.index('[lib]\n');end=manifest.index('[dependencies]\n',start)
 manifest=manifest[:start]+manifest[end:]
-manifest=manifest.replace('../../crates/thinkthen',str(installed/'crate'))
+shutil.copytree(root/'crates/thinkthen-host',installed/'thinkthen-host',ignore=shutil.ignore_patterns('target'))
+host=installed/'thinkthen-host/Cargo.toml'
+host.write_text(host.read_text().replace('../thinkthen\"',str(installed/'crate')+'\"'))
+manifest=manifest.replace('../../crates/thinkthen-host',str(installed/'thinkthen-host')).replace('../../crates/thinkthen',str(installed/'crate'))
 (project/'Cargo.toml').write_text(manifest)
 shutil.copyfile(root/'libraries/python/Cargo.lock',project/'Cargo.lock')
 shutil.copytree(root/'libraries/python/examples/native_case',project/'src')
-main=project/'src/main.rs'
-main.write_text(main.read_text().replace('../../../r/thinkthen/src/rust/src/complete/mod.rs',str(root/'libraries/r/thinkthen/src/rust/src/complete/mod.rs')))
 RUSTCONSUMER
     python3 - "$root" "$installed/consumer/Cargo.toml" <<'RUSTNATIVE'
 import sys

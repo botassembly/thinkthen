@@ -542,7 +542,9 @@ def lock_versions(relative: str) -> dict[str, set[str]]:
 def check_consumer() -> None:
     """Ticket 0086: the external consumer builds against the root's versions and lints."""
     root, consumer = lock_versions("Cargo.lock"), lock_versions("conformance/consumer/Cargo.lock")
-    for name in sorted(set(consumer) - {"consumer", "fork-probe"}):
+    # The private host translation crate is a normal path dependency of the
+    # legacy fixture, not a registry package in the published core's graph.
+    for name in sorted(set(consumer) - {"consumer", "fork-probe", "thinkthen-host"}):
         if not consumer[name] <= root.get(name, set()):
             fail("consumer", f"conformance/consumer/Cargo.lock pins {name} {sorted(consumer[name])}, "
                  f"and the root lock pins {sorted(root.get(name, set()))}")
@@ -584,6 +586,7 @@ BINDING_PLANTS = (
         "[dev-dependencies]\n", '[dev-dependencies]\nengine = { package = "thinkthen", path = "../../crates/thinkthen" }\n')),
     ("patch toward another binding", "Cargo.toml", lambda text: text + '\n[patch.crates-io]\nx = { path = "../c" }\n'),
     ("unsafe outside an FFI module", "src/lib.rs", lambda text: text + "unsafe fn planted() {}\n"),
+    ("source imported from another crate", "src/lib.rs", lambda text: text + '\n#[path = "../../other/src/lib.rs"]\nmod other;\n'),
     ("overflow-checks = false", "Cargo.toml", lambda text: text.replace(
         "overflow-checks = true", "overflow-checks = false")),
     ("second ureq version", "Cargo.lock", lambda text: re.sub(
@@ -764,6 +767,11 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
         held += deny_failures(name, tomllib.loads(files["deny.toml"]))
     for relative, text in files.items():
         if relative.endswith(".rs"):
+            if relative.startswith("src/"):
+                for imported in re.findall(r'^\s*#\[path\s*=\s*"([^"]+)"\s*\]', text, re.M):
+                    reached = posixpath.normpath(posixpath.join(posixpath.dirname(relative), imported))
+                    if reached.startswith("../") or reached.startswith("/"):
+                        held.append(f"{name}/{relative} imports source outside its crate; use a normal dependency")
             tokens = rust_tokens(text)
             if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs":
                 held.append(f"{name}/{relative} holds unsafe outside the binding's FFI module")

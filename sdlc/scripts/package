@@ -69,8 +69,8 @@ CARGO_TARGET_DIR="$built" \
 # 0431: the actual complete Rust consumer also links the unpacked crate.
 # Keep its caller framing and the ten concrete native APIs, then execute the
 # unchanged shared matrix against that archive-built executable.
-cp -R crates/thinkthen-host "$isolated/consumer/thinkthen-host"
 mkdir -p "$isolated/consumer/consumer/src" "$isolated/consumer/consumer/examples" "$isolated/consumer/fork-probe/src"
+cp -R crates/thinkthen-host "$isolated/consumer/thinkthen-host"
 cp conformance/consumer/Cargo.toml conformance/consumer/Cargo.lock "$isolated/consumer/"
 cp conformance/consumer/consumer/Cargo.toml "$isolated/consumer/consumer/"
 cp conformance/consumer/consumer/src/lib.rs "$isolated/consumer/consumer/src/"
