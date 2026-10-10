@@ -1,6 +1,6 @@
 # 0528: Generate Ada access from the complete C views
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -12,6 +12,8 @@ Reviews: revision a087f6dc3, accept
 Reviews: revision 0ab21ff1e58ddfbc31255c738d1fe035b3df8a94, accept
 
 Reviews: revision b099a8410a0316144046229d5ab3e3048c9dc0fd, accept
+
+Landed: ef3a5d0
 
 ## Outcome
 
