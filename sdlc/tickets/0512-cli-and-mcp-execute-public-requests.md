@@ -26,6 +26,8 @@ Reviews: revision 818a30847983af80682c76c7002644c0172075c8, accept
 
 Reviews: revision 028a384c021a382cd505139c030d8545eb9d2ba3, accept
 
+Reviews: revision 749847ab53294ce8efcf7ec338e5d6f4cd0c74a4, accept
+
 ## Outcome
 
 The CLI and MCP admit and execute every judgment call through the same public Request path as the libraries. Their private judgment pipelines and duplicate semantic admission go. Callers see the same output, exit codes and protocol behavior.
