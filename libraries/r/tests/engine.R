@@ -67,4 +67,30 @@ out <- run(c(
 check("no output names the key or the URL's credentials",
       !any(grepl("tt-test-not-a-key", said, fixed = TRUE)) && !any(grepl("hunter2", said, fixed = TRUE)))
 
-finish("engine", 4L)
+
+# Live usage methods operate on the selected native engine and keep frozen facts.
+sent <- sent_by(out <- run(c(
+  sprintf('tt_engine(base_url = "%s", cache = FALSE)', generic),
+  'done <- tt_decide("Is it urgent?", "urgent")',
+  'before <- serialize(done, NULL)',
+  'status <- tt_finish_usage_status()',
+  'stopifnot(inherits(status,"thinkthen_UsageStatus"), identical(status$state,"written"), is.null(status$advice), identical(serialize(done,NULL), before), tt_usage()$requests_sent == 1)',
+  'cat("written", status$state, "\\n")'
+)))
+check("live usage finalization preserves the answer and sends nothing", sent == 1L && grepl("written written", out, fixed=TRUE))
+
+sent <- sent_by(out <- run(c(
+  'state <- tempfile("usage-state-"); dir.create(state); Sys.setenv(XDG_STATE_HOME=state)',
+  sprintf('tt_engine(base_url = "%s", cache = FALSE)', generic),
+  'first <- tt_decide("Is it urgent?", "first")',
+  'stopifnot(identical(tt_finish_usage_status()$state,"written"))',
+  'folder <- file.path(state,"thinkthen"); Sys.chmod(folder,"0555")',
+  'done <- tt_decide("Is it urgent?", "second")',
+  'before <- serialize(done, NULL)',
+  'failed <- tt_finish_usage_status(); Sys.chmod(folder,"0700")',
+  'stopifnot(identical(failed$state,"failed"), identical(failed$advice,"check the usage folder permissions and free space"), identical(tt_usage_persistence(),failed), identical(tt_finish_usage_status(),failed), identical(serialize(done,NULL),before), tt_usage()$requests_sent == 2)',
+  'cat("failed", failed$state, "\\n")'
+)))
+check("failed durability stays latched and does not lose answers", sent == 2L && grepl("failed failed",out,fixed=TRUE))
+
+finish("engine", 7L)

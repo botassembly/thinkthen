@@ -44,3 +44,6 @@ export(tt_reader_failure)
 S3method(print,thinkthen_feed)
 S3method(print,thinkthen_record)
 S3method(print,thinkthen_reader_failure)
+
+export(tt_usage_persistence)
+export(tt_finish_usage_status)

@@ -7,6 +7,56 @@ require "minitest/autorun"
 require_relative "backend"
 
 class TestEngineSettings < Minitest::Test
+  def test_native_live_usage_status_keeps_answers_and_closed_client_rules
+    TestBackend.with(<<~RUBY) do |backend, child, root|
+      client = T::Client.new(cache: false)
+      done = client.decide("Is it urgent?", "urgent")
+      before = done.terminal.to_h
+      written = client.finish_usage_status
+      raise "wrong written state" unless written == T::UsageStatus.new("written", nil)
+      raise "facts changed" unless done.terminal.to_h == before && done.value == true
+      raise "status sent" unless client.usage.fetch(:requests_sent) == 1
+      client.close
+      raise "lost owned status" unless written.frozen? && written.state.frozen?
+      raise "closed client observed" unless kind_of_raise { client.usage_persistence } == "UsageError"
+      raise "closed client finalized" unless kind_of_raise { client.finish_usage_status } == "UsageError"
+      say "ok"
+    RUBY
+      assert_equal "ok", child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 1, backend.count
+    end
+  end
+
+  def test_native_live_usage_status_latches_held_writer_failure
+    TestBackend.with(<<~RUBY) do |backend, child, root|
+      folder = File.join(ENV.fetch("XDG_STATE_HOME"), "thinkthen")
+      require "fileutils"
+      FileUtils.mkdir_p(folder, mode: 0700)
+      File.open(File.join(folder, ".lock"), File::RDWR | File::CREAT, 0600) do |lock|
+        lock.flock(File::LOCK_EX)
+        client = T::Client.new(cache: false)
+        done = client.decide("Is it urgent?", "urgent")
+        before = done.terminal.to_h
+        raise "writer did not remain pending" unless client.usage_persistence == T::UsageStatus.new("pending", nil)
+        failed = client.finish_usage_status
+        raise "wrong failure" unless failed.state == "failed" && failed.advice == "check the usage folder permissions and free space"
+        raise "failure not latched" unless client.usage_persistence == failed && client.finish_usage_status == failed
+        raise "facts changed" unless done.terminal.to_h == before && done.value == true
+        raise "status sent" unless client.usage.fetch(:requests_sent) == 1
+        client.close
+        raise "advice not owned" unless failed.advice.frozen?
+      end
+      say "ok"
+    RUBY
+      assert_equal "ok", child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 1, backend.count
+    end
+  end
+
   def entries(folder)
     Dir.glob("**/*", base: folder).reject { |name| File.directory?(File.join(folder, name)) }
   end

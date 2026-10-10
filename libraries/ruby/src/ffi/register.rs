@@ -24,6 +24,14 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     completion.define_method("result", method!(CompletionValue::result, 1))?;
     let engine = native.define_class("Engine", ruby.class_object())?;
     engine.define_method("call", method!(EngineValue::call, 8))?;
+    engine.define_method(
+        "usage_persistence",
+        method!(EngineValue::usage_persistence, 0),
+    )?;
+    engine.define_method(
+        "finish_usage_status",
+        method!(EngineValue::finish_usage_status, 0),
+    )?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;
     engine.define_method("plan", method!(EngineValue::plan, 4))?;
     native.define_module_function("default_engine", function!(default_engine, 0))?;

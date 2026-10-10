@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 require_relative "results_generated"
 module ThinkThen
+  UsageStatus = Struct.new(:state, :advice) do
+    def initialize(state, advice)
+      super(state.freeze, advice&.freeze)
+      freeze
+    end
+  end
   module Results
     # A native failure never becomes a value. Read .value to branch on decisions:
     # Ruby treats every object as true, including a result whose value is false.
@@ -120,6 +126,14 @@ module ThinkThen
     end
     def inspect = "<ThinkThen::Client>"
     def usage = @native.usage
+    def usage_persistence
+      raise UsageError.new("client is closed", "usage") if @closed
+      UsageStatus.new(*@native.usage_persistence)
+    end
+    def finish_usage_status
+      raise UsageError.new("client is closed", "usage") if @closed
+      UsageStatus.new(*@native.finish_usage_status)
+    end
 
     class Operation
       attr_reader :terminal

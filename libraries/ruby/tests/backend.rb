@@ -17,7 +17,7 @@ require_relative "../../../conformance/children/children"
 
 module TestBackend
   BIN = ENV.fetch("THINKTHEN_TEST_BACKEND")
-  LIB = File.expand_path("../lib", __dir__)
+  LIB = ENV.fetch("THINKTHEN_TEST_LIBRARY") { File.expand_path("../lib", __dir__) }
   FAKE_KEY = "tt-ruby-test-not-a-key"
   # Millisecond promises run only under the stress profile (ticket 0356).
   # The routine run proves the same stop by order: the child reports it
