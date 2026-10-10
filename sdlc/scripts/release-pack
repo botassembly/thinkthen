@@ -238,9 +238,7 @@ cpp)
 		mkdir -p "$folder/cmake" "$folder/include/thinkthen"
 		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
 		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
-		cp libraries/cpp/include/thinkthen/door.hpp libraries/cpp/include/thinkthen/json.hpp \
-			libraries/cpp/include/thinkthen/complete.hpp libraries/cpp/include/thinkthen/native.hpp \
-			libraries/cpp/include/thinkthen/native_views.hpp "$folder/include/thinkthen/"
+		cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
 		;;
 csharp)
 		mkdir -p "$folder/feed"

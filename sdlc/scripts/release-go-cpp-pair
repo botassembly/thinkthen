@@ -77,14 +77,13 @@ for name in "$first" "$second" ${third:+"$third"}; do
 done
 if [ "$mode" = go-cpp ]; then
 	tar -tzf "$dir/$first" | LC_ALL=C sort >"$work/members" || fail "cannot list $first"
-	printf '%s\n' ./ ./LICENSE ./README.md ./go.mod ./complete.go ./complete_answers.go ./complete_details.go \
-		./complete_engine.go ./complete_enums.go ./complete_inputs.go ./complete_metadata.go \
-		./complete_readers.go ./complete_rows.go ./complete_test.go ./identities.go ./native_batch.go \
-		./native_complete.go ./native_details.go ./native_inputs.go ./native_methods.go \
-		./native_question_view.go ./native_test.go ./native_unions.go ./native_values.go \
-		./portable_batch_test.go ./questions.go ./recovery_test.go \
-		./requests.go ./result.go ./thinkthen.go ./thinkthen_test.go ./examples/ ./examples/decide/ \
-		./examples/decide/main.go ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
+	# Go compiles every root .go file; compare against committed source, not the package.
+	git ls-tree -r --name-only HEAD -- libraries/go >"$work/go-source" || fail 'cannot list committed Go source'
+	{
+		printf '%s\n' ./ ./LICENSE ./README.md ./go.mod ./examples/ ./examples/decide/ \
+			./examples/decide/main.go ./THINKTHEN-PACKAGE-INPUTS
+		sed -n 's|^libraries/go/\([^/]*\.go\)$|./\1|p' "$work/go-source"
+	} | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail 'Go source members differ'
 fi
 if [ "$mode" = swift-zig ]; then
