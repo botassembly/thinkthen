@@ -51,7 +51,7 @@ final class OwnedSession implements Finalizable {
   final NativeOwner _owner;
   bool _reading = false, _pushing = false;
   OwnedSession._(this._abi, Pointer<Void> pointer)
-      : _owner = NativeOwner(_abi.library, 'thinkthen_session_free', pointer) {
+      : _owner = NativeOwner(_abi.thinkthen_session_freePointer, pointer) {
     _owner.setRelease(_abi.thinkthen_session_free);
   }
   void cancel() {
@@ -146,13 +146,13 @@ final class Engine implements Finalizable {
   final NativeAbi _abi;
   final NativeOwner _owner;
   Engine._(this._abi, Pointer<Void> pointer)
-      : _owner = NativeOwner(_abi.library, 'thinkthen_engine_free', pointer) {
+      : _owner = NativeOwner(_abi.thinkthen_engine_freePointer, pointer) {
     _owner.setRelease(_abi.thinkthen_engine_free);
   }
 
-  /// Development native selection; automatic native-asset loading follows in packaging.
-  factory Engine.open(String libraryPath, {InputEngineSettings? settings}) {
-    final abi = NativeAbi(DynamicLibrary.open(libraryPath));
+  /// Load the SDK-bundled native asset.
+  factory Engine.open({InputEngineSettings? settings}) {
+    final abi = NativeAbi();
     final pointer = withBytes(settings ?? InputEngineSettings(),
         (bytes, _) => abi.thinkthen_engine_new_with(bytes));
     if (pointer == nullptr) {

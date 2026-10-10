@@ -6,6 +6,12 @@ FLUTTER="$ROOT/flutter"
 # The pinned Flutter holds the same Dart 3.13.4; the surfaces rung's allow-list drops TT_DART and TT_FLUTTER.
 TT_DART=${TT_DART:-$(command -v dart || echo "$HOME/.local/opt/flutter/bin/dart")}
 TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || echo "$HOME/.local/opt/flutter/bin/flutter")}
+# Explicit development packaging check; it never builds the Rust engine.
+if [ "${1:-}" = --native-assets ]; then
+  shift
+  [ "$#" -eq 3 ] || { echo 'usage: check.sh --native-assets NATIVE_LIBRARY SCRATCH PUB_CACHE' >&2; exit 2; }
+  exec python3 "$CHECKS/installed_native_assets.py" "$TT_DART" "$TT_FLUTTER" "$1" "$2" "$3"
+fi
 # Run one command under the named lock. A caller that already holds it, such as the surfaces
 # rung, exports THINKTHEN_HEAVY_LOCK_HELD; waiting on it again would only time out.
 locked() {

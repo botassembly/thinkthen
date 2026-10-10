@@ -192,14 +192,20 @@ def bridge(abi):
                'thinkthen_session_try_read', 'thinkthen_session_finish', 'thinkthen_session_cancel',
                'thinkthen_session_free', 'thinkthen_session_result_free', 'thinkthen_session_result_json',
                'thinkthen_session_error_message')
-    lines = ['// Generated from the canonical C header ABI. Do not edit.', "import 'dart:ffi';", 'final class NativeAbi {', '  final DynamicLibrary library;', '  NativeAbi(this.library);']
+    lines = ['// Generated from the canonical C header ABI. Do not edit.', "import 'dart:ffi';"]
+    members = []
     for symbol in symbols:
         fn = abi['functions'][symbol]
         ret = types(fn['return'])
         args = [types(value) for value in fn['arguments']]
-        signatures = [f'{ret[i]} Function({", ".join(arg[i] for arg in args)})' for i in (0, 1)]
-        lines += [f'  late final {symbol} = library.lookupFunction<{signatures[0]}, {signatures[1]}>("{symbol}");']
-    lines += ['}']
+        native = f'{ret[0]} Function({", ".join(arg[0] for arg in args)})'
+        parameters = ', '.join(f'{arg[1]} arg{i}' for i, arg in enumerate(args))
+        lines += [f"@Native<{native}>(symbol: '{symbol}', assetId: 'package:thinkthen_dart/thinkthen')",
+                  f'external {ret[1]} _{symbol}({parameters});']
+        members += [f'  final {symbol} = _{symbol};']
+        if symbol in ('thinkthen_engine_free', 'thinkthen_session_free'):
+            members += [f'  final {symbol}Pointer = Native.addressOf<NativeFunction<{native}>>(_{symbol});']
+    lines += ['final class NativeAbi {', *members, '}']
     errors = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_E') and not key.endswith('_V1')]
     lines += ['enum NativeErrorKind { ' + ', '.join(key.removeprefix('THINKTHEN_E').lower() + '(' + str(value) + ')' for key, value in errors) + '; final int code; const NativeErrorKind(this.code); }']
     for key, value in abi['constants'].items():
