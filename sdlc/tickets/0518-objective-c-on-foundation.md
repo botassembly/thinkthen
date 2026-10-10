@@ -32,3 +32,7 @@ Objective-C is Apple-only and uses Foundation: `NSError`, ARC, blocks for async 
   One public API is one coherent family of named typed calls. Initial claims: `libraries/objective-c/Sources/ThinkThen.h`, `libraries/objective-c/Sources/ThinkThen.m`, `libraries/objective-c/check.sh`, `libraries/objective-c/source-package.json`, `libraries/objective-c/README.md` and `libraries/objective-c/checks/installed.py`. Name the installed consumer source before coding. 0530 removes the Linux-only Objective-C routing in final assembly; coordinate with it.
 - Proof: An actual Foundation consumer installs the local Apple package on macOS and passes the shared suite. It proves callback ownership, cancellation and ARC cleanup, plus one held-provider case where unrelated work progresses and cancel returns before the provider is released. Linux checks and declaration generation cannot replace this native proof. Record handwritten code removed and added, counting templates, in the landing record.
 - Defers: GNU Objective-C support, which ends here. This ticket grants no machine or workflow permission; native qualification follows Ian's release hold.
+
+## Progress
+
+- 2026-10-10 started
