@@ -27,6 +27,7 @@ public final class SessionConsumer {
     }
     public static void main(String[] ignored) throws Exception {
         Engine.OwnedCall retained;
+        Engine.SessionFailure retainedFailure;
         try (var engine = new Engine(Map.of("cache",false,"max_retries",0,"batch",1))) {
             var question = question("Is it?");
             var decide = done(engine.decide(question,records("session-decide"),options()));
@@ -51,6 +52,8 @@ public final class SessionConsumer {
             catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure"); }
             try { engine.decide(question,records("\ud800"),options()).join(); throw new AssertionError("invalid Unicode admitted"); }
             catch (CompletionException error) { check(error.getCause() instanceof IllegalArgumentException,"Unicode representation failure"); }
+            try { engine.decide(question,records("status-401"),options()).join(); throw new AssertionError("provider failure succeeded"); }
+            catch (CompletionException error) { retainedFailure = (Engine.SessionFailure)error.getCause(); }
             var held = engine.decide(question,records("hold-jvm-java"),options());
             arrived("hold-jvm-java");
             check(done(engine.decide(question,records("session-independent"),options())).terminal().facts().value().requestsSent().intValueExact() == 1,"unrelated session blocked");
@@ -73,6 +76,8 @@ public final class SessionConsumer {
             }
         }
         check(retained.terminal().facts().value().records().intValueExact() == 1,"result died with engine");
+        check(retainedFailure.call().terminal().facts().value().requestsSent().intValueExact() == 1,"failure facts died with engine");
+        check(retainedFailure.failure().error().message() != null,"typed failure died with engine");
         var missing = new Results.Facts(Map.of());
         check(missing.model().state() == Presence.State.MISSING,"missing presence");
         try { new Results.Plan(Map.of()).firstBodyUtf8(); throw new AssertionError("missing required nullable member admitted"); }

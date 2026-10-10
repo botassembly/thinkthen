@@ -7,11 +7,17 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /** Ten named asynchronous calls over one shared owned native session boundary. */
 public final class Engine implements AutoCloseable {
+    /** Outer JVM facade identity; native code validates the corresponding token. */
+    public enum Surface { JAVA, KOTLIN, SCALA }
+    private final Surface surface;
     private MemorySegment pointer;
     private static final ScheduledExecutorService POLLER = Executors.newScheduledThreadPool(2, runnable -> {
         Thread thread = new Thread(runnable, "thinkthen-session"); thread.setDaemon(true); return thread;
     });
-    public Engine(Map<String,?> settings) {
+    public Engine(Map<String,?> settings) { this(settings, Surface.JAVA); }
+    /** Shared transport construction for the Kotlin and Scala facade packages. */
+    public Engine(Map<String,?> settings, Surface surface) {
+        this.surface = Objects.requireNonNull(surface);
         try (Arena arguments = Arena.ofConfined()) {
             byte[] bytes = NativeSession.utf8(Json.write(settings));
             var text = arguments.allocate(bytes.length + 1L);
@@ -37,8 +43,9 @@ public final class Engine implements AutoCloseable {
         try (Arena arguments = Arena.ofConfined()) {
             var bytes = NativeSession.bytes(arguments, request);
             var output = arguments.allocate(ValueLayout.ADDRESS);
-            NativeSession.check((int)NativeSession.call("thinkthen_session_new", ValueLayout.JAVA_INT,
-                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), output));
+            var token = arguments.allocateFrom(ValueLayout.JAVA_BYTE, NativeSession.utf8(surface.name().toLowerCase(Locale.ROOT)));
+            NativeSession.check((int)NativeSession.call("thinkthen_session_new_with_surface", ValueLayout.JAVA_INT,
+                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), token, token.byteSize(), output));
             return new OwnedSession(output.get(ValueLayout.ADDRESS, 0));
         }
     }

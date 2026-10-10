@@ -1,6 +1,7 @@
 import thinkthen.scala.ScalaEngine
 import thinkthen.Presence
 import thinkthen.Results
+import thinkthen.Engine
 import scala.concurrent.Await
 import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
@@ -9,6 +10,8 @@ import java.nio.file.{Files, Path}
 object SessionScala {
   def main(args: Array[String]): Unit = {
     val engine = new ScalaEngine(Map("cache" -> false, "max_retries" -> 0))
+    var retainedCall: Engine.OwnedCall = null
+    var failure: Engine.SessionFailure = null
     try {
       val question = Map[String, Any]("kind" -> "text", "text" -> "Is it?")
       def input(text: String) = Map[String, Any]("kind" -> "text", "text" -> text)
@@ -41,7 +44,13 @@ object SessionScala {
       assert(nested.terminal().facts().value().requestsSent().intValueExact() == 1)
       try { Await.result(engine.decide(authored, records, Map("field" -> List(7))).result, 10.seconds); throw new AssertionError("invalid field admitted") }
       catch { case _: thinkthen.NativeFailure => () }
+      retainedCall = independent
+      try { Await.result(engine.decide(question, input("status-401")).result, 10.seconds); throw new AssertionError("provider failure succeeded") }
+      catch { case error: Engine.SessionFailure => failure = error }
     } finally engine.close()
+    assert(retainedCall.terminal().facts().value().requestsSent().intValueExact() == 1)
+    assert(failure.call().terminal().facts().value().requestsSent().intValueExact() == 1)
+    assert(failure.failure().error().message().nonEmpty)
     println("INSTALLED_JVM_SCALA_SESSION_PASS")
   }
 }
