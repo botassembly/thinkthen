@@ -42,12 +42,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.dynamic_choose_stream(
-            question.clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.clone().into(),
+                records,
+                options,
+                crate::RequestCall::Choose,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Choices(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native dynamic choose batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     pub(crate) fn dynamic_choose_stream<'a, I, T>(

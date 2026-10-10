@@ -30,14 +30,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Decide,
-            question.question().clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-            super::decision,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.question().clone().into(),
+                records,
+                options,
+                crate::RequestCall::Decide,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Decisions(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native decide batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull fallible originals with complete ordered replacement choose shortlists.
@@ -54,14 +61,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Choose,
-            question.question().clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-            super::choice,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.question().clone().into(),
+                records,
+                options,
+                crate::RequestCall::Choose,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Choices(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native choose batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull fallible originals with every accepted and rejected tag probability.
@@ -78,14 +92,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Tag,
-            question.question().clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-            super::tags,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.question().clone().into(),
+                records,
+                options,
+                crate::RequestCall::Tag,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Tags(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native tag batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull fallible originals with complete graded score answers and per-record context.
@@ -101,14 +122,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Score,
-            question.clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-            super::score,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.clone().into(),
+                records,
+                options,
+                crate::RequestCall::Score,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Scores(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native score batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull complete filter judgments for every original, including rejected rows.
@@ -124,16 +152,27 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Filter,
-            question.clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-            super::records::filter,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.clone().into(),
+                records,
+                options,
+                crate::RequestCall::Filter,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Filtered(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native filter batch returned another result kind",
+                )),
+            }),
+        )
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "owned context stays separate from borrowed caller controls"
+    )]
     pub(crate) fn complete_stream<'a, I, T, R: 'a>(
         &self,
         function: InputFunction,

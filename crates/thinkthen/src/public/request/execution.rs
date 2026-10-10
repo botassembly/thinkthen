@@ -148,47 +148,25 @@ impl Engine {
     ) -> Result<RequestOutcome, Error> {
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
-        let mut controls = controls(options, environment.controls)?.started()?;
-        controls.admission()?;
-        let mut definition = request.resolve_question()?;
-        request.admit_inline(&definition)?;
-        let reading_definition = definition.clone();
-        apply(&mut definition, options)?;
-        controls.admission()?;
-        if environment
-            .feed
-            .as_ref()
-            .is_some_and(|feed| feed.image_inputs)
-            && !request.request.call.function().images()
-        {
-            return Err(Error::usage(format!(
-                "{} accepts text only; images are unsupported",
-                request.request.call.function().name()
-            )));
-        }
-        let mut engine = self.clone();
-        if let Some(model) = &options.model {
-            engine.inner = self.for_model(Some(
-                &crate::core::ModelName::new(model).map_err(Error::refused)?,
-            ))?;
-        }
-        if controls.cli_reader.is_some()
-            && let Some(context) = controls.context_text()
-        {
-            crate::public::complete::records::cli_context(&engine.inner, context)?;
-        }
-        let image_refusal = image_route(&engine, &definition)
-            .err()
-            .map(|error| error.detail().message().to_owned());
-        if request.attachment_limit.is_none()
-            && (image_descriptors(&request.request.call.arguments().input)
-                || environment
-                    .feed
-                    .as_ref()
-                    .is_some_and(|feed| feed.image_inputs))
-            && let Some(message) = &image_refusal
-        {
-            return Err(Error::usage(message.clone()));
+        let prepared = prepare(
+            self,
+            request,
+            environment.controls,
+            environment
+                .feed
+                .as_ref()
+                .is_some_and(|feed| feed.image_inputs),
+        )?;
+        let Prepared {
+            reading: reading_definition,
+            definition,
+            engine,
+            mut controls,
+            context,
+            image_refusal,
+        } = prepared;
+        if let Some(context) = &context {
+            controls = controls.context(context);
         }
         let eager = environment.feed.as_ref().is_some_and(|feed| feed.eager)
             || !matches!(
@@ -227,6 +205,69 @@ impl Engine {
         })
     }
 }
+pub(super) struct Prepared<'a> {
+    pub reading: RequestDefinition,
+    pub definition: RequestDefinition,
+    pub engine: Engine,
+    pub controls: CallOptions<'a>,
+    pub context: Option<String>,
+    pub image_refusal: Option<String>,
+}
+
+pub(super) fn prepare<'a>(
+    base: &Engine,
+    request: &AdmittedRequest,
+    controls: CallOptions<'a>,
+    image_inputs: bool,
+) -> Result<Prepared<'a>, Error> {
+    let options = &request.request.call.arguments().options;
+    let context = options
+        .context
+        .clone()
+        .or_else(|| controls.context_text().map(str::to_owned));
+    let controls = scalar_controls(options, controls)?.started()?;
+    controls.admission()?;
+    let mut definition = request.resolve_question()?;
+    request.admit_inline(&definition)?;
+    let reading_definition = definition.clone();
+    apply(&mut definition, options)?;
+    controls.admission()?;
+    if image_inputs && !request.request.call.function().images() {
+        return Err(Error::usage(format!(
+            "{} accepts text only; images are unsupported",
+            request.request.call.function().name()
+        )));
+    }
+    let mut engine = base.clone();
+    if let Some(model) = &options.model {
+        engine.inner = base.for_model(Some(
+            &crate::core::ModelName::new(model).map_err(Error::refused)?,
+        ))?;
+    }
+    if controls.cli_reader.is_some()
+        && let Some(context) = context.as_deref()
+    {
+        crate::public::complete::records::cli_context(&engine.inner, context)?;
+    }
+    let image_refusal = image_route(&engine, &definition)
+        .err()
+        .map(|error| error.detail().message().to_owned());
+    if request.attachment_limit.is_none()
+        && (image_descriptors(&request.request.call.arguments().input) || image_inputs)
+        && let Some(message) = &image_refusal
+    {
+        return Err(Error::usage(message.clone()));
+    }
+    Ok(Prepared {
+        reading: reading_definition,
+        definition,
+        engine,
+        controls,
+        context,
+        image_refusal,
+    })
+}
+
 pub(super) fn feed_projection(
     request: &AdmittedRequest,
     feed: Option<&RequestFeed<'_>>,
@@ -253,6 +294,16 @@ pub(super) fn feed_projection(
 }
 pub(super) fn controls<'a>(
     options: &'a RequestOptions,
+    controls: CallOptions<'a>,
+) -> Result<CallOptions<'a>, Error> {
+    let mut controls = scalar_controls(options, controls)?;
+    if let Some(context) = &options.context {
+        controls = controls.context(context);
+    }
+    Ok(controls)
+}
+fn scalar_controls<'a>(
+    options: &RequestOptions,
     mut controls: CallOptions<'a>,
 ) -> Result<CallOptions<'a>, Error> {
     if options.attempts {
@@ -264,14 +315,12 @@ pub(super) fn controls<'a>(
     if let Some(ms) = options.deadline_ms {
         controls = controls.deadline_ms(ms)?;
     }
-    if let Some(context) = &options.context {
-        controls = controls.context(context);
-    }
     if let Some(batch) = &options.batch {
         controls = controls.batch(batch.native()?);
     }
     Ok(controls)
 }
+
 fn complete(call: Call<RequestValue>) -> RequestOutcome {
     RequestOutcome::Complete(call)
 }
@@ -308,60 +357,30 @@ fn stream<T>(
         },
     }
 }
-#[expect(
-    clippy::too_many_arguments,
-    reason = "shared atomic dispatch adds only the optional owned row sink"
-)]
 fn atomic<'a>(
     engine: &'a Engine,
     function: Function,
     q: &'a LoadedQuestion,
     rows: super::composition::Inputs<'a>,
     controls: CallOptions<'a>,
-    eager: bool,
-    sink: Option<&dyn Fn(RequestValue)>,
 ) -> Result<RequestOutcome, Error> {
     macro_rules! run {
-        ($eager:ident,$stream:ident,$q:expr,$value:expr) => {
-            if eager {
-                Ok(complete(
-                    engine
-                        .$eager($q, rows.collect::<Result<Vec<_>, _>>()?, controls)?
-                        .map($value),
-                ))
-            } else {
-                Ok(stream(engine.$stream($q, rows, controls), $value, sink))
-            }
+        ($eager:ident,$q:expr,$value:expr) => {
+            Ok(complete(
+                engine
+                    .$eager($q, rows.collect::<Result<Vec<_>, _>>()?, controls)?
+                    .map($value),
+            ))
         };
     }
+
     match function {
-        Function::Decide => run!(
-            decide_records_complete_with,
-            try_decide_records_complete_with,
-            q,
-            RequestValue::Decisions
-        ),
-        Function::Choose => run!(
-            choose_records_complete_with,
-            try_choose_records_complete_with,
-            q,
-            RequestValue::Choices
-        ),
-        Function::Tag => run!(
-            tag_records_complete_with,
-            try_tag_records_complete_with,
-            q,
-            RequestValue::Tags
-        ),
-        Function::Score => run!(
-            score_records_complete_with,
-            try_score_records_complete_with,
-            plain(q)?,
-            RequestValue::Scores
-        ),
+        Function::Decide => run!(decide_records_complete_with, q, RequestValue::Decisions),
+        Function::Choose => run!(choose_records_complete_with, q, RequestValue::Choices),
+        Function::Tag => run!(tag_records_complete_with, q, RequestValue::Tags),
+        Function::Score => run!(score_records_complete_with, plain(q)?, RequestValue::Scores),
         Function::Filter => run!(
             filter_records_complete_with,
-            try_filter_records_complete_with,
             plain(q)?,
             RequestValue::Filtered
         ),
@@ -507,6 +526,35 @@ fn dispatch<'a>(
     release: Option<&dyn Fn(usize)>,
     recover: crate::public::options::AnnotationRecovery<'a>,
 ) -> Result<RequestOutcome, Error> {
+    if !eager
+        && matches!(
+            function,
+            Function::Decide
+                | Function::Choose
+                | Function::Tag
+                | Function::Score
+                | Function::Filter
+                | Function::Annotate
+        )
+    {
+        let rows = super::pull::dispatch(
+            engine,
+            function,
+            definition.clone(),
+            rows,
+            controls,
+            controls.context_text().map(str::to_owned),
+            recover,
+        )?;
+        return Ok(match rows {
+            super::pull::Rows::Decisions(batch) => stream(batch, RequestValue::Decisions, sink),
+            super::pull::Rows::Choices(batch) => stream(batch, RequestValue::Choices, sink),
+            super::pull::Rows::Tags(batch) => stream(batch, RequestValue::Tags, sink),
+            super::pull::Rows::Scores(batch) => stream(batch, RequestValue::Scores, sink),
+            super::pull::Rows::Filtered(batch) => stream(batch, RequestValue::Filtered, sink),
+            super::pull::Rows::Annotations(batch) => stream(batch, RequestValue::Annotations, sink),
+        });
+    }
     if controls.cli_reader.is_some() {
         let recognition = match definition {
             RequestDefinition::Recognize(file) => Some(file.question()),
@@ -522,7 +570,7 @@ fn dispatch<'a>(
         }
     }
     let outcome = match definition {
-        RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls, eager, sink),
+        RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls),
         RequestDefinition::Rank(q) => Ok(complete(
             engine
                 .request_rank_records_complete_with(q, rows, controls, options.top, release)?
@@ -548,25 +596,15 @@ fn dispatch<'a>(
                 .try_find_records_complete_with(file.question(), rows, controls)?
                 .map(RequestValue::Found),
         )),
-        RequestDefinition::Annotate(set) => {
-            if eager {
-                Ok(complete(
-                    engine
-                        .annotate_records_complete_with(
-                            set,
-                            rows.collect::<Result<Vec<_>, _>>()?,
-                            controls,
-                        )?
-                        .map(RequestValue::Annotations),
-                ))
-            } else {
-                Ok(stream(
-                    engine.request_annotate_stream(set, rows, controls, recover),
-                    RequestValue::Annotations,
-                    sink,
-                ))
-            }
-        }
+        RequestDefinition::Annotate(set) => Ok(complete(
+            engine
+                .annotate_records_complete_with(
+                    set,
+                    rows.collect::<Result<Vec<_>, _>>()?,
+                    controls,
+                )?
+                .map(RequestValue::Annotations),
+        )),
         RequestDefinition::Recognize(file) => Ok(complete(
             engine
                 .try_recognize_records_complete_with(file.question(), rows, controls)?
@@ -582,25 +620,15 @@ fn dispatch<'a>(
                 .try_relate_records_complete_with(ask, rows, controls)?
                 .map(RequestValue::Related),
         )),
-        RequestDefinition::DynamicChoose(q) => {
-            if eager {
-                Ok(complete(
-                    engine
-                        .choose_dynamic_records_complete_with(
-                            q,
-                            rows.collect::<Result<Vec<_>, _>>()?,
-                            controls,
-                        )?
-                        .map(RequestValue::Choices),
-                ))
-            } else {
-                Ok(stream(
-                    engine.try_choose_dynamic_records_complete_with(q, rows, controls),
-                    RequestValue::Choices,
-                    sink,
-                ))
-            }
-        }
+        RequestDefinition::DynamicChoose(q) => Ok(complete(
+            engine
+                .choose_dynamic_records_complete_with(
+                    q,
+                    rows.collect::<Result<Vec<_>, _>>()?,
+                    controls,
+                )?
+                .map(RequestValue::Choices),
+        )),
         RequestDefinition::DecodedSet { .. } => {
             Err(Error::defect("unresolved authored set entered execution"))
         }

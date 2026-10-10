@@ -26,33 +26,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.annotate_stream(
-            questions.clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-            None,
-        ))
-    }
-
-    pub(crate) fn request_annotate_stream<'a, I, T>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-        options: CallOptions<'a>,
-        recover: crate::public::options::AnnotationRecovery<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteAnnotated>>
-    where
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(self.annotate_stream(
-            questions.clone(),
-            records,
-            options,
-            options.context_text().map(str::to_owned),
-            recover,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                questions.clone().into(),
+                records,
+                options,
+                crate::RequestCall::Annotate,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Annotations(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native annotate batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     pub(crate) fn annotate_stream<'a, I, T>(

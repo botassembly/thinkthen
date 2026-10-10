@@ -1,4 +1,4 @@
-//! Pull-based frame calls share the existing native scheduler.
+//! Pull-based frame calls enter Request through the native borrowed-row scheduler.
 use super::typed::present;
 use crate::public::{
     Batch, Call, CallOptions, CompleteAnnotated, CompleteChoice, CompleteDecision, CompleteFilter,
