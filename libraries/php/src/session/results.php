@@ -88,8 +88,8 @@ final class Decoder
         }
         if (($schema['type'] ?? null) === 'array') return array_map(fn($item) => self::convert($item, $schema['items']), $value);
         if (($schema['type'] ?? null) === 'object' && is_array($schema['additionalProperties'] ?? null)) {
-            $result = [];
-            foreach ((array)$value as $name => $item) $result[$name] = self::convert($item, $schema['additionalProperties']);
+            $result = new \stdClass();
+            foreach ($value as $name => $item) $result->$name = self::convert($item, $schema['additionalProperties']);
             return $result;
         }
         return $value;

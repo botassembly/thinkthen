@@ -36,6 +36,19 @@ if ($mode === 'named') {
     check($retained['decide']->results[0]->value === true, 'true value');
     check($retained['decide']->results[0]->meta->question_sources[0] instanceof ThinkThen\Results\NativeQuestionSource, 'typed nested optional source array');
 } elseif ($mode === 'presence') {
+    $annotated = $client->annotate(['version' => 1, 'questions' => [
+        'ok' => ['decide' => 'Is it urgent?'], 'tags' => ['tag' => 'Which?', 'labels' => ['first', 'second']],
+    ]], ['map-record']);
+    $row = $annotated->results[0];
+    check($row->answers()->value instanceof stdClass && $row->value()->value instanceof stdClass, 'annotation maps must remain objects');
+    check($row->answers->ok instanceof ThinkThen\Results\NativeAnnotationMemberAnswerId, 'typed map answer member');
+    check($row->value->ok === true, 'map decision value');
+    check(is_array($row->value->tags) && in_array('first', $row->value->tags, true), 'nested tags must remain an array');
+    foreach ($annotated->packets as $packet) if ($packet->kind === 'row') {
+        $empty = $packet->toObject(); $empty->value->answers = new stdClass(); $empty->value->value = new stdClass();
+        $decoded = ThinkThen\Results\Decoder::packet(json_encode($empty, JSON_THROW_ON_ERROR))->value;
+        check($decoded->answers instanceof stdClass && $decoded->value instanceof stdClass && json_encode($decoded->answers) === '{}' && json_encode($decoded->value) === '{}', 'empty maps must remain objects');
+    }
     $false = $client->decide(['decide' => 'Is it?', 'threshold' => 0.95], 'text');
     $null = $client->decide(['decide' => 'Is it?', 'true' => null], 'text');
     check($false->results[0]->value()->present && $false->results[0]->value === false, 'false confused with absence');
