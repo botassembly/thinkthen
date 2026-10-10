@@ -1,6 +1,6 @@
 //! Native complete SQL calls keep file privilege checks on the backend thread.
 use crate::{call, files};
-use pgrx::datum::Json;
+use pgrx::datum::{Array, Json};
 use pgrx::prelude::*;
 use thinkthen::Surface;
 
@@ -14,6 +14,19 @@ fn invoke(
     settings: Option<&str>,
 ) -> Option<Json> {
     let (question, inputs) = (question?, inputs?);
+    execute(verb, question, settings, || {
+        // Retain PostgreSQL's client-reader restriction for text descriptors.
+        crate::complete_native::Inputs::parse(inputs, false)?;
+        crate::complete_native::Inputs::parse_request(inputs)
+    })
+}
+
+fn execute(
+    verb: &'static str,
+    question: &str,
+    settings: Option<&str>,
+    inputs: impl FnOnce() -> Result<crate::complete_native::Inputs, thinkthen::Error>,
+) -> Option<Json> {
     let prepared = (|| {
         let saved = if question.starts_with('@') {
             let (reference, source) =
@@ -31,9 +44,7 @@ fn invoke(
             }
             None => crate::complete_native::prepare(verb, question, &settings)?,
         };
-        // Retain PostgreSQL's client-reader restriction before enabling deferred native inputs.
-        crate::complete_native::Inputs::parse(inputs, false)?;
-        let inputs = crate::complete_native::Inputs::parse_request(inputs)?;
+        let inputs = inputs()?;
         let request = request::admit(&prepared)?;
         let call = call::read_result()?.with_settings(&settings)?;
         Ok::<_, thinkthen::Error>((prepared, inputs, request, call))
@@ -147,4 +158,19 @@ fn thinkthen_relate_complete(
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
     call::guarded(|| invoke("relate", question, inputs, settings))
+}
+
+/// Complete result for one ordered native bytea image collection.
+#[pg_extern(parallel_restricted, requires = ["image_value_type"])]
+fn thinkthen_decide_images_complete(
+    question: Option<&str>,
+    images: Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>,
+    settings: default!(Option<&str>, "NULL"),
+) -> Option<Json> {
+    call::guarded(|| {
+        let (question, images) = (question?, images?);
+        execute("decide", question, settings, || {
+            crate::images::input(images, None).map(crate::complete_native::Inputs::from_record)
+        })
+    })
 }

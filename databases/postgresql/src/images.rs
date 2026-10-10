@@ -45,41 +45,40 @@ fn thinkthen_image(
     })
 }
 
-fn input(
+pub(crate) fn input(
     images: Array<'_, pgrx::composite_type!("thinkthen_image_value")>,
     text: Option<&str>,
-) -> RequestItem {
-    let mut admission = ImageAdmission::new(images.len()).or_raise();
+) -> Result<RequestItem, thinkthen::Error> {
+    let mut admission = ImageAdmission::new(images.len())?;
     for tuple in images.iter() {
-        let tuple = tuple.unwrap_or_else(|| call::raise(call::usage("image list contains NULL")));
+        let tuple = tuple.ok_or_else(|| call::usage("image list contains NULL"))?;
         let bytes = tuple
             .get_by_name::<&[u8]>("data")
-            .unwrap_or_else(|_| call::raise(call::usage("invalid image data field")))
-            .unwrap_or_else(|| call::raise(call::usage("image data is NULL")));
-        admission.push(bytes.len()).or_raise();
+            .map_err(|_| call::usage("invalid image data field"))?
+            .ok_or_else(|| call::usage("image data is NULL"))?;
+        admission.push(bytes.len())?;
     }
     let images = images
         .iter()
         .map(|tuple| {
-            let tuple =
-                tuple.unwrap_or_else(|| call::raise(call::usage("image list contains NULL")));
+            let tuple = tuple.ok_or_else(|| call::usage("image list contains NULL"))?;
             let bytes = tuple
                 .get_by_name::<&[u8]>("data")
-                .unwrap_or_else(|_| call::raise(call::usage("invalid image data field")))
-                .unwrap_or_else(|| call::raise(call::usage("image data is NULL")));
+                .map_err(|_| call::usage("invalid image data field"))?
+                .ok_or_else(|| call::usage("image data is NULL"))?;
             let mime = tuple
                 .get_by_name::<String>("media")
-                .unwrap_or_else(|_| call::raise(call::usage("invalid image media field")))
-                .unwrap_or_else(|| call::raise(call::usage("image media is NULL")));
+                .map_err(|_| call::usage("invalid image media field"))?
+                .ok_or_else(|| call::usage("image media is NULL"))?;
             // file is retained in the caller's composite, never model evidence.
-            let image = image(bytes, &mime).or_raise();
-            RequestImage::Bytes {
+            let image = image(bytes, &mime)?;
+            Ok(RequestImage::Bytes {
                 media: image.media(),
                 bytes: image.bytes().to_vec(),
-            }
+            })
         })
-        .collect();
-    RequestItem {
+        .collect::<Result<_, thinkthen::Error>>()?;
+    Ok(RequestItem {
         original: text.map(|text| RequestOriginal::Text {
             text: text.to_owned(),
         }),
@@ -88,7 +87,7 @@ fn input(
         options: None,
         examples: None,
         seed_spans: None,
-    }
+    })
 }
 
 fn judged(
@@ -107,7 +106,7 @@ fn judged(
         call::raise(call::usage("image judgments take decide, choose or score"));
     }
     let question = forms::question(Some(question), None, verb, &settings);
-    let input = input(images, text);
+    let input = input(images, text).or_raise();
     call::run(controls, move |engine, options| {
         crate::request::details(engine, &question, vec![input], options, false)
             .map(|rows| rows.into_iter().next())
