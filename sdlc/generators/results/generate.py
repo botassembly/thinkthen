@@ -357,7 +357,8 @@ def main():
         import go
         definitions = prepare(graph(json.loads(args.schema.read_text()), go.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        result = subprocess.run(["gofmt"], input=go.render(definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n", text=True, capture_output=True, check=True).stdout
+        result = subprocess.run(["gofmt"], input=go.render(definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n", text=True, capture_output=True, check=True,
+                                env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = ROOT / "libraries/go/owned_results_generated.go"
         if args.check:
             if not output.exists() or output.read_text() != result:
