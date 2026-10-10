@@ -1,6 +1,6 @@
 # 0522: Make Dart and Flutter thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -16,6 +16,8 @@ Reviews: revision dbcd3cbc5c8e736cbd515928d39a9cd1034df4a1, reject
 Reviews: revision 3dfd812c21f4308c808148ee48093792578acc68, accept
 
 Reviews: revision c002754a4df2f9f64e59095d0243c314ebc47549, accept
+
+Landed: baf82f2
 
 ## Outcome
 
