@@ -1,18 +1,18 @@
 # Agent instructions for thinkthen
 
-Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification and `sdlc/planning/milestones.md`. Read status, order and lanes through pm. Workspace instructions load role skills from `repos/agents/skills/`; this file adds boundaries and checks.
+Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification and `sdlc/planning/milestones.md`. Read status, order and lanes through pm. Load workspace role skills from `repos/agents/skills/`.
 
 ## Build and review
 
-- Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change, plus `spec` and affected surfaces when needed. Run `lint` and `test` once at ticket closure. Large-input cases, full parity runs and load run only in the release suite: `sdlc/decisions/2026-10-09-two-test-suites.md`. Gates use no network.
+- Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`, offline. Run focused checks per change, `spec` and affected surfaces as needed, and `lint` and `test` once at closure. Large-input cases, full parity and load are release-only: `sdlc/decisions/2026-10-09-two-test-suites.md`.
 - Tests are outside-in through the Rust API, the CLI and each installed library. Red, green, remove: delete scaffolding unit tests before landing.
 - `policy.py` enforces source file limits; `sdlc/ratchet.json` holds the measured source ceiling. Explain warnings and growth in the commit; avoid mechanical splits.
 - Require explicit reviewer acceptance for a source-ceiling increase before landing, and lower the ceiling when deleting source.
 - Keep the handwritten complete readers in Python, Ruby, R and JavaScript unchanged except for confirmed regressions until their generated migrations replace them.
-- Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
+- Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` for file caps and the adapter-word boundary.
 - Run checks that read Git history after committing the changes, and finish them before committing again.
 - Beelink is primary. M5 may run experiments and Mac-specific checks, including before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
-- Cap each lane at 40 GB total, including `libraries/` and `databases/`. When a lane passes the cap or a build needs room, delete the lane's regenerable build output and caches. Never delete another lane's active work. Keep 50 GB free on disk. Keep branch-specific source copies; sharing mixes branches.
+- Cap each lane at 40 GB, including `libraries/` and `databases/`. Delete its regenerable output and caches at the cap or when a build needs room. Preserve other lanes' active work. Keep 50 GB free and branch-specific source copies.
 - Delete old code without asking: each language's old public API once its replacement passes routine installed checks, dead code and scaffolding tests. A migration ticket closes on routine installed checks, deletion of its old API, one `lint` and `test` run and a fresh code review. Platform qualification belongs to the candidate: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`.
 
 ## Boundaries
@@ -39,7 +39,7 @@ Read the key from `THINKTHEN_API_KEY`, or from a named backend's own key variabl
 
 `CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. The queue owner owns the whole repo, `site/` included, per `sdlc/planning/ownership.md`. Lasting rulings live in `sdlc/decisions/`; accepted ADRs and specifications retain product contracts. Preserve source links and name what Ian can overturn.
 
-The release process lives in `sdlc/planning/release-process.md`. Ian held release management on 2026-10-08 and narrowed the hold on 2026-10-10: the coordinator may push candidate tags and dispatch workflows that do not publish, and use GitHub for Windows and other platforms the Beelink cannot test. Publication requires his permission: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`. See `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`.
+Release process: `sdlc/planning/release-process.md`. Ian's 2026-10-10 ruling permits coordinator candidate tags, nonpublishing workflows and GitHub tests for platforms unavailable locally. Publishing needs his permission: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`, superseding the hold in `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`.
 
 ## Outside agents
 
