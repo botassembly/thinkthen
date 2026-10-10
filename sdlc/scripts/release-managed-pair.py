@@ -98,12 +98,16 @@ def zip_members(data, label):
     return members, dirs
 
 
-def xml_field(data, name):
+def xml_field(data, name, parents=("project",)):
     root = ET.fromstring(data)
-    matches = [node.text.strip() for node in root.iter()
-               if node.tag.rsplit("}", 1)[-1] == name and node.text]
-    require(len(matches) == 1, f"ambiguous XML {name}")
-    return matches[0]
+    require(root.tag.rsplit("}", 1)[-1] == parents[0], "XML root differs")
+    for parent in parents[1:]:
+        matches = [node for node in root if node.tag.rsplit("}", 1)[-1] == parent]
+        require(len(matches) == 1, f"ambiguous XML {parent}")
+        root = matches[0]
+    matches = [node for node in root if node.tag.rsplit("}", 1)[-1] == name]
+    require(len(matches) == 1 and matches[0].text and matches[0].text.strip(), f"ambiguous XML {name}")
+    return matches[0].text.strip()
 
 
 def check_nupkg(data, version, source):
@@ -117,8 +121,8 @@ def check_nupkg(data, version, source):
         "nupkg inventory differs")
     require(members["lib/net8.0/ThinkThen.dll"], "empty net8 DLL")
     nuspec = members["Botassembly.ThinkThen.nuspec"]
-    require(xml_field(nuspec, "id") == "Botassembly.ThinkThen" and
-            xml_field(nuspec, "version") == version, "nupkg identity differs")
+    require(xml_field(nuspec, "id", ("package", "metadata")) == "Botassembly.ThinkThen" and
+            xml_field(nuspec, "version", ("package", "metadata")) == version, "nupkg identity differs")
     for name in ("README.md", "LICENSE"):
         require(members[name] == source[f"libraries/csharp/{name}"], f"nupkg {name} differs from source")
     forbidden = (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-290", b"-----BEGIN PRIVATE KEY-----")

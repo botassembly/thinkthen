@@ -307,6 +307,21 @@ def main():
         run(base, "assemble", 0)
         run(base, "verify", 0)
         gate(base, 0)
+    identity = b"<groupId>io.github.botassembly</groupId>"
+    for label, replacement, message in (
+        ("duplicate project identity", identity * 2, "ambiguous XML groupId"),
+        ("missing project identity", b"", "ambiguous XML groupId"),
+        ("wrong project identity with matching dependency", b"<groupId>wrong</groupId>", "source POM identity differs"),
+    ):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = fixture(base)
+            source["libraries/jvm/pom.xml"] = source["libraries/jvm/pom.xml"].replace(
+                identity, replacement, 1).replace(b"<groupId>org.jetbrains.kotlinx</groupId>", identity)
+            write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
+            save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
+            run(base, "assemble", 1, message)
+            print(f"{label}: refused")
     def source_attack(base, source):
         source["libraries/csharp/README.md"] = b"altered"
         write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)

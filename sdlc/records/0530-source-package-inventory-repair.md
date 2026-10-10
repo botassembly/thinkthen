@@ -19,3 +19,13 @@ This repair runs no real native build, full parity check, final distribution ass
 A fresh read-only reviewer accepted `73065ed38601fc3c3373a6d3cee7d85feb207841`. The reviewer checked all 31 root Go files and nine public C++ headers against committed source and confirmed that the existing source identity, zero-SHA and archived byte rejection checks remain intact. Integration changes no source ceiling.
 
 The apparent synthetic fixture failure exposed two stale copies of package contents in real scripts. Deriving Go source names from committed source and C++ headers from the public directory removes those copies while preserving independent package identity and rejection checks.
+
+## Bound managed package identity to its XML parent
+
+At starting revision `73af2637d581be49248ed8e4531e8d22682b9f33`, the managed package self-test used the current JVM POM and encountered `ambiguous XML groupId`. The package checker searched every descendant for project identity. The POM's valid Kotlin dependency also declares group, artifact and version fields.
+
+`release-managed-pair.py` now reads Maven identity only from direct children of the project root. NuGet identity comes only from direct children of the package's single metadata element. The existing ElementTree parser handles namespace prefixes. Missing, duplicate and blank fields refuse; nested dependency identity cannot replace project identity. The root and each selected parent must also match uniquely.
+
+The existing managed pair self-test retains its package and provenance refusals. Its successful assembly and verification use the real POM with dependency coordinates. Three added assembly cases reject duplicate, missing and wrong project group identifiers even when a dependency supplies the expected identifier. This change adds no checker, receipt mechanism, native build or release action. Neither source ceiling changes; the scripts remain below the existing file size limit.
+
+A fresh read-only reviewer accepted `ea740b17b7853f17403a12a728b96c2316fe2fdc` and reproduced the existing managed self-test, including the three dependency boundary cases. Integration preserves the independently reviewed root Rust ceiling of 183258. Reading a document's descendants does not identify its owner: project and dependency coordinates require their own semantic parents.
