@@ -419,11 +419,16 @@ fn take(
         crate::RequestValue::Filtered(v) => rows!(v),
         crate::RequestValue::Ranked(v) => {
             for row in v {
-                let unit = held
-                    .borrow_mut()
-                    .remove(&row.ordinal())
-                    .ok_or(Failure::Defect("native rank lost its host occurrence"))?;
-                let judged = rendering.row(reading, unit, row.result().canonical.clone())?;
+                let unit = held.borrow_mut().remove(&row.ordinal());
+                let judged = if rendering.view.details {
+                    rendering.rank_details(&row, unit.and_then(|unit| unit.position))?
+                } else {
+                    rendering.row(
+                        reading,
+                        unit.ok_or(Failure::Defect("native rank lost its host occurrence"))?,
+                        row.result().canonical.clone(),
+                    )?
+                };
                 if !output.print(judged)? {
                     ended.closed = true;
                     break;
@@ -432,27 +437,16 @@ fn take(
         }
         crate::RequestValue::SetRanked(v) => {
             for row in v {
-                let unit = held
-                    .borrow_mut()
-                    .remove(&row.ordinal())
-                    .ok_or(Failure::Defect("native set rank lost its host occurrence"))?;
-                let mut judged =
-                    rendering.row(reading, unit, row.result().result().canonical.clone())?;
-                if rendering.view.details {
-                    let original = row.original();
-                    judged.printed = Some(json_line(&RankMembers {
-                        canonical: &row.result().result().canonical,
-                        original,
-                        index: row.ordinal(),
-                        name: row.result().question_name(),
-                        members: row.result().members(),
-                    })?);
-                    crate::cli::intake::locate(&mut judged.printed, judged.position.as_ref())?;
-                    crate::cli::intake::source_members(
-                        &mut judged.printed,
-                        judged.position.as_ref(),
-                    )?;
-                }
+                let unit = held.borrow_mut().remove(&row.ordinal());
+                let judged = if rendering.view.details {
+                    rendering.rank_details(&row, unit.and_then(|unit| unit.position))?
+                } else {
+                    rendering.row(
+                        reading,
+                        unit.ok_or(Failure::Defect("native set rank lost its host occurrence"))?,
+                        row.result().result().canonical.clone(),
+                    )?
+                };
                 if !output.print(judged)? {
                     ended.closed = true;
                     break;
@@ -462,6 +456,27 @@ fn take(
         _ => return Err(Failure::Defect("atomic request returned another function")),
     }
     Ok(())
+}
+impl Renderer {
+    fn rank_details(
+        &self,
+        row: &impl serde::Serialize,
+        position: Option<crate::cli::intake::Position>,
+    ) -> Result<Judged, Failure> {
+        let mut printed = Some(json_line(row)?);
+        crate::cli::intake::locate(&mut printed, position.as_ref())?;
+        crate::cli::intake::source_members(&mut printed, position.as_ref())?;
+        Ok(Judged {
+            model: None,
+            printed,
+            position,
+            outcome: Outcome::Yes,
+            replayed: false,
+            order_value: None,
+            partial_failure: false,
+            profile_mismatch: self.mismatch.notice(),
+        })
+    }
 }
 impl Renderer {
     fn row(
@@ -594,32 +609,6 @@ struct Details<'a> {
     canonical: &'a crate::core::CompleteAtomic,
     original: Option<&'a crate::core::Record>,
     index: Option<usize>,
-}
-struct RankMembers<'a> {
-    canonical: &'a crate::core::CompleteAtomic,
-    original: &'a crate::QuestionInput,
-    index: usize,
-    name: &'a str,
-    members: &'a [crate::CompleteRankMember],
-}
-impl serde::Serialize for RankMembers<'_> {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical.serialize_occurrence_members(
-            Some(self.original),
-            Some(self.name),
-            Some(self.index),
-            Some(
-                self.members
-                    .iter()
-                    .map(|member| crate::core::RankMemberDocument {
-                        name: member.name(),
-                        result: &member.result().canonical,
-                    })
-                    .collect(),
-            ),
-            serializer,
-        )
-    }
 }
 impl serde::Serialize for Details<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
