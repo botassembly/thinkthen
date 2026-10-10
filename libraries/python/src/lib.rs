@@ -1,26 +1,11 @@
-//! The Python binding: `import thinkthen as tt` (ticket 0105, ADR 0047).
-//!
-//! Every call reaches the real engine through the public `thinkthen` API on a
-//! detachable worker thread (`worker`). A Polars column or frame crosses
-//! through the Arrow door (`arrow`, `frame`, ticket 0106), and a pandas column
-//! through the door or the list reader (ticket 0122). This file holds the module edge: the
-//! six exception classes, the one table from an error kind to its class, and
-//! the one panic guard.
+//! Typed Python calls own native engines, sessions, results and exceptions.
 
-mod arrow;
 mod asked;
-mod complete_stream;
-mod diagnostics;
 mod engine;
 mod files;
-mod frame;
-mod input;
 mod native_result;
 mod request;
-mod result;
 mod results_generated;
-mod stream;
-mod tally;
 mod worker;
 
 use pyo3::exceptions::{PyException, PyKeyboardInterrupt};
@@ -125,6 +110,7 @@ pub(crate) fn raise(py: Python<'_>, kind: ErrorKind, message: &str, retryable: b
     match value
         .setattr("kind", kind.name())
         .and_then(|()| value.setattr("retryable", retryable))
+        .and_then(|()| value.setattr("facts", py.None()))
     {
         Ok(()) => error,
         Err(failed) => failed,
@@ -135,12 +121,10 @@ pub(crate) fn raise(py: Python<'_>, kind: ErrorKind, message: &str, retryable: b
 pub(crate) fn raised(py: Python<'_>, error: &Error) -> PyErr {
     let raised = raise(py, error.kind(), &error.to_string(), error.retryable());
     if let Some(facts) = error.facts()
-        && let Ok(value) = result::python_facts(py, facts)
+        && let Ok(value) = serde_json::to_value(facts)
+        && let Ok(value) = native_result::plain(py, &value)
     {
         let _set = raised.value(py).setattr("facts", value);
-    }
-    if let Ok(snapshot) = engine::complete::stream::failure(error) {
-        let _set = raised.value(py).setattr("native_complete", snapshot);
     }
     raised
 }
@@ -175,10 +159,6 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<files::SourceIterator>()?;
     module.add_function(wrap_pyfunction!(files::_read_files, module)?)?;
     module.add_function(wrap_pyfunction!(files::_spec_source, module)?)?;
-    module.add_class::<result::PyCall>()?;
-    module.add_class::<tally::PyTally>()?;
-    module.add_class::<stream::PyStream>()?;
-    module.add_class::<complete_stream::CompleteStream>()?;
     module.add_class::<request::Session>()?;
     module.add_class::<native_result::NativeResult>()?;
     module.add_function(wrap_pyfunction!(
@@ -186,36 +166,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module
     )?)?;
     module.add_class::<worker::Token>()?;
-    module.add_class::<worker::Receipt>()?;
-    module.add_class::<worker::Completion>()?;
-    module.add_class::<asked::Question>()?;
     module.add_class::<asked::QuestionSet>()?;
-    module.add_class::<asked::Recognize>()?;
-    module.add_class::<asked::Relate>()?;
-    module.add_class::<asked::Entity>()?;
-    module.add_class::<asked::Edge>()?;
-    module.add_class::<asked::RecognizedEntity>()?;
-    module.add_class::<asked::Relation>()?;
-    module.add_class::<asked::Recognized>()?;
-    module.add_class::<arrow::Arrow>()?;
-    module.add_class::<input::Pandas>()?;
-    module.add_function(wrap_pyfunction!(frame::_annotate_frame, module)?)?;
-    module.add_function(wrap_pyfunction!(frame::_recognize_frame, module)?)?;
-    module.add_function(wrap_pyfunction!(frame::_annotate_column, module)?)?;
-    module.add_function(wrap_pyfunction!(frame::_recognize_column, module)?)?;
-    module.add_function(wrap_pyfunction!(frame::_collection_column, module)?)?;
-    module.add_function(wrap_pyfunction!(frame::_recognize_series, module)?)?;
-    // A column's batches are released behind this hook at exit (change 6).
-    let gate = wrap_pyfunction!(arrow::_exit_gate, module)?;
-    py.import("atexit")?.call_method1("register", (&gate,))?;
-    module.add_function(gate)?;
-    #[cfg(feature = "probe")]
-    {
-        module.add_function(wrap_pyfunction!(worker::_live_workers, module)?)?;
-        module.add_function(wrap_pyfunction!(frame::_arrow_probe, module)?)?;
-        module.add_function(wrap_pyfunction!(arrow::_raw_producer, module)?)?;
-        module.add_function(wrap_pyfunction!(arrow::_probe_trace, module)?)?;
-    }
     Ok(())
 }
 

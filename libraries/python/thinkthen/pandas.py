@@ -51,26 +51,3 @@ class ThinkThenAccessor:
 
     def relate(self, ask=None, *, engine=None, **keywords):
         return self._call("relate", ask, engine=engine, **keywords)
-
-    def complete(self, *, engine=None):
-        """Select complete typed calls while retaining this Series presentation."""
-        from .frames import Engine
-        return CompleteAccessor(self._series, Engine(engine=engine))
-
-
-class CompleteAccessor:
-    """A complete engine bound to the accessor's original Series."""
-    def __init__(self, series, engine):
-        self._series, self._engine = series, engine
-    def _call(self, verb, question, **controls):
-        return getattr(self._engine, verb)(question, self._series, **controls)
-    def decide(self, question, **controls): return self._call("decide", question, **controls)
-    def choose(self, question, **controls): return self._call("choose", question, **controls)
-    def tag(self, question, **controls): return self._call("tag", question, **controls)
-    def score(self, question, **controls): return self._call("score", question, **controls)
-    def filter(self, question, **controls): return self._call("filter", question, **controls)
-    def rank(self, question, **controls): return self._call("rank", question, **controls)
-    def find(self, question, **controls): return self._call("find", question, **controls)
-    def annotate(self, question, **controls): return self._call("annotate", question, **controls)
-    def recognize(self, question, **controls): return self._call("recognize", question, **controls)
-    def relate(self, question, **controls): return self._call("relate", question, **controls)

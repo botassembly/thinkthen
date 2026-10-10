@@ -18,15 +18,6 @@ class SourceRecord:
 
 
 @dataclass(frozen=True, repr=False)
-class Located:
-    source: SourceRecord
-    value: object
-
-    def __repr__(self):
-        return "Located(source=<withheld>, value=<withheld>)"
-
-
-@dataclass(frozen=True, repr=False)
 class FileSelection:
     paths: tuple[str, ...]
     unit: str = "line"
@@ -60,29 +51,3 @@ def read_files(path_or_paths, *, unit="line", window=None):
             (type(window) is not int or window <= 0)) or (unit != "window" and window is not None):
         raise _thinkthen.UsageError("reader window requires unit window and a positive whole number")
     return FileSelection(paths, unit, window)
-
-
-def rebuild(row):
-    if row is None:
-        return None
-    if isinstance(row, list):
-        return [rebuild(value) for value in row]
-    if "record" in row and "file" in row:
-        source = SourceRecord(*(row[key] for key in ("record", "file", "first_line", "last_line")))
-        return Located(source, row["value"])
-    if "edges" in row:
-        return [dict(edge, source=rebuild(edge["source"]), target=rebuild(edge["target"])) for edge in row["edges"]]
-    return row
-
-
-def call(engine, verb, question, selection, batch, context, deadline, token):
-    from . import _mapped
-    done = engine._engine._source(verb, question, selection._json(), batch, context, deadline, token)
-    return _mapped(done, lambda text: rebuild(json.loads(text)))
-
-
-def spec_source(ask):
-    if isinstance(ask, type):
-        from . import pydantic as adapter
-        ask = adapter.question_set(ask)
-    return json.dumps(ask) if isinstance(ask, dict) else _thinkthen._spec_source(os.fspath(ask))

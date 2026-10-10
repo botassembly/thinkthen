@@ -83,45 +83,16 @@ def main():
         # The production wheel must send nothing on refusal, then answer from
         # the fixture backend. Those tests count real loopback requests.
         env['PYTHONPATH'] = str(checked / 'tests')
-        run(str(python), '-m', 'pytest', '-q', '-p', 'no:cacheprovider',
-            'tests/test_call.py::test_token_cap_variable_refuses_before_any_send',
-            'tests/test_stopping.py::test_a_token_cancelled_before_the_call_sends_nothing',
-            'tests/test_surface.py::test_the_module_functions_equal_an_explicit_engine', cwd=checked)
-        # Shared cases and documentation examples exercise the production wheel.
-        with subprocess.Popen([str(REPO / 'target/debug/conformance-backend.exe')], env=env,
-                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True) as backend:
-            try:
-                port = backend.stdout.readline().strip()
-                int(port)
-                fake = {'THINKTHEN_API_KEY': 'sk-fake-loopback-python-0105',
-                        'THINKTHEN_BASE_URL': f'http://127.0.0.1:{port}/generic/v1',
-                        'THINKTHEN_CACHE': str(scratch / 'cache')}
-                run(str(python), 'tests/conformance.py', port, cwd=checked, extra=fake)
-                run(str(python), 'tests/examples.py', port, cwd=checked, extra=fake)
-            finally:
-                backend.stdin.close()
-                try:
-                    backend.wait(timeout=60)
-                except subprocess.TimeoutExpired:
-                    backend.kill()
-                    backend.wait(timeout=10)
+        run(str(python), '-m', 'pytest', '-q', '-p', 'no:cacheprovider', '-m', 'not stress', 'tests', cwd=checked)
+        run(str(python), '-m', 'mypy', '--strict', 'tests/native_types.py', cwd=checked)
         run('cargo', 'clippy', '--locked', '--offline', '--all-targets', '--', '-D', 'warnings')
         run('cargo', 'clippy', '--locked', '--offline', '--all-targets', '--features', 'probe', '--', '-D', 'warnings')
         run('cargo', 'test', '--locked', '--offline', '--no-default-features', '--lib')
-        # Full tests use the existing test hooks. The released wheel above
-        # contains none; build-wheel.sh checks that distinction.
-        run('maturin', 'build', '--quiet', '--locked', '--offline', '--features', 'probe', '-o', str(scratch / 'probe'))
-        probe, = (scratch / 'probe').glob('thinkthen-*.whl')
-        run(str(python), '-m', 'pip', 'install', '--no-index', '--no-deps', '--force-reinstall', str(probe))
-        run(str(python), '-c', installed, cwd=checked)
-        run(str(python), '-m', 'mypy', '--strict', 'tests/type_contract.py', cwd=checked)
-        run(str(python), '-m', 'pytest', '-q', '-rs', '-p', 'no:cacheprovider', '-m', 'not stress',
-            'tests', cwd=checked)
         older = venv('pandas2', 'requirements-pandas2.txt')
-        run(str(older), '-m', 'pip', 'install', '--no-index', '--no-deps', str(probe))
+        run(str(older), '-m', 'pip', 'install', '--no-index', '--no-deps', str(wheels[0]))
         run(str(older), '-c', installed, cwd=checked)
-        run(str(older), '-m', 'pytest', '-q', '-rs', '-p', 'no:cacheprovider', '-m', 'not stress',
-            'tests/test_pandas.py', 'tests/test_secrecy.py', cwd=checked)
+        run(str(older), '-m', 'pytest', '-q', '-p', 'no:cacheprovider', '-m', 'not stress',
+            'tests/test_series_accessors.py', 'tests/test_call_boundaries.py', cwd=checked)
 
 
 if __name__ == '__main__':

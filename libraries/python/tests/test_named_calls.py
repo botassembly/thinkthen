@@ -6,7 +6,7 @@ import pytest
 def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_path):
     output = run('''
         import pickle, thinkthen as tt
-        from thinkthen import complete as c
+        import thinkthen as c
         with tt.Engine(cache=False, max_retries=0) as engine:
             calls = [
                 ('decide', 'Late?', 'note', {}),
@@ -36,11 +36,11 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             pairs = [('A', 'person'), ('B', 'person')]
             relations = {'knows': ('person', 'person')}
             assert engine.relate(iter(pairs), relations=relations).value == engine.relate(pairs, relations=relations).value
-            detailed = engine.decide(c.DecideSpec(decide='Late?'), c.TextInput(text='note'), details=True)
+            detailed = engine.decide({'decide': 'Late?'}, 'note', details=True)
             assert detailed.value is detailed.results[0]
             assert detailed.value.input == 'note'
             assert detailed.value.index == 0
-            context = engine.decide(c.DecideSpec(decide='Late?'), c.RecordInput(records=('note',), context='policy'))
+            context = engine.decide({'decide': 'Late?'}, c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert len(context.results[0].meta.context_sha256) == 64
             item = engine.decide('Late?', c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert item.results[0].meta.context_sha256 == context.results[0].meta.context_sha256

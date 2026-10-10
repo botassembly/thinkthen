@@ -10,7 +10,7 @@ import sys
 import time
 from typing import Generic, TypeVar
 from . import _thinkthen as native
-from . import _complete as c
+from . import _inputs as c
 from .files import FileSelection
 
 T = TypeVar('T')
@@ -19,8 +19,6 @@ VERBS = ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate
 
 
 def _json(value):
-    if isinstance(value, c.Carrier):
-        return c.to_json(value)
     if isinstance(value, Mapping):
         return {key: _json(item) for key, item in value.items()}
     if isinstance(value, (tuple, list)):
@@ -40,7 +38,7 @@ def _original(value):
 
 
 def _item(value, verb=None):
-    from .complete import Item
+    from ._inputs import Item
     if isinstance(value, Item):
         out = {'images': [{'kind': 'bytes', 'media': image.media,
                            'bytes': base64.b64encode(image.data).decode('ascii')} for image in value.images]}
@@ -54,15 +52,14 @@ def _item(value, verb=None):
         return out
     if verb == 'relate' and isinstance(value, tuple):
         value = {'name': value[0], 'kind': value[1]}
-    if isinstance(value, native.Entity):
-        value = {'name': value.name, 'kind': value.kind}
-    elif isinstance(value, native.RecognizedEntity):
-        value = {'name': value.text, 'kind': value.kind}
     return {'original': _original(value)}
 
 
 def _question(verb, question, controls):
-    from .complete import QuestionSource
+    from ._inputs import QuestionSource
+    if verb == 'annotate' and isinstance(question, type):
+        from .pydantic import question_set
+        question = question_set(question)
     if isinstance(question, QuestionSource):
         selectors = {}
         for key in ('path', 'name', 'reference'):
@@ -86,13 +83,9 @@ def _question(verb, question, controls):
         if rules or verb == 'relate':
             plan['relations'] = [dict(name=n, source=s, target=t, either=e) for n,s,t,e in rules]
         return {'kind': 'definition', 'value': {'version': 1, verb: plan}}
-    if isinstance(question, c.QuestionFile):
-        return {'kind': 'file', 'path': os.fspath(question.path)}
     if isinstance(question, os.PathLike):
         return {'kind': 'file', 'path': os.fspath(question)}
-    if hasattr(question, '_json'):
-        return {'kind': 'definition', 'value': json.loads(question._json())}
-    if isinstance(question, (c.Carrier, Mapping)):
+    if isinstance(question, Mapping):
         return {'kind': 'definition', 'value': _json(question)}
     if verb in ('annotate', 'recognize', 'relate'):
         return {'kind': 'file', 'path': question}
@@ -108,8 +101,8 @@ def _question(verb, question, controls):
 
 
 def _source(verb, value):
-    from .complete import Files, Records
-    if isinstance(value, (FileSelection, c.Files, Files)):
+    from ._inputs import Files, Records
+    if isinstance(value, (FileSelection, Files)):
         reading = {'unit': value.unit}
         if value.window is not None and value.window is not c.ABSENT:
             reading['window'] = value.window
@@ -117,21 +110,6 @@ def _source(verb, value):
         source = {'paths': list(value.paths), 'reading': reading, 'media': 'text' if media is c.ABSENT else media}
         if getattr(value, 'jsonl', False): source['jsonl'] = value.jsonl
         return {'kind': 'source', 'source': source}, None, False
-    if isinstance(value, c.TextInput): value = value.text
-    if isinstance(value, c.ImageInput):
-        if any(not hasattr(image, 'media') for image in value.images):
-            raise native.UsageError('image bytes require declared media; use complete.Item and complete.Image')
-        images = [{'kind': 'bytes', 'media': image.media, 'bytes': base64.b64encode(image.data).decode('ascii')} for image in value.images]
-        item = {'images': images}
-        if value.text is not c.ABSENT: item['original'] = _original(value.text)
-        return {'kind': 'records', 'items': [item]}, None, True
-    if isinstance(value, (c.RecordInput, c.CandidateInput)):
-        context = value.context
-        items = value.records if isinstance(value, c.RecordInput) else value.units
-        rows = [_item(item, verb) for item in items]
-        if context is not c.ABSENT:
-            for row in rows: row['context'] = _json(context)
-        return {'kind': 'records', 'items': rows}, None, False
     if isinstance(value, Records): value = value.items
     if isinstance(value, Iterator):
         return {'kind': 'feed', 'name': 'python'}, value, False
@@ -248,8 +226,12 @@ class Operation:
         if self.closed:
             raise _cancelled()
         if self.token is not None and self.token.cancelled:
-            self.cancel()
-            raise _cancelled()
+            error = _cancelled()
+            error.results = tuple(self.results)
+            error.terminal = self.terminal
+            try: self.cancel()
+            except Exception: pass
+            raise error
         # Poll before advancing the producer. Native closure stops all further reads.
         packet = self.session._poll_typed()
         if packet is not None:
@@ -364,3 +346,55 @@ class AsyncCalls:
             except Exception: pass  # Producer cleanup cannot replace task cancellation.
             raise
         finally: operation.close()
+
+class Session:
+    """Lazy typed results; final facts become available only after native settlement."""
+    def __init__(self, engine, function, question, source, controls):
+        self._arguments = (engine, function, question, source, dict(controls))
+        self._operation = None
+        self._position = 0
+        self._ended = False
+
+    def __iter__(self): return self
+    def __next__(self):
+        if self._ended: raise StopIteration
+        if self._operation is None:
+            self._operation = Operation(*self._arguments)
+        operation = self._operation
+        try:
+            while self._position >= len(operation.results):
+                if operation.step():
+                    self._ended = True
+                    operation.close()
+                    raise StopIteration
+                time.sleep(.001)
+            value = operation.results[self._position]
+            self._position += 1
+            return value
+        except StopIteration: raise
+        except BaseException:
+            self._ended = True
+            operation.close()
+            raise
+
+    @property
+    def facts(self):
+        return None if self._operation is None else getattr(self._operation.terminal, 'facts', None)
+
+    @property
+    def terminal(self):
+        return None if self._operation is None else self._operation.terminal
+
+    def cancel(self):
+        if self._operation is None:
+            self._ended = True
+        else:
+            self._operation.session.cancel()
+            self._operation._close_producer(preserve_failure=True)
+            self._operation.token = None
+
+    def close(self):
+        self._ended = True
+        if self._operation is not None: self._operation.close()
+    def __enter__(self): return self
+    def __exit__(self, *args): self.close()

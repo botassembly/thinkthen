@@ -5,7 +5,7 @@ from ._calls import Result
 
 def records(source, verb):
     import pandas as pd
-    from .complete import Item
+    from ._inputs import Item
     positions, values = [], []
     for at, value in enumerate(source):
         marker = False if isinstance(value, Item) else pd.isna(value)
