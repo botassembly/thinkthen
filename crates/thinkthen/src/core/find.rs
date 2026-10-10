@@ -49,7 +49,8 @@ impl Find {
     }
     /// Admit the complete unit count under the existing option bound.
     pub(crate) fn validate_count(count: usize, none: bool) -> Result<(), FindError> {
-        if !(2..=Self::maximum(none)).contains(&count) {
+        let minimum = if none { 1 } else { 2 };
+        if !(minimum..=Self::maximum(none)).contains(&count) {
             return Err(FindError::Count);
         }
         Ok(())
@@ -361,7 +362,7 @@ mod tests {
 
     #[test]
     fn every_outside_count_is_refused_and_hostile_text_stays_json_data() {
-        for (units, none) in [(1, false), (256, false), (1, true), (255, true)] {
+        for (units, none) in [(1, false), (256, false), (0, true), (255, true)] {
             let evidence = (0..units)
                 .map(|place| Evidence::new(format!("unit {place}")).expect("evidence"))
                 .collect::<Vec<_>>();

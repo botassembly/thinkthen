@@ -308,7 +308,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
                  `choose --raw` prints a label"
             ),
         ),
-        Failure::FindCount { none: true } => (2, "`find --none` takes 2 to 254 units".to_owned()),
+        Failure::FindCount { none: true } => (2, "`find --none` takes 1 to 254 units".to_owned()),
         Failure::FindCount { none: false } => (2, "`find` takes 2 to 255 units".to_owned()),
         Failure::FindTooLarge => (2, "`find` reads at most 16 MiB across all units".to_owned()),
         Failure::Stopped { .. } | Failure::BatchFailed { .. } | Failure::PartialReply { .. } => {

@@ -107,7 +107,7 @@ impl Engine {
     }
 
     /// Select the one unit that best answers the question, from 2 to 255.
-    /// A question from [`Question::offering_none`] takes 2 to 254 units and
+    /// A question from [`Question::offering_none`] takes 1 to 254 units and
     /// may select none.
     ///
     /// # Errors
@@ -239,7 +239,7 @@ impl Question {
 
 fn count_message(none: bool) -> &'static str {
     if none {
-        "a find question offering none takes 2 to 254 units"
+        "a find question offering none takes 1 to 254 units"
     } else {
         "find takes 2 to 255 units"
     }

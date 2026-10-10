@@ -109,7 +109,7 @@ export const LIMITS = {
   score: [count('Levels', 'levels'), RECORD_CAP],
   filter: [RECORD_CAP],
   rank: [RECORD_CAP, '`rank` holds every record until the input ends. Cut an endless stream into windows first.'],
-  find: ['The set holds 2 to 255 lines or records, or 2 to 254 with `--none`. `find` reads at most 16 MiB of input in all.'],
+  find: ['The set holds 2 to 255 lines or records, or 1 to 254 with `--none`. `find` reads at most 16 MiB of input in all.'],
   annotate: [RECORD_CAP, 'The questions and the evidence count together against the token limit. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.'],
   recognize: [`A text over ${setting('Recognize text limit').default} UTF-8 bytes exits 2 before any request. \`--max-text-bytes\` raises the limit.`, 'A relation plan admits at most 255 names and 4,000 pair questions.'],
   relate: ['A set holds at most 255 entities. A larger set exits 2 before any request.'],

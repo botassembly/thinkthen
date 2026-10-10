@@ -86,24 +86,16 @@ fn dry_run_builds_one_aggregate_request_and_names_the_framing() {
 
 #[test]
 fn count_refusals_are_exact_and_need_no_key() {
-    let cases = [
-        (
-            vec!["find", "Which?"],
-            b"one\n".as_slice(),
-            "thinkthen: `find` takes 2 to 255 units\n",
-        ),
-        (
-            vec!["find", "Which?", "--none"],
-            b"one\n".as_slice(),
-            "thinkthen: `find --none` takes 2 to 254 units\n",
-        ),
-    ];
-    for (arguments, input, message) in cases {
-        let output = run(&arguments, input).expect("binary runs");
-        assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
-        assert_eq!(String::from_utf8_lossy(&output.stderr), message);
-    }
+    let listener =
+        crate::harness::Listener::answering(|_| crate::harness::Canned::ok("unused")).unwrap();
+    let output = run(&["find", "Which?", "--url", listener.base()], b"one\n").expect("binary runs");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: `find` takes 2 to 255 units\n"
+    );
+    assert_eq!(listener.count(), 0);
 }
 
 #[test]
@@ -145,10 +137,19 @@ fn help_omits_unsupported_image_attachment_and_repeated_prose() {
 
 #[test]
 fn empty_input_succeeds_without_reading_a_key() {
-    let output = run(&["find", "Which unit answers?"], b"").expect("binary runs");
-    assert_eq!(output.status.code(), Some(0));
-    assert!(output.stdout.is_empty());
-    assert!(output.stderr.is_empty());
+    let listener =
+        crate::harness::Listener::answering(|_| crate::harness::Canned::ok("unused")).unwrap();
+    for none in [false, true] {
+        let mut arguments = vec!["find", "Which unit answers?", "--url", listener.base()];
+        if none {
+            arguments.push("--none");
+        }
+        let output = run(&arguments, b"").expect("binary runs");
+        assert_eq!(output.status.code(), Some(0));
+        assert!(output.stdout.is_empty());
+        assert!(output.stderr.is_empty());
+    }
+    assert_eq!(listener.count(), 0);
 }
 
 #[test]
@@ -220,11 +221,13 @@ fn compiled_count_boundaries_accept_and_refuse_the_exact_edges() {
         let output = run(&arguments, many(count).as_bytes()).expect("binary runs");
         assert_eq!(output.status.code(), Some(0), "{count} {none}");
     }
+    let listener =
+        crate::harness::Listener::answering(|_| crate::harness::Canned::ok("unused")).unwrap();
     for (count, none, message) in [
         (256, false, "thinkthen: `find` takes 2 to 255 units\n"),
-        (255, true, "thinkthen: `find --none` takes 2 to 254 units\n"),
+        (255, true, "thinkthen: `find --none` takes 1 to 254 units\n"),
     ] {
-        let mut arguments = vec!["find", "Which?"];
+        let mut arguments = vec!["find", "Which?", "--url", listener.base()];
         if none {
             arguments.push("--none");
         }
@@ -233,6 +236,7 @@ fn compiled_count_boundaries_accept_and_refuse_the_exact_edges() {
         assert_eq!(String::from_utf8_lossy(&output.stderr), message);
     }
 
+    assert_eq!(listener.count(), 0);
     let mut stops_at_256 = many(255).into_bytes();
     stops_at_256.extend_from_slice(b"unit 256\nPRIVATE\xff");
     let output = run(&["find", "Which?"], &stops_at_256).expect("binary runs");

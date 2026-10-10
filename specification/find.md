@@ -10,7 +10,7 @@ thinkthen find QUESTION|@FILE [--lines|--jsonl] [--field POINTER] [--none] [--de
 
 ## What it reads
 
-From 2 to 255 lines or records on standard input, or 2 to 254 with `--none`. `--input FILE` reads a file instead. Empty input succeeds without output or a request. One unit and either overflow are usage errors before any request. The whole original input may contain at most 16 MiB. [records.md](records.md) gives the framing and pointer rules.
+From 2 to 255 lines or records on standard input, or 1 to 254 with `--none`. `--input FILE` reads a file instead. Empty input succeeds without output or a request. One unit without `--none` and either overflow are usage errors before any request. A single unit with `--none` offers that unit and none as two alternatives. The whole original input may contain at most 16 MiB. [records.md](records.md) gives the framing and pointer rules.
 
 `QUESTION` states what the best unit answers. CSV, TSV, and `--jobs` are absent from this command; the parser refuses them as unexpected arguments.
 
