@@ -1,6 +1,6 @@
 # 0497: Make Ruby thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -18,6 +18,8 @@ Reviews: revision a087f6dc3, accept
 Reviews: revision 696103c3c43fcd7025df3690223e2ba5cc528902, accept
 
 Reviews: revision c2916d99ba994e30314b11418bda874254a6bb5a, accept
+
+Landed: 0343489
 
 ## Outcome
 
