@@ -6,6 +6,7 @@ pub(crate) mod cli_atomic;
 mod composition;
 mod definition;
 mod execution;
+mod framing;
 mod inline;
 mod input;
 mod native_feed;

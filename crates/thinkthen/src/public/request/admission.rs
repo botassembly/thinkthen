@@ -204,7 +204,12 @@ pub(super) fn admit(
     admit_header(request, attachment_limit, false)
 }
 pub(super) fn admit_session(request: Request) -> Result<AdmittedRequest, Error> {
-    admit_header(request, None, true)
+    let admitted = admit_header(request, None, true)?;
+    super::framing::admit(&admitted)?;
+    if let Some(definition) = &admitted.definition {
+        super::framing::reading(&admitted, definition)?;
+    }
+    Ok(admitted)
 }
 fn admit_header(
     request: Request,

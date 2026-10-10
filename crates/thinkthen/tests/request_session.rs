@@ -5,6 +5,9 @@ use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 use thinkthen::*;
 
+#[path = "request_session/framing.rs"]
+mod framing;
+
 fn request(input: RequestInput) -> Request {
     Request::new(RequestCall::Decide(RequestArguments {
         question: RequestQuestion::Text {
