@@ -6,6 +6,8 @@ from c_parity import ERRORS
 def project_session(payload, fixture):
     if 'admission' in payload:
         return payload['admission']
+    # Native packets already retain the original input; only CLI callers wrap it.
+    projection_fixture = dict(fixture, context_present=False, contexts=None, candidate_orders=None)
     packets = payload['packets']
     terminal = next(packet for packet in packets if packet['kind'] == 'terminal')
     facts = terminal.get('facts', {})
@@ -16,7 +18,7 @@ def project_session(payload, fixture):
         for result in values:
             result = dict(result)
             result.update(result.get('source', {}))
-            rows.append(project_row(result, fixture, len(rows)))
+            rows.append(project_row(result, projection_fixture, len(rows)))
     failure = terminal.get('failure')
     if failure:
         error = failure['error']
