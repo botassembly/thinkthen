@@ -85,7 +85,7 @@ jobs:
         if: matrix.channel == 'maven'
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '22'
       - name: Set up Maven 3
         if: matrix.channel == 'maven'
         run: |

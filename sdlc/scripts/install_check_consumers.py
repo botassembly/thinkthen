@@ -67,17 +67,36 @@ int main(int argc, char **argv) {
 ''',
     "csharp": '''using System;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using ThinkThen;
-using Engine engine = Engine.Open(File.ReadAllText(args[0]));
-Console.WriteLine(engine.Call(File.ReadAllText(args[1])));
+using ThinkThen.Inputs;
+using ThinkThen.Results;
+string root = args[0];
+using var engine = Engine.Open(new InputEngineSettings {Replay = Path.Combine(root, "recording"),
+    Cache = new InputCacheDocumentAlternative1 {Value = new InputDisabledCache()}});
+var call = await engine.DecideAsync(new InputRequestQuestionText {Text = File.ReadAllText(Path.Combine(root, "question.txt"))},
+    new InputRequestInputText {Text = File.ReadAllText(Path.Combine(root, "report.txt"))});
+Console.WriteLine(JsonSerializer.Serialize(new {value = call.Packets.OfType<SessionPacketDecideRow>().Single().Value.Value,
+    requests_sent = (long)call.Terminal.Facts.Value.RequestsSent}));
 ''',
     "java": '''import java.nio.file.Files;
 import java.nio.file.Path;
-import thinkthen.Door;
+import java.util.concurrent.TimeUnit;
+import thinkthen.Engine;
+import thinkthen.Inputs;
+import thinkthen.Results;
 public class InstallCheck {
   public static void main(String[] args) throws Exception {
-    try (Door door = new Door(Files.readString(Path.of(args[0])))) {
-      System.out.println(door.call(Files.readString(Path.of(args[1]))));
+    Path root = Path.of(args[0]);
+    try (Engine engine = new Engine(new Inputs.EngineSettings()
+        .replay(root.resolve("recording").toString()).cache(new Inputs.CacheDocument(false)))) {
+      var call = engine.decide(new Inputs.RequestQuestionText().text(Files.readString(root.resolve("question.txt"))),
+          new Inputs.RequestInputText().text(Files.readString(root.resolve("report.txt"))), null).get(10, TimeUnit.SECONDS);
+      var row = (Results.SessionPacketDecideRow)call.packets().stream()
+          .filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
+      System.out.println("{\\\"value\\\":" + row.value().value().value()
+          + ",\\\"requests_sent\\\":" + call.terminal().facts().value().requestsSent() + "}");
     }
   }
 }
@@ -85,34 +104,47 @@ public class InstallCheck {
     "dart": '''import 'dart:convert';
 import 'dart:io';
 import 'package:thinkthen_dart/thinkthen_dart.dart';
-void main(List<String> args) {
-  final door = Door(args[0]);
-  final engine = door.create(File(args[1]).readAsStringSync());
+Future<void> main(List<String> args) async {
+  final root = args[0];
+  final engine = Engine.open(settings: InputEngineSettings.read({'replay': '$root/recording', 'cache': false}));
   try {
-    print(jsonEncode(door.call(engine, File(args[2]).readAsStringSync())));
-  } finally { door.engineFree(engine); }
+    final call = await engine.decide(InputRequestQuestionText(text: File('$root/question.txt').readAsStringSync()),
+        InputRequestInputText(text: File('$root/report.txt').readAsStringSync()));
+    final row = call.packets.whereType<SessionPacketDecideRow>().single;
+    print(jsonEncode({'value': row.value.value.toJson(), 'requests_sent': call.terminal.facts.value!.requestsSent.toInt()}));
+  } finally { engine.close(); }
 }
 ''',
     "php": '''<?php
 require __DIR__ . '/vendor/autoload.php';
-$engine = new ThinkThen($argv[1], file_get_contents($argv[2]));
-try { echo $engine->call(file_get_contents($argv[3])), "\\n"; }
-finally { $engine->close(); }
+$root = $argv[1];
+$client = new ThinkThen\\Client(['replay' => $root.'/recording', 'cache' => false]);
+try {
+  $call = $client->decide(file_get_contents($root.'/question.txt'), file_get_contents($root.'/report.txt'));
+  echo json_encode(['value' => $call->results[0]->value, 'requests_sent' => $call->facts()->requests_sent], JSON_THROW_ON_ERROR), "\\n";
+} finally { $client->close(); }
 ''',
     "go": '''package main
 import (
  "context"
- "fmt"
+ "encoding/json"
  "os"
  thinkthen "github.com/botassembly/thinkthen/libraries/go"
 )
 func main() {
- settings, err := os.ReadFile(os.Args[1]); if err != nil { panic(err) }
- engine, err := thinkthen.NewWith(string(settings)); if err != nil { panic(err) }
- defer engine.Close()
- request, err := os.ReadFile(os.Args[2]); if err != nil { panic(err) }
- call, err := engine.Call(context.Background(), string(request)); if err != nil { panic(err) }
- fmt.Println(call)
+ root := os.Args[1]
+ question, err := os.ReadFile(root + "/question.txt"); if err != nil { panic(err) }
+ text, err := os.ReadFile(root + "/report.txt"); if err != nil { panic(err) }
+ client, err := thinkthen.NewClient(thinkthen.EngineSettings{Replay: thinkthen.Ptr(root + "/recording"), Cache: thinkthen.Ptr[thinkthen.CacheDocument](thinkthen.DisabledCache(false))}); if err != nil { panic(err) }
+ defer client.Close()
+ call, err := client.Decide(context.Background(), thinkthen.TextQuestion(string(question)), string(text), nil); if err != nil { panic(err) }
+ for _, packet := range call.Packets {
+  row, err := packet.AsSessionPacketDecideRow(); if err != nil { continue }
+  value, err := row.Value().Value.Value().Value.Boolean(); if err != nil { panic(err) }
+  json.NewEncoder(os.Stdout).Encode(map[string]any{"value": value, "requests_sent": call.Terminal.Facts().Value.RequestsSent().Value})
+  return
+ }
+ panic("decide returned no row")
 }
 ''',
     "r": '''args <- commandArgs(trailingOnly = TRUE)
