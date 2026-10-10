@@ -17,12 +17,9 @@ crate-type = ["cdylib"]
 name = "thinkthen_ruby"
 
 [dependencies]
-thinkthen-host = { path = "../../crates/thinkthen-host" }
 thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 magnus = { version = "=0.7.1", features = ["rb-sys"] }
 rb-sys = "=0.9.130"
-# The call's worker blocks asynchronous signals with `pthread_sigmask`.
-libc = "=0.2.189"
 # Results cross to Ruby as JSON, which Ruby's own json library reads.
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.151", features = ["raw_value"] }
