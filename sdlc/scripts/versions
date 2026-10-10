@@ -83,14 +83,12 @@ PLACES = [
     *[("libraries/go/thinkthen.go", rf"(?m)^#if {pattern}", PART[i]) for i, pattern in enumerate([
         r"THINKTHEN_VERSION_MAJOR != (\d+) \|\|", r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != (\d+) \|\|",
         r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != \d+ \|\| THINKTHEN_VERSION_PATCH != (\d+)$"])],
-    ("libraries/go/thinkthen_test.go", r'm\["tool"\] != "thinkthen (\d+\.\d+\.\d+)"', WHOLE),
     *[(p, r'<PackageReference Include="Botassembly\.ThinkThen" Version="([^"]+)"', WHOLE) for p in
       ("libraries/csharp/tests/Installed.csproj", "libraries/csharp/tests/Smoke.csproj")],
     *[(p, rf'(?m)^  {name}:\n(?:    .*\n)*?    version: "([^"]+)"$', WHOLE) for p, name in (
         ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_dart"),
         ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_flutter"),
-        ("libraries/dart/checks/consumers/alpha/pubspec.lock", "thinkthen_dart"),
-        ("libraries/dart/checks/consumers/bravo/pubspec.lock", "thinkthen_dart"))],
+        ("libraries/dart/checks/session_consumer/pubspec.lock", "thinkthen_dart"))],
 ]
 PLACEHOLDER = "0.0.1"
 # Each publish hold: a file and a pattern whose one group is the whole hold line.

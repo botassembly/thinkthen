@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:thinkthen_dart/thinkthen_session.dart';
+import 'package:thinkthen_dart/thinkthen_dart.dart';
 
 void require(bool value, String message) {
   if (!value) throw StateError(message);

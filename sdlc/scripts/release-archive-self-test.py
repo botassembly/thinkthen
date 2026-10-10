@@ -396,7 +396,7 @@ def main():
         for family, relative in (("swift", "Sources/ThinkThen/ThinkThen.swift"),
                                  ("zig", "src/thinkthen.zig"),
                                  ("php", "autoload.php"),
-                                 ("dart", "lib/src/door.dart"),
+                                 ("dart", "lib/src/session/client.dart"),
                                  ("ada", "src/thinkthen.ads"),
                                  ("objective-c", "Sources/ThinkThen.m"),
                                  ("cobol", "src/tt_call.cob")):
