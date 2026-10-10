@@ -1,6 +1,6 @@
 # 0383: Qualify the Node package on Windows x86-64
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
