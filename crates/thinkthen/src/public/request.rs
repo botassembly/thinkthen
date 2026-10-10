@@ -12,6 +12,7 @@ mod input;
 mod native_feed;
 mod options;
 mod preview;
+pub(crate) mod pull;
 mod result;
 mod source;
 pub use source::RequestSourceReader;

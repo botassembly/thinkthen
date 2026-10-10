@@ -56,6 +56,8 @@ mod aggregates;
 #[path = "native_complete/readings.rs"]
 mod readings;
 
+#[path = "native_complete/borrowed_pull.rs"]
+mod borrowed_pull;
 #[path = "native_complete/calls.rs"]
 mod calls;
 #[path = "native_complete/composition.rs"]

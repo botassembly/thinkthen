@@ -245,7 +245,7 @@ fn spec(function: InputFunction, question: &Question, shown: Value, record: usiz
     }
 }
 
-fn decision(canonical: core::CompleteAtomic) -> Result<CompleteDecision, Error> {
+pub(crate) fn decision(canonical: core::CompleteAtomic) -> Result<CompleteDecision, Error> {
     let Value::YesNo(value) = *canonical.value() else {
         return Err(wrong());
     };
@@ -256,7 +256,7 @@ fn decision(canonical: core::CompleteAtomic) -> Result<CompleteDecision, Error> 
     };
     Ok(CompleteDecision { canonical, value })
 }
-fn choice(canonical: core::CompleteAtomic) -> Result<CompleteChoice, Error> {
+pub(crate) fn choice(canonical: core::CompleteAtomic) -> Result<CompleteChoice, Error> {
     let Value::Choice(value) = canonical.value() else {
         return Err(wrong());
     };
@@ -265,7 +265,7 @@ fn choice(canonical: core::CompleteAtomic) -> Result<CompleteChoice, Error> {
         canonical,
     })
 }
-fn tags(canonical: core::CompleteAtomic) -> Result<CompleteTags, Error> {
+pub(crate) fn tags(canonical: core::CompleteAtomic) -> Result<CompleteTags, Error> {
     let Value::Tag(value) = canonical.value() else {
         return Err(wrong());
     };
@@ -274,7 +274,7 @@ fn tags(canonical: core::CompleteAtomic) -> Result<CompleteTags, Error> {
         canonical,
     })
 }
-fn score(canonical: core::CompleteAtomic) -> Result<CompleteScore, Error> {
+pub(crate) fn score(canonical: core::CompleteAtomic) -> Result<CompleteScore, Error> {
     let Value::Score(value) = *canonical.value() else {
         return Err(wrong());
     };

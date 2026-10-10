@@ -26,28 +26,29 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.annotate_stream(questions, records, options, None))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                questions.clone().into(),
+                records,
+                options,
+                crate::RequestCall::Annotate,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Annotations(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native annotate batch returned another result kind",
+                )),
+            }),
+        )
     }
 
-    pub(crate) fn request_annotate_stream<'a, I, T>(
-        &'a self,
-        questions: &'a QuestionSet,
+    pub(crate) fn annotate_stream<'a, I, T>(
+        &self,
+        questions: QuestionSet,
         records: I,
         options: CallOptions<'a>,
-        recover: crate::public::options::AnnotationRecovery<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteAnnotated>>
-    where
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(self.annotate_stream(questions, records, options, recover))
-    }
-
-    fn annotate_stream<'a, I, T>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-        options: CallOptions<'a>,
+        context: Option<String>,
         recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<Batch<'a, CompleteRecord<T, CompleteAnnotated>>, Error>
     where
@@ -65,9 +66,10 @@ impl Engine {
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
+        let preparing_set = questions.0.clone();
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
-                .and_then(|record| prepare_record(&questions.0, record, options.context_text(), at))
+                .and_then(|record| prepare_record(&preparing_set, record, context.as_deref(), at))
                 .map_err(|error| error.at_record(at))?;
             if options.cli_reader.is_none() {
                 preparing

@@ -30,13 +30,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Decide,
-            question.question(),
-            records,
-            options,
-            super::decision,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.question().clone().into(),
+                records,
+                options,
+                crate::RequestCall::Decide,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Decisions(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native decide batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull fallible originals with complete ordered replacement choose shortlists.
@@ -53,13 +61,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Choose,
-            question.question(),
-            records,
-            options,
-            super::choice,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.question().clone().into(),
+                records,
+                options,
+                crate::RequestCall::Choose,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Choices(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native choose batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull fallible originals with every accepted and rejected tag probability.
@@ -76,13 +92,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Tag,
-            question.question(),
-            records,
-            options,
-            super::tags,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.question().clone().into(),
+                records,
+                options,
+                crate::RequestCall::Tag,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Tags(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native tag batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull fallible originals with complete graded score answers and per-record context.
@@ -98,13 +122,21 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Score,
-            question,
-            records,
-            options,
-            super::score,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.clone().into(),
+                records,
+                options,
+                crate::RequestCall::Score,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Scores(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native score batch returned another result kind",
+                )),
+            }),
+        )
     }
 
     /// Pull complete filter judgments for every original, including rejected rows.
@@ -120,30 +152,43 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.complete_stream(
-            InputFunction::Filter,
-            question,
-            records,
-            options,
-            super::records::filter,
-        ))
+        Batch::of(
+            crate::public::request::pull::native(
+                self,
+                question.clone().into(),
+                records,
+                options,
+                crate::RequestCall::Filter,
+            )
+            .and_then(|rows| match rows {
+                crate::public::request::pull::Rows::Filtered(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native filter batch returned another result kind",
+                )),
+            }),
+        )
     }
 
-    pub(super) fn complete_stream<'a, I, T, R: 'a>(
-        &'a self,
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "owned context stays separate from borrowed caller controls"
+    )]
+    pub(crate) fn complete_stream<'a, I, T, R: 'a>(
+        &self,
         function: InputFunction,
-        question: &'a Question,
+        question: Question,
         records: I,
         options: CallOptions<'a>,
+        context: Option<String>,
         convert: impl Fn(core::CompleteAtomic) -> Result<R, Error> + 'a,
     ) -> Result<Batch<'a, CompleteRecord<T, R>>, Error>
     where
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        super::admitted(function, question)?;
-        let setting = crate::public::bulk::selected_batch(question, &options, self.batch)?;
-        let engine = self.asking(question)?;
+        super::admitted(function, &question)?;
+        let setting = crate::public::bulk::selected_batch(&question, &options, self.batch)?;
+        let engine = self.asking(&question)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let attempts = stop.facts().attempts().is_some();
         let mut packing = pull::packing(setting, false, false);
@@ -151,10 +196,19 @@ impl Engine {
         let validates =
             question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some();
         let preparing = Records(Arc::clone(&engine), validates);
+        let profile = self.profile.clone();
+        let most = self.most;
+        let preparing_question = question.clone();
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
                 .and_then(|record| {
-                    prepare_record(function, question, record, options.context_text(), at)
+                    prepare_record(
+                        function,
+                        &preparing_question,
+                        record,
+                        context.as_deref(),
+                        at,
+                    )
                 })
                 .map_err(|error| error.at_record(at))?;
             preparing
@@ -169,7 +223,7 @@ impl Engine {
             engine: Arc::clone(&engine),
             stop,
             packing,
-            most: self.most,
+            most,
         };
         Ok(pull::try_start_prepared(
             call,
@@ -179,7 +233,7 @@ impl Engine {
             Box::new(move |stop, at, original, row| {
                 let effective = original
                     .as_ref()
-                    .map_or(question, |original| &original.held.question);
+                    .map_or(&question, |original| &original.held.question);
                 let keys = row
                     .as_ref()
                     .map_or_else(|_| Vec::new(), |row| row.keys.clone());
@@ -188,8 +242,7 @@ impl Engine {
                         .map_err(|error| error.at_record(at))?;
                 let Original { held, .. } = original
                     .ok_or_else(|| Error::defect("a complete pulled row lost its original"))?;
-                let mut run =
-                    super::batch_run(&engine, &held.question, self.profile.as_ref(), setting);
+                let mut run = super::batch_run(&engine, &held.question, profile.as_ref(), setting);
                 run.context_sha256 = held.context_sha256;
                 let events = attempts.then(|| judged.answered.attempts.clone());
                 let mut canonical = super::atomic(

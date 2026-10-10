@@ -281,7 +281,7 @@ fn mapped<T, R>(
         .collect()
 }
 
-pub(super) fn filter(canonical: core::CompleteAtomic) -> Result<CompleteFilter, Error> {
+pub(crate) fn filter(canonical: core::CompleteAtomic) -> Result<CompleteFilter, Error> {
     let Value::YesNo(Some(value)) = *canonical.value() else {
         return Err(super::wrong());
     };

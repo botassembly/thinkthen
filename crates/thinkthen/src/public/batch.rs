@@ -68,6 +68,10 @@ impl<'a, T: 'a> Batch<'a, T> {
         }
     }
 
+    pub(crate) fn map_rows<U: 'a>(self, map: impl FnMut(T) -> U + 'a) -> Batch<'a, U> {
+        Batch::from_source(Box::new(Mapped { batch: self, map }))
+    }
+
     /// A batch that yields one error, then nothing.
     pub(crate) fn failed(error: Error) -> Self {
         Self {
@@ -134,4 +138,17 @@ pub(crate) struct CompletedPrefix<'a, T> {
     completed: &'a [T],
     #[serde(flatten)]
     failure: crate::public::CompleteError<'a>,
+}
+
+struct Mapped<'a, T, F> {
+    batch: Batch<'a, T>,
+    map: F,
+}
+impl<T, U, F: FnMut(T) -> U> Source<U> for Mapped<'_, T, F> {
+    fn pull(&mut self) -> Option<Result<U, Error>> {
+        self.batch.next().map(|row| row.map(&mut self.map))
+    }
+    fn facts(&self) -> Option<&Facts> {
+        self.batch.facts()
+    }
 }
