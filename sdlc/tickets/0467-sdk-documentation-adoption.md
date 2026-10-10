@@ -55,3 +55,7 @@ After the language and database migrations land, the shared documentation descri
   - Close the transcript how-to help gaps. The `--record` help in `crates/thinkthen/src/cli/args.rs` names `thinkthen cache convert` for site recordings. The site says how to pick a `filter --threshold` from a few labeled cases. The site and `specification/result.md` say that a batched row carries an even share of `requests_sent`, so one row can show 0 beside a live request, and `--facts` gives the run total.
 - Proof: A fresh review compares the text with the implementation and the retained installed cases. Run the focused documentation link, ticket and privacy checks. Replay an example only if it changes.
 - Defers: New SDK behavior, package claims without evidence, hosted workflows and publication. None needs a ticket; publication waits for Ian's release permission.
+
+## Progress
+
+- 2026-10-10 landed 198636def; next: Current CLI examples, help flags, kind rules and recipe references are landed; the complete local site build passes. Finish documentation adoption for the remaining installed surfaces.
