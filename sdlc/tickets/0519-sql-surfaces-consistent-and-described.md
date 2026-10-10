@@ -44,3 +44,4 @@ DuckDB, SQLite and PostgreSQL treat NULL one way, accept images as native binary
 ## Progress
 
 - 2026-10-10 started
+- 2026-10-10 landed ece970c80; next: PostgreSQL native bytea complete-image input is implemented and reviewed; focused installed ownership, replay, NULL and secrecy cases pass. Finish DuckDB native JSON and in-database descriptions. Full installed and platform qualification remain held.
