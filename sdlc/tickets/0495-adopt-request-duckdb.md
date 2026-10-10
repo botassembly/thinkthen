@@ -31,3 +31,7 @@ DuckDB admits every call through the shared Request and 0503's owned session, an
   Claim `databases/duckdb/**` and its installed typed consumer cases, narrowed to the actual DuckDB and shared dependency files per slice before coding.
 - Proof: The full shared cases run through the installed extension's typed functions. They cover files and images, context and options, original positions, facts, failures, invalid input with zero sends and cancellation. Raw JSON pass-through does not count. Record handwritten code removed and added in the landing record.
 - Defers: The proxy and any platform ruling change without evidence. Neither needs a ticket in 0.2.
+
+## Progress
+
+- 2026-10-10 started
