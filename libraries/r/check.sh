@@ -42,6 +42,14 @@ export R_LIBS="$scratch/lib:$libs"
 Rscript --vanilla -e 'stopifnot(startsWith(find.package("thinkthen"),commandArgs(TRUE)[1]))' "$scratch/lib/"
 . "$root/sdlc/scripts/installed.sh"
 own_panic_hook "$scratch/lib/thinkthen/libs/thinkthen.so"
+# Bundled SQLite names must not bind another installed package's SQLite.
+case $(uname -s) in
+  Linux) exported=$(nm -D --defined-only "$scratch/lib/thinkthen/libs/thinkthen.so") ;;
+  Darwin) exported=$(nm -gU "$scratch/lib/thinkthen/libs/thinkthen.so" | sed 's/ _/ /') ;;
+  *) exported= ;;
+esac
+leaked=$(printf '%s\n' "$exported" | awk '$3 ~ /^sqlite3_/ { n++ } END { print n+0 }')
+[ "$leaked" = 0 ] || { echo "r: bundled SQLite symbols escaped the package" >&2; exit 1; }
 backend=${THINKTHEN_TEST_BACKEND:-${CARGO_TARGET_DIR:-$root/target}/debug/conformance-backend}
 [ -x "$backend" ] || not_run "the conformance backend is not built"
 if [ "$profile" = stress ]; then
@@ -65,7 +73,7 @@ from native_fixture import run
 sys.exit(bool(run('r',['Rscript','--vanilla',str(root/'libraries/r/tests/native_case.R')],root,{'R_LIBS':sys.argv[2]})))
 PY
 for file in tests/requests.R tests/complete_input_admission.R tests/engine.R tests/facts.R \
-  tests/verbs.R tests/files.R tests/text.R tests/threshold_strings.R tests/plan_identity.R \
+  tests/verbs.R tests/files.R tests/recognize.R tests/text.R tests/threshold_strings.R tests/plan_identity.R \
   tests/portable_batch_identity.R tests/profile.R tests/fork.R tests/hook.R tests/startup.R \
   tests/settings_cases.R; do
   bash tests/with-backend.sh "$backend" "$file"

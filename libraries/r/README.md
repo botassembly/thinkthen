@@ -50,7 +50,7 @@ A native failure raises a `thinkthen_error` condition with `$kind`, `$retryable`
 | `tt_files(question, paths)` | `tt_*(question, tt_files(paths))` |
 | `tt_plan(judge, input)` | `tt_plan(question, input)` |
 
-The previous simplified frames, judge closures, `_complete` functions, and named `_batch` functions are no longer public. Old native compatibility modules remain private while other hosts still consume them. `tt_engine()` selects the session engine, and `tt_usage()` reports its running usage totals.
+The previous simplified frames, judge closures, `_complete` functions, and named `_batch` functions are no longer public. The old R native endpoints and handwritten compatibility readers have been deleted. `tt_engine()` selects the session engine, and `tt_usage()` reports its running usage totals.
 
 For bounded records, `tt_feed(next_item, name = "records")` supplies an R producer. The producer returns `tt_record(original, location = NULL, ...)`, ordinary evidence, or `NULL` at end of input. Use `tt_record(NULL)` for a present JSON null. Record fields such as context, options and images pass to native admission. An explicit `tt_reader_failure("io")`, `"utf8"` or `"invalid_input"` finishes input with a native failure. Rust preserves the completed prefix and final facts. Producers run only on R's thread; polling retains one pending record while the native input cell is full. A producer's `close` callback releases its reader at input end, failure, cancellation or garbage collection.
 
@@ -165,7 +165,7 @@ No key is needed. Select replay before any asking call because R keeps one engin
 
 ## Checking
 
-From `libraries/r`, `./check.sh` runs the complete offline surface check. It exits 77 and reports "not run" if R, a tested R dependency or a cached crate is missing. `tools/setup.sh` prepares pinned R dependencies on a networked machine. From the repository root, `sdlc/scripts/smoke libraries/r` installs into owned scratch, loads the native package and replays a saved answer; its loopback counter proves the consumer adds no requests.
+From `libraries/r`, `./check.sh` installs the vendored source archive and runs the routine outside-in checks. `THINKTHEN_ARTIFACT` selects an existing archive. `THINKTHEN_TEST_PROFILE=full` selects all shared cases and the release-only interruption and concurrency campaigns at the candidate. An explicit `CARGO_TARGET_DIR` belongs to the installer and is retained for reuse; otherwise package-local build output is removed after installation. It exits 77 and reports "not run" if R, a tested R dependency or a cached crate is missing. `tools/setup.sh` prepares pinned R dependencies on a networked machine. From the repository root, `sdlc/scripts/smoke libraries/r` installs into owned scratch, loads the native package and replays a saved answer; its loopback counter proves the consumer adds no requests.
 
 ## Live usage durability
 
