@@ -16,7 +16,7 @@ public sealed partial class Engine
         ArgumentNullException.ThrowIfNull(request);
         byte[] bytes = request.ToBytes();
         return Live(_ => {
-            NativeSession.Check(NativeSession.thinkthen_session_new(ownedEngine, bytes, (nuint)bytes.Length, out var pointer));
+            NativeSession.Check(NativeSession.thinkthen_session_new_with_surface(ownedEngine, bytes, (nuint)bytes.Length, "csharp"u8.ToArray(), 6, out var pointer));
             return new OwnedSession(pointer);
         });
     }

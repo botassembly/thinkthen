@@ -45,6 +45,7 @@ class Backend(http.server.ThreadingHTTPServer):
         super().__init__(("127.0.0.1", 0), Handler)
         self.barrier = pathlib.Path(barrier)
         self.arrivals = []
+        self.user_agents = []
         self.completions = []
         self.attempts = 0
         self.connections = 0
@@ -90,6 +91,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with (self.server.barrier / 'wire-requests.jsonl').open('ab') as capture:
                 capture.write(body + b'\n')
             self.server.arrivals.append(arrival_identity)
+            self.server.user_agents.append(self.headers.get("User-Agent"))
             self.server.attempts += 1
             bulk_first = state_key in ('first', 'second', 'third') and self.server.bulk_seen[state_key] == 0
             if state_key in self.server.bulk_seen:
