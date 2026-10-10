@@ -1,25 +1,25 @@
 /* Generated mechanical Request conversion; Rust owns admission. */
+#define _POSIX_C_SOURCE 200809L
 #include "tt_requests_generated.h"
 #include "thinkthen.h"
+#include <locale.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define TT_COBOL_REPRESENTATION 1001
-#define TT_COBOL_OVERFLOW 1002
 typedef struct {char *data; size_t len, capacity; int code;} writer;
 static void append(writer *w,const char *data,size_t len) {
  if(w->code) return;
- if(len>SIZE_MAX-w->len-1) {w->code=TT_COBOL_OVERFLOW; return;}
+ if(len>SIZE_MAX-w->len-1) {w->code=THINKTHEN_COBOL_OVERFLOW; return;}
  size_t needed=w->len+len+1;
- if(needed>w->capacity) {char *next=realloc(w->data,needed); if(!next) {w->code=TT_COBOL_REPRESENTATION; return;} w->data=next; w->capacity=needed;}
+ if(needed>w->capacity) {char *next=realloc(w->data,needed); if(!next) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;} w->data=next; w->capacity=needed;}
  if(len) memcpy(w->data+w->len,data,len);
  w->len+=len; w->data[w->len]=0;
 }
 static void raw(writer *w,const char *value) {append(w,value,strlen(value));}
 static void text(writer *w,const char *data,uint64_t len,int quote) {
- if(len>8192) {w->code=TT_COBOL_OVERFLOW; return;}
- if(len && !data) {w->code=TT_COBOL_REPRESENTATION; return;}
+ if(len>THINKTHEN_COBOL_TEXT_CAPACITY) {w->code=THINKTHEN_COBOL_OVERFLOW; return;}
+ if(len && !data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
  if(!quote) {append(w,data,(size_t)len); return;}
  raw(w,"\"");
  for(uint64_t i=0;i<len && !w->code;i++) {
@@ -29,6 +29,15 @@ static void text(writer *w,const char *data,uint64_t len,int quote) {
   else append(w,data+i,1);
  }
  raw(w,"\"");
+}
+static int encode(writer *w,const void *input,void (*convert)(writer *,const void *)) {
+ locale_t locale=newlocale(LC_NUMERIC_MASK,"C",(locale_t)0);
+ if(!locale) return THINKTHEN_COBOL_REPRESENTATION;
+ locale_t previous=uselocale(locale);
+ if(!previous) {freelocale(locale); return THINKTHEN_COBOL_REPRESENTATION;}
+ convert(w,input);
+ uselocale(previous); freelocale(locale);
+ return w->code;
 }
 
 static inline void emit_Authored_choose(writer *,const void *);
@@ -307,7 +316,6 @@ static inline void emit_RequestReader_member_window(writer *,const void *);
 static inline void emit_RequestSource_member_paths(writer *,const void *);
 static inline void emit_RequestThreshold_arm_1(writer *,const void *);
 static inline void emit_RequestThreshold_arm_2(writer *,const void *);
-static inline void emit_RequestVersion_arm_1(writer *,const void *);
 static inline void emit_SessionSourceLocation_member_file(writer *,const void *);
 static inline void emit_SessionSourceLocation_member_first_line(writer *,const void *);
 static inline void emit_SessionSourceLocation_member_last_line(writer *,const void *);
@@ -351,7 +359,7 @@ static inline void emit_Authored_relate_member_relate_member_fields_member_name(
 static inline void emit_RequestDefinition_fields_relate_version_member_relate_member_fields_member_kind(writer *,const void *);
 static inline void emit_RequestDefinition_fields_relate_version_member_relate_member_fields_member_name(writer *,const void *);
 static inline void emit_Authored_choose(writer *w,const void *input) { const thinkthen_cobol_Authored_choose *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_Authored_choose_member_batch(w,p->m_batch); }
 if(p->m_choose) { if(comma++) raw(w,","); raw(w,"\"choose\":"); emit_Authored_questionText(w,p->m_choose); }
@@ -367,25 +375,25 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_Authored_criterion(writer *w,const void *input) { const thinkthen_cobol_Authored_criterion *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_criterion_arm_1(w,p->value); break;
 case 2: emit_Authored_criterion_arm_2(w,p->value); break;
 case 3: emit_Authored_criterion_arm_3(w,p->value); break;
 case 4: emit_Authored_criterion_arm_4(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_cut(writer *w,const void *input) { const thinkthen_cobol_Authored_cut *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_cut_arm_1(w,p->value); break;
 case 2: emit_Authored_cut_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_decide(writer *w,const void *input) { const thinkthen_cobol_Authored_decide *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_Authored_decide_member_batch(w,p->m_batch); }
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
@@ -402,17 +410,17 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_Authored_description(writer *w,const void *input) { const thinkthen_cobol_Authored_description *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_description_arm_1(w,p->value); break;
 case 2: emit_Authored_description_arm_2(w,p->value); break;
 case 3: emit_Authored_description_arm_3(w,p->value); break;
 case 4: emit_Authored_description_arm_4(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_find(writer *w,const void *input) { const thinkthen_cobol_Authored_find *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_find) { if(comma++) raw(w,","); raw(w,"\"find\":"); emit_Authored_questionText(w,p->m_find); }
@@ -425,15 +433,15 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_Authored_inputDeclaration(writer *w,const void *input) { const thinkthen_cobol_Authored_inputDeclaration *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_inputDeclaration_string(w, p->value); break;
 case 2: emit_Authored_inputDeclaration_object(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_inputDeclaration_object(writer *w,const void *input) { const thinkthen_cobol_Authored_inputDeclaration_object *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_properties) { if(comma++) raw(w,","); raw(w,"\"properties\":"); emit_Authored_inputDeclaration_object_member_properties(w,p->m_properties); }
 if(p->m_required) { if(comma++) raw(w,","); raw(w,"\"required\":"); emit_Authored_inputDeclaration_object_member_required(w,p->m_required); }
@@ -441,97 +449,97 @@ if(1) { if(comma++) raw(w,","); raw(w,"\"type\":"); emit_Authored_inputDeclarati
 raw(w,"}");
 }
 static inline void emit_Authored_inputDeclaration_string(writer *w,const void *input) { const thinkthen_cobol_Authored_inputDeclaration_string *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"type\":"); emit_Authored_inputDeclaration_string_member_type(w,p->m_type); }
 raw(w,"}");
 }
 static inline void emit_Authored_inputProperty(writer *w,const void *input) { const thinkthen_cobol_Authored_inputProperty *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_inputProperty_string(w, p->value); break;
 case 2: emit_Authored_inputProperty_number(w, p->value); break;
 case 3: emit_Authored_inputProperty_boolean(w, p->value); break;
 case 4: emit_Authored_inputProperty_array(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_inputProperty_array(writer *w,const void *input) { const thinkthen_cobol_Authored_inputProperty_array *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_items) { if(comma++) raw(w,","); raw(w,"\"items\":"); emit_Authored_inputProperty_array_member_items(w,p->m_items); }
 if(1) { if(comma++) raw(w,","); raw(w,"\"type\":"); emit_Authored_inputProperty_array_member_type(w,p->m_type); }
 raw(w,"}");
 }
 static inline void emit_Authored_inputProperty_boolean(writer *w,const void *input) { const thinkthen_cobol_Authored_inputProperty_boolean *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"type\":"); emit_Authored_inputProperty_boolean_member_type(w,p->m_type); }
 raw(w,"}");
 }
 static inline void emit_Authored_inputProperty_number(writer *w,const void *input) { const thinkthen_cobol_Authored_inputProperty_number *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"type\":"); emit_Authored_inputProperty_number_member_type(w,p->m_type); }
 raw(w,"}");
 }
 static inline void emit_Authored_inputProperty_string(writer *w,const void *input) { const thinkthen_cobol_Authored_inputProperty_string *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"type\":"); emit_Authored_inputProperty_string_member_type(w,p->m_type); }
 raw(w,"}");
 }
 static inline void emit_Authored_labels(writer *w,const void *input) { const thinkthen_cobol_Authored_labels *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_labels_arm_1(w,p->value); break;
 case 2: emit_Authored_labels_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_levels(writer *w,const void *input) { const thinkthen_cobol_Authored_levels *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_levels_arm_1(w,p->value); break;
 case 2: emit_Authored_levels_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_name(writer *w,const void *input) { const thinkthen_cobol_Authored_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_options(writer *w,const void *input) { const thinkthen_cobol_Authored_options *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_options_arm_1(w,p->value); break;
 case 2: emit_Authored_options_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_pointers(writer *w,const void *input) { const thinkthen_cobol_Authored_pointers *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_pointers_arm_1(w,p->value); break;
 case 2: emit_Authored_pointers_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_profile(writer *w,const void *input) { const thinkthen_cobol_Authored_profile *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_questionText(writer *w,const void *input) { const thinkthen_cobol_Authored_questionText *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_questionText_arm_1(w,p->value); break;
 case 2: emit_Authored_questionText_arm_2(w,p->value); break;
 case 3: emit_Authored_questionText_arm_3(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_relate(writer *w,const void *input) { const thinkthen_cobol_Authored_relate *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_item_schema) { if(comma++) raw(w,","); raw(w,"\"item_schema\":"); emit_Authored_inputDeclaration(w,p->m_item_schema); }
@@ -545,7 +553,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_Authored_relation(writer *w,const void *input) { const thinkthen_cobol_Authored_relation *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_either) { if(comma++) raw(w,","); raw(w,"\"either\":"); emit_Authored_relation_member_either(w,p->m_either); }
 if(p->m_name) { if(comma++) raw(w,","); raw(w,"\"name\":"); emit_Authored_name(w,p->m_name); }
@@ -556,7 +564,7 @@ if(p->m_target) { if(comma++) raw(w,","); raw(w,"\"target\":"); emit_Authored_na
 raw(w,"}");
 }
 static inline void emit_Authored_score(writer *w,const void *input) { const thinkthen_cobol_Authored_score *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_Authored_score_member_batch(w,p->m_batch); }
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
@@ -571,7 +579,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_Authored_tag(writer *w,const void *input) { const thinkthen_cobol_Authored_tag *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_Authored_tag_member_batch(w,p->m_batch); }
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
@@ -587,54 +595,54 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_Authored_threshold(writer *w,const void *input) { const thinkthen_cobol_Authored_threshold *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_threshold_arm_1(w,p->value); break;
 case 2: emit_Authored_threshold_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_ContextSchema(writer *w,const void *input) { const thinkthen_cobol_ContextSchema *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_ContextSchema_arm_1(w,p->value); break;
 case 2: emit_ContextSchema_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_ImageMedia(writer *w,const void *input) { const thinkthen_cobol_ImageMedia *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_ImageMedia_arm_1(w,p->value); break;
 case 2: emit_ImageMedia_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_OptionSchema(writer *w,const void *input) { const thinkthen_cobol_OptionSchema *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_description) { if(comma++) raw(w,","); raw(w,"\"description\":"); emit_OptionSchema_member_description(w,p->m_description); }
 if(p->m_name) { if(comma++) raw(w,","); raw(w,"\"name\":"); emit_OptionSchema_member_name(w,p->m_name); }
 raw(w,"}");
 }
 static inline void emit_ReaderMedia(writer *w,const void *input) { const thinkthen_cobol_ReaderMedia *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_ReaderMedia_arm_1(w,p->value); break;
 case 2: emit_ReaderMedia_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RecognitionExample(writer *w,const void *input) { const thinkthen_cobol_RecognitionExample *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RecognitionExample_arm_1(w,p->value); break;
 case 2: emit_RecognitionExampleText(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RecognitionExampleEntity(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleEntity *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_end) { if(comma++) raw(w,","); raw(w,"\"end\":"); emit_RecognitionExampleEntity_member_end(w,p->m_end); }
 if(p->m_kind) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RecognitionExampleEntity_member_kind(w,p->m_kind); }
@@ -642,7 +650,7 @@ if(p->m_start) { if(comma++) raw(w,","); raw(w,"\"start\":"); emit_RecognitionEx
 raw(w,"}");
 }
 static inline void emit_RecognitionExampleText(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleText *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_entities) { if(comma++) raw(w,","); raw(w,"\"entities\":"); emit_RecognitionExampleText_member_entities(w,p->m_entities); }
 if(p->m_kinds) { if(comma++) raw(w,","); raw(w,"\"kinds\":"); emit_RecognitionExampleText_member_kinds(w,p->m_kinds); }
@@ -650,15 +658,15 @@ if(p->m_text) { if(comma++) raw(w,","); raw(w,"\"text\":"); emit_RecognitionExam
 raw(w,"}");
 }
 static inline void emit_RecognitionMode(writer *w,const void *input) { const thinkthen_cobol_RecognitionMode *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RecognitionMode_arm_1(w,p->value); break;
 case 2: emit_RecognitionMode_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RecognitionSeedSpan(writer *w,const void *input) { const thinkthen_cobol_RecognitionSeedSpan *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_end) { if(comma++) raw(w,","); raw(w,"\"end\":"); emit_RecognitionSeedSpan_member_end(w,p->m_end); }
 if(p->m_kind) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RecognitionSeedSpan_member_kind(w,p->m_kind); }
@@ -666,7 +674,7 @@ if(p->m_start) { if(comma++) raw(w,","); raw(w,"\"start\":"); emit_RecognitionSe
 raw(w,"}");
 }
 static inline void emit_RecognitionStageContext(writer *w,const void *input) { const thinkthen_cobol_RecognitionStageContext *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_boundary) { if(comma++) raw(w,","); raw(w,"\"boundary\":"); emit_RecognitionStageContext_member_boundary(w,p->m_boundary); }
 if(p->m_kind_edge) { if(comma++) raw(w,","); raw(w,"\"kind_edge\":"); emit_RecognitionStageContext_member_kind_edge(w,p->m_kind_edge); }
@@ -674,22 +682,22 @@ if(p->m_relation) { if(comma++) raw(w,","); raw(w,"\"relation\":"); emit_Recogni
 raw(w,"}");
 }
 static inline void emit_Request(writer *w,const void *input) { const thinkthen_cobol_Request *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_call) { if(comma++) raw(w,","); raw(w,"\"call\":"); emit_RequestCall(w,p->m_call); }
-if(p->m_schema) { if(comma++) raw(w,","); raw(w,"\"schema\":"); emit_RequestVersion(w,p->m_schema); }
+if(1) { if(comma++) raw(w,","); raw(w,"\"schema\":"); emit_RequestVersion(w,p->m_schema); }
 raw(w,"}");
 }
 static inline void emit_RequestBatch(writer *w,const void *input) { const thinkthen_cobol_RequestBatch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestBatch_arm_1(w,p->value); break;
 case 2: emit_RequestBatch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestCall(writer *w,const void *input) { const thinkthen_cobol_RequestCall *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestCall_decide(w, p->value); break;
 case 2: emit_RequestCall_choose(w, p->value); break;
@@ -701,11 +709,11 @@ case 7: emit_RequestCall_find(w, p->value); break;
 case 8: emit_RequestCall_annotate(w, p->value); break;
 case 9: emit_RequestCall_recognize(w, p->value); break;
 case 10: emit_RequestCall_relate(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestCall_annotate(writer *w,const void *input) { const thinkthen_cobol_RequestCall_annotate *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_annotate_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -714,7 +722,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_choose(writer *w,const void *input) { const thinkthen_cobol_RequestCall_choose *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_choose_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -723,7 +731,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_decide(writer *w,const void *input) { const thinkthen_cobol_RequestCall_decide *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_decide_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -732,7 +740,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_filter(writer *w,const void *input) { const thinkthen_cobol_RequestCall_filter *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_filter_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -741,7 +749,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_find(writer *w,const void *input) { const thinkthen_cobol_RequestCall_find *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_find_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -750,7 +758,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_rank(writer *w,const void *input) { const thinkthen_cobol_RequestCall_rank *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_rank_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -759,7 +767,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_recognize(writer *w,const void *input) { const thinkthen_cobol_RequestCall_recognize *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_recognize_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -768,7 +776,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_relate(writer *w,const void *input) { const thinkthen_cobol_RequestCall_relate *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_relate_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -777,7 +785,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_score(writer *w,const void *input) { const thinkthen_cobol_RequestCall_score *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_score_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -786,7 +794,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestCall_tag(writer *w,const void *input) { const thinkthen_cobol_RequestCall_tag *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"function\":"); emit_RequestCall_tag_member_function(w,p->m_function); }
 if(p->m_input) { if(comma++) raw(w,","); raw(w,"\"input\":"); emit_RequestInput(w,p->m_input); }
@@ -795,7 +803,7 @@ if(p->m_question) { if(comma++) raw(w,","); raw(w,"\"question\":"); emit_Request
 raw(w,"}");
 }
 static inline void emit_RequestDefinition(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestDefinition_fields_decide(w, p->value); break;
 case 2: emit_RequestDefinition_fields_choose(w, p->value); break;
@@ -805,21 +813,21 @@ case 5: emit_RequestDefinition_fields_relate_version(w, p->value); break;
 case 6: emit_RequestDefinition_fields_find(w, p->value); break;
 case 7: emit_RequestDefinition_fields_recognize_version(w, p->value); break;
 case 8: emit_RequestDefinition_fields_questions_version(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_decide(w, p->value); break;
 case 2: emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_choose(w, p->value); break;
 case 3: emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_tag(w, p->value); break;
 case 4: emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_score(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_choose(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_choose *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_choose) { if(comma++) raw(w,","); raw(w,"\"choose\":"); emit_Authored_questionText(w,p->m_choose); }
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
@@ -832,7 +840,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_decide(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_decide *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_decide) { if(comma++) raw(w,","); raw(w,"\"decide\":"); emit_Authored_questionText(w,p->m_decide); }
@@ -846,7 +854,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_score(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_score *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_item_schema) { if(comma++) raw(w,","); raw(w,"\"item_schema\":"); emit_Authored_inputDeclaration(w,p->m_item_schema); }
@@ -858,7 +866,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_tag(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_tag *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_item_schema) { if(comma++) raw(w,","); raw(w,"\"item_schema\":"); emit_Authored_inputDeclaration(w,p->m_item_schema); }
@@ -871,7 +879,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_choose(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_choose *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_RequestDefinition_fields_choose_member_batch(w,p->m_batch); }
 if(p->m_choose) { if(comma++) raw(w,","); raw(w,"\"choose\":"); emit_Authored_questionText(w,p->m_choose); }
@@ -887,7 +895,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_decide(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_decide *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_RequestDefinition_fields_decide_member_batch(w,p->m_batch); }
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
@@ -904,7 +912,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_find(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_find *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_find) { if(comma++) raw(w,","); raw(w,"\"find\":"); emit_Authored_questionText(w,p->m_find); }
@@ -917,7 +925,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_questions_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_questions_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_RequestDefinition_fields_questions_version_member_batch(w,p->m_batch); }
 if(p->m_profile) { if(comma++) raw(w,","); raw(w,"\"profile\":"); emit_Authored_profile(w,p->m_profile); }
@@ -927,7 +935,7 @@ if(1) { if(comma++) raw(w,","); raw(w,"\"version\":"); emit_RequestDefinition_fi
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_recognize_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_recognize_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_item_schema) { if(comma++) raw(w,","); raw(w,"\"item_schema\":"); emit_Authored_inputDeclaration(w,p->m_item_schema); }
@@ -943,7 +951,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_relate_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
 if(p->m_item_schema) { if(comma++) raw(w,","); raw(w,"\"item_schema\":"); emit_Authored_inputDeclaration(w,p->m_item_schema); }
@@ -957,7 +965,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_score(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_score *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_RequestDefinition_fields_score_member_batch(w,p->m_batch); }
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
@@ -972,7 +980,7 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_tag(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_tag *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_RequestDefinition_fields_tag_member_batch(w,p->m_batch); }
 if(p->m_context_schema) { if(comma++) raw(w,","); raw(w,"\"context_schema\":"); emit_Authored_inputDeclaration(w,p->m_context_schema); }
@@ -988,26 +996,26 @@ if(p->m_wording_version) { if(comma++) raw(w,","); raw(w,"\"wording_version\":")
 raw(w,"}");
 }
 static inline void emit_RequestFraming(writer *w,const void *input) { const thinkthen_cobol_RequestFraming *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestFraming_arm_1(w,p->value); break;
 case 2: emit_RequestFraming_arm_2(w,p->value); break;
 case 3: emit_RequestFraming_arm_3(w,p->value); break;
 case 4: emit_RequestFraming_arm_4(w,p->value); break;
 case 5: emit_RequestFraming_arm_5(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestImage(writer *w,const void *input) { const thinkthen_cobol_RequestImage *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestImage_file(w, p->value); break;
 case 2: emit_RequestImage_bytes(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestImage_bytes(writer *w,const void *input) { const thinkthen_cobol_RequestImage_bytes *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_bytes) { if(comma++) raw(w,","); raw(w,"\"bytes\":"); emit_RequestImage_bytes_member_bytes(w,p->m_bytes); }
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestImage_bytes_member_kind(w,p->m_kind); }
@@ -1015,7 +1023,7 @@ if(p->m_media) { if(comma++) raw(w,","); raw(w,"\"media\":"); emit_ImageMedia(w,
 raw(w,"}");
 }
 static inline void emit_RequestImage_file(writer *w,const void *input) { const thinkthen_cobol_RequestImage_file *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestImage_file_member_kind(w,p->m_kind); }
 if(p->m_media) { if(comma++) raw(w,","); raw(w,"\"media\":"); emit_ImageMedia(w,p->m_media); }
@@ -1023,7 +1031,7 @@ if(p->m_path) { if(comma++) raw(w,","); raw(w,"\"path\":"); emit_RequestImage_fi
 raw(w,"}");
 }
 static inline void emit_RequestInput(writer *w,const void *input) { const thinkthen_cobol_RequestInput *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestInput_text(w, p->value); break;
 case 2: emit_RequestInput_json(w, p->value); break;
@@ -1032,18 +1040,18 @@ case 4: emit_RequestInput_units(w, p->value); break;
 case 5: emit_RequestInput_entities(w, p->value); break;
 case 6: emit_RequestInput_source(w, p->value); break;
 case 7: emit_RequestInput_feed(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestInput_entities(writer *w,const void *input) { const thinkthen_cobol_RequestInput_entities *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_items) { if(comma++) raw(w,","); raw(w,"\"items\":"); emit_RequestInput_entities_member_items(w,p->m_items); }
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestInput_entities_member_kind(w,p->m_kind); }
 raw(w,"}");
 }
 static inline void emit_RequestInput_feed(writer *w,const void *input) { const thinkthen_cobol_RequestInput_feed *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_framing) { if(comma++) raw(w,","); raw(w,"\"framing\":"); emit_RequestFraming(w,p->m_framing); }
 if(p->m_images) { if(comma++) raw(w,","); raw(w,"\"images\":"); emit_RequestInput_feed_member_images(w,p->m_images); }
@@ -1053,7 +1061,7 @@ if(p->m_reading) { if(comma++) raw(w,","); raw(w,"\"reading\":"); emit_RequestRe
 raw(w,"}");
 }
 static inline void emit_RequestInput_json(writer *w,const void *input) { const thinkthen_cobol_RequestInput_json *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_images) { if(comma++) raw(w,","); raw(w,"\"images\":"); emit_RequestInput_json_member_images(w,p->m_images); }
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestInput_json_member_kind(w,p->m_kind); }
@@ -1061,21 +1069,21 @@ if(p->m_value) { if(comma++) raw(w,","); raw(w,"\"value\":"); emit_RequestInput_
 raw(w,"}");
 }
 static inline void emit_RequestInput_records(writer *w,const void *input) { const thinkthen_cobol_RequestInput_records *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_items) { if(comma++) raw(w,","); raw(w,"\"items\":"); emit_RequestInput_records_member_items(w,p->m_items); }
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestInput_records_member_kind(w,p->m_kind); }
 raw(w,"}");
 }
 static inline void emit_RequestInput_source(writer *w,const void *input) { const thinkthen_cobol_RequestInput_source *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestInput_source_member_kind(w,p->m_kind); }
 if(p->m_source) { if(comma++) raw(w,","); raw(w,"\"source\":"); emit_RequestSource(w,p->m_source); }
 raw(w,"}");
 }
 static inline void emit_RequestInput_text(writer *w,const void *input) { const thinkthen_cobol_RequestInput_text *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_images) { if(comma++) raw(w,","); raw(w,"\"images\":"); emit_RequestInput_text_member_images(w,p->m_images); }
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestInput_text_member_kind(w,p->m_kind); }
@@ -1083,14 +1091,14 @@ if(p->m_text) { if(comma++) raw(w,","); raw(w,"\"text\":"); emit_RequestInput_te
 raw(w,"}");
 }
 static inline void emit_RequestInput_units(writer *w,const void *input) { const thinkthen_cobol_RequestInput_units *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_items) { if(comma++) raw(w,","); raw(w,"\"items\":"); emit_RequestInput_units_member_items(w,p->m_items); }
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestInput_units_member_kind(w,p->m_kind); }
 raw(w,"}");
 }
 static inline void emit_RequestItem(writer *w,const void *input) { const thinkthen_cobol_RequestItem *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_context) { if(comma++) raw(w,","); raw(w,"\"context\":"); emit_ContextSchema(w,p->m_context); }
 if(p->m_examples) { if(comma++) raw(w,","); raw(w,"\"examples\":"); emit_RequestItem_member_examples(w,p->m_examples); }
@@ -1101,7 +1109,7 @@ if(p->m_seed_spans) { if(comma++) raw(w,","); raw(w,"\"seed_spans\":"); emit_Req
 raw(w,"}");
 }
 static inline void emit_RequestOptions(writer *w,const void *input) { const thinkthen_cobol_RequestOptions *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_attempts) { if(comma++) raw(w,","); raw(w,"\"attempts\":"); emit_RequestOptions_member_attempts(w,p->m_attempts); }
 if(p->m_batch) { if(comma++) raw(w,","); raw(w,"\"batch\":"); emit_RequestBatch(w,p->m_batch); }
@@ -1128,89 +1136,89 @@ if(p->m_top) { if(comma++) raw(w,","); raw(w,"\"top\":"); emit_RequestOptions_me
 raw(w,"}");
 }
 static inline void emit_RequestOriginal(writer *w,const void *input) { const thinkthen_cobol_RequestOriginal *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestOriginal_text(w, p->value); break;
 case 2: emit_RequestOriginal_json(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestOriginal_json(writer *w,const void *input) { const thinkthen_cobol_RequestOriginal_json *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestOriginal_json_member_kind(w,p->m_kind); }
 if(p->m_value) { if(comma++) raw(w,","); raw(w,"\"value\":"); emit_RequestOriginal_json_member_value(w,p->m_value); }
 raw(w,"}");
 }
 static inline void emit_RequestOriginal_text(writer *w,const void *input) { const thinkthen_cobol_RequestOriginal_text *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestOriginal_text_member_kind(w,p->m_kind); }
 if(p->m_text) { if(comma++) raw(w,","); raw(w,"\"text\":"); emit_RequestOriginal_text_member_text(w,p->m_text); }
 raw(w,"}");
 }
 static inline void emit_RequestQuestion(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestQuestion_text(w, p->value); break;
 case 2: emit_RequestQuestion_definition(w, p->value); break;
 case 3: emit_RequestQuestion_file(w, p->value); break;
 case 4: emit_RequestQuestion_name(w, p->value); break;
 case 5: emit_RequestQuestion_reference(w, p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestQuestion_definition(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_definition *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestQuestion_definition_member_kind(w,p->m_kind); }
 if(p->m_value) { if(comma++) raw(w,","); raw(w,"\"value\":"); emit_RequestDefinition(w,p->m_value); }
 raw(w,"}");
 }
 static inline void emit_RequestQuestion_file(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_file *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestQuestion_file_member_kind(w,p->m_kind); }
 if(p->m_path) { if(comma++) raw(w,","); raw(w,"\"path\":"); emit_RequestQuestion_file_member_path(w,p->m_path); }
 raw(w,"}");
 }
 static inline void emit_RequestQuestion_name(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestQuestion_name_member_kind(w,p->m_kind); }
 if(p->m_name) { if(comma++) raw(w,","); raw(w,"\"name\":"); emit_RequestQuestion_name_member_name(w,p->m_name); }
 raw(w,"}");
 }
 static inline void emit_RequestQuestion_reference(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_reference *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestQuestion_reference_member_kind(w,p->m_kind); }
 if(p->m_reference) { if(comma++) raw(w,","); raw(w,"\"reference\":"); emit_RequestQuestion_reference_member_reference(w,p->m_reference); }
 raw(w,"}");
 }
 static inline void emit_RequestQuestion_text(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_text *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestQuestion_text_member_kind(w,p->m_kind); }
 if(p->m_text) { if(comma++) raw(w,","); raw(w,"\"text\":"); emit_RequestQuestion_text_member_text(w,p->m_text); }
 raw(w,"}");
 }
 static inline void emit_RequestReader(writer *w,const void *input) { const thinkthen_cobol_RequestReader *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_unit) { if(comma++) raw(w,","); raw(w,"\"unit\":"); emit_SourceUnit(w,p->m_unit); }
 if(p->m_window) { if(comma++) raw(w,","); raw(w,"\"window\":"); emit_RequestReader_member_window(w,p->m_window); }
 raw(w,"}");
 }
 static inline void emit_RequestSessionDescriptor(writer *w,const void *input) { const thinkthen_cobol_RequestSessionDescriptor *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_item) { if(comma++) raw(w,","); raw(w,"\"item\":"); emit_RequestItem(w,p->m_item); }
 if(p->m_location) { if(comma++) raw(w,","); raw(w,"\"location\":"); emit_SessionSourceLocation(w,p->m_location); }
 raw(w,"}");
 }
 static inline void emit_RequestSource(writer *w,const void *input) { const thinkthen_cobol_RequestSource *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_media) { if(comma++) raw(w,","); raw(w,"\"media\":"); emit_ReaderMedia(w,p->m_media); }
 if(p->m_paths) { if(comma++) raw(w,","); raw(w,"\"paths\":"); emit_RequestSource_member_paths(w,p->m_paths); }
@@ -1218,22 +1226,19 @@ if(p->m_reading) { if(comma++) raw(w,","); raw(w,"\"reading\":"); emit_RequestRe
 raw(w,"}");
 }
 static inline void emit_RequestThreshold(writer *w,const void *input) { const thinkthen_cobol_RequestThreshold *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestThreshold_arm_1(w,p->value); break;
 case 2: emit_RequestThreshold_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestVersion(writer *w,const void *input) { const thinkthen_cobol_RequestVersion *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
-switch(p->kind) {
-case 1: emit_RequestVersion_arm_1(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
-}
+(void)p;
+raw(w,"\"thinkthen.request/1\"");
 }
 static inline void emit_SessionSourceLocation(writer *w,const void *input) { const thinkthen_cobol_SessionSourceLocation *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_file) { if(comma++) raw(w,","); raw(w,"\"file\":"); emit_SessionSourceLocation_member_file(w,p->m_file); }
 if(p->m_first_line) { if(comma++) raw(w,","); raw(w,"\"first_line\":"); emit_SessionSourceLocation_member_first_line(w,p->m_first_line); }
@@ -1241,43 +1246,43 @@ if(p->m_last_line) { if(comma++) raw(w,","); raw(w,"\"last_line\":"); emit_Sessi
 raw(w,"}");
 }
 static inline void emit_SourceUnit(writer *w,const void *input) { const thinkthen_cobol_SourceUnit *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_SourceUnit_arm_1(w,p->value); break;
 case 2: emit_SourceUnit_arm_2(w,p->value); break;
 case 3: emit_SourceUnit_arm_3(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_choose_member_batch(writer *w,const void *input) { const thinkthen_cobol_Authored_choose_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_choose_member_batch_arm_1(w,p->value); break;
 case 2: emit_Authored_choose_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_choose_member_name(writer *w,const void *input) { const thinkthen_cobol_Authored_choose_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_choose_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_Authored_choose_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_criterion_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_criterion_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_criterion_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_criterion_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_Authored_criterion_arm_3(writer *w,const void *input) { const thinkthen_cobol_Authored_criterion_arm_3 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_criterion_arm_3_item(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1285,44 +1290,44 @@ static inline void emit_Authored_criterion_arm_4(writer *w,const void *input) { 
 (void)p; raw(w,"null");
 }
 static inline void emit_Authored_cut_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_cut_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
-if(!isfinite(p->value)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!isfinite(p->value)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 snprintf(bytes,sizeof(bytes),"%.17g",p->value); raw(w,bytes);
 }
 static inline void emit_Authored_cut_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_cut_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_decide_member_batch(writer *w,const void *input) { const thinkthen_cobol_Authored_decide_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_decide_member_batch_arm_1(w,p->value); break;
 case 2: emit_Authored_decide_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_decide_member_name(writer *w,const void *input) { const thinkthen_cobol_Authored_decide_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_decide_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_Authored_decide_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_description_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_description_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_description_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_description_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_Authored_description_arm_3(writer *w,const void *input) { const thinkthen_cobol_Authored_description_arm_3 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_description_arm_3_item(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1330,25 +1335,25 @@ static inline void emit_Authored_description_arm_4(writer *w,const void *input) 
 (void)p; raw(w,"null");
 }
 static inline void emit_Authored_find_member_name(writer *w,const void *input) { const thinkthen_cobol_Authored_find_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_find_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_Authored_find_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_inputDeclaration_object_member_properties(writer *w,const void *input) { const thinkthen_cobol_Authored_inputDeclaration_object_member_properties *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"{");
-if(p->len && (!p->keys || !p->values)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && (!p->keys || !p->values)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); text(w,p->keys[i].data,p->keys[i].len,1); raw(w,":"); emit_Authored_inputProperty(w,p->values[i]); }
 raw(w,"}");
 }
 static inline void emit_Authored_inputDeclaration_object_member_required(writer *w,const void *input) { const thinkthen_cobol_Authored_inputDeclaration_object_member_required *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_inputDeclaration_object_member_required_item(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1361,7 +1366,7 @@ static inline void emit_Authored_inputDeclaration_string_member_type(writer *w,c
 raw(w,"\"string\"");
 }
 static inline void emit_Authored_inputProperty_array_member_items(writer *w,const void *input) { const thinkthen_cobol_Authored_inputProperty_array_member_items *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(1) { if(comma++) raw(w,","); raw(w,"\"type\":"); emit_Authored_inputProperty_array_member_items_member_type(w,p->m_type); }
 raw(w,"}");
@@ -1383,79 +1388,79 @@ static inline void emit_Authored_inputProperty_string_member_type(writer *w,cons
 raw(w,"\"string\"");
 }
 static inline void emit_Authored_labels_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_labels_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_name(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_Authored_labels_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_labels_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"{");
-if(p->len && (!p->keys || !p->values)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && (!p->keys || !p->values)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); text(w,p->keys[i].data,p->keys[i].len,1); raw(w,":"); emit_Authored_description(w,p->values[i]); }
 raw(w,"}");
 }
 static inline void emit_Authored_levels_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_levels_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_name(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_Authored_levels_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_levels_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"{");
-if(p->len && (!p->keys || !p->values)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && (!p->keys || !p->values)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); text(w,p->keys[i].data,p->keys[i].len,1); raw(w,":"); emit_Authored_criterion(w,p->values[i]); }
 raw(w,"}");
 }
 static inline void emit_Authored_options_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_options_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_name(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_Authored_options_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_options_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"{");
-if(p->len && (!p->keys || !p->values)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && (!p->keys || !p->values)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); text(w,p->keys[i].data,p->keys[i].len,1); raw(w,":"); emit_Authored_description(w,p->values[i]); }
 raw(w,"}");
 }
 static inline void emit_Authored_pointers_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_pointers_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_pointers_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_pointers_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_pointers_arm_2_item(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_Authored_questionText_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_questionText_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_questionText_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_questionText_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_Authored_questionText_arm_3(writer *w,const void *input) { const thinkthen_cobol_Authored_questionText_arm_3 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_questionText_arm_3_item(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_Authored_relate_member_name(writer *w,const void *input) { const thinkthen_cobol_Authored_relate_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_relate_member_relate(writer *w,const void *input) { const thinkthen_cobol_Authored_relate_member_relate *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_fields) { if(comma++) raw(w,","); raw(w,"\"fields\":"); emit_Authored_relate_member_relate_member_fields(w,p->m_fields); }
 if(p->m_relations) { if(comma++) raw(w,","); raw(w,"\"relations\":"); emit_Authored_relate_member_relate_member_relations(w,p->m_relations); }
@@ -1466,68 +1471,68 @@ static inline void emit_Authored_relate_member_version(writer *w,const void *inp
 raw(w,"1");
 }
 static inline void emit_Authored_relate_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_Authored_relate_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_relation_member_either(writer *w,const void *input) { const thinkthen_cobol_Authored_relation_member_either *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,p->value ? "true" : "false");
 }
 static inline void emit_Authored_relation_member_single(writer *w,const void *input) { const thinkthen_cobol_Authored_relation_member_single *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,p->value ? "true" : "false");
 }
 static inline void emit_Authored_score_member_batch(writer *w,const void *input) { const thinkthen_cobol_Authored_score_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_score_member_batch_arm_1(w,p->value); break;
 case 2: emit_Authored_score_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_score_member_name(writer *w,const void *input) { const thinkthen_cobol_Authored_score_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_score_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_Authored_score_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_tag_member_batch(writer *w,const void *input) { const thinkthen_cobol_Authored_tag_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_Authored_tag_member_batch_arm_1(w,p->value); break;
 case 2: emit_Authored_tag_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_Authored_tag_member_name(writer *w,const void *input) { const thinkthen_cobol_Authored_tag_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_tag_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_Authored_tag_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_threshold_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_threshold_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
-if(!isfinite(p->value)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!isfinite(p->value)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 snprintf(bytes,sizeof(bytes),"%.17g",p->value); raw(w,bytes);
 }
 static inline void emit_Authored_threshold_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_threshold_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_ContextSchema_arm_1(writer *w,const void *input) { const thinkthen_cobol_ContextSchema_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_ContextSchema_arm_2(writer *w,const void *input) { const thinkthen_cobol_ContextSchema_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_ImageMedia_arm_1(writer *w,const void *input) { const thinkthen_cobol_ImageMedia_arm_1 *p=input;
@@ -1539,11 +1544,11 @@ static inline void emit_ImageMedia_arm_2(writer *w,const void *input) { const th
 raw(w,"\"image/png\"");
 }
 static inline void emit_OptionSchema_member_description(writer *w,const void *input) { const thinkthen_cobol_OptionSchema_member_description *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_OptionSchema_member_name(writer *w,const void *input) { const thinkthen_cobol_OptionSchema_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_ReaderMedia_arm_1(writer *w,const void *input) { const thinkthen_cobol_ReaderMedia_arm_1 *p=input;
@@ -1555,39 +1560,39 @@ static inline void emit_ReaderMedia_arm_2(writer *w,const void *input) { const t
 raw(w,"\"image\"");
 }
 static inline void emit_RecognitionExample_arm_1(writer *w,const void *input) { const thinkthen_cobol_RecognitionExample_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RecognitionExampleEntity_member_end(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleEntity_member_end *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RecognitionExampleEntity_member_kind(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleEntity_member_kind *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RecognitionExampleEntity_member_start(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleEntity_member_start *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RecognitionExampleText_member_entities(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleText_member_entities *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RecognitionExampleEntity(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RecognitionExampleText_member_kinds(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleText_member_kinds *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RecognitionExampleText_member_kinds_item(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RecognitionExampleText_member_text(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleText_member_text *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RecognitionMode_arm_1(writer *w,const void *input) { const thinkthen_cobol_RecognitionMode_arm_1 *p=input;
@@ -1599,38 +1604,38 @@ static inline void emit_RecognitionMode_arm_2(writer *w,const void *input) { con
 raw(w,"\"boundary_only\"");
 }
 static inline void emit_RecognitionSeedSpan_member_end(writer *w,const void *input) { const thinkthen_cobol_RecognitionSeedSpan_member_end *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RecognitionSeedSpan_member_kind(writer *w,const void *input) { const thinkthen_cobol_RecognitionSeedSpan_member_kind *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RecognitionSeedSpan_member_start(writer *w,const void *input) { const thinkthen_cobol_RecognitionSeedSpan_member_start *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RecognitionStageContext_member_boundary(writer *w,const void *input) { const thinkthen_cobol_RecognitionStageContext_member_boundary *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RecognitionStageContext_member_kind_edge(writer *w,const void *input) { const thinkthen_cobol_RecognitionStageContext_member_kind_edge *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RecognitionStageContext_member_relation(writer *w,const void *input) { const thinkthen_cobol_RecognitionStageContext_member_relation *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestBatch_arm_1(writer *w,const void *input) { const thinkthen_cobol_RequestBatch_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestBatch_arm_2(writer *w,const void *input) { const thinkthen_cobol_RequestBatch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestCall_annotate_member_function(writer *w,const void *input) { const thinkthen_cobol_RequestCall_annotate_member_function *p=input;
@@ -1674,92 +1679,92 @@ static inline void emit_RequestCall_tag_member_function(writer *w,const void *in
 raw(w,"\"tag\"");
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_choose_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_choose_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_choose_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_choose_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_decide_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_decide_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_decide_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_decide_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_score_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_score_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_score_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_score_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_tag_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_tag_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_tag_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_anyOf_7_properties_questions_additionalProperties_fields_tag_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_choose_member_batch(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_choose_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestDefinition_fields_choose_member_batch_arm_1(w,p->value); break;
 case 2: emit_RequestDefinition_fields_choose_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestDefinition_fields_choose_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_choose_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_choose_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_choose_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_decide_member_batch(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_decide_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestDefinition_fields_decide_member_batch_arm_1(w,p->value); break;
 case 2: emit_RequestDefinition_fields_decide_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestDefinition_fields_decide_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_decide_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_decide_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_decide_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_find_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_find_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_find_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_find_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_questions_version_member_batch(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_questions_version_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_RequestDefinition_fields_questions_version_member_questions(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_questions_version_member_questions *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"{");
-if(p->len && (!p->keys || !p->values)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && (!p->keys || !p->values)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); text(w,p->keys[i].data,p->keys[i].len,1); raw(w,":"); emit_RequestDefinition_anyOf_7_properties_questions_additionalProperties(w,p->values[i]); }
 raw(w,"}");
 }
@@ -1768,11 +1773,11 @@ static inline void emit_RequestDefinition_fields_questions_version_member_versio
 raw(w,"1");
 }
 static inline void emit_RequestDefinition_fields_recognize_version_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_recognize_version_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_recognize_version_member_recognize(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_recognize_version_member_recognize *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_entity_definition) { if(comma++) raw(w,","); raw(w,"\"entity_definition\":"); emit_Authored_questionText(w,p->m_entity_definition); }
 if(p->m_instructions) { if(comma++) raw(w,","); raw(w,"\"instructions\":"); emit_Authored_questionText(w,p->m_instructions); }
@@ -1788,16 +1793,16 @@ static inline void emit_RequestDefinition_fields_recognize_version_member_versio
 raw(w,"1");
 }
 static inline void emit_RequestDefinition_fields_recognize_version_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_recognize_version_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_relate_version_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_relate_version_member_relate(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version_member_relate *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_fields) { if(comma++) raw(w,","); raw(w,"\"fields\":"); emit_RequestDefinition_fields_relate_version_member_relate_member_fields(w,p->m_fields); }
 if(p->m_relations) { if(comma++) raw(w,","); raw(w,"\"relations\":"); emit_RequestDefinition_fields_relate_version_member_relate_member_relations(w,p->m_relations); }
@@ -1808,41 +1813,41 @@ static inline void emit_RequestDefinition_fields_relate_version_member_version(w
 raw(w,"1");
 }
 static inline void emit_RequestDefinition_fields_relate_version_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_score_member_batch(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_score_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestDefinition_fields_score_member_batch_arm_1(w,p->value); break;
 case 2: emit_RequestDefinition_fields_score_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestDefinition_fields_score_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_score_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_score_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_score_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_tag_member_batch(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_tag_member_batch *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 switch(p->kind) {
 case 1: emit_RequestDefinition_fields_tag_member_batch_arm_1(w,p->value); break;
 case 2: emit_RequestDefinition_fields_tag_member_batch_arm_2(w,p->value); break;
-default: w->code=TT_COBOL_REPRESENTATION; break;
+default: w->code=THINKTHEN_COBOL_REPRESENTATION; break;
 }
 }
 static inline void emit_RequestDefinition_fields_tag_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_tag_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_tag_member_wording_version(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_tag_member_wording_version *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
@@ -1867,7 +1872,7 @@ static inline void emit_RequestFraming_arm_5(writer *w,const void *input) { cons
 raw(w,"\"tsv\"");
 }
 static inline void emit_RequestImage_bytes_member_bytes(writer *w,const void *input) { const thinkthen_cobol_RequestImage_bytes_member_bytes *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestImage_bytes_member_kind(writer *w,const void *input) { const thinkthen_cobol_RequestImage_bytes_member_kind *p=input;
@@ -1879,13 +1884,13 @@ static inline void emit_RequestImage_file_member_kind(writer *w,const void *inpu
 raw(w,"\"file\"");
 }
 static inline void emit_RequestImage_file_member_path(writer *w,const void *input) { const thinkthen_cobol_RequestImage_file_member_path *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestInput_entities_member_items(writer *w,const void *input) { const thinkthen_cobol_RequestInput_entities_member_items *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestItem(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1894,9 +1899,9 @@ static inline void emit_RequestInput_entities_member_kind(writer *w,const void *
 raw(w,"\"entities\"");
 }
 static inline void emit_RequestInput_feed_member_images(writer *w,const void *input) { const thinkthen_cobol_RequestInput_feed_member_images *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestImage(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1905,13 +1910,13 @@ static inline void emit_RequestInput_feed_member_kind(writer *w,const void *inpu
 raw(w,"\"feed\"");
 }
 static inline void emit_RequestInput_feed_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestInput_feed_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestInput_json_member_images(writer *w,const void *input) { const thinkthen_cobol_RequestInput_json_member_images *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestImage(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1920,13 +1925,13 @@ static inline void emit_RequestInput_json_member_kind(writer *w,const void *inpu
 raw(w,"\"json\"");
 }
 static inline void emit_RequestInput_json_member_value(writer *w,const void *input) { const thinkthen_cobol_RequestInput_json_member_value *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_RequestInput_records_member_items(writer *w,const void *input) { const thinkthen_cobol_RequestInput_records_member_items *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestItem(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1939,9 +1944,9 @@ static inline void emit_RequestInput_source_member_kind(writer *w,const void *in
 raw(w,"\"source\"");
 }
 static inline void emit_RequestInput_text_member_images(writer *w,const void *input) { const thinkthen_cobol_RequestInput_text_member_images *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestImage(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1950,13 +1955,13 @@ static inline void emit_RequestInput_text_member_kind(writer *w,const void *inpu
 raw(w,"\"text\"");
 }
 static inline void emit_RequestInput_text_member_text(writer *w,const void *input) { const thinkthen_cobol_RequestInput_text_member_text *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestInput_units_member_items(writer *w,const void *input) { const thinkthen_cobol_RequestInput_units_member_items *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestItem(w,p->data[i]); }
 raw(w,"]");
 }
@@ -1965,111 +1970,111 @@ static inline void emit_RequestInput_units_member_kind(writer *w,const void *inp
 raw(w,"\"units\"");
 }
 static inline void emit_RequestItem_member_examples(writer *w,const void *input) { const thinkthen_cobol_RequestItem_member_examples *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RecognitionExample(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestItem_member_images(writer *w,const void *input) { const thinkthen_cobol_RequestItem_member_images *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestImage(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestItem_member_options(writer *w,const void *input) { const thinkthen_cobol_RequestItem_member_options *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_OptionSchema(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestItem_member_seed_spans(writer *w,const void *input) { const thinkthen_cobol_RequestItem_member_seed_spans *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RecognitionSeedSpan(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestOptions_member_attempts(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_attempts *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,p->value ? "true" : "false");
 }
 static inline void emit_RequestOptions_member_context(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_context *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestOptions_member_context_field(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_context_field *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestOptions_member_deadline_ms(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_deadline_ms *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestOptions_member_details(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_details *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,p->value ? "true" : "false");
 }
 static inline void emit_RequestOptions_member_examples(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_examples *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RecognitionExample(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestOptions_member_examples_field(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_examples_field *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestOptions_member_field(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_field *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestOptions_member_field_item(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestOptions_member_files_only(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_files_only *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,p->value ? "true" : "false");
 }
 static inline void emit_RequestOptions_member_max_requests_total(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_max_requests_total *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestOptions_member_model(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_model *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestOptions_member_none(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_none *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,p->value ? "true" : "false");
 }
 static inline void emit_RequestOptions_member_options_field(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_options_field *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestOptions_member_seed_spans(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_seed_spans *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RecognitionSeedSpan(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestOptions_member_seed_spans_field(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_seed_spans_field *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestOptions_member_snippet_pieces(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_snippet_pieces *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestOptions_member_top(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_top *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
@@ -2078,7 +2083,7 @@ static inline void emit_RequestOriginal_json_member_kind(writer *w,const void *i
 raw(w,"\"json\"");
 }
 static inline void emit_RequestOriginal_json_member_value(writer *w,const void *input) { const thinkthen_cobol_RequestOriginal_json_member_value *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_RequestOriginal_text_member_kind(writer *w,const void *input) { const thinkthen_cobol_RequestOriginal_text_member_kind *p=input;
@@ -2086,7 +2091,7 @@ static inline void emit_RequestOriginal_text_member_kind(writer *w,const void *i
 raw(w,"\"text\"");
 }
 static inline void emit_RequestOriginal_text_member_text(writer *w,const void *input) { const thinkthen_cobol_RequestOriginal_text_member_text *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestQuestion_definition_member_kind(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_definition_member_kind *p=input;
@@ -2098,7 +2103,7 @@ static inline void emit_RequestQuestion_file_member_kind(writer *w,const void *i
 raw(w,"\"file\"");
 }
 static inline void emit_RequestQuestion_file_member_path(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_file_member_path *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestQuestion_name_member_kind(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_name_member_kind *p=input;
@@ -2106,7 +2111,7 @@ static inline void emit_RequestQuestion_name_member_kind(writer *w,const void *i
 raw(w,"\"name\"");
 }
 static inline void emit_RequestQuestion_name_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_name_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestQuestion_reference_member_kind(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_reference_member_kind *p=input;
@@ -2114,7 +2119,7 @@ static inline void emit_RequestQuestion_reference_member_kind(writer *w,const vo
 raw(w,"\"reference\"");
 }
 static inline void emit_RequestQuestion_reference_member_reference(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_reference_member_reference *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestQuestion_text_member_kind(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_text_member_kind *p=input;
@@ -2122,46 +2127,42 @@ static inline void emit_RequestQuestion_text_member_kind(writer *w,const void *i
 raw(w,"\"text\"");
 }
 static inline void emit_RequestQuestion_text_member_text(writer *w,const void *input) { const thinkthen_cobol_RequestQuestion_text_member_text *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestReader_member_window(writer *w,const void *input) { const thinkthen_cobol_RequestReader_member_window *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestSource_member_paths(writer *w,const void *input) { const thinkthen_cobol_RequestSource_member_paths *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_RequestSource_member_paths_item(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestThreshold_arm_1(writer *w,const void *input) { const thinkthen_cobol_RequestThreshold_arm_1 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
-if(!isfinite(p->value)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!isfinite(p->value)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 snprintf(bytes,sizeof(bytes),"%.17g",p->value); raw(w,bytes);
 }
 static inline void emit_RequestThreshold_arm_2(writer *w,const void *input) { const thinkthen_cobol_RequestThreshold_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
-static inline void emit_RequestVersion_arm_1(writer *w,const void *input) { const thinkthen_cobol_RequestVersion_arm_1 *p=input;
-(void)p;
-raw(w,"\"thinkthen.request/1\"");
-}
 static inline void emit_SessionSourceLocation_member_file(writer *w,const void *input) { const thinkthen_cobol_SessionSourceLocation_member_file *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_SessionSourceLocation_member_first_line(writer *w,const void *input) { const thinkthen_cobol_SessionSourceLocation_member_first_line *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_SessionSourceLocation_member_last_line(writer *w,const void *input) { const thinkthen_cobol_SessionSourceLocation_member_last_line *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
@@ -2182,12 +2183,12 @@ static inline void emit_Authored_choose_member_batch_arm_1(writer *w,const void 
 raw(w,"\"max\"");
 }
 static inline void emit_Authored_choose_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_choose_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_criterion_arm_3_item(writer *w,const void *input) { const thinkthen_cobol_Authored_criterion_arm_3_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_Authored_decide_member_batch_arm_1(writer *w,const void *input) { const thinkthen_cobol_Authored_decide_member_batch_arm_1 *p=input;
@@ -2195,16 +2196,16 @@ static inline void emit_Authored_decide_member_batch_arm_1(writer *w,const void 
 raw(w,"\"max\"");
 }
 static inline void emit_Authored_decide_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_decide_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_Authored_description_arm_3_item(writer *w,const void *input) { const thinkthen_cobol_Authored_description_arm_3_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_Authored_inputDeclaration_object_member_required_item(writer *w,const void *input) { const thinkthen_cobol_Authored_inputDeclaration_object_member_required_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_inputProperty_array_member_items_member_type(writer *w,const void *input) { const thinkthen_cobol_Authored_inputProperty_array_member_items_member_type *p=input;
@@ -2212,24 +2213,24 @@ static inline void emit_Authored_inputProperty_array_member_items_member_type(wr
 raw(w,"\"string\"");
 }
 static inline void emit_Authored_pointers_arm_2_item(writer *w,const void *input) { const thinkthen_cobol_Authored_pointers_arm_2_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_questionText_arm_3_item(writer *w,const void *input) { const thinkthen_cobol_Authored_questionText_arm_3_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,0);
 }
 static inline void emit_Authored_relate_member_relate_member_fields(writer *w,const void *input) { const thinkthen_cobol_Authored_relate_member_relate_member_fields *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_kind) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_Authored_relate_member_relate_member_fields_member_kind(w,p->m_kind); }
 if(p->m_name) { if(comma++) raw(w,","); raw(w,"\"name\":"); emit_Authored_relate_member_relate_member_fields_member_name(w,p->m_name); }
 raw(w,"}");
 }
 static inline void emit_Authored_relate_member_relate_member_relations(writer *w,const void *input) { const thinkthen_cobol_Authored_relate_member_relate_member_relations *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_relation(w,p->data[i]); }
 raw(w,"]");
 }
@@ -2238,7 +2239,7 @@ static inline void emit_Authored_score_member_batch_arm_1(writer *w,const void *
 raw(w,"\"max\"");
 }
 static inline void emit_Authored_score_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_score_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
@@ -2247,12 +2248,12 @@ static inline void emit_Authored_tag_member_batch_arm_1(writer *w,const void *in
 raw(w,"\"max\"");
 }
 static inline void emit_Authored_tag_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_Authored_tag_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RecognitionExampleText_member_kinds_item(writer *w,const void *input) { const thinkthen_cobol_RecognitionExampleText_member_kinds_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_choose_member_batch_arm_1(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_choose_member_batch_arm_1 *p=input;
@@ -2260,7 +2261,7 @@ static inline void emit_RequestDefinition_fields_choose_member_batch_arm_1(write
 raw(w,"\"max\"");
 }
 static inline void emit_RequestDefinition_fields_choose_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_choose_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
@@ -2269,40 +2270,40 @@ static inline void emit_RequestDefinition_fields_decide_member_batch_arm_1(write
 raw(w,"\"max\"");
 }
 static inline void emit_RequestDefinition_fields_decide_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_decide_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_recognize_version_member_recognize_member_kinds(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_recognize_version_member_recognize_member_kinds *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"{");
-if(p->len && (!p->keys || !p->values)) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && (!p->keys || !p->values)) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); text(w,p->keys[i].data,p->keys[i].len,1); raw(w,":"); emit_Authored_description(w,p->values[i]); }
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_recognize_version_member_recognize_member_relations(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_recognize_version_member_recognize_member_relations *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_relation(w,p->data[i]); }
 raw(w,"]");
 }
 static inline void emit_RequestDefinition_fields_recognize_version_member_recognize_member_snippet_pieces(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_recognize_version_member_recognize_member_snippet_pieces *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%llu",(unsigned long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestDefinition_fields_relate_version_member_relate_member_fields(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version_member_relate_member_fields *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
 if(p->m_kind) { if(comma++) raw(w,","); raw(w,"\"kind\":"); emit_RequestDefinition_fields_relate_version_member_relate_member_fields_member_kind(w,p->m_kind); }
 if(p->m_name) { if(comma++) raw(w,","); raw(w,"\"name\":"); emit_RequestDefinition_fields_relate_version_member_relate_member_fields_member_name(w,p->m_name); }
 raw(w,"}");
 }
 static inline void emit_RequestDefinition_fields_relate_version_member_relate_member_relations(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version_member_relate_member_relations *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 raw(w,"[");
-if(p->len && !p->data) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(p->len && !p->data) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 for(uint64_t i=0;i<p->len && !w->code;i++) { if(i) raw(w,","); emit_Authored_relation(w,p->data[i]); }
 raw(w,"]");
 }
@@ -2311,7 +2312,7 @@ static inline void emit_RequestDefinition_fields_score_member_batch_arm_1(writer
 raw(w,"\"max\"");
 }
 static inline void emit_RequestDefinition_fields_score_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_score_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
@@ -2320,42 +2321,42 @@ static inline void emit_RequestDefinition_fields_tag_member_batch_arm_1(writer *
 raw(w,"\"max\"");
 }
 static inline void emit_RequestDefinition_fields_tag_member_batch_arm_2(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_tag_member_batch_arm_2 *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 char bytes[64];
 snprintf(bytes,sizeof(bytes),"%lld",(long long)p->value); raw(w,bytes);
 }
 static inline void emit_RequestOptions_member_field_item(writer *w,const void *input) { const thinkthen_cobol_RequestOptions_member_field_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestSource_member_paths_item(writer *w,const void *input) { const thinkthen_cobol_RequestSource_member_paths_item *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_relate_member_relate_member_fields_member_kind(writer *w,const void *input) { const thinkthen_cobol_Authored_relate_member_relate_member_fields_member_kind *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_Authored_relate_member_relate_member_fields_member_name(writer *w,const void *input) { const thinkthen_cobol_Authored_relate_member_relate_member_fields_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_relate_version_member_relate_member_fields_member_kind(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version_member_relate_member_fields_member_kind *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 static inline void emit_RequestDefinition_fields_relate_version_member_relate_member_fields_member_name(writer *w,const void *input) { const thinkthen_cobol_RequestDefinition_fields_relate_version_member_relate_member_fields_member_name *p=input;
-if(!p) {w->code=TT_COBOL_REPRESENTATION; return;}
+if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 text(w,p->data,p->len,1);
 }
 int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out) {
-writer w={0}; emit_Request(&w,request);
-int code=w.code ? w.code : thinkthen_session_new_with_surface(engine,w.data,w.len,"cobol",5,(thinkthen_session **)out);
+writer w={0}; int encoded=encode(&w,request,emit_Request);
+int code=encoded ? encoded : thinkthen_session_new_with_surface(engine,w.data,w.len,"cobol",5,(thinkthen_session **)out);
 free(w.data); return code;
 }
 int TT_SESSION_PUSH(const void *session,const thinkthen_cobol_RequestSessionDescriptor *descriptor,uint32_t *status) {
-writer w={0}; emit_RequestSessionDescriptor(&w,descriptor);
-int code=w.code ? w.code : thinkthen_session_try_push((thinkthen_session *)session,w.data,w.len,status);
+writer w={0}; int encoded=encode(&w,descriptor,emit_RequestSessionDescriptor);
+int code=encoded ? encoded : thinkthen_session_try_push((thinkthen_session *)session,w.data,w.len,status);
 free(w.data); return code;
 }
 int TT_SESSION_DECIDE(const void *engine,const thinkthen_cobol_RequestCall_decide *input,void **out) {
