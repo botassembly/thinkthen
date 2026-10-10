@@ -45,11 +45,7 @@ final class NativeSession {
             var advice = outputs.allocate(NativeUsageLayouts.ADVICE);
             int code = (int)call(function, ValueLayout.JAVA_INT,
                 new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, engine, state, advice);
-            if (code != 0) {
-                var message = (MemorySegment)call("thinkthen_error_message", ValueLayout.ADDRESS,
-                    new MemoryLayout[]{ValueLayout.ADDRESS}, engine);
-                throw new NativeFailure(code, false, message.reinterpret(Long.MAX_VALUE).getString(0), null);
-            }
+            check(code);
             var data = advice.get(ValueLayout.ADDRESS, NativeUsageLayouts.ADVICE_DATA);
             long length = advice.get(SIZE, NativeUsageLayouts.ADVICE_LEN);
             if (length < 0 || length > Integer.MAX_VALUE || (data.equals(MemorySegment.NULL) && length != 0))
