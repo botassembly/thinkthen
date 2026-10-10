@@ -314,11 +314,11 @@ The Request migration changes execution inside the extension. It preserves SQL f
 
 | Existing SQL call | Complete result call |
 | --- | --- |
-| `thinkthen_decide`, `thinkthen_decide_images` | `thinkthen_decide_complete` |
-| `thinkthen_choose`, `thinkthen_choose_images` | `thinkthen_choose_complete` |
-| `thinkthen_tag` | `thinkthen_tag_complete` |
-| `thinkthen_score`, `thinkthen_score_images` | `thinkthen_score_complete` |
-| `thinkthen_decide_many` and its keyed join | `thinkthen_filter_complete` |
+| `thinkthen_decide`, `thinkthen_decide_images`, `thinkthen_decide_many` | `thinkthen_decide_complete` |
+| `thinkthen_choose`, `thinkthen_choose_images`, `thinkthen_choose_many` | `thinkthen_choose_complete` |
+| `thinkthen_tag`, `thinkthen_tag_many` | `thinkthen_tag_complete` |
+| `thinkthen_score`, `thinkthen_score_images`, `thinkthen_score_many` | `thinkthen_score_complete` |
+| Passing-row selection from `thinkthen_decide_many` | `thinkthen_filter_complete` |
 | `thinkthen_rank`, `thinkthen_rank_set` | `thinkthen_rank_complete` |
 | `thinkthen_find` | `thinkthen_find_complete` |
 | `thinkthen_annotate` | `thinkthen_annotate_complete` |
