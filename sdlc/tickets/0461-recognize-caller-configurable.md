@@ -1,6 +1,6 @@
 # 0461: Let callers define recognition entities
 
-Status: OPEN. Slice A is landed: callers define recognition wording and kind descriptions across the supported surfaces, with corrected help and a shared custom-wording case. Slice B remains authorized for size-based admission and follows confirmed bug fixes; the 20-kind cap remains until B lands.
+Status: COMPLETE. Slice A is landed: callers define recognition wording and kind descriptions across the supported surfaces, with corrected help and a shared custom-wording case. Slice B remains authorized for size-based admission and follows confirmed bug fixes; the 20-kind cap remains until B lands.
 
 Reviews: accept
 
@@ -16,6 +16,8 @@ Reviews: revision a106961a4, accept
 Reviews: revision d5619d276, accept
 
 Reviews: revision cbc0ba43466772e0b0b21988c8635a3c3351ea36, accept
+
+Landed: e3d41e1
 
 ## Slice B: Admit complete recognition menus by encoded request size
 
