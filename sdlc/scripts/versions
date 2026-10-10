@@ -89,8 +89,7 @@ PLACES = [
     *[(p, rf'(?m)^  {name}:\n(?:    .*\n)*?    version: "([^"]+)"$', WHOLE) for p, name in (
         ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_dart"),
         ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_flutter"),
-        ("libraries/dart/checks/consumers/alpha/pubspec.lock", "thinkthen_dart"),
-        ("libraries/dart/checks/consumers/bravo/pubspec.lock", "thinkthen_dart"))],
+        ("libraries/dart/checks/session_consumer/pubspec.lock", "thinkthen_dart"))],
 ]
 PLACEHOLDER = "0.0.1"
 # Each publish hold: a file and a pattern whose one group is the whole hold line.
