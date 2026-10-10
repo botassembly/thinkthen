@@ -43,7 +43,9 @@ import ThinkThen
             if unit == 4 || fixture["image_reader"] as? Bool == true { source["media"] = "image" }
             input = try InputRequestInput.read(value(["kind": "source", "source": source]))
         } else {
-            let images: [[String: Any]] = (fixture["image_paths"] as? [String] ?? []).map { ["kind": "file", "path": $0, "media": fixture["media"] ?? "image/png"] }
+            let images: [[String: Any]] = try (fixture["image_paths"] as? [String] ?? []).map {
+                ["kind": "bytes", "bytes": try Data(contentsOf: URL(fileURLWithPath: $0)).base64EncodedString(), "media": fixture["media"] ?? "image/png"]
+            }
             var records: [[String: Any]] = []
             for (index, original) in (fixture["items"] as? [Any] ?? []).enumerated() {
                 var item: [String: Any] = [:]
