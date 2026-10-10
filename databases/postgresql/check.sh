@@ -1579,6 +1579,11 @@ complete_request_contract_cases() {
     sh "$LIMIT" 300 python3 tests/complete_request_cases.py
 }
 check complete_request_contract_cases
+complete_image_contract_cases() {
+    complete_environment
+    sh "$LIMIT" 60 python3 tests/complete_image_cases.py
+}
+check complete_image_contract_cases
 
 echo "== conformance"
 # Each case on its own server, backend, and cache folder. Every case counts

@@ -241,3 +241,21 @@ privileged readers. Original authored bytes reach native role/name validation
 before caller settings are applied.
 `thinkthen.base_url` and `thinkthen.refresh_cache` are administrator settings;
 the paired price GUCs are decimal strings. No key GUC becomes a credential source.
+
+`thinkthen_decide_images_complete(question TEXT, images thinkthen_image_value[],
+settings TEXT := NULL)` returns the same complete envelope as `json`. Build the
+ordered collection with `thinkthen_image(bytea, media)` or read stored composites:
+
+```sql
+SELECT thinkthen_decide_images_complete(
+  'Is the package damaged?',
+  ARRAY[thinkthen_image($1::bytea, 'image/png')],
+  NULL);
+```
+
+One collection becomes one image-only record. Order and duplicates remain present;
+image bytes never require a JSON byte array. Select an admitted backend and model
+through the existing settings. A NULL question or collection returns SQL NULL
+before reading partners or resolving question files. NULL settings uses defaults.
+Malformed native images and backend failures return the complete error envelope.
+The existing text complete signatures and scalar image functions remain available.
