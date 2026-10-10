@@ -14,11 +14,11 @@ final class Operation
     private array $packets = [];
     private ?\ThinkThen\Results\Node $terminal = null;
     public function __construct(private readonly \FFI $ffi, \FFI\CData $engine,
-        string $function, string|array|\stdClass $question, mixed $input,
+        string $function, string|array|\stdClass|QuestionInput $question, mixed $input,
         array $options, private readonly ?Cancellation $token)
     {
         if ($input instanceof FileInput) {
-            $source = ['kind' => 'source', 'source' => ['paths' => $input->paths, 'reading' => (object)$input->reading, 'media' => 'text']];
+            $source = ['kind' => 'source', 'source' => ['paths' => $input->paths, 'reading' => (object)$input->reading, ...($input->framing === null ? [] : ['framing' => $input->framing]), ...($input->media === null ? [] : ['media' => $input->media])]];
         } elseif ($input instanceof \Traversable) {
             $this->producer = $input instanceof \Iterator ? $input : $input->getIterator();
             $source = ['kind' => 'feed', 'name' => 'php'];
@@ -29,7 +29,7 @@ final class Operation
         }
         $request = Client::json(['schema' => \ThinkThen\Session\REQUEST_VERSION,
             'call' => ['function' => $function,
-                'question' => is_string($question) ? ['kind' => 'text', 'text' => $question] : ['kind' => 'definition', 'value' => $question],
+                'question' => $question instanceof QuestionInput ? $question->descriptor : (is_string($question) ? ['kind' => 'text', 'text' => $question] : ['kind' => 'definition', 'value' => $question]),
                 'input' => $source, 'options' => (object)$options]]);
         $owner = $ffi->new('struct thinkthen_session *');
         $this->check($ffi->thinkthen_session_new_with_surface($engine, $request, strlen($request), 'php', 3, \FFI::addr($owner)));
@@ -61,7 +61,7 @@ final class Operation
             $packet = \ThinkThen\Results\Decoder::packet(\FFI::string($text, $length->cdata));
             $this->packets[] = $packet;
             if ($packet->kind === 'row') $this->rows[] = $packet->value;
-            elseif ($packet->kind === 'aggregate') $this->rows = is_array($packet->value) ? $packet->value : [$packet->value];
+            elseif ($packet->kind === 'aggregate') array_push($this->rows, ...(is_array($packet->value) ? $packet->value : [$packet->value]));
             elseif ($packet->kind === 'terminal') $this->terminal = $packet;
             return $packet;
         } finally { $this->ffi->thinkthen_session_result_free($owner); }
