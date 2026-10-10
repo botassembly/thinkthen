@@ -432,7 +432,7 @@ class Engine:
         return self._judged("filter", question, records, token, keywords)
 
     def _judged(self, verb, question, value, token, keywords):
-        if value is not _MISSING and (not _frames.is_series(value) or _pandas(value) == "Series"):
+        if value is not _MISSING:
             return self._named(verb, question, value, token=token, **keywords)
         fields = dict(keywords)
         deadline_ms = fields.pop("deadline_ms", _MISSING)
@@ -473,58 +473,19 @@ class Engine:
 
         ``question`` is the question text. ``top`` keeps the first entries.
         """
-        if not _frames.is_series(records) or _pandas(records) == "Series":
-            controls = dict(legacy)
-            for key, item in dict(top=top, batch=batch, context=context).items():
-                if item is not None: controls[key] = item
-            if deadline_ms is not _MISSING: controls["deadline_ms"] = deadline_ms
-            return self._named('rank', question, records, token=token, **controls)
-        deadline_ms = _due_keyword(deadline_ms, legacy)
-        if isinstance(records, FileSelection):
-            asked = _ordering(question, "rank")
-            if asked.kind != "rank":
-                raise UsageError("rank takes a rank question")
-            call = _source_call(self, "rank", asked._json(), records, batch, context, deadline_ms, token)
-            return _mapped(call, lambda rows: rows[:top])
-        if _frames.is_series(records):
-            ranked = _frames.collection(self, "rank", _ordering(question, "rank"), records,
-                                        batch, context, deadline_ms, token)
-        else:
-            ranked = self._engine.order("rank", _ordering(question, "rank"), records,
-                                         batch, context, deadline_ms, token)
-        return _mapped(ranked, lambda rows: [{"index": index, "record": record,
-                                               "probability": probability}
-                                              for index, record, probability in rows][:top])
+        controls = dict(legacy)
+        for key, item in dict(top=top, batch=batch, context=context).items():
+            if item is not None: controls[key] = item
+        if deadline_ms is not _MISSING: controls["deadline_ms"] = deadline_ms
+        return self._named('rank', question, records, token=token, **controls)
 
     def find(self, question, units, *, none=False, deadline_ms=_MISSING, token=None, **legacy):
         """The unit that answers the question best, as ``{"index", "unit",
         "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
         a none candidate, as ``find --none`` does."""
-        if not _frames.is_series(units) or _pandas(units) == "Series":
-            controls = dict(legacy, none=none, token=token)
-            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
-            return self._named('find', question, units, **controls)
-        if not isinstance(none, bool):
-            raise UsageError("none is True or False")
-        asked = _ordering(question, "find")
-        deadline_ms = _due_keyword(deadline_ms, legacy)
-        if isinstance(units, FileSelection):
-            if asked.kind != "find":
-                raise UsageError("find takes a find question")
-            body = json.loads(asked._json())
-            body["none"] = none
-            return _source_call(self, "find", json.dumps(body), units, None, None, deadline_ms, token)
-        if none:
-            asked = asked._offering_none()
-        found = (_frames.collection(self, "find", asked, units, None, None, deadline_ms, token)
-                 if _frames.is_series(units) else
-                 self._engine.order("find", asked, units, None, None, deadline_ms, token))
-        def picked(rows):
-            if not rows:
-                return None
-            [(index, unit, probability)] = rows
-            return {"index": index, "unit": unit, "probability": probability}
-        return _mapped(found, picked)
+        controls = dict(legacy, none=none, token=token)
+        if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+        return self._named('find', question, units, **controls)
 
     def annotate(self, questions, records, *, on=None, batch=None, context=None,
                  deadline_ms=_MISSING, token=None, **legacy):
@@ -539,7 +500,7 @@ class Engine:
         holds a question-to-failure map for partial rows and null otherwise.
         A pandas frame keeps its index. A question named as a column is refused first.
         """
-        if on is None and (not _frames.is_series(records) or _pandas(records) == "Series"):
+        if on is None:
             controls = dict(legacy, token=token)
             for key, item in dict(batch=batch, context=context).items():
                 if item is not None: controls[key] = item
@@ -552,11 +513,7 @@ class Engine:
             if on is not None:
                 raise UsageError("source annotate takes question-member on, not frame on")
             return _source_call(self, "annotate", _source_spec(questions), records, batch, None, deadline_ms, token)
-        if on is None and _frames.is_series(records):
-            return _frames.annotate(self, questions, records, batch, deadline_ms, token)
         asked = _spec(_thinkthen._QuestionSet, questions)
-        if on is None:
-            return self._engine.annotate(asked, records, batch, deadline_ms, token)
         if "failed" in asked._names():
             raise UsageError("the question name failed is reserved for frame failures")
         if _pandas(records) == "DataFrame":
@@ -591,7 +548,7 @@ class Engine:
         ``names`` column: one list per row of ``dict`` with those fields but
         ``row``. Relations take one text.
         """
-        if on is None and (not _frames.is_series(text) or _pandas(text) == "Series"):
+        if on is None:
             controls = dict(legacy, token=token)
             if ask is None:
                 controls.update(kinds=kinds or [], relations=relations, either=either, descriptions=descriptions)
@@ -642,9 +599,6 @@ class Engine:
         if on is not None:
             result = _thinkthen._recognize_frame(self._engine, spec, text, on, deadline_ms, token)
             return _mapped(result, lambda value: type(text)(_Stream(value)))
-        if on is None and _frames.is_series(text):
-            return _frames.recognize(self, spec, text, deadline_ms, token)
-        return self._engine.recognize(spec, text, deadline_ms, token)
 
     def relate(self, entities, ask=None, *, relations=None, either=None, threshold=None,
                deadline_ms=_MISSING, token=None, **legacy):
@@ -656,27 +610,11 @@ class Engine:
         named by its ``text``. ``relations`` and ``either`` read as for
         ``recognize``.
         """
-        if not _frames.is_series(entities) or _pandas(entities) == "Series":
-            controls = dict(legacy, token=token)
-            if ask is None: controls.update(relations=relations, either=either)
-            if threshold is not None: controls['threshold'] = threshold
-            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
-            return self._named('relate', ask, entities, **controls)
-        deadline_ms = _due_keyword(deadline_ms, legacy)
-        if ask is not None:
-            spec = _spec(_thinkthen._Relate, ask)
-        else:
-            spec = _thinkthen._Relate._build(_rules(relations, either), threshold)
-        if isinstance(entities, FileSelection):
-            body = {"version": 1, "relate": {"relations": [
-                {"name": name, "source": source, "target": target, "either": both}
-                for name, source, target, both in _rules(relations, either)]}}
-            if threshold is not None:
-                body["threshold"] = threshold
-            return _source_call(self, "relate", _source_spec(ask) if ask is not None else json.dumps(body), entities, None, None, deadline_ms, token)
-        if _frames.is_series(entities):
-            entities = _frames.entities(entities)
-        return self._engine.relate(spec, entities, deadline_ms, token)
+        controls = dict(legacy, token=token)
+        if ask is None: controls.update(relations=relations, either=either)
+        if threshold is not None: controls['threshold'] = threshold
+        if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+        return self._named('relate', ask, entities, **controls)
 
     def usage(self):
         """This engine's totals: requests sent, cache answers, and tokens."""
