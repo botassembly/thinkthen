@@ -274,7 +274,7 @@ def nuget_cases(nupkg):
 
 
 def jvm_contract_cases():
-    """Read scalar fields and propagate inventory failures through both workflow steps."""
+    """Read scalar fields and propagate inventory failures through the workflow steps."""
     with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
         root = pathlib.Path(tmp)
         for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
@@ -290,7 +290,7 @@ def jvm_contract_cases():
         workflow = yaml.safe_load((root / ".github/workflows/release.yml").read_text())
         steps = [step for job in workflow["jobs"].values() for step in job.get("steps", [])
                  if step.get("id") == "jvm-contract"]
-        assert len(steps) == 2
+        assert len(steps) == 3
         pom = root / "libraries/jvm/pom.xml"
         original = pom.read_text()
         for step in steps:
