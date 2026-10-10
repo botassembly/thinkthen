@@ -19,7 +19,13 @@ $asks = [
         [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']]],
 ];
 $mode = $argv[1];
-if ($mode === 'named') {
+if ($mode === 'surface') {
+    $call = $client->decide('Is it?', 'surface-attribution');
+    $client->close();
+    check($call->results[0]->value === true, 'attributed call answer');
+    check($call->facts() instanceof ThinkThen\Results\NativeFacts && $call->facts()->requests_sent === 1, 'retained terminal send facts');
+    check(is_string($call->facts()->call_id) && $call->facts()->call_id !== '', 'retained native call identity');
+} elseif ($mode === 'named') {
     $retained = [];
     foreach ($asks as $verb => [$question, $input]) {
         $retained[$verb] = $client->$verb($question, $input);

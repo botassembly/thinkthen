@@ -32,7 +32,7 @@ final class Operation
                 'question' => is_string($question) ? ['kind' => 'text', 'text' => $question] : ['kind' => 'definition', 'value' => $question],
                 'input' => $source, 'options' => (object)$options]]);
         $owner = $ffi->new('struct thinkthen_session *');
-        $this->check($ffi->thinkthen_session_new($engine, $request, strlen($request), \FFI::addr($owner)));
+        $this->check($ffi->thinkthen_session_new_with_surface($engine, $request, strlen($request), 'php', 3, \FFI::addr($owner)));
         $this->session = $owner;
     }
     private function check(int $code): void

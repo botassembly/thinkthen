@@ -83,6 +83,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         with self.server.lock:
             with (self.server.barrier / 'request-bodies.jsonl').open('a') as receipt:
                 receipt.write(json.dumps(wire, ensure_ascii=False) + '\n')
+            with (self.server.barrier / 'user-agents.jsonl').open('a') as receipt:
+                receipt.write(json.dumps(self.headers.get('User-Agent')) + '\n')
             self.server.arrivals.append(state)
             self.server.attempts += 1
             bulk_first = state_key in ('first', 'second', 'third') and self.server.bulk_seen[state_key] == 0
