@@ -3,7 +3,11 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 TT_DART=${TT_DART:-$(command -v dart || echo "$HOME/.local/opt/flutter/bin/dart")}
 TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || echo "$HOME/.local/opt/flutter/bin/flutter")}
-[ -x "$TT_DART" ] && [ -x "$TT_FLUTTER" ] || exit 77
+[ -x "$TT_DART" ] || exit 77
+case ${THINKTHEN_ARTIFACT:-} in
+  *thinkthen-dart-*.tar.gz) ;;
+  *) [ -x "$TT_FLUTTER" ] || exit 77 ;;
+esac
 python3 "$ROOT/checks/privacy.py"
 node "$ROOT/../../sdlc/scripts/ratchet.mjs" "$ROOT/ratchet.dart.json"
 if [ "${1:-}" = --native-assets ]; then

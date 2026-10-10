@@ -140,7 +140,6 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
   }
   final options = InputRequestOptions(
       attempts: const Presence.present(true),
-      details: const Presence.present(true),
       deadlineMs: injection == 'expired_deadline'
           ? Presence.present(BigInt.zero)
           : const Presence.absent(),

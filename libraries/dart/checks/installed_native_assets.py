@@ -75,6 +75,9 @@ def main():
             content.extractall(target, filter='data')
         archives.append(archive)
         print(name, hashlib.sha256(archive.read_bytes()).hexdigest())
+    if supplied:
+        declared = json.loads((packages / 'dart/native-assets.json').read_text())['assets']['linux_x64']
+        assert declared['sha256'] == hashlib.sha256(native.read_bytes()).hexdigest(), 'supplied Dart/native asset checksum mismatch'
     cache = configure(packages / 'dart', native, [])
     definition = packages / 'dart/native-assets.json'
     manifest = json.loads(definition.read_text())
