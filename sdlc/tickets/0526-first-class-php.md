@@ -1,6 +1,6 @@
 # 0526: Make PHP thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -12,6 +12,8 @@ Reviews: revision a087f6dc3, accept
 Reviews: revision 47e7b9d518c372cbdaaf2eda003e26fd20dff5d2, reject
 
 Reviews: revision 1ae8c48ef60315bde3f9dc1c1bd46efe023c7163, accept
+
+Landed: 0b3026c
 
 ## Outcome
 
