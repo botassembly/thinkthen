@@ -80,3 +80,36 @@ fn ordinary_and_split_replies_keep_only_a_consistent_filter_prefix() -> io::Resu
     }
     Ok(())
 }
+
+#[test]
+fn discarded_rank_rows_still_require_consistent_live_models() -> io::Result<()> {
+    let set = crate::rank_set::saved(
+        "rank-discarded-model",
+        r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#,
+    )?;
+    let input = RECORDS.lines().take(2).collect::<Vec<_>>().join("\n") + "\n";
+    for (question, flags) in [
+        (super::QUESTION, ["--top", "1"]),
+        (super::QUESTION, ["--threshold", "0.8"]),
+        (set.as_str(), ["--top", "1"]),
+    ] {
+        let listener = Listener::serving(vec![
+            Canned::ok(&answer("jev-1.13.0")),
+            Canned::ok(&answer("jev-1.14.0").replace("0.9", "0.5")),
+        ])?;
+        let output = crate::rank_set::call(
+            &listener,
+            question,
+            &[&["--jsonl", "--field", "/body", "--batch", "1"][..], &flags].concat(),
+            input.as_bytes(),
+        )?;
+        assert_eq!(code(&output), 4, "{question}/{flags:?}: {}", said(&output));
+        assert_eq!(printed(&output), "", "{question}/{flags:?}");
+        assert!(
+            said(&output)
+                .contains("the replies for one filter or rank run named different model versions")
+        );
+        assert_eq!(listener.requests().len(), 2, "{question}/{flags:?}");
+    }
+    Ok(())
+}

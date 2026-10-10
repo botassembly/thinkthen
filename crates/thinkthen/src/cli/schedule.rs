@@ -89,7 +89,37 @@ pub(crate) struct Output<'a> {
     display: crate::cli::display::Display,
     usage: &'a Counters,
     model_guard: bool,
-    run_model: Option<ModelName>,
+    run_model: ModelGuard,
+}
+
+/// Live reply comparison shared by row output and rank observations.
+#[derive(Default)]
+pub(crate) struct ModelGuard(Option<ModelName>);
+
+impl ModelGuard {
+    pub(crate) fn check_sources<'a>(
+        &mut self,
+        sources: impl Iterator<Item = &'a crate::core::QuestionSource>,
+    ) -> Result<(), Failure> {
+        for source in sources {
+            if source.origin() == crate::core::Origin::Live {
+                self.check_model(Some(source.model()))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn check_model(&mut self, model: Option<&ModelName>) -> Result<(), Failure> {
+        // Stored answers take no part in this comparison (ADR 0111 section 4).
+        if let Some(model) = model {
+            match &self.0 {
+                Some(first) if first != model => return Err(Failure::RunModelsDiffer),
+                None => self.0 = Some(model.clone()),
+                Some(_) => {}
+            }
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Debug for Output<'_> {
@@ -105,7 +135,7 @@ impl Output<'_> {
             usage,
             display: crate::cli::display::Display::default(),
             model_guard: false,
-            run_model: None,
+            run_model: ModelGuard::default(),
         }
     }
 
@@ -135,27 +165,9 @@ impl Output<'_> {
         self.model_guard = true;
     }
 
-    pub(crate) fn check_sources<'a>(
-        &mut self,
-        sources: impl Iterator<Item = &'a crate::core::QuestionSource>,
-    ) -> Result<(), Failure> {
-        for source in sources {
-            if source.origin() == crate::core::Origin::Live {
-                self.check_model(Some(source.model()))?;
-            }
-        }
-        Ok(())
-    }
-
     fn check_model(&mut self, model: Option<&ModelName>) -> Result<(), Failure> {
-        // A row the store answered wholly names no live model, so it takes
-        // no part in the check, by ADR 0111 section 4.
-        if let (true, Some(model)) = (self.model_guard, model) {
-            match &self.run_model {
-                Some(first) if first != model => return Err(Failure::RunModelsDiffer),
-                None => self.run_model = Some(model.clone()),
-                Some(_) => {}
-            }
+        if self.model_guard {
+            self.run_model.check_model(model)?;
         }
         Ok(())
     }
