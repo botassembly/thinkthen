@@ -34,7 +34,9 @@ try:
             with (state / '.lock').open('w') as lock:
                 (state / '.lock').chmod(0o600)
                 if mode == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
-                result = subprocess.run([binary, mode, scratch, scratch], env=env | {'XDG_STATE_HOME': str(state.parent)}, capture_output=True, text=True, timeout=5)
+                usage_env = child_env(home=scratch / mode, THINKTHEN_BASE_URL=env['THINKTHEN_BASE_URL'],
+                                      THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
+                result = subprocess.run([binary, mode, scratch, scratch], env=usage_env, capture_output=True, text=True, timeout=5)
                 assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.returncode, result.stdout, result.stderr)
             assert len(server.requests) == before + 1, server.requests
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
