@@ -6,7 +6,6 @@ package body Thinkthen.Sessions is
    use Interfaces.C.Strings;
    use Interfaces;
    use Thinkthen_Session_C;
-   type Engine_Access is access all thinkthen_engine;
    type View_Access is access constant thinkthen_complete_session_packet_v1;
    procedure Check (Code : int) is
    begin
@@ -26,22 +25,23 @@ package body Thinkthen.Sessions is
       end;
    end Check;
    procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request) is
+      Client : Engine;
+   begin
+      Start (Client, Owner, Request);
+   end Start;
+   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_Request) is
       JSON : constant String := Thinkthen.Requests.Encode (Request);
-      Bytes : chars_ptr := New_String (JSON);
-      Surface : chars_ptr := New_String ("ada");
-      Client : Engine_Access := Engine_Access (thinkthen_engine_new);
+      Bytes : chars_ptr := Null_Ptr;
+      Surface : chars_ptr := Null_Ptr;
       Code : int;
       New_Handle : aliased Session_Access := null;
    begin
-      if Client = null then
-         raise Native_Error with "native engine construction failed";
-      end if;
-      Code := thinkthen_session_new_with_surface (Client, Bytes, size_t (JSON'Length),
+      Bytes := New_String (JSON);
+      Surface := New_String ("ada");
+      Code := thinkthen_session_new_with_surface (Client.Handle, Bytes, size_t (JSON'Length),
                                                   Surface, 3, New_Handle'Address);
       Free (Bytes);
       Free (Surface);
-      thinkthen_engine_free (Client);
-      Client := null;
       Check (Code);
       Close (Owner);
       Owner.Handle := New_Handle;
@@ -49,7 +49,7 @@ package body Thinkthen.Sessions is
       when others =>
          Free (Bytes);
          Free (Surface);
-         if Client /= null then thinkthen_engine_free (Client); end if;
+         if New_Handle /= null then thinkthen_session_free (New_Handle); end if;
          raise;
    end Start;
    procedure Push (Owner : in out Session; Item : Thinkthen.Requests.T_RequestSessionDescriptor;

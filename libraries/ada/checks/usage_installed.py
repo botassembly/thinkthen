@@ -200,7 +200,7 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
                                 ready.register(child.stdout, selectors.EVENT_READ)
                                 assert ready.select(15), (family, mode, 'Pending not observed')
                             prefix = child.stdout.readline()
-                            assert prefix.strip() == 'PENDING', (family, mode, prefix, child.poll())
+                            assert prefix.strip() == 'PENDING', (family, mode, prefix, child.poll(), child.stderr.read() if child.poll() is not None else '')
                             if mode == 'written':
                                 fcntl.flock(lock, fcntl.LOCK_UN)
                             child.stdin.write('continue\n')

@@ -8,8 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/childr
 from children import child_env
 
 ROOT = Path(__file__).resolve().parents[3]
-HEADER = ROOT / 'libraries/c/include/thinkthen.h'
-ADA = ROOT / 'libraries/ada/src/thinkthen_session_c.ads'
+HEADER = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'libraries/c/include/thinkthen.h'
+ADA = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'libraries/ada/src/thinkthen_session_c.ads'
 source = re.sub(r'/\*.*?\*/', '', HEADER.read_text(), flags=re.S)
 imports = set(re.findall(r'External_Name => "(thinkthen_\w+)"', ADA.read_text()))
 functions = set(re.findall(r'\b(thinkthen_\w+)\s*\([^;{}]*\)\s*;', source))
