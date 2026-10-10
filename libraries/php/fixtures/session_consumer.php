@@ -62,6 +62,8 @@ if ($mode === 'named') {
         check($error->terminal->has('failure'), 'terminal failure missing');
     }
 } elseif ($mode === 'zero') {
+    try { new Client([], getenv('HOME').'/missing-library.so'); throw new RuntimeException('missing library loaded'); }
+    catch (ThinkThen\LocalFailure) {}
     try { $client->decide('', 'invalid'); throw new RuntimeException('empty admitted'); }
     catch (ThinkThen\UsageFailure) {}
     $token = new ThinkThen\Cancellation(); $token->cancel();

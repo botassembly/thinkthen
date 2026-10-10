@@ -12,7 +12,11 @@ final class Client
     {
         $this->operations = new \WeakMap();
         $library ??= dirname(__DIR__, 2).'/native/libthinkthen.so';
-        $this->ffi = \FFI::cdef(file_get_contents(__DIR__.'/ffi_generated.h'), $library);
+        try {
+            $declarations = @file_get_contents(__DIR__.'/ffi_generated.h');
+            if ($declarations === false) throw new \RuntimeException('native declarations are missing');
+            $this->ffi = \FFI::cdef($declarations, $library);
+        } catch (\Throwable $error) { throw new LocalFailure('native library could not be loaded', previous: $error); }
         $engine = $this->ffi->thinkthen_engine_new_with(self::json((object)$settings));
         if ($engine === null || \FFI::isNull($engine)) {
             $code = $this->ffi->thinkthen_error_code(null);

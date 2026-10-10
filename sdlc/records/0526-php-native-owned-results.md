@@ -12,7 +12,7 @@ PHP's signed integer range cannot hold every native unsigned count. The PHP repr
 
 The PHP target consumes the existing prepared Rust result graph. Its class/member inventories and request version are generated. FFI declarations are stripped directly from the generated C header; no layouts are hand-copied. The exact generated FFI header path is exempted from the handwritten file-size limit. It contains 3,920 nonblank lines and 208,644 bytes. The generated PHP result declarations contain 905 nonblank lines and 83,636 bytes and stay together because they represent one generated graph, not handwritten logic. Generated constants contain 17 lines and 569 bytes; the schema-derived conversion graph contains 5,906 JSON lines and 116,171 bytes.
 
-PHP source grows from 1,759 to 3,111 nonblank lines, including generated declarations and focused consumers. Of the increase, 922 lines are generated PHP declarations/constants. Python fixtures grow from 1,175 to 1,250 after replacing their manual source-package file list with source discovery and adding local archive assembly plus the installed consumer. The target template has 53 nonblank Python lines. Rust source is unchanged.
+PHP source grows from 1,759 to 3,117 nonblank lines, including generated declarations and focused consumers. Of the increase, 922 lines are generated PHP declarations/constants. Python fixtures grow from 1,175 to 1,250 after replacing their manual source-package file list with source discovery and adding local archive assembly plus the installed consumer. The target template has 53 nonblank Python lines. Rust source is unchanged.
 
 The local archive includes package source and one supplied native library. An actual Composer consumer installs that archive with plugins, scripts and network disabled, then loads `vendor/autoload.php`. This fixture carries the bounded debug native build; it does not qualify a production distribution.
 
@@ -21,11 +21,11 @@ The local archive includes package source and one supplied native library. An ac
 - C shared library rebuilt with locked offline dependencies, two jobs and the bounded memory scope.
 - PHP syntax checks pass for every new handwritten and generated PHP file.
 - Shared generation freshness passes with the consolidated PHP target registration from `f07fcce75`. That registration is owned by the TypeScript slice and is not duplicated here.
-- Installed Composer checks pass for all ten named calls and typed results retained after client closure; absent/null/false, an unknown extension and an unsigned count beyond PHP's range; physical file lines and bounded feed order; retained backend failure facts; counted zero-send invalid input and pre-cancellation; client destruction with an open operation while the provider reply remains held, followed by progress on another engine.
+- Installed Composer checks pass for all ten named calls and typed results retained after client closure; absent/null/false, an unknown extension and an unsigned count beyond PHP's range; physical file lines and bounded feed order; retained backend failure facts; typed local failure for a missing native library, counted zero-send invalid input and pre-cancellation; client destruction with an open operation while the provider reply remains held, followed by progress on another engine.
 - Both PHP source ceilings match their measured totals. Policy and whitespace checks are recorded against the committed branch before review.
 - The existing installed compatibility consumer passes both routes, with three counted arrivals each, after its package copy discovers the new source files.
 
-The final local archive is `target/0526/package.tar.gz`, SHA-256 `59e51bba44474391de1144d6b9cbce1ee95ad7028116fe03e1a80292370ef2d4`. It carries the 59,292,496-byte debug native library, SHA-256 `ca587e92f9898621346d917731dc039a61e29bda3076706b0ed04a5c29607b7d`.
+The final local archive is `target/0526/package.tar.gz`, SHA-256 `44edbc28b35c5bb1430bdc2ea874fb35f2e2a345080c53ced23e354dc32a15cf`. It carries the 59,292,496-byte debug native library, SHA-256 `ca587e92f9898621346d917731dc039a61e29bda3076706b0ed04a5c29607b7d`.
 
 Composer 2.10.3 was downloaded into ticket scratch from its official endpoint and verified against the official SHA-256, `7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6`. All product consumers use the shared clean child environment and owned temporary homes. No paid calls, full parity, large-input suite or release action ran.
 
