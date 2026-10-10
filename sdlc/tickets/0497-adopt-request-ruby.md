@@ -15,6 +15,8 @@ Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 696103c3c43fcd7025df3690223e2ba5cc528902, accept
+
 ## Outcome
 
 A Ruby caller installs the gem, calls the ten functions by name with ordinary Ruby values, and gets typed Ruby results and typed exceptions. Work honors the gem's declared scheduler and cancellation, and blocks clean up resources. Rust owns every rule and observation; Ruby keeps only naming, conversion, errors, scheduling and cleanup.
