@@ -20,5 +20,6 @@ mod door;
 mod lazy;
 mod throttle_equality;
 mod typed;
+mod typed_aggregate;
 mod typed_rank;
 mod typed_rows;

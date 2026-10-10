@@ -5,7 +5,7 @@ use crate::public::{
     CompleteFound, CompleteRank, CompleteRecognized, CompleteRecord, CompleteRelated,
     CompleteScore, CompleteSetRank, CompleteTags, DecisionQuestion, DetailQuestion, Engine, Error,
     InputEvidence, Question, QuestionSet, RankSet, Recognize, RecordInput, Relate, RequestCall,
-    RequestValue, Surface,
+    RequestValue,
 };
 use polars::prelude::Series;
 
@@ -363,10 +363,27 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<CompleteRecord<Vec<T>, CompleteRelated>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.relate_records_complete_with(
-            question,
+        let call = super::request::complete_value(
+            self,
+            question.clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Relate,
+            |value, originals| {
+                let RequestValue::Related(row) = value else {
+                    return Err(Error::defect(
+                        "a relate column returned another result kind",
+                    ));
+                };
+                if row.original().len() != originals.len() || row.ordinal() != 0 {
+                    return Err(Error::defect("a relate column changed its original set"));
+                }
+                Ok(CompleteRecord {
+                    original: originals,
+                    ordinal: row.ordinal(),
+                    result: row.into_parts().1,
+                })
+            },
         )?;
         Ok((call, positions))
     }
@@ -388,10 +405,32 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<CompleteFound<T>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.find_records_complete_with(
-            question,
+        let call = super::request::complete_value(
+            self,
+            question.clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Find,
+            |value, mut originals| {
+                let RequestValue::Found(found) = value else {
+                    return Err(Error::defect("a find column returned another result kind"));
+                };
+                if found
+                    .candidates()
+                    .iter()
+                    .filter(|row| row.input().is_some())
+                    .count()
+                    != originals.len()
+                {
+                    return Err(Error::defect("a find column changed its original set"));
+                }
+                Ok(CompleteFound {
+                    canonical: found.canonical,
+                    sources: found.sources,
+                    // Candidate order is native input order; the synthetic none is not mapped.
+                    found: found.found.map(|_| originals.remove(0)),
+                })
+            },
         )?;
         Ok((call, positions))
     }
