@@ -329,9 +329,30 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "cpp":
+        if args.bridge:
+            parser.error("C++ reads the installed native header")
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import cpp
+        definitions = prepare(graph(json.loads(args.schema.read_text()), cpp.ROOTS))
+        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
+        if args.inputs:
+            schema = json.loads((ROOT / "specification/request.schema.json").read_text())
+            result = cpp.input_render(prepare(graph(schema, ("RequestQuestion", "RequestInput", "RequestOptions", "RequestSessionDescriptor"))))
+            output = ROOT / "libraries/cpp/include/thinkthen/inputs_generated.hpp"
+        else:
+            result = cpp.render(definitions, version)
+            output = ROOT / "libraries/cpp/include/thinkthen/results_generated.hpp"
+        if args.check:
+            if not output.exists() or output.read_text() != result:
+                print("generated C++ results differ", file=sys.stderr)
+                return 1
+        else:
+            output.write_text(result)
+        return 0
     if args.target == "php":
         if args.inputs or args.bridge:
             parser.error("PHP target generates owned results only")

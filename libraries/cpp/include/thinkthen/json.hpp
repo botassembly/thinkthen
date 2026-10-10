@@ -1,6 +1,8 @@
 #pragma once
 // Local JSON value, parser and writer for host values. MIT, with this package.
 #include <cmath>
+#include <cstdint>
+#include <charconv>
 #include <cstdlib>
 #include <iomanip>
 #include <istream>
@@ -19,7 +21,7 @@ public:
     using Object = std::vector<std::pair<std::string, Json>>;
     using Array = std::vector<Json>;
 private:
-    std::variant<std::nullptr_t, bool, double, std::string, Array, Object> value_;
+    std::variant<std::nullptr_t, bool, int64_t, uint64_t, double, std::string, Array, Object> value_;
     static std::string quote(const std::string& text) {
         std::string out = "\"";
         const char* hex = "0123456789abcdef";
@@ -115,6 +117,11 @@ private:
                 if (pos>=input.size() || input[pos]<'0' || input[pos]>'9') invalid();
                 do {++pos;} while (pos<input.size() && input[pos]>='0' && input[pos]<='9'); }
             auto part=input.substr(start,pos-start);
+            if (part.find_first_of(".eE") == std::string::npos) {
+                if (part.front() == '-') { int64_t n; auto r=std::from_chars(part.data(),part.data()+part.size(),n); if(r.ec==std::errc{}) return Json(n); }
+                else { uint64_t n; auto r=std::from_chars(part.data(),part.data()+part.size(),n); if(r.ec==std::errc{}) return Json(n); }
+                invalid();
+            }
             char* end=nullptr;
             double d=std::strtod(part.c_str(), &end);
             if (end!=part.c_str()+part.size() || !std::isfinite(d)) invalid();
@@ -129,7 +136,7 @@ private:
                 std::string name(literal.first); if (input.compare(pos,name.size(),name)==0) {pos+=name.size(); return literal.second;}
             }
             if (c=='[' || c=='{') {
-                if (++depth>128) invalid();
+                ++depth;
                 ++pos;
                 if (c=='[') {
                     Array rows; if (!consume(']')) { do {rows.push_back(value());} while (consume(',')); if (!consume(']')) invalid(); }
@@ -154,7 +161,8 @@ public:
     Json():value_(nullptr) {} Json(std::nullptr_t):value_(nullptr) {}
     Json(bool b):value_(b) {}
     Json(double n):value_(n) {if (!std::isfinite(n)) throw std::invalid_argument("nonfinite JSON number");}
-    Json(int n):value_(static_cast<double>(n)) {}
+    template<typename T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T,bool>, int> = 0>
+    Json(T n):value_(nullptr) { if constexpr(std::is_signed_v<T>) value_=int64_t(n); else value_=uint64_t(n); }
     Json(const char* s):value_(std::string(s)) {}
     Json(std::string s):value_(std::move(s)) {}
     Json(Array a):value_(std::move(a)) {} Json(Object o):value_(std::move(o)) {}
@@ -169,7 +177,7 @@ public:
     static Json parse(std::istream& s) {return parse(std::string(std::istreambuf_iterator<char>(s),{}));}
     bool is_null() const {return std::holds_alternative<std::nullptr_t>(value_);}
     bool is_boolean() const {return std::holds_alternative<bool>(value_);}
-    bool is_number() const {return std::holds_alternative<double>(value_);}
+    bool is_number() const {return std::holds_alternative<double>(value_) || std::holds_alternative<int64_t>(value_) || std::holds_alternative<uint64_t>(value_);}
     bool is_string() const {return std::holds_alternative<std::string>(value_);}
     bool is_array() const {return std::holds_alternative<Array>(value_);}
     bool is_object() const {return std::holds_alternative<Object>(value_);}
@@ -189,11 +197,17 @@ public:
     template <typename T> T get() const {
         if constexpr (std::is_same_v<T, std::string>) return std::get<std::string>(value_);
         else if constexpr (std::is_same_v<T, bool>) return std::get<bool>(value_);
-        else if constexpr (std::is_same_v<T, double>) return std::get<double>(value_);
+        else if constexpr (std::is_arithmetic_v<T>) {
+            if(auto p=std::get_if<int64_t>(&value_)) return static_cast<T>(*p);
+            if(auto p=std::get_if<uint64_t>(&value_)) return static_cast<T>(*p);
+            return static_cast<T>(std::get<double>(value_));
+        }
     }
     std::string dump() const {
         if (is_null()) return "null";
         if (auto p=std::get_if<bool>(&value_)) return *p ? "true":"false";
+        if (auto p=std::get_if<int64_t>(&value_)) return std::to_string(*p);
+        if (auto p=std::get_if<uint64_t>(&value_)) return std::to_string(*p);
         if (auto p=std::get_if<double>(&value_)) {std::ostringstream s; s << std::setprecision(17) << *p; return s.str();}
         if (auto p=std::get_if<std::string>(&value_)) return quote(*p);
         if (auto p=std::get_if<Array>(&value_)) {std::string s="["; for (const auto& v:*p) {if (s.size()>1) s+=','; s+=v.dump();} return s+']';}
