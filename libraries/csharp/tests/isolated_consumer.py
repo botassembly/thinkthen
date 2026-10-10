@@ -45,6 +45,7 @@ try:
  bodies=(barrier/'wire-requests.jsonl').read_bytes().splitlines()
  if mode=='sessions':
   assert b'INSTALLED_CSHARP_SESSION_PASS' in result.stdout,result.stdout
+  assert server.user_agents and set(server.user_agents)=={f'thinkthen/{V} (csharp)'},server.user_agents
   required=collections.Counter(['session-owned','hold-session-task','hold-session-drain'])
   actual=collections.Counter(server.arrivals)
   admitted=collections.Counter((barrier/'admitted-feed').read_text().splitlines())

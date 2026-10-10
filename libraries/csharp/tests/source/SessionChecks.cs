@@ -120,6 +120,7 @@ static class SessionChecks
         var deepRow = call.Packets.OfType<SessionPacketDecideRow>().Single();
         if (deepRow.Value.Value.GetRawText() != deepMeaning || deepRow.Value.Input.Value.GetRawText() != deepOriginal || deepRow.ToPlain()["value"]!["input"]!["nested"]!.ToJsonString() != deepMeaning) throw new Exception("deep meaning or original result changed");
         if (!call.Packets.Any(p => p is SessionPacketDecideRow) || call.Terminal.Facts.State != PresenceState.Value || call.Terminal.Failure.State != PresenceState.Missing) throw new Exception("owned row or terminal");
+        string facts = call.Terminal.Facts.Value.ToJsonString();
         string owned = call.Packets.First(p => p is SessionPacketDecideRow).ToJsonString();
         using (var spent = new CancellationTokenSource())
         {
@@ -184,7 +185,7 @@ static class SessionChecks
         }
         // Keep actual received rows after all native owners have been released.
         engine.Dispose();
-        if (call.Packets.First(p => p is SessionPacketDecideRow).ToJsonString() != owned) throw new Exception("result ownership");
+        if (call.Terminal.Facts.Value.ToJsonString() != facts || call.Packets.First(p => p is SessionPacketDecideRow).ToJsonString() != owned) throw new Exception("result ownership");
         using (var document = JsonDocument.Parse("{\"kind\":\"terminal\",\"facts\":null,\"future\":{\"nested\":false}}"))
         {
             var terminal = (SessionPacketTerminal)SessionPacket.Read(document.RootElement);
