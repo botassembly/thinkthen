@@ -17,7 +17,9 @@ public:
 class SessionFailure : public std::runtime_error {
 public:
     results::CallError failure;
-    explicit SessionFailure(results::CallError error):std::runtime_error(error.error().value->message().value.value()),failure(std::move(error)) {}
+    results::SessionPacketTerminal terminal;
+    std::vector<results::SessionPacket> packets;
+    explicit SessionFailure(results::SessionPacketTerminal value):std::runtime_error(value.failure().value->error().value->message().value.value()),failure(*value.failure().value),terminal(std::move(value)) {}
 };
 namespace detail {
 inline void check_session(int code) { if(code) throw NativeFailure(code,thinkthen_session_error_message()); }
@@ -62,18 +64,20 @@ public:
         results::SessionPacket value(Json::parse(std::string(bytes,size)));
         if(auto terminal=value.as_SessionPacketTerminal()) {
             auto failure=terminal->failure();
-            if(failure.state==results::PresenceState::value) throw SessionFailure(std::move(*failure.value));
+            if(failure.state==results::PresenceState::value) throw SessionFailure(std::move(*terminal));
         }
         return {PollState::result,std::move(value)};
     }
     // Explicit blocking convenience; a caller can run this on its chosen worker.
     std::vector<results::SessionPacket> collect() {
         std::vector<results::SessionPacket> values;
-        for(;;) {
-            auto next=poll(); if(next.state==PollState::end) return values;
-            if(next.packet) values.push_back(std::move(*next.packet));
-            else std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
+        try {
+            for(;;) {
+                auto next=poll(); if(next.state==PollState::end) return values;
+                if(next.packet) values.push_back(std::move(*next.packet));
+                else std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        } catch(SessionFailure& error) { error.packets=std::move(values); throw; }
     }
 };
 class Client {

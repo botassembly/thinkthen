@@ -11,6 +11,13 @@ template<class T> struct Presence {
 class Node {
 protected:
     Json value_;
+    void set_member(const char* key, Json value) {
+        auto members=value_.object();
+        for(auto& member:members) if(member.first==key) {
+            member.second=std::move(value); value_=Json(std::move(members)); return;
+        }
+        members.emplace_back(key,std::move(value)); value_=Json(std::move(members));
+    }
 public:
     explicit Node(Json value):value_(std::move(value)) {}
     // Preserve unknown extensions and caller-owned original JSON without imposing a grammar.
@@ -38,7 +45,8 @@ template<class... T> struct Encoder<std::variant<T...>> {
 template<class T> Json encode(const T& value) { return Encoder<T>::write(value); }
 template<class T> struct Decoder {
     static T read(const Json& value) {
-        if constexpr(std::is_same_v<T,Json>) return value;
+        if constexpr(std::is_same_v<T,std::nullptr_t>) return nullptr;
+        else if constexpr(std::is_same_v<T,Json>) return value;
         else if constexpr(std::is_arithmetic_v<T> || std::is_same_v<T,std::string>) return value.get<T>();
         else return T(value);
     }

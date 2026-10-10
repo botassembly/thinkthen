@@ -1,13 +1,15 @@
 """C++ immutable typed accessors from the native semantic graph."""
 import json
 import re
-from csharp import shape as common_shape
+from csharp import shape as common_shape, enum_values
 
 def shape(raw):
     if isinstance(raw, dict) and "const" in raw and "type" not in raw:
         raw = {**raw, "type": "string" if isinstance(raw["const"],str) else "boolean" if isinstance(raw["const"],bool) else "integer"}
     try:
-        return common_shape(raw)
+        result = common_shape(raw)
+        if isinstance(result,dict) and enum_values(result): return {**result,"type":"string"}
+        return result
     except ValueError:
         alternatives=raw.get("anyOf", raw.get("oneOf",[]))
         if not alternatives and isinstance(raw.get("type"),list): alternatives=[{**raw,"type":kind} for kind in raw["type"]]
@@ -17,6 +19,11 @@ ROOTS = ('completesessionPacket',)
 
 def name(key):
     return ''.join(p[:1].upper()+p[1:] for p in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
+
+def integer_type(s):
+    if s.get("minimum", -1) >= 0 or s.get("format", "").startswith("uint"):
+        return "uint8_t" if s.get("maximum")==255 else "uint32_t" if s.get("maximum")==4294967295 else "uint64_t"
+    return "int64_t"
 
 def typ(raw):
     s=shape(raw)
@@ -28,7 +35,7 @@ def typ(raw):
     if 'primitive_variants' in s:
         schemas=s.get('primitive_schemas',{})
         return 'std::variant<'+', '.join(dict.fromkeys(typ(schemas.get(k,{'type':k})) for k in s['primitive_variants'] if k!='null'))+'>'
-    return {'string':'std::string','boolean':'bool','integer':'int64_t' if s.get('format')=='int64' else 'uint64_t','number':'double','null':'std::nullptr_t'}.get(kind,'Json') if isinstance(kind,str) else 'Json'
+    return {'string':'std::string','boolean':'bool','integer':integer_type(s),'number':'double','null':'std::nullptr_t'}.get(kind,'Json') if isinstance(kind,str) else 'Json'
 
 def condition(tag):
     mode,member,value=tag
@@ -78,7 +85,7 @@ def input_render(definitions):
             for member,field in s['properties'].items():
                 if isinstance(field,dict) and 'const' in field: continue
                 t=typ(field); lines += [f'    {n}& set_{member}(const {t}& value);']
-                bodies += [f'inline {n}& {n}::set_{member}(const {t}& value) {{ auto members=value_.object(); auto encoded=results::encode(value); bool found=false; for(auto& member:members) if(member.first=={json.dumps(member)}) {{ member.second=encoded; found=true; }} if(!found) members.emplace_back({json.dumps(member)},encoded); value_=Json(std::move(members)); return *this; }}']
+                bodies += [f'inline {n}& {n}::set_{member}(const {t}& value) {{ set_member({json.dumps(member)},results::encode(value)); return *this; }}']
         else:
             t=typ(s)
             lines += [f'    explicit {n}(const {t}& value);']

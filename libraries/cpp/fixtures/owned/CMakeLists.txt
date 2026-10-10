@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.18)
+project(owned_consumer LANGUAGES CXX)
+find_package(thinkthen-cpp REQUIRED CONFIG)
+add_executable(owned_consumer main.cpp)
+target_link_libraries(owned_consumer PRIVATE thinkthen::thinkthen_cpp_shared)
+target_compile_options(owned_consumer PRIVATE -Wall -Wextra -Werror)

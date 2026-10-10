@@ -442,7 +442,7 @@ class Find : public Node { public: using Node::Node;
     Presence<Position> position() const;
     Presence<ReadableQuestion2> question() const;
     Presence<Version> schema() const;
-    Presence<Json> threshold() const;
+    Presence<std::nullptr_t> threshold() const;
     Presence<Json> value() const;
 };
 class FindCandidate : public Node { public: using Node::Node;
@@ -453,12 +453,12 @@ class FindCandidate : public Node { public: using Node::Node;
 };
 class Image : public Node { public: using Node::Node;
     Presence<std::string> base64() const;
-    Presence<uint64_t> height() const;
+    Presence<uint32_t> height() const;
     Presence<ImageMedia> media() const;
-    Presence<uint64_t> width() const;
+    Presence<uint32_t> width() const;
 };
 class ImageMedia : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class InputDeclaration : public Node { public: using Node::Node;
     std::optional<InputDeclarationString> as_InputDeclarationString() const;
@@ -538,7 +538,7 @@ class ObservationObservationId : public Node { public: using Node::Node;
     Presence<ObservationId> observation_id() const;
 };
 class Origin : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class PersistenceObservation : public Node { public: using Node::Node;
     Presence<std::string> advice() const;
@@ -561,7 +561,7 @@ class QuestionName : public Node { public: using Node::Node;
 };
 class QuestionSource : public Node { public: using Node::Node;
     Presence<std::string> answered_by() const;
-    Presence<uint64_t> batch_size() const;
+    Presence<uint32_t> batch_size() const;
     Presence<Origin> origin() const;
 };
 class RankMember : public Node { public: using Node::Node;
@@ -576,7 +576,7 @@ class RankMemberResult : public Node { public: using Node::Node;
     Presence<ReadableQuestion> question() const;
     Presence<Version> schema() const;
     Presence<PhysicalSource> source() const;
-    Presence<Json> threshold() const;
+    Presence<std::nullptr_t> threshold() const;
     Presence<uint64_t> value() const;
 };
 class ReadableQuestion : public Node { public: using Node::Node;
@@ -596,7 +596,7 @@ class ReadableQuestion2 : public Node { public: using Node::Node;
     Presence<std::vector<std::string>> on() const;
     Presence<std::string> profile() const;
     Presence<Json> text() const;
-    Presence<Json> verb() const;
+    Presence<std::string> verb() const;
     Presence<WordingVersion> wording_version() const;
 };
 class ReadableQuestion3 : public Node { public: using Node::Node;
@@ -614,7 +614,7 @@ class ReadableQuestion3 : public Node { public: using Node::Node;
     Presence<std::string> profile() const;
     Presence<Threshold> relation_threshold() const;
     Presence<std::vector<RelationRule>> relations() const;
-    Presence<uint64_t> snippet_pieces() const;
+    Presence<uint32_t> snippet_pieces() const;
     Presence<RecognitionStageContext> stage_context() const;
     Presence<Threshold> threshold() const;
     Presence<Verb> verb() const;
@@ -632,7 +632,7 @@ class ReadableQuestion4 : public Node { public: using Node::Node;
     Presence<std::string> profile() const;
     Presence<std::vector<RelationRule>> relations() const;
     Presence<Threshold> threshold() const;
-    Presence<Json> verb() const;
+    Presence<std::string> verb() const;
     Presence<WordingVersion> wording_version() const;
 };
 class ReadableQuestionChoose : public Node { public: using Node::Node;
@@ -715,7 +715,7 @@ class RecognitionEdgeDocument : public Node { public: using Node::Node;
     Presence<Entity> target() const;
 };
 class RecognitionMode : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class RecognitionOdds : public Node { public: using Node::Node;
     std::optional<RecognitionOddsFieldsNamesPairsPiecesProposals> as_RecognitionOddsFieldsNamesPairsPiecesProposals() const;
@@ -761,7 +761,7 @@ class Relation : public Node { public: using Node::Node;
     Presence<std::vector<RelatedEntityEdge>> value() const;
 };
 class RelationDirection : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class RelationMember : public Node { public: using Node::Node;
     std::optional<RelationMemberAnswerId> as_RelationMemberAnswerId() const;
@@ -802,10 +802,10 @@ class RelationMemberFailureId : public Node { public: using Node::Node;
     Presence<FailureId> failure_id() const;
 };
 class RelationMethod : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class RequestFunction : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class SdkRequestId : public Node { public: using Node::Node;
     std::string value() const;
@@ -826,7 +826,7 @@ class SendBudgetDenialBeforeRetry : public Node { public: using Node::Node;
     Presence<uint64_t> last_status() const;
 };
 class StopCause : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class Stopped : public Node { public: using Node::Node;
     Presence<uint64_t> at() const;
@@ -845,7 +845,7 @@ class Usage : public Node { public: using Node::Node;
     Presence<uint64_t> output_tokens() const;
 };
 class UsagePersistence : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class Verb : public Node { public: using Node::Node;
     std::string value() const;
@@ -854,7 +854,7 @@ class Version : public Node { public: using Node::Node;
     std::string value() const;
 };
 class WordingVersion : public Node { public: using Node::Node;
-    uint64_t value() const;
+    uint32_t value() const;
 };
 class AnnotatedField : public Node { public: using Node::Node;
     std::variant<bool, std::string, std::vector<std::string>, double, Failed> value() const;
@@ -889,7 +889,7 @@ class AnswerYesNo : public Node { public: using Node::Node;
     Presence<double> probability() const;
 };
 class AttemptOutcome : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class BatchSetting : public Node { public: using Node::Node;
     std::variant<uint64_t, std::string> value() const;
@@ -924,14 +924,14 @@ class Failure : public Node { public: using Node::Node;
     Presence<std::string> kind() const;
 };
 class FailureCause : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class FailureKind : public Node { public: using Node::Node;
-    Json value() const;
+    std::string value() const;
 };
 class FindAnswer : public Node { public: using Node::Node;
     Presence<double> confidence() const;
-    Presence<Json> kind() const;
+    Presence<std::string> kind() const;
     Presence<std::string> pick() const;
     Presence<std::vector<std::pair<std::string, double>>> probabilities() const;
 };
@@ -1468,17 +1468,17 @@ inline Presence<Meta> Find::meta() const { return member_value<Meta>(value_, "me
 inline Presence<Position> Find::position() const { return member_value<Position>(value_, "position"); }
 inline Presence<ReadableQuestion2> Find::question() const { return member_value<ReadableQuestion2>(value_, "question"); }
 inline Presence<Version> Find::schema() const { return member_value<Version>(value_, "schema"); }
-inline Presence<Json> Find::threshold() const { return member_value<Json>(value_, "threshold"); }
+inline Presence<std::nullptr_t> Find::threshold() const { return member_value<std::nullptr_t>(value_, "threshold"); }
 inline Presence<Json> Find::value() const { return member_value<Json>(value_, "value"); }
 inline Presence<uint64_t> FindCandidate::index() const { return member_value<uint64_t>(value_, "index"); }
 inline Presence<Json> FindCandidate::input() const { return member_value<Json>(value_, "input"); }
 inline Presence<double> FindCandidate::probability() const { return member_value<double>(value_, "probability"); }
 inline Presence<PhysicalSource> FindCandidate::source() const { return member_value<PhysicalSource>(value_, "source"); }
 inline Presence<std::string> Image::base64() const { return member_value<std::string>(value_, "base64"); }
-inline Presence<uint64_t> Image::height() const { return member_value<uint64_t>(value_, "height"); }
+inline Presence<uint32_t> Image::height() const { return member_value<uint32_t>(value_, "height"); }
 inline Presence<ImageMedia> Image::media() const { return member_value<ImageMedia>(value_, "media"); }
-inline Presence<uint64_t> Image::width() const { return member_value<uint64_t>(value_, "width"); }
-inline Json ImageMedia::value() const { return decode<Json>(value_); }
+inline Presence<uint32_t> Image::width() const { return member_value<uint32_t>(value_, "width"); }
+inline std::string ImageMedia::value() const { return decode<std::string>(value_); }
 inline std::optional<InputDeclarationString> InputDeclaration::as_InputDeclarationString() const { if (literal(value_, "type", "string")) return InputDeclarationString(value_); return std::nullopt; }
 inline std::optional<InputDeclarationObject> InputDeclaration::as_InputDeclarationObject() const { if (literal(value_, "type", "object")) return InputDeclarationObject(value_); return std::nullopt; }
 inline Presence<std::vector<std::pair<std::string, InputPropertyType>>> InputDeclarationObject::properties() const { return member_value<std::vector<std::pair<std::string, InputPropertyType>>>(value_, "properties"); }
@@ -1524,7 +1524,7 @@ inline std::optional<ObservationFailureId> Observation::as_ObservationFailureId(
 inline std::string ObservationId::value() const { return decode<std::string>(value_); }
 inline Presence<FailureId> ObservationFailureId::failure_id() const { return member_value<FailureId>(value_, "failure_id"); }
 inline Presence<ObservationId> ObservationObservationId::observation_id() const { return member_value<ObservationId>(value_, "observation_id"); }
-inline Json Origin::value() const { return decode<Json>(value_); }
+inline std::string Origin::value() const { return decode<std::string>(value_); }
 inline Presence<std::string> PersistenceObservation::advice() const { return member_value<std::string>(value_, "advice"); }
 inline Presence<std::string> PersistenceObservation::observed_at() const { return member_value<std::string>(value_, "observed_at"); }
 inline Presence<UsagePersistence> PersistenceObservation::state() const { return member_value<UsagePersistence>(value_, "state"); }
@@ -1537,7 +1537,7 @@ inline Presence<std::vector<std::string>> Position::images() const { return memb
 inline Presence<uint64_t> Position::last() const { return member_value<uint64_t>(value_, "last"); }
 inline std::string QuestionName::value() const { return decode<std::string>(value_); }
 inline Presence<std::string> QuestionSource::answered_by() const { return member_value<std::string>(value_, "answered_by"); }
-inline Presence<uint64_t> QuestionSource::batch_size() const { return member_value<uint64_t>(value_, "batch_size"); }
+inline Presence<uint32_t> QuestionSource::batch_size() const { return member_value<uint32_t>(value_, "batch_size"); }
 inline Presence<Origin> QuestionSource::origin() const { return member_value<Origin>(value_, "origin"); }
 inline Presence<std::string> RankMember::name() const { return member_value<std::string>(value_, "name"); }
 inline Presence<RankMemberResult> RankMember::result() const { return member_value<RankMemberResult>(value_, "result"); }
@@ -1548,7 +1548,7 @@ inline Presence<Meta> RankMemberResult::meta() const { return member_value<Meta>
 inline Presence<ReadableQuestion> RankMemberResult::question() const { return member_value<ReadableQuestion>(value_, "question"); }
 inline Presence<Version> RankMemberResult::schema() const { return member_value<Version>(value_, "schema"); }
 inline Presence<PhysicalSource> RankMemberResult::source() const { return member_value<PhysicalSource>(value_, "source"); }
-inline Presence<Json> RankMemberResult::threshold() const { return member_value<Json>(value_, "threshold"); }
+inline Presence<std::nullptr_t> RankMemberResult::threshold() const { return member_value<std::nullptr_t>(value_, "threshold"); }
 inline Presence<uint64_t> RankMemberResult::value() const { return member_value<uint64_t>(value_, "value"); }
 inline std::optional<ReadableQuestionDecide> ReadableQuestion::as_ReadableQuestionDecide() const { if (literal(value_, "verb", "decide")) return ReadableQuestionDecide(value_); return std::nullopt; }
 inline std::optional<ReadableQuestionChoose> ReadableQuestion::as_ReadableQuestionChoose() const { if (literal(value_, "verb", "choose")) return ReadableQuestionChoose(value_); return std::nullopt; }
@@ -1564,7 +1564,7 @@ inline Presence<bool> ReadableQuestion2::none() const { return member_value<bool
 inline Presence<std::vector<std::string>> ReadableQuestion2::on() const { return member_value<std::vector<std::string>>(value_, "on"); }
 inline Presence<std::string> ReadableQuestion2::profile() const { return member_value<std::string>(value_, "profile"); }
 inline Presence<Json> ReadableQuestion2::text() const { return member_value<Json>(value_, "text"); }
-inline Presence<Json> ReadableQuestion2::verb() const { return member_value<Json>(value_, "verb"); }
+inline Presence<std::string> ReadableQuestion2::verb() const { return member_value<std::string>(value_, "verb"); }
 inline Presence<WordingVersion> ReadableQuestion2::wording_version() const { return member_value<WordingVersion>(value_, "wording_version"); }
 inline Presence<Batch> ReadableQuestion3::batch() const { return member_value<Batch>(value_, "batch"); }
 inline Presence<InputDeclaration> ReadableQuestion3::context_schema() const { return member_value<InputDeclaration>(value_, "context_schema"); }
@@ -1580,7 +1580,7 @@ inline Presence<std::vector<std::string>> ReadableQuestion3::on() const { return
 inline Presence<std::string> ReadableQuestion3::profile() const { return member_value<std::string>(value_, "profile"); }
 inline Presence<Threshold> ReadableQuestion3::relation_threshold() const { return member_value<Threshold>(value_, "relation_threshold"); }
 inline Presence<std::vector<RelationRule>> ReadableQuestion3::relations() const { return member_value<std::vector<RelationRule>>(value_, "relations"); }
-inline Presence<uint64_t> ReadableQuestion3::snippet_pieces() const { return member_value<uint64_t>(value_, "snippet_pieces"); }
+inline Presence<uint32_t> ReadableQuestion3::snippet_pieces() const { return member_value<uint32_t>(value_, "snippet_pieces"); }
 inline Presence<RecognitionStageContext> ReadableQuestion3::stage_context() const { return member_value<RecognitionStageContext>(value_, "stage_context"); }
 inline Presence<Threshold> ReadableQuestion3::threshold() const { return member_value<Threshold>(value_, "threshold"); }
 inline Presence<Verb> ReadableQuestion3::verb() const { return member_value<Verb>(value_, "verb"); }
@@ -1596,7 +1596,7 @@ inline Presence<std::vector<std::string>> ReadableQuestion4::on() const { return
 inline Presence<std::string> ReadableQuestion4::profile() const { return member_value<std::string>(value_, "profile"); }
 inline Presence<std::vector<RelationRule>> ReadableQuestion4::relations() const { return member_value<std::vector<RelationRule>>(value_, "relations"); }
 inline Presence<Threshold> ReadableQuestion4::threshold() const { return member_value<Threshold>(value_, "threshold"); }
-inline Presence<Json> ReadableQuestion4::verb() const { return member_value<Json>(value_, "verb"); }
+inline Presence<std::string> ReadableQuestion4::verb() const { return member_value<std::string>(value_, "verb"); }
 inline Presence<WordingVersion> ReadableQuestion4::wording_version() const { return member_value<WordingVersion>(value_, "wording_version"); }
 inline Presence<Batch> ReadableQuestionChoose::batch() const { return member_value<Batch>(value_, "batch"); }
 inline Presence<InputDeclaration> ReadableQuestionChoose::context_schema() const { return member_value<InputDeclaration>(value_, "context_schema"); }
@@ -1665,7 +1665,7 @@ inline Presence<double> RecognitionEdgeDocument::probability() const { return me
 inline Presence<std::string> RecognitionEdgeDocument::relation() const { return member_value<std::string>(value_, "relation"); }
 inline Presence<Entity> RecognitionEdgeDocument::source() const { return member_value<Entity>(value_, "source"); }
 inline Presence<Entity> RecognitionEdgeDocument::target() const { return member_value<Entity>(value_, "target"); }
-inline Json RecognitionMode::value() const { return decode<Json>(value_); }
+inline std::string RecognitionMode::value() const { return decode<std::string>(value_); }
 inline std::optional<RecognitionOddsFieldsNamesPairsPiecesProposals> RecognitionOdds::as_RecognitionOddsFieldsNamesPairsPiecesProposals() const { if (value_.contains("names") && value_.contains("pairs") && value_.contains("pieces") && value_.contains("proposals")) return RecognitionOddsFieldsNamesPairsPiecesProposals(value_); return std::nullopt; }
 inline std::optional<RecognitionOddsFieldsPiecesProposals> RecognitionOdds::as_RecognitionOddsFieldsPiecesProposals() const { if (value_.contains("pieces") && value_.contains("proposals") && !value_.contains("names") && !value_.contains("pairs")) return RecognitionOddsFieldsPiecesProposals(value_); return std::nullopt; }
 inline Presence<std::vector<NameOdds>> RecognitionOddsFieldsNamesPairsPiecesProposals::names() const { return member_value<std::vector<NameOdds>>(value_, "names"); }
@@ -1697,7 +1697,7 @@ inline Presence<Position> Relation::position() const { return member_value<Posit
 inline Presence<ReadableQuestion4> Relation::question() const { return member_value<ReadableQuestion4>(value_, "question"); }
 inline Presence<Version> Relation::schema() const { return member_value<Version>(value_, "schema"); }
 inline Presence<std::vector<RelatedEntityEdge>> Relation::value() const { return member_value<std::vector<RelatedEntityEdge>>(value_, "value"); }
-inline Json RelationDirection::value() const { return decode<Json>(value_); }
+inline std::string RelationDirection::value() const { return decode<std::string>(value_); }
 inline std::optional<RelationMemberAnswerId> RelationMember::as_RelationMemberAnswerId() const { if (value_.contains("answer_id")) return RelationMemberAnswerId(value_); return std::nullopt; }
 inline std::optional<RelationMemberFailureId> RelationMember::as_RelationMemberFailureId() const { if (value_.contains("failure_id")) return RelationMemberFailureId(value_); return std::nullopt; }
 inline Presence<RelationDirection> RelationMemberAnswerId::direction() const { return member_value<RelationDirection>(value_, "direction"); }
@@ -1730,8 +1730,8 @@ inline Presence<Threshold> RelationMemberFailureId::threshold() const { return m
 inline Presence<Usage> RelationMemberFailureId::usage() const { return member_value<Usage>(value_, "usage"); }
 inline Presence<Failure> RelationMemberFailureId::failure() const { return member_value<Failure>(value_, "failure"); }
 inline Presence<FailureId> RelationMemberFailureId::failure_id() const { return member_value<FailureId>(value_, "failure_id"); }
-inline Json RelationMethod::value() const { return decode<Json>(value_); }
-inline Json RequestFunction::value() const { return decode<Json>(value_); }
+inline std::string RelationMethod::value() const { return decode<std::string>(value_); }
+inline std::string RequestFunction::value() const { return decode<std::string>(value_); }
 inline std::string SdkRequestId::value() const { return decode<std::string>(value_); }
 inline std::optional<SendBudgetDenialBeforeFirstSend> SendBudgetDenial::as_SendBudgetDenialBeforeFirstSend() const { if (literal(value_, "kind", "before_first_send")) return SendBudgetDenialBeforeFirstSend(value_); return std::nullopt; }
 inline std::optional<SendBudgetDenialBeforeAdditionalSend> SendBudgetDenial::as_SendBudgetDenialBeforeAdditionalSend() const { if (literal(value_, "kind", "before_additional_send")) return SendBudgetDenialBeforeAdditionalSend(value_); return std::nullopt; }
@@ -1740,7 +1740,7 @@ inline Presence<std::string> SendBudgetDenialBeforeAdditionalSend::kind() const 
 inline Presence<std::string> SendBudgetDenialBeforeFirstSend::kind() const { return member_value<std::string>(value_, "kind"); }
 inline Presence<std::string> SendBudgetDenialBeforeRetry::kind() const { return member_value<std::string>(value_, "kind"); }
 inline Presence<uint64_t> SendBudgetDenialBeforeRetry::last_status() const { return member_value<uint64_t>(value_, "last_status"); }
-inline Json StopCause::value() const { return decode<Json>(value_); }
+inline std::string StopCause::value() const { return decode<std::string>(value_); }
 inline Presence<uint64_t> Stopped::at() const { return member_value<uint64_t>(value_, "at"); }
 inline Presence<StopCause> Stopped::cause() const { return member_value<StopCause>(value_, "cause"); }
 inline Presence<bool> Stopped::retryable() const { return member_value<bool>(value_, "retryable"); }
@@ -1749,10 +1749,10 @@ inline Presence<StringType> StringRoot::type() const { return member_value<Strin
 inline std::string StringType::value() const { return decode<std::string>(value_); }
 inline Presence<uint64_t> Usage::input_tokens() const { return member_value<uint64_t>(value_, "input_tokens"); }
 inline Presence<uint64_t> Usage::output_tokens() const { return member_value<uint64_t>(value_, "output_tokens"); }
-inline Json UsagePersistence::value() const { return decode<Json>(value_); }
+inline std::string UsagePersistence::value() const { return decode<std::string>(value_); }
 inline std::string Verb::value() const { return decode<std::string>(value_); }
 inline std::string Version::value() const { return decode<std::string>(value_); }
-inline uint64_t WordingVersion::value() const { return decode<uint64_t>(value_); }
+inline uint32_t WordingVersion::value() const { return decode<uint32_t>(value_); }
 inline std::variant<bool, std::string, std::vector<std::string>, double, Failed> AnnotatedField::value() const { return decode<std::variant<bool, std::string, std::vector<std::string>, double, Failed>>(value_); }
 inline std::vector<std::pair<std::string, AnnotatedField>> AnnotatedRow::value() const { return decode<std::vector<std::pair<std::string, AnnotatedField>>>(value_); }
 inline std::optional<AnswerYesNo> Answer::as_AnswerYesNo() const { if (literal(value_, "kind", "yes_no")) return AnswerYesNo(value_); return std::nullopt; }
@@ -1771,7 +1771,7 @@ inline Presence<std::string> AnswerTag::kind() const { return member_value<std::
 inline Presence<std::vector<std::pair<std::string, double>>> AnswerTag::probabilities() const { return member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"); }
 inline Presence<std::string> AnswerYesNo::kind() const { return member_value<std::string>(value_, "kind"); }
 inline Presence<double> AnswerYesNo::probability() const { return member_value<double>(value_, "probability"); }
-inline Json AttemptOutcome::value() const { return decode<Json>(value_); }
+inline std::string AttemptOutcome::value() const { return decode<std::string>(value_); }
 inline std::variant<uint64_t, std::string> BatchSetting::value() const { return decode<std::variant<uint64_t, std::string>>(value_); }
 inline Presence<BatchSetting> BatchWarning::running() const { return member_value<BatchSetting>(value_, "running"); }
 inline Presence<BatchSetting> BatchWarning::tuned_for() const { return member_value<BatchSetting>(value_, "tuned_for"); }
@@ -1792,10 +1792,10 @@ inline Presence<Entity> EntityEdge::target() const { return member_value<Entity>
 inline Presence<Failure> Failed::failed() const { return member_value<Failure>(value_, "failed"); }
 inline Presence<FailureCause> Failure::cause() const { return member_value<FailureCause>(value_, "cause"); }
 inline Presence<std::string> Failure::kind() const { return member_value<std::string>(value_, "kind"); }
-inline Json FailureCause::value() const { return decode<Json>(value_); }
-inline Json FailureKind::value() const { return decode<Json>(value_); }
+inline std::string FailureCause::value() const { return decode<std::string>(value_); }
+inline std::string FailureKind::value() const { return decode<std::string>(value_); }
 inline Presence<double> FindAnswer::confidence() const { return member_value<double>(value_, "confidence"); }
-inline Presence<Json> FindAnswer::kind() const { return member_value<Json>(value_, "kind"); }
+inline Presence<std::string> FindAnswer::kind() const { return member_value<std::string>(value_, "kind"); }
 inline Presence<std::string> FindAnswer::pick() const { return member_value<std::string>(value_, "pick"); }
 inline Presence<std::vector<std::pair<std::string, double>>> FindAnswer::probabilities() const { return member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"); }
 inline Presence<std::vector<std::pair<std::string, double>>> NameOdds::edges() const { return member_value<std::vector<std::pair<std::string, double>>>(value_, "edges"); }

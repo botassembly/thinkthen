@@ -71,6 +71,8 @@ cp -a fixtures/tests/. "$out/consumer-source/"
 cp "$repo/specification/fixtures/types/corpus.json" \
     "$out/fixture-root/specification/fixtures/types/corpus.json"
 export CPP_CORPUS_ROOT="$out/fixture-root"
+"$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --check
+"$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --inputs --check
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.cpp.json
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.hpp.json
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
@@ -79,6 +81,7 @@ printf '%s\n' '-----BEGIN PRIVATE KEY----- planted' >"$out/guard-plant/README.md
 if "$python_bin" fixtures/guard.py "$out/guard-plant" >/dev/null 2>&1; then
     echo 'cpp: private marker plant passed' >&2; exit 1
 fi
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
 "$python_bin" fixtures/exports.py
 header=$repo/libraries/c/include/thinkthen.h
@@ -93,6 +96,9 @@ sh "$repo/libraries/c/localize.sh" "$repo/libraries/c/target/debug/libthinkthen_
 cmp "$header" "$out/install/include/thinkthen/thinkthen.h"
 cmp "$shared" "$out/install/lib/libthinkthen.so.0"
 cmp "$static" "$out/install/lib/libthinkthen.a"
+"$cmake_bin" -S fixtures/owned -B "$out/owned-build" -DCMAKE_PREFIX_PATH="$out/install"
+"$cmake_bin" --build "$out/owned-build" --parallel 2
+"$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-build/owned_consumer" "$out/owned-cases"
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 THINKTHEN_PORTABLE_NATIVE="$out/install" "$python_bin" fixtures/portable_batch.py
 for mode in shared static; do

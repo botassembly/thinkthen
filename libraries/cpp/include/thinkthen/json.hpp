@@ -214,6 +214,21 @@ public:
         std::string s="{"; for (const auto& [k,v]:std::get<Object>(value_)) {if (s.size()>1) s+=','; s+=quote(k)+":"+v.dump();} return s+'}';
     }
     friend bool operator==(const Json& a,const Json& b) {
+        if (a.is_number() && b.is_number()) {
+            if(auto x=std::get_if<int64_t>(&a.value_)) {
+                if(auto y=std::get_if<uint64_t>(&b.value_)) return *x>=0 && static_cast<uint64_t>(*x)==*y;
+            }
+            if(auto x=std::get_if<uint64_t>(&a.value_)) {
+                if(auto y=std::get_if<int64_t>(&b.value_)) return *y>=0 && *x==static_cast<uint64_t>(*y);
+            }
+            if(a.value_.index()!=b.value_.index()) {
+                const Json& integer=std::holds_alternative<double>(a.value_) ? b:a;
+                double number=std::holds_alternative<double>(a.value_) ? a.get<double>():b.get<double>();
+                if(std::trunc(number)!=number) return false;
+                if(auto x=std::get_if<uint64_t>(&integer.value_)) return number>=0 && number<18446744073709551616.0 && *x==static_cast<uint64_t>(number);
+                if(auto x=std::get_if<int64_t>(&integer.value_)) return number>=-9223372036854775808.0 && number<9223372036854775808.0 && *x==static_cast<int64_t>(number);
+            }
+        }
         if (a.value_.index()!=b.value_.index()) return false;
         if (!a.is_object()) return a.value_==b.value_;
         const auto& first=std::get<Object>(a.value_);
