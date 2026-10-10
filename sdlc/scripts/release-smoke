@@ -190,7 +190,10 @@ if [ -n "$managed_pair" ]; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" csharp-jvm
 fi
 if [ -n "$swift_zig_pair" ]; then
-	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" swift-zig
+	case $(uname -s) in
+	Darwin) ;; # The Apple framework is checked with Foundation below.
+	*) sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" swift-zig ;;
+	esac
 fi
 if [ -n "$php_seen" ] || { [ -n "$dart_seen" ] && [ -z "$flutter_seen" ]; }; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" php-dart

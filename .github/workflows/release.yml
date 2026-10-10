@@ -146,6 +146,47 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  apple-packages:
+    needs: [resolve, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: aarch64-apple-darwin, runner: macos-15}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel}
+    defaults: {run: {shell: bash}}
+    runs-on: ${{ matrix.runner }}
+    permissions: {contents: read, actions: read}
+    env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*-apple-darwin', path: target/apple-inputs}
+      - name: Assemble Swift and Foundation from both captured C packages
+        env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: |
+          set -eu
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+          for arch in x86_64 aarch64; do
+            input="target/apple-inputs/platform-$arch-apple-darwin"
+            name="thinkthen-c-$version-$arch-apple-darwin.tar.gz"
+            (cd "$input" && shasum -a 256 -c "$name.sha256")
+            mkdir "target/apple-$arch"
+            tar -xzf "$input/$name" -C "target/apple-$arch"
+            cmp "target/apple-$arch/include/thinkthen.h" libraries/c/include/thinkthen.h
+          done
+          libraries/swift/build-xcframework.sh target/apple-x86_64 target/apple-aarch64 target/apple-framework
+          cp -R target/apple-framework/CThinkThen.xcframework libraries/swift/
+          mkdir target/apple-packages
+          cp "target/apple-inputs/platform-$TARGET/thinkthen-c-$version-$TARGET.tar.gz"* target/apple-packages/
+          sdlc/scripts/release-pack --apple-wrappers "$TARGET" target/apple-packages swift objective-c
+          rm "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz" "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz.sha256"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: {name: 'apple-packages-${{ matrix.target }}', path: target/apple-packages/, if-no-files-found: error, retention-days: 7}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: {name: 'apple-framework-${{ matrix.target }}', path: libraries/swift/CThinkThen.xcframework/, if-no-files-found: error, retention-days: 7}
+
   wheels:
     needs: [resolve, build]
     runs-on: ubuntu-24.04
@@ -258,7 +299,7 @@ jobs:
         run: python3 sdlc/scripts/release-windows-sdk-smoke.py npm-dist registry
 
   smoke:
-    needs: [resolve, build, wheels, npm-pack, gems, crate]
+    needs: [resolve, build, apple-packages, wheels, npm-pack, gems, crate]
     strategy:
       fail-fast: false
       matrix:
@@ -332,6 +373,12 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: 'platform-${{ matrix.target }}', path: platform}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: runner.os == 'macOS'
+        with: {name: 'apple-packages-${{ matrix.target }}', path: platform}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: runner.os == 'macOS'
+        with: {name: 'apple-framework-${{ matrix.target }}', path: libraries/swift/CThinkThen.xcframework}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         with: {name: provenance-x86, path: provenance}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -359,7 +406,7 @@ jobs:
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
-      - env: {TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
+      - env: {THINKTHEN_TEST_PROFILE: full, TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
         if: matrix.target != 'x86_64-pc-windows-msvc'
         run: |
           sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
@@ -391,6 +438,10 @@ jobs:
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: provenance-x86, path: provenance}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: apple-packages-aarch64-apple-darwin, path: platform/platform-aarch64-apple-darwin}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: apple-packages-x86_64-apple-darwin, path: platform/platform-x86_64-apple-darwin}
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
         run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
       - run: ruby -c thinkthen.rb

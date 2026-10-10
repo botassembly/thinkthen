@@ -9,3 +9,6 @@ libraries/swift/Sources/CThinkThen/include/thinkthen.h
 __pycache__/
 
 libraries/swift/Sources/ThinkThen/Native/*/libthinkthen.so
+
+# Assembled from the two reviewed Apple C packages at the candidate.
+libraries/swift/CThinkThen.xcframework/
