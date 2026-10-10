@@ -18,7 +18,11 @@ int main(int argc, const char *argv[]) {
         } error:&error];
         require(task != nil && error == nil);
         require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC)) == 0);
+        TTUsagePersistenceStatus *usage = [client finishUsageStatus:&error];
+        require(usage != nil && error == nil && usage.state == TTUsagePersistenceWritten && usage.advice == nil);
+        require([client usagePersistence:&error].state == usage.state && error == nil);
         task = nil; client = nil;
+        require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.terminal != nil && retained.packets.count > 0);
         require(retained.terminal.facts.state == TTPresenceValue);
         // A new client and unrelated host work progress while a provider is held.

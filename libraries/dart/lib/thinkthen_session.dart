@@ -14,7 +14,7 @@ export 'src/session/native.dart' show NativeFailure;
 export 'src/session/values.dart' show Presence;
 export 'src/session/inputs_generated.dart';
 export 'src/session/results_generated.dart';
-export 'src/session/abi_generated.dart' show NativeErrorKind;
+export 'src/session/abi_generated.dart' show NativeErrorKind, UsagePersistenceState;
 part 'src/session/client.dart';
 
 const _surfaceToken = 'dart';

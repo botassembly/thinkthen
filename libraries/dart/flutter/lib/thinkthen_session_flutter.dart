@@ -15,7 +15,7 @@ export 'package:thinkthen_dart/src/session/values.dart' show Presence;
 export 'package:thinkthen_dart/src/session/inputs_generated.dart';
 export 'package:thinkthen_dart/src/session/results_generated.dart';
 export 'package:thinkthen_dart/src/session/abi_generated.dart'
-    show NativeErrorKind;
+    show NativeErrorKind, UsagePersistenceState;
 part 'package:thinkthen_dart/src/session/client.dart';
 
 const _surfaceToken = 'flutter';

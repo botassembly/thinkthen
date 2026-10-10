@@ -1,6 +1,27 @@
 // Generated from the canonical C header ABI. Do not edit.
 import 'dart:ffi';
 
+final class NativeUsageState extends Struct {
+  @Uint32()
+  external int kind;
+}
+
+final class NativeUsageAdvice extends Struct {
+  external Pointer<Uint8> data;
+  @Size()
+  external int len;
+}
+
+enum UsagePersistenceState {
+  disabled(1),
+  failed(4),
+  pending(2),
+  written(3);
+
+  final int code;
+  const UsagePersistenceState(this.code);
+}
+
 @Native<Pointer<Void> Function(Pointer<Uint8>)>(
     symbol: 'thinkthen_engine_new_with',
     assetId: 'package:thinkthen_dart/thinkthen')
@@ -72,6 +93,20 @@ external int _thinkthen_session_result_json(
     symbol: 'thinkthen_session_error_message',
     assetId: 'package:thinkthen_dart/thinkthen')
 external Pointer<Uint8> _thinkthen_session_error_message();
+@Native<
+        Int32 Function(Pointer<Void>, Pointer<NativeUsageState>,
+            Pointer<NativeUsageAdvice>)>(
+    symbol: 'thinkthen_engine_usage_persistence_v1',
+    assetId: 'package:thinkthen_dart/thinkthen')
+external int _thinkthen_engine_usage_persistence_v1(Pointer<Void> arg0,
+    Pointer<NativeUsageState> arg1, Pointer<NativeUsageAdvice> arg2);
+@Native<
+        Int32 Function(Pointer<Void>, Pointer<NativeUsageState>,
+            Pointer<NativeUsageAdvice>)>(
+    symbol: 'thinkthen_engine_finish_usage_status_v1',
+    assetId: 'package:thinkthen_dart/thinkthen')
+external int _thinkthen_engine_finish_usage_status_v1(Pointer<Void> arg0,
+    Pointer<NativeUsageState> arg1, Pointer<NativeUsageAdvice> arg2);
 
 final class NativeAbi {
   final thinkthen_engine_new_with = _thinkthen_engine_new_with;
@@ -96,6 +131,10 @@ final class NativeAbi {
   final thinkthen_session_result_free = _thinkthen_session_result_free;
   final thinkthen_session_result_json = _thinkthen_session_result_json;
   final thinkthen_session_error_message = _thinkthen_session_error_message;
+  final thinkthen_engine_usage_persistence_v1 =
+      _thinkthen_engine_usage_persistence_v1;
+  final thinkthen_engine_finish_usage_status_v1 =
+      _thinkthen_engine_finish_usage_status_v1;
 }
 
 enum NativeErrorKind {

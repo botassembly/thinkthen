@@ -62,11 +62,81 @@ Future<void> main(List<String> args) async {
   final text = InputRequestInputText(text: 'owned');
   final question = InputRequestQuestionText(text: 'Is it?');
   try {
+    if (args.contains('usage-disabled')) {
+      final status = engine.finishUsageStatus();
+      check(
+          status.state == UsagePersistenceState.disabled &&
+              status.advice == null,
+          'disabled storage returns owned state');
+      engine.close();
+      check(status.state == UsagePersistenceState.disabled && sends == 0,
+          'disabled inspection sends nothing and survives close');
+      try {
+        engine.usagePersistence();
+        throw StateError('closed accepted');
+      } on StateError catch (error) {
+        check(error.message == 'Native owner is closed', 'closed guard');
+      }
+      print('PASS: disabled usage and closed guard');
+      return;
+    }
     final call = await engine.decide(question, text);
     check(!call.terminal.failure.isPresent && call.terminal.facts.isPresent,
         'typed terminal facts');
     final row = call.packets.whereType<SessionPacketDecideRow>().single;
     check(row.value.answer is AnswerYesNo, 'typed decide answer');
+    if (args.any((arg) => arg.startsWith('usage-'))) {
+      final held = args.contains('usage-failed');
+      if (held)
+        check(engine.usagePersistence().state == UsagePersistenceState.pending,
+            'held writer remains pending');
+      try {
+        await engine.decide(question, text,
+            options: InputRequestOptions(
+                maxRequestsTotal: Presence.present(BigInt.zero)));
+        throw StateError('budget accepted');
+      } on SessionFailure catch (error) {
+        check(error.call.terminal.facts.isPresent, 'failure retains facts');
+      }
+      final status = engine.finishUsageStatus();
+      check(
+          status.state ==
+              (held
+                  ? UsagePersistenceState.failed
+                  : UsagePersistenceState.written),
+          'finalization returns actual writer state after judgment failure');
+      check(
+          status.advice ==
+              (held
+                  ? 'check the usage folder permissions and free space'
+                  : null),
+          'native advice is safe');
+      check(engine.usagePersistence().state == status.state && sends == 1,
+          'latched state and no additional sends');
+      engine.close();
+      check(
+          status.state ==
+                  (held
+                      ? UsagePersistenceState.failed
+                      : UsagePersistenceState.written) &&
+              call.terminal.facts.value != null &&
+              row.value.answer is AnswerYesNo,
+          'owned status facts and successful answer survive cleanup');
+      for (final method in [
+        engine.usagePersistence,
+        engine.finishUsageStatus
+      ]) {
+        try {
+          method();
+          throw StateError('closed accepted');
+        } on StateError catch (error) {
+          check(error.message == 'Native owner is closed', 'closed guard');
+        }
+      }
+      print(
+          'PASS: usage state, copied advice, facts, one send and closed guards');
+      return;
+    }
     final wide = BigInt.parse('18446744073709551615');
     final authored = InputRequestQuestionDefinition(
         value: InputRequestDefinitionFieldsDecide(

@@ -142,6 +142,13 @@ final class OwnedSession implements Finalizable {
   }
 }
 
+/// An owned snapshot of this engine's count persistence.
+final class UsagePersistenceStatus {
+  final UsagePersistenceState state;
+  final String? advice;
+  const UsagePersistenceStatus(this.state, this.advice);
+}
+
 final class Engine implements Finalizable {
   final NativeAbi _abi;
   final NativeOwner _owner;
@@ -168,6 +175,35 @@ final class Engine implements Finalizable {
     return Engine._(abi, pointer);
   }
   void close() => _owner.close();
+  /// Observe without waiting for the usage writer.
+  UsagePersistenceStatus usagePersistence() => _usageStatus(false);
+
+  /// Finish current deltas. Only usage-lock acquisition has a deadline.
+  UsagePersistenceStatus finishUsageStatus() => _usageStatus(true);
+
+  UsagePersistenceStatus _usageStatus(bool finish) {
+    final engine = _owner.live;
+    final state = calloc<NativeUsageState>();
+    final advice = calloc<NativeUsageAdvice>();
+    try {
+      final operation = finish
+          ? _abi.thinkthen_engine_finish_usage_status_v1
+          : _abi.thinkthen_engine_usage_persistence_v1;
+      checkSession(_abi, operation(engine, state, advice));
+      return UsagePersistenceStatus(
+        UsagePersistenceState.values.firstWhere(
+          (value) => value.code == state.ref.kind,
+        ),
+        advice.ref.data == nullptr
+            ? null
+            : utf8.decode(advice.ref.data.asTypedList(advice.ref.len)),
+      );
+    } finally {
+      calloc.free(state);
+      calloc.free(advice);
+    }
+  }
+
   OwnedSession startSession(
       InputRequestQuestion question, InputRequestInput input, String function,
       {InputRequestOptions? options}) {
