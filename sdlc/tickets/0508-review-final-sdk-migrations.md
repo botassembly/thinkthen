@@ -60,3 +60,4 @@ After the final language and database migrations, the documentation pass and the
 ## Progress
 
 - 2026-10-10 started
+- 2026-10-10 landed cc66bc590; next: The canonical after-sprint record now covers all reviewed areas, confirmed caller harms, repairs and evidence limits. Four reviewed core, CLI and SQL fixes still need compilation and focused runtime checks under the lane cap. Keep open until those repairs land; installed and platform qualification remain separate and held.
