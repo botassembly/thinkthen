@@ -511,7 +511,14 @@ fn table_native_stops_take_precedence_over_missing_headers() {
             arguments.options.deadline_ms = Some(20);
         }
         let session = engine(&listener)
-            .request_session(Request::new(RequestCall::Decide(arguments)))
+            .request_session_with_feed_options(
+                Request::new(RequestCall::Decide(arguments)),
+                Surface::Rust,
+                RequestSessionFeedOptions {
+                    eager: true,
+                    ..Default::default()
+                },
+            )
             .unwrap();
         if cancel {
             session.cancel();
@@ -553,6 +560,10 @@ fn release_only_table_descriptor_bounds_include_trailing_blank_bytes() {
     assert_eq!(listener.count(), 0);
 }
 
+#[allow(
+    clippy::unwrap_used,
+    reason = "isolated native definitions must admit before the caller behavior is exercised"
+)]
 fn owned_eager_cases() -> Vec<Request> {
     let arguments = |definition| RequestArguments {
         question: RequestQuestion::Definition { value: definition },
@@ -599,6 +610,10 @@ fn owned_eager_cases() -> Vec<Request> {
     ].into_iter().map(Request::new).collect()
 }
 
+#[allow(
+    clippy::unwrap_used,
+    reason = "isolated owned descriptors must admit before the caller behavior is exercised"
+)]
 fn owned_descriptor(text: &str, dynamic: bool) -> RequestSessionDescriptor {
     let mut row = descriptor(text);
     row.location = Some(SourceLocation::new("input".into(), None, None).unwrap());
