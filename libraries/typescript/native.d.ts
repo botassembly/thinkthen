@@ -1,5 +1,9 @@
 import type * as R from './results_generated.js';
 export * as Results from './results_generated.js';
+export interface UsageStatus {
+ readonly state: R.NativeUsagePersistence;
+ readonly advice?: string;
+}
 export type Question = string | R.JsonValue | QuestionFile;
 export interface QuestionFile { readonly _questionFile?: never; }
 export interface Source { readonly _source?: never; }
@@ -22,6 +26,8 @@ export class Operation implements AsyncIterableIterator<R.NativeSessionPacket> {
 }
 export class Client {
  constructor(settings?:Readonly<Record<string,R.JsonValue>>);
+ usagePersistence():UsageStatus;
+ finishUsageStatus():UsageStatus;
  static files(paths:readonly string[],reading?:Readonly<Record<string,R.JsonValue>>,media?:string):Source;
  static item(value:R.JsonValue,fields?:Readonly<Record<string,R.JsonValue>>):Item;
  static questionFile(path:string):QuestionFile;
