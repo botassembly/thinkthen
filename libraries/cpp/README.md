@@ -18,7 +18,7 @@ cmake --install target/thinkthen-cpp
 
 A separate CMake project can set `CMAKE_PREFIX_PATH` to that prefix and call `find_package(thinkthen-cpp CONFIG REQUIRED)`. Link `thinkthen::thinkthen_cpp_shared` or `thinkthen::thinkthen_cpp_static`; both provide `<thinkthen/client.hpp>`. Shared mode needs the installed library directory in the runtime loader path. Static-C mode still depends on Linux system libraries. The package config uses `PACKAGE_PREFIX_DIR` and also resolves a multi-component `lib/x86_64-linux-gnu` installation. It does not ship a shim library or download a native binary.
 
-`sh libraries/cpp/check.sh 0` checks the current 31-export native ABI, parser boundaries, the 55-case schema and 30 executable public corpus cases, four installed shared/static/multilib/sanitized consumers with 16 exact request bodies each, and planted failures. It uses only a counted loopback backend. The C++ sanitizer checks the C++ consumer, not Rust allocations.
+`sh libraries/cpp/check.sh` tests the installed CMake package with shared and static consumers, all ten typed calls, parser boundaries, presence and null, usage persistence, locale independence, file locations and cancellation. The routine shared cases use a counted local backend. Set `THINKTHEN_TEST_PROFILE=full` only at a candidate to run the entire required shared inventory through the same owned API.
 
 For Linux x86-64, `sdlc/scripts/release-pack TARGET OUT c go cpp` produces versioned Go, C++ and C archives from one clean source commit. Run `sdlc/scripts/release-go-cpp-pair OUT` before using the files together. Unpack the C++ source and the matching C archive into separate folders, then pass the C archive's `include/thinkthen.h`, `lib/libthinkthen.so`, and `lib/libthinkthen.a` to CMake through the three `THINKTHEN_` inputs above. The C++ archive's `THINKTHEN-PACKAGE-INPUTS` records the exact C archive digest. Each GitHub release ships these archives, and an installed `find_package` consumer check covers them. No CMake registry package is published.
 
@@ -46,52 +46,22 @@ for (const auto& packet : call.collect()) {
 
 Generated input builders accept standard strings, vectors, ordered member lists, booleans and integers. Generated result classes expose known fields and typed alternatives. Each field returns `tt::results::Presence<T>` with `absent`, `null` or `value` state. `document()` retains unknown extensions and unrestricted authored JSON. Integer conversion preserves all signed and unsigned 64-bit values. `tt::SessionFailure` retains the generated `CallError`, including native kind, retryability and facts; immediate admission errors throw `tt::NativeFailure` with the actual native error kind.
 
-The focused installed consumer covers all ten named calls, presence, null, false, unknown fields, wide integers, native failure facts, document files, rejected image admission and held-provider cancellation and destruction. Successful image results and complete shared parity remain required before the migration retires legacy calls. The existing headers remain available during this bounded migration slice.
+The installed consumer covers all ten named calls, presence, null, false, unknown fields, wide integers, native failure facts, file locations and held-provider cancellation and destruction. Shared cases also exercise images, cache and replay; full parity and platform qualification run at the candidate.
 
-| Previous call | Owned caller form |
+| Removed API | Replacement |
 | --- | --- |
-| `tt::create` and `tt::call` | `tt::Client` and its named methods |
-| `tt::many` | `Client::decide` with generated records or a bounded feed |
-| `tt::native` typed calls | Named `Client` calls with generated input and result types |
-| External cancel token and joined worker | Owned `Call::cancel`, `close` and RAII cleanup |
+| `tt::create`, `tt::call`, `tt::Engine` | `tt::Client` and its ten named methods |
+| `tt::many` | Named calls with `RequestInputRecords`, or `Call::try_push` |
+| `tt::native` and `tt::complete` | Generated `tt::inputs` and `tt::results` values |
+| Cancel token and joined worker | `Call::cancel`, `close` and RAII cleanup |
+| JSON result envelopes and hand-copied views | Generated session packets with explicit presence |
 
-`tt::Engine`, `tt::CancelToken`, and `tt::OwnedString` are move-only RAII owners. Join worker and canceller threads before freeing the token or engine. `tt::create(settings)` accepts the current C settings JSON. `tt::call` returns the JSON success envelope, including `value` and `facts`. The typed `decide`, `many`, `recognize`, and `relate` helpers each return `CallResult<T>` with the former value in `.value` and that call's facts object in `.facts` as `tt::Json`. `specification/result.schema.json` describes every JSON value; read the members you need and ignore the rest. Recognize and relate values stay JSON, and entity offsets count Unicode scalars, not UTF-16 units. `call`, `recognize` and `relate` take the same `deadline` milliseconds and cancel token as `decide` and `many`. `tt::plan(engine, verb, question, input, settings)` previews a `decide`, `choose`, `score` or `tag` call through `thinkthen_plan_json` and returns the result schema's `plan` object; the question is a JSON string of bare text or one question object. It needs no key, reads no cache and sends nothing. `tt::create(settings)` passes engine settings such as `max_requests_total` to the C constructor unchanged. The package offers no probability option on score or tag, so it has no probability refusal to make.
+The old headers and public names have been removed. The local JSON parser preserves insertion order, rejects duplicate keys and invalid strings, and retains signed and unsigned 64-bit integers without rounding. Runtime model selection, grammar, file reading and cache behavior remain in Rust.
 
-`tt::Failure` names one of six `tt::ErrorKind` values, codes 1 to 6, and copies the message, retry flag and borrowed final facts before another native call on the same thread. `tt::annotatedField` reads one annotate answer member as `tt::Unresolved` (JSON null), its JSON value, or a `tt::FailedField` with kind and cause; `tt::annotatedDecision` does the same for a decide member with a `tt::Outcome`. An unresolved `null` value is never a failure.
-
-The local MIT JSON parser preserves object insertion order for label maps and rejects invalid strings and duplicate keys. Numbers are `double`; this is not arbitrary-precision number support. Synthetic replies prove the integration boundary, not model accuracy or a published release.
-
-`tt::create(settings)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
-
-Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
-
-Typed 0.2 host descriptors are available through `tt::complete`. Ten named request builders prepare explicit questions/question files and record/file/image sources; known answer, metadata, fact, identity, location, span and edge fields have typed carriers. This is independent carrier preparation, not complete-call runtime parity. The host descriptor codec is not the native wire format. Existing engine calls remain the executable compatibility API. Adoption of the real 0426 constructors, complete calls, result views and failure snapshots is still required; no legacy result is promoted to result/2.
-
-Typed counters retain `uint64_t`. The existing C++ JSON value stores numbers as doubles, so descriptor encoding and serialized facts readers refuse integer counts above 2^53 − 1 instead of rounding them. Native typed-view copying remains pending.
-
-
-## Complete native calls (0428 integration)
-
-The additive complete API uses C's native question grammar and readers for all ten named functions. Bare and generic JSON calls remain available. Known result fields are typed; arbitrary original JSON is retained as counted content.
-
-Question input is explicit: construct a typed descriptor, parse saved JSON with a loader role, load an exact file, load a configured name, or load a reference. The eight roles are atomic, question set, per-record choose, recognize, record relate, rank, rank set and find. A string is never guessed to be a path. Native declarations, named/versioned authors, record context, options, rank members, observations, answer/request/call IDs, final facts and owned failure snapshots remain distinct.
-
-Records may carry explicit text or JSON, per-record context and ordered candidate replacements. Images use explicit PNG/JPEG media and preserve original compressed bytes, order and duplicates. Decide, choose and score admit native image routes; the other seven functions refuse before sending. File sources explicitly select line, window, whole file, image file or JSONL. Physical filename/line ranges and absent image line coordinates come from the native reader.
-
-Complete results copy all borrowed native views before `thinkthen_result_free`. They survive destruction of the engine, question, source and input buffers. Presence remains explicit, including absent aggregate IDs/meta, nullable selections and independently unknown reported token dimensions. Cost strings are copied without floating-point conversion. Failures retain the six native kinds, safe messages, available stop details and final facts/attempts.
-
-Decide, choose, tag, score, filter and annotate also have owned lazy native batches. Start/next/facts/free belong to the creating thread; keep the engine live until the batch closes. Starting clones question/source/context/cancellation state. Returned rows own independent snapshots. Rank, find, recognize and relate retain aggregate complete calls. No host parser, cache, scheduler or model-routing policy is added.
-
-This is an unpublished integration API. The family ticket and root review own final qualification; the shared consumer reports actual failures instead of counting generic JSON as typed parity.
-
-Include `<thinkthen/native.hpp>`. `tt::native::create(settings)` owns an engine. `question`, `parse`, `load`, `named`, `reference`, `records`, `files` and `image` construct owned inputs; `Role` and `Unit` select native grammar/readers. The ten `tt::native::FUNCTION(engine, question, source, controls)` calls return `Result`. Its named getters, detail/author arrays, rank members and located values contain owned C++ values. `NativeFailure` owns its complete result snapshot and exposes `kind()`. The six `FUNCTION_batch` functions return a noncopyable batch with `next()` and `facts()`; it retains engine ownership. Destroy the batch on its creating thread.
-
-Counted C input descriptors borrow caller buffers only through the constructor call. Use `counted(string)` for a bounded string and explicit `thinkthen_content_v1` text/JSON tags; constructors clone every nested buffer. Returned C++ strings/vectors contain no borrowed C pointers.
-
-Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+Client settings accept a named backend, for example `tt::Client({{"backend", "local"}})`, or a direct base URL. A missing or invalid backend name fails before sending. Explicit files follow the [library reader contract](../files.md); pass a generated `RequestInputSource` with its paths and reading unit.
 
 ## Live usage persistence
 
-The ordinary `tt::Client` exposes `usage_persistence()` and `finish_usage_status()`. Each returns a `UsageStatus` with constant `state` and optional copied `advice` members. The state uses the generated `UsagePersistenceState` enum. The compatibility native engine alias keeps its existing API.
+The ordinary `tt::Client` exposes `usage_persistence()` and `finish_usage_status()`. Each returns a `UsageStatus` with constant `state` and optional copied `advice` members. The state uses the generated `UsagePersistenceState` enum.
 
 These methods observe the native engine directly and refuse calls after close. Failed persistence leaves successful answers and their earlier facts intact. Written covers this engine's current deltas, not future calls or other engines. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Returned observations remain readable after close. See [the C engine contract](../c/DESIGN.md) for native observation semantics.

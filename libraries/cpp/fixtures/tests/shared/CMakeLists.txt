@@ -1,8 +1,0 @@
-cmake_minimum_required(VERSION 3.18)
-project(consumer_shared LANGUAGES CXX)
-find_package(thinkthen-cpp CONFIG REQUIRED)
-add_executable(consumer ../consumer.cpp)
-target_link_libraries(consumer PRIVATE thinkthen::thinkthen_cpp_shared)
-get_target_property(_tt_native_location thinkthen::native_shared IMPORTED_LOCATION)
-get_filename_component(_tt_native_dir "${_tt_native_location}" DIRECTORY)
-set_target_properties(consumer PROPERTIES BUILD_RPATH "${_tt_native_dir}")

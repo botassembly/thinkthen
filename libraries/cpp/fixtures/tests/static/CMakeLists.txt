@@ -1,5 +1,0 @@
-cmake_minimum_required(VERSION 3.18)
-project(consumer_static LANGUAGES CXX)
-find_package(thinkthen-cpp CONFIG REQUIRED)
-add_executable(consumer ../consumer.cpp)
-target_link_libraries(consumer PRIVATE thinkthen::thinkthen_cpp_static)
