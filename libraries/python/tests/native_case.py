@@ -1,80 +1,89 @@
-"""Actual installed Python consumer; known outputs are accessed as public types."""
-import json, sys
-from thinkthen import complete as c
-from thinkthen import ThinkThenError, CancelToken
+"""Use the installed named Python API and Rust-owned generated result fields."""
+import json
+import sys
+import threading
+from pathlib import Path
+import thinkthen as tt
 
-# Test framing is arbitrary caller data. The adapter and native engine own admission.
+LIBRARY = __import__('os').environ.get('THINKTHEN_FRAME_LIBRARY')
+
 def main():
-    document=json.loads(sys.stdin.readline())
-    settings=document['settings']
-    q=document['question']
-    source=document['input']
-    question=c.QuestionSource(**q)
-    if source['kind']=='files':
-        reading=source['options']['reading']
-        source=c.Files(paths=tuple(source['paths']),unit=reading['unit'],window=reading.get('window',c.ABSENT),media=source['options']['media'],jsonl=source.get('jsonl',False))
+    document = json.loads(sys.stdin.readline())
+    question = tt.QuestionSource(**{key:value for key,value in document['question'].items() if key!='role'})
+    framed = document['input']
+    if framed['kind'] == 'files':
+        reading = framed['options']['reading']
+        source = tt.Files(paths=tuple(framed['paths']), unit=reading['unit'],
+                          window=reading.get('window', tt.ABSENT), media=framed['options']['media'], jsonl=framed.get('jsonl', False))
     else:
-        items=[]
-        for row in source['records']:
-            content=row['content']
-            context=row.get('context',c.ABSENT)
-            options=row.get('options',c.ABSENT)
-            items.append(c.Item(value=content.get('value'),text=content['kind']=='text',image_only=content['kind']=='images',
-                images=tuple(c.Image(data=bytes(i['bytes']),media=i['media']) for i in row.get('images',[])),
-                context=context if context is c.ABSENT else context['value'],
-                options=options if options is c.ABSENT else tuple((i['name'],i.get('description',c.ABSENT)) for i in options)))
-        source=c.Records(tuple(items))
-    token=CancelToken()
-    if document.get('cancel'):token.cancel()
-    prefix=[]
+        values = []
+        for row in framed['records']:
+            content = row['content']
+            context = row.get('context', tt.ABSENT)
+            context = context if context is tt.ABSENT else context['value']
+            options = row.get('options', tt.ABSENT)
+            options = options if options is tt.ABSENT else tuple((item['name'], item.get('description', tt.ABSENT)) for item in options)
+            values.append(tt.Item(value=content.get('value'), text=content['kind']=='text', image_only=content['kind']=='images',
+                images=tuple(tt.Image(data=bytes(image['bytes']), media=image['media']) for image in row.get('images', [])), context=context, options=options))
+        source = tt.Records(tuple(values))
+        if LIBRARY == 'pandas':
+            import pandas as pd
+            import thinkthen.pandas
+            source = pd.Series(values, index=[7]*len(values), name='original', dtype=object)
+        elif LIBRARY == 'polars':
+            import polars as pl
+            import thinkthen.polars
+            source = pl.Series('original', values, dtype=pl.Object)
+    token = tt.CancelToken()
+    if document.get('cancel'): token.cancel()
+    controls = {'token': token, 'attempts': True}
+    if document.get('deadline_ms') is not None: controls['deadline_ms'] = document['deadline_ms']
+    if document.get('shared_context') is not None: controls['context'] = document['shared_context']
+    verb = document['verb']
+    prefix = []
     try:
-        engine=c.Engine(**settings)
-        if document.get("held_cancel"):
-            import threading,time
-            def stop():
-                time.sleep(.15);token.cancel()
-            threading.Thread(target=stop,daemon=True).start()
-        # All ten named functions have distinct public calls and typed return carriers.
-        methods={'decide':engine.decide,'choose':engine.choose,'tag':engine.tag,'score':engine.score,
-                 'filter':engine.filter,'rank':engine.rank,'find':engine.find,'annotate':engine.annotate,
-                 'recognize':engine.recognize,'relate':engine.relate}
-
-        if document.get('incremental'):
-            batch=getattr(engine,document['verb']+'_batch')(question,source,token=token,deadline_ms=document.get('deadline_ms'),attempts=True,context=document.get('shared_context'))
-            if document.get("batch_probe"):
-                print("ready",flush=True);sys.stdin.readline()
-            for row in batch: prefix.append(row)
-            done=c.Completed(tuple(row.result for row in prefix),batch.facts,tuple(row.ordinal for row in prefix),tuple(row.input for row in prefix))
-        else:
-            done=methods[document['verb']](question,source,token=token,deadline_ms=document.get('deadline_ms'),attempts=True,context=document.get('shared_context'))
-        encoded_facts=c.to_json(done.facts)
-        assert isinstance(done.facts.largest_request_bytes,int)
-        assert done.facts.largest_request_estimated_input_tokens is None or isinstance(done.facts.largest_request_estimated_input_tokens,int)
-        assert isinstance(done.facts.token_estimate_method,str)
-        for key in ('largest_request_bytes','largest_request_estimated_input_tokens','token_estimate_method'):
-            assert encoded_facts[key] == getattr(done.facts,key)
-        if done.facts.usage_persistence is not c.ABSENT:
-            observation=done.facts.usage_persistence
-            assert isinstance(observation,c.PersistenceObservation)
-            assert observation.state in ('disabled','pending','written','failed')
-            assert observation.observed_at == 'facts_snapshot'
-            assert encoded_facts['usage_persistence'] == c.to_json(observation)
-        assert isinstance(done.facts.call_id,c.CallId)
-        assert all(isinstance(r.answer_id,c.AnswerId) for r in done.results)
-        for result in done.results:
-            if isinstance(result,c.RankResult) and result.members is not c.ABSENT:
-                for member in result.members:
-                    assert isinstance(member,c.RankMember) and isinstance(member.result,c.RankMemberResult)
-                    assert isinstance(member.result.answer_id,c.AnswerId)
-                    assert member.result.value>0 and isinstance(member.result.answer,c.YesNo)
-                    assert isinstance(member.result.question,c.DecideQuestion) and isinstance(member.result.meta,c.Meta)
-        packet={'results':[c.to_json(r) for r in done.results],'facts':c.to_json(done.facts),'ordinals':done.ordinals,'inputs':[c.to_json(i) for i in done.inputs]}
-        print(json.dumps(packet,separators=(',',':'),ensure_ascii=False))
-    except ThinkThenError as error:
+        with tt.Engine(**document['settings']) as engine:
+            if document.get('incremental'):
+                with engine.iterate(verb, question, source, **controls) as session:
+                    if document.get('batch_probe'):
+                        print('ready', flush=True); sys.stdin.readline()
+                    if document.get('held_cancel'):
+                        def stop():
+                            __import__('time').sleep(.15); session.cancel()
+                        threading.Thread(target=stop, daemon=True).start()
+                    prefix.extend(session)
+                    results, facts = prefix, session.facts
+            else:
+                if document.get('held_cancel'):
+                    def stop():
+                        __import__('time').sleep(.15); token.cancel()
+                    threading.Thread(target=stop, daemon=True).start()
+                if verb in ('recognize', 'relate'): done = getattr(engine, verb)(source, question, **controls)
+                elif LIBRARY is not None and isinstance(source, (tt.Files, tt.Records)) is False:
+                    done = getattr(source.tt, verb)(question, engine=engine, **controls)
+                else: done = getattr(engine, verb)(question, source, **controls)
+                results, facts = done.results, done.facts
+            assert facts is not None and len(facts.call_id)==64
+            assert isinstance(facts.requests_sent,int)
+            for result in results:
+                assert result.schema=='thinkthen.result/2'
+                assert isinstance(result.answer_id,str) and len(result.answer_id)==64
+                assert result.meta.origin in ('live','cache','replay','proxy','memory')
+                assert result.to_dict()['answer_id']==result.answer_id
+                if verb=='recognize':
+                    if 'entities' in result.value:
+                        for entity in result.value.entities:
+                            assert isinstance(entity.start,int) and isinstance(entity.text,str)
+                    elif 'proposals' in result.value:
+                        for entity in result.value.proposals:
+                            assert isinstance(entity.start,int) and isinstance(entity.name,str)
+            print(json.dumps({'native':True,'results':[result.to_dict() for result in results], 'facts':facts.to_dict()},ensure_ascii=False))
+    except tt.ThinkThenError as error:
+        failure=getattr(error,'complete',None)
         facts=getattr(error,'facts',None)
-        complete=getattr(error,'complete',None)
-        if complete is not None:
-            print(json.dumps({'error':c.to_json(complete),'facts':None if complete.facts is c.ABSENT else c.to_json(complete.facts),'completed':{'results':[c.to_json(r.result) for r in prefix],'facts':c.to_json(complete.facts),'ordinals':[r.ordinal for r in prefix],'inputs':[c.to_json(r.input) for r in prefix]} if prefix else None}));return
-        print(json.dumps({'error':{'kind':error.kind,'message':str(error),'retryable':error.retryable},'facts':dict(facts) if facts else None}))
+        results=getattr(error,'results',prefix)
+        detail=failure.error.to_dict() if failure is not None else {'kind':error.kind,'message':str(error),'retryable':error.retryable}
+        encoded=facts.to_dict() if hasattr(facts,'to_dict') else facts
+        print(json.dumps({'native':True,'error':detail,'facts':encoded,'completed':{'native':True,'results':[result.to_dict() for result in results],'facts':encoded} if results and encoded else None},ensure_ascii=False))
 
-if __name__=='__main__': main()
+if __name__ == '__main__': main()

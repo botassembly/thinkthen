@@ -9,7 +9,7 @@
       "expected": "True"
     },
     "decide_band": {
-      "python": "tt.decide(tt.question(decide=\"Does the customer ask for a refund?\", threshold=(0.2, 0.95)), \"I was charged twice. Can you fix this?\").value",
+      "python": "tt.decide({\"decide\":\"Does the customer ask for a refund?\",\"threshold\":\"0.2:0.95\"}, \"I was charged twice. Can you fix this?\").value",
       "expected": "None"
     },
     "decide_many": {
@@ -34,7 +34,7 @@
       "expected": "0.15"
     },
     "details": {
-      "python": "tt.details(\"Is this a complaint?\", \"I demand a refund today\").value[\"answer\"]",
+      "python": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\", details=True).value.answer.to_dict()",
       "expected": "{'kind': 'yes_no', 'probability': 0.9}"
     },
     "filter": {

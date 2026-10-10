@@ -1,227 +1,21 @@
-"""Ten named calls over the canonical native Request session.
-
-Ordinary direct calls return Result with an ordinary value, generated owned
-complete results, and native final facts. Engine.asyncio mirrors those calls.
-Engine context exit closes active sessions. Curried Judge and the complete
-frame facade retain their compatibility implementation.
-"""
-
+"""Ten named typed calls over owned native requests and sessions."""
 import json
 import os
-from typing import Annotated as _Annotated, get_origin as _get_origin
-
+from typing import NamedTuple as _NamedTuple
 from . import _thinkthen
-from typing import NamedTuple
+from ._thinkthen import BackendError, Cancelled, CancelToken, DeadlineError, DefectError, LocalError, ThinkThenError, UsageError
 from ._native_results import NativeUsagePersistence
-from ._labels import normalize as _labels
-from ._thinkthen import (
-    BackendError,
-    Cancelled,
-    CancelToken,
-    Call,
-    Completion,
-    CompletionReceipt,
-    DeadlineError,
-    DefectError,
-    Edge,
-    Entity,
-    LocalError,
-    Question,
-    Recognized,
-    RecognizedEntity,
-    Relation,
-    ThinkThenError,
-    UsageError,
-    Tally,
-)
-from .judge import Judge, make as _make_judge
-from .stream import Stream
-from . import _frames
 from ._calls import Result
-from .files import FileSelection, SourceRecord, Located, read_files
-from .files import call as _source_call, spec_source as _source_spec
-
-__all__ = [
-    "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
-    "Call", "Result", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
-    "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
-    "annotate", "choose", "decide", "details", "filter",
-    "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
-    "usage", "UsageStatus", "NativeUsagePersistence", "FileSelection", "SourceRecord", "Located", "read_files",
-]
-
-_VERBS = ("decide", "choose", "score", "tag")
-_PARTS = {"threshold": "threshold", "options": "options", "labels": "labels",
-          "levels": "levels", "true": "true", "false": "false", "model": "model"}
+from ._inputs import ABSENT, Image, Item, Records, Files, QuestionSource
+from .files import FileSelection, SourceRecord, read_files
 _MISSING = object()
 
+__all__ = ['BackendError', 'Cancelled', 'CancelToken', 'DeadlineError', 'DefectError', 'LocalError', 'ThinkThenError', 'UsageError', 'Engine', 'Result', 'UsageStatus', 'NativeUsagePersistence', 'ABSENT', 'Image', 'Item', 'Records', 'Files', 'QuestionSource', 'FileSelection', 'SourceRecord', 'read_files', 'decide', 'choose', 'score', 'tag', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'usage']
 
-def question(*, decide=None, choose=None, score=None, tag=None, threshold=None,
-             options=None, labels=None, levels=None, true=None, false=None,
-             true_=_MISSING, false_=_MISSING,
-             model=None, file=None, descriptions=None):
-    """Build one question from its parts, or read it from ``file``.
-
-    Give exactly one of ``decide``, ``choose``, ``score``, or ``tag``. A cut
-    is a number, and a band for ``decide`` is a ``(low, high)`` pair or the
-    file's ``"low:high"`` text. Parts
-    and files make the same question, since both go through the file form.
-    """
-    if true_ is not _MISSING or false_ is not _MISSING:
-        raise UsageError("use true= and false= instead of true_= and false_=")
-    if descriptions is not None:
-        raise UsageError("put descriptions inside options, levels, or labels")
-    verbs = [(verb, text) for verb, text in zip(_VERBS, (decide, choose, score, tag))
-             if text is not None]
-    if len(verbs) > 1:
-        raise TypeError(f"question() takes one verb, and both {verbs[0][0]!r} and "
-                        f"{verbs[1][0]!r} are given")
-    given = {key: value for key, value in dict(
-        threshold=threshold, options=options, labels=labels, levels=levels,
-        true=true, false=false, model=model).items() if value is not None}
-    if file is not None:
-        if verbs or given or descriptions is not None:
-            raise TypeError("question(file=...) takes nothing beside the file")
-        return Question._load(os.fspath(file))
-    if not verbs:
-        raise TypeError("question() takes one of decide, choose, score, or tag")
-    body = {verbs[0][0]: verbs[0][1]}
-    for key, value in given.items():
-        body[_PARTS[key]] = (_threshold(value) if key == "threshold" else
-                             _labels(value, bare_level_names=key == "levels")
-                             if key in ("options", "labels", "levels") else
-                             value)
-    return Question._from_json(json.dumps(body))
-
-
-def _threshold(value):
-    if isinstance(value, (tuple, list)) and len(value) == 2:
-        return f"{value[0]}:{value[1]}"
-    return value
-
-
-def _asked(value, verb, **parts):
-    """A built question, or one built from its text and the call's parts."""
-    parts = {name: part for name, part in parts.items() if part is not None}
-    if isinstance(value, str):
-        return question(**{verb if verb in _VERBS else "decide": value}, **parts)
-    if not isinstance(value, Question):
-        raise UsageError(f"{verb} takes a question text or tt.question(), "
-                         f"not a {type(value).__name__}")
-    if parts:
-        raise TypeError(f"{verb} takes {' and '.join(parts)} only beside a question text")
-    return value
-
-
-_QUESTION_KEYS = frozenset(("threshold", "true", "false", "options", "levels", "labels", "model"))
-
-
-def _configured(verb, asked, keywords):
-    """One shared Rust grammar for question fields and call controls."""
-    for old, new in (("deadline", "deadline_ms"), ("true_", "true"),
-                     ("false_", "false")):
-        if old in keywords:
-            raise UsageError(f"use {new}= instead of {old}=")
-    if "descriptions" in keywords:
-        raise UsageError("put descriptions inside options, levels, or labels")
-    fields = dict(keywords)
-    if not isinstance(asked, str):
-        if not isinstance(asked, Question):
-            raise UsageError(f"{verb} takes a question text or tt.question(), not a {type(asked).__name__}")
-        if "none" in fields:
-            raise UsageError("the settings key `none` does not belong to this verb")
-        repeated = _QUESTION_KEYS.intersection(fields)
-        if repeated:
-            raise UsageError(f"settings repeats `{sorted(repeated)[0]}` from the question or named arguments")
-    if "threshold" in fields:
-        fields["threshold"] = _threshold(fields["threshold"])
-    for key in ("options", "levels", "labels"):
-        if key in fields:
-            fields[key] = _labels(fields[key], bare_level_names=key == "levels")
-    try:
-        encoded = json.dumps(fields, allow_nan=False)
-    except (TypeError, ValueError) as source:
-        raise UsageError("the settings hold a value JSON cannot represent") from source
-    built, count, maximum, context, deadline_ms = Question._settings(
-        verb, asked if isinstance(asked, str) else None, encoded)
-    return built or asked, ("max" if maximum else count), context, deadline_ms
-
-
-def _due_keyword(deadline_ms, legacy):
-    if "deadline" in legacy:
-        raise UsageError("use deadline_ms= instead of deadline=")
-    if legacy:
-        raise UsageError(f"the settings key `{sorted(legacy)[0]}` does not exist")
-    return _deadline(deadline_ms)
-
-
-def _deadline(deadline_ms):
-    """ADR 0041: omission and -1 mean no deadline; an explicit None is refused before a send."""
-    if deadline_ms is None:
-        raise UsageError("`deadline_ms` is a whole number of milliseconds")
-    return -1 if deadline_ms is _MISSING else deadline_ms
-
-
-def _rebuilt(value, answer):
-    """A Polars input gets its answers back through its own class."""
-    if isinstance(answer, _thinkthen._Arrow):
-        rebuilt = type(value)(answer)
-        return rebuilt.rename(value.name) if _frames.is_series(value) else rebuilt
-    return answer
-
-
-def _mapped(call, convert):
-    """Rebuild an old value inside its completed account."""
-    try:
-        return call._with_value(convert(call.value))
-    except Exception as source:
-        error = LocalError("the completed result could not be rebuilt")
-        error.kind, error.retryable = "local", False
-        error.facts, error.details = call.facts, call.details
-        raise error from source
-
-
-def _paired(call, verb, multiple=False):
-    """Use the owned observations from this call; never ask the engine again."""
-    try:
-        probabilities = [None] * len(call.value) if multiple else []
-        seen = set()
-        for detail in call.details:
-            index = detail["index"]
-            if type(index) is not int or index in seen or index < 0 or \
-                    (multiple and index >= len(probabilities)) or (not multiple and index != 0):
-                raise ValueError("the answer has a duplicate or missing row place")
-            seen.add(index)
-            reported = detail["probabilities"]
-            if verb == "decide":
-                probability = reported
-            else:
-                selected = detail["answer"]
-                probability = next((chance for name, chance in reported if name == selected), None)
-            if multiple:
-                probabilities[index] = probability
-            else:
-                probabilities.append(probability)
-        if multiple:
-            value = call.value
-            if _pandas(value) == "Series":
-                probability = type(value)(probabilities, index=value.index, name=value.name,
-                                          dtype="Float64")
-            elif type(value).__module__.partition(".")[0] == "polars":
-                probability = type(value)(probabilities)
-            else:
-                probability = probabilities
-        else:
-            if len(probabilities) != 1:
-                raise ValueError("the scalar answer has no matching probability")
-            probability = probabilities[0]
-        return call._with_probability(probability)
-    except Exception as source:
-        error = DefectError("the completed result has no matching probability")
-        error.kind, error.retryable = "defect", False
-        error.facts, error.details = call.facts, call.details
-        raise error from source
-
+class UsageStatus(_NamedTuple):
+    """Live native durability state and optional fixed advice; no call facts."""
+    state: NativeUsagePersistence
+    advice: str | None
 
 def _pandas(value):
     """The pandas class a value is, by name, found through its type's method
@@ -230,53 +24,6 @@ def _pandas(value):
         if kind.__module__.partition(".")[0] == "pandas":
             return kind.__name__
     return None
-
-
-class _Once:
-    """pandas' exported stream, handed over once and as it is."""
-
-    def __init__(self, capsule):
-        self._capsule = capsule
-
-    def __arrow_c_stream__(self, requested_schema=None):
-        capsule, self._capsule = self._capsule, None
-        if capsule is None or requested_schema is not None:
-            raise UsageError("a pandas column's stream is read once, as it is")
-        return capsule
-
-
-def _marked(series, kind):
-    """A pandas Series, marked with its reader before any export (decision 2):
-    the list reader when it is empty or categorical, lacks the stream, or its
-    export raises, and the Arrow door otherwise."""
-    if kind == "DataFrame":
-        raise UsageError('a data frame is not a column; pass df["name"], or annotate with on=')
-    if kind != "Series":
-        raise UsageError(f"thinkthen reads a pandas Series, not a pandas {kind}; "
-                         "pass a pandas Series")
-    if not len(series) or series.dtype.name == "category" or \
-            (series.dtype.name == "object" and series.isna().all()) or \
-            not hasattr(series, "__arrow_c_stream__"):
-        return _thinkthen._Pandas([None if missing else value
-                                  for value, missing in zip(series, series.isna())], True)
-    try:
-        capsule = series.__arrow_c_stream__()
-    except Exception:
-        return _thinkthen._Pandas([None if missing else value
-                                  for value, missing in zip(series, series.isna())], True)
-    return _thinkthen._Pandas(_Once(capsule), False)
-
-
-def _column(call, verb, asked, value, deadline, token):
-    """A column verb. A pandas Series gets the caller's Series back, with its
-    index and name, through its own class (decision 3)."""
-    kind = _pandas(value)
-    if kind is None:
-        return _mapped(call(verb, asked, value, deadline, token),
-                       lambda answer: _rebuilt(value, answer))
-    result = call(verb, asked, _marked(value, kind), deadline, token)
-    return _mapped(result, lambda answer: type(value)(answer[0], index=value.index,
-                                                       name=value.name, dtype=answer[1]))
 
 
 def _on(frame, on, new):
@@ -297,50 +44,11 @@ def _on(frame, on, new):
     return frame[on]
 
 
-class _Stream:
-    """A frame answer offered only as a stream, since Polars reads an object
-    with ``__arrow_c_array__`` as one array."""
-
-    def __init__(self, held):
-        self._held = held
-
-    def __arrow_c_stream__(self, requested_schema=None):
-        return self._held.__arrow_c_stream__(requested_schema)
-
-
-def _ordering(value, verb):
-    if isinstance(value, str):
-        return Question._ordering(verb, value)
-    return _asked(value, verb)
-
-
-def _spec(maker, ask):
-    if maker is _thinkthen._QuestionSet and _get_origin(ask) is _Annotated:
-        raise UsageError("a question-set model takes no root Field description")
-    if not isinstance(ask, type) and any(base.__module__.startswith("pydantic.")
-                                         for base in type(ask).__mro__):
-        raise UsageError("a question set takes a Pydantic model class, not an instance")
-    if maker is _thinkthen._QuestionSet and isinstance(ask, type) and any(
-            base.__module__.startswith("pydantic.") for base in ask.__mro__):
-        from . import pydantic as adapter
-        ask = adapter.question_set(ask)
-    if isinstance(ask, dict):
-        return maker._from_json(json.dumps(ask))
-    return maker._load(os.fspath(ask))
-
-
 def _rules(relations, either):
     if isinstance(relations, dict):
         relations = [(name, *ends) for name, ends in relations.items()]
     both = set(either or ())
     return [(name, source, target, name in both) for name, source, target in relations or ()]
-
-
-class UsageStatus(NamedTuple):
-    """Live native durability state and optional fixed advice; no call facts."""
-    state: NativeUsagePersistence
-    advice: str | None
-
 
 class Engine:
     """An engine with its own settings, each keyword-only.
@@ -369,13 +77,11 @@ class Engine:
                  max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None,
                  record=None, replay=None, profile=None):
         self._sessions = set()
-        self._engine = _thinkthen._Engine(
-            backend=backend, base_url=base_url, model=model, throttle=throttle,
-            batch=batch,
-            max_requests=max_requests, max_requests_total=max_requests_total,
-            max_request_bytes=max_request_bytes,
-            cache=cache, timeout=timeout,
-            max_retries=max_retries, record=record, replay=replay, profile=profile)
+        self._engine = _thinkthen._Engine(json.dumps({key: value for key, value in dict(
+            backend=backend, base_url=base_url, model=model, throttle=throttle, batch=batch,
+            max_requests=max_requests, max_requests_total=max_requests_total, max_request_bytes=max_request_bytes,
+            cache=cache, timeout=timeout, max_retries=max_retries, record=record, replay=replay, profile=profile).items()
+            if value is not None}, default=os.fspath))
         given = dict(backend=backend, base_url=base_url, model=model, throttle=throttle, batch=batch,
                      max_requests=max_requests, max_requests_total=max_requests_total,
                      max_request_bytes=max_request_bytes, cache=cache, timeout=timeout,
@@ -416,72 +122,35 @@ class Engine:
         from ._calls import call
         return call(self, verb, question, value, controls)
 
-    @property
-    def complete(self):
-        from .complete import Engine as CompleteEngine
-        return CompleteEngine(_engine=self._engine)
+    def decide(self, question, text, **controls):
+        return self._named('decide', question, text, **controls)
 
-    def decide(self, question, text=_MISSING, *, token=None, **keywords):
-        """Build a judge, or answer one text, ordered input, or column."""
-        return self._judged("decide", question, text, token, keywords)
+    def choose(self, question, text, **controls):
+        return self._named('choose', question, text, **controls)
 
-    def choose(self, question, text=_MISSING, *, token=None, **keywords):
-        """Build a judge, or pick one option from an input."""
-        return self._judged("choose", question, text, token, keywords)
+    def score(self, question, text, **controls):
+        return self._named('score', question, text, **controls)
 
-    def score(self, question, text=_MISSING, *, token=None, **keywords):
-        """Build a judge, or score an input."""
-        return self._judged("score", question, text, token, keywords)
+    def tag(self, question, text, **controls):
+        return self._named('tag', question, text, **controls)
 
-    def tag(self, question, text=_MISSING, *, token=None, **keywords):
-        """Build a judge, or tag an input."""
-        return self._judged("tag", question, text, token, keywords)
+    def filter(self, question, records, **controls):
+        return self._named('filter', question, records, **controls)
 
-    def details(self, question, text, *, deadline_ms=_MISSING, token=None, **legacy):
-        """The command's ``--details`` document, as a ``dict``."""
-        deadline_ms = _due_keyword(deadline_ms, legacy)
-        return _mapped(self._engine.ask("details", _asked(question, "details"), text,
-                                        deadline_ms, token), json.loads)
+    def iterate(self, function, question, records, **controls):
+        from ._calls import Session
+        return Session(self, function, question, records, controls)
 
-    def filter(self, question, records=_MISSING, *, token=None, **keywords):
-        """Build a judge, or keep matching records in input order."""
-        return self._judged("filter", question, records, token, keywords)
-
-    def _judged(self, verb, question, value, token, keywords):
-        if value is not _MISSING:
-            return self._named(verb, question, value, token=token, **keywords)
-        fields = dict(keywords)
-        deadline_ms = fields.pop("deadline_ms", _MISSING)
-        if value is _MISSING and (deadline_ms is not _MISSING or token is not None):
-            raise UsageError("deadline_ms and token belong when the judge is applied")
-        judge = _make_judge(verb, question, self, fields)
-        if value is _MISSING:
-            return judge
-        return judge(value, deadline_ms=_deadline(deadline_ms), token=token)
-
-    def plan(self, judge, records):
-        """Preview a judge on a complete input without a key or send."""
-        if not isinstance(judge, Judge):
-            raise UsageError("plan takes a ThinkThen Judge")
-        if judge._engine is not None and judge._engine is not self:
-            raise UsageError("the judge belongs to another engine")
-        if isinstance(records, (set, frozenset)):
-            raise UsageError("an unordered set cannot align records with answers")
-        if isinstance(records, FileSelection):
-            return self._engine.plan(judge._asked, _thinkthen._read_files(records._json()),
-                                     judge._batch, judge._context)
-        kind = _pandas(records)
-        if kind == "Series":
-            records = _marked(records, kind)
-        elif kind == "DataFrame":
-            raise UsageError("plan reads a complete list or text column, not a data frame")
-        elif kind is not None:
-            records = list(records)
-        elif hasattr(records, "__arrow_c_stream__") or hasattr(records, "__arrow_c_array__"):
-            pass
-        elif iter(records) is records:
-            raise UsageError("plan reads a complete list or column, not an iterator")
-        return self._engine.plan(judge._asked, records, judge._batch, judge._context)
+    def plan(self, function, question, records, **controls):
+        """Preview a complete native request without a key or a send."""
+        from ._calls import _question, _source, _dump
+        fields = dict(controls)
+        asked = _question(function, question, fields)
+        source, producer, _ = _source(function, records)
+        if producer is not None:
+            raise UsageError('plan reads a complete input, not an iterator')
+        return self._engine._plan(_dump({'schema': 'thinkthen.request/1', 'call': {
+            'function': function, 'question': asked, 'input': source, 'options': fields}}))
 
     def rank(self, question, records, *, top=None, batch=None, context=None,
              deadline_ms=_MISSING, token=None, **legacy):
@@ -580,86 +249,42 @@ class Engine:
         """This engine's totals: requests sent, cache answers, and tokens."""
         return self._engine.usage()
 
-    def __getattr__(self, name):
-        if name in ("decide_many", "choose_many", "score_many", "tag_many"):
-            raise AttributeError(f"thinkthen: {name} was removed; apply the judge to a list: tt.decide(q)(rows)")
-        raise AttributeError(name)
-
 
 _process = None
-
-
 def _engine():
     global _process
     if _process is None:
         engine = Engine.__new__(Engine)
-        engine._engine = _thinkthen._Engine._process()
+        engine._engine = _thinkthen._Engine("{}")
         engine._settings_json = None
         engine._sessions = set()
         _process = engine
     return _process
 
 
-def decide(question, text=_MISSING, *, token=None, **keywords):
-    return _module_judged("decide", question, text, token, keywords)
+def decide(question, text, **controls):
+    return _engine().decide(question, text, **controls)
 
+def choose(question, text, **controls):
+    return _engine().choose(question, text, **controls)
 
-def choose(question, text=_MISSING, *, token=None, **keywords):
-    return _module_judged("choose", question, text, token, keywords)
+def score(question, text, **controls):
+    return _engine().score(question, text, **controls)
 
+def tag(question, text, **controls):
+    return _engine().tag(question, text, **controls)
 
-def score(question, text=_MISSING, *, token=None, **keywords):
-    return _module_judged("score", question, text, token, keywords)
-
-
-def tag(question, text=_MISSING, *, token=None, **keywords):
-    return _module_judged("tag", question, text, token, keywords)
-
-
-def details(question, text, **keywords):
-    return _engine().details(question, text, **keywords)
-
-
-def filter(question, records=_MISSING, *, token=None, **keywords):
-    return _module_judged("filter", question, records, token, keywords)
-
-
-def _module_judged(verb, question, value, token, keywords):
-    if value is not _MISSING:
-        return getattr(_engine(), verb)(question, value, token=token, **keywords)
-    fields = dict(keywords)
-    deadline_ms = fields.pop("deadline_ms", _MISSING)
-    if value is _MISSING and (deadline_ms is not _MISSING or token is not None):
-        raise UsageError("deadline_ms and token belong when the judge is applied")
-    judge = _make_judge(verb, question, None, fields)
-    if value is _MISSING:
-        return judge
-    return judge(value, deadline_ms=_deadline(deadline_ms), token=token)
-
-
-def plan(judge, records):
-    if not isinstance(judge, Judge):
-        raise UsageError("plan takes a ThinkThen Judge")
-    return (judge._engine if judge._engine is not None else _engine()).plan(judge, records)
-
-
-def __getattr__(name):
-    if name in ("decide_many", "choose_many", "score_many", "tag_many"):
-        raise AttributeError(f"thinkthen: {name} was removed; apply the judge to a list: tt.decide(q)(rows)")
-    raise AttributeError(name)
-
+def filter(question, records, **controls):
+    return _engine().filter(question, records, **controls)
 
 def rank(question, records, **keywords):
     return _engine().rank(question, records, **keywords)
 
-
 def find(question, units, **keywords):
     return _engine().find(question, units, **keywords)
 
-
 def annotate(questions, records, **keywords):
     return _engine().annotate(questions, records, **keywords)
-
 
 def recognize(text, ask=None, *, kinds=None, relations=None, either=None, threshold=None,
               relation_threshold=None, on=None, deadline_ms=_MISSING, token=None,
@@ -670,19 +295,11 @@ def recognize(text, ask=None, *, kinds=None, relations=None, either=None, thresh
                                descriptions=descriptions, instructions=instructions,
                                entity_definition=entity_definition, **legacy)
 
-
 def relate(entities, ask=None, *, relations=None, either=None, threshold=None,
            deadline_ms=_MISSING, token=None, **legacy):
     return _engine().relate(entities, ask, relations=relations, either=either,
                             threshold=threshold, deadline_ms=deadline_ms, token=token, **legacy)
 
-
 def usage():
     """The process engine's totals."""
     return _engine().usage()
-
-
-for _name in ("decide", "choose", "score", "tag", "details", "filter",
-              "rank", "find", "annotate", "recognize", "relate"):
-    globals()[_name].__doc__ = getattr(Engine, _name).__doc__
-del _name

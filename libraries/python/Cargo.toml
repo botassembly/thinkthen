@@ -24,18 +24,10 @@ pyo3 = { version = "=0.29.2", features = ["abi3-py310"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.151", features = ["raw_value"] }
 
-# The standard library cannot inspect unreadable pages before Arrow reads them.
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", default-features = false, features = ["Win32_System_Memory"] }
-
-# `extension-module` stays on for the wheel. The Rust unit tests turn it off
-# with --no-default-features, so they link libpython and can raise the host's
-# exceptions. `probe` builds the test hooks `_live_workers`; check.sh builds
-# the tested extension with it, and build-wheel.sh never does.
+# Wheels link the extension; native unit tests link libpython.
 [features]
 default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
-probe = []
 
 [profile.release]
 overflow-checks = true

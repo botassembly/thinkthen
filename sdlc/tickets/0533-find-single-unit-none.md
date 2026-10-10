@@ -15,3 +15,7 @@ Milestone: 0.2
 - Changes: Own native find count admission, affected public docs/CLI diagnostic and outside-in CLI plus Rust library cases. Derive every adapter's admission from the native owner. Preserve cache question identity for unchanged requests.
 - Proof: One unit with none plans successfully without a send; saved exchanges select the original unit or none with correct position/probabilities through the CLI and Rust API. One unit without none and overflow still refuse before sending. Use small existing fixtures, no live call or load test.
 - Defers: This consumer gap does not block TCGA's current experiment. Finish the active migration closures before assigning its code lane; no unrelated classifier or API expansion.
+
+## Progress
+
+- 2026-10-10 started

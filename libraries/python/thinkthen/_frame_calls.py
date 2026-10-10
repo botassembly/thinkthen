@@ -24,7 +24,7 @@ def members(question):
 
 def records(source, verb, controls, surface, members=()):
     from . import _on, UsageError
-    from .complete import Item
+    from ._inputs import Item
     on = controls.pop('on', None)
     if on is None:
         raise UsageError('a data frame is not a column; pass df["name"], or annotate with on=')

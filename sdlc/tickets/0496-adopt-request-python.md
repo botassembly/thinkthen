@@ -1,6 +1,6 @@
 # 0496: Make Python, pandas and Python Polars thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -16,6 +16,10 @@ Reviews: revision 4d59e7c6a, accept
 Reviews: revision a087f6dc3, accept
 
 Reviews: revision 10aeeed436ed0826dc4812a99b2ecc502f928a1c, reject
+
+Reviews: revision fc46955c3f01429ad42857b29d48b1656e2672dc, accept
+
+Landed: 91f9b91
 
 ## Outcome
 

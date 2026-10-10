@@ -6,7 +6,7 @@ import pytest
 def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_path):
     output = run('''
         import pickle, thinkthen as tt
-        from thinkthen import complete as c
+        import thinkthen as c
         with tt.Engine(cache=False, max_retries=0) as engine:
             calls = [
                 ('decide', 'Late?', 'note', {}),
@@ -35,12 +35,19 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 print(verb)
             pairs = [('A', 'person'), ('B', 'person')]
             relations = {'knows': ('person', 'person')}
-            assert engine.relate(iter(pairs), relations=relations).value == engine.relate(pairs, relations=relations).value
-            detailed = engine.decide(c.DecideSpec(decide='Late?'), c.TextInput(text='note'), details=True)
+            related = engine.relate(pairs, relations=relations)
+            edges = related.value
+            assert [(edge.relation, edge.source.name, edge.target.name) for edge in edges] == [('knows', 'A', 'B'), ('knows', 'B', 'A')]
+            assert related.results[0].input == [{'name': 'A', 'kind': 'person'}, {'name': 'B', 'kind': 'person'}]
+            assert engine.relate(iter(pairs), relations=relations).value == edges
+            empty = engine.relate([], relations=relations)
+            assert empty.value == []
+            assert empty.facts.requests_sent == 0
+            detailed = engine.decide({'decide': 'Late?'}, 'note', details=True)
             assert detailed.value is detailed.results[0]
             assert detailed.value.input == 'note'
             assert detailed.value.index == 0
-            context = engine.decide(c.DecideSpec(decide='Late?'), c.RecordInput(records=('note',), context='policy'))
+            context = engine.decide({'decide': 'Late?'}, c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert len(context.results[0].meta.context_sha256) == 64
             item = engine.decide('Late?', c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert item.results[0].meta.context_sha256 == context.results[0].meta.context_sha256
@@ -60,6 +67,8 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             assert located.results[0].source.first_line == 2
             assert located.results[1].source.first_line == 3
             assert [row.index for row in located.results] == [0, 1]
+        assert edges[0].relation == 'knows'
+        assert pickle.loads(pickle.dumps(related)).value == edges
         failure_engine = tt.Engine(cache=False, max_retries=0, base_url=__import__('os').environ['THINKTHEN_BASE_URL'].replace('/generic/', '/arm/malformed/missing_answer/'))
         failed = failure_engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, ['note'])
         embedded = failed.value[0]['bad']
