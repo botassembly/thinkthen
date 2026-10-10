@@ -1,35 +1,32 @@
-"""Complete dataframe callers access the same concrete native carriers."""
-from thinkthen import frames, complete as c
+"""Installed callers access generated known fields without a hand-copied reader."""
+import thinkthen as tt
+from thinkthen._native_results import NativeSessionPacketDecideRow, NativeSessionPacketTerminal, NativeAnswerYesNo, NativeAnswerChoice, NativeAnswerTag
 
+def known(engine: tt.Engine, question: object, source: object) -> None:
+    decision=engine.decide(question,source)
+    answer=decision.results[0].answer
+    assert isinstance(answer,NativeAnswerYesNo)
+    probability: float=answer.probability
+    identity: str=decision.results[0].answer_id
+    original: object=decision.results[0].input
+    chosen=engine.choose(question,source).results[0].answer
+    assert isinstance(chosen,NativeAnswerChoice)
+    choice: float=chosen.probabilities['blue']
+    tagged=engine.tag(question,source).results[0].answer
+    assert isinstance(tagged,NativeAnswerTag)
+    tags: dict[str,float]=tagged.probabilities
+    score: float=engine.score(question,source).results[0].value
+    kept: bool=engine.filter(question,source).results[0].value
+    position: int=engine.rank(question,source).results[0].value
+    selected: object=engine.find(question,source).results[0].value
+    fields=engine.annotate(question,source).results[0].answers
+    names=engine.recognize(source,question).results[0].value
+    edges=engine.relate(source,question).results[0].value
 
-def known(engine: frames.Engine, question: c.QuestionSource, series: object) -> None:
-    decision: frames.FrameCompleted[c.DecideResult] = engine.decide(question, series)
-    native: c.Completed[c.DecideResult] = decision.native
-    yes: float = decision.results[0].answer.probability
-    images: tuple[c.NativeImage, ...] | c.Absent = decision.results[0].images
-    probability: float = engine.choose(question, series).results[0].answer.probabilities['blue']
-    tags = engine.tag(question, series).results[0].answer.probabilities
-    score: float = engine.score(question, series).results[0].value
-    accepted: bool = engine.filter(question, series).results[0].value
-    place: int = engine.rank(question, series).results[0].value
-    rank_members: tuple[c.RankMember, ...] | c.Absent = engine.rank(question, series).results[0].members
-    if not isinstance(rank_members, c.Absent):
-        for member in rank_members:
-            result: c.RankMemberResult = member.result
-            member_id: c.AnswerId = result.answer_id
-            member_position: int = result.value
-            member_probability: float = result.answer.probability
-            member_question: c.DecideQuestion = result.question
-            usage: c.Usage | c.Absent = result.meta.usage
-            physical: c.PhysicalSource | c.Absent = result.source
-    selected: int | None | c.Absent = engine.find(question, series).results[0].index
-    candidates = engine.find(question, series).results[0].candidates
-    members = engine.annotate(question, series).results[0].answers
-    entities = engine.recognize(question, series).results[0].value.entities
-    edges = engine.relate(question, series).results[0].value
-    position: int | None = decision.positions[0]
-    call: c.CallId = decision.facts.call_id
-    answer: c.AnswerId = decision.results[0].answer_id
-    for row in engine.decide_batch(question, series):
-        width: int = row.input.images[0].width
-        actual: float = row.result.answer.probability
+def generated_known(row: NativeSessionPacketDecideRow, terminal: NativeSessionPacketTerminal) -> None:
+    schema: str=row.value.schema
+    identity: str=row.value.answer_id
+    requests: int=terminal.facts.requests_sent
+    failure: str=terminal.failure.error.kind
+    present: bool='failure' in terminal
+    raw: dict[str, object]=row.value.to_dict()

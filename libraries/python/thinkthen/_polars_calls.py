@@ -5,7 +5,7 @@ from ._pandas_calls import PandasResult
 
 
 def records(source, verb):
-    from .complete import Item
+    from ._inputs import Item
     positions, values = [], []
     for at, value in enumerate(source):
         if value is None:

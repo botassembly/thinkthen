@@ -2,10 +2,10 @@
 import json
 import pathlib
 import pytest
-from conftest import child_env, run
-from test_named_backends import configuration, isolated
+from conftest import child_env, run, REPO
+from backend_settings import configuration, isolated
 
-CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/cases.json"
+CORPUS = REPO / "conformance/cases.json"
 
 
 @pytest.mark.parametrize("shape", ["pandas", "polars"])
@@ -16,7 +16,7 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
         def series(values, name="body"):
             return pd.Series(values, name=name, index=[9] * len(values), dtype=object) if shape == "pandas" else pl.Series(name, values, dtype=pl.Object)
         def cell(value, at): return value.iloc[at] if shape == "pandas" else value[at]
-        from thinkthen import complete as c
+        import thinkthen as c
         source = series(['first', None, 'second'])
         with tt.Engine(cache=False, batch=1) as engine:
             done = source.tt.decide('Late?', engine=engine)
@@ -42,7 +42,7 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
             explicit = series([c.Item(value=None), None])
             null = engine.decide('Late?', explicit)
             assert null.positions == (0,) and null.results[0].input is None
-            entities = series([tt.Entity('Ada', 'person'), None, tt.Entity('Bo', 'person')])
+            entities = series([('Ada', 'person'), None, ('Bo', 'person')])
             related = entities.tt.relate(engine=engine, relations={'knows': ('person', 'person')})
             assert related.facts.requests_sent == 1
             assert [(edge.source.name, edge.target.name) for edge in related.value] == [('Ada', 'Bo'), ('Bo', 'Ada')]
@@ -124,7 +124,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         entities = (pd.Series([("Ada", "person"), None, ("Bo", "person")],
                              index=[9,9,2], name="entities", dtype=object)
                     if shape == "pandas" else pl.Series("entities",
-                        [tt.Entity("Ada", "person"), None, tt.Entity("Bo", "person")], dtype=pl.Object))
+                        [('Ada', 'person'), None, ('Bo', 'person')], dtype=pl.Object))
         related = (entities.tt.relate(engine=engine, relations={{"knows": ("person", "person")}})
                    if shape == "pandas" else engine.relate(entities, relations={{"knows": ("person", "person")}}))
         print("relate", [(e.relation, e.source.name, e.target.name) for e in related.value])
@@ -149,7 +149,7 @@ def test_series_filter_replay_retains_original_rows_and_sends_nothing(backend, t
         import pandas as pd, thinkthen as tt, thinkthen.pandas
         texts = { [row['evidence'] for row in case['exchanges']]!r}
         source = pd.Series(texts, index=[9, 9, 2, 2, 1], name="body")
-        question = tt.question(**{case['question']!r})
+        question = {case['question']!r}
         engine = tt.Engine(batch=1, cache=False, record={str(folder)!r})
         first = source.tt.filter(question, engine=engine)
         print(first.value.index.to_list(), first.facts['requests_sent'])

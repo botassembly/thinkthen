@@ -5,7 +5,7 @@ from ._calls import Result
 
 def records(source, verb):
     import pandas as pd
-    from .complete import Item
+    from ._inputs import Item
     positions, values = [], []
     for at, value in enumerate(source):
         marker = False if isinstance(value, Item) else pd.isna(value)
@@ -49,8 +49,6 @@ class PandasResult(Result):
             return [dict(row, index=self.present[row['index']]) for row in value]
         if self.function == 'find' and not self.detailed:
             return None if value is None else dict(value, index=self.present[value['index']])
-        if self.function == 'relate' and not self.detailed:
-            return value[0] if value else []
         if self.function in ('rank', 'find', 'relate'):
             return value
         rows = [None] * len(self.source)

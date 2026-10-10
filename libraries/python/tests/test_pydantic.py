@@ -5,8 +5,8 @@ import json
 import pytest
 
 from conftest import child_env, run
-from test_call import capturing_filter_listener
-from test_label_types import _answer
+from test_spending import capturing_filter_listener
+from backend_settings import _answer
 
 
 def test_optional_authoring_and_strict_row_validation(backend, tmp_path):
@@ -43,7 +43,7 @@ def test_optional_authoring_and_strict_row_validation(backend, tmp_path):
         engine = tt.Engine(cache=False)
         taken = []
         def hold(call):
-            taken.append([list(call.details[0]["requests"]), call.facts["requests_sent"]])
+            taken.append([list(call.details[0].meta.requests), call.facts["requests_sent"]])
             return call.value
         assert hold(engine.choose("Which?", "Alice", options=Labels)) == "first"
         assert hold(engine.choose("Which?", "Alice", options={
@@ -58,7 +58,7 @@ def test_optional_authoring_and_strict_row_validation(backend, tmp_path):
         assert hold(engine.choose("Which?", "Alice", options={
             "first": "same meaning", "second": "same meaning"})) == "first"
         batch = engine.annotate(Questions, ["Alice"], batch=1)
-        taken.append([list(batch.details[0]["requests"]), batch.facts["requests_sent"]])
+        taken.append([list(batch.details[0].meta.requests), batch.facts["requests_sent"]])
         row = row_model(Questions)
         assert row.model_validate(batch.value[0]).kind == "first"
         assert row.model_validate({"open": None, "kind": None, "score": 0.5,
@@ -121,7 +121,7 @@ def test_plain_import_does_not_import_pydantic(backend, tmp_path):
     sys.meta_path.insert(0, Block())
     import thinkthen as tt
     assert "pydantic" not in sys.modules
-    assert tt.question(choose="Which?", options=["a", "b"]).kind == "choose"
+    assert hasattr(tt.Engine, "choose")
     try:
         import thinkthen.pydantic
     except ImportError as error:
