@@ -50,6 +50,7 @@ pub(super) fn run(
         })
     });
     let token = crate::CancelToken::new();
+    let signal_token = crate::CancelToken::from_flag(environment.cancel().flag());
     let downstream = crate::edge::Downstream::default();
     let signal = || {
         if downstream.gone() {
@@ -92,12 +93,13 @@ pub(super) fn run(
     };
     let mut controls = controls(
         (environment, common, configuration.streams),
-        &token,
+        &signal_token,
         &signal,
         &readiness,
         setting,
         context.as_deref(),
-    );
+    )
+    .cancel(&token);
     if configuration.keeping == crate::judge::Keeping::Ordered {
         controls = controls.observe(&observe);
     }
