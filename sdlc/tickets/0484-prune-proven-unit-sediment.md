@@ -31,3 +31,4 @@ The routine suite holds only outside-in behavior tests through the public Rust A
 ## Progress
 
 - 2026-10-10 landed d05def2bb; next: Routine Clippy now passes after row-count setup errors use Result. The existing large-case separation is landed; finish bounded removal of proven redundant source tests after active core changes settle.
+- 2026-10-10 landed 911f4d83f; next: Removed two source assertions already covered by exact CLI behavior and lowered the source ceiling by twelve lines. Distinct parser, math, secrecy and error cases remain; continue only bounded proven-duplicate cleanup.
