@@ -61,3 +61,13 @@ These APIs are built from this 0.2 source checkout and require its matching C he
 
 Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
 `Rank_Member_Details` borrows the member’s own `Details_V1` from its retained `Result`; `Member_Author` reads that member’s authored declarations.
+
+`Thinkthen.Persistence.Usage_Persistence (Client)` observes the live count-only writer on the existing `Thinkthen.Engine`. `Finish_Usage_Status (Client)` drains its current deltas and returns the same owned `Observation`, with a `Persistence_State` of `Disabled`, `Pending`, `Written` or latched `Failed`. `Advice` is an owned `Unbounded_String`; an empty value means no advice. The observation remains readable after the controlled engine finalizes. A persistence failure leaves successful answers and their historical call facts intact. These calls send no judgment request. Written covers only this engine's current deltas. Only usage-lock acquisition has a deadline; other filesystem work may take longer. Operation failures raise the existing `Thinkthen.Sessions` typed exceptions using the calling thread's session diagnostic.
+
+```ada
+with Thinkthen.Persistence;
+-- After the existing typed judgment call:
+Saved := Thinkthen.Persistence.Finish_Usage_Status (Client);
+```
+
+Declare `Saved : Thinkthen.Persistence.Observation`. The Linux focused installed consumer is `checks/usage_installed.py`; it also exercises the COBOL package with a matching native library selected through `THINKTHEN_C_LIBRARY`. It does not qualify a release archive or another platform.
