@@ -66,3 +66,4 @@ fn AdmittedRequest::with_resolved_definition(self, RequestDefinition) -> Result<
 - 2026-10-10 landed 0b6bf683e; next: SQL feed controls and whole-input recognition are documented accurately. Add CSV/TSV path readers through the shared source-format contract, then qualify the installed extension; retain reachable PostgreSQL and DuckDB helpers.
 - 2026-10-10 landed b9fba40a8; next: SQLite and PostgreSQL use native whitespace and count admission while retaining early byte refusal before copying. Adopt shared CSV/TSV path readers; DuckDB chunk preflight and final installed qualification remain.
 - 2026-10-10 landed 085cfa873; next: SQLite, PostgreSQL client and DuckDB read CSV and TSV through native framing with preserved originals, locations and failures. Finish shared preflight and remaining consumer adoption; full installed qualification remains held.
+- 2026-10-10 started
