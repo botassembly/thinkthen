@@ -52,5 +52,27 @@ say(ok=True)
     expect(backend.close(), 0, 'invalid tables send nothing')
 
 
+def test_complete_tables_keep_only_incremental_prefix_on_late_reader_failure():
+    backend = Backend()
+    got = child('''
+from pathlib import Path
+root=Path(os.environ['SCRATCH']);db=connect()
+db.execute('SELECT thinkthen_configure(?)',[json.dumps({'cache':False,'batch':1})])
+for format, delimiter in [('csv',','),('tsv','\\t')]:
+    source=root/('late.'+format)
+    source.write_text('body\\nAlpha.\\nBeta.'+delimiter+'extra\\n')
+    for incremental in (False, True):
+        inputs={'files':{'paths':[str(source)],'format':format},'incremental':incremental}
+        value=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',
+            [json.dumps({'decide':'Fits?'}),json.dumps(inputs)]).fetchone()[0])
+        assert value['native']['error']['kind']=='usage',value
+        assert len(value.get('completed',[]))==int(incremental),value
+        assert value['native'].get('facts',{}).get('requests_sent',0)==int(incremental),value
+say(ok=True)
+''', environment(backend))
+    expect(got['ok'], True, 'late table errors preserve incremental SQL prefixes')
+    expect(backend.close(), 2, 'eager tables send nothing and incremental tables send one prefix')
+
+
 if __name__ == '__main__':
     raise SystemExit(main(globals()))

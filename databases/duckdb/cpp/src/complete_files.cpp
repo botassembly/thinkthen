@@ -77,7 +77,11 @@ string CompleteFileInputs(ClientContext &context,const string &inputs,string &fa
         Handle held{files,files.OpenFile(name,FileOpenFlags::FILE_FLAGS_READ)};
         if (files.GetFileType(*held.handle)!=FileType::FILE_TYPE_REGULAR) { throw OrdinaryError("thinkthen local: source file must be regular"); }
         RustReply created(thinkthen_cpp_complete_reader_new(View(name),View(options),static_cast<int32_t>(framing),&held,Read,&held.reader));
-        Checked(created.value);
+        if (created.value.status!=0) {
+            if (records.size()>1) { records+=","; }
+            records+="{\"read_error\":"+ReplyText(created.value)+"}";
+            break;
+        }
         for (;;) {
             RustReply next(thinkthen_cpp_complete_reader_next(held.reader));
             if (next.value.status!=0) {
