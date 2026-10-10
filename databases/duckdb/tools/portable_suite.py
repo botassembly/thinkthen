@@ -12,6 +12,36 @@ from harness import EXTENSION, Backend, case, child_env, expect, main, rows, run
 
 
 @case
+def discovery_describes_every_registered_function_without_sending():
+    query = ("SELECT function_name, function_type, parameter_types, return_type, description "
+             "FROM duckdb_functions() WHERE starts_with(function_name, 'thinkthen_') "
+             "ORDER BY function_name, function_type, parameter_types")
+    with Backend() as backend:
+        got = run([
+            "SET thinkthen_max_requests_total=0",
+            "SET enable_external_access=false",
+            "SET thinkthen_refresh_cache=2",
+            query, query,
+            "SELECT thinkthen_usage_status()->>'state'",
+        ], backend.base(), keyless=True)
+        inventory = rows(got[3])
+        expect(bool(inventory), True, "registered inventory is nonempty")
+        expect(rows(got[4]), inventory, "discovery remains stable")
+        missing = [row[:3] for row in inventory if not row[4] or not row[4].strip()]
+        expect(missing, [], "every registered overload has a purpose")
+        expect({row[1] for row in inventory}, {"scalar", "table", "macro", "table_macro"},
+               "discovery covers native functions and SQL macros")
+        signatures = [tuple([row[0], row[1], tuple(row[2])]) for row in inventory]
+        expect(len(set(signatures)), len(signatures), "discovery has unique overloads")
+        purposes = {row[0]: row[4] for row in inventory}
+        expect(purposes["thinkthen_usage"], "Read count-only usage totals.", "usage purpose")
+        expect("removed" in purposes["thinkthen_warm"], True, "warm documents its refusal")
+        expect("removed" in purposes["thinkthen_probability"], True, "probability documents its refusal")
+        expect(rows(got[5]), [["disabled"]], "discovery creates no engine")
+        expect(backend.count(), 0, "loading and discovery send nothing")
+
+
+@case
 def named_decide_binds_by_name_and_settings_refuse_before_send():
     with Backend() as backend:
         got = run([

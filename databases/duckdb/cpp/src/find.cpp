@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "find.hpp"
 #include "bridge.hpp"
 #include "scalar_owner.hpp"
@@ -158,16 +159,17 @@ void Find(DataChunk &args, ExpressionState &state, Vector &result) {
 } // namespace
 
 void RegisterFind(ExtensionLoader &loader) {
+	const string purpose = "Find the best matching unit in an ordered list and retain its original index.";
 	const auto result = FindType();
 	ScalarFunction function("thinkthen_native_find", {LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
 	                                                 LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                        result, Find, BindFind);
 	function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	function.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(function);
+	RegisterDescribedScalar(loader, function, purpose);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_find(question, units, settings := NULL, legacy_deadline := NULL) AS "
 	                              "thinkthen_native_find(question, units, CAST(settings AS VARCHAR), "
-	                              "typeof(settings), typeof(legacy_deadline))");
+	                              "typeof(settings), typeof(legacy_deadline))", purpose);
 }
 
 } // namespace duckdb

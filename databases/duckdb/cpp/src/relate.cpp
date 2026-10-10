@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "relate.hpp"
 #include "relate_query.hpp"
 #include "bridge.hpp"
@@ -267,10 +268,12 @@ void RegisterRelate(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_relate_seconds", "Relate query time limit in seconds", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_relate_holding_rows", "Relate plan holding-row limit", LogicalType::BIGINT);
 	TableFunction function("thinkthen_relate", {LogicalType::VARCHAR, LogicalType::ANY}, ScanRelate, BindRelate, InitRelate);
-	loader.RegisterFunction(function);
+	TableFunctionSet overloads("thinkthen_relate");
+	overloads.AddFunction(function);
 	TableFunction with_settings("thinkthen_relate", {LogicalType::VARCHAR, LogicalType::ANY,
 	                                               LogicalType::VARCHAR}, ScanRelate, BindRelate, InitRelate);
-	loader.RegisterFunction(with_settings);
+	overloads.AddFunction(with_settings);
+	RegisterDescribedTable(loader, overloads, "Judge relations between ids in committed query rows using caller-supplied rules.");
 }
 
 } // namespace duckdb

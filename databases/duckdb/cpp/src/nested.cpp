@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "bridge.hpp"
 #include "listed_result.hpp"
 #include "nested.hpp"
@@ -169,27 +170,29 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 } // namespace
 
 void RegisterNested(ExtensionLoader &loader) {
+	const string spans = "Recognize named kinds of text spans with Unicode scalar offsets.";
+	const string edges = "Extract named relations between recognized text spans.";
 	ScalarFunction recognize("thinkthen_native_recognize",
 	                         {LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
 	                          LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                         NestedType(8), Nested, BindNested);
 	recognize.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	recognize.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(recognize);
+	RegisterDescribedScalar(loader, recognize, spans);
 	auto described = recognize;
 	described.arguments[1] = LogicalType::VARCHAR;
-	loader.RegisterFunction(described);
+	RegisterDescribedScalar(loader, described, spans);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_recognize(input, kinds, settings := NULL) AS "
-	                              "thinkthen_native_recognize(input, kinds, CAST(settings AS VARCHAR), typeof(settings))");
+	                              "thinkthen_native_recognize(input, kinds, CAST(settings AS VARCHAR), typeof(settings))", spans);
 	ScalarFunction relations("thinkthen_native_relations",
 	                         {LogicalType::VARCHAR, LogicalType::VARCHAR,
 	                          LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                         NestedType(9), Nested, BindNested);
 	relations.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	relations.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(relations);
+	RegisterDescribedScalar(loader, relations, edges);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_relations(input, spec, settings := NULL) AS "
-	                              "thinkthen_native_relations(input, spec, CAST(settings AS VARCHAR), typeof(settings))");
+	                              "thinkthen_native_relations(input, spec, CAST(settings AS VARCHAR), typeof(settings))", edges);
 }
 
 } // namespace duckdb

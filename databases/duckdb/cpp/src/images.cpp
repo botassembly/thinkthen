@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "images.hpp"
 #include "json_result.hpp"
 #include "bridge.hpp"
@@ -134,11 +135,11 @@ void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 }
 void Register(ExtensionLoader &loader, const string &name, vector<LogicalType> arguments, LogicalType result,
-              scalar_function_t function, bool bind) {
+              scalar_function_t function, bool bind, const string &purpose) {
 	ScalarFunction scalar(name, std::move(arguments), std::move(result), function, bind ? BindImages : nullptr);
 	scalar.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	scalar.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(scalar);
+	RegisterDescribedScalar(loader, scalar, purpose);
 }
 } // namespace
 LogicalType ImageType() {
@@ -166,13 +167,14 @@ vector<ThinkThenImage> ImageViews(const vector<std::pair<string, string>> &image
     return out;
 }
 void RegisterImages(ExtensionLoader &loader) {
-	Register(loader, "thinkthen_image", {LogicalType::BLOB, LogicalType::VARCHAR}, ImageType(), Constructor, false);
-	Register(loader, "thinkthen_image_file", {LogicalType::VARCHAR}, ImageType(), File, true);
+	Register(loader, "thinkthen_image", {LogicalType::BLOB, LogicalType::VARCHAR}, ImageType(), Constructor, false, "Construct image evidence from native bytes and a media type.");
+	Register(loader, "thinkthen_image_file", {LogicalType::VARCHAR}, ImageType(), File, true, "Read an authorized local image file as image evidence.");
 	for (auto verb : {"decide", "choose", "score", "details"}) {
 		const string name = string("thinkthen_native_") + verb + "_images";
+		const string purpose = string(verb) == "decide" ? "Judge a yes-or-no question using image evidence and optional text." : string(verb) == "choose" ? "Choose an option using image evidence and optional text." : string(verb) == "score" ? "Score image evidence and optional text against ordered levels." : "Return judgment details for image evidence and optional text as JSON.";
 		Register(loader, name, {LogicalType::VARCHAR, LogicalType::LIST(ImageType()), LogicalType::VARCHAR, LogicalType::VARCHAR},
-		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : string(verb) == "details" ? LogicalType::JSON() : LogicalType::VARCHAR, Judge, true);
-		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL) AS " + name + "(question, images, text, settings)");
+		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : string(verb) == "details" ? LogicalType::JSON() : LogicalType::VARCHAR, Judge, true, purpose);
+		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL) AS " + name + "(question, images, text, settings)", purpose);
 	}
 }
 } // namespace duckdb
