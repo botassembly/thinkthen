@@ -44,6 +44,9 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeTe
         let Some(files) = value.get("files") else {
             return Ok(Vec::new());
         };
+        let paths = inputs
+            .file_paths()
+            .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         let options: InputReaderOptions = serde_json::from_value(
             files
                 .get("options")
@@ -63,7 +66,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeTe
         .validate_reading()
         .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         serde_json::to_vec(
-            &serde_json::json!({"paths":files.get("paths"),"options":options,"framing":match inputs.framing {None=>0,Some(RequestFraming::Jsonl)=>1,Some(RequestFraming::Csv)=>2,Some(RequestFraming::Tsv)=>3,_=>return Err(reject(thinkthen::ErrorKind::Defect,"invalid SQL framing"))}}),
+            &serde_json::json!({"paths":paths,"options":options,"framing":match inputs.framing {None=>0,Some(RequestFraming::Jsonl)=>1,Some(RequestFraming::Csv)=>2,Some(RequestFraming::Tsv)=>3,_=>return Err(reject(thinkthen::ErrorKind::Defect,"invalid SQL framing"))}}),
         )
         .map_err(|_| "thinkthen defect: source plan did not encode".to_owned())
     })

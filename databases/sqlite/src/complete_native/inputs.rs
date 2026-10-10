@@ -222,15 +222,20 @@ impl Inputs {
                 .unwrap_or(RecordReading::new(&[], None, None)?)
         })
     }
-    fn file_records(&self, files: &str, reading: RecordReading) -> Result<Records<'_>, Error> {
-        let value = fields(files)?;
-        let paths: Vec<String> = serde_json::from_str(
+    /// Validate ordered file paths before a host opens content.
+    pub(crate) fn file_paths(&self) -> Result<Vec<String>, Error> {
+        let value = fields(self.raw.get("files").ok_or_else(defect)?.get())?;
+        serde_json::from_str(
             value
                 .get("paths")
                 .ok_or_else(|| usage("files requires paths"))?
                 .get(),
         )
-        .map_err(|_| usage("file paths is a text array"))?;
+        .map_err(|_| usage("file paths is a text array"))
+    }
+    fn file_records(&self, files: &str, reading: RecordReading) -> Result<Records<'_>, Error> {
+        let value = fields(files)?;
+        let paths = self.file_paths()?;
         let options = value
             .get("options")
             .map(|v| {
