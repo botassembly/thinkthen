@@ -1,4 +1,6 @@
 """Install development packages and exercise SDK-owned Linux native assets offline."""
+import fcntl
+import os
 import hashlib
 import http.server
 import json
@@ -74,6 +76,24 @@ def main():
     run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'checksum mismatch')
     cached.with_suffix('.held').replace(cached)
     run([str(dart), 'run', 'bin/main.dart'], consumer, env)
+    # The same installed consumer owns tiny usage cases; it runs one local call.
+    for mode in ('written', 'failed', 'disabled'):
+        usage_env = dict(env, XDG_STATE_HOME=str(scratch / ('usage-' + mode)))
+        lock = None
+        if mode == 'failed':
+            folder = Path(usage_env['XDG_STATE_HOME']) / 'thinkthen'
+            folder.mkdir(parents=True, mode=0o700)
+            lock = (folder / '.lock').open('w')
+            os.chmod(folder / '.lock', 0o600)
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        if mode == 'disabled':
+            usage_env.pop('HOME', None)
+            usage_env.pop('XDG_STATE_HOME', None)
+        try:
+            run([str(dart), 'run', 'bin/main.dart', 'usage-' + mode], consumer, usage_env)
+        finally:
+            if lock:
+                lock.close()
     # A separate installed project obtains the same pinned bytes during its build.
     download_consumer = scratch / 'download-consumer'
     shutil.copytree(consumer / 'bin', download_consumer / 'bin')
