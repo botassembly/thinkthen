@@ -28,26 +28,30 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
         result=subprocess.run([str(home/'consumer-bin')],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=20)
         assert result.returncode==0, (result.stdout,result.stderr)
-        assert result.stdout.strip()=='ten-named-calls-owned-results-pass',result.stdout
+        assert result.stdout.startswith('ten-named-calls-owned-results-pass requests='),result.stdout
         # Ten named calls plus one false-decision call; invalid/precancel/deadline add none.
-        assert server.attempts>=11, server.attempts
+        assert server.attempts==int(result.stdout.strip().split("=")[-1]), (server.attempts, result.stdout)
         baseline=server.attempts
-        cancel=home/'cancel'
-        child=subprocess.Popen([str(home/'consumer-bin'),'cancel'],env=run_env|{'TT_CANCEL_FILE':str(cancel)},cwd=consumer,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        try:
-            deadline=time.monotonic()+5
-            while not (barrier/'arrived-hold-go').exists() and time.monotonic()<deadline:
-                time.sleep(.005)
-            assert (barrier/'arrived-hold-go').exists(),'held request never arrived'
-            cancel.touch()
-            stdout,stderr=child.communicate(timeout=3)
-            assert child.returncode==0 and stdout.strip()=='cancelled-before-release',(stdout,stderr)
-            assert not (barrier/'release-hold-go').exists()
-            assert server.attempts==baseline+1,server.attempts
-        finally:
-            (barrier/'release-hold-go').touch()
-            if child.poll() is None:
-                child.terminate();child.wait(timeout=3)
+        for iteration,mode in enumerate(('cancel','close')):
+            for marker in ('arrived-hold-go','release-hold-go'):
+                (barrier/marker).unlink(missing_ok=True)
+            (home/'cancel').unlink(missing_ok=True)
+            cancel=home/'cancel'
+            child=subprocess.Popen([str(home/'consumer-bin'),mode],env=run_env|{'TT_CANCEL_FILE':str(cancel)},cwd=consumer,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            try:
+                deadline=time.monotonic()+5
+                while not (barrier/'arrived-hold-go').exists() and time.monotonic()<deadline:
+                    time.sleep(.005)
+                assert (barrier/'arrived-hold-go').exists(),'held request never arrived'
+                cancel.touch()
+                stdout,stderr=child.communicate(timeout=3)
+                assert child.returncode==0 and stdout.strip()=='cancelled-before-release',(stdout,stderr)
+                assert not (barrier/'release-hold-go').exists()
+                assert server.attempts==baseline+iteration+1,server.attempts
+            finally:
+                (barrier/'release-hold-go').touch()
+                if child.poll() is None:
+                    child.terminate();child.wait(timeout=3)
         print('GO_OWNED_INSTALLED_PASS ten-functions presence retained-errors cancellation static-native')
     finally:
         server.close()

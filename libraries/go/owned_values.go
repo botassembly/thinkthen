@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"reflect"
 )
 
 // Presence distinguishes an absent field, JSON null and an actual value.
@@ -19,6 +20,10 @@ func (v *ownedJSON) UnmarshalJSON(data []byte) error { v.raw = append(v.raw[:0],
 func (v ownedJSON) MarshalJSON() ([]byte, error)     { return append([]byte(nil), v.raw...), nil }
 func ownedDecode[T any](data []byte) (T, error) {
 	var value T
+	kind := reflect.TypeOf((*T)(nil)).Elem().Kind()
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) && kind != reflect.Interface && kind != reflect.Map && kind != reflect.Slice && kind != reflect.Pointer {
+		return value, errors.New("JSON null is not a scalar value")
+	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
 	err := decoder.Decode(&value)
@@ -58,3 +63,6 @@ func ownedLiteral(data []byte, key, value string) bool {
 // Boolean reads an authored decision only when its value is actually Boolean.
 func (v ownedJSON) Boolean() (bool, error)  { return ownedDecode[bool](v.raw) }
 func (v ownedJSON) JSONValue() (any, error) { return ownedDecode[any](v.raw) }
+
+func (v ownedJSON) String() string   { return "<ThinkThen owned result>" }
+func (v ownedJSON) GoString() string { return v.String() }

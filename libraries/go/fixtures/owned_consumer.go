@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 	defer client.Close()
-	if len(os.Args) > 1 && os.Args[1] == "cancel" {
+	if len(os.Args) > 1 && (os.Args[1] == "cancel" || os.Args[1] == "close") {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		var ticks atomic.Int64
@@ -42,7 +42,11 @@ func main() {
 		go func() {
 			for {
 				if _, err := os.Stat(os.Getenv("TT_CANCEL_FILE")); err == nil {
-					cancel()
+					if os.Args[1] == "close" {
+						client.Close()
+					} else {
+						cancel()
+					}
 					return
 				}
 				select {
@@ -53,7 +57,11 @@ func main() {
 			}
 		}()
 		_, err = client.Decide(ctx, "Is it?", "hold-go", nil)
-		require(errors.Is(err, context.Canceled), "context cancellation lost")
+		if os.Args[1] == "close" {
+			require(errors.Is(err, tt.ErrClosed), "client close did not stop the host reader")
+		} else {
+			require(errors.Is(err, context.Canceled), "context cancellation lost")
+		}
 		client.Close()
 		require(ticks.Load() > 0, "other goroutine did not progress")
 		fmt.Println("cancelled-before-release")
@@ -75,6 +83,7 @@ func main() {
 	}
 	calls := map[string]func(context.Context, any, any, map[string]any) (tt.OwnedCall, error){"decide": client.Decide, "choose": client.Choose, "tag": client.Tag, "score": client.Score, "filter": client.Filter, "rank": client.Rank, "find": client.Find, "annotate": client.Annotate, "recognize": client.Recognize, "relate": client.Relate}
 	retained := []tt.OwnedCall{}
+	expectedRequests := int64(0)
 	for _, a := range asks {
 		result, err := calls[a.verb](context.Background(), a.q, a.input, nil)
 		if err != nil {
@@ -82,20 +91,77 @@ func main() {
 		}
 		require(result.Terminal.Facts().Present, "missing settled facts")
 		retained = append(retained, result)
+		sends := result.Terminal.Facts().Value.RequestsSent()
+		n, err := sends.Value.Int64()
+		require(sends.Present && err == nil, "missing requests")
+		expectedRequests += n
 	}
 	// A false value must remain false, not absent or null.
 	falsity, err := client.Decide(context.Background(), map[string]any{"decide": "Is it?", "threshold": .95}, "text", nil)
 	if err != nil {
 		panic(err)
 	}
-	row, err := falsity.Packets[0].AsSessionPacketDecideRow()
-	if err != nil {
-		panic(err)
+	falseSends := falsity.Terminal.Facts().Value.RequestsSent()
+	n, err := falseSends.Value.Int64()
+	require(falseSends.Present && err == nil, "missing false requests")
+	expectedRequests += n
+	var row tt.OwnedSessionPacketDecideRow
+	found := false
+	for _, packet := range falsity.Packets {
+		row, err = packet.AsSessionPacketDecideRow()
+		if err == nil {
+			found = true
+			break
+		}
 	}
+	require(found, "decision row missing")
 	value := row.Value().Value.Value()
 	falseValue, falseErr := value.Value.Boolean()
 	require(falseErr == nil, "nonboolean decision")
 	require(value.Present && !value.Null && falseValue == false, "false changed")
+	// Authored null is different from a missing field, and file positions survive.
+	nullCall, err := client.Decide(context.Background(), map[string]any{"decide": "Is it?", "true": nil}, "text", nil)
+	if err != nil {
+		panic(err)
+	}
+	nullSends := nullCall.Terminal.Facts().Value.RequestsSent()
+	n, err = nullSends.Value.Int64()
+	require(nullSends.Present && err == nil, "null requests")
+	expectedRequests += n
+	nullFound := false
+	for _, packet := range nullCall.Packets {
+		r, e := packet.AsSessionPacketDecideRow()
+		if e == nil {
+			v := r.Value().Value.Value()
+			require(v.Present && v.Null, "authored null lost")
+			nullFound = true
+		}
+	}
+	require(nullFound, "null row missing")
+	path := os.Getenv("HOME") + "/records.txt"
+	require(os.WriteFile(path, []byte("alpha\n\nbeta\n"), 0600) == nil, "fixture file")
+	files, err := client.Decide(context.Background(), "Is it?", tt.FileRecords{Paths: []string{path}, Reading: map[string]any{"unit": "line"}}, nil)
+	if err != nil {
+		panic(err)
+	}
+	fileSends := files.Terminal.Facts().Value.RequestsSent()
+	n, err = fileSends.Value.Int64()
+	require(fileSends.Present && err == nil, "file requests")
+	expectedRequests += n
+	lines := []int64{}
+	for _, packet := range files.Packets {
+		r, e := packet.AsSessionPacketDecideRow()
+		if e == nil {
+			source := r.Value().Value.Source()
+			require(source.Present && source.Value.File().Value == path, "file source lost")
+			line, e := source.Value.FirstLine().Value.Int64()
+			require(e == nil, "line")
+			lines = append(lines, line)
+		}
+	}
+	require(len(lines) == 2 && lines[0] == 1 && lines[1] == 3, "physical positions changed")
+	meta := row.Value().Value.Meta()
+	require(meta.Present && meta.Value.Model().Present && meta.Value.AnsweredBy().Present, "native provenance missing")
 	_, err = client.Decide(context.Background(), "Is it?", "text", map[string]any{"deadline_ms": 0})
 	var failure *tt.SessionError
 	require(errors.As(err, &failure), "untyped failure")
@@ -119,5 +185,5 @@ func main() {
 		facts := call.Terminal.Facts()
 		require(facts.Present && facts.Value.CallId().Present, "owned facts lost after close")
 	}
-	fmt.Println("ten-named-calls-owned-results-pass")
+	fmt.Printf("ten-named-calls-owned-results-pass requests=%d\n", expectedRequests)
 }

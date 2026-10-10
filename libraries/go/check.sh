@@ -3,6 +3,16 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
+# Source checks use the same bundled link path as the installed Go module.
+# Remove only the link made here, then run the existing scratch cleanup.
+bundle_source() {
+    bundle="$1/native/x86_64-unknown-linux-gnu"
+    [ ! -e "$bundle" ] && [ ! -L "$bundle" ] || { echo 'go: bundled source path already exists' >&2; exit 1; }
+    mkdir -p "$1/native"
+    ln -s "$2" "$bundle"
+    trap 'rm "$bundle"; rmdir "${bundle%/*}" 2>/dev/null || true; scratch_clean' EXIT
+}
+
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
     routine|full|smoke) ;;
     stress) echo 'go: not run: no stress gate'; exit 77 ;;
@@ -45,6 +55,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     . "$repo/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$repo" "$smoke/native"
+    bundle_source "$PWD" "$smoke/native"
     PKG_CONFIG_PATH="$smoke/native/lib/pkgconfig" GOCACHE="$repo/target/go/cache" GOMODCACHE="$repo/target/go/modcache" \
         GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1 CGO_LDFLAGS="-Wl,-rpath,$smoke/native/lib" \
         "$go_bin" build -buildvcs=false -o "$smoke/smoke" ./examples/smoke
@@ -74,6 +85,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_ARTIFACT=$THINKTHEN_C_ARTIFACT
     installed_unpack
     native=$scratch
+    if [ ! -d "$wrapper/native/x86_64-unknown-linux-gnu" ]; then bundle_source "$wrapper" "$native"; fi
     cp portable_batch_test.go "$wrapper/portable_batch_test.go"
     cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
     THINKTHEN_PORTABLE_NATIVE="$native" THINKTHEN_PORTABLE_MODULE="$wrapper" "$python_bin" fixtures/portable_batch.py
@@ -114,6 +126,7 @@ Libs: -L\${libdir} -lthinkthen
 Cflags: -I\${includedir}
 EOF
 "$python_bin" fixtures/abi.py
+bundle_source "$PWD" "$out/native"
 export PKG_CONFIG_PATH="$out/native/lib/pkgconfig" LD_LIBRARY_PATH="$out/native/lib"
 export GOCACHE="$out/cache" GOMODCACHE="$out/modcache" GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2

@@ -11,12 +11,17 @@ import (
 	"errors"
 	"reflect"
 	"runtime"
+	"sync"
 	"time"
-	"unsafe"
 )
 
 // Client is the canonical named-call API; Engine retains compatibility calls.
-type Client struct{ engine *Engine }
+type Client struct {
+	engine   *Engine
+	mu       sync.Mutex
+	closed   bool
+	sessions map[*C.thinkthen_session]struct{}
+}
 
 func NewClient(settings map[string]any) (*Client, error) {
 	data, err := json.Marshal(settings)
@@ -27,9 +32,17 @@ func NewClient(settings map[string]any) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{engine}, nil
+	return &Client{engine: engine, sessions: make(map[*C.thinkthen_session]struct{})}, nil
 }
-func (c *Client) Close() { c.engine.Close() }
+func (c *Client) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.closed = true
+	for session := range c.sessions {
+		C.thinkthen_session_cancel(session)
+	}
+	c.engine.Close()
+}
 
 // FileRecords selects the native reader; its parsing and validation stay native.
 type FileRecords struct {
@@ -44,7 +57,7 @@ type Item struct {
 }
 type OwnedCall struct {
 	Packets  []OwnedSessionPacket
-	Terminal OwnedSessionPacketTerminal
+	Terminal *OwnedSessionPacketTerminal
 }
 type SessionError struct {
 	Call   OwnedCall
@@ -133,7 +146,16 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 	if err != nil {
 		return result, err
 	}
-	defer C.thinkthen_session_free(session)
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		C.thinkthen_session_cancel(session)
+		C.thinkthen_session_free(session)
+		return result, ErrClosed
+	}
+	c.sessions[session] = struct{}{}
+	c.mu.Unlock()
+	defer func() { c.mu.Lock(); delete(c.sessions, session); C.thinkthen_session_free(session); c.mu.Unlock() }()
 	runtime.LockOSThread()
 	err = sessionFailure(C.thinkthen_session_finish(session, nil, 0))
 	runtime.UnlockOSThread()
@@ -141,6 +163,12 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 		return result, err
 	}
 	for {
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+		if closed {
+			return result, ErrClosed
+		}
 		if err = ctx.Err(); err != nil {
 			C.thinkthen_session_cancel(session)
 			return result, err
@@ -176,7 +204,9 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 				return result, packetKind.Err
 			}
 			if packetKind.Value == "terminal" {
-				result.Terminal, err = ownedDecode[OwnedSessionPacketTerminal](raw)
+				terminal, decodeErr := ownedDecode[OwnedSessionPacketTerminal](raw)
+				result.Terminal = &terminal
+				err = decodeErr
 				if err != nil {
 					return result, err
 				}
