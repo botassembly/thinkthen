@@ -52,14 +52,15 @@ test('Client retains false, null, missing, extensions and physical positions',as
     const uncertain=await client.decide({decide:'Question?',threshold:'0.2:0.95'},'text');
     const {writeFileSync}=await import('node:fs');
     const path=process.env.HOME+'/input.txt';writeFileSync(path,'first\\n\\nthird\\n');
-    const located=await client.decide('Question?',tt.Client.files([path]));client.close();
+    const located=await client.decide('Question?',tt.Client.files([path]));
+    const exactDone=await client.decide('Question?',tt.Results.parse('9007199254740993'));client.close();
     const raw=JSON.parse(JSON.stringify(no.terminal));raw.future={flag:false,empty:null};
     const extended=tt.Results.packet(raw);
-    return {values:[no.results[0].value,nil.results[0].value,uncertain.results[0].value],presence:[no.results[0].question.has('true'),nil.results[0].question.has('true'),nil.results[0].question.true],positions:located.results.map(r=>[r.index,r.source.first_line,r.source.last_line,r.input]),future:extended.future,exact:(()=>{const p=tt.Results.parse('9007199254740993');return [p.raw,JSON.stringify(p)];})(),typed:extended instanceof tt.Results.NativeSessionPacketTerminal};
+    return {values:[no.results[0].value,nil.results[0].value,uncertain.results[0].value],presence:[no.results[0].question.has('true'),nil.results[0].question.has('true'),nil.results[0].question.true],positions:located.results.map(r=>[r.index,r.source.first_line,r.source.last_line,r.input]),future:extended.future,nativeExact:[exactDone.results[0].input.raw,JSON.stringify(exactDone.results[0].input)],exact:(()=>{const p=tt.Results.parse('9007199254740993');return [p.raw,JSON.stringify(p)];})(),typed:extended instanceof tt.Results.NativeSessionPacketTerminal};
   `);
   assert.deepEqual(value.values,[false,null,null]);assert.deepEqual(value.presence,[false,true,null]);
   assert.deepEqual(value.positions,[[0,1,1,'first'],[1,3,3,'third']]);
-  assert.deepEqual(value.future,{flag:false,empty:null});assert.equal(value.typed,true);assert.deepEqual(value.exact,['9007199254740993','9007199254740993']);
+  assert.deepEqual(value.future,{flag:false,empty:null});assert.equal(value.typed,true);assert.deepEqual(value.exact,['9007199254740993','9007199254740993']);assert.deepEqual(value.nativeExact,['9007199254740993','9007199254740993']);
 });
 
 test('Client reports native deadline settlement and invalid admission sends nothing',async t=>{
