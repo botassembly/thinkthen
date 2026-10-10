@@ -7,6 +7,8 @@ import subprocess
 import sys
 from urllib.parse import unquote, urlparse
 
+from native_assets import configure
+
 ROOT = Path(__file__).resolve().parents[3]
 def resolution(project, name, expected):
     config = project / '.dart_tool/package_config.json'
@@ -27,6 +29,7 @@ def prepare(package, native, consumer):
     source = ROOT / 'libraries/dart/checks/consumers/alpha'
     shutil.copytree(source / 'bin', app / 'bin', dirs_exist_ok=True)
     shutil.copy2(source / 'pubspec.yaml', app / 'pubspec.yaml')
+    configure(package, native / 'lib/libthinkthen.so', [app])
     env = dict(os.environ, FLUTTER_SUPPRESS_ANALYTICS='true', CI='true')
     subprocess.run([dart, 'pub', 'get', '--offline', '--directory', str(app)], env=env, check=True)
 
@@ -34,8 +37,8 @@ def prepare(package, native, consumer):
     env.update(THINKTHEN_PARITY_PACKAGE=str(package), THINKTHEN_DART_CONSUMER=str(app),
                THINKTHEN_COMPLETE_LIBRARY=str(native / 'lib/libthinkthen.so'))
     if consumer == 'dart':
-        binary = app / 'complete-native'
-        subprocess.run([dart, 'compile', 'exe', str(app / 'bin/complete_native.dart'), '-o', str(binary)], env=env, check=True)
+        subprocess.run([dart, 'build', 'cli', '-t', 'bin/complete_native.dart', '-o', str(app / 'complete-build')], cwd=app, env=env, check=True)
+        binary = app / 'complete-build/bundle/bin/complete_native'
         env['THINKTHEN_DART_BINARY'] = str(binary)
     else:
         facade = package / 'flutter'
@@ -44,6 +47,7 @@ def prepare(package, native, consumer):
         tests = example / 'test'; tests.mkdir(exist_ok=True)
         for name in ('complete_constructed_test.dart', 'complete_native_test.dart'):
             shutil.copy2(ROOT / 'libraries/dart/flutter/example/test' / name, tests / name)
+        configure(package, native / 'lib/libthinkthen.so', [facade, example])
         for project in (facade, example):
             subprocess.run([flutter, 'pub', 'get', '--offline'], cwd=project, env=env, check=True)
             resolution(project, 'thinkthen_dart', package)

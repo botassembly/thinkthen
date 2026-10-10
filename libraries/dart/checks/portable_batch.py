@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env
 from backend_cases import ROWS, alias, configuration, paths
+from native_assets import configure, package_members
 from portable import one_portable_request  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -44,23 +45,7 @@ assert bool(RELEASE_PACKAGE) == bool(RELEASE_NATIVE), "both release inputs are r
 if RELEASE_PACKAGE:
     package = Path(RELEASE_PACKAGE).resolve()
     native = Path(RELEASE_NATIVE).resolve() / "lib/libthinkthen.so"
-    expected = {"CHANGELOG.md", "LICENSE", "README.md", "pubspec.yaml", "pubspec.lock",
-                "lib/thinkthen_dart.dart", "lib/src/allocator.dart", "lib/src/door.dart",
-                "lib/src/typed.dart", "THINKTHEN-PACKAGE-INPUTS",
-                'lib/thinkthen_complete.dart',
-                'lib/src/native/abi.dart',
-                'lib/src/native/api.dart',
-                'lib/src/native/batch.dart',
-                'lib/src/native/engine.dart',
-                'lib/src/native/execution.dart',
-                'lib/src/native/functions.dart',
-                'lib/src/native/input.dart',
-                'lib/src/native/question.dart',
-                'lib/src/native/question_adapter.dart',
-                'lib/src/native/result.dart',
-                'lib/src/native/views.dart',
-                'lib/src/native/value_views.dart',
-                'lib/src/native/observation_views.dart'}
+    expected = package_members(ROOT / 'libraries/dart') | {'pubspec.lock', 'THINKTHEN-PACKAGE-INPUTS'}
     members = {str(path.relative_to(package)) for path in package.rglob("*") if path.is_file()}
     assert members == expected and not any(path.is_symlink() for path in package.rglob("*")), ("DART_ARCHIVE_MEMBERS", members)
     manifest = (package / "pubspec.yaml").read_text()
@@ -93,6 +78,7 @@ for named in (False, True):
                     "name: thinkthen_release_consumer\nversion: 0.0.1\npublish_to: none\n"
                     "environment:\n  sdk: '>=3.3.0 <4.0.0'\ndependencies:\n"
                     f"  thinkthen_dart:\n    path: {json.dumps(str(package))}\n")
+                configure(package, native, [consumer])
                 resolved = subprocess.run([DART, "pub", "get", "--offline", "--directory", str(consumer)],
                                           env=env, capture_output=True, text=True, timeout=60)
                 assert resolved.returncode == 0, (resolved.stdout, resolved.stderr)
