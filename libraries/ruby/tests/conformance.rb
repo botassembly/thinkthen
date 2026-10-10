@@ -89,11 +89,7 @@ def same(what, actual, expected)
   raise "#{what}: got #{JSON.generate(actual)}, expected #{JSON.generate(expected)}" unless close?(actual, expected)
 end
 
-def engine(base, **settings) = T::Engine.new(base_url: base, cache: false, **settings)
-
-def question(held) = T.question(**held.transform_keys(&:to_sym))
-
-def entity(one) = %w[text start end length kind strength].to_h { |key| [key, one[key]] }
+def engine(base, **settings) = T::Client.new(base_url: base, cache: false, **settings)
 
 def detailed(document, expected, base)
   wanted = expected["details"]
@@ -109,41 +105,33 @@ def detailed(document, expected, base)
   same("url", document["meta"]["url"], "#{base}/systemone")
 end
 
-def single(engine, asked, text, success, base)
+def single(client, verb, asked, text, success, base)
   expected = success["answers"][0]
-  document = engine.details(asked, text).value
+  result = client.public_send(verb, asked, text)
+  document = result.results.first.to_h
   detailed(document, expected, base)
-  typed = case document["answer"]["kind"]
-          when "yes_no" then engine.decide(asked, text).value
-          when "score" then engine.score(asked, text).value
-          when "choice" then engine.choose(asked, text).value
-          when "tag" then engine.tag(asked, text).value
-          end
-  same("typed", typed, expected["bare"])
+  same("typed", result.value, expected["bare"])
   counters = success["counters"] or return
   Dir.mktmpdir do |folder|
-    cached = T::Engine.new(base_url: base, cache: folder)
-    before = cached.usage
-    counters["calls"].times { cached.details(asked, text) }
-    after = cached.usage
-    same("counters", { "calls" => counters["calls"], "requests" => after[:requests_sent] - before[:requests_sent],
-                       "cache_answers" => after[:cache_answers] - before[:cache_answers] }, counters)
+    T::Client.open(base_url: base, cache: folder) do |cached|
+      facts = Array.new(counters["calls"]) { cached.public_send(verb, asked, text).facts }
+      same("counters", { "calls" => facts.size, "requests" => facts.sum(&:requests_sent),
+                         "cache_answers" => facts.sum(&:cache_answers) }, counters)
+    end
   end
 end
 
-def annotated(engine, set, texts, success, one)
-  records = Dir.mktmpdir do |folder|
-    File.write(File.join(folder, "set.json"), JSON.generate(set))
-    engine.annotate(T.set(File.join(folder, "set.json")), texts).value
-  end
+def annotated(client, set, texts, success, one)
+  result = client.annotate(set, texts)
+  records = result.results.map(&:to_h)
   failed = 0
   success["answers"].each do |expected|
-    value = records[one ? 0 : expected["exchange"]].fetch(expected["name"].to_sym)
-    # ThinkThen.failed reads the failure marker; nil stays unresolved.
-    failure = T.failed(value)
+    answer = records[one ? 0 : expected["exchange"]].fetch("answers").fetch(expected["name"])
+    failure = answer["failure"]
+    value = answer["value"]
     failed += 1 if failure
     same("bare #{expected['name']}", failure ? { "failed" => failure } : value, expected["bare"])
-    same("unresolved #{expected['name']}", value.nil?, expected["bare"].nil?)
+    same("unresolved #{expected['name']}", !failure && value.nil?, expected["bare"].nil?)
   end
   same("failed", failed, success.fetch("failed_questions", 0))
 end
@@ -161,54 +149,53 @@ def check(one)
   end
   success = swap(one["expect"]["success"], renamed)
   texts = exchanges.map { |exchange| exchange["evidence"] }
-  engine = engine(base, batch: LEGACY_BATCH_ONE.include?(id) ? 1 : nil)
+  settings = LEGACY_BATCH_ONE.include?(id) ? {batch: 1} : {}
+  client = T::Client.new(base_url: base, cache: false, **settings)
   held = one["question"]
   case [one["verb"], success["kind"]]
   in ["recognize", _]
-    rules = held["recognize"]
-    found = engine.recognize(one["text"], kinds: rules["kinds"], relations: rules["relations"],
-                                          threshold: held["threshold"], relation_threshold: held["relation_threshold"]).value
-    bare = { "entities" => found.entities.map { |e| entity(e) } }
-    unless found.relations.nil?
-      bare["relations"] = found.relations.map do |r|
-        { "relation" => r.relation, "source" => entity(r.source), "target" => entity(r.target), "probability" => r.probability, **(r.either ? { "either" => true } : {}) }
-      end
-    end
+    result = client.recognize(held, one.fetch("text"))
+    raise "untyped recognition" unless result.results.first.is_a?(T::Results::NativeRecognition)
+    bare = result.value.to_h
     same("result", bare, success["answers"][0]["bare"])
   in ["relate", _]
-    pair = ->(e) { { "name" => e.name, "kind" => e.kind } }
-    edges = engine.relate(one["entities"], relations: held["relate"]["relations"], threshold: held["threshold"]).value
-    same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability, **(e.either ? { "either" => true } : {}) } },
-         success["answers"][0]["bare"])
+    edges = client.relate(held, one["entities"]).value
+    same("result", edges.map(&:to_h), success["answers"][0]["bare"])
   in ["annotate", _]
     whole = one.key?("record")
-    annotated(engine, one["question_set"], whole ? [JSON.generate(one["record"])] : texts, success, whole)
+    annotated(client, one["question_set"], whole ? [one["record"]] : texts, success, whole)
   in ["find", _]
-    found = engine.find(held["find"], held["units"], none: held["none"]).value
+    result = client.find(held["find"], held["units"], none: held["none"])
+    found = result.results.first
     selected = success["operation"]["selected"]
     picked = success["operation"]["probabilities"].find { |row| row["index"] == selected }
     want = selected.nil? ? nil : [selected, held["units"][selected], picked["probability"]]
-    same("found", found.index.nil? ? nil : found.to_a, want)
+    candidate = found.candidates.find { |row| row.index == found.index }
+    same("found", found.index.nil? ? nil : [found.index, found.value, candidate.probability], want)
+    same("selected value", result.value, want&.[](1))
   in ["rank", _]
-    ranked = engine.rank(held["decide"], texts).value
-    same("ranking", ranked.map { |row| { "index" => row.index, "probability" => row.probability } }, success["operation"]["ranking"])
+    ranked = client.rank(held, texts).results
+    same("ranking", ranked.map { |row| { "index" => row.index, "probability" => row.answer.probability } }, success["operation"]["ranking"])
   in [_, "filter"]
-    kept = engine.filter(question(held), texts).value
-    same("indexes", kept.map { |text| texts.index { |held_text| held_text.equal?(text) } }, success["operation"]["indexes"])
+    kept = client.filter(held, texts).results
+    same("indexes", kept.map(&:index), success["operation"]["indexes"])
   in [_, "decide_many"]
-    same("bare", engine.decide_many(question(held), texts).value, success["answers"].map { |answer| answer["bare"] })
+    same("bare", client.decide(held, texts).value, success["answers"].map { |answer| answer["bare"] })
   else
-    single(engine, question(held), texts[0], success, base)
+    single(client, one["verb"], held, texts[0], success, base)
     if id == "01-decide-yes-captured"
       Dir.mktmpdir do |folder|
         file = File.join(folder, "question.json")
         File.write(file, JSON.generate(held))
-        before = engine.usage[:requests_sent]
-        detailed(engine.details(T.question(file: file), texts[0]).value, success["answers"][0], base)
-        same("named-file sends", engine.usage[:requests_sent] - before, 1)
+        before = client.usage[:requests_sent]
+        named = client.decide(T::Client.question_file(file), texts[0])
+        detailed(named.results.first.to_h, success["answers"][0], base)
+        same("named-file sends", client.usage[:requests_sent] - before, 1)
       end
     end
   end
+ensure
+  client&.close
 end
 
 # Each error case at its public boundary: the kind, not retryable, a usage
@@ -226,19 +213,19 @@ def refused(one, kind)
       Dir.mktmpdir do |folder|
         file = File.join(folder, "not-a-folder")
         File.write(file, "not a folder")
-        T::Engine.new(base_url: generic, cache: file).decide(text, "Is this urgent?")
+        T::Client.open(base_url: generic, cache: file) { |client| client.decide(text, "Is this urgent?") }
       end
     when "23-cancelled-fault"
       token = T::Cancel.new
       token.cancel
       counted.decide(text, "Is this urgent?", cancel: token)
     when "24-deadline-fault" then counted.decide(text, "Is this urgent?", deadline_ms: 0)
-    when "29-usage-json-text" then T.question(decide: text, threshold: one["question"]["threshold"])
+    when "29-usage-json-text" then counted.decide(one["question"], "Is this urgent?")
     when "30-local-question-file"
       Dir.mktmpdir do |folder|
         file = File.join(folder, "question.json")
         File.write(file, JSON.generate(one["question"]))
-        counted.decide(T.question(file: file), one["evidence"])
+        counted.decide(T::Client.question_file(file), one["evidence"])
       end
     when "31-usage-rank-blank-question" then counted.rank(text, %w[one two])
     else raise "no public boundary is written for #{one['id']}"
@@ -253,6 +240,8 @@ def refused(one, kind)
     return
   end
   raise "the case succeeded"
+ensure
+  counted&.close
 end
 
 passed = failed = skipped = 0
