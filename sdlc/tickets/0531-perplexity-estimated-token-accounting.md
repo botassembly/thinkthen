@@ -1,6 +1,6 @@
 # 0531: Account for Perplexity token usage in plans and budgets
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Reviews: revision 43719e4a80629187619d1cf48458f84429924656, accept
 Reviews: revision 1b97c9273a1ecc79471764386329a48fb01f69b4, accept
 
 Reviews: revision 4721e09fb25761d38d9e360164a68644d48fdd96, accept
+
+Landed: 98d89a0
 
 ## Outcome
 
