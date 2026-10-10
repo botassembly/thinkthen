@@ -46,3 +46,7 @@ The release scripts assemble every final registry-format artifact from 0501's in
 - Defers: Native platform qualification goes to 0383–0385 at the first authorized candidate. Local workflow edits and assembly tests authorize no dispatch, candidate or publication.
 
 Author: project manager.
+
+## Progress
+
+- 2026-10-10 landed 474d0116e; next: Committed Dart, Flutter and COBOL archive inventories are landed and fake workflow checks pass. Final installed distribution and platform qualification remain held.
