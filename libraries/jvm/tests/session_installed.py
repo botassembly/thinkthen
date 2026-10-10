@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT / 'conformance/children'))
@@ -22,6 +23,7 @@ def main():
     parser.add_argument('--jars',type=Path,required=True)
     parser.add_argument('--out',type=Path,required=True)
     args = parser.parse_args()
+    version = ET.parse(args.jars / 'pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text
     logs = args.out.resolve()
     logs.mkdir(parents=True,exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="installed-",dir=logs))
@@ -43,7 +45,13 @@ def main():
     backend_source = ROOT / 'libraries/csharp/tests/backend.py'
     spec = importlib.util.spec_from_file_location('shared_package_backend',backend_source)
     backend = importlib.util.module_from_spec(spec); spec.loader.exec_module(backend)
+    class AttributedHandler(backend.Handler):
+        def do_POST(self):
+            self.server.user_agents.append(self.headers.get('User-Agent'))
+            super().do_POST()
+    backend.Handler = AttributedHandler
     server = backend.Backend(work / 'barrier')
+    server.user_agents = []
     env = child_env(home='/work/home',LANG='C.UTF-8',LC_ALL='C.UTF-8',THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',THINKTHEN_API_KEY='tt-canary-290')
     command = ['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind',str(jdk),'/jdk','--bind',str(work),'/work','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--chdir','/work','--','/jdk/bin/java','--enable-native-access=ALL-UNNAMED','-XX:ActiveProcessorCount=2','-Xmx1g','-cp','/work/feed/*:/work/app','SessionConsumer']
     try:
@@ -54,8 +62,9 @@ def main():
             print(result.stderr.decode(),file=sys.stderr)
             raise AssertionError(f'installed JVM exit {result.returncode}')
         assert b'INSTALLED_JVM_SESSION_PASS' in result.stdout
-        expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'hold-jvm-java','session-independent']
+        expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'status-401','hold-jvm-java','session-independent']
         assert server.arrivals == expected,server.arrivals
+        expected_agents = [f'thinkthen/{version} (java)'] * len(expected)
         assert server.attempts == server.connections == len(expected),server.arrivals
         assert all('malformed' not in str(item) and 'preview' not in str(item) for item in server.arrivals),server.arrivals
         print('Installed Java ten functions, counted zero-send refusals, held cancellation and owned results PASS')
@@ -68,11 +77,15 @@ def main():
             (logs / (language + '-consumer.log')).write_bytes(actual.stdout + actual.stderr)
             assert actual.returncode == 0,(actual.stdout,actual.stderr)
             assert ('INSTALLED_JVM_' + language.upper() + '_SESSION_PASS').encode() in actual.stdout,actual.stdout
+            previous = len(expected)
             expected += ['hold-jvm-' + language,'session-' + language + '-independent']
             if language == 'scala': expected += ['session-scala-nested']
+            expected += ['status-401']
+            expected_agents += [f'thinkthen/{version} ({language})'] * (len(expected) - previous)
             assert server.arrivals == expected,server.arrivals
             print(actual.stdout.decode(),end='')
         assert server.attempts == server.connections == len(expected),server.arrivals
+        assert server.user_agents == expected_agents,server.user_agents
         print('Installed Kotlin coroutine and Scala Future cancellation while held PASS')
     finally:
         for file in (work / 'barrier').glob('arrived-*'):

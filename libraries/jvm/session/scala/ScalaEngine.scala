@@ -12,7 +12,7 @@ final class ScalaEngine(settings: Map[String, Any] = Map.empty) extends AutoClos
     case items: Iterable[?] => items.iterator.map(javaValue).toList.asJava
     case scalar => scalar
   }
-  private val engine = new Engine(javaMap(settings))
+  private val engine = new Engine(javaMap(settings), Engine.Surface.SCALA)
   private def run(native: java.util.concurrent.CompletableFuture[Engine.OwnedCall]): Call = {
     val result = Promise[Engine.OwnedCall]()
     native.whenComplete((value, error) => { if (error == null) result.trySuccess(value) else result.tryFailure(error); () })

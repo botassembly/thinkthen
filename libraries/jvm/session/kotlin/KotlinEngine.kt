@@ -8,7 +8,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 /** Coroutine facade over the shared owned JVM sessions. */
 class KotlinEngine(settings: Map<String, Any?> = emptyMap()) : AutoCloseable {
-    private val engine = Engine(settings)
+    private val engine = Engine(settings, Engine.Surface.KOTLIN)
     private suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): Engine.OwnedCall {
         currentCoroutineContext().ensureActive()
         val call = start()
