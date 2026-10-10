@@ -2,6 +2,7 @@ import thinkthen.scala.ScalaEngine
 import thinkthen.Presence
 import thinkthen.Results
 import thinkthen.Engine
+import thinkthen.Inputs
 import scala.concurrent.Await
 import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
@@ -9,12 +10,12 @@ import java.nio.file.{Files, Path}
 
 object SessionScala {
   def main(args: Array[String]): Unit = {
-    val engine = new ScalaEngine(Map("cache" -> false, "max_retries" -> 0))
+    val engine = new ScalaEngine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0))
     var retainedCall: Engine.OwnedCall = null
     var failure: Engine.SessionFailure = null
     try {
-      val question = Map[String, Any]("kind" -> "text", "text" -> "Is it?")
-      def input(text: String) = Map[String, Any]("kind" -> "text", "text" -> text)
+      val question = new Inputs.RequestQuestionText().text("Is it?")
+      def input(text: String) = new Inputs.RequestInputText().text(text)
       val held = engine.decide(question, input("hold-jvm-scala"))
       val limit = System.nanoTime() + 10.seconds.toNanos
       while (!Files.exists(Path.of("barrier/arrived-hold-jvm-scala"))) {

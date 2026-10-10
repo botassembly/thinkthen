@@ -14,6 +14,11 @@ public final class Engine implements AutoCloseable {
     private static final ScheduledExecutorService POLLER = Executors.newScheduledThreadPool(2, runnable -> {
         Thread thread = new Thread(runnable, "thinkthen-session"); thread.setDaemon(true); return thread;
     });
+    public Engine(Inputs.EngineSettings settings) { this(settings, Surface.JAVA); }
+    public Engine(Inputs.EngineSettings settings, Surface surface) { this(Values.object(settings.json()), surface); }
+    public OwnedSession startSession(Inputs.Request request) { return startSession(Values.object(request.json())); }
+    public Results.Plan plan(Inputs.Request request) { return plan(Values.object(request.json())); }
+    public CompletableFuture<OwnedCall> execute(Inputs.Request request) { return execute(Values.object(request.json())); }
     public Engine(Map<String,?> settings) { this(settings, Surface.JAVA); }
     /** Shared transport construction for the Kotlin and Scala facade packages. */
     public Engine(Map<String,?> settings, Surface surface) {
@@ -27,7 +32,7 @@ public final class Engine implements AutoCloseable {
             if (pointer.equals(MemorySegment.NULL)) throw engineFailure();
         }
     }
-    public Engine() { this(Map.of()); }
+    public Engine() { this(new Inputs.EngineSettings()); }
     private NativeFailure engineFailure() {
         var args = new MemoryLayout[]{ValueLayout.ADDRESS};
         int code = (int)NativeSession.call("thinkthen_error_code", ValueLayout.JAVA_INT, args, pointer);
@@ -107,6 +112,26 @@ public final class Engine implements AutoCloseable {
         if (result.isDone()) scheduled.get().cancel(false);
         return result;
     }
+    public CompletableFuture<OwnedCall> decide(Inputs.RequestQuestion question, Inputs.RequestInput input) { return decide(question, input, null); }
+    public CompletableFuture<OwnedCall> decide(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("decide", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> choose(Inputs.RequestQuestion question, Inputs.RequestInput input) { return choose(question, input, null); }
+    public CompletableFuture<OwnedCall> choose(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("choose", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> tag(Inputs.RequestQuestion question, Inputs.RequestInput input) { return tag(question, input, null); }
+    public CompletableFuture<OwnedCall> tag(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("tag", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> score(Inputs.RequestQuestion question, Inputs.RequestInput input) { return score(question, input, null); }
+    public CompletableFuture<OwnedCall> score(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("score", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> filter(Inputs.RequestQuestion question, Inputs.RequestInput input) { return filter(question, input, null); }
+    public CompletableFuture<OwnedCall> filter(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("filter", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> rank(Inputs.RequestQuestion question, Inputs.RequestInput input) { return rank(question, input, null); }
+    public CompletableFuture<OwnedCall> rank(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("rank", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> find(Inputs.RequestQuestion question, Inputs.RequestInput input) { return find(question, input, null); }
+    public CompletableFuture<OwnedCall> find(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("find", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> annotate(Inputs.RequestQuestion question, Inputs.RequestInput input) { return annotate(question, input, null); }
+    public CompletableFuture<OwnedCall> annotate(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("annotate", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> recognize(Inputs.RequestQuestion question, Inputs.RequestInput input) { return recognize(question, input, null); }
+    public CompletableFuture<OwnedCall> recognize(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("recognize", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
+    public CompletableFuture<OwnedCall> relate(Inputs.RequestQuestion question, Inputs.RequestInput input) { return relate(question, input, null); }
+    public CompletableFuture<OwnedCall> relate(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call("relate", Values.object(question.json()), Values.object(input.json()), options == null ? null : Values.object(options.json())); }
     private CompletableFuture<OwnedCall> call(String function, Map<String,?> question, Map<String,?> input, Map<String,?> options) {
         var call = new LinkedHashMap<String,Object>();
         call.put("function", function); call.put("question", question); call.put("input", input);

@@ -470,10 +470,28 @@ def main():
                 output.write_text(result)
         return 0
     if args.target == "jvm":
-        if args.inputs or args.bridge:
-            parser.error("JVM target generates owned results only")
+        if args.bridge:
+            parser.error("JVM uses the shared stable native session ABI")
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import jvm
+        request_schema = json.loads((ROOT / "specification/request.schema.json").read_text())
+        request_schema["$defs"]["Request"] = {key: value for key, value in request_schema.items() if key != "$defs"}
+        input_definitions = prepare(graph(request_schema, jvm.INPUT_ROOTS))
+        selected, pending = {}, list(jvm.INPUT_ROOTS)
+        while pending:
+            key = pending.pop()
+            if key in selected:
+                continue
+            source = selected[key] = input_definitions[key]
+            pending.extend(references(source))
+            pending.extend(child for child, _ in source.get("variants", []))
+        input_source = jvm.inputs(selected)
+        input_output = ROOT / "libraries/jvm/session/thinkthen/Inputs.java"
+        if args.check and (not input_output.exists() or input_output.read_text() != input_source):
+            print("generated JVM inputs differ", file=sys.stderr)
+            return 1
+        if not args.check:
+            input_output.write_text(input_source)
         result = jvm.render(prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS)))
         if args.output == OUTPUT:
             args.output = ROOT / "libraries/jvm/session/thinkthen/Results.java"

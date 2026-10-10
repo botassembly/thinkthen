@@ -5,12 +5,13 @@ import java.util.concurrent.*;
 
 /** Installed calls, zero-send rejection and blocked-provider cancellation. */
 public final class SessionConsumer {
-    static Map<String,Object> question(String text) { return Map.of("kind","text","text",text); }
-    static Map<String,Object> authored(String value) { return Map.of("kind","definition","value",Json.parse(value)); }
-    static Map<String,Object> records(String... values) {
-        return Map.of("kind","records","items",Arrays.stream(values).map(text -> Map.of("original",Map.of("kind","text","text",text))).toList());
+    static Inputs.RequestQuestion question(String text) { return new Inputs.RequestQuestionText().text(text); }
+    static Inputs.AuthoredQuestionText wording(String text) { return new Inputs.AuthoredQuestionText(text); }
+    static Inputs.RequestQuestion authored(Inputs.RequestDefinition value) { return new Inputs.RequestQuestionDefinition().value(value); }
+    static Inputs.RequestInputRecords records(String... values) {
+        return new Inputs.RequestInputRecords().items(Arrays.stream(values).map(text -> new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text(text))).toList());
     }
-    static Map<String,Object> options() { return Map.of("batch",1); }
+    static Inputs.RequestOptions options() { return new Inputs.RequestOptions().batch(new Inputs.RequestBatch(1)); }
     static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
     static Engine.OwnedCall done(CompletableFuture<Engine.OwnedCall> future) throws Exception {
         var call = future.get(10,TimeUnit.SECONDS);
@@ -28,25 +29,25 @@ public final class SessionConsumer {
     public static void main(String[] ignored) throws Exception {
         Engine.OwnedCall retained;
         Engine.SessionFailure retainedFailure;
-        try (var engine = new Engine(Map.of("cache",false,"max_retries",0,"batch",1))) {
+        try (var engine = new Engine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0).batch(new Inputs.RequestBatch(1)))) {
             var question = question("Is it?");
             var decide = done(engine.decide(question,records("session-decide"),options()));
             var row = (Results.SessionPacketDecideRow)decide.packets().stream().filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
             check(Boolean.TRUE.equals(row.value().value().value()),"typed decide reading");
-            var choose = done(engine.choose(authored("{\"choose\":\"Which?\",\"options\":[\"first\",\"second\"]}"),records("session-choose"),options()));
+            var choose = done(engine.choose(authored(new Inputs.RequestDefinitionFieldsChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second")))),records("session-choose"),options()));
             check(choose.packets().stream().anyMatch(Results.SessionPacketChooseRow.class::isInstance),"choose row");
-            var tag = done(engine.tag(authored("{\"tag\":\"Which?\",\"labels\":[\"first\",\"second\"]}"),records("session-tag"),options()));
+            var tag = done(engine.tag(authored(new Inputs.RequestDefinitionFieldsTag().tag(wording("Which?")).labels(new Inputs.AuthoredLabels(List.of("first","second")))),records("session-tag"),options()));
             check(tag.packets().stream().anyMatch(Results.SessionPacketTagRow.class::isInstance),"tag row");
-            var score = done(engine.score(authored("{\"score\":\"Which?\",\"levels\":[\"Low.\",\"High.\"]}"),records("session-score"),options()));
+            var score = done(engine.score(authored(new Inputs.RequestDefinitionFieldsScore().score(wording("Which?")).levels(new Inputs.AuthoredLevels(List.of("Low.","High.")))),records("session-score"),options()));
             check(score.packets().stream().anyMatch(Results.SessionPacketScoreRow.class::isInstance),"score row");
-            check(done(engine.filter(authored("{\"decide\":\"Is it?\",\"threshold\":0.5}"),records("session-filter"),options())).packets().stream().anyMatch(Results.SessionPacketFilterRow.class::isInstance),"filter row");
-            check(done(engine.rank(authored("{\"decide\":\"Is it?\"}"),records("session-rank"),options())).packets().stream().anyMatch(Results.SessionPacketRankAggregate.class::isInstance),"rank aggregate");
-            check(done(engine.find(authored("{\"find\":\"Which?\"}"),records("session-find","session-find-two"),options())).packets().stream().anyMatch(Results.SessionPacketFindAggregate.class::isInstance),"find aggregate");
-            check(done(engine.annotate(authored("{\"version\":1,\"questions\":{\"check\":{\"decide\":\"Is it?\"}}}"),records("session-annotate"),options())).packets().stream().anyMatch(Results.SessionPacketAnnotateRow.class::isInstance),"annotate row");
-            check(done(engine.recognize(authored("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}"),records("Maria Chen"),options())).packets().stream().anyMatch(Results.SessionPacketRecognizeAggregate.class::isInstance),"recognize aggregate");
-            var entities = Map.<String,Object>of("kind","records","items",List.of(Map.of("original",Map.of("kind","json","value",Map.of("name","First","kind","alert"))),Map.of("original",Map.of("kind","json","value",Map.of("name","Second","kind","alert")))));
-            check(done(engine.relate(authored("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}"),entities,options())).packets().stream().anyMatch(Results.SessionPacketRelateAggregate.class::isInstance),"relate aggregate");
-            var request = Map.<String,Object>of("schema","thinkthen.request/1","call",Map.of("function","decide","question",question,"input",records("preview")));
+            check(done(engine.filter(authored(new Inputs.RequestDefinitionFieldsDecide().decide(wording("Is it?")).threshold(new Inputs.AuthoredThreshold(0.5))),records("session-filter"),options())).packets().stream().anyMatch(Results.SessionPacketFilterRow.class::isInstance),"filter row");
+            check(done(engine.rank(authored(new Inputs.RequestDefinitionFieldsDecide().decide(wording("Is it?"))),records("session-rank"),options())).packets().stream().anyMatch(Results.SessionPacketRankAggregate.class::isInstance),"rank aggregate");
+            check(done(engine.find(authored(new Inputs.RequestDefinitionFieldsFind().find(wording("Which?"))),records("session-find","session-find-two"),options())).packets().stream().anyMatch(Results.SessionPacketFindAggregate.class::isInstance),"find aggregate");
+            check(done(engine.annotate(authored(new Inputs.RequestDefinitionFieldsQuestionsVersion().questions(Map.of("check",new Inputs.RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide().decide(wording("Is it?"))))),records("session-annotate"),options())).packets().stream().anyMatch(Results.SessionPacketAnnotateRow.class::isInstance),"annotate row");
+            check(done(engine.recognize(authored(new Inputs.RequestDefinitionFieldsRecognizeVersion().recognize(new Inputs.RequestDefinitionFieldsRecognizeVersionPropertiesRecognize().kinds(Map.of("person",new Inputs.AuthoredDescription("A person's name."))))),records("Maria Chen"),options())).packets().stream().anyMatch(Results.SessionPacketRecognizeAggregate.class::isInstance),"recognize aggregate");
+            var entities = new Inputs.RequestInputEntities().items(List.of(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","First","kind","alert"))),new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","Second","kind","alert")))));
+            check(done(engine.relate(authored(new Inputs.RequestDefinitionFieldsRelateVersion().relate(new Inputs.RequestDefinitionFieldsRelateVersionPropertiesRelate().relations(List.of(new Inputs.AuthoredRelation().name("caused_by").source("alert").target("alert"))))),entities,options())).packets().stream().anyMatch(Results.SessionPacketRelateAggregate.class::isInstance),"relate aggregate");
+            var request = new Inputs.Request().call(new Inputs.RequestCallDecide().question(question).input(records("preview")));
             check(engine.plan(request).requests().intValueExact() == 1,"typed no-send plan");
             try { engine.decide(question(""),records("malformed"),options()).join(); throw new AssertionError("malformed admitted"); }
             catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure"); }
@@ -62,8 +63,8 @@ public final class SessionConsumer {
             check(held.isCancelled() && System.nanoTime() - started < TimeUnit.SECONDS.toNanos(2),"cancellation waited for provider");
             check(!Files.exists(Path.of("barrier/release-hold-jvm-java")),"provider was released early");
             retained = decide;
-            try (var session = engine.startSession(Map.of("schema","thinkthen.request/1","call",Map.of("function","decide","question",question,"input",Map.of("kind","feed","name","input"))))) {
-                session.finish(Map.of("kind","io"));
+            try (var session = engine.startSession(new Inputs.Request().call(new Inputs.RequestCallDecide().question(question).input(new Inputs.RequestInputFeed().name("input"))))) {
+                session.finish(new Inputs.RequestReaderFailureIo());
                 Results.SessionPacketTerminal terminal = null;
                 long limit = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
                 while (System.nanoTime() < limit) {
