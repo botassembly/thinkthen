@@ -6,6 +6,7 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 import json
 import os
+import sys
 import time
 from typing import Generic, TypeVar
 from . import _thinkthen as native
@@ -225,7 +226,7 @@ class Operation:
         source, self.producer, self.scalar = _source(verb, value)
         request = {'schema': 'thinkthen.request/1', 'call': {'function': verb, 'question': asked, 'input': source, 'options': fields}}
         if self.token is not None and self.token.cancelled:
-            self._close_producer()
+            self._close_producer(preserve_failure=True)
             raise _cancelled()
         try:
             self.session = engine._engine._request_session(_dump(request), self.surface)
@@ -287,14 +288,18 @@ class Operation:
             if self.pending is not None:
                 status = self.session._push(self.pending)
                 if status == 'accepted': self.pending = None
-                elif status == 'closed': self._close_producer(); self.pending = None
+                elif status == 'closed': self._close_producer(preserve_failure=True); self.pending = None
         return False
 
-    def _close_producer(self):
+    def _close_producer(self, preserve_failure=False):
         producer, self.producer = self.producer, None
         if producer is not None:
             close = getattr(producer, 'close', None)
-            if close is not None: close()
+            if close is not None:
+                active_failure = preserve_failure or sys.exc_info()[0] is not None
+                try: close()
+                except Exception:
+                    if not active_failure: raise
 
     def cancel(self):
         self.session.cancel()
