@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "bridge.hpp"
 #include "json_result.hpp"
 #include "images.hpp"
@@ -91,16 +92,17 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
 }
 void RegisterComplete(ExtensionLoader &loader) {
     for (auto verb : {"decide","choose","tag","score","filter","rank","find","annotate","recognize","relate"}) {
+        const string purpose = string("Return complete ") + verb + " results, request facts and typed failures as JSON.";
         const auto name = string("thinkthen_native_") + verb + "_complete";
         ScalarFunction function(name,{LogicalType::VARCHAR,LogicalType::VARCHAR,LogicalType::VARCHAR},LogicalType::JSON(),Complete,BindComplete);
         function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
         function.SetStability(FunctionStability::VOLATILE);
-        loader.RegisterFunction(function);
+        RegisterDescribedScalar(loader, function, purpose);
         if (string(verb) == "decide") {
             function.arguments[1] = LogicalType::LIST(ImageType());
-            loader.RegisterFunction(function);
+            RegisterDescribedScalar(loader, function, purpose);
         }
-        RegisterPortableMacro(loader,string("CREATE MACRO thinkthen_")+verb+"_complete(question, inputs, settings := NULL) AS "+name+"(question, inputs, settings)");
+        RegisterPortableMacro(loader,string("CREATE MACRO thinkthen_")+verb+"_complete(question, inputs, settings := NULL) AS "+name+"(question, inputs, settings)", purpose);
     }
 }
 }

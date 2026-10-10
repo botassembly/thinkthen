@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "removed.hpp"
 #include "portable.hpp"
 #include "duckdb/common/exception.hpp"
@@ -24,13 +25,13 @@ void RegisterRemoved(ExtensionLoader &loader) {
 		function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 		overloads.AddFunction(function);
 	}
-	loader.RegisterFunction(overloads);
+	RegisterDescribedScalar(loader, overloads, "Refuse the removed warm call and direct callers to thinkthen_decide_many.");
 	// A macro binds the old named `settings :=` form too, so every spelling reaches the refusal.
 	ScalarFunction probability("thinkthen_removed_probability", {}, LogicalType::DOUBLE, RemovedProbability);
 	probability.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(probability);
+	RegisterDescribedScalar(loader, probability, "Refuse the removed probability call and direct callers to thinkthen_rank.");
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_probability(question, input, settings := NULL) AS "
-	                              "thinkthen_removed_probability()");
+	                              "thinkthen_removed_probability()", "Refuse the removed probability call and direct callers to thinkthen_rank.");
 }
 
 } // namespace duckdb

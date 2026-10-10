@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "portable.hpp"
 #include "json_result.hpp"
 #include "bridge.hpp"
@@ -112,14 +113,15 @@ void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
 } // namespace
 
 void RegisterPlan(ExtensionLoader &loader) {
+	const string purpose = "Prepare request counts, token estimates and the first body without sending.";
 	ScalarFunction function("thinkthen_native_plan", {LogicalType::VARCHAR, LogicalType::VARCHAR,
 	                                                LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                        PlanType(), Plan, Bind);
 	function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	function.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(function);
+	RegisterDescribedScalar(loader, function, purpose);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_plan(question, keyed_json, settings := NULL) AS "
-	                              "thinkthen_native_plan(question, keyed_json, CAST(settings AS VARCHAR), typeof(settings))");
+	                              "thinkthen_native_plan(question, keyed_json, CAST(settings AS VARCHAR), typeof(settings))", purpose);
 }
 
 } // namespace duckdb

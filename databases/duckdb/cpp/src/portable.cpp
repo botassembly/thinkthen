@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "portable.hpp"
 #include "json_result.hpp"
 #include "bridge.hpp"
@@ -362,40 +363,45 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 }
 
-void RegisterMacro(ExtensionLoader &loader, const string &sql) {
+void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	Parser parser;
 	parser.ParseQuery(sql);
 	auto &statement = parser.statements.at(0)->Cast<CreateStatement>();
 	statement.info->schema = DEFAULT_SCHEMA;
 	statement.info->internal = true;
-	loader.RegisterFunction(statement.info->Cast<CreateMacroInfo>());
+	auto &info = statement.info->Cast<CreateMacroInfo>();
+	FunctionDescription description;
+	description.description = purpose;
+	info.descriptions.push_back(std::move(description));
+	loader.RegisterFunction(info);
 }
 
 } // namespace
 
-void RegisterPortableMacro(ExtensionLoader &loader, const string &sql) {
-	RegisterMacro(loader, sql);
+void RegisterPortableMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
+	RegisterMacro(loader, sql, purpose);
 }
 
 void RegisterPortableDecide(ExtensionLoader &loader) {
+	const string purpose = "Judge whether text answers a yes-or-no question.";
 	ScalarFunction native("thinkthen_native_decide",
 	                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 	                       LogicalType::VARCHAR},
 	                      LogicalType::BOOLEAN, Decide, Bind);
 	native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	native.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(native);
+	RegisterDescribedScalar(loader, native, purpose);
 	// A scalar := argument is positional in DuckDB 1.5.5. This catalog macro
 	// binds names before calling the native vector function.
 	RegisterMacro(loader, "CREATE MACRO thinkthen_decide(question, input, settings := NULL, threshold := NULL) "
 	                      "AS thinkthen_native_decide(question, input, CAST(settings AS VARCHAR), "
-	                      "CAST(threshold AS VARCHAR), typeof(settings))");
+	                      "CAST(threshold AS VARCHAR), typeof(settings))", purpose);
 	ScalarFunction many("thinkthen_native_many",
 	                    {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::INTEGER},
 	                    LogicalType::JSON(), Many, Bind);
 	many.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	many.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(many);
+	RegisterDescribedScalar(loader, many, "Judge or rank keyed text records and return their values as JSON.");
 	for (auto kind : {0, 4, 5, 6}) {
 		string name = kind == 0 ? "decide" : kind == 4 ? "choose" : kind == 5 ? "score" : "tag";
 		string conversion = kind == 0 ? "CAST(json_extract(item.value, '$.value') AS BOOLEAN)"
@@ -408,10 +414,11 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		}
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "_many(question, keyed_json, settings := NULL) "
 		                      "AS TABLE SELECT " + projection + " FROM json_each(thinkthen_native_many(question, keyed_json, settings, "
-		                      + std::to_string(kind) + ")) item");
+		                      + std::to_string(kind) + ")) item", "Judge keyed text records with " + name + " and return one row per record.");
 	}
 	for (auto kind : {4, 5, 6}) {
 		const string name = kind == 4 ? "choose" : kind == 5 ? "score" : "tag";
+		const string purpose = kind == 4 ? "Choose an option for text." : kind == 5 ? "Score text against ordered levels." : "Tag text with matching labels.";
 		const auto type = kind == 5 ? LogicalType::DOUBLE : kind == 6 ? LogicalType::LIST(LogicalType::VARCHAR)
 		                                                : LogicalType::VARCHAR;
 		ScalarFunction native("thinkthen_native_" + name,
@@ -420,38 +427,39 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		                       LogicalType::VARCHAR}, type, Listed, Bind);
 		native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 		native.SetStability(FunctionStability::VOLATILE);
-		loader.RegisterFunction(native);
+		RegisterDescribedScalar(loader, native, purpose);
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, members := NULL, settings := NULL) AS "
 		                      "thinkthen_native_" + name + "(question, input, "
 		                      "CASE WHEN typeof(members) = 'VARCHAR[]' THEN CAST(to_json(members) AS VARCHAR) ELSE NULL END, "
 		                      "CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE CAST(settings AS VARCHAR) END, "
-		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))");
+		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))", purpose);
 	}
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL) "
 	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability "
 	                      "FROM json_each(thinkthen_native_many(question, keyed_json, settings, "
-	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank");
+	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank", "Rank keyed text records by their probability of yes.");
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank_set(questions, keyed_json, settings := NULL) "
 	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability, "
 	                      "json_extract_string(item.value, '$.question_name') AS question_name, "
 	                      "json_extract(item.value, '$.facts') AS facts "
-	                      "FROM json_each(thinkthen_native_many(questions, keyed_json, settings, 9)) item ORDER BY rank");
+	                      "FROM json_each(thinkthen_native_many(questions, keyed_json, settings, 9)) item ORDER BY rank", "Rank keyed text records for each named question and include request facts.");
 	for (auto kind : {2, 3, 7}) {
 		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
+		const string purpose = kind == 2 ? "Return judgment details as JSON." : kind == 3 ? "Return judgment details or a safe recoverable failure as JSON." : "Annotate text with a question set and return its values as JSON.";
 		ScalarFunction native("thinkthen_native_" + name,
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::INTEGER, LogicalType::VARCHAR},
 		                      LogicalType::JSON(), Scalar, Bind);
 		native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 		native.SetStability(FunctionStability::VOLATILE);
-		loader.RegisterFunction(native);
+		RegisterDescribedScalar(loader, native, purpose);
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, settings := NULL) AS "
 		                      "thinkthen_native_" + name + "(question, input, CAST(settings AS VARCHAR), "
-		                      + std::to_string(kind) + ", typeof(settings))");
+		                      + std::to_string(kind) + ", typeof(settings))", purpose);
 	}
 }
 

@@ -13,6 +13,19 @@ To load directly, use `LOAD 'v1.5.5/linux_amd64/thinkthen.duckdb_extension';` on
 
 Use dbt v1 with `duckdb` 1.5.5 for the documented dbt route. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2. Community listing and signing are in progress under ticket 0415. No community install is available until DuckDB accepts and builds the submission. A signed build for another DuckDB version does not establish dbt v2 compatibility. The [public install page](https://thinkthen.dev/install/duckdb/#use-the-release-from-dbt-v1) provides the pinned dbt v1 packages and complete startup profile.
 
+## Discover function purposes
+
+DuckDB's catalog describes every registered ThinkThen function, including SQL macros, native scalar overloads, table functions, image and file helpers, usage observation and removed calls that still refuse with migration advice:
+
+```sql
+SELECT function_name, function_type, parameter_types, return_type, description
+FROM duckdb_functions()
+WHERE starts_with(function_name, 'thinkthen_')
+ORDER BY function_name, function_type, parameter_types;
+```
+
+Discovery creates no engine, reads no input files and sends no requests.
+
 ## Functions
 
 | SQL | Returns |

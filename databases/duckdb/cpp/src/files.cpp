@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "files.hpp"
 #include "files_manifest.hpp"
 #include "bridge.hpp"
@@ -197,8 +198,8 @@ void RegisterFiles(ExtensionLoader &loader) {
 			readers.AddFunction(TableFunction("thinkthen_read_files", arguments, ScanFiles, BindFiles, InitFiles));
 		}
 	}
-	loader.RegisterFunction(readers);
-	loader.RegisterFunction(ScalarFunction("thinkthen_span_lines", {LogicalType::VARCHAR, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	    LogicalType::STRUCT({{"first_line", LogicalType::BIGINT}, {"last_line", LogicalType::BIGINT}}), SpanLines));
+	RegisterDescribedTable(loader, readers, "Read authorized local files or folders as ordered text records with file and line positions.");
+	RegisterDescribedScalar(loader, ScalarFunction("thinkthen_span_lines", {LogicalType::VARCHAR, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
+	    LogicalType::STRUCT({{"first_line", LogicalType::BIGINT}, {"last_line", LogicalType::BIGINT}}), SpanLines), "Map Unicode scalar offsets in a record to inclusive physical line positions.");
 }
 } // namespace duckdb

@@ -1,3 +1,4 @@
+#include "descriptions.hpp"
 #include "usage.hpp"
 #include "json_result.hpp"
 #include "bridge.hpp"
@@ -57,10 +58,10 @@ void ScanUsage(ClientContext &, TableFunctionInput &input, DataChunk &output) {
 
 void RegisterUsage(ExtensionLoader &loader) {
 	TableFunction function("thinkthen_usage", {}, ScanUsage, BindUsage, InitUsage);
-	loader.RegisterFunction(function);
+	RegisterDescribedTable(loader, function, "Read count-only usage totals.");
 	ScalarFunction status("thinkthen_usage_status", {}, LogicalType::JSON(), UsageStatus);
 	status.SetStability(FunctionStability::VOLATILE);
-	loader.RegisterFunction(status);
+	RegisterDescribedScalar(loader, status, "Observe usage persistence without creating an engine or waiting for writes.");
 }
 
 } // namespace duckdb
