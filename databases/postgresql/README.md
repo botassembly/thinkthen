@@ -120,6 +120,24 @@ The throttle holds for the whole backend process. The first explicit throttle st
 
 `thinkthen.max_requests_total` caps attempted live sends in one backend, including retries and requests inside annotate or relate. An atomic reservation admits every transport attempt. A cache or replay answer can still complete after the send total is spent. A later request or split child that needs transport then raises 22023; previously completed attempts remain counted. A new connection forks a backend with a new total. A pool of N connections can spend up to N times its per-backend total. A cancelled call's send already on the wire remains counted. Each backend adds its sends to the count-only usage totals of the server's operating-system user when it exits, so `thinkthen status` run as that user shows the whole server's spend (ADR 0113). The total and the token cap still bind per backend.
 
+## Function descriptions
+
+The extension registers PostgreSQL comments on every installed function, including overloads that explain a removed interface. Read them through `pg_description`, `obj_description`, or psql `\df+`. This discovery query uses extension ownership and preserves each full signature:
+
+```sql
+SELECT p.oid::regprocedure::text AS signature,
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS description
+FROM pg_catalog.pg_proc p
+JOIN pg_catalog.pg_depend d
+  ON d.objid = p.oid AND d.classid = 'pg_catalog.pg_proc'::regclass
+JOIN pg_catalog.pg_extension e
+  ON e.oid = d.refobjid AND d.refclassid = 'pg_catalog.pg_extension'::regclass
+WHERE e.extname = 'thinkthen' AND d.deptype = 'e'
+ORDER BY signature;
+```
+
+Discovery reads only PostgreSQL catalogs. It builds no engine, reads no question or evidence file and sends no request. A description identifies the actual overload's result, failure behavior and applicable NULL or file rules. Existing installations need the rebuilt extension's SQL applied through their normal extension installation or upgrade procedure.
+
 ## Errors
 
 Each failure raises PostgreSQL's error with the message `thinkthen <kind>: <message> (retryable: yes|no)`.

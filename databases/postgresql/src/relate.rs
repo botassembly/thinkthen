@@ -167,8 +167,10 @@ fn relate(query: &str, ask: impl FnOnce(bool) -> Result<Relate, Error>) -> Edges
     TableIterator::new(out)
 }
 
+crate::descriptions::describe! {
+"Run the supplied SQL query through SPI and relate its id/name[/kind] rows using inline relation rules. Return relation, both retained ids, probability and direction. NULL query is invalid; NULL rules raises Usage. Reads no evidence file; failures raise SQL errors.";
+[parallel_restricted];
 /// Inline rules, as the command's `--relation` spells them.
-#[pg_extern(parallel_restricted)]
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the columns from the signature, not an alias"
@@ -197,9 +199,12 @@ fn thinkthen_relate(
         relate(query.unwrap_or_default(), |kinds| inline(&rules, kinds))
     })
 }
+}
 
+crate::descriptions::describe! {
+"Run the supplied SQL query through SPI and relate its id/name[/kind] rows using authored JSON rules or a privileged/confined @file. Return relation, both retained ids, probability and direction. NULL rules raises Usage; NULL query is invalid. Failures raise SQL errors. Evidence files must be read by the client.";
+[name = "thinkthen_relate", parallel_restricted];
 /// A version-one relate file, as `'@file.json'` or JSON text.
-#[pg_extern(name = "thinkthen_relate", parallel_restricted)]
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the columns from the signature, not an alias"
@@ -223,6 +228,7 @@ fn thinkthen_relate_file(
             .or_raise();
         relate(query.unwrap_or_default(), |_| Ok(ask))
     })
+}
 }
 
 #[cfg(test)]

@@ -25,7 +25,9 @@ fn image(bytes: &[u8], mime: &str) -> Result<ImageInput, thinkthen::Error> {
     ImageInput::new(media, bytes)
 }
 
-#[pg_extern(parallel_restricted, requires = ["image_value_type"])]
+crate::descriptions::describe! {
+"Construct a native image composite from bytea and image/png or image/jpeg media, validating pixels. Either NULL operand returns NULL. Invalid media, pixels or size raises Usage; reads no file and sends nothing.";
+[parallel_restricted, requires = ["image_value_type"]];
 fn thinkthen_image(
     bytes: Option<&[u8]>,
     mime: Option<&str>,
@@ -43,6 +45,7 @@ fn thinkthen_image(
             .unwrap_or_else(|_| call::raise(call::defect("image data field is unavailable")));
         Some(tuple)
     })
+}
 }
 
 pub(crate) fn input(
@@ -114,7 +117,9 @@ fn judged(
     .unwrap_or_else(|| call::raise(call::defect("image details returned no record")))
 }
 
-#[pg_extern(parallel_restricted, requires = ["image_value_type"])]
+crate::descriptions::describe! {
+["Judge an ordered native image collection with optional text and return a boolean or NULL when unsure. ", crate::descriptions::SCALAR_IMAGES].concat();
+[parallel_restricted, requires = ["image_value_type"]];
 fn thinkthen_decide_images(
     question: Option<&str>,
     images: Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>,
@@ -135,8 +140,11 @@ fn thinkthen_decide_images(
         }
     })
 }
+}
 
-#[pg_extern(parallel_restricted, requires = ["image_value_type"])]
+crate::descriptions::describe! {
+["Judge an ordered native image collection with optional text and return a chosen member or NULL when unsure. ", crate::descriptions::SCALAR_IMAGES].concat();
+[parallel_restricted, requires = ["image_value_type"]];
 fn thinkthen_choose_images(
     question: Option<&str>,
     images: Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>,
@@ -157,8 +165,11 @@ fn thinkthen_choose_images(
         }
     })
 }
+}
 
-#[pg_extern(parallel_restricted, requires = ["image_value_type"])]
+crate::descriptions::describe! {
+["Judge an ordered native image collection with optional text and return a numeric score. ", crate::descriptions::SCALAR_IMAGES].concat();
+[parallel_restricted, requires = ["image_value_type"]];
 fn thinkthen_score_images(
     question: Option<&str>,
     images: Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>,
@@ -179,8 +190,11 @@ fn thinkthen_score_images(
         }
     })
 }
+}
 
-#[pg_extern(parallel_restricted, requires = ["image_value_type"])]
+crate::descriptions::describe! {
+["Judge an ordered native image collection with optional text and return detailed judgment jsonb. ", crate::descriptions::SCALAR_IMAGES].concat();
+[parallel_restricted, requires = ["image_value_type"]];
 fn thinkthen_details_images(
     question: Option<&str>,
     images: Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>,
@@ -191,4 +205,5 @@ fn thinkthen_details_images(
         let held = judged(question?, images?, text, settings, None);
         Some(crate::jsonb(&held.to_json()))
     })
+}
 }

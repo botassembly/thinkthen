@@ -6,7 +6,9 @@ use thinkthen::{Error, ErrorKind};
 use crate::{call, files};
 use call::OrRaise as _;
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+"Load and validate a question or question set from a literal server path, preserving authored JSON bytes. NULL path returns NULL. Requires server-file privilege or administrator directory confinement; regular-file, size and link checks apply. Failures raise SQL errors; sends nothing. Evidence files must be read by the client.";
+[parallel_restricted];
 fn thinkthen_question_file(path: Option<&str>) -> Option<String> {
     call::guarded(|| {
         let path = path?;
@@ -42,4 +44,6 @@ fn thinkthen_question_file(path: Option<&str>) -> Option<String> {
         }
         Some(source)
     })
+}
+
 }

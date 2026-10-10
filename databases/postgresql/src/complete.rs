@@ -70,7 +70,9 @@ fn execute(
     Some(Json(result))
 }
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native decide ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_decide_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -78,8 +80,11 @@ fn thinkthen_decide_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("decide", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native choose ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_choose_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -87,8 +92,11 @@ fn thinkthen_choose_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("choose", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native tag ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_tag_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -96,8 +104,11 @@ fn thinkthen_tag_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("tag", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native score ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_score_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -105,8 +116,11 @@ fn thinkthen_score_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("score", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native filter ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_filter_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -114,8 +128,11 @@ fn thinkthen_filter_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("filter", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native rank ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_rank_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -123,8 +140,11 @@ fn thinkthen_rank_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("rank", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native find ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_find_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -132,8 +152,11 @@ fn thinkthen_find_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("find", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native annotate ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_annotate_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -141,8 +164,11 @@ fn thinkthen_annotate_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("annotate", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native recognize ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_recognize_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -150,8 +176,11 @@ fn thinkthen_recognize_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("recognize", question, inputs, settings))
 }
+}
 
-#[pg_extern(parallel_restricted)]
+crate::descriptions::describe! {
+["Run native relate ", crate::descriptions::COMPLETE_TEXT].concat();
+[parallel_restricted];
 fn thinkthen_relate_complete(
     question: Option<&str>,
     inputs: Option<&str>,
@@ -159,9 +188,12 @@ fn thinkthen_relate_complete(
 ) -> Option<Json> {
     call::guarded(|| invoke("relate", question, inputs, settings))
 }
+}
 
+crate::descriptions::describe! {
+"Run native decide on one ordered native bytea image collection and return the complete result/2 envelope as PostgreSQL json, including final facts and started failures. NULL question or image collection returns NULL before inspecting partners; NULL settings uses defaults. Questions support native catalog references and privileged/confined @files. Evidence and image files must be read by the client. Admission and backend failures return error envelopes.";
+[parallel_restricted, requires = ["image_value_type"]];
 /// Complete result for one ordered native bytea image collection.
-#[pg_extern(parallel_restricted, requires = ["image_value_type"])]
 fn thinkthen_decide_images_complete(
     question: Option<&str>,
     images: Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>,
@@ -173,4 +205,5 @@ fn thinkthen_decide_images_complete(
             crate::images::input(images, None).map(crate::complete_native::Inputs::from_record)
         })
     })
+}
 }

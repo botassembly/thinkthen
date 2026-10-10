@@ -29,11 +29,13 @@ fn judged(
     )
 }
 
+crate::descriptions::describe! {
+["Return a boolean decision, or NULL when unsure. ", crate::descriptions::SCALAR_TEXT].concat();
+[name = "thinkthen_decide", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
 )]
-#[pg_extern(name = "thinkthen_decide", parallel_restricted)]
 fn decide(
     question: Option<&str>,
     input: Option<&str>,
@@ -59,12 +61,15 @@ fn decide(
         }
     })
 }
+}
 
+crate::descriptions::describe! {
+["Return one chosen member, or NULL when unsure. ", crate::descriptions::SCALAR_TEXT].concat();
+[name = "thinkthen_choose", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
 )]
-#[pg_extern(name = "thinkthen_choose", parallel_restricted)]
 fn choose(
     question: Option<&str>,
     input: Option<&str>,
@@ -91,12 +96,15 @@ fn choose(
         }
     })
 }
+}
 
+crate::descriptions::describe! {
+["Return a numeric score using the authored levels. ", crate::descriptions::SCALAR_TEXT].concat();
+[name = "thinkthen_score", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
 )]
-#[pg_extern(name = "thinkthen_score", parallel_restricted)]
 fn score(
     question: Option<&str>,
     input: Option<&str>,
@@ -123,12 +131,15 @@ fn score(
         }
     })
 }
+}
 
+crate::descriptions::describe! {
+["Return every matching authored label as text[]. ", crate::descriptions::SCALAR_TEXT].concat();
+[name = "thinkthen_tag", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
 )]
-#[pg_extern(name = "thinkthen_tag", parallel_restricted)]
 fn tag(
     question: Option<&str>,
     input: Option<&str>,
@@ -155,12 +166,15 @@ fn tag(
         }
     })
 }
+}
 
+crate::descriptions::describe! {
+"Return detailed judgment JSON as jsonb. Judge text with a literal/JSON question or privileged/confined @file. NULL question returns NULL after controls validation; NULL input returns NULL after question validation; NULL optional settings uses defaults. Evidence files must be read by the client. Failures raise SQL errors.";
+[name = "thinkthen_details", parallel_restricted];
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
 )]
-#[pg_extern(name = "thinkthen_details", parallel_restricted)]
 fn details_sql(
     question: Option<&str>,
     input: Option<&str>,
@@ -191,13 +205,16 @@ fn details_sql(
         Some(crate::jsonb(&held.to_json()))
     })
 }
+}
 
+crate::descriptions::describe! {
+"Return detailed judgment JSON or a recoverable row failure as jsonb. Judge text with a literal/JSON question or privileged/confined @file. NULL question or input returns NULL before checking partners; NULL optional settings uses defaults. Evidence files must be read by the client. Recoverable failures return failure JSON; other failures raise SQL errors.";
+[name = "thinkthen_try_details", parallel_restricted];
 /// Recoverable row failure without losing the ordinary details envelope.
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
 )]
-#[pg_extern(name = "thinkthen_try_details", parallel_restricted)]
 fn try_details(
     question: Option<&str>,
     input: Option<&str>,
@@ -239,4 +256,5 @@ fn try_details(
         };
         Some(pgrx::datum::JsonB(value))
     })
+}
 }

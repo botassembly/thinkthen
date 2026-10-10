@@ -188,6 +188,12 @@ shipped_lacks_probe() {
 	same "$(grep -c thinkthen_panic_probe "$PACKAGE_SQL" || true)" 0
 }
 check shipped_lacks_probe
+function_descriptions() {
+	fresh generic
+	python3 tests/function_descriptions.py "$SOCK"
+	same "$(bcount)" 0
+}
+check function_descriptions
 no_home_in_library() {
 	local files=("$PACKAGE_LIB"/thinkthen.*)
 	[ "${#files[@]}" = 1 ] && [ -f "${files[0]}" ]
