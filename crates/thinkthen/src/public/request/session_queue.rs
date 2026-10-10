@@ -130,6 +130,12 @@ impl Queue {
             RequestSessionRead::Pending
         }
     }
+    pub(super) fn close_intake(&self) {
+        let mut state = self.lock();
+        state.intake_closed = true;
+        state.input = None;
+        self.wake.notify_all();
+    }
     pub(super) fn stop(&self, drop_receiver: bool) {
         let mut state = self.lock();
         self.cancel.cancel();

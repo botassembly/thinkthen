@@ -174,3 +174,25 @@ Fresh narrow review accepted `2d400ced676655cce01f60d5c9f8dcf90cbc1f5c`, reprodu
 ## What the build taught us
 
 Test repeated calls at an exported iterator boundary. A command that aborts on its first error cannot establish the public iterator's terminal behavior. Shared reader failures must terminate both buffered suffix delivery and future reads.
+
+## Bounded native table sessions
+
+Fresh read-only review accepted `d3e1e145cf7662ebf1f8096dd3f0b0ef5ada67e9`, including the necessary 552-line source growth. It reproduced multiline projection, zero-send refusals, completed-prefix facts and EOF/BOM cases. Integration retains the independently reviewed 229-line Polars conversion and measures a combined ceiling of 184897; only the count conflict is resolved.
+
+This slice starts from `d05def2bb`. The contract in `specification/records.md` and ADR 0129 defines one encoded header descriptor followed by complete encoded data-row descriptors. It reuses the landed shared CSV/TSV parser without changing Request grammar, dependencies or public declarations. Raw byte chunks remain the authorized `TableReader` to typed Document-feed path.
+
+`src/table/framed.rs` retains the admitted header in `Rows` and replaces its owned bounded input for each descriptor. It parses the complete descriptor before yielding, refuses a second logical row before either sends, and bounds all descriptor bytes including trailing blanks. Existing header admission and record conversion remain shared in `src/table.rs`. The adapter moves the original text and clears its encoded buffer before yielding. It primes csv-core with an ignored blank line after reset so reset's initial BOM handling cannot consume a legitimate first data-cell BOM. The primer changes no real byte accounting or caller coordinates.
+
+`public/request/framing.rs` owns stateful session decoding and explicit EOF admission. Header controls refuse even when their existing optional representation is explicitly empty. Nonempty header images refuse; the existing public image vector represents an empty list as no attachments. Typed JSON and image-only originals refuse. Blank data descriptors skip only without per-item controls or images. Shared images attach after header and blank skipping. The existing composition path retains projection, item admission, route checks and supplied locations. File selection requires a location only on decoded data. Window and file units refuse before worker creation.
+
+The first decoder or composition failure fuses the iterator and uses `Queue::close_intake` to reject later transfers without cancelling admitted work. Reader failure precedes a missing-header check. Cancellation and deadlines run before EOF header admission. Existing bounded queues and completed-prefix settlement remain authoritative.
+
+Caller tests cover CSV/TSV multiline strings, projected and explicit context, supplied and absent locations, no location on the wire, bad headers, typed originals, header controls, multirow descriptors, reader units, missing headers, header-only success, blank records, data-cell BOMs and later table/reader failures. The existing held-provider cancellation and file-selection cases also exercise table framing. The descriptor bound regression remains ignored for the release suite. The new multiline test failed on the starting revision because session table framing refused before intake.
+
+The proposed source ceiling grows from 184116 to 184668 nonblank Rust lines. New code supplies one framed adapter, session decoding and caller behaviors; extracting the existing row conversion avoids another grammar. The existing large session test file gains table parameters for its owning behaviors instead of duplicate pressure or file-selection tests. Fresh review must accept the growth before landing.
+
+### What the build taught us
+
+csv-core reset restores initial BOM detection. A framed adapter must prevent that stream-start rule from stripping data in a later descriptor. Consume an ignored parser input before real row bytes, and test a legitimate data-cell BOM through the session boundary. Optional per-item controls preserve explicit emptiness; a plain image vector does not preserve whether an empty list was supplied. Respect the admitted representation instead of adding a new wire control solely to recover erased presence.
+
+Focused validation passes the native session suite with 26 routine cases and one ignored release case, all three authorized table-reader caller cases, strict library/session/Request Clippy, policy, formatting, whitespace and the exact source ratchet. Public inventory checks all 1971 declarations and refuses its four plants; no public declaration changes. Routine session and table-reader runs use an owned empty home, cleared environment, offline locked dependencies and two build jobs. Build scopes cap memory at 8 GiB and swap at 1 GiB. Lane allocation remains below 40 GiB across target, libraries and databases. Logs live under `target/0511-session-*.log`. Large boundaries, full parity, stress, paid calls and release qualification remain outside this focused slice.
