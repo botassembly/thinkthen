@@ -1,6 +1,6 @@
 # 0529: Generate COBOL access from the complete C views
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -12,6 +12,8 @@ Reviews: revision a087f6dc3, accept
 Reviews: revision a6cb8f0877aa288a450715b79102570b8b8273af, accept
 
 Reviews: revision d7eff7196b9cad6c6e0cc8db994e3d13954081de, accept
+
+Landed: d3c8890
 
 ## Outcome
 
