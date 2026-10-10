@@ -20,7 +20,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-client-format-') as tmp:
                 done=subprocess.run(command,input=payload,text=True,capture_output=True,timeout=5,
                                     env={'PATH':os.environ['PATH'],'HOME':tmp,'THINKTHEN_BASE_URL':with_backend.base(),'THINKTHEN_API_KEY':'sk-sqlite-loopback'})
                 assert done.returncode==1 and done.stdout=='',(done.returncode,done.stdout,done.stderr)
-                assert done.stderr.startswith('Error: Usage(') and 'file format is jsonl' in done.stderr,done.stderr
+                assert done.stderr.startswith('Error: Usage(') and 'file format is jsonl, csv or tsv' in done.stderr,done.stderr
                 if sys.platform=='linux':
                     calls=trace.read_text()
                     assert calls and '"'+path+'"' not in calls,calls
@@ -33,7 +33,32 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-client-format-') as tmp:
             value=json.loads(done.stdout)
             assert 'files' not in value and len(value['records'])==1,value
             assert value['records'][0]['json_text' if format else 'text']=='"Refund please."',value
+        for format,delimiter in [('csv',','),('tsv','\t')]:
+            source=folder/('valid.'+format)
+            source.write_text('body'+delimiter+'policy\n"Alpha.\nBeta."'+delimiter+'Refund policy\n')
+            files={'paths':[str(source),str(source)],'format':format}
+            done=subprocess.run([str(READER)],input=json.dumps({'files':files}),text=True,capture_output=True,timeout=5,
+                                env={'PATH':os.environ['PATH'],'HOME':tmp})
+            assert done.returncode==0 and done.stderr=='',(done.returncode,done.stderr)
+            records=json.loads(done.stdout)['records']
+            assert len(records)==2 and records[0]==records[1],records
+            assert json.loads(records[0]['json_text'])=={'body':'Alpha.\nBeta.','policy':'Refund policy'},records
+            assert records[0]['json_text'].startswith('{"body":'),records
+            assert records[0]['source']=={'file':str(source),'first_line':2,'last_line':3},records
+            for text,options in [
+                ('body'+delimiter+'body\nAlpha'+delimiter+'Beta\n',{}),
+                ('body\nAlpha\n',{'reading':{'unit':'file'}}),
+                ('body\nAlpha\n',{'reading':{'unit':'window','window':2}}),
+                ('body\nAlpha\n',{'reading':{'unit':'file'},'media':'image'}),
+            ]:
+                source.write_text(text)
+                files={'paths':[str(source)],'format':format,'options':options}
+                done=subprocess.run([str(READER)],input=json.dumps({'files':files}),text=True,capture_output=True,timeout=5,
+                                    env={'PATH':os.environ['PATH'],'HOME':tmp})
+                assert done.returncode==0 and done.stderr=='',(done.returncode,done.stderr)
+                error=json.loads(done.stdout)['records'][0]['read_error']['error']
+                assert error['kind']=='usage',error
         assert with_backend.close()==0
-        print('client reader: invalid formats refuse before I/O, admitted text/JSON lines preserve descriptors, zero requests')
+        print('client reader: invalid formats refuse before I/O, admitted text/JSON/table rows preserve descriptors, zero requests')
     finally:
         if with_backend.process.poll() is None:with_backend.process.kill();with_backend.process.wait()

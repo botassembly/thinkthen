@@ -66,7 +66,7 @@ string CompleteFileInputs(ClientContext &context,const string &inputs,string &fa
     auto encoded=yyjson_val_write(settings,0,nullptr);
     if (!encoded) { throw OrdinaryError("thinkthen defect: native reader options did not encode"); }
     string options(encoded); free(encoded);
-    const auto jsonl=yyjson_get_bool(yyjson_obj_get(root,"jsonl"));
+    const auto framing=yyjson_get_int(yyjson_obj_get(root,"framing"));
     auto &files=FileSystem::GetFileSystem(context);
     const auto manifest=FileManifest(files,operands);
     string records="[";
@@ -76,7 +76,7 @@ string CompleteFileInputs(ClientContext &context,const string &inputs,string &fa
         AuthorizeLocalSource(files,name);
         Handle held{files,files.OpenFile(name,FileOpenFlags::FILE_FLAGS_READ)};
         if (files.GetFileType(*held.handle)!=FileType::FILE_TYPE_REGULAR) { throw OrdinaryError("thinkthen local: source file must be regular"); }
-        RustReply created(thinkthen_cpp_complete_reader_new(View(name),View(options),jsonl ? 1:0,&held,Read,&held.reader));
+        RustReply created(thinkthen_cpp_complete_reader_new(View(name),View(options),static_cast<int32_t>(framing),&held,Read,&held.reader));
         Checked(created.value);
         for (;;) {
             RustReply next(thinkthen_cpp_complete_reader_next(held.reader));

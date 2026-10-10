@@ -7,7 +7,7 @@ use thinkthen::{CallOptions, Engine, Error, ErrorKind, RecordObservation, Surfac
     reason = "DuckDB retains this compatibility dispatcher until its Request migration"
 )]
 mod execute;
-mod file_format;
+pub(crate) mod file_format;
 mod inputs;
 pub(crate) mod observations;
 mod questions;

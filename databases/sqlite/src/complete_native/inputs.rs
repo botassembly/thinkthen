@@ -3,7 +3,7 @@ use super::{defect, usage};
 use serde_json::{Value, value::RawValue};
 use std::collections::BTreeMap;
 use thinkthen::{
-    Error, InputEvidence, InputReaderOptions, QuestionInput, RawRecord, RecordInput, RecordReading,
+    Error, InputEvidence, InputReaderOptions, QuestionInput, RecordInput, RecordReading,
     SourceLocation,
 };
 
@@ -14,7 +14,7 @@ pub(crate) struct Inputs {
     raw: Fields,
     native_record: Option<thinkthen::RequestItem>,
     native_request: bool,
-    pub(crate) jsonl: bool,
+    pub(crate) framing: Option<thinkthen::RequestFraming>,
     pub(crate) incremental: bool,
     pub(crate) attempts: bool,
     pub(crate) cancelled: bool,
@@ -27,7 +27,7 @@ impl Inputs {
             raw: Fields::new(),
             native_record: Some(record),
             native_request: true,
-            jsonl: false,
+            framing: None,
             incremental: false,
             attempts: false,
             cancelled: false,
@@ -108,7 +108,7 @@ impl Inputs {
         }) {
             return Err(usage("unknown complete input field"));
         }
-        let mut jsonl = false;
+        let mut framing = None;
         if let Some(files) = raw.get("files") {
             let files = fields(files.get())?;
             if files
@@ -117,7 +117,7 @@ impl Inputs {
             {
                 return Err(usage("unknown complete files field"));
             }
-            jsonl = super::file_format::jsonl(files.get("format").map(|value| value.get()))?;
+            framing = super::file_format::framing(files.get("format").map(|value| value.get()))?;
         }
         if raw.contains_key("records") == raw.contains_key("files") {
             return Err(usage(
@@ -144,7 +144,7 @@ impl Inputs {
             raw,
             native_record: None,
             native_request: false,
-            jsonl,
+            framing,
             incremental,
             attempts,
             cancelled,
@@ -206,26 +206,7 @@ impl Inputs {
                 .unwrap_or(RecordReading::new(&[], None, None)?)
         };
         if let Some(files) = self.raw.get("files") {
-            let value = fields(files.get())?;
-            let paths: Vec<String> = serde_json::from_str(
-                value
-                    .get("paths")
-                    .ok_or_else(|| usage("files requires paths"))?
-                    .get(),
-            )
-            .map_err(|_| usage("file paths is a text array"))?;
-            let options = value
-                .get("options")
-                .map(|v| {
-                    serde_json::from_str::<InputReaderOptions>(v.get())
-                        .map_err(|_| usage("invalid native reader options"))
-                })
-                .transpose()?
-                .unwrap_or_default();
-            let records = thinkthen::read_inputs(paths, options)?;
-            return Ok(Box::new(records.map(move |item| {
-                item.and_then(|item| compose_file(item, &reading, self.jsonl))
-            })));
+            return self.file_records(files.get(), reading);
         }
         let records: Vec<Box<RawValue>> =
             serde_json::from_str(self.raw.get("records").ok_or_else(defect)?.get())
@@ -234,6 +215,53 @@ impl Inputs {
             compose(raw.get(), &reading, self.native_request)
         })))
     }
+    fn file_records(&self, files: &str, reading: RecordReading) -> Result<Records<'_>, Error> {
+        let value = fields(files)?;
+        let paths: Vec<String> = serde_json::from_str(
+            value
+                .get("paths")
+                .ok_or_else(|| usage("files requires paths"))?
+                .get(),
+        )
+        .map_err(|_| usage("file paths is a text array"))?;
+        let options = value
+            .get("options")
+            .map(|v| {
+                serde_json::from_str::<InputReaderOptions>(v.get())
+                    .map_err(|_| usage("invalid native reader options"))
+            })
+            .transpose()?
+            .unwrap_or_default();
+        if let Some(framing) = self.framing {
+            let source = thinkthen::RequestSource {
+                paths: paths.into_iter().map(Into::into).collect(),
+                reading: options.reading,
+                media: options.media,
+                framing: Some(framing),
+            };
+            let records = source.read_framed(Default::default())?;
+            return Ok(Box::new(records.map(move |item| {
+                item.and_then(|source| compose_framed(source, &reading))
+            })));
+        }
+        let records = thinkthen::read_inputs(paths, options)?;
+        Ok(Box::new(records.map(move |item| {
+            item.and_then(|item| reading.compose_source(item))
+        })))
+    }
+}
+
+fn compose_framed(
+    source: thinkthen::SourceRecord<thinkthen::RawRecord>,
+    reading: &RecordReading,
+) -> Result<RecordInput<QuestionInput>, Error> {
+    let mut record = reading.compose(source.record)?;
+    record.original = record.original.with_location(SourceLocation::new(
+        source.file,
+        Some(source.first_line),
+        Some(source.last_line),
+    )?);
+    Ok(record.map_original(|original| original.question_input()))
 }
 
 fn compose(
@@ -271,33 +299,6 @@ fn fields(source: &str) -> Result<Fields, Error> {
     serde_json::from_str(source).map_err(|_| usage("descriptor is one object with unique fields"))
 }
 
-fn compose_file(
-    item: thinkthen::SourceItem,
-    reading: &RecordReading,
-    jsonl: bool,
-) -> Result<RecordInput<QuestionInput>, Error> {
-    if !jsonl {
-        return reading.compose_source(item);
-    }
-    let thinkthen::SourceItem::Text(source) = item else {
-        return Err(usage("jsonl requires text media"));
-    };
-    let record = reading.compose(RawRecord::json(&source.record)?)?;
-    Ok(RecordInput {
-        seed_spans: record.seed_spans,
-        examples: record.examples,
-        original: record
-            .original
-            .with_location(SourceLocation::new(
-                source.file,
-                Some(source.first_line),
-                Some(source.last_line),
-            )?)
-            .question_input(),
-        context: record.context,
-        options: record.options,
-    })
-}
 fn located(original: QuestionInput, source: &RawValue) -> Result<QuestionInput, Error> {
     let value: Value =
         serde_json::from_str(source.get()).map_err(|_| usage("source is one object"))?;

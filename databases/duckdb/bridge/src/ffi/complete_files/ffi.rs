@@ -4,7 +4,9 @@ use std::{
     ffi::c_void,
     io::{self, BufReader, Read},
 };
-use thinkthen::{InputFileReader, InputReaderOptions, SourceItem};
+use thinkthen::{
+    InputFileReader, InputReaderOptions, RequestFraming, RequestSourceReader, SourceItem,
+};
 #[derive(Debug)]
 struct Host {
     context: *mut c_void,
@@ -19,8 +21,7 @@ impl Read for Host {
     }
 }
 pub(crate) struct Reader {
-    items: InputFileReader<BufReader<Host>>,
-    jsonl: bool,
+    items: Box<dyn Iterator<Item = Result<serde_json::Value, thinkthen::Error>>>,
 }
 impl std::fmt::Debug for Reader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -51,8 +52,16 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeTe
         options
             .validate()
             .map_err(|e| crate::complete_native::failure(&e).to_string())?;
+        thinkthen::RequestSource {
+            paths: Vec::new(),
+            reading: options.reading,
+            media: options.media,
+            framing: inputs.framing,
+        }
+        .validate_reading()
+        .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         serde_json::to_vec(
-            &serde_json::json!({"paths":files.get("paths"),"options":options,"jsonl":inputs.jsonl}),
+            &serde_json::json!({"paths":files.get("paths"),"options":options,"framing":match inputs.framing {None=>0,Some(RequestFraming::Jsonl)=>1,Some(RequestFraming::Csv)=>2,Some(RequestFraming::Tsv)=>3,_=>return Err(reject(thinkthen::ErrorKind::Defect,"invalid SQL framing"))}}),
         )
         .map_err(|_| "thinkthen defect: source plan did not encode".to_owned())
     })
@@ -64,7 +73,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeTe
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_reader_new(
     file: BridgeText,
     options: BridgeText,
-    jsonl: i32,
+    framing: i32,
     context: *mut c_void,
     read: Option<extern "C" fn(*mut c_void, *mut u8, usize) -> i64>,
     out: *mut *mut Reader,
@@ -75,20 +84,43 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_reader_new(
         }
         let read =
             read.ok_or_else(|| "thinkthen defect: missing authorized source callback".to_owned())?;
-        let options = serde_json::from_str(text(options.bytes, options.len)?)
-            .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid native reader options"))?;
-        let items = InputFileReader::new(
-            text(file.bytes, file.len)?,
-            BufReader::new(Host { context, read }),
-            options,
-        )
-        .map_err(|e| crate::complete_native::failure(&e).to_string())?;
+        let options: InputReaderOptions = serde_json::from_str(text(options.bytes, options.len)?)
+            .map_err(|_| {
+            reject(thinkthen::ErrorKind::Usage, "invalid native reader options")
+        })?;
+        let name = text(file.bytes, file.len)?;
+        let host = BufReader::new(Host { context, read });
+        let items: Box<dyn Iterator<Item = Result<serde_json::Value, thinkthen::Error>>> =
+            if framing == 0 {
+                Box::new(
+                    InputFileReader::new(name, host, options)
+                        .map_err(|e| crate::complete_native::failure(&e).to_string())?
+                        .map(|item| item.map(physical_descriptor)),
+                )
+            } else {
+                let framing = match framing {
+                    1 => RequestFraming::Jsonl,
+                    2 => RequestFraming::Csv,
+                    3 => RequestFraming::Tsv,
+                    _ => return Err(reject(thinkthen::ErrorKind::Defect, "invalid SQL framing")),
+                };
+                thinkthen::RequestSource {
+                    paths: Vec::new(),
+                    reading: options.reading,
+                    media: options.media,
+                    framing: Some(framing),
+                }
+                .validate_reading()
+                .map_err(|e| crate::complete_native::failure(&e).to_string())?;
+                Box::new(
+                    RequestSourceReader::new(name, host, framing, options.reading)
+                        .map_err(|e| crate::complete_native::failure(&e).to_string())?
+                        .map(|item| item.and_then(crate::complete_native::file_format::descriptor)),
+                )
+            };
         // SAFETY: host lends the out range and takes exclusive reader ownership.
         unsafe {
-            out.write(Box::into_raw(Box::new(Reader {
-                items,
-                jsonl: jsonl != 0,
-            })));
+            out.write(Box::into_raw(Box::new(Reader { items })));
         }
         Ok(Vec::new())
     })
@@ -105,14 +137,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_reader_next(reader: *mut 
         let Some(item) = reader.items.next() else {
             return Ok(Vec::new());
         };
-        let descriptor = match item.map_err(|e| crate::complete_native::failure(&e).to_string())? {
-            SourceItem::Text(s) => {
-                serde_json::json!({if reader.jsonl {"json_text"}else{"text"}:s.record,"source":{"file":s.file,"first_line":s.first_line,"last_line":s.last_line}})
-            }
-            SourceItem::Image(s) => {
-                serde_json::json!({"images":[{"media":match s.record.media(){thinkthen::ImageMedia::Png=>"image/png",thinkthen::ImageMedia::Jpeg=>"image/jpeg"},"bytes":s.record.bytes()}],"source":{"file":s.file}})
-            }
-        };
+        let descriptor = item.map_err(|e| crate::complete_native::failure(&e).to_string())?;
         serde_json::to_vec(&descriptor)
             .map_err(|_| "thinkthen defect: source descriptor did not encode".to_owned())
     })
@@ -156,6 +181,17 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_records(
         serde_json::to_vec(&value)
             .map_err(|_| "thinkthen defect: source descriptors did not encode".to_owned())
     })
+}
+
+fn physical_descriptor(item: SourceItem) -> serde_json::Value {
+    match item {
+        SourceItem::Text(s) => {
+            serde_json::json!({"text":s.record,"source":{"file":s.file,"first_line":s.first_line,"last_line":s.last_line}})
+        }
+        SourceItem::Image(s) => {
+            serde_json::json!({"images":[{"media":match s.record.media(){thinkthen::ImageMedia::Png=>"image/png",thinkthen::ImageMedia::Jpeg=>"image/jpeg"},"bytes":s.record.bytes()}],"source":{"file":s.file}})
+        }
+    }
 }
 
 fn reject(kind: thinkthen::ErrorKind, message: &str) -> String {

@@ -123,6 +123,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	done
 	select_host "$DEFAULT_VERSION"
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/$DEFAULT_VERSION/$platform/thinkthen.duckdb_extension"
+	"$PY" cpp/verify_complete_tables.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
 	sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py duckdb
@@ -160,6 +161,7 @@ for version in $DUCKDB_VERSIONS; do
 	[ "$version" = "$DEFAULT_VERSION" ] || older_suites
 done
 select_host "$DEFAULT_VERSION"
+"$PY" cpp/verify_complete_tables.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 "$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 
 if [ "$profile" = stress ]; then
