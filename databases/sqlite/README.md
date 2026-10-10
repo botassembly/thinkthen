@@ -218,11 +218,7 @@ model evidence and answer-cache identity.
 `context_schema`. SQLite also admits per-record `seed_spans` and `examples`, with
 matching projection pointers under `reading`. Null lists refuse; an explicit empty
 list clears the question fallback. Other database adapters retain their own admitted grammar.
-Per-record context and options retain false, empty and missing
-distinctions. `incremental: true` selects native fallible admission; row-producing
-calls retain their completed prefix on failure. Aggregate calls use native whole
-set admission. `cancelled: true` pre-cancels a native token. NULL question or inputs
-returns NULL; NULL settings uses defaults. Empty records use native semantics.
+Per-record context and options retain false, empty and missing distinctions. `incremental: true` selects native fallible admission. Decide, choose, tag, score, filter and annotate retain their completed rows on a later failure. Rank, find, recognize and relate still admit their complete input set before sending, including under `incremental: true`. Recognition produces rows but does not stream input admission through this SQL door. `cancelled: true` pre-cancels a native token. NULL question or inputs returns NULL; NULL settings uses defaults. Empty records use native semantics.
 
 SQLite and DuckDB additionally accept `files` instead of `records`, with `paths`,
 native reader `options` and optional `format: "jsonl"`. DuckDB opens only handles
@@ -240,9 +236,18 @@ SQLite accepts exactly one input collection, `records` or `files`. Supplying bot
 | `records` with optional `reading` | Compose explicit records and preserve their originals and locations. |
 | `files` with optional `reading` | Read selected files with native reader options; preserve file and line locations. |
 | `files` with `format: "jsonl"` | Require text media and compose each JSON line through the selected reading. |
-| Text or JSON records with explicit `images` | Admit actual image media, route and function before sending. |
-| Image-only records or image file media | Admit native image inputs; images never follow implicitly from text or JSON. |
-| Either collection with `incremental: true` | Row-producing calls retain the completed prefix; whole-set calls still admit the complete set. |
+| Text or JSON records with explicit `images` | Decide, choose and score admit actual image media and the configured image route before sending; the other functions refuse. |
+| Image-only records or image file media | Decide, choose and score admit native image inputs; images never follow implicitly from text or JSON. |
+| Per-record `options`, or a `reading.options` pointer | Choose admits ordered candidates; the other functions refuse a row with candidates. |
+| Per-record `examples` or `seed_spans`, or their `reading` pointers | Recognize admits these controls; the other functions refuse a row carrying them. |
+| Per-record context, or a `reading.context` pointer | Find and relate require shared call context instead; other functions retain native per-record context admission. |
+| Either collection with `incremental: true` | Decide, choose, tag, score, filter and annotate retain their completed prefix; rank, find, recognize and relate admit the complete input set. |
+
+`files.format` accepts only `"jsonl"`; omission uses the native text or image reader directly. CSV, TSV and other format names refuse before question-file resolution or source access. JSONL requires text media; image media and JSONL cannot combine. Native reader options select file, line or window units before SQL composes rows. The SQL `reading` descriptor selects fields and per-record controls; it does not accept framing, unit, window or shared attachment fields. An explicit SQL reading replaces the fallback reading derived from the question.
+
+SQLite supplies already composed rows to `RequestFeed::from_records`. That native feed owns framing, projections and attachments. Additional canonical Request framing, projection pointers or shared attachments refuse before the iterator advances. The native Session CSV/TSV grammar and `TableReader` do not expand this SQL descriptor grammar.
+
+Eager admission checks every composed row before sending. Incremental admission may send for earlier valid rows before a later row refusal in the six streaming functions above. Caller-known image descriptors still require function and route admission before any reader advances, including incremental calls. Malformed image descriptors retain ordinary row-failure behavior; they do not authorize an image route. Cancellation, declarations, request-size limits and native result facts continue to apply.
 
 The `native` member contains the strict native `Call::complete()` envelope: `value` contains complete
 result/2 rows (or the native find/relation object), and `facts` contains the owning
@@ -269,8 +274,7 @@ Missing/overflowed usage omits cost; cache and replay have zero sends and cost.
 The existing cache/record/replay and backend/key selection remain native.
 
 SQLite translates these named complete calls directly into Rust `Request` values.
-The native feed preserves composed originals and locations. Eager input validates
-every row before sending; incremental input retains its actual completed prefix.
+The native feed preserves composed originals and locations. Eager input validates every row before sending; incremental streaming calls retain their actual completed prefix.
 Caller-known image descriptors require route and function admission before reader
 access. An omitted image declaration never waives validation of actual image rows.
 Authored projections use the admitted native reading before declaration validation.
