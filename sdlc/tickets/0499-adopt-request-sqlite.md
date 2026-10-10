@@ -1,6 +1,6 @@
 # 0499: Run SQLite through the shared request contract
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -30,6 +30,8 @@ Reviews: revision c97589232ea2a69aad6f111558b42349a62eef8c, accept
 Reviews: revision 791fe5e8f5c72e83ec8ff796a87b80d229afe988, accept
 
 Reviews: revision e47d4140822486a9c772e9ff9f91d073854b4b87, accept
+
+Landed: d99aa00
 
 ## Outcome
 
