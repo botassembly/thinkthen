@@ -46,6 +46,7 @@ UNFETCHED_LOCKS = {
     "conformance/consumer/Cargo.lock": "a test consumer no release job builds",
     "libraries/r/thinkthen/src/rust/Cargo.lock": "R-universe builds R against the published crate",
     "libraries/rust/Cargo.lock": "the Rust examples surface, which no release job builds",
+    "libraries/rust/consumer/Cargo.lock": "an installed-package test consumer no release job builds",
     "probes/churn-0086/Cargo.lock": "an experiment probe",
 }
 # Each registry job publishes in release mode only; `publish` waits for all of them (ticket 0355).
