@@ -352,6 +352,10 @@ fn take(
         crate::RequestValue::Scores(v) => rows!(v),
         crate::RequestValue::Filtered(v) => rows!(v),
         crate::RequestValue::Ranked(v) => {
+            output.check_sources(
+                v.iter()
+                    .flat_map(|row| row.result().canonical.identity.question_sources()),
+            )?;
             for row in v {
                 let unit = held
                     .borrow_mut()
@@ -367,6 +371,10 @@ fn take(
             }
         }
         crate::RequestValue::SetRanked(v) => {
+            output.check_sources(
+                v.iter()
+                    .flat_map(|row| row.result().result().canonical.identity.question_sources()),
+            )?;
             for row in v {
                 let unit = held
                     .borrow_mut()
@@ -421,15 +429,12 @@ impl Renderer {
             .question_sources()
             .iter()
             .all(|s| s.origin() != crate::core::Origin::Live);
-        let model = (!replayed)
-            .then(|| {
-                canonical
-                    .identity
-                    .question_sources()
-                    .first()
-                    .map(|s| s.model().clone())
-            })
-            .flatten();
+        let model = canonical
+            .identity
+            .question_sources()
+            .iter()
+            .find(|source| source.origin() == crate::core::Origin::Live)
+            .map(|source| source.model().clone());
         let passing = self.keeping == crate::judge::Keeping::Passing;
         let mut printed = if passing && outcome != Outcome::Yes {
             None

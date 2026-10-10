@@ -135,10 +135,22 @@ impl Output<'_> {
         self.model_guard = true;
     }
 
-    fn check_model(&mut self, judged: &Judged) -> Result<(), Failure> {
+    pub(crate) fn check_sources<'a>(
+        &mut self,
+        sources: impl Iterator<Item = &'a crate::core::QuestionSource>,
+    ) -> Result<(), Failure> {
+        for source in sources {
+            if source.origin() == crate::core::Origin::Live {
+                self.check_model(Some(source.model()))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn check_model(&mut self, model: Option<&ModelName>) -> Result<(), Failure> {
         // A row the store answered wholly names no live model, so it takes
         // no part in the check, by ADR 0111 section 4.
-        if let (true, Some(model)) = (self.model_guard, judged.model.as_ref()) {
+        if let (true, Some(model)) = (self.model_guard, model) {
             match &self.run_model {
                 Some(first) if first != model => return Err(Failure::RunModelsDiffer),
                 None => self.run_model = Some(model.clone()),
@@ -149,7 +161,7 @@ impl Output<'_> {
     }
 
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
-        self.check_model(&judged)?;
+        self.check_model(judged.model.as_ref())?;
         if let Some(mismatch) = &judged.profile_mismatch {
             mismatch.print_once()?;
         }
