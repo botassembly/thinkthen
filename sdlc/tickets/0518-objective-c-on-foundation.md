@@ -38,3 +38,4 @@ Objective-C is Apple-only and uses Foundation: `NSError`, ARC, blocks for async 
 ## Progress
 
 - 2026-10-10 started
+- 2026-10-10 landed 2f3da2b86f08851f3ca159d44c2b9a7b1aa0ed3f; next: Foundation calls, generated owned results, NSError failures and ARC cancellation are implemented and reviewed; actual Apple SDK compilation and carrier checks pass. Matching native Apple linkage, installed session execution and held-provider parity remain owed; retain GNU compatibility until qualified.
