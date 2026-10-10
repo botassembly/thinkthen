@@ -9,6 +9,8 @@ Depends on: 0517
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 8d4a86bf92aec9fb3fa6ac7eeb7772cc330b821b, accept
+
 ## Outcome
 
 Go callers add one module that carries the native library, call the ten functions with Go values, cancel through `context.Context`, and read generated Go result types with explicit presence. Failures are typed errors with retained facts. Hand-copied layouts, readers and old public names are gone.
