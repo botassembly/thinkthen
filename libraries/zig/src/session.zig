@@ -3,7 +3,7 @@ const std = @import("std");
 const tt = @import("thinkthen.zig");
 const c = tt.c;
 pub const Function = enum { decide, choose, tag, score, filter, rank, find, annotate, recognize, relate };
-pub const Error = error{ Usage, Backend, Deadline, Local, Cancelled, Defect };
+pub const Error = error{ Usage, Backend, Deadline, Local, Cancelled, Defect, ClosedEngine };
 pub fn checked(code: c_int) Error!void {
     switch (code) {
         c.THINKTHEN_OK => {},
@@ -18,7 +18,7 @@ pub fn checked(code: c_int) Error!void {
 pub fn message() []const u8 {
     return std.mem.span(c.thinkthen_session_error_message());
 }
-pub fn bytes(value: c.thinkthen_complete_utf8_v1) []const u8 {
+pub fn bytes(value: anytype) []const u8 {
     return if (value.len == 0) &.{} else value.data[0..value.len];
 }
 /// Distinguish absent, present null and present value without a JSON reader.
