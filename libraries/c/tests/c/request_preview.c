@@ -10,14 +10,16 @@ static void check(int holds, const char *what) {
 }
 static const char p1[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"text\",\"text\":\"Refund me please.\"},\"options\":{\"max_requests_total\":0}}}";
 
-static void refused(thinkthen_engine *engine, const char *input) {
+static void refused(thinkthen_engine *engine, const char *input, int expected) {
     char *sentinel = (char *)(uintptr_t)7;
     size_t extent = 99;
-    check(thinkthen_request_plan_json(engine, input, strlen(input), &sentinel, &extent) == THINKTHEN_EUSAGE,
+    check(thinkthen_request_plan_json(engine, input, strlen(input), &sentinel, &extent) == expected,
           "canonical refusal kind");
     check(sentinel == (char *)(uintptr_t)7 && extent == 99, "refusal preserves outputs");
     const char *message = thinkthen_session_error_message();
     check(message && !strstr(message, "PRIVATE"), "refusal keeps safe diagnostic");
+    check(strcmp(message, expected == THINKTHEN_ELOCAL ? "session local operation failed" :
+                 "invalid session arguments or input") == 0, "refusal pins safe diagnostic");
 }
 int main(void) {
     thinkthen_engine *engine = thinkthen_engine_new();
@@ -39,9 +41,9 @@ int main(void) {
           "unrepresentable input extent");
     check(thinkthen_request_plan_json(engine, NULL, 0, &out, &len) == THINKTHEN_EUSAGE,
           "empty request");
-    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"schema\":\"thinkthen.request/1\",\"PRIVATE\":true}");
-    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"options\":{\"batch\":null}}}");
-    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"filter\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"source\",\"source\":{\"paths\":[\"PRIVATE-MISSING\"]}}}}");
+    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"schema\":\"thinkthen.request/1\",\"PRIVATE\":true}", THINKTHEN_EUSAGE);
+    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"options\":{\"batch\":null}}}", THINKTHEN_EUSAGE);
+    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"filter\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"source\",\"source\":{\"paths\":[\"PRIVATE-MISSING\"]}}}}", THINKTHEN_ELOCAL);
     /* Counted input deliberately omits the trailing NUL. */
     char *request = malloc(sizeof(p1)-1);
     check(request != NULL, "request storage");

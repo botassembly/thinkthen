@@ -17,6 +17,7 @@ fn p1_plans_with_no_key_and_no_send_and_refusals_keep_the_outputs() {
     let backend = Backend::start().expect("a loopback backend");
     let output = Command::new(compile(&crate_dir().join("tests/c/plan.c")))
         .clear_environment()
+        .isolated_home(scratch("plan-home"))
         .env(
             "THINKTHEN_BASE_URL",
             format!("{}/generic/v1", backend.origin()),
@@ -43,6 +44,8 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
     let backend = Backend::start().expect("a loopback backend");
     let output = Command::new(compile(&crate_dir().join("tests/c/request_preview.c")))
         .clear_environment()
+        .isolated_home(scratch("canonical-preview-home"))
+        .current_dir(scratch("canonical-preview-work"))
         .env(
             "THINKTHEN_BASE_URL",
             format!("{}/generic/v1", backend.origin()),
