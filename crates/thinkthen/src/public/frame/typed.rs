@@ -200,10 +200,18 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteFilter>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.filter_records_complete_with(
-            question,
+        let call = super::request::complete_records(
+            self,
+            question.clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Filter,
+            |value| match value {
+                RequestValue::Filtered(rows) => Ok(rows),
+                _ => Err(Error::defect(
+                    "a filter column returned another result kind",
+                )),
+            },
         )?;
         Ok((call, positions))
     }
