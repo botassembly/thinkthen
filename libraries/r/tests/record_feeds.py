@@ -35,10 +35,13 @@ try:
         code = '''library(thinkthen)
 tt_engine(cache=FALSE, max_retries=0L, model="fixed", batch=1L)
 at <- 0L
-feed <- tt_feed(function() { at <<- at + 1L; if (at <= 2L) tt_record(paste0("row", at), list(file="records",first_line=at*2L,last_line=at*2L)) else NULL })
+reader <- textConnection(c("row1", "row2"))
+released_reader <- 0L
+feed <- tt_feed(function() { at <<- at + 1L; row <- readLines(reader,n=1L); if(length(row)) tt_record(row, list(file="records",first_line=at*2L,last_line=at*2L)) else NULL },
+                close=function() {released_reader <<- released_reader+1L; close(reader)})
 result <- tt_decide("Feed?", feed)
 stopifnot(length(result$results) == 2L, result$facts$requests_sent == 2,
-          inherits(result, "thinkthen_Call"), at == 3L,
+          inherits(result, "thinkthen_Call"), at == 3L, released_reader == 1L,
           result$results[[1]]$source$first_line==2, result$results[[2]]$source$first_line==4)
 at <- 0L
 bad <- tt_feed(function() { at <<- at + 1L; "never" })
@@ -53,12 +56,15 @@ partial <- tt_feed(function() { at <<- at + 1L; if(at==1L) tt_record("prefix") e
 fault <- tryCatch(tt_decide("Partial?", partial), thinkthen_error=identity)
 stopifnot(inherits(fault,"thinkthen_local"),length(fault$completed)==1L,
           fault$facts$requests_sent==1, inherits(fault$facts,"thinkthen_Facts"))
-batch <- tt_batch("decide","Push?",tt_feed())
+manual_reader <- textConnection("manual")
+manual_releases <- 0L
+batch <- tt_batch("decide","Push?",tt_feed(close=function() {manual_releases <<- manual_releases+1L; close(manual_reader)}))
 stopifnot(batch$push(tt_record("manual")) == "accepted")
 batch$finish()
 stopifnot(batch$push(tt_record("closed")) == "closed", inherits(batch$next_result(),"thinkthen_DecideResult"),
           is.null(batch$next_result()), batch$facts()$requests_sent==1)
 batch$close()
+rm(batch); gc(); stopifnot(manual_releases==1L, released_reader==1L)
 batch <- tt_batch("decide","Cancel?",tt_feed(function() stop("must not read")))
 batch$cancel()
 fault <- tryCatch(batch$next_result(), thinkthen_error=identity)
@@ -66,6 +72,12 @@ stopifnot(inherits(fault,"thinkthen_cancelled"),fault$facts$requests_sent==0)
 closed <- FALSE
 batch <- tt_batch("decide","Drop?",tt_feed(close=function() closed <<- TRUE))
 rm(batch); gc(); stopifnot(closed)
+cleanup_attempts <- 0L
+batch <- tt_batch("decide","Cleanup?",tt_feed(close=function() {cleanup_attempts <<- cleanup_attempts+1L; stop("reader cleanup failed")}))
+fault <- tryCatch(batch$close(),error=identity)
+stopifnot(conditionMessage(fault)=="reader cleanup failed")
+batch$close()
+rm(batch); gc(); stopifnot(cleanup_attempts==1L)
 cat("r: bounded record feeds passed\\n")
 '''
         env = child_env(("R_LIBS", "LANG", "LC_ALL"), home=home,

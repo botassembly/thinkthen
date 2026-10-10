@@ -94,8 +94,14 @@ tt_batch <- function(function_name, question, input, options = list()) {
   state$ended <- FALSE
   state$stopped <- FALSE
   state$pending <- NULL
+  state$released <- FALSE
   producer <- if (inherits(input, "thinkthen_feed")) input else NULL
-  release <- function() { if (!is.null(producer)) producer$close(); invisible(NULL) }
+  release <- function() {
+    if (state$released) return(invisible(NULL))
+    state$released <- TRUE
+    if (!is.null(producer)) producer$close()
+    invisible(NULL)
+  }
   reg.finalizer(state, function(e) release(), onexit = TRUE)
   finish <- function(failure = NULL) {
     .tt_call(tt_request_batch_finish(native, if (is.null(failure)) NULL else .tt_json(unclass(failure))))
