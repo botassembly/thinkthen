@@ -88,6 +88,10 @@ pub(super) fn definition(prepared: &Prepared) -> RequestDefinition {
 }
 
 pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
+    request(prepared, RequestOptions::default())?.admit()
+}
+
+pub(super) fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, Error> {
     let definition = definition(prepared);
     let args = RequestArguments {
         question: RequestQuestion::Definition { value: definition },
@@ -97,7 +101,7 @@ pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
             reading: Default::default(),
             images: Vec::new(),
         },
-        options: RequestOptions::default(),
+        options,
     };
     let call = match prepared {
         Prepared::Atomic(LoadedQuestion::Banded(_)) => RequestCall::Decide(args),
@@ -116,7 +120,7 @@ pub(super) fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
         Prepared::Recognize(_, _) => RequestCall::Recognize(args),
         Prepared::Relate(_) => RequestCall::Relate(args),
     };
-    Request::new(call).admit()
+    Ok(Request::new(call))
 }
 fn render(outcome: RequestOutcome) -> Result<Value, Error> {
     match outcome {
@@ -138,7 +142,7 @@ fn render(outcome: RequestOutcome) -> Result<Value, Error> {
         }
     }
 }
-fn supplement(value: &mut Value, result: &RequestValue) -> Result<(), Error> {
+pub(super) fn supplement(value: &mut Value, result: &RequestValue) -> Result<(), Error> {
     macro_rules! rows {
         ($rows:expr) => {
             crate::complete_native::put(

@@ -1,6 +1,6 @@
 #pragma once
-#include "duckdb/main/client_context.hpp"
+#include "bridge.hpp"
 namespace duckdb {
-string CompleteFileInputs(ClientContext &context, const string &inputs, string &failure);
+bool CompleteFileCall(ClientContext &,const string &,const string &,const string &,const string &,const void *,int64_t,ThinkThenSettings,string &);
 string CompleteAdmissionError(const std::exception &error);
 }

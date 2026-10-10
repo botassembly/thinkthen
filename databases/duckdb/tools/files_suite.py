@@ -240,13 +240,91 @@ def complete_files_reject_unknown_formats_before_filesystem_work():
         for result in got:
             value=json.loads(rows(result)[0][0])
             expect(value['native']['error']['kind'],'usage','format refusal precedes source access')
-            expect(value['native']['error']['message'],'file format is jsonl','exact format diagnostic')
+            expect(value['native']['error']['message'],'file format is jsonl, csv or tsv','exact format diagnostic')
             assert 'facts' not in value['native'] and value['observations']==[],value
         expect(backend.count(),0,'unknown formats send nothing')
         valid=json.dumps({'files':{'paths':[str(folder/'missing')],'format':'jsonl'}})
         value=json.loads(rows(run(["SELECT thinkthen_decide_complete('{\"decide\":\"Refund?\"}',"+literal(valid)+")"],backend.base())[-1])[0][0])
         expect(value['native']['error']['kind'],'local','admitted format reaches the native reader')
         expect(backend.count(),0,'missing valid JSON-line file sends nothing')
+
+
+@case
+def complete_file_admission_stops_before_an_unread_suffix():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-owned-feed-') as tmp, Backend() as backend:
+        folder=Path(tmp)
+        prefix=[]
+        for ordinal in range(64):
+            path=folder/f'prefix-{ordinal:02d}'
+            path.write_text(f'Refund {ordinal}.')
+            prefix.append(str(path))
+        sentinel=folder/'unread-sentinel'
+        sentinel.write_bytes(b'\xffPRIVATE_UNREAD_SUFFIX')
+        payload=json.dumps({'files':{'paths':prefix+[str(sentinel)]},'incremental':True,'attempts':True})
+        trace=folder/'owned-feed.trace'
+        wrap=['strace','-f','-e','trace=openat','-o',str(trace)] if sys.platform=='linux' else None
+        got=run(['SET thinkthen_throttle=1','SET thinkthen_max_requests=1',
+                 "SELECT thinkthen_decide_complete('Refund?',"+literal(payload)+",'{\"batch\":1}')"],backend.base(),wrap=wrap,timeout=5)
+        value=json.loads(rows(got[-1])[0][0])
+        expect(value['native']['error']['kind'],'usage','native admission wins over unread UTF-8 error')
+        expect(value['native']['facts']['requests_sent'],1,'actual started prefix sends once')
+        expect(len(value['completed']),1,'completed prefix is retained')
+        expect(value['ordinals'],[0],'original prefix ordinal')
+        expect('PRIVATE_UNREAD_SUFFIX' in json.dumps(value),False,'suffix secrecy')
+        expect(backend.count(),1,'bounded native requests')
+        if wrap:
+            calls=trace.read_text()
+            expect('"'+str(sentinel)+'"' in calls,False,'sentinel content was never opened')
+            opened=sum('"'+path+'"' in calls for path in prefix)
+            assert 1 <= opened <= 4,('native excess row, queued input and one producer retry',opened)
+
+
+@case
+def complete_file_preflight_and_eager_invalid_input_send_nothing():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-owned-preflight-') as tmp, Backend() as backend:
+        folder=Path(tmp); good=folder/'good'; bad=folder/'bad'
+        good.write_text('Refund please.');bad.write_bytes(b'\xffPRIVATE_INPUT_MARKER')
+        files={'files':{'paths':[str(good),str(bad)]}}
+        trace=folder/'preflight.trace'
+        wrap=['strace','-f','-e','trace=openat','-o',str(trace)] if sys.platform=='linux' else None
+        invalid=[('choose',{'choose':'Which?','options':['only']}),('decide',{'decide':'Refund?'})]
+        statements=["SELECT thinkthen_"+verb+"_complete("+literal(json.dumps(question))+","+literal(json.dumps({**files,'reading':{'unknown':'PRIVATE_INPUT_MARKER'}}))+')' for verb,question in invalid]
+        statements.append("SELECT thinkthen_decide_complete('{\"decide\":\"Refund?\",\"profile\":42}',"+literal(json.dumps(files))+')')
+        path_refusals=[(None,'descriptor is one object with unique fields'),
+                       ({},'files requires paths'),
+                       ({'paths':None},'file paths is a text array'),
+                       ({'paths':42},'file paths is a text array'),
+                       ({'paths':'not-an-array'},'file paths is a text array'),
+                       ({'paths':[42]},'file paths is a text array'),
+                       ({'paths':[None]},'file paths is a text array'),
+                       ({'paths':[str(good),42]},'file paths is a text array')]
+        path_start=len(statements)
+        statements.extend("SELECT thinkthen_decide_complete('Refund?',"+literal(json.dumps({'files':invalid_paths}))+')'
+                          for invalid_paths,_ in path_refusals)
+        image_files={'files':{'paths':[str(good)],'options':{'reading':{'unit':'file'},'media':'image'}}}
+        statements.append("SELECT thinkthen_tag_complete('{\"tag\":\"Topics?\",\"labels\":[\"refund\"]}',"+literal(json.dumps(image_files))+')')
+        got=run(statements,backend.base(),wrap=wrap,timeout=5)
+        for result in got:
+            value=json.loads(rows(result)[0][0]);expect(value['native']['error']['kind'],'usage','static refusal')
+            assert 'facts' not in value['native'] and value['observations']==[],value
+        for result,(_,message) in zip(got[path_start:],path_refusals):
+            expect(json.loads(rows(result)[0][0])['native']['error']['message'],message,'native paths diagnostic')
+        if wrap:
+            calls=trace.read_text()
+            expect(any('"'+str(path)+'"' in calls for path in (good,bad)),False,'preflight opens no content')
+        eager=json.loads(rows(run(["SELECT thinkthen_decide_complete('Refund?',"+literal(json.dumps(files))+')'],backend.base())[-1])[0][0])
+        expect(eager['native']['error']['kind'],'usage','exact native UTF-8 kind')
+        assert 'facts' not in eager['native'],eager
+        expect(backend.count(),0,'eager late-invalid input sends nothing')
+        incremental={**files,'incremental':True,'attempts':True}
+        prefix=json.loads(rows(run(["SELECT thinkthen_decide_complete('Refund?',"+literal(json.dumps(incremental))+",'{\"batch\":1}')"],backend.base())[-1])[0][0])
+        expect(prefix['native']['error']['kind'],'usage','native reader error retains kind')
+        expect(prefix['native']['error']['message'],eager['native']['error']['message'],'native reader diagnostic survives finish')
+        expect(prefix['native']['facts']['requests_sent'],1,'completed prefix has actual send facts')
+        expect(len(prefix['completed']),1,'reader failure retains accepted completed prefix')
+        expect(prefix['ordinals'],[0],'reader failure preserves prefix ordinal')
+        expect(len(prefix['observations']),2,'actual question and row observations precede failure')
+        expect(backend.count(),1,'only the incremental completed prefix sends')
 
 
 if __name__=='__main__':
