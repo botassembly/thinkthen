@@ -66,6 +66,7 @@ def main():
     spec = ("name: installed_native_assets\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     (consumer / 'pubspec.yaml').write_text(spec)
     run([str(dart), 'pub', 'get', '--offline'], consumer, env)
+    run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
     configure(packages / 'dart', native, [packages / 'flutter'])
     run([str(flutter), 'pub', 'get', '--offline'], packages / 'flutter', env)
     cached.rename(cached.with_suffix('.held'))
@@ -140,8 +141,8 @@ def main():
     for streams in [app / 'lib/stream_cases.dart', app / 'lib/data_cases.dart']:
         streams.write_text(streams.read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart'))
     source = (consumer / 'bin/main.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart').replace('(dart)', '(flutter)')
-    source = source.replace('Future<void> main(List<String> args) async {', 'Future<void> exercise() async {')
-    source += '\nFuture<void> main() async {\n  try { await exercise(); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
+    source = source.replace('Future<void> main(List<String> args) async {', 'Future<void> exercise([List<String> args = const []]) async {')
+    source += '\nFuture<void> main() async {\n  try { await exercise(); await exercise(["stream-regressions"]); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
     (app / 'lib/main.dart').write_text(source)
     (app / 'pubspec.yaml').write_text("name: thinkthen_flutter_example\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  flutter:\n    sdk: flutter\n  thinkthen_flutter:\n    path: ../packages/flutter\ndependency_overrides:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     run([str(flutter), 'pub', 'get', '--offline'], app, env)
