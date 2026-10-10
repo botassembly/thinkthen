@@ -738,3 +738,5 @@ end
 
 require_relative "thinkthen/complete"
 require_relative "thinkthen/native_complete"
+
+require_relative "thinkthen/session"

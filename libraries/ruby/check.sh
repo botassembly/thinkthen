@@ -181,6 +181,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   "$RUBY" -I lib -e 'require "thinkthen"; ours = $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)})
     abort "thinkthen loaded #{ours}" unless ours.any? && ours.all? { |path| path.start_with?(ARGV[0]) }' "$scratch/gems/gems/" ||
     fail "thinkthen loaded from outside the gem folder"
+  "$RUBY" tests/test_owned_session.rb || fail "owned session cases failed, installed"
   for test in tests/conformance.rb tests/examples.rb; do
     sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed, installed"
   done
@@ -204,6 +205,7 @@ RUBYNATIVE
   exit 0
 fi
 
+python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
 ./build.sh
 cargo fmt --check
 cargo clippy --locked --offline --all-targets --quiet -- -D warnings
