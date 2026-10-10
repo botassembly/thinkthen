@@ -52,3 +52,7 @@ After the final language and database migrations, the documentation pass and the
   Claim `sdlc/records/0508*` only. Reviewers change no product code.
 - Proof: One concise record gives each confirmed finding with file and line evidence, severity, its ticket or ruling, and the reviewed revision. Required defects are fixed before the final installed-package run. Passing tests alone do not prove absence of bugs.
 - Defers: New proof machinery, per-language audit records, broad redesign unrelated to confirmed defects, and release management. Native platform checks owed to an authorized candidate stay explicit release obligations; they do not substitute for local acceptance or permit dispatch. Publishing and hosted qualification still need Ian's permission.
+
+## Progress
+
+- 2026-10-10 started
