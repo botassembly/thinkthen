@@ -1,4 +1,6 @@
+with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
+with System;
 package body Thinkthen.Sessions is
    use Interfaces.C;
    use Interfaces.C.Strings;
@@ -150,6 +152,13 @@ package body Thinkthen.Sessions is
 
    begin
       if Length = 0 then return ""; end if;
-      return Interfaces.C.Strings.Value (Value.data, size_t (Length));
+      if Value.data = Null_Ptr then raise Dereference_Error; end if;
+      declare
+         function Address_Of is new Ada.Unchecked_Conversion (chars_ptr, System.Address);
+         Bytes : char_array (0 .. size_t (Length) - 1)
+           with Import, Address => Address_Of (Value.data);
+      begin
+         return To_Ada (Bytes, Trim_Nul => False);
+      end;
    end Text;
 end Thinkthen.Sessions;

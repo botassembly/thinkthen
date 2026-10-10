@@ -3,6 +3,7 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 with Interfaces; use Interfaces;
 with Interfaces.C;
+with Interfaces.C.Strings;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
@@ -106,6 +107,19 @@ begin
          when Representation_Overflow => Overflowed := True;
       end;
       if not Overflowed then raise Program_Error with "extent overflow accepted"; end if;
+   end;
+   declare
+      use Interfaces.C.Strings;
+      Expected : constant String := "a" & Character'Val (0) & "b";
+      Bytes : chars_ptr := New_String (Expected);
+   begin
+      if Text ((data => Bytes, len => 3)) /= Expected or else
+         Text ((data => Null_Ptr, len => 0)) /= "" then
+         raise Program_Error with "counted text changed";
+      end if;
+      Free (Bytes);
+   exception
+      when others => Free (Bytes); raise;
    end;
    if State (0) /= Missing or State (1) /= Null_Value or State (2) /= Present then raise Program_Error with "presence conflated"; end if;
    Put_Line ("INSTALLED_ADA_NATIVE_SESSION_PASS");
