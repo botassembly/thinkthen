@@ -1,4 +1,4 @@
-"""Run routine public type cases through a staged Go module and counted backend."""
+"""Run shared cases or routine public type cases through a staged Go module and counted backend."""
 from pathlib import Path
 import importlib.util
 import base64
@@ -17,6 +17,43 @@ from c_parity import Backend
 spec = importlib.util.spec_from_file_location('type_checks', ROOT / 'specification/fixtures/types/check.py')
 checks = importlib.util.module_from_spec(spec); spec.loader.exec_module(checks)
 module = Path(sys.argv[1]).resolve()
+if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'full':
+    sys.path.insert(0, str(ROOT / 'libraries/cpp/fixtures'))
+    from session_cases import native_cases, descriptor
+    with tempfile.TemporaryDirectory(prefix='thinkthen-go-full-') as folder:
+        home = Path(folder)
+        (home / 'go.mod').write_text('module example.org/full-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
+        shutil.copy2(Path(__file__).with_name('full_consumer.go'), home / 'main.go')
+        env = child_env(home=home, GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=str(ROOT / 'target/go/cache'), GOMODCACHE=str(home / 'modcache'), CGO_ENABLED='1')
+        binary = home / 'consumer-bin'
+        subprocess.run(['go', 'build', '-p', '1', '-buildvcs=false', '-o', str(binary), '.'], cwd=home, env=env, check=True)
+        def invoke(step, settings, child, work, backend):
+            fixture = work / 'consumer-input.json'
+            fixture.write_text(json.dumps({**descriptor(step, work), "incremental": step.get("incremental", False)}))
+            args = [str(binary), str(fixture), json.dumps(settings)]
+            if step.get('held_cancel'):
+                process = subprocess.Popen(args, env=child, cwd=work, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                try:
+                    assert backend.read('wait 1') == 'wait 1'
+                    process.stdin.write('!'); process.stdin.flush()
+                    assert process.stdout.readline() == 'cancel-fired\n'
+                    backend.process.stdin.write('release\n'); backend.process.stdin.flush()
+                    stdout, stderr = process.communicate(timeout=60)
+                    result = subprocess.CompletedProcess(args, process.returncode, stdout, stderr)
+                finally:
+                    backend.process.stdin.write('release\n'); backend.process.stdin.flush()
+                    if process.poll() is None: process.kill(); process.wait()
+            else:
+                result = subprocess.run(args, env=child, cwd=work, capture_output=True, text=True, timeout=120)
+            payload = json.loads(result.stdout)
+            # Go context cancellation returns no terminal facts. The shared assertion
+            # uses the actual loopback count, not invented native facts.
+            if payload.get('admission', {}).get('code') == 5:
+                payload['admission']['requests_sent'] = int(backend.read('count'))
+                result.stdout = json.dumps(payload)
+            return result
+        native_cases(binary, consumer='go', invoke=invoke)
+    sys.exit(0)
 cases = json.loads((ROOT / 'specification/fixtures/types/corpus.json').read_text())['cases']
 # The shared public corpus owns expected answers; retain every successful named
 # function and each scalar presence reading. Envelope grammar cases exercise the

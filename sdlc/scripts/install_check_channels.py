@@ -149,18 +149,16 @@ def rubygems(check):
 
 
 def nuget(check):
-    native_library(check)
     check.run('dotnet', 'new', 'console', '--name', 'InstallCheck', '--framework', 'net8.0')
     check.run('dotnet', 'add', 'package', 'Botassembly.ThinkThen', '--version', check.version)
     source = write_consumer(check.project, 'csharp', 'Program.cs')
     assets = json.loads((check.project / 'obj/project.assets.json').read_text())
     installed = next(name.split('/')[1] for name in assets['libraries'] if name.startswith('Botassembly.ThinkThen/'))
     check.run('dotnet', 'build', '--no-restore', '--nologo', '--verbosity', 'quiet')
-    return installed, native_call(check, ['dotnet', check.project / 'bin/Debug/net8.0/InstallCheck.dll']), 'resolved NuGet metadata'
+    return installed, check.response('dotnet', check.project / 'bin/Debug/net8.0/InstallCheck.dll', check.sample), 'resolved NuGet metadata'
 
 
 def maven(check):
-    library = native_library(check)
     dependencies = ''.join(f'<dependency><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId><version>{check.version}</version>{classifier}</dependency>'
                            for classifier in ('', '<classifier>kotlin</classifier>', '<classifier>scala</classifier>'))
     (check.project / 'pom.xml').write_text(f'<project><modelVersion>4.0.0</modelVersion><groupId>installcheck</groupId><artifactId>consumer</artifactId><version>1</version><dependencies>{dependencies}</dependencies></project>')
@@ -168,21 +166,24 @@ def maven(check):
     jar = check.project / f'dependencies/thinkthen-jvm-{check.version}.jar'
     import xml.etree.ElementTree as ET
     pom = check.root / f'maven-cache/io/github/botassembly/thinkthen-jvm/{check.version}/thinkthen-jvm-{check.version}.pom'
-    installed = ET.parse(pom).getroot().findtext('{http://maven.apache.org/POM/4.0.0}version')
+    metadata = ET.parse(pom).getroot()
+    installed = metadata.findtext("{*}version")
+    jdk = metadata.findtext("{*}properties/{*}thinkthen.session.jdk")
+    if jdk is None or not jdk.isdecimal():
+        raise Failure("Maven POM is missing the supported stable JDK floor")
     source = write_consumer(check.project, 'java', 'InstallCheck.java')
-    check.run('javac', '--enable-preview', '--release', '21', '-cp', str(jar), source)
-    return installed, native_call(check, ['java', '--enable-preview', '--enable-native-access=ALL-UNNAMED', f'-Dthinkthen.library={library}', '-cp', f'{check.project}:{jar}', 'InstallCheck']), 'resolved Maven POM metadata'
+    check.run('javac', '--release', jdk, '-cp', str(jar), source)
+    return installed, check.response('java', '--enable-native-access=ALL-UNNAMED', '-cp', f'{check.project}:{check.project / "dependencies/*"}', 'InstallCheck', check.sample), 'resolved Maven POM metadata'
 
 
 def pub(check):
-    library = native_library(check)
     (check.project / 'pubspec.yaml').write_text("name: installcheck\nenvironment:\n  sdk: '>=3.13.0 <4.0.0'\n")
     check.run('dart', 'pub', 'add', f'thinkthen_dart:{check.version}')
     lock = (check.project / 'pubspec.lock').read_text()
     match = re.search(r'(?ms)^  thinkthen_dart:\n(.*?)(?=^  \w|^sdks:|\Z)', lock)
     installed = re.search(r'^    version: "?([^"\n]+)', match.group(1), re.M).group(1)
     source = write_consumer(check.project, 'dart', 'consumer.dart')
-    return installed, native_call(check, ['dart', 'run', source, library]), 'resolved pub metadata'
+    return installed, check.response('dart', 'run', source, check.sample), 'resolved pub metadata'
 
 
 def packagist(check):
@@ -192,22 +193,20 @@ def packagist(check):
     check.run('composer', 'require', '--no-interaction', '--no-plugins', '--no-scripts', f'botassembly/thinkthen:{check.version}')
     entries = json.loads((check.project / 'vendor/composer/installed.json').read_text())
     installed = next(p['version'].removeprefix('v') for p in entries['packages'] if p['name'] == 'botassembly/thinkthen')
-    library = native_library(check)
     source = write_consumer(check.project, 'php', 'consumer.php')
-    return installed, native_call(check, ['php', '-d', 'ffi.enable=true', source, library]), 'installed Composer metadata'
+    return installed, check.response('php', '-d', 'ffi.enable=true', source, check.sample), 'installed Composer metadata'
 
 
 def go(check):
     module = 'github.com/botassembly/thinkthen/libraries/go'
     listed = check.text(f'https://proxy.golang.org/{module}/@v/list', 'go-index').splitlines()
     check_index('Go proxy', check.version, [v.removeprefix('v') for v in listed])
-    native_library(check)
     check.run('go', 'mod', 'init', 'installcheck')
     check.run('go', 'get', f'{module}@v{check.version}')
     installed = check.response('go', 'list', '-m', '-json', module)['Version'].removeprefix('v')
     source = write_consumer(check.project, 'go', 'main.go')
     check.run('go', 'build', '-o', 'consumer', source)
-    return installed, native_call(check, [check.project / 'consumer']), 'resolved Go module metadata'
+    return installed, check.response(check.project / 'consumer', check.sample), 'resolved Go module metadata'
 
 
 def r_universe(check):
