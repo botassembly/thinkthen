@@ -21,6 +21,20 @@ pub(crate) extern "C" fn thinkthen_cpp_usage() -> Reply {
     })
 }
 
+/// Serialize only the live persistence observation and fixed safe advice.
+#[unsafe(no_mangle)]
+pub(crate) extern "C" fn thinkthen_cpp_usage_status() -> Reply {
+    reply_boundary(|| {
+        let state = engines::usage_status();
+        let value = match state.advice() {
+            Some(advice) => serde_json::json!({"state": state, "advice": advice}),
+            None => serde_json::json!({"state": state}),
+        };
+        serde_json::to_vec(&value)
+            .map_err(|_| crate::errors::usage("cannot serialize usage status"))
+    })
+}
+
 /// Flush the kept engines' usage totals at exit (ADR 0113), registered once
 /// when the first engine is kept.
 pub(crate) fn flush_usage_at_exit() {

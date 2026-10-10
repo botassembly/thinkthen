@@ -44,6 +44,7 @@ UsagePersistence::Pending
 UsagePersistence::Written
 UsagePersistence::Failed
 const fn UsagePersistence::advice(self) -> Option<&'static str>
+fn UsagePersistence::aggregate(states: impl IntoIterator<Item = Self>) -> Self
 fn Engine::usage_persistence(&self) -> UsagePersistence
 fn Engine::finish_usage_status(&self) -> UsagePersistence
 const fn Facts::usage_persistence(&self) -> Option<UsagePersistence>

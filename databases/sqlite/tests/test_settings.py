@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import datetime
+import fcntl
 import os
 import pathlib
 import sqlite3
@@ -24,6 +26,67 @@ def recording_entries(folder: str) -> int:
         return 0
     with sqlite3.connect(store) as connection:
         return connection.execute("SELECT count(*) FROM answers").fetchone()[0]
+
+
+def test_usage_status_keeps_good_answers_and_observes_writer_failure() -> None:
+    backend = Backend()
+    env = environment(backend)
+    usage = pathlib.Path(env["XDG_STATE_HOME"]) / "thinkthen"
+    usage.mkdir(mode=0o700, parents=True)
+    with (usage / ".lock").open("w") as lock:
+        os.chmod(lock.name, 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        worker = Child("""
+import time
+db = connect()
+before = json.loads(run(db, "SELECT thinkthen_usage_status()")[0][0])
+configure = run(db, 'SELECT thinkthen_configure(?)', ('{"cache":false}',))
+answer = run(db, "SELECT thinkthen_decide('Is it a refund?', 'refund now')")
+pending = json.loads(run(db, "SELECT thinkthen_usage_status()")[0][0])
+say(before=before, answer=answer, pending=pending)
+sys.stdin.readline()
+end = time.monotonic() + 3
+while time.monotonic() < end:
+    status = json.loads(run(db, "SELECT thinkthen_usage_status()")[0][0])
+    if status['state'] == 'failed': break
+    time.sleep(.01)
+say(status=status, again=json.loads(run(db, "SELECT thinkthen_usage_status()")[0][0]),
+    usage=json.loads(run(db, "SELECT thinkthen_usage()")[0][0]))
+""", env)
+        started = worker.read()
+        expect(started, {"before": {"state": "disabled"}, "answer": [[1]],
+                         "pending": {"state": "pending"}}, "live status keeps good answer")
+        month = usage / (datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m") + ".json")
+        month.write_text("not JSON")
+        month.chmod(0o600)
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        worker.send()
+        done = worker.result()
+    failure = {"state": "failed", "advice": "check the usage folder permissions and free space"}
+    expect(done["status"], failure, "safe writer failure")
+    expect(done["again"], failure, "latched failure")
+    expect(done["usage"]["requests_sent"], 1, "in-memory counts survive failure")
+    expect(backend.close(), 1, "observation adds no send")
+
+
+def test_usage_status_written_does_not_build_an_engine() -> None:
+    backend = Backend()
+    done = child("""
+import time
+db = connect()
+before = json.loads(run(db, "SELECT thinkthen_usage_status()")[0][0])
+configured = run(db, 'SELECT thinkthen_configure(?)', ('{"cache":false}',))
+answer = run(db, "SELECT thinkthen_decide('Is it a refund?', 'refund now')")
+end = time.monotonic() + 3
+while time.monotonic() < end:
+    status = json.loads(run(db, "SELECT thinkthen_usage_status()")[0][0])
+    if status['state'] == 'written': break
+    time.sleep(.01)
+say(before=before, status=status, answer=answer)
+""", environment(backend))
+    expect(done, {"before": {"state": "disabled"}, "status": {"state": "written"},
+                  "answer": [[1]]}, "written current deltas and unbuilt observation")
+    expect(backend.close(), 1, "written observation adds no send")
 
 
 def test_recording_counter_excludes_lock_files() -> None:

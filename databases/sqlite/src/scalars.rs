@@ -351,6 +351,22 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
     })?)
 }
 
+fn usage_status(context: &Context<'_>) -> rusqlite::Result<String> {
+    Ok(guard("thinkthen_usage_status", || {
+        if !context.is_empty() {
+            return Err(Failure::usage("thinkthen_usage_status takes no arguments"));
+        }
+        let state = thinkthen::UsagePersistence::aggregate(
+            settings::built().map(thinkthen::Engine::usage_persistence),
+        );
+        let value = match state.advice() {
+            Some(advice) => serde_json::json!({"state": state, "advice": advice}),
+            None => serde_json::json!({"state": state}),
+        };
+        Ok(value.to_string())
+    })?)
+}
+
 mod find;
 mod plan;
 
@@ -458,6 +474,7 @@ pub(crate) fn register(connection: &Connection, mode: Registration) -> rusqlite:
         connection.create_scalar_function("thinkthen_find", arity, judgment, find::find)?;
     }
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
+    connection.create_scalar_function("thinkthen_usage_status", -1, volatile, usage_status)?;
     for arity in [2, 3] {
         connection.create_scalar_function("thinkthen_plan", arity, judgment, plan::plan)?;
     }

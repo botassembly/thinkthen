@@ -46,6 +46,20 @@ pub enum UsagePersistence {
 }
 
 impl UsagePersistence {
+    /// Combine current observations, retaining failure and incomplete work first.
+    /// An empty set, or only engines without storage, is disabled.
+    #[must_use]
+    pub fn aggregate(states: impl IntoIterator<Item = Self>) -> Self {
+        states
+            .into_iter()
+            .fold(Self::Disabled, |held, next| match (held, next) {
+                (Self::Failed, _) | (_, Self::Failed) => Self::Failed,
+                (Self::Pending, _) | (_, Self::Pending) => Self::Pending,
+                (Self::Written, _) | (_, Self::Written) => Self::Written,
+                _ => Self::Disabled,
+            })
+    }
+
     /// Fixed safe advice, present only after a persistence failure.
     #[must_use]
     pub const fn advice(self) -> Option<&'static str> {

@@ -126,6 +126,19 @@ fn thinkthen_usage() -> TableIterator<
     })
 }
 
+/// Current usage persistence for this backend; no engine is built by observation.
+#[pg_extern(parallel_restricted)]
+fn thinkthen_usage_status() -> JsonB {
+    call::guarded(|| {
+        let state = call::usage_status();
+        let value = match state.advice() {
+            Some(advice) => serde_json::json!({"state": state, "advice": advice}),
+            None => serde_json::json!({"state": state}),
+        };
+        JsonB(value)
+    })
+}
+
 type Names = Vec<(String, i32, i32, i32, String, f64)>;
 
 /// One recognize call on the worker, or none for a NULL text.
