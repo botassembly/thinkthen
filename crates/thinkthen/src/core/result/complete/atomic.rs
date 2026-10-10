@@ -19,6 +19,11 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    pub(crate) fn clear_batch_metadata(&mut self) {
+        self.legacy.meta.batch_setting = None;
+        self.legacy.meta.batch_warning = None;
+    }
+
     pub(crate) const fn question(&self) -> &crate::core::Question {
         &self.legacy.question
     }
