@@ -117,6 +117,35 @@ fn complete_relation_counts_source_occurrences_and_stops_before_the_unread_suffi
     assert_eq!(backend.count(), 0);
 }
 #[test]
+fn complete_find_admits_counts_and_cancellation_before_the_unread_suffix() {
+    let backend = Backend::start().expect("loopback");
+    let path = super::scratch("find-count").join("units.txt");
+    for (count, none) in [(0, false), (2, false), (256, false), (255, true)] {
+        let mut bytes = "Ada\n".repeat(count).into_bytes();
+        bytes.push(0xff);
+        std::fs::write(&path, bytes).unwrap();
+        let count = count.to_string();
+        let mut extra = vec![
+            ("TYPED_SOURCE", path.as_path()),
+            ("TYPED_FIND_BOUND", std::path::Path::new(&count)),
+        ];
+        if none {
+            extra.push(("TYPED_FIND_NONE", std::path::Path::new("1")));
+        }
+        let output = run_with(
+            &compile(&crate_dir().join("tests/c/complete_calls.c")),
+            &format!("{}/generic/v1", backend.origin()),
+            b"",
+            &extra,
+        );
+        assert_eq!(
+            (output.status.code(), text(&output.stderr)),
+            (Some(0), String::new())
+        );
+        assert_eq!(backend.count(), 0);
+    }
+}
+#[test]
 fn complete_failure_snapshots_keep_actual_stops_and_final_joined_facts() {
     for (code, arm, sends) in [
         (1, "generic", 0),
