@@ -91,5 +91,3 @@ def test_token_cap_variable_refuses_before_any_send(backend, tmp_path):
                "would be exceeded before this call's first request")
     assert printed.splitlines() == [refusal, refusal]
     assert backend.count() == 0
-
-

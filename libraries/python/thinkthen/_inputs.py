@@ -46,4 +46,3 @@ class Files:
     media: str = 'text'
     jsonl: bool = False
     def __repr__(self): return '<Files: content withheld>'
-

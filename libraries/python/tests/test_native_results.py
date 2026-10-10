@@ -80,4 +80,3 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ['owned']
     assert backend.count() == 1
-
