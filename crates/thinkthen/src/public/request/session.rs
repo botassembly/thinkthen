@@ -177,6 +177,19 @@ pub enum RequestSessionRead {
     End,
 }
 
+/// Owned controls for the native session feed, separate from canonical Request JSON.
+#[derive(Debug, Default, Clone)]
+pub struct RequestSessionFeedOptions {
+    /// Validate the supported input before any provider sends.
+    pub eager: bool,
+    /// Admit the image route before the caller reads content.
+    pub image_inputs: bool,
+    /// Preserve rejected as well as passing filter rows.
+    pub all_filter_results: bool,
+    /// Replace the prepared record projection with an owned native reading.
+    pub record_reading: Option<crate::RecordReading>,
+}
+
 /// One bounded session. Drop signals stop and never joins a provider.
 #[derive(Debug)]
 pub struct RequestSession {
@@ -235,6 +248,25 @@ impl RequestSession {
         }
         self.queue.finish(failure)
     }
+    /// Finish with an owned native reader diagnostic after accepted descriptors.
+    /// # Errors
+    /// Refuses non-reader error kinds, invocation facts and any prior finish.
+    /// Native errors transfer once; transport EOF and equal transport failures remain idempotent.
+    pub fn finish_native_reader_error(&self, error: Error) -> Result<(), Error> {
+        if !self.feed {
+            return Err(Error::usage("this session has no caller-supplied feed"));
+        }
+        if !matches!(
+            error.kind(),
+            crate::ErrorKind::Usage | crate::ErrorKind::Local
+        ) || error.facts().is_some()
+        {
+            return Err(Error::usage(
+                "session native reader failure requires Usage or Local without facts",
+            ));
+        }
+        self.queue.finish_native(error)
+    }
     /// Stop intake promptly. Final facts remain pending until native settlement.
     pub fn cancel(&self) {
         self.queue.stop(false);
@@ -261,25 +293,80 @@ impl Engine {
         request: Request,
         surface: Surface,
     ) -> Result<RequestSession, Error> {
+        self.request_session_with_feed_options(
+            request,
+            surface,
+            RequestSessionFeedOptions::default(),
+        )
+    }
+    /// Admit owned native feed controls before starting the session worker.
+    /// # Errors
+    /// Refuses incompatible feed projections, image routes and declarations.
+    pub fn request_session_with_feed_options(
+        &self,
+        request: Request,
+        surface: Surface,
+        options: RequestSessionFeedOptions,
+    ) -> Result<RequestSession, Error> {
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
             admitted.request.call.arguments().input,
             RequestInput::Feed { .. }
         );
         let queue = Arc::new(Queue::default());
+        let configured_feed = match &admitted.request.call.arguments().input {
+            RequestInput::Feed { name, .. } => {
+                Some(configured_feed(name.clone(), Arc::clone(&queue), &options))
+            }
+            _ if options.eager
+                || options.image_inputs
+                || options.all_filter_results
+                || options.record_reading.is_some() =>
+            {
+                return Err(Error::usage(
+                    "owned feed controls require a caller-supplied feed",
+                ));
+            }
+            _ => None,
+        };
+        super::execution::feed_projection(&admitted, configured_feed.as_ref())?;
+        // Existing constructors retain asynchronous runtime preparation. Explicit
+        // image declaration must complete the same native route check before intake.
+        if options.image_inputs {
+            super::execution::prepare(self, &admitted, CallOptions::new().surface(surface), true)?;
+        }
         let worker_queue = Arc::clone(&queue);
         let engine = self.clone();
         std::thread::Builder::new()
             .name("request-session".into())
             .spawn(move || {
-                run(engine, admitted, &worker_queue, surface);
+                run(engine, admitted, &worker_queue, surface, options);
             })
             .map_err(|_| Error::local("session worker could not be started"))?;
         Ok(RequestSession { queue, feed })
     }
 }
 
-fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>, surface: Surface) {
+fn configured_feed(
+    name: String,
+    queue: Arc<Queue>,
+    options: &RequestSessionFeedOptions,
+) -> RequestFeed<'static> {
+    let mut feed = RequestFeed::session(name, queue);
+    feed.eager = options.eager;
+    feed.image_inputs = options.image_inputs;
+    feed.all_filter_results = options.all_filter_results;
+    feed.record_reading = options.record_reading.clone();
+    feed
+}
+
+fn run(
+    engine: Engine,
+    request: AdmittedRequest,
+    queue: &Arc<Queue>,
+    surface: Surface,
+    options: RequestSessionFeedOptions,
+) {
     let function = request.request.call.function();
     let observer = |event: crate::RecordObservation<'_>| {
         queue.publish(RequestSessionResult::Observation {
@@ -289,10 +376,10 @@ fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>, surface: Su
     };
     let files = Mutex::new(std::collections::BTreeSet::new());
     let files_only = request.request.call.arguments().options.files_only;
-    let sink = |value| publish_rows(queue, value, files_only, &files);
+    let sink = |value| publish_rows(queue, value, files_only, &files, options.all_filter_results);
     let feed = match &request.request.call.arguments().input {
         RequestInput::Feed { name, .. } => {
-            Some(RequestFeed::session(name.clone(), Arc::clone(queue)))
+            Some(configured_feed(name.clone(), Arc::clone(queue), &options))
         }
         _ => None,
     };
@@ -307,17 +394,34 @@ fn run(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>, surface: Su
     {
         Ok(RequestOutcome::Complete(call)) => {
             let facts = call.facts().clone();
-            publish_rows(queue, call.into_value(), files_only, &files);
+            queue.close_intake();
+            publish_rows(
+                queue,
+                call.into_value(),
+                files_only,
+                &files,
+                options.all_filter_results,
+            );
             RequestSessionTerminal {
                 facts: Some(facts),
                 error: None,
             }
         }
         Ok(RequestOutcome::Failed { completed, error }) => {
-            publish_rows(queue, completed, files_only, &files);
+            queue.close_intake();
+            publish_rows(
+                queue,
+                completed,
+                files_only,
+                &files,
+                options.all_filter_results,
+            );
             RequestSessionTerminal::failed(error)
         }
-        Err(error) => RequestSessionTerminal::failed(error),
+        Err(error) => {
+            queue.close_intake();
+            RequestSessionTerminal::failed(error)
+        }
     };
     queue.settle(terminal);
 }
@@ -327,6 +431,7 @@ fn publish_rows(
     value: RequestValue,
     files_only: bool,
     files: &Mutex<std::collections::BTreeSet<String>>,
+    all_filter_results: bool,
 ) {
     macro_rules! rows {
         ($rows:expr, $variant:ident) => {
@@ -348,7 +453,7 @@ fn publish_rows(
                     files_only,
                     &mut files.lock().unwrap_or_else(|e| e.into_inner()),
                 );
-                if selected {
+                if selected || all_filter_results {
                     queue.publish(RequestSessionResult::Row(RequestSessionRow::Filter(row)));
                 }
             }

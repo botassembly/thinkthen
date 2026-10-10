@@ -35,8 +35,8 @@ pub use options::{RequestBatch, RequestOptions, RequestThreshold};
 pub use result::{RequestOutcome, RequestValue};
 use serde::{Deserialize, Serialize};
 pub use session::{
-    RequestReaderFailure, RequestSession, RequestSessionDescriptor, RequestSessionPush,
-    RequestSessionPushStatus, RequestSessionRead,
+    RequestReaderFailure, RequestSession, RequestSessionDescriptor, RequestSessionFeedOptions,
+    RequestSessionPush, RequestSessionPushStatus, RequestSessionRead,
 };
 pub use session_result::{RequestSessionResult, RequestSessionRow, RequestSessionTerminal};
 use std::path::PathBuf;

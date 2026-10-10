@@ -165,7 +165,7 @@ fn held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts() {
 }
 
 #[test]
-fn free_returns_while_the_provider_is_held_and_the_engine_owner_is_gone() {
+fn cancel_and_free_return_while_the_provider_is_held_and_the_engine_owner_is_gone() {
     let release = Arc::new(Rendezvous::new(2));
     let held = Arc::clone(&release);
     let (sent, received) = mpsc::channel();
@@ -175,11 +175,22 @@ fn free_returns_while_the_provider_is_held_and_the_engine_owner_is_gone() {
     )
     .unwrap();
     let engine = engine(&listener);
-    let session = engine.request_session(request(feed())).unwrap();
+    let session = engine
+        .request_session_with_feed_options(
+            request(feed()),
+            Surface::Rust,
+            RequestSessionFeedOptions {
+                eager: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
     session.try_push(descriptor("first")).unwrap();
+    session.finish(None).unwrap();
     received.recv_timeout(Duration::from_secs(5)).unwrap();
     drop(engine);
     let began = Instant::now();
+    session.cancel();
     drop(session);
     assert!(began.elapsed() < Duration::from_secs(1));
     assert!(release.wait());
@@ -946,4 +957,51 @@ fn recognition_packets_keep_native_whole_and_boundary_alternatives() {
             serde_json::to_value(mode).unwrap()
         );
     }
+}
+
+#[test]
+fn owned_reading_retains_typed_context_and_replaces_question_fallback() {
+    let listener = Listener::answering(response).unwrap();
+    let schema = InputDeclaration::Object(ObjectDeclaration::new(vec![], vec![]).unwrap());
+    let question = Question::decide("Fits?")
+        .unwrap()
+        .cut()
+        .with_context_schema(schema.clone())
+        .unwrap();
+    let request = Request::new(RequestCall::Decide(RequestArguments {
+        question: RequestQuestion::Definition {
+            value: question.into(),
+        },
+        input: feed(),
+        options: RequestOptions::default(),
+    }));
+    let reading = RecordReading::new(&["/body"], Some("/policy"), None)
+        .unwrap()
+        .with_context_schema(schema);
+    let session = engine(&listener)
+        .request_session_with_feed_options(
+            request,
+            Surface::Rust,
+            RequestSessionFeedOptions {
+                eager: true,
+                record_reading: Some(reading),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    session.try_push_json(&json!({"item":{"original":{"kind":"json","value":{"body":"first","policy":{"rule":"refund"}}}}}).to_string()).unwrap();
+    session.finish(None).unwrap();
+    let packets = drain(&session);
+    let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+        panic!("terminal")
+    };
+    assert!(terminal.error.is_none());
+    assert_eq!(listener.count(), 1);
+    let sent = String::from_utf8(listener.requests()[0].body.clone()).unwrap();
+    assert!(sent.contains("refund"));
+    assert!(
+        packets
+            .iter()
+            .any(|packet| matches!(packet, RequestSessionResult::Row(_)))
+    );
 }

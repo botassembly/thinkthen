@@ -511,7 +511,14 @@ fn table_native_stops_take_precedence_over_missing_headers() {
             arguments.options.deadline_ms = Some(20);
         }
         let session = engine(&listener)
-            .request_session(Request::new(RequestCall::Decide(arguments)))
+            .request_session_with_feed_options(
+                Request::new(RequestCall::Decide(arguments)),
+                Surface::Rust,
+                RequestSessionFeedOptions {
+                    eager: true,
+                    ..Default::default()
+                },
+            )
             .unwrap();
         if cancel {
             session.cancel();
@@ -551,4 +558,398 @@ fn release_only_table_descriptor_bounds_include_trailing_blank_bytes() {
     };
     assert_eq!(terminal.error.as_ref().unwrap().kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 0);
+}
+
+#[allow(
+    clippy::unwrap_used,
+    reason = "isolated native definitions must admit before the caller behavior is exercised"
+)]
+fn owned_eager_cases() -> Vec<Request> {
+    let arguments = |definition| RequestArguments {
+        question: RequestQuestion::Definition { value: definition },
+        input: feed(),
+        options: RequestOptions::default(),
+    };
+    let set = r#"{"version":1,"questions":{"fits":{"decide":"Fits?"}}}"#;
+    let decide = Question::decide("Fits?").unwrap().cut();
+    let choice = Question::choose_labels("Which?")
+        .unwrap()
+        .label("a", None)
+        .unwrap()
+        .label("b", None)
+        .unwrap()
+        .build()
+        .unwrap();
+    let tags = Question::tag_labels("Which?")
+        .unwrap()
+        .label("a", None)
+        .unwrap()
+        .build()
+        .unwrap();
+    let score = Question::score("Grade?")
+        .unwrap()
+        .level("low", None)
+        .unwrap()
+        .level("high", None)
+        .unwrap()
+        .build()
+        .unwrap();
+    vec![
+        RequestCall::Decide(arguments(decide.clone().into())),
+        RequestCall::Choose(arguments(choice.into())),
+        RequestCall::Tag(arguments(tags.into())),
+        RequestCall::Score(arguments(score.into())),
+        RequestCall::Filter(arguments(decide.into())),
+        RequestCall::Annotate(arguments(QuestionSet::from_json(set).unwrap().into())),
+        RequestCall::Rank(arguments(Question::rank("Fits?").unwrap().into())),
+        RequestCall::Rank(arguments(RankSet::from_json(set).unwrap().into())),
+        RequestCall::Find(arguments(Question::find("Which?").unwrap().into())),
+        RequestCall::Recognize(arguments(Recognize::builder().build().unwrap().into())),
+        RequestCall::Relate(arguments(Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into())),
+        RequestCall::Choose(arguments(RecordChooseQuestion::from_json(r#"{"choose":"Which?"}"#).unwrap().into())),
+    ].into_iter().map(Request::new).collect()
+}
+
+#[allow(
+    clippy::unwrap_used,
+    reason = "isolated owned descriptors must admit before the caller behavior is exercised"
+)]
+fn owned_descriptor(text: &str, dynamic: bool) -> RequestSessionDescriptor {
+    let mut row = descriptor(text);
+    row.location = Some(SourceLocation::new("input".into(), None, None).unwrap());
+    if dynamic {
+        row.item.options = Some(
+            RecordOptions::new(
+                ["a", "b"]
+                    .into_iter()
+                    .map(|name| RecordOption {
+                        name: name.into(),
+                        description: None,
+                    })
+                    .collect(),
+            )
+            .unwrap(),
+        );
+    }
+    row
+}
+
+#[test]
+fn owned_eager_admission_closes_before_finish_and_leaves_suffix_unconsumed() {
+    for (case, request) in owned_eager_cases().into_iter().enumerate() {
+        let listener = Listener::answering(response).unwrap();
+        let engine = Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("session-fixture")
+            .unwrap()
+            .no_cache()
+            .max_retries(0)
+            .max_requests(Some(2))
+            .unwrap()
+            .build()
+            .unwrap();
+        let session = engine
+            .request_session_with_feed_options(
+                request,
+                Surface::Rust,
+                RequestSessionFeedOptions {
+                    eager: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let until = Instant::now() + Duration::from_secs(5);
+        let mut accepted = 0;
+        let mut pending = owned_descriptor("Ada", case == 11);
+        loop {
+            assert!(
+                Instant::now() < until,
+                "case {case} waited for EOF instead of refusing"
+            );
+            match session.try_push(pending).unwrap() {
+                RequestSessionPush::Accepted => {
+                    accepted += 1;
+                    assert!(accepted <= 4, "case {case} consumed the refused suffix");
+                    pending = owned_descriptor("Ada", case == 11);
+                }
+                RequestSessionPush::Full(row) => {
+                    pending = row;
+                    std::thread::yield_now();
+                }
+                RequestSessionPush::Closed(_) => break,
+            }
+        }
+        let packets = drain(&session);
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("terminal")
+        };
+        assert_eq!(
+            terminal.error.as_ref().unwrap().to_string(),
+            "this engine answers at most 2 records in one call",
+            "case {case}"
+        );
+        assert!(terminal.facts.is_none(), "case {case}");
+        assert_eq!(listener.count(), 0, "case {case}");
+    }
+}
+
+#[test]
+fn owned_eager_late_invalid_input_sends_nothing_and_keeps_precedence() {
+    for (case, request) in owned_eager_cases().into_iter().enumerate() {
+        let listener = Listener::answering(response).unwrap();
+        let session = engine(&listener)
+            .request_session_with_feed_options(
+                request,
+                Surface::Rust,
+                RequestSessionFeedOptions {
+                    eager: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        push(&session, owned_descriptor("Ada", case == 11));
+        let invalid = owned_descriptor(" ", case == 11);
+        push(&session, invalid);
+        session
+            .finish_native_reader_error(Error::new(ErrorKind::Local, "later reader failure"))
+            .unwrap();
+        let packets = drain(&session);
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("terminal")
+        };
+        assert_eq!(
+            terminal.error.as_ref().unwrap().kind(),
+            ErrorKind::Usage,
+            "case {case}"
+        );
+        assert_ne!(
+            terminal.error.as_ref().unwrap().to_string(),
+            "later reader failure"
+        );
+        assert_eq!(listener.count(), 0, "case {case}");
+    }
+}
+
+#[test]
+fn native_reader_finish_preserves_diagnostic_after_completed_prefix() {
+    let listener = Listener::answering(response).unwrap();
+    let session = engine(&listener)
+        .request_session_with_feed_options(
+            request(feed()),
+            Surface::Rust,
+            RequestSessionFeedOptions::default(),
+        )
+        .unwrap();
+    push(&session, descriptor("first"));
+    assert_eq!(
+        session
+            .finish_native_reader_error(Error::new(ErrorKind::Backend, "refused"))
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Usage
+    );
+    session
+        .finish_native_reader_error(Error::new(ErrorKind::Local, "native reader diagnostic"))
+        .unwrap();
+    assert_eq!(session.finish(None).unwrap_err().kind(), ErrorKind::Usage);
+    let packets = drain(&session);
+    assert_eq!(
+        packets
+            .iter()
+            .filter(|packet| matches!(packet, RequestSessionResult::Row(_)))
+            .count(),
+        1
+    );
+    let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+        panic!("terminal")
+    };
+    assert_eq!(
+        terminal.error.as_ref().unwrap().to_string(),
+        "native reader diagnostic"
+    );
+    assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
+}
+
+#[test]
+fn owned_feed_projection_preserves_false_filters_and_refuses_conflicts_before_intake() {
+    let listener = Listener::answering(response).unwrap();
+    let mut arguments = request(feed()).call.arguments().clone();
+    arguments.options.threshold = Some(RequestThreshold::Cut(0.95));
+    let options = RequestSessionFeedOptions {
+        eager: true,
+        all_filter_results: true,
+        ..Default::default()
+    };
+    let session = engine(&listener)
+        .request_session_with_feed_options(
+            Request::new(RequestCall::Filter(arguments)),
+            Surface::Rust,
+            options,
+        )
+        .unwrap();
+    push(&session, descriptor("first"));
+    session.finish(None).unwrap();
+    let packets = drain(&session);
+    assert_eq!(
+        packets
+            .iter()
+            .filter(|packet| matches!(
+                packet,
+                RequestSessionResult::Row(RequestSessionRow::Filter(_))
+            ))
+            .count(),
+        1
+    );
+    for controls in [
+        RequestSessionFeedOptions {
+            all_filter_results: true,
+            ..Default::default()
+        },
+        RequestSessionFeedOptions {
+            image_inputs: true,
+            ..Default::default()
+        },
+    ] {
+        assert_eq!(
+            engine(&listener)
+                .request_session_with_feed_options(request(feed()), Surface::Rust, controls)
+                .unwrap_err()
+                .kind(),
+            ErrorKind::Usage
+        );
+    }
+    let reading = RecordReading::new(&["/body"], Some("/policy"), None).unwrap();
+    let mut arguments = request(feed()).call.arguments().clone();
+    arguments.options.field = Some(vec!["/body".into()]);
+    assert_eq!(
+        engine(&listener)
+            .request_session_with_feed_options(
+                Request::new(RequestCall::Decide(arguments)),
+                Surface::Rust,
+                RequestSessionFeedOptions {
+                    record_reading: Some(reading),
+                    ..Default::default()
+                }
+            )
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Usage
+    );
+    assert_eq!(listener.count(), 1);
+}
+
+#[test]
+fn owned_find_and_relate_keep_native_set_limits_without_engine_cap() {
+    for (case, message) in [
+        (8, "find takes 2 to 255 units"),
+        (10, "source relate takes at most 255 source records"),
+    ] {
+        let request = owned_eager_cases().remove(case);
+        let listener = Listener::answering(response).unwrap();
+        let session = engine(&listener)
+            .request_session_with_feed_options(
+                request,
+                Surface::Rust,
+                RequestSessionFeedOptions {
+                    eager: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let until = Instant::now() + Duration::from_secs(5);
+        let mut accepted = 0;
+        let mut pending = owned_descriptor("Ada", false);
+        loop {
+            assert!(Instant::now() < until);
+            match session.try_push(pending).unwrap() {
+                RequestSessionPush::Accepted => {
+                    accepted += 1;
+                    assert!(accepted <= 257);
+                    pending = owned_descriptor("Ada", false);
+                }
+                RequestSessionPush::Full(row) => {
+                    pending = row;
+                    std::thread::yield_now();
+                }
+                RequestSessionPush::Closed(_) => break,
+            }
+        }
+        let packets = drain(&session);
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("terminal")
+        };
+        assert_eq!(terminal.error.as_ref().unwrap().to_string(), message);
+        assert!(terminal.facts.is_none());
+        assert_eq!(listener.count(), 0);
+    }
+}
+
+#[test]
+fn owned_whole_set_preparation_error_wins_on_first_excess_record() {
+    for case in [8, 10] {
+        let request = owned_eager_cases().remove(case);
+        let listener = Listener::answering(response).unwrap();
+        let engine = Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("session-fixture")
+            .unwrap()
+            .no_cache()
+            .max_requests(Some(2))
+            .unwrap()
+            .build()
+            .unwrap();
+        let records = (0..3).map(|at| RecordInput {
+            original: QuestionInput::Text("Ada".into()),
+            context: (at == 2).then(|| "policy".into()),
+            options: None,
+            seed_spans: None,
+            examples: None,
+        });
+        let RequestQuestion::Definition { value } = &request.call.arguments().question else {
+            unreachable!()
+        };
+        let expected = match value {
+            RequestDefinition::Atomic(LoadedQuestion::Question(q)) => engine
+                .try_find_records_complete_with(q, records.map(Ok), CallOptions::new())
+                .unwrap_err(),
+            RequestDefinition::Relate(q) => engine
+                .try_relate_records_complete_with(q, records.map(Ok), CallOptions::new())
+                .unwrap_err(),
+            _ => unreachable!(),
+        };
+        let session = engine
+            .request_session_with_feed_options(
+                request,
+                Surface::Rust,
+                RequestSessionFeedOptions {
+                    eager: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        push(&session, owned_descriptor("Ada", false));
+        push(&session, owned_descriptor("Ada", false));
+        let mut invalid = owned_descriptor("Ada", false);
+        invalid.item.context = Some("policy".into());
+        push(&session, invalid);
+        session
+            .finish_native_reader_error(Error::new(ErrorKind::Local, "suffix failure"))
+            .unwrap();
+        let packets = drain(&session);
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("terminal")
+        };
+        let actual = terminal.error.as_ref().unwrap();
+        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.stopped().at(), expected.stopped().at());
+        assert_eq!(actual.stopped().at(), Some(3));
+        assert!(terminal.facts.is_none());
+        assert_eq!(listener.count(), 0);
+    }
 }

@@ -101,6 +101,14 @@ fn RequestSessionDescriptor::from_json(&str) -> Result<RequestSessionDescriptor,
 fn RequestReaderFailure::from_json(&str) -> Result<RequestReaderFailure, Error>
 impl Drop for RequestSession
 struct RequestSession
+struct RequestSessionFeedOptions
+RequestSessionFeedOptions::eager: bool
+RequestSessionFeedOptions::image_inputs: bool
+RequestSessionFeedOptions::all_filter_results: bool
+RequestSessionFeedOptions::record_reading: Option<RecordReading>
+impl Default for RequestSessionFeedOptions
+fn Engine::request_session_with_feed_options(&self, Request, Surface, RequestSessionFeedOptions) -> Result<RequestSession, Error>
+fn RequestSession::finish_native_reader_error(&self, Error) -> Result<(), Error>
 ```
 
 - 2026-10-09 landed f6768b855; next: Slice A settles ADR0129 after a real producer-closure correction and fresh acceptance. No runtime/session implementation is claimed. Implement the reviewed owned bounded session after shared admission and generated result-view interfaces; preserve frozen C compatibility and prompt caller cancellation/free.
