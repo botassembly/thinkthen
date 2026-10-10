@@ -241,8 +241,9 @@ cpp)
 		cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
 		;;
 csharp)
-		mkdir -p "$folder/feed" "$folder/c"
-		tar -xzf "$OUT/$c_name" -C "$folder/c"
+		mkdir -p "$folder/feed"
+		scratch_dir csharp_native
+		tar -xzf "$OUT/$c_name" -C "$csharp_native"
 		native_properties=$(python3 sdlc/scripts/package-inventory.py csharp --target "$TARGET")
 		native_rid=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["rid"])' "$TARGET")
 		native_name=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["file"].split("/")[-1])' "$TARGET")
@@ -250,9 +251,9 @@ csharp)
 		DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
 		${THINKTHEN_DOTNET:-dotnet} pack libraries/csharp/ThinkThen.csproj -c Release \
 			--source "$folder/feed" -o "$folder" -v quiet \
-			-p:ThinkThenNativeAsset="$folder/c/lib/$native_name" -p:ThinkThenNativeRid="$native_rid" -p:ThinkThenNativeName="$native_name"
+			-p:ThinkThenNativeAsset="$csharp_native/lib/$native_name" -p:ThinkThenNativeRid="$native_rid" -p:ThinkThenNativeName="$native_name"
 		[ -f "$folder/Botassembly.ThinkThen.$V.nupkg" ] || { echo 'release-pack: C# nupkg missing' >&2; exit 1; }
-		rm -r "$folder/c"
+		scratch_remove "$csharp_native"
 		rmdir "$folder/feed"
 		# The release workflow's managed pair packs the same four files (ticket 0375).
 		cp libraries/csharp/LICENSE libraries/csharp/README.md "$folder/"
