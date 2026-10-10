@@ -797,7 +797,7 @@ def main():
                                       "THINKTHEN_HEAVY_LOCK_HELD": str(base / "held-lock")}
         for family in ("go", "cpp"):
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
-                   f"{family}: missing C archive")
+                   f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env),
                    f"{family}: not run: Python jsonschema is unavailable")
