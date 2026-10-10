@@ -1,6 +1,6 @@
 # 0527: Make Rust and Rust Polars thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -26,6 +26,8 @@ Reviews: revision bb869d4a7bdb51aa4fe8d75119c579038f0d7737, accept
 Reviews: revision 1b566d22367686db993dfcff475bc8186ef87e49, accept
 
 Reviews: revision 76b153289292d50474becb86cc7f55049579efde, accept
+
+Landed: fb35e20
 
 ## Outcome
 
