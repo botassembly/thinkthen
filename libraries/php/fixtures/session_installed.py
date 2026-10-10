@@ -1,4 +1,5 @@
 """Run focused public calls from an extracted native-bearing PHP archive."""
+import fcntl
 import argparse
 import hashlib
 import json
@@ -19,6 +20,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--archive', type=Path, required=True)
     parser.add_argument('--composer', type=Path, required=True)
+    parser.add_argument('--usage', action='store_true')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='thinkthen-php-session-') as folder:
         work = Path(folder)
@@ -44,6 +46,18 @@ def main():
                 TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),
                 THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
                 THINKTHEN_API_KEY='tt-canary-291')
+            if args.usage:
+                for mode in ('usage-written', 'usage-failed'):
+                    state = work / mode / 'state/thinkthen'; state.mkdir(parents=True)
+                    before = server.attempts
+                    with (state / '.lock').open('w') as lock:
+                        (state / '.lock').chmod(0o600)
+                        if mode == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
+                        result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(work / 'consumer.php'), mode], capture_output=True, env=env | {'XDG_STATE_HOME': str(state.parent)}, timeout=5)
+                        assert result.returncode == 0, (mode, result.stdout, result.stderr)
+                    assert server.attempts == before + 1, server.attempts
+                    print(result.stdout.decode(), end='')
+                return
             for mode in ('surface', 'named', 'presence', 'failure', 'zero', 'destroy'):
                 before = server.attempts
                 result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',

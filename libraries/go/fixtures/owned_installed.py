@@ -1,4 +1,5 @@
 """Focused named Go calls through an external consumer of the staged module."""
+import fcntl
 import os
 from pathlib import Path
 import shutil
@@ -12,6 +13,7 @@ from children import child_env
 
 module = Path(sys.argv[1]).resolve()
 surface_only = len(sys.argv) > 2 and sys.argv[2] == 'surface'
+usage_only = len(sys.argv) > 2 and sys.argv[2] == 'usage'
 feed_only = len(sys.argv) > 2 and sys.argv[2] == 'feed'
 with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     home = Path(folder)
@@ -34,6 +36,18 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     server.RequestHandlerClass = AttributedHandler
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
+        if usage_only:
+            for mode in ('usage-written', 'usage-failed'):
+                state = home / mode / 'state/thinkthen'; state.mkdir(parents=True)
+                before = server.attempts
+                with (state / '.lock').open('w') as lock:
+                    (state / '.lock').chmod(0o600)
+                    if mode == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
+                    result = subprocess.run([str(home/'consumer-bin'), mode], env=run_env | {'XDG_STATE_HOME': str(state.parent)}, cwd=consumer, text=True, capture_output=True, timeout=5)
+                    assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.stdout, result.stderr)
+                assert server.attempts == before + 1, server.attempts
+                print('GO_USAGE_INSTALLED_PASS', mode, 'requests=1')
+            sys.exit(0)
         result=subprocess.run([str(home/'consumer-bin'), *(['surface'] if surface_only else ['feed'] if feed_only else [])],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=5 if surface_only else 20)
         assert result.returncode==0, (result.stdout,result.stderr)
         assert user_agents and all(agent == 'thinkthen/0.2.0 (go)' for agent in user_agents), user_agents

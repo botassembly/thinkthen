@@ -80,6 +80,10 @@ public:
         } catch(SessionFailure& error) { error.packets=std::move(values); throw; }
     }
 };
+struct UsageStatus {
+    const UsagePersistenceState state;
+    const std::optional<std::string> advice;
+};
 class Client {
     std::unique_ptr<thinkthen_engine,detail::EngineDeleter> engine_;
     Call start(const char* function,const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options) const {
@@ -97,6 +101,8 @@ public:
     Client(const Client&)=delete;
     Client& operator=(const Client&)=delete;
     void close() noexcept { engine_.reset(); }
+    UsageStatus usage_persistence() const { return usage_status(false); }
+    UsageStatus finish_usage_status() const { return usage_status(true); }
     Call decide(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("decide",question,input,options); }
     Call choose(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("choose",question,input,options); }
     Call tag(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("tag",question,input,options); }
@@ -108,6 +114,13 @@ public:
     Call recognize(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("recognize",question,input,options); }
     Call relate(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("relate",question,input,options); }
 private:
+    UsageStatus usage_status(bool finish) const {
+        if(!engine_) throw std::logic_error("C++ client is closed");
+        thinkthen_complete_usage_persistence_v1 state{}; thinkthen_complete_utf8_v1 advice{};
+        int code=finish ? thinkthen_engine_finish_usage_status_v1(engine_.get(),&state,&advice) : thinkthen_engine_usage_persistence_v1(engine_.get(),&state,&advice);
+        if(code) throw NativeFailure(code,thinkthen_error_message(engine_.get()));
+        return {static_cast<UsagePersistenceState>(state.kind), advice.data ? std::optional<std::string>(std::string(advice.data,advice.len)) : std::nullopt};
+    }
     void check_engine() {
         if(!engine_) throw NativeFailure(thinkthen_error_code(nullptr),thinkthen_error_message(nullptr));
     }

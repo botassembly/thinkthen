@@ -104,3 +104,10 @@ def input_render(definitions):
             bodies += [f'inline {n}::{n}(const {t}& value):Node(results::encode(value)) {{}}']
         lines += ['};']
     return '\n'.join(lines+bodies+['}'])+'\n'
+
+
+def usage(header):
+    members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
+    lines = ['// Generated from the compiler-derived C header; do not edit.', '#pragma once', '#include <thinkthen/thinkthen.h>', 'namespace tt {', 'enum class UsagePersistenceState : uint32_t {']
+    lines += [word.lower() + ' = ' + symbol + ',' for symbol, word, _ in members]
+    return '\n'.join(lines + ['};', '}']) + '\n'

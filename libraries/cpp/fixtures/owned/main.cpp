@@ -21,6 +21,28 @@ static Call named(Client& client,const std::string& verb,const RequestQuestion& 
 int main(int argc,char** argv) {
     try {
         if(argc!=4) return 2;
+        if(std::string(argv[1])=="usage-written" || std::string(argv[1])=="usage-failed") {
+            Client client; auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
+            call.finish(); auto packets=call.collect(); auto earlier=packets.back().document().dump();
+            auto row=packets.front().as_SessionPacketDecideRow();
+            if(!row || !*row->value().value->value().value) return 30;
+            auto terminal=packets.back().as_SessionPacketTerminal();
+            if(!terminal || *terminal->facts().value->requests_sent().value!=1) return 31;
+            const bool failed=std::string(argv[1])=="usage-failed";
+            auto observed=client.usage_persistence();
+            if(failed && (observed.state!=UsagePersistenceState::pending || observed.advice)) return 32;
+            auto finished=client.finish_usage_status();
+            const auto expected=failed ? UsagePersistenceState::failed : UsagePersistenceState::written;
+            if(finished.state!=expected || finished.advice.has_value()!=failed) return 33;
+            if(failed && *finished.advice!="check the usage folder permissions and free space") return 34;
+            if(client.usage_persistence().state!=expected || client.finish_usage_status().state!=expected) return 35;
+            if(packets.back().document().dump()!=earlier) return 36;
+            client.close();
+            try { client.usage_persistence(); return 37; } catch(const std::logic_error&) {}
+            try { client.finish_usage_status(); return 38; } catch(const std::logic_error&) {}
+            if(finished.state!=expected) return 39;
+            std::cout<<"usage-status-pass requests=1\n"; return 0;
+        }
         if(std::string(argv[1])=="held") {
             Client client;
             {

@@ -311,3 +311,45 @@ func (c *Client) Recognize(ctx context.Context, question, input any, options map
 func (c *Client) Relate(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
 	return c.call(ctx, "relate", question, input, options)
 }
+
+// UsageStatus owns one native observation and remains valid after Close.
+type UsageStatus struct {
+	state  UsagePersistenceState
+	advice Optional[string]
+}
+
+func (s UsageStatus) State() UsagePersistenceState        { return s.state }
+func (s UsageStatus) Advice() Optional[string]            { return s.advice }
+func (c *Client) UsagePersistence() (UsageStatus, error)  { return c.engine.UsagePersistence() }
+func (c *Client) FinishUsageStatus() (UsageStatus, error) { return c.engine.FinishUsageStatus() }
+func (e *Engine) UsagePersistence() (UsageStatus, error)  { return e.usageStatus(false) }
+func (e *Engine) FinishUsageStatus() (UsageStatus, error) { return e.usageStatus(true) }
+func (e *Engine) usageStatus(finish bool) (UsageStatus, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.raw == nil {
+		return UsageStatus{}, ErrClosed
+	}
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var state C.thinkthen_complete_usage_persistence_v1
+	var advice C.thinkthen_complete_utf8_v1
+	var code C.int
+	if finish {
+		code = C.thinkthen_engine_finish_usage_status_v1(e.raw, &state, &advice)
+	} else {
+		code = C.thinkthen_engine_usage_persistence_v1(e.raw, &state, &advice)
+	}
+	if code != 0 {
+		return UsageStatus{}, failure(e.raw, code)
+	}
+	out := UsageStatus{state: UsagePersistenceState(state.kind)}
+	if advice.data != nil {
+		text, err := copyCountedResult(advice.data, advice.len)
+		if err != nil {
+			return UsageStatus{}, err
+		}
+		out.advice = Optional[string]{Present: true, Value: text}
+	}
+	return out, nil
+}

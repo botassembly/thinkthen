@@ -19,7 +19,26 @@ $asks = [
         [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']]],
 ];
 $mode = $argv[1];
-if ($mode === 'surface') {
+if ($mode === 'usage-written' || $mode === 'usage-failed') {
+    $call = $client->decide('Is it?', 'surface-attribution');
+    $earlier = json_encode($call->facts()->toObject());
+    check($call->results[0]->value === true && $call->facts()->requests_sent === 1, 'retained answer and sends');
+    $observed = $client->usage_persistence();
+    if ($mode === 'usage-failed') check($observed->state === ThinkThen\UsagePersistenceState::Pending && $observed->advice === null, 'held writer pending');
+    $finished = $client->finish_usage_status();
+    $expected = $mode === 'usage-failed' ? ThinkThen\UsagePersistenceState::Failed : ThinkThen\UsagePersistenceState::Written;
+    check($finished->state === $expected, 'finalized state');
+    check($finished->advice === ($mode === 'usage-failed' ? 'check the usage folder permissions and free space' : null), 'native safe advice');
+    check($client->usage_persistence() == $finished && $client->finish_usage_status() == $finished, 'latched observation');
+    check(json_encode($call->facts()->toObject()) === $earlier, 'retained facts changed');
+    $client->close();
+    foreach (['usage_persistence', 'finish_usage_status'] as $method) {
+        try { $client->$method(); throw new RuntimeException('closed method admitted'); }
+        catch (ThinkThen\UsageFailure) {}
+    }
+    try { $finished->advice = 'changed'; throw new RuntimeException('mutable status'); } catch (Error) {}
+    check($finished->state === $expected, 'owned status lost after close');
+} elseif ($mode === 'surface') {
     $call = $client->decide('Is it?', 'surface-attribution');
     $client->close();
     check($call->results[0]->value === true, 'attributed call answer');

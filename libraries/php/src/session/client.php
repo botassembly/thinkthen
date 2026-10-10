@@ -63,6 +63,20 @@ final class Client
     public function annotate(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('annotate', $question, $input, $options, $cancel); }
     public function recognize(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('recognize', $question, $input, $options, $cancel); }
     public function relate(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('relate', $question, $input, $options, $cancel); }
+    public function usage_persistence(): UsageStatus { return $this->usageStatus(false); }
+    public function finish_usage_status(): UsageStatus { return $this->usageStatus(true); }
+    private function usageStatus(bool $finish): UsageStatus
+    {
+        if ($this->engine === null) throw new UsageFailure('client is closed');
+        $state = $this->ffi->new('thinkthen_complete_usage_persistence_v1');
+        $advice = $this->ffi->new('thinkthen_complete_utf8_v1');
+        $code = $finish
+            ? $this->ffi->thinkthen_engine_finish_usage_status_v1($this->engine, \FFI::addr($state), \FFI::addr($advice))
+            : $this->ffi->thinkthen_engine_usage_persistence_v1($this->engine, \FFI::addr($state), \FFI::addr($advice));
+        if ($code !== 0) self::throwImmediate($code, self::text($this->ffi->thinkthen_error_message($this->engine)));
+        return new UsageStatus(UsagePersistenceState::from($state->kind),
+            \FFI::isNull($advice->data) ? null : \FFI::string($advice->data, $advice->len));
+    }
     public function close(): void
     {
         foreach ($this->operations as $operation => $_) $operation->close();
@@ -93,4 +107,9 @@ final readonly class FileInput
 final readonly class ItemInput
 {
     public function __construct(public mixed $value, public array $fields = []) {}
+}
+
+final readonly class UsageStatus
+{
+    public function __construct(public UsagePersistenceState $state, public ?string $advice) {}
 }
