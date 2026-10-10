@@ -1,13 +1,11 @@
 //! Find host settings come from the retained native admitted question.
 use crate::args::{Common, FindArguments};
-use crate::core::{ProfileName, QuestionText, Source, Sources};
+use crate::core::{Source, Sources};
 use crate::failure::Failure;
 
 pub(super) struct Prepared {
     pub(super) metadata: crate::core::declaration::QuestionMetadata,
     pub(super) common: Common,
-    pub(super) question: QuestionText,
-    pub(super) profile: Option<ProfileName>,
     pub(super) sources: Option<Sources>,
 }
 impl Prepared {
@@ -34,7 +32,7 @@ impl Prepared {
                 ));
             }
         };
-        let crate::core::Question::Decide { text, .. } = &question.core else {
+        let crate::core::Question::Decide { .. } = &question.core else {
             return Err(Failure::Defect(
                 "find admission retained another question shape",
             ));
@@ -68,8 +66,6 @@ impl Prepared {
         Ok(Self {
             metadata: question.metadata.clone(),
             common,
-            question: text.clone(),
-            profile: question.profile.clone(),
             sources,
         })
     }

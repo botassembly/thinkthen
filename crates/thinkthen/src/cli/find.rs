@@ -4,8 +4,7 @@ use std::io::{Read, Write};
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, PlanDocument, PlanSummary, Pointer,
-    Reading, Record, json_line,
+    Backend, Framing, MAX_RECORD_BYTES, PlanDocument, Pointer, Reading, Record, json_line,
 };
 
 use crate::args::{Common, FindArguments};
@@ -32,8 +31,6 @@ pub(crate) fn run(
     let question::Prepared {
         metadata,
         common,
-        question,
-        profile: saved_profile,
         sources,
     } = question::Prepared::new(arguments, &mut admitted)?;
     let common = &common;
@@ -80,16 +77,37 @@ pub(crate) fn run(
         });
     }
     if common.dry_run {
-        let evidence: Vec<_> = units.iter().map(|unit| unit.evidence.clone()).collect();
-        let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
-            .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?
-            .with_profile(saved_profile);
+        let inner = crate::cli::construction::engine(
+            common,
+            environment,
+            Folders::of(common, environment)?,
+            (backend.clone(), profile.clone()),
+            None,
+            false,
+        )?;
+        let native = crate::Engine::from_cli(inner, environment.config().prices());
+        let composition = composition(common)?;
+        let rows = composed(&composition, &units);
+        let admitted = admitted.with_composed_feed("cli-find-plan");
+        let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
+        if let Some(context) = context.as_deref() {
+            controls = controls.context(context);
+        }
+        let (find, summary) = admitted
+            .plan_find(
+                &native,
+                crate::RequestEnvironment {
+                    controls,
+                    feed: Some(crate::RequestFeed::from_records("cli-find-plan", rows)),
+                },
+            )
+            .map_err(Failure::from)?;
         return planned(
             &find,
+            summary,
             (&backend, environment.key_variable()),
-            (profile.as_ref(), context.as_deref()),
+            context.is_some(),
             (&reading, sources),
-            units.len(),
             writer,
         );
     }
@@ -122,22 +140,8 @@ fn execute(
     context: Option<&str>,
 ) -> Result<crate::CompleteFound<crate::QuestionInput>, Failure> {
     let engine = crate::Engine::from_cli(engine, environment.config().prices());
-    let fields = common.field.iter().map(String::as_str).collect::<Vec<_>>();
-    let composition = crate::RecordReading::new(&fields, None, None).map_err(Failure::from)?;
-    let rows = units.iter().map(|unit| {
-        let mut record =
-            composition.compose(crate::RawRecord(std::sync::Arc::new(unit.record.clone())))?;
-        if unit.position.located
-            && let Some(file) = &unit.position.file
-        {
-            record.original = record.original.with_location(crate::SourceLocation::new(
-                file.clone(),
-                unit.position.first,
-                unit.position.last,
-            )?);
-        }
-        Ok(record.map_original(crate::QuestionInput::Record))
-    });
+    let composition = composition(common)?;
+    let rows = composed(&composition, units);
     let token = crate::CancelToken::from_flag(environment.cancel().flag());
     let mut controls = crate::CallOptions::new()
         .cli_cancel(&token, environment.cancel().deadline())
@@ -171,6 +175,31 @@ fn execute(
     Ok(found)
 }
 
+fn composition(common: &Common) -> Result<crate::RecordReading, Failure> {
+    let fields = common.field.iter().map(String::as_str).collect::<Vec<_>>();
+    crate::RecordReading::new(&fields, None, None).map_err(Failure::from)
+}
+
+fn composed<'a>(
+    composition: &'a crate::RecordReading,
+    units: &'a [Unit],
+) -> impl Iterator<Item = Result<crate::RecordInput<crate::QuestionInput>, crate::Error>> + 'a {
+    units.iter().map(|unit| {
+        let mut record =
+            composition.compose(crate::RawRecord(std::sync::Arc::new(unit.record.clone())))?;
+        if unit.position.located
+            && let Some(file) = &unit.position.file
+        {
+            record.original = record.original.with_location(crate::SourceLocation::new(
+                file.clone(),
+                unit.position.first,
+                unit.position.last,
+            )?);
+        }
+        Ok(record.map_original(crate::QuestionInput::Record))
+    })
+}
+
 fn live_engine(
     common: &Common,
     environment: &Environment,
@@ -201,37 +230,22 @@ fn display(arguments: &FindArguments, common: &Common) -> Result<Display, Failur
 
 /// Print the plan. `target` is the backend and its first key variable.
 fn planned(
-    find: &Find,
+    find: &crate::core::Find,
+    summary: crate::core::PlanSummary,
     (backend, key_env): (&Backend, &str),
-    (profile, context): (Option<&crate::core::BackendProfile>, Option<&str>),
+    context: bool,
     (reading, sources): (&Reading, Option<crate::core::Sources>),
-    records: usize,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let mut asks = facade::Asks::default();
-    asks.add(backend, find.plan())?;
-    if let Some(context) = context {
-        asks = asks.with_context(backend, context)?;
-    }
-    let prepared = asks.requests(backend, profile, facade::Bound::WHOLE)?;
-    let mut summary = PlanSummary::new(false).with_accounting(backend.accounting());
-    summary
-        .records_added(records)
-        .map_err(|_| Failure::Defect("a plan is too large"))?;
-    for request in prepared {
-        summary
-            .request(&request.body)
-            .map_err(|_| Failure::Defect("a plan is too large"))?;
-    }
     let mut document = match context {
-        Some(_) => PlanDocument::of_body(
+        true => PlanDocument::of_body(
             backend,
             summary
                 .first_body()
                 .ok_or(Failure::Defect("a find preview has no request"))?
                 .to_vec(),
         ),
-        None => PlanDocument::of(backend, find.plan()),
+        false => PlanDocument::of(backend, find.plan()),
     }
     .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
     .key_env(key_env);
@@ -321,7 +335,7 @@ fn located_units(
         let record = reading
             .record(&bytes)
             .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
-        let evidence = reading
+        reading
             .evidence(&record)
             .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
         let mut position = item
@@ -331,7 +345,6 @@ fn located_units(
         units.push(Unit {
             bytes,
             record,
-            evidence,
             position,
         });
     }
@@ -341,7 +354,6 @@ fn located_units(
 struct Unit {
     bytes: Vec<u8>,
     record: Record,
-    evidence: Evidence,
     position: Position,
 }
 
@@ -376,14 +388,13 @@ fn read_units(
         let record = reading
             .record(&bytes)
             .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
-        let evidence = reading
+        reading
             .evidence(&record)
             .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
         let line = units.len() + 1;
         units.push(Unit {
             bytes,
             record,
-            evidence,
             position: Position {
                 file: file.clone(),
                 first: Some(line),
