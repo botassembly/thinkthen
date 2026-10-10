@@ -556,7 +556,7 @@ fn empty_find_refuses_before_sending_or_inventing_a_none_answer() {
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(
         error.detail().message(),
-        "a find question offering none takes 2 to 254 units"
+        "a find question offering none takes 1 to 254 units"
     );
     assert!(error.facts().is_none());
     assert_eq!(listener.count(), 0);

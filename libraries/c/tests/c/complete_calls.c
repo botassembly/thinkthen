@@ -203,7 +203,7 @@ int main(void) {
         if(count==0) { assert(code==THINKTHEN_ECANCELLED); assert(strcmp(thinkthen_error_message(e),"the call was cancelled")==0); }
         else {
             assert(code==THINKTHEN_EUSAGE);
-            const char *message=count==2?"the record is not valid UTF-8":getenv("TYPED_FIND_NONE")?"a find question offering none takes 2 to 254 units":"find takes 2 to 255 units";
+            const char *message=count==2?"the record is not valid UTF-8":getenv("TYPED_FIND_NONE")?"a find question offering none takes 1 to 254 units":"find takes 2 to 255 units";
             assert(strcmp(thinkthen_error_message(e),message)==0);
         }
         thinkthen_question_free(q); thinkthen_source_free(source); thinkthen_cancel_token_free(cancel); thinkthen_engine_free(e);
