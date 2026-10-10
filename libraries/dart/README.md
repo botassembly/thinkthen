@@ -1,98 +1,48 @@
-# thinkthen_dart
+# Dart
 
-This source package calls the ThinkThen C library through Dart FFI. It exposes the six named error kinds with their C codes (`ErrorKind.code`), a distinct unresolved `null` outcome, and Unicode scalar offsets. Results are plain JSON: `Door.ask` returns the C success envelope with separate `value` and per-call `facts`, and `Door.decide`, `Door.many`, `Door.recognize`, and `Door.relate` each return a record whose `.facts` is that call's facts map, as `specification/result.schema.json` describes it. A reader ignores members it does not know. `readField` reads one annotate member as `UnresolvedField` (JSON null), `AnswerField` with its value, or `FailedField` with its kind and cause. `Door.plan(engine, verb, question, input, settings)` previews a decide, choose, score or tag call through `thinkthen_plan_json` and returns the plan map; it needs no key and sends nothing. `call`, `ask`, `recognize` and `relate` take `deadline` and `token` like `decide` and `many`, and `max_requests_total` passes through `Door.create(settings)`. `DoorFailure.facts` copies the borrowed facts for a failed started call.
-
-The native shared library is installed separately. This package does not build or download native code. pub.dev publishes the package as `thinkthen_dart`. Each GitHub release ships the matching C archive. Match the native archive to the source release and platform. The checked host is Linux x86_64. Android, iOS, macOS, Windows, static linkage, and native asset packaging remain open.
-
-## Build and use from source
-
-Build the C library at the same source commit, or install its matching platform archive. From the repository root:
-
-```sh
-CARGO_NET_OFFLINE=true cargo build --offline --release --manifest-path libraries/c/Cargo.toml
-cd libraries/dart
-dart pub get --offline
-dart analyze lib
-```
-
-The default Linux output is `libraries/c/target/release/libthinkthen_c.so`, unless `CARGO_TARGET_DIR` selects another location. Add a source path dependency to the consuming application's `pubspec.yaml`:
-
-```yaml
-dependencies:
-  thinkthen_dart:
-    path: /path/to/thinkthen/libraries/dart
-```
-
-Pass the installed native library path explicitly:
+The development `thinkthen_dart` package provides one typed asynchronous caller. Import `package:thinkthen_dart/thinkthen_dart.dart`, open an `Engine`, await a named function, and close the engine in `finally`.
 
 ```dart
 import 'package:thinkthen_dart/thinkthen_dart.dart';
 
-final door = Door('/absolute/path/to/libthinkthen_c.so');
-final engine = door.create();
+final engine = Engine.open();
 try {
-  final decisionEnvelope = door.ask(engine, {'decide': 'Is it?', 'evidence': 'Example'}) as Map;
-  print(decisionEnvelope['value']);
-  print(decisionEnvelope['facts']);
+  final refundDecision = await engine.decide(
+    InputRequestQuestionText(text: 'Does this ask for a refund?'),
+    InputRequestInputText(text: 'Refund me please.'),
+  );
+  final row = refundDecision.packets.whereType<SessionPacketDecideRow>().single;
+  print(row.value.answer);
 } finally {
-  door.engineFree(engine);
+  engine.close();
 }
 ```
 
-Cancellation can fire from a second Dart isolate during a blocking native call. Join both isolates before freeing the cancel token or engine. Strings returned by C are freed with `thinkthen_free_string`; caller arguments use `package:ffi` allocation. [Flutter source](flutter/README.md) contains a Linux application that calls through this package.
+The ten named methods return `Future<OwnedCall>`. Generated classes retain typed answers, observations, row metadata and terminal facts. `Presence` distinguishes absence from present null. Wide counters and caller integers remain exact `BigInt`; unknown output fields and arbitrary authored JSON remain present. Rust admits requests and owns file reading, image admission, cache identity, recording and replay. Use generated `InputRequestInputSource` for files, `InputRequestImageFile` for image files, and `imageBytes` for `Uint8List` attachments.
 
-`check.sh` builds the current C source offline, matches the header to all exported symbols, checks two independent installed Dart consumers, runs the shared J1 corpus through the public `Door` API, and runs the Flutter Linux host and app. Set `TT_DART` and `TT_FLUTTER` to installed executables when they are absent from `PATH`. The check needs a populated local pub cache and creates no runtime downloads.
+`NativeFailure` reports admission errors. `SessionFailure` retains the owned call, completed rows and native terminal failure facts. An unresolved answer stays separate from a failed call. Reader failures use generated failure values; native diagnostics do not expose host exception text.
 
-The local Linux file pilot packs this Dart source beside a separately built matching C archive with `release-pack x86_64-unknown-linux-gnu OUT c php dart` from one clean commit. The Dart archive contains no Flutter wrapper or native library. After verifying the pair, set `THINKTHEN_ARTIFACT` to the absolute Dart archive path, `THINKTHEN_C_ARTIFACT` to the absolute C archive path, `TT_DART` to the Dart executable and `PUB_CACHE` to a local cache containing `ffi` 2.2.0, then run `sh libraries/dart/check.sh 0`. That installed-file mode resolves an unrelated consumer offline to the unpacked Dart source and loads the unpacked C library. It does not install or test the private Flutter wrapper or publish to pub.dev.
+Pass `Cancellation` to stop a call explicitly. The native nonblocking session operations yield to Dart's event loop while the provider runs. A `feed` stream supplies bounded intake. Cancellation stops further intake and releases native owners before a held provider or asynchronous subscription cleanup finishes. Ordinary completion awaits subscription cleanup and reports `StreamCleanupFailure` if it fails. `OwnedSession` exposes `push`, `finish`, `read` and the typed `packets` stream for explicit session control. Close sessions before the engine. Native finalizers backstop forgotten cleanup; copied results survive close.
 
-`Door.create(settings)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
+`usagePersistence()` observes count persistence without waiting. `finishUsageStatus()` finishes current deltas and returns an owned `UsagePersistenceStatus` with a header-derived state and optional safe advice. Persistence failures preserve answers and call facts. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Closed engines reject these methods.
 
-Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+## Upgrade
 
-## Complete typed calls
+| Old call | Typed call |
+| --- | --- |
+| `Door(path).create(settings)` | `Engine.open(settings: InputEngineSettings(...))` |
+| `Door` judgment methods and `CompleteApi` methods | Await the same named `Engine` method with generated question and input values |
+| `Door.ask` or generic `call` | Choose one of the ten named functions |
+| Legacy batch pull | Use a named method with `feed`, or an owned session's typed `packets` stream |
+| `engineFree` or `dispose` | `close()` in `finally` |
+| Separate native path | SDK build hook and bundled native asset |
 
-Import `package:thinkthen_dart/thinkthen_complete.dart` for the native-backed `Engine`, typed questions/inputs and copied complete views. Existing `Door` methods retain their behavior.
+The old public names, complete readers and handwritten native layouts have been removed. The former session import now uses the main package import above.
 
-```dart
-import 'package:thinkthen_dart/thinkthen_complete.dart';
+## Native assets
 
-final engine = Engine(absoluteLibrary, settingsJson: settingsJson);
-try {
-  final question = Question.spec(QuestionSpec(FunctionKind.decide,
-      text: const Content.text('Does this ask for a refund?')));
-  final decisionRows = engine.decide(question,
-      Records([Record(const Content.text('Refund me please.'))]));
-  final answerId = decisionRows.rows.first.common.answer_id.data;
-  final probability = decisionRows.rows.first.common.answer.value!.data.probability;
-} finally { engine.close(); }
-```
+Dart 3.10 or later is required. The build hook verifies the package definition's SHA-256 and bundles the selected native library. It compiles no Rust and downloads nothing at runtime. The current `native-assets.json` describes the reviewed Linux development asset and has no release URL. Distribution assembly supplies release pins; published installation and other platforms belong to candidate qualification.
 
-The ten named methods return `CompleteResult<DecideView>`, `ChooseView`, `TagView`, `ScoreView`, `FilterView`, `RankView`, `FindView`, `AnnotateView`, `RecognizeView` and `RelateView`, respectively. `CompleteApi` fixes their compile-time signatures for Dart and the separately executed Flutter facade.
+For an offline development build, set `hooks.user_defines.thinkthen_dart.offline` to `true` and `asset_cache` to an owned cache directory in the application pubspec. Put the matching library at `<cache>/<sha256>/<file>` using `native-assets.json`. Missing or corrupt cached bytes fail during the build.
 
-`QuestionSpec` carries typed choices/descriptions, meanings, reading rules, model/profile/batch, pointers, members, recognition kinds and relation rules. `Author`, `Declaration` and `Property` carry names, wording versions and item/context schemas. `Question.file`, `named` and `reference` use native loaders. `Question.saved(LoaderRole.…, json)` explicitly imports saved grammar under one native parser. Text never implies a path.
-
-`Records` preserves ordered `Record` originals, contexts, candidate replacements and `Image` attachments. `Content.text` is literal; `Content.json` is arbitrary caller JSON, including explicit null. `Files` selects native line/window/file/image/JSONL reading. Images remain ordered original JPEG/PNG bytes; native alone decodes and admits their route/limits. Only decide/choose/score support them on admitted routes. Other functions refuse before sending.
-
-Results copy summaries/facts/attempts, every observation and its details/author, full row views/details/authors, annotation member authors, rank member views and located recognition/relation views. Known fields have static property types; arbitrary authored/original JSON retains explicit content bytes. Optional views keep `present` and nullable `value`. Decide's native discriminator preserves uncertainty, ordinary Boolean and authored meanings, including Boolean/null. Find's named-answer reader requires the declared C answer tag 5. Unsigned counters are exact `BigInt`; wording version admission stays native.
-
-`CompleteFailure` exposes `ErrorKind`, message, retryability and copied final native summary. Prestart failures have absent facts/attempts. `Controls` supplies deadlines, cancellation, context, packing and attempts. Cancellation owns a native token; `nativeHandle` is borrowed until close and can be passed to a cooperating native thread/isolate. Free tokens after using calls finish.
-
-`decideBatch`, `chooseBatch`, `tagBatch`, `scoreBatch`, `filterBatch` and `annotateBatch` own native lazy batches. Pull `next()` until exhaustion, read `facts()`, and always close the batch before closing its engine. The native engine owns all reading, packing, scheduling and storage. Returned views survive engine/batch close. Cache/record/refresh/replay settings retain native identities and support changed-reading strict replay without sends.
-
-The older private JSON carrier readers retain their own boundary restrictions; complete views above do not use them. The canonical consumer is AOT-compiled and statically calls the named public methods. `complete_parity.py dart` reuses the shared suite and counted owned loopback backend. Flutter runs its own facade separately.
-
-Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
-
-## Development owned session caller
-
-Ticket 0522 adds `package:thinkthen_dart/thinkthen_session.dart` for the reviewed caller slice. Its ten named `Engine` methods return `Future<OwnedCall>` with generated typed packets, answers, observations and terminal facts. Generated `Presence` keeps absent fields separate from present null. Wide integers use `BigInt`; caller-authored JSON remains ordinary Dart maps and lists. Rust admits every request. `imageBytes` converts a Dart `Uint8List` to the generated attachment descriptor; callers supply file paths through generated source and image types.
-
-Open an engine with `Engine.open(settings: InputEngineSettings(...))`, pass generated `InputRequestQuestion` and `InputRequestInput` values, await a named method, and call `close` in `finally`. Supply `Cancellation` to stop a call explicitly. An owned session supports bounded `push`, `read`, and the `packets` stream; call `finish` after intake and `close` after use. Native finalizers backstop forgotten cleanup. `NativeFailure` describes admission failures, and `SessionFailure` retains the complete call and native terminal failure facts.
-
-The old `Door` entry point remains during the package migration. The proposed replacement maps `Door.decide` and the other old judgment methods to the same named `Engine` methods. The session entry point loads an SDK-bundled native asset without a caller library path. The package requires Dart 3.10 or later. Its build hook selects the target, verifies the package definition’s SHA-256 and declares a dynamic code asset. It never compiles Rust or fetches at runtime. The current `native-assets.json` pins the reviewed development Linux asset and has no release URL. A build without the matching cache fails before a download. Final distribution assembly supplies the approved release pin; ordinary pub installation and the public API switch remain unqualified.
-
-For offline development builds, set `hooks.user_defines.thinkthen_dart.offline` to `true` and `asset_cache` to an owned cache directory in the application pubspec. Store the matching asset at `<cache>/<sha256>/<file>` using the values from `native-assets.json`. The hook verifies those bytes and copies them into the SDK-owned output. This build configuration is separate from the caller API. The [native package design](../../sdlc/decisions/2026-10-09-native-package-design.md) defines the distribution route.
-
-The focused installed check is `libraries/dart/check.sh --native-assets NATIVE_LIBRARY SCRATCH PUB_CACHE`. It uses the extracted development packages, a checksum-pinned local fixture and a loopback artifact server. It runs the same ten-function consumer in a bundled Dart executable and a Linux Flutter FFI application, including cancellation while a provider is held. It runs no released artifact download.
-
-The owned session `Engine` exposes `usagePersistence()` for a nonblocking observation and `finishUsageStatus()` to finish its current usage deltas. Both return an immutable `UsagePersistenceStatus` with a header-derived `UsagePersistenceState` and optional copied safe native advice. Failed persistence preserves successful answers and call facts. Written covers current deltas only. Only usage-lock acquisition has a deadline during finalization; other filesystem work may take longer. Retained snapshots survive `close()`; methods reject a closed engine.
+The routine installed check is `libraries/dart/check.sh --native-assets NATIVE_LIBRARY SCRATCH PUB_CACHE`. It extracts packages into unrelated consumers, exercises typed calls against a counted loopback backend, builds a standalone Dart bundle and Linux Flutter FFI application, and runs them after their source packages move away. It covers file reading, image admission, cache/replay, presence, failures, usage, cancellation and stream cleanup. It uses the installed toolchains and cached dependencies.

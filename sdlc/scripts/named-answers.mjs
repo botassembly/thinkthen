@@ -218,7 +218,7 @@ function selfTest() {
   }
   const dartReadme = real.find(([path]) => path === 'libraries/dart/README.md');
   if (!dartReadme || scan(...dartReadme).problems.length) throw new Error('real Dart README is not clean');
-  const genericReadme = dartReadme[1].replaceAll('decisionEnvelope', 'result');
+  const genericReadme = dartReadme[1].replaceAll('refundDecision', 'result');
   if (genericReadme === dartReadme[1] ||
       !scan(dartReadme[0], genericReadme).problems.some((line) => /: generic: /.test(line))) {
     throw new Error('real Dart call did not reach the shared generic-name rule');
