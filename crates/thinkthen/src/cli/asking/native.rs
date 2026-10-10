@@ -63,18 +63,30 @@ pub(super) fn run(
         .map(super::Context::evidence)
         .map(|c| c.as_text().map(|s| s.into_owned()))
         .transpose()?;
-    let guard = Mutex::new((crate::schedule::ModelGuard::default(), None));
+    let progress = Mutex::new(RankProgress::default());
     let observe = |event: crate::RecordObservation<'_>| {
-        if let crate::RecordObservation::Question { detail, .. } = event {
-            let mut guard = guard.lock().unwrap_or_else(PoisonError::into_inner);
-            if guard.1.is_none() {
-                guard.1 = guard
-                    .0
-                    .check_sources(detail.question_sources().iter())
-                    .err();
+        let mut progress = progress.lock().unwrap_or_else(PoisonError::into_inner);
+        match event {
+            crate::RecordObservation::Question { detail, .. } => {
+                progress.live |= detail
+                    .question_sources()
+                    .iter()
+                    .any(|source| source.origin() == crate::core::Origin::Live);
+                if progress.failure.is_none() {
+                    progress.failure = progress
+                        .models
+                        .check_sources(detail.question_sources().iter())
+                        .err();
+                }
+                if progress.failure.is_some() {
+                    token.cancel();
+                }
             }
-            if guard.1.is_some() {
-                token.cancel();
+            crate::RecordObservation::Row { .. } => {
+                progress.finished += 1;
+                progress.replayed += usize::from(!progress.live);
+                progress.live = false;
+                environment.usage().record_done();
             }
         }
     };
@@ -131,8 +143,16 @@ pub(super) fn run(
         &release,
         None,
     );
-    if let Some(failure) = guard.into_inner().unwrap_or_else(PoisonError::into_inner).1 {
-        ended.borrow_mut().failure.get_or_insert(failure);
+    if configuration.keeping == crate::judge::Keeping::Ordered {
+        let progress = progress
+            .into_inner()
+            .unwrap_or_else(PoisonError::into_inner);
+        let mut ended = ended.borrow_mut();
+        ended.finished = progress.finished;
+        ended.replayed = progress.replayed;
+        if let Some(failure) = progress.failure {
+            ended.failure.get_or_insert(failure);
+        }
     }
     let result = if configuration.keeping == crate::judge::Keeping::Ordered {
         result.map(|outcome| match outcome {
@@ -295,7 +315,7 @@ impl Renderer {
                 finished: ended.finished,
                 replayed: ended.replayed,
                 recording,
-                held: false,
+                held: self.keeping == crate::judge::Keeping::Ordered,
                 cause: Box::new(cause),
             });
         }
@@ -316,6 +336,14 @@ fn input_error(cause: Failure, at: Option<usize>) -> crate::Error {
         Some(at) => error.at_record(at.saturating_sub(1)),
         None => error,
     }
+}
+#[derive(Default)]
+struct RankProgress {
+    models: crate::schedule::ModelGuard,
+    failure: Option<Failure>,
+    finished: usize,
+    replayed: usize,
+    live: bool,
 }
 #[derive(Default)]
 struct Ended {
@@ -379,9 +407,7 @@ fn take(
                     .remove(&row.ordinal())
                     .ok_or(Failure::Defect("native rank lost its host occurrence"))?;
                 let judged = rendering.row(reading, unit, row.result().canonical.clone())?;
-                if output.take(judged)? {
-                    ended.finished += 1;
-                } else {
+                if !output.print(judged)? {
                     ended.closed = true;
                     break;
                 }
@@ -410,9 +436,7 @@ fn take(
                         judged.position.as_ref(),
                     )?;
                 }
-                if output.take(judged)? {
-                    ended.finished += 1;
-                } else {
+                if !output.print(judged)? {
                     ended.closed = true;
                     break;
                 }

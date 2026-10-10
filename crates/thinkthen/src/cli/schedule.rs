@@ -173,15 +173,19 @@ impl Output<'_> {
     }
 
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
-        self.check_model(judged.model.as_ref())?;
-        if let Some(mismatch) = &judged.profile_mismatch {
-            mismatch.print_once()?;
-        }
-        let result = self.display.emit(self.writer, &judged);
+        let result = self.print(judged);
         if result.is_ok() {
             self.usage.record_done();
         }
         result
+    }
+
+    pub(crate) fn print(&mut self, judged: Judged) -> Result<bool, Failure> {
+        self.check_model(judged.model.as_ref())?;
+        if let Some(mismatch) = &judged.profile_mismatch {
+            mismatch.print_once()?;
+        }
+        self.display.emit(self.writer, &judged)
     }
     pub(crate) fn writer(&mut self) -> &mut dyn Write {
         self.writer
