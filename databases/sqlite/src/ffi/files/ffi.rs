@@ -5,7 +5,7 @@ use std::ffi::{CStr, c_int};
 
 use crate::catalog::Catalog;
 use rusqlite::ffi;
-use rusqlite::types::Value;
+use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::{
     Context, Filters, IndexConstraintOp, IndexInfo, Module, VTab, VTabConfig, VTabConnection,
     VTabCursor,
@@ -129,6 +129,9 @@ unsafe impl VTabCursor for ReaderCursor {
         self.row = None;
         self.ordinal = 0;
         Ok(guard("thinkthen_read_files", || {
+            if matches!(arguments.iter().next(), Some(ValueRef::Null)) {
+                return Ok(());
+            }
             let path = arguments
                 .get::<Value>(0)
                 .map_err(|_| Failure::usage("source path must be text"))?;

@@ -171,7 +171,12 @@ fn prepare<T: InputEvidence>(
     record: RecordInput<T>,
     (lines, bytes): (&mut Option<bool>, &mut crate::public::SourceBudget),
 ) -> Result<Prepared<T>, Error> {
-    if record.context.is_some() || record.options.is_some() || record.examples.is_some() {
+    record.admit_recognition_controls(
+        crate::public::request::RequestFunction::from_input(InputFunction::Relate),
+        "relate takes one whole-set call context and no per-record controls",
+        "relate takes one whole-set call context and no per-record controls",
+    )?;
+    if record.context.is_some() || record.options.is_some() {
         return Err(Error::usage(
             "relate takes one whole-set call context and no per-record controls",
         ));

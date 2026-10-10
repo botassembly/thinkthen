@@ -70,8 +70,11 @@ int64_t ReadHandle(void *pointer, uint8_t *buffer, size_t length) noexcept {
 unique_ptr<FunctionData> BindFiles(ClientContext &, TableFunctionBindInput &input,
                                   vector<LogicalType> &types, vector<string> &names) {
 	auto bind = make_uniq<FilesBind>();
+	types = {LogicalType::BIGINT, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT, LogicalType::BIGINT};
+	names = {"ordinal", "record", "file", "first_line", "last_line"};
+
 	if (input.inputs[0].IsNull()) {
-		throw OrdinaryError("thinkthen usage: source path must be text or a list of paths");
+		return bind;
 	}
 	if (input.inputs[0].type().id() == LogicalTypeId::LIST) {
 		for (auto &path : ListValue::GetChildren(input.inputs[0])) {
@@ -99,8 +102,6 @@ unique_ptr<FunctionData> BindFiles(ClientContext &, TableFunctionBindInput &inpu
 	bind->options = input.inputs.size() > 1 && !input.inputs[1].IsNull() ? input.inputs[1].GetValue<string>() : "{}";
 	RustReply checked(thinkthen_cpp_reader_options(Bytes(bind->options), bind->options.size()));
 	Checked(checked.value);
-	types = {LogicalType::BIGINT, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT, LogicalType::BIGINT};
-	names = {"ordinal", "record", "file", "first_line", "last_line"};
 	return std::move(bind);
 }
 
@@ -108,7 +109,7 @@ unique_ptr<GlobalTableFunctionState> InitFiles(ClientContext &context, TableFunc
     auto &bind = input.bind_data->Cast<FilesBind>();
     auto state = make_uniq<FilesState>();
     state->files = &FileSystem::GetFileSystem(context);
-    state->manifest = FileManifest(*state->files, bind.paths);
+    if (!bind.paths.empty()) { state->manifest = FileManifest(*state->files, bind.paths); }
     return std::move(state);
 }
 

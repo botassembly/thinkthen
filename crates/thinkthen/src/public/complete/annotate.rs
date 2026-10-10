@@ -278,9 +278,13 @@ fn prepare_record<T: InputEvidence>(
     fallback: Option<&str>,
     at: usize,
 ) -> Result<(Held<T>, Prepared), Error> {
-    if record.examples.is_some() {
-        return Err(Error::usage("record examples are admitted only for recognize").at_record(at));
-    }
+    record
+        .admit_recognition_controls(
+            crate::public::request::RequestFunction::from_input(InputFunction::Annotate),
+            "record examples are admitted only for recognize",
+            "record seed spans are admitted only for recognize",
+        )
+        .map_err(|error| error.at_record(at))?;
     if record.options.is_some() {
         return Err(Error::usage("record options are admitted only for choose"));
     }

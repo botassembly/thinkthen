@@ -65,7 +65,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (!context) {
 		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
-	const auto session = Settings(*context);
+	std::optional<SessionSettings> session;
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<Group> groups;
 	std::map<std::tuple<string, string, std::optional<string>>, idx_t> known;
@@ -77,6 +77,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (question.IsNull() || evidence.IsNull()) {
 			continue;
 		}
+		if (!session) { session.emplace(Settings(*context)); }
 		const auto settings_type = args.data[4].GetValue(row).GetValue<string>();
 		if (settings_type != "\"NULL\"" && settings_type != "VARCHAR") {
 			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
@@ -112,7 +113,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
 		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
 		    threshold, group.threshold ? group.threshold->size() : 0,
-		    owner->Remaining(*context), session.Bridge(), StopFor(*context)));
+		    owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		if (!reply.value.bytes || reply.value.len != group.texts.size()) {
 			throw OrdinaryError("thinkthen defect: the bridge returned an invalid decision group");
@@ -139,7 +140,7 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (!context) {
 		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
-	const auto session = Settings(*context);
+	std::optional<SessionSettings> session;
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	struct Row { ResolvedQuestion question; string keyed; string settings; int32_t kind; };
 	vector<std::optional<Row>> calls(args.size());
@@ -147,6 +148,7 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 		auto question = args.data[0].GetValue(row);
 		auto keyed = args.data[1].GetValue(row);
 		if (question.IsNull() || keyed.IsNull()) { continue; }
+		if (!session) { session.emplace(Settings(*context)); }
 		auto settings = args.data[2].GetValue(row);
 		auto kind = args.data[3].GetValue(row).GetValue<int32_t>();
 		// A rank question is literal text, as find's is, and never opens a file.
@@ -173,7 +175,7 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 		    call.question.from_file ? 1 : 0,
 		    reinterpret_cast<const uint8_t *>(call.keyed.data()), call.keyed.size(),
 		    reinterpret_cast<const uint8_t *>(call.settings.data()), call.settings.size(), call.kind,
-		    owner->Remaining(*context), session.Bridge(), StopFor(*context)));
+		    owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		result.SetValue(row, ThinkThenJSON(ReplyText(reply.value)));
 	}
@@ -183,7 +185,7 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
 	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
-	const auto session = Settings(*context);
+	std::optional<SessionSettings> session;
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	struct ListedGroup {
 		ResolvedQuestion question;
@@ -200,6 +202,7 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		auto question = args.data[0].GetValue(row);
 		auto input = args.data[1].GetValue(row);
 		if (question.IsNull() || input.IsNull()) { continue; }
+		if (!session) { session.emplace(Settings(*context)); }
 		const auto members_type = args.data[5].GetValue(row).GetValue<string>();
 		const auto settings_type = args.data[6].GetValue(row).GetValue<string>();
 		if ((members_type != "\"NULL\"" && members_type != "VARCHAR" && members_type != "VARCHAR[]") ||
@@ -243,7 +246,7 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
 		    members, group.members ? group.members->size() : 0,
 		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), group.kind,
-		    owner->Remaining(*context), session.Bridge(), StopFor(*context)));
+		    owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		answers.push_back(DecodeListed(reply.value.bytes, reply.value.len, texts.size(), group.kind));
 	}
@@ -264,7 +267,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
 	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
-	const auto session = Settings(*context);
+	std::optional<SessionSettings> session;
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	struct ScalarGroup {
 		ResolvedQuestion question;
@@ -280,6 +283,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		auto question = args.data[0].GetValue(row);
 		auto input = args.data[1].GetValue(row);
 		if (question.IsNull() || input.IsNull()) { continue; }
+		if (!session) { session.emplace(Settings(*context)); }
 		const auto type = args.data[4].GetValue(row).GetValue<string>();
 		if (type != "\"NULL\"" && type != "VARCHAR") {
 			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
@@ -326,17 +330,17 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
 		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
 		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
-		    owner->Remaining(*context), session.Bridge(), StopFor(*context))
+		    owner->Remaining(*context), session->Bridge(), StopFor(*context))
 		    : group.kind == 7 ? thinkthen_cpp_portable_annotate_group(
 		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
 		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
 		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
-		    owner->Remaining(*context), session.Bridge(), StopFor(*context))
+		    owner->Remaining(*context), session->Bridge(), StopFor(*context))
 		    : thinkthen_cpp_portable_scalar_group(
 		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
 		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
 		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), group.kind,
-		    owner->Remaining(*context), session.Bridge(), StopFor(*context)));
+		    owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		vector<Value> values;
 		if (!reply.value.bytes) { throw OrdinaryError("thinkthen defect: the bridge returned no scalar values"); }

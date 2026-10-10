@@ -81,10 +81,12 @@ void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<std::optional<Input>> calls(args.size());
+	bool live = false;
 	for (idx_t row = 0; row < args.size(); ++row) {
 		auto question = args.data[0].GetValue(row);
 		auto keyed = args.data[1].GetValue(row);
 		if (question.IsNull() || keyed.IsNull()) { continue; }
+		live = true;
 		const auto type = args.data[3].GetValue(row).GetValue<string>();
 		if (type != "\"NULL\"" && type != "VARCHAR") {
 			throw OrdinaryError("thinkthen usage: plan settings are one JSON text object");
@@ -98,13 +100,14 @@ void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
 		Checked(checked.value);
 		calls[row] = std::move(call);
 	}
-	const auto session = Settings(*context);
+	std::optional<SessionSettings> session;
+	if (live) { session.emplace(Settings(*context)); }
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!calls[row]) { result.SetValue(row, Value(PlanType())); continue; }
 		const auto &call = *calls[row];
 		RustReply reply(thinkthen_cpp_plan(Bytes(call.question.text), call.question.text.size(),
 		                                call.question.from_file ? 1 : 0, Bytes(call.keyed), call.keyed.size(),
-		                                Bytes(call.settings), call.settings.size(), session.Bridge()));
+		                                Bytes(call.settings), call.settings.size(), session->Bridge()));
 		Checked(reply.value);
 		result.SetValue(row, Decode(reply.value));
 	}

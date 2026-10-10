@@ -166,5 +166,29 @@ say(empty=run(db,'SELECT thinkthen_span_lines(?,1,2,2)',('abc',)),
     expect(backend.close(),0,'mapper refusals send nothing')
 
 
+def test_required_null_file_operands_skip_invalid_partners_and_send_nothing():
+    backend=Backend()
+    held=child(f"""
+db=connect()
+spans=[]
+for slot in range(4):
+    for partner in (7, 'invalid', b'invalid'):
+        args=[partner]*4
+        args[slot]=None
+        spans.append(run(db,'SELECT thinkthen_span_lines(?,?,?,?)',args))
+readers=[run(db,"SELECT thinkthen_decide('Valid?',record) FROM thinkthen_read_files(?,?)",(None,partner))
+    for partner in (None,7,'invalid',b'invalid','{{"unit":"window","window":0}}')]
+say(spans=spans,readers=readers,
+    optional=run(db,'SELECT * FROM thinkthen_read_files(?,NULL)',({str(FIXTURE)!r},)),
+    omitted=run(db,'SELECT * FROM thinkthen_read_files(?)',({str(FIXTURE)!r},)))
+""",environment(backend),5)
+    sends=backend.close()
+    expect(held['spans'],[[[None]]]*12,'each required span NULL precedes partner parsing')
+    expect(held['readers'],[[]]*5,'NULL path prevents reader selection and judgment')
+    expect(held['optional'],held['omitted'],'optional NULL reader settings use defaults')
+    expect(len(held['optional']),8,'optional settings retain file rows')
+    expect(sends,0,'NULL file helpers send nothing')
+
+
 if __name__ == '__main__':
     sys.exit(main(globals()))
