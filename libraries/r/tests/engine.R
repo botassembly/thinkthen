@@ -80,16 +80,17 @@ sent <- sent_by(out <- run(c(
 check("live usage finalization preserves the answer and sends nothing", sent == 1L && grepl("written written", out, fixed=TRUE))
 
 sent <- sent_by(out <- run(c(
-  'folder <- file.path(Sys.getenv("XDG_STATE_HOME"), "thinkthen")',
-  'dir.create(dirname(folder), recursive=TRUE, showWarnings=FALSE)',
-  'file.create(folder)',
+  'state <- tempfile("usage-state-"); dir.create(state); Sys.setenv(XDG_STATE_HOME=state)',
   sprintf('tt_engine(base_url = "%s", cache = FALSE)', generic),
-  'done <- tt_decide("Is it urgent?", "urgent")',
+  'first <- tt_decide("Is it urgent?", "first")',
+  'stopifnot(identical(tt_finish_usage_status()$state,"written"))',
+  'folder <- file.path(state,"thinkthen"); Sys.chmod(folder,"0555")',
+  'done <- tt_decide("Is it urgent?", "second")',
   'before <- serialize(done, NULL)',
-  'failed <- tt_finish_usage_status()',
-  'stopifnot(identical(failed$state,"failed"), identical(failed$advice,"check the usage folder permissions and free space"), identical(tt_usage_persistence(),failed), identical(tt_finish_usage_status(),failed), identical(serialize(done,NULL),before), tt_usage()$requests_sent == 1)',
+  'failed <- tt_finish_usage_status(); Sys.chmod(folder,"0700")',
+  'stopifnot(identical(failed$state,"failed"), identical(failed$advice,"check the usage folder permissions and free space"), identical(tt_usage_persistence(),failed), identical(tt_finish_usage_status(),failed), identical(serialize(done,NULL),before), tt_usage()$requests_sent == 2)',
   'cat("failed", failed$state, "\\n")'
 )))
-check("failed durability stays latched and does not lose answers", sent == 1L && grepl("failed failed",out,fixed=TRUE))
+check("failed durability stays latched and does not lose answers", sent == 2L && grepl("failed failed",out,fixed=TRUE))
 
-finish("engine", 6L)
+finish("engine", 7L)

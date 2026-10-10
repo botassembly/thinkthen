@@ -100,3 +100,10 @@ def named_frame(engine: Engine, source: object) -> None:
 
 def frame_positions(result: FrameResult) -> tuple[int | None, ...]:
     return result.positions
+
+def live_usage_status(engine: tt.Engine) -> None:
+    observed = engine.usage_persistence()
+    assert_type(observed, tt.UsageStatus)
+    assert_type(observed.state, tt.NativeUsagePersistence)
+    assert_type(observed.advice, str | None)
+    assert_type(engine.finish_usage_status(), tt.UsageStatus)
