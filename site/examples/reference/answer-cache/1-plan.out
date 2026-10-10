@@ -2,6 +2,9 @@
   "records": 1,
   "requests": 1,
   "estimated_bytes": 211,
+  "largest_request_bytes": 211,
+  "largest_request_estimated_input_tokens": 192,
+  "token_estimate_method": "encoded-body-bytes-908-v1",
   "estimated_input_tokens": {
     "lower": 108,
     "upper": 192

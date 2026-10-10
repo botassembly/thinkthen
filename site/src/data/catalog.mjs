@@ -297,7 +297,7 @@ export const FUNCTIONS = [
     howtos: [],
     see: {
       '0-kinds': 'recognize finds three names and gives each one of the three kinds: a person, an organization, and a place.',
-      '1-names': 'Each --kind gives a kind a description. recognize finds three names. Each comes back with its kind and its strength.',
+      '1-names': 'Each --kind gives a kind a description. --plan shows the first question without sending it. The descriptions tell the model which literal spans to find; this example shows no model answer.',
     },
     moreSee: {
       typescript: 'Two relation rules ask how the names connect. Maria Chen works for Northwind Freight, and Northwind Freight is based in Chicago.',

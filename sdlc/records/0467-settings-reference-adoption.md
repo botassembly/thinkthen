@@ -19,3 +19,13 @@ The script changes add 32 handwritten lines and remove 6. The page changes add 3
 An inventory must follow shared ownership when a binding sheds local code. Build-time tool homes belong outside the runtime settings inventory. A source negative must still detect a disconnected caller and a removed shared setter.
 
 Fresh read-only review accepts `dc62d9d270aec8d1b337249a2b70f7fb405f779b`. The reviewer checked the C constructor and shared Rust reader, Python timeout chain and schema ownership, and reproduced all fifteen self-tests and the real page with the warm CLI in a cleared environment. The repair adds 54 and removes seven handwritten lines. No runtime source or build changes enter this slice.
+
+## Current CLI examples
+
+This bounded documentation repair starts from `d05def2bb44345c230e76f392f165f6d98d7fde1`. The described-kind recognition example uses `--plan` and shows its actual first question. `core/recognize/questions.rs` gives caller descriptions to every recognition step and uses entity wording for its boundary choices. The saved site answers describe the older name-only questions. Cache conversion preserves stored question identity; it cannot answer the changed wording. The example makes no new model claim. The existing bare-kind recognition example and all recordings remain unchanged.
+
+The located relation output follows `cli/relate/source.rs::Occurrence`, whose serialized ordinal precedes its original record. Its values and physical positions remain unchanged. The answer-cache examples now show the current `PlanSummary` and `cli/facts.rs` request-size fields. Replay facts retain zero actual sends and zero actual sent-body maxima; planned bodies retain their estimated size.
+
+The four affected examples pass against the current development command supplied through `THINKTHEN_BIN`. The local site build also passes every CLI example, including the retained bare-kind recognition replay. Its flag inventory then reports ten existing differences between the current command help and the site catalog, so this run does not establish a complete site build. Logs are ticket-owned build output at `target/0467-affected-replays.log` and `target/0467-site-build-current.log`. Sample formatting, ticket records and count-only private-name checks pass. Public install instructions remain at 0.1.2. No provider call, host binding replay, release build, workflow or publication runs.
+
+A saved answer can become incompatible when a caller description changes the generated question. Show the prepared question or retain a compatible recorded case instead of reusing a different question's reply. Compare native serialization and facts before updating example output.

@@ -14,5 +14,9 @@ thinkthen recognize \
   --kind "$person" \
   --kind "$org" \
   --kind "$place" \
-  --kind "$other" |
-jq -c '.entities[] | [.text, .kind, .strength]'
+  --kind "$other" --plan |
+head -1 |
+jq '
+  .requests[0].body_utf8 | fromjson |
+  .questions.q1
+'

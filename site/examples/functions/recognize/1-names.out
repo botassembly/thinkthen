@@ -1,3 +1,11 @@
-["Maria Chen","PER",0.9987]
-["Northwind Freight","ORG",0.997]
-["Chicago","LOC",1.0]
+{
+  "type": "choice",
+  "instructions": "Recognize literal entity spans in the text according to this caller declaration.\nEntity definition: A literal span that satisfies the caller's instructions and listed kinds.\nKinds and descriptions: \nPER: \"Part of a person's name.\"\nORG: \"Part of the name of an organization: a company, band, team, agency, government body, or media outlet.\"\nLOC: \"Part of the name of a place: a country, region, city, or geographic feature.\"\nMISC: \"Part of another named entity: a nationality, an event, a product, or the name of a creative work.\"\nTokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in an entity?\n\nSnippet: [[Maria]] Chen joined Northwind Freight in Chicago",
+  "criteria": {
+    "BEGIN": "first token of an entity of two or more tokens",
+    "INSIDE": "a middle token of an entity",
+    "END": "last token of an entity of two or more tokens",
+    "SINGLE": "a one-token entity",
+    "OUT": "not part of an entity"
+  }
+}
