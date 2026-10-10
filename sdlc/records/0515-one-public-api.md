@@ -52,6 +52,18 @@ The generated header's interface-wide preference originates in the Rust `Door` c
 
 Header generation and drift checking pass. The existing C ABI self-test passes its carrier, constant and prototype checks and rejects its field, enum, return, argument, pointer, by-value and omission mutations. The comment-stripped generated header is unchanged from the starting revision. The warm C library omitted two exports already present in the source at that revision; an offline library-only rebuild supplies them, and the existing export check matches all 103 header declarations. C and root source ceilings remain unchanged and pass: replacing comments adds no nonblank Rust source lines. Formatting, local documentation links and whitespace checks pass. Existing policy size warnings concern unchanged files.
 
+## DuckDB bridge ownership
+
+This bounded ownership slice starts from `e0e645ea213b589a8189e958dfa7574b1be6558f`. The shipped Rust bridge declared `engines` and `signal` through paths into the retired raw C API workspace. The retired crate declared neither module. Caller inspection found the bridge's scalar, complete, portable, plan, nested and usage forms use the engine registry; its query scope and relate interrupt registration use the signal module. These modules remain live.
+
+Source commit `3e8835768` moves `databases/duckdb/src/engines.rs`, `src/signal.rs` and `src/signal/ffi.rs` into `databases/duckdb/bridge/src/` without changing their contents. The bridge declares the modules locally. The existing settings source reader and SIGINT source check read the new owning paths. Current DuckDB documentation and the retired crate comment describe that ownership. Historical ticket and build references retain their original paths. All callers, helpers and C declarations remain intact; this slice removes no reachable dispatcher, complete reader, request helper or compatibility export.
+
+Removing two obsolete path attributes lowers the existing DuckDB Rust ceiling from 5,067 to 5,065 nonblank lines. Its directories already include both `src` and `bridge/src`, so moving the files changes no counted helper source. This slice does not change the policy scanner or introduce a new gate.
+
+The committed source passes `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`, the existing complete DuckDB `tools/source_checks.py`, the settings reader's existing `engine_cells` check against the real settings table, bridge formatting and whitespace checks. Existing policy size warnings concern unchanged files. Locked offline bridge Clippy passes with `-D warnings` for the library and for all targets and features, including compilation of retained helper tests. Builds use two jobs, mold and a scope with 8 GiB memory and 1 GiB swap. The lane retains its warm graphs within its 40 GiB limit. No installed-host runtime, full parity, large-input, load, paid-call or release-candidate check ran; this slice changes source ownership only.
+
 ## What the build taught us
 
 A generated header can retain an obsolete API recommendation even while its declarations remain current. Update the owning Rust comment and regenerate the header. A warm native artifact can lag additive declarations; rebuild the affected library before treating its export mismatch as an implementation failure. Documentation checks need no new symbol classifier or verification machinery when the existing header and design table already supply those facts.
+
+A module compiled through a path into a retired crate is live code with misleading ownership. Move it into the compiling crate and update existing source readers; retain the helper contents and callers. A directory ratchet that already counts both homes measures ownership moves without a new source inventory.
