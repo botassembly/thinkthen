@@ -10,17 +10,17 @@ The [official pricing page](https://docs.perplexity.ai/docs/decisions/quickstart
 
 ## Evidence
 
+Fresh closure review accepted `4721e09fb25761d38d9e360164a68644d48fdd96`. It confirmed the agreed scope and unchanged accounting inputs against the existing routine, lint, specification and accepted site-build evidence. Provider counting guarantees and invoice reconciliation remain outside this repair.
+
 The outside-in regression in `public_estimated.rs` failed before the fix because the Perplexity plan retained the ordinary estimate. It now proves shared-state accounting across three actual packed questions, unchanged request bytes, a cap between the old and revised estimates with zero loopback sends, ordinary-provider admission, and successful call and Tally facts matching the admitted estimate.
 
 Focused public estimated-admission tests, public plan tests, image estimated-admission tests, the existing pure summary case and existing Tally cases passed. Existing CLI backend plan regressions passed. A built-command synthetic three-question shared-context check proved the CLI plan keeps physical bytes and computes its upper and largest token estimates through selected-route accounting. Targeted Clippy passed with warnings denied. Policy passed before Rust review. No source file exceeds its limit. The existing admission test file crosses the warning threshold because it retains distinct cap, retry, cache, replay and concurrency behaviors beside this regression; no mechanical split adds behavior.
 
-The site build cannot run in this worktree because its installed dependencies and output are absent. The changed page and specification were checked against the current provider source. Full landing gates belong to the coordinator.
+The agreed plan, admission, provider isolation and documentation outcomes are implemented in `4d5d8b251`. Coordinator routine tests, strict workspace lint and executable specification checks passed; their existing output is in `target/0512-routine-all/{test.log,rust-lint-after-table.log,spec-after-settings.log}`. The [0467 record](0467-settings-reference-adoption.md#current-cli-examples) records the complete passing site build, including the Perplexity page. Relevant accounting code, regression, page and backend specification remain unchanged through this revision, so these checks apply without another build.
 
 ## Source budget
 
-Fresh read-only review accepted `1b97c9273a1ecc79471764386329a48fb01f69b4`, including the explicit 275-line increase. Independent policy, estimated admission, public plans, Tally and image admission checks passed. The coordinator applied the accepted ceiling before merging the source. Combined landing checks remain necessary before whole-ticket closure.
-
-Propose 275 additional handwritten nonblank Rust lines over the starting ceiling of 180824, for a measured total of 181099. Generated source grows by zero lines; no generator changes. The shared estimator replaces duplicate estimate reconstruction, and the outside-in case reuses the existing child fixture. The ceiling remains unchanged for explicit reviewer acceptance.
+Fresh read-only review accepted `1b97c9273a1ecc79471764386329a48fb01f69b4`, including the source-ceiling increase that the coordinator applied before merging. Independent policy and focused behavior checks passed. The repeated-state formula remains an estimate supported by saved observations, with no billing guarantee. Actual invoice reconciliation remains deferred because it needs provider evidence; the repair requires no paid call.
 
 ## What the build taught us
 
