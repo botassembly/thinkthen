@@ -20,6 +20,7 @@ name = "thinkthen_c"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
+thinkthen-host = { path = "../../crates/thinkthen-host" }
 thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }

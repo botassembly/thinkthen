@@ -15,7 +15,10 @@ scratch_root.mkdir(parents=True, exist_ok=True)
 owned = tempfile.TemporaryDirectory(prefix='caller-',dir=scratch_root)
 scratch = Path(owned.name)
 linked = subprocess.check_output(['ldd',binary],env=child_env(),text=True)
-assert 'libthinkthen.so.0 => ' + str(prefix / 'lib/libthinkthen.so.0') in linked, linked
+if len(sys.argv)>4 and sys.argv[4]=='static':
+    assert 'libthinkthen.so.0' not in linked,linked
+else:
+    assert 'libthinkthen.so.0 => ' + str(prefix / 'lib/libthinkthen.so.0') in linked, linked
 # The focused behavior mode reuses a warm native build; distribution privacy
 # stays on the ordinary installed-package route with qualified artifacts.
 if len(sys.argv) <= 4 or sys.argv[4] != 'usage':

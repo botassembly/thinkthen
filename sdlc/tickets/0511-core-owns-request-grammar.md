@@ -58,6 +58,8 @@ Reviews: revision 127d97271e1f49497bfb46fb05c59b98a4a124d7, accept
 
 Reviews: revision c11ef289778fd2df6662f8a2b6cc13d0ece8833f, accept
 
+Reviews: revision 5c9a07a2aebe8950394df71007a74f8763e9af99, accept
+
 ## Outcome
 
 One public Request edge admits every request through shared Rust grammar, limits, defaults and validation. Every surface calls it, and core refusals reach the caller. No binding, extension or host package restates an engine rule.
@@ -108,6 +110,25 @@ fn RequestSource::read_framed<'a>(&self, CallOptions<'a>) -> Result<Box<(dyn Ite
 
 ## Progress
 
+### Remaining caller ownership at the closure audit
+
+The closure audit starts at `b13c802b7`. These are live consumers, not unused imports. Host translation preserves the existing accepted wire grammar and diagnostics; it does not duplicate native admission. Language migration tickets still own deleting their old public APIs.
+
+- DuckDB `bridge/src/lib.rs` imports SQLite `complete_native`; `bridge/src/ffi/complete/ffi.rs` imports SQLite `complete/request.rs`. The shared SQL host adapter owns question/descriptor translation, observations and SQL envelopes; execution already enters `Engine::execute_request`.
+- PostgreSQL `src/lib.rs` imports SQLite `complete_native`; `src/complete.rs` imports SQLite `complete/request.rs`; `src/bin/thinkthen_read_inputs.rs` imports SQLite `complete_native/file_format.rs`. Server file authority and SQL value conversion remain PostgreSQL responsibilities. Shared framing and record admission remain native responsibilities.
+- SQLite `src/complete_native` owns the same SQL host adapter today. Its input parser already calls `RequestItem::from_record_descriptor`, `RequestItem::compose_record`, `RecordReading` and native file readers. The adapter must have one package owner rather than compilation through another database's source paths.
+- Ruby `src/call.rs` imports R `complete` and `source`; Python `src/engine.rs` imports R `complete`, and Python `src/files.rs` imports R `source`. The legacy envelope and result writer must retain one host-adapter owner until 0494, 0496 and 0497 remove these public APIs.
+- TypeScript `src/lib.rs` imports R `complete`, and `src/door/result.rs` imports R `source`. Its remaining legacy translation joins the same host adapter until 0498 removes the public legacy API.
+- C `src/call.rs` imports R `source`. The frozen 0.1 C translation stays under 0515; shared parsing, source reading and its existing diagnostics stay in the host adapter. Canonical C sessions already enter the public Request edge.
+- Python `examples/native_case/main.rs` and Rust Polars `consumer/src/main.rs` import R `complete`; the Polars fixture also imports Python `native_settings.rs`. These are test consumers of legacy native results. Their family migrations own replacing the legacy result fixtures; shared fixture conversion needs a normal dependency or a fixture-local owner.
+- R `complete` and `source` retain the legacy translation definitions used above. Native typed APIs own question parsing, record composition and execution limits. The source relation writer still restates its output-byte bound and must derive that bound from its native owner.
+
+Same-crate path declarations, host pointer representability, file authority, SQL argument conversion and frozen C duplicate-key translation are retained. Pure `core` imports no host adapter, reader, process or Request decoder.
+
+The remaining common translations move to the private `thinkthen-host` crate through normal path dependencies. No public SDK endpoint is added. SQL execution enters the existing Request edge; the unused direct SQL dispatcher is deleted. The legacy language packet and source translators remain only for their named family migrations and the frozen C exports. Native fixture settings use `EngineBuilder::from_settings_json` instead of a second settings-key matcher. The host crate is shipped as a source dependency where R and archive-built Rust consumers need it; its relocated lines remain visible in the root source ceiling and are not counted as deletion.
+
+The remaining retirement list is exact: R `src/rust/src/ffi/complete.rs` and `files.rs` (0494); Python `src/engine/complete_calls.rs`, `complete_stream.rs` and `files.rs` (0496); Ruby `src/ffi/complete.rs` and the `Ask::Complete`/`Ask::Files` branches in `src/call.rs` (0497); TypeScript `src/complete_node.rs` and legacy `src/door/result.rs` calls (0498); Python's `examples/native_case` and Rust Polars `consumer` fixture dispatchers (0527). Their first-class replacement APIs already enter canonical Request sessions. Remove these legacy callers in their migration tickets rather than convert dispatchers that those tickets delete. The frozen C `src/call.rs`, `call/legacy.rs` and `plan.rs` retain the shared source translation under 0515; they are the explicit compatibility exception, not a replacement SDK route.
+
 - 2026-10-09 started
 - 2026-10-09 landed 2dbccdf0e; next: Shared SQL record descriptors are landed. Continue named consumer migrations and remove remaining duplicated request grammar and cross-crate includes; this first slice does not complete the whole ticket.
 - 2026-10-09 landed 48363919e; next: SQL and shared binding record descriptors now delegate original/image composition to Request. Preserve the documented legacy tagged-context and ordered-description translations until canonical grammar expresses them; finish remaining consumer grammar and cross-crate includes.
@@ -132,3 +153,4 @@ fn RequestSource::read_framed<'a>(&self, CallOptions<'a>) -> Result<Box<(dyn Ite
 - 2026-10-10 landed 26e11eca8; next: SQLite inline and JSON relation definitions now share native rule validation. Focused callers and fresh review preserve exact refusals and zero sends; compatibility retirement and boundary enforcement remain.
 - 2026-10-10 landed f27b497d7; next: The CLI find reader derives its maximum from core with identical boundary, diagnostic and unread-suffix behavior. Remaining compatibility and cross-crate grammar retirement follow adopted callers and installed qualification.
 - 2026-10-10 started
+- 2026-10-10 landed b57f7fde8; next: Shared host grammar uses normal dependencies and passes compilation, installed checks and fresh review; retire the named R, Python, Ruby, TypeScript and Rust/Polars legacy callers before closure.

@@ -8,6 +8,7 @@ rust-version = "1.95.0"
 publish = false
 
 [dependencies]
+thinkthen-host = { path = "../../../crates/thinkthen-host" }
 thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["polars", "bundled-sqlite"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.151", features = ["raw_value"] }

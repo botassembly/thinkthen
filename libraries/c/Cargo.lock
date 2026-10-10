@@ -555,6 +555,16 @@ dependencies = [
  "serde_json",
  "sha2",
  "thinkthen",
+ "thinkthen-host",
+]
+
+[[package]]
+name = "thinkthen-host"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thinkthen",
 ]
 
 [[package]]

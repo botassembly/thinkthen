@@ -70,6 +70,7 @@ CARGO_TARGET_DIR="$built" \
 # Keep its caller framing and the ten concrete native APIs, then execute the
 # unchanged shared matrix against that archive-built executable.
 mkdir -p "$isolated/consumer/consumer/src" "$isolated/consumer/consumer/examples" "$isolated/consumer/fork-probe/src"
+cp -R crates/thinkthen-host "$isolated/consumer/thinkthen-host"
 cp conformance/consumer/Cargo.toml conformance/consumer/Cargo.lock "$isolated/consumer/"
 cp conformance/consumer/consumer/Cargo.toml "$isolated/consumer/consumer/"
 cp conformance/consumer/consumer/src/lib.rs "$isolated/consumer/consumer/src/"
@@ -83,9 +84,9 @@ from pathlib import Path
 root,source,consumer=map(Path,sys.argv[1:])
 for member in ('consumer','fork-probe'):
     manifest=consumer/member/'Cargo.toml'
-    manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(source)).replace('../../backend',str(root/'conformance/backend')))
-example=consumer/'consumer/examples/native_case.rs'
-example.write_text(example.read_text().replace('../../../r/thinkthen/src/rust/src/complete/mod.rs',str(root/'libraries/r/thinkthen/src/rust/src/complete/mod.rs')))
+    manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen-host',str(consumer/'thinkthen-host')).replace('../../../crates/thinkthen',str(source)).replace('../../backend',str(root/'conformance/backend')))
+host=consumer/'thinkthen-host/Cargo.toml'
+host.write_text(host.read_text().replace('../thinkthen\"',str(source)+'\"'))
 RUSTPACKAGE
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$built" \

@@ -3,7 +3,7 @@ use crate::catalog::Catalog;
 use crate::{ffi, guard, question, worker};
 use rusqlite::functions::{Context, FunctionFlags};
 use thinkthen::{Error, ErrorKind, Surface};
-mod request;
+use thinkthen_host::sql_request as request;
 mod selector;
 
 fn prepare(

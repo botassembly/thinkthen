@@ -27,6 +27,7 @@ pg16 = ["pgrx/pg16"]
 panic-probe = []
 
 [dependencies]
+thinkthen-host = { path = "../../crates/thinkthen-host" }
 thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 libc = "0.2"
 pgrx = "=0.17.0"

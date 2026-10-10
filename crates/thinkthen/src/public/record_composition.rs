@@ -12,6 +12,12 @@ use std::sync::Arc;
 #[derive(Clone, Eq, PartialEq)]
 pub struct RawRecord(pub(crate) Arc<core::Record>);
 impl RawRecord {
+    /// Maximum encoded bytes in one original record or bounded source collection.
+    #[must_use]
+    pub const fn max_bytes() -> usize {
+        core::MAX_RECORD_BYTES
+    }
+
     pub(crate) fn retained_bytes(&self) -> Result<usize, Error> {
         self.literal().map_or_else(
             || {

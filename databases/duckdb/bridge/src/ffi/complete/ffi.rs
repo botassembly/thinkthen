@@ -5,8 +5,7 @@ use super::{
 };
 use crate::{complete_native, engines};
 
-#[path = "../../../../../sqlite/src/complete/request.rs"]
-pub(super) mod request;
+pub(super) use thinkthen_host::sql_request as request;
 
 /// Execute one named complete call; C++ retains readable ranges through return.
 /// # Safety

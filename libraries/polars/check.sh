@@ -42,9 +42,10 @@ root,source,installed=map(Path,sys.argv[1:])
 consumer=installed/'consumer'
 shutil.copytree(root/'libraries/polars/consumer',consumer,ignore=shutil.ignore_patterns('target'))
 manifest=consumer/'Cargo.toml'
-manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(source)))
-main=consumer/'src/main.rs'
-main.write_text(main.read_text().replace('../../../r/thinkthen/src/rust/src/complete/mod.rs',str(root/'libraries/r/thinkthen/src/rust/src/complete/mod.rs')).replace('../../../python/examples/native_case/native_settings.rs',str(root/'libraries/python/examples/native_case/native_settings.rs')))
+shutil.copytree(root/'crates/thinkthen-host',installed/'thinkthen-host',ignore=shutil.ignore_patterns('target'))
+host=installed/'thinkthen-host/Cargo.toml'
+host.write_text(host.read_text().replace('../thinkthen\"',str(source)+'\"'))
+manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen-host',str(installed/'thinkthen-host')).replace('../../../crates/thinkthen',str(source)))
 RUSTFRAME
     consumer="$installed/consumer/Cargo.toml"
 else

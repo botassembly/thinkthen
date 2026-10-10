@@ -1,6 +1,6 @@
 # 0525: Make C++ thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -10,6 +10,10 @@ Depends on: 0517
 Reviews: revision a087f6dc3, accept
 
 Reviews: revision 7e68e2e90a0bc885944c11e0164cc8c6844727ce, accept
+
+Reviews: revision 9bf4643b0d8b8159bb67901c539349dd4925559e, accept
+
+Landed: 5015ec5
 
 ## Outcome
 

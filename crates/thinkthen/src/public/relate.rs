@@ -24,6 +24,12 @@ use observation::observe_row;
 pub struct Relate(pub(crate) RelateSpec);
 
 impl Relate {
+    /// Maximum bytes in a located relation result, including its envelope.
+    #[must_use]
+    pub const fn max_source_output_bytes() -> usize {
+        core::MAX_RECORD_BYTES
+    }
+
     /// The largest admitted raw record set, before deduplication.
     #[must_use]
     pub const fn max_record_count() -> usize {
