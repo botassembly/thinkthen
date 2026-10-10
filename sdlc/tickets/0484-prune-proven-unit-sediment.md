@@ -25,3 +25,7 @@ The routine suite holds only outside-in behavior tests through the public Rust A
   - Slice B, after 0512 lands: for each in-source test module under `crates/thinkthen/src/**`, delete tests that an outside-in test in `crates/thinkthen/tests/**` or a library check already covers. Add a small outside-in case first when none exists. Work module by module and lower `sdlc/ratchet.json` after each removal. Consolidate duplicate assertions without hiding distinct edge cases. Apply the same pass to `libraries/**/tests/**` for tests that repeat a claim the shared cases make. Record the result in `sdlc/records/0484-prune-proven-unit-sediment.md`.
 - Proof: The routine `sdlc/scripts/test` passes with no case over the timeout. `test-full-cases --run` runs the release cases once at the end of slice A. One reviewer checks each deletion against the retained behavior. The landing record gives test and source line counts before and after, with the counting method. No per-test receipts and no counting gate.
 - Defers: Load and timing stay in `test-stress --run` unchanged. Per-language parity suites stay with each migration ticket.
+
+## Progress
+
+- 2026-10-10 landed d05def2bb; next: Routine Clippy now passes after row-count setup errors use Result. The existing large-case separation is landed; finish bounded removal of proven redundant source tests after active core changes settle.
