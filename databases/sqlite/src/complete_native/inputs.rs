@@ -3,8 +3,8 @@ use super::{defect, usage};
 use serde_json::{Value, value::RawValue};
 use std::collections::BTreeMap;
 use thinkthen::{
-    Error, InputEvidence, InputReaderOptions, QuestionInput, RawRecord, RecordInput,
-    RecordReading, SourceLocation,
+    Error, InputEvidence, InputReaderOptions, QuestionInput, RawRecord, RecordInput, RecordReading,
+    SourceLocation,
 };
 
 type Fields = BTreeMap<String, Box<RawValue>>;

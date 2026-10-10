@@ -209,6 +209,9 @@ Ordinary scalar/table signatures and cumulative usage remain compatible. See the
 for explicit records, context, reading, options, images, rank sets, file controls,
 error envelopes and native cache/record/replay behavior.
 
+All ten complete calls admit a shared native Request before constructing the
+engine and execute through the same Request owner as SQLite and PostgreSQL.
+Generated SQL results retain the native envelope and its presence distinctions.
 DuckDB returns JSON text. Explicit native file inputs read DuckDB-authorized
 handles. Complete question `@reference` and `@@NAME` use native metadata
 selection, then the executing session authorizes the selected path and reads
