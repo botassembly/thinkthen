@@ -122,10 +122,15 @@ fn borrowed_find_admission_refuses_invalid_sets_without_sending_or_reading_the_t
         } else {
             asked.clone()
         };
-        for units in [vec![], vec!["one"], vec!["one", " \t"]] {
+        for units in [vec![], vec!["one", " \t"]] {
             let error = question
                 .admit_find_units(units.into_iter().map(Ok))
                 .expect_err("invalid set");
+            assert_eq!(error.kind(), ErrorKind::Usage);
+        }
+        let single = question.admit_find_units([Ok("one")]);
+        assert_eq!(single.is_ok(), none);
+        if let Err(error) = single {
             assert_eq!(error.kind(), ErrorKind::Usage);
         }
         question
