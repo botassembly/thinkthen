@@ -5662,6 +5662,14 @@ int thinkthen_session_new(const struct thinkthen_engine *engine,
                           struct thinkthen_session **out);
 
 
+int thinkthen_session_new_with_surface(const struct thinkthen_engine *engine,
+                                       const char *request_json,
+                                       size_t request_len,
+                                       const char *surface,
+                                       size_t surface_len,
+                                       struct thinkthen_session **out);
+
+
 void thinkthen_session_result_free(struct thinkthen_session_result *result);
 
 
