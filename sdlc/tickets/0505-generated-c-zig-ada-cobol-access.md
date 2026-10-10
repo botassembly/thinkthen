@@ -34,3 +34,7 @@ C callers read every known result field through additive complete session views 
   - Zig: read the generated header, expose optionals and error unions, package the library under 0517's design, update `libraries/zig/README.md` and remove old public names after installed parity. Claim `libraries/zig/**` files named per slice.
 - Proof: An installed C consumer reads every known field and failure facts through shared cases. One installed typed case keeps these fields and nested views after session destruction and before result destruction. An installed Zig consumer passes the same cases. Raw JSON availability alone does not satisfy parity. Record handwritten code removed and added, counting generator changes, in the landing record.
 - Defers: Final distribution assembly to 0530. Ada to 0528. COBOL to 0529. Dead `libraries/zig/src/complete.zig` removal and frozen-export documentation to 0515.
+
+## Progress
+
+- 2026-10-10 landed 00ad0813e; next: Zig exposes owned live usage persistence and finalization through the generated C header. Focused installed status and lifetime checks pass with fresh review; Swift 0523 shares the same recorded batch. Full installed and platform qualification remain held.
