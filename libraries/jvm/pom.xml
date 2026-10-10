@@ -17,12 +17,27 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>${project.groupId}</groupId><artifactId>${project.artifactId}</artifactId><version>${project.version}</version><classifier>natives-linux-x64</classifier>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId><artifactId>${project.artifactId}</artifactId><version>${project.version}</version><classifier>natives-linux-arm64</classifier>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId><artifactId>${project.artifactId}</artifactId><version>${project.version}</version><classifier>natives-osx-x64</classifier>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId><artifactId>${project.artifactId}</artifactId><version>${project.version}</version><classifier>natives-osx-arm64</classifier>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId><artifactId>${project.artifactId}</artifactId><version>${project.version}</version><classifier>natives-win-x64</classifier>
+    </dependency>
+    <dependency>
       <groupId>org.jetbrains.kotlinx</groupId><artifactId>kotlinx-coroutines-core-jvm</artifactId>
       <version>${thinkthen.kotlin.coroutines.version}</version><optional>true</optional>
     </dependency>
   </dependencies>
   <name>ThinkThen JVM binding</name>
-  <description>Java binding for ThinkThen, with Kotlin and Scala callers as the kotlin and scala classifier JARs; install the matching native library separately</description>
+  <description>Stable JDK binding for ThinkThen with bundled native dependencies and Kotlin and Scala classifier JARs</description>
   <url>https://thinkthen.dev</url>
   <licenses><license><name>MIT</name><url>https://opensource.org/license/mit</url></license></licenses>
   <developers><developer><name>Ian Maurer</name><organization>botassembly</organization><organizationUrl>https://github.com/botassembly</organizationUrl></developer></developers>
