@@ -42,3 +42,4 @@ Packages ship no dead, unshipped or demo code. The frozen 0.1 C symbols stay and
 - 2026-10-09 landed 9aa16733898cc247d28db7b0e7f7098b172658e7; next: JVM demos and proven unshipped PHP readers are removed. Keep reachable readers until their owning migrations; finish remaining dead-code audit and frozen C documentation.
 - 2026-10-09 landed aeb48278c; next: Frozen C compatibility documentation is reviewed and landed with unchanged declarations. Keep reachable readers until owning migrations and finish the remaining dead-code audit.
 - 2026-10-10 landed 715e68470; next: DuckDB engine and signal helpers live in their compiling bridge crate with unchanged implementations and callers. Finish remaining justified dead imports and the public API audit; retain reachable compatibility until installed qualification.
+- 2026-10-10 started
