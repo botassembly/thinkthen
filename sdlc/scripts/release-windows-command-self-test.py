@@ -82,6 +82,7 @@ exec '{sys.executable}' "$@"''',
         "cargo fetch --locked --manifest-path Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/c/Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/python/Cargo.toml",
+        "cargo fetch --locked --manifest-path libraries/typescript/Cargo.toml",
         "python3 -m pip install --disable-pip-version-check maturin==1.15.0 jsonschema==4.25.1"]
 
 

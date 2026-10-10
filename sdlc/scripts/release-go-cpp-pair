@@ -213,24 +213,12 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 		tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
 		case $name in
 		"$first")
-			printf '%s\n' ./ ./LICENSE ./README.md \
-				./thinkthen.gpr ./native/ ./native/include/ ./native/include/thinkthen.h \
-				./native/lib/ ./native/lib/libthinkthen.a \
-				./src/ ./src/thinkthen-requests.ads ./src/thinkthen-requests.adb \
-				./src/thinkthen-sessions.ads ./src/thinkthen-sessions.adb \
-				./src/thinkthen-sessions-calls.ads ./src/thinkthen-sessions-calls.adb \
-				./src/thinkthen_session_c.ads ./src/thinkthen-buffers.adb \
-				./src/thinkthen-buffers.ads ./src/thinkthen-native-batches.adb ./src/thinkthen-native-batches.ads \
-				./src/thinkthen-native-inputs.ads ./src/thinkthen-native-results.ads ./src/thinkthen-native.adb \
-				./src/thinkthen-native.ads ./src/thinkthen-typed-complete-batches.adb ./src/thinkthen-typed-complete-batches.ads \
-				./src/thinkthen-typed-complete.adb ./src/thinkthen-typed-complete.ads ./src/thinkthen-typed.adb \
-				./src/thinkthen-typed.ads ./src/thinkthen-views.adb ./src/thinkthen-views.ads \
-				./src/thinkthen.adb ./src/thinkthen.ads ./src/thinkthen_c.ads \
-				./src/thinkthen_c_answers.ads ./src/thinkthen_c_entities.ads ./src/thinkthen_c_events.ads \
-				./src/thinkthen_c_extensions.ads ./src/thinkthen_c_inputs.ads ./src/thinkthen_c_metadata.ads \
-				./src/thinkthen_c_rows.ads ./examples/ ./examples/consumer.adb \
-				./examples/native.adb ./examples/session_demo.adb ./THINKTHEN-PACKAGE-INPUTS \
-				| LC_ALL=C sort >"$work/expected-members" ;;
+			{
+				printf '%s\n' ./ ./LICENSE ./README.md ./thinkthen.gpr \
+					./native/ ./native/include/ ./native/include/thinkthen.h ./native/lib/ ./native/lib/libthinkthen.a \
+					./examples/ ./examples/consumer.adb ./examples/native.adb ./examples/session_demo.adb ./THINKTHEN-PACKAGE-INPUTS
+				source_members libraries/ada/ libraries/ada/src
+			} | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./Sources/ \
 				./Sources/ThinkThen.h ./Sources/ThinkThen.m \
