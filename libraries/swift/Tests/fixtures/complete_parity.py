@@ -1,222 +1,155 @@
+"""Shared fixtures through a versioned installed SwiftPM consumer.
+
+Routine selects existing routine IDs; full executes every required case at a candidate.
+"""
+import argparse
 import json
 import os
-import sys
 from pathlib import Path
-import subprocess, tempfile
+import subprocess
+import shutil
+import sys
+import tempfile
 ROOT = Path(__file__).resolve().parents[4]
-CONSUMER = 'swift'
-PACKAGE = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / 'libraries/swift')).resolve(strict=True)
-NATIVE = Path(os.environ.get('THINKTHEN_NATIVE_ROOT', ROOT / 'libraries/swift/target/native')).resolve(strict=True)
-FIXTURES = Path(__file__).resolve().parent
-if os.environ.get('THINKTHEN_ARTIFACT') and not os.environ.get('THINKTHEN_PARITY_PACKAGE'):
-    raise ValueError('installed swift parity requires its extracted package')
-# Complete native public cases, using the shared input and assertion inventory.
-import sqlite3
-sys.path[:0] = [str(ROOT / 'conformance/children'), str(ROOT / 'conformance')]
-import c_parity as shared
+sys.path[:0] = [str(ROOT / "conformance"), str(ROOT / "conformance/children")]
 from children import child_env
-import parity
-
-def native_content(v):
-    return json.loads(v['data']) if v['kind'] == 2 else v['data']
-
-def native_decision(v):
-    return None if v['kind'] == 0 else bool(v['data']['boolean']) if v['kind'] == 1 else native_content(v['data']['authored'])
-
-def native_member(v):
-    k, d = v['kind'], v['data']
-    return native_decision(d['decide']) if k == 1 else d['choose'] if k == 2 else d['tag'] if k == 3 else d['score']
-
-def native_value(kind,v):
-    if kind == 1: return native_decision(v)
-    if kind == 5: return bool(v)
-    if kind == 7: return native_content(v) if v is not None else None
-    if kind == 9:
-        result = {'entities':v['entities']}
-        if v['relations'] is not None:
-            result['relations'] = [{**{k:e[k] for k in ('relation','source','target','probability')}, **({'either':True} if e['either'] else {})} for e in v['relations']]
-        return result
-    if kind == 10:
-        return [{**{k:e[k] for k in ('relation','source','target','probability')}, **({'either':True} if e['either'] else {})} for e in v]
-    return v
-
-def native_projection(raw):
-    s=raw['summary']; facts=s['facts'] or {}; error=s['error']
-    out={'code':error['code'] if error else 0}
-    for field in ('requests_sent','records','cache_answers','call_id','input_tokens','output_tokens'):
-        if facts.get(field) is not None: out[field]=facts[field]
-    if error:
-        out['message']=error['message']
-        if error['stopped'] and error['stopped']['at'] is not None:out['stopped_at']=error['stopped']['at']
-        return out
-    out.update(schema=s['schema'],observations=s['observation_count'],rows=[])
-    for i,r in enumerate(raw['rows']):
-        k=r['function']; v=r['data'][shared.FUNCTIONS[k-1]]; common=v['common']; meta=common['meta']
-        value=v.get('value')
-        if k == 8:
-            causes=['','missing_answer','wrong_kind','missing_probability','invalid_probability','invalid_distribution','unexpected_probability']
-            value={m['name']:native_member(m['data']['success']['value']) if m['state']==1 else {'failed':{'kind':'backend','cause':causes[m['data']['failure']['cause']]}} for m in v['answers']}
-        else:value=native_value(k,value)
-        row={'value':value,'answer_id':common['answer_id'],'index':v['index'] if k==7 else r['index'],
-             'origin':meta['origin'],'answered_by':meta['answered_by'], 'observations':len(meta['observations']),'sources':len(meta['question_sources']),
-             'observation_ids':[entry['data']['observation_id'] or entry['data']['failure_id'] for entry in meta['observations']],
-             'input':native_content(common['input']) if common['input'] is not None else None}
-        def location(obj, position):
-            if position is not None:
-                if position['file'] is not None:obj['file']=position['file']
-                for key in ('first_line','last_line'):
-                    if position[key] is not None:obj[key]=position[key]
-        location(row, common['position'])
-        if common['images'] is not None:
-            row['images']=[bytes(image['bytes']).hex() for image in common['images']]
-            row['image_properties']=[[image[x] for x in ('media','width','height')] for image in common['images']]
-        if common['answer'] is not None:
-            answer=common['answer']; ak=answer['kind']; data=answer['data']
-            if ak==1:row['probability']=data['probability']
-            else:
-                values=data['tag'] if ak==3 else data[{2:'choice',4:'score',5:'find'}[ak]]['probabilities']
-                row['probabilities']={p['name']:p['probability'] for p in values}
-        row['detail_inputs']=[]
-        for original in raw['details'][i]['inputs']:
-            inp={'input':native_content(original['original']) if original['original'] is not None else None};location(inp,original['position']);row['detail_inputs'].append(inp)
-        author=raw['authors'][i]
-        for key in ('name','wording_version'):
-            if author[key] is not None:row[key]=author[key]
-        if k==8:row['member_authors']=[{key:author[key] for key in ('name','wording_version') if author[key] is not None} for author in raw['member_authors'][i]]
-        if k==6 and raw['rank_members'][i]:
-            def rank_facts(target, common, details):
-                meta=common['meta']
-                target['model']=meta['model']; target['context_digest']=meta['context_sha256']
-                target['usage']={key:details['usage'][key] for key in ('input_tokens','output_tokens') if details['usage'][key] is not None}
-                target['source_batch_sizes']=[source['batch_size'] for source in details['question_sources']]
-            rank_facts(row,common,raw['details'][i]); row['question_name']=v['question_name']; row['members']=[]
-            for j,member in enumerate(raw['rank_members'][i]):
-                member=member['data']['rank'] if 'function' in member else member
-                mc=member['common']; mm=mc['meta']; author=raw['member_authors'][i][j]
-                child={'name':member['question_name'],'value':member['value'],'probability':mc['answer']['data']['probability'],
-                       'answer_id':mc['answer_id'],'author':author['name'],'observations':len(mm['observations']),'sources':len(mm['question_sources'])}
-                if author['wording_version'] is not None:child['wording_version']=author['wording_version']
-                rank_facts(child,mc,raw['rank_member_details'][i][j]); row['members'].append(child)
-        # Validate copied complete fields in addition to the common value oracle.
-        assert len(meta['requests']) == len(meta['question_sources']) == len(meta['observations']), meta
-        assert len(common['answer_id']) == 64,common
-        assert len(raw['observation_details']) == len(raw['observations']) == len(raw['observation_authors']),raw
-        out['rows'].append(row)
-    return out
-
-def native_document(v):
-    v=dict(v); verb=v['verb']; question=v['question']
-    v['role']=shared.role(verb,question)
-    v['question_json']=v.get('raw') if v.get('raw') is not None else shared.compact(question)
-    v['find_none']=verb=='find' and bool(question.get('none'))
-    if v['find_none']:
-        v['find_text_literal']=isinstance(question['find'],str)
-        v['find_text']=question['find'] if v['find_text_literal'] else shared.compact(question['find'])
-    v['image_data']=[(ROOT/path).read_bytes().hex() for path in (v.get('image_paths',[]) if not v.get('paths') else [])]
-    v['items_bytes']=[item if v.get('text') and isinstance(item,str) else shared.compact(item) for item in v['items']]
-    v['items_kind']=[1 if v.get('text') and isinstance(item,str) else 2 for item in v['items']]
-    if v.get('context_present'):v['context_bytes']=v['context'] if isinstance(v['context'],str) else shared.compact(v['context']);v['context_kind']=1 if isinstance(v['context'],str) else 2
-    if v.get('shared_context') is not None:v['shared_context_bytes']=v['shared_context'] if isinstance(v['shared_context'],str) else shared.compact(v['shared_context']);v['shared_context_kind']=1 if isinstance(v['shared_context'],str) else 2
-    v['media_code']=1 if v.get('media')=='image/jpeg' else 2
-    if v.get('paths'):v['paths']=[path if v.get('owned_jsonl') else str(ROOT/path) for path in v['paths']]
-    if (v.get('operation') or {}).get('injection')=='recording_read_failure':v.update(paths=[str(ROOT/'target/family0428-missing-input')],source_unit=3)
-    return v
-
-def native_cases(binary):
-    inventory=parity.inventory(); rows=list(parity.required_cases(inventory,CONSUMER).values())
-    cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
-    named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
-    required = {row['id'] for row in rows}
-    rows += [{**row,'id':'native-filter-first-excluded'} for row in rows if row['id']=='15-rank-records']
-    rows += [{**row,'id':'native-duplicate-row-indices'} for row in rows if row['id']=='complete-decide']
-    failed=0
-    for at,row in enumerate(rows):
-        error=None
+from session_projection import project_session
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--binary", type=Path, required=True)
+parser.add_argument("--case", action="append", default=[])
+parser.add_argument("--routine", action="store_true")
+args = parser.parse_args()
+selected = set(args.case)
+if args.routine:
+    import parity
+    required_ids = parity.required_cases(parity.inventory(), "swift")
+    selected.update(line for line in (ROOT / "conformance/routine-ids.txt").read_text().splitlines() if line in required_ids)
+    selected.update(("complete-decide", "complete-find", "complete-annotate", "files-annotate", "images-decide", "image-file-decide", "settings-cache-off-sends-again", "settings-replay-answers-from-the-folder-alone", "declared-object-context", "context-null", "recognize-record-contexts"))
+native = Path(shutil.which("swift")).resolve().parents[2] / "usr/lib/swift/linux"
+def native_parity(consumer, command):
+    # Shared recipes/assertions are read-only; execution uses each actual named consumer.
+    import sqlite3
+    sys.path.insert(0, str(ROOT / "conformance"))
+    import parity, c_parity, c_images
+    cases = {c["id"]: c for c in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
+    named = {c["id"]: c for c in json.loads((ROOT / "conformance/named-inputs.json").read_text())["cases"]}
+    failures = []
+    required = parity.required_cases(parity.inventory(), consumer)
+    if selected and not selected.issubset(required):
+        raise ValueError("unknown required case selector: " + repr(selected - required.keys()))
+    for row in required.values():
+        if selected and row["id"] not in selected:
+            continue
+        failure = None
         try:
-            original={'native-filter-first-excluded':'15-rank-records','native-duplicate-row-indices':'complete-decide'}.get(row['id'],row['id'])
-            value=shared.document({**row,'id':original},cases,named)
-            if row['id']=='native-filter-first-excluded':
-                value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
-            if row['id']=='native-duplicate-row-indices':value['items'] *= 2
-            with tempfile.TemporaryDirectory(prefix='thinkthen-'+CONSUMER+'-complete-') as folder:
-                home=Path(folder); child=child_env(home=folder,
-                          PATH=os.environ.get('PATH','/usr/bin:/bin'),
-                          ASAN_OPTIONS='detect_leaks=1',
-                          UBSAN_OPTIONS='halt_on_error=1')
-                backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
+            value = c_parity.document(row, cases, named)
+            with tempfile.TemporaryDirectory(prefix=f"thinkthen-{consumer}-parity-") as folder:
+                home = Path(folder)
+                env = child_env(home=folder,
+                                PATH=os.environ.get("PATH", "/usr/bin:/bin"),
+                                LC_ALL="C.UTF-8",
+                                DOTNET_CLI_TELEMETRY_OPTOUT="1",
+                                LD_LIBRARY_PATH=str(native))
+                backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
                 try:
-                    child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s'%(backend.port,value['arm']),THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback')
-                    shared.prepare(home,value);identities=[]
-                    for si,step in enumerate(value.get('steps',[value])):
-                        if step.get('copy_store'):
-                            (home/'refreshed').mkdir()
-                            with sqlite3.connect(home/'saved/thinkthen.sqlite') as old,sqlite3.connect(home/'refreshed/thinkthen.sqlite') as new:old.backup(new)
-                        if step.get('damage_store'):
-                            with sqlite3.connect(home/'saved/thinkthen.sqlite') as db:db.execute("UPDATE answers SET answer='damaged fixture answer'")
-                        if value.get('image_variants'):
-                            backend.close();backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
-                            child['THINKTHEN_BASE_URL']='http://127.0.0.1:%d/%s'%(backend.port,step['arm']);child['PERPLEXITY_API_KEY']='sk-conformance-loopback';shared.prepare(home,step)
-                        settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{}),'base_url':child['THINKTHEN_BASE_URL']}
-                        replacements={'$FOLDER':str(home/'saved'),'$REFRESH':str(home/'refreshed'),'$PROFILE':str(home/'profile.json')}
-                        settings={k:replacements.get(v,v) if isinstance(v,str) else v for k,v in settings.items()}
-                        if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
-                        input_file=home/'consumer-input.json';doc=native_document(step);doc['case_number']=10000+at*100+si if 'steps' in value else at;input_file.write_text(shared.compact(doc))
-                        before=int(backend.read('count'));args=[str(binary),str(input_file),shared.compact(settings)]
-                        if step.get('held_cancel'):
-                            process=subprocess.Popen(args,env=child,cwd=home,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
-                            try:
-                                assert backend.read('wait 1')=='wait 1';process.stdin.write('!');process.stdin.flush();assert process.stdout.readline()=='cancel-fired\n'
-                                backend.process.stdin.write('release\n');backend.process.stdin.flush();stdout,stderr=process.communicate(timeout=60)
-                                output=subprocess.CompletedProcess(args,process.returncode,stdout,stderr)
-                            finally:
-                                backend.process.stdin.write('release\n');backend.process.stdin.flush()
-                                if process.poll() is None:process.kill();process.wait()
-                        else:output=subprocess.run(args,env=child,cwd=home,capture_output=True,text=True,timeout=120)
-                        assert output.returncode==0 and not output.stderr,(output.returncode,output.stderr)
-                        assert 'sk-conformance-loopback' not in output.stdout+output.stderr, 'key leaked through public result or failure'
-                        emitted=[native_projection(json.loads(line)) for line in output.stdout.splitlines()]
-                        got=emitted[-1]
-                        if step.get('incremental'):
-                            got['completed']=[answer for partial in emitted[:-1] for answer in partial['rows']]
-                            if step.get('owned_jsonl'):
-                                bodies=json.loads(backend.read('capture'))['bodies']; request=json.loads(bodies[0]); expected={'q%d'%(i+1):{'type':'noul','instructions':'The text is %s. %s'%(shared.compact(item),step['question']['decide'])} for i,item in enumerate(step['items'][:2])};assert request['questions']==expected,request
-                        if value.get('identity_steps'):identities.append(got)
-                        if step.get('stored_answers')==0:
-                            path=home/'saved/thinkthen.sqlite'
+                    env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
+                    c_parity.prepare(home, value)
+                    identities = []
+                    for original in value.get("steps", [value]):
+                        step = dict(original)
+                        if step.get("copy_store"):
+                            (home / "refreshed").mkdir()
+                            with sqlite3.connect(home / "saved/thinkthen.sqlite") as source, sqlite3.connect(home / "refreshed/thinkthen.sqlite") as target:
+                                source.backup(target)
+                        if step.get("damage_store"):
+                            with sqlite3.connect(home / "saved/thinkthen.sqlite") as db:
+                                db.execute("UPDATE answers SET answer='damaged fixture answer'")
+                        if value.get("image_variants"):
+                            backend.close()
+                            backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                            c_parity.prepare(home, step)
+                        for key in ("paths", "image_paths"):
+                            if key in step and not step.get("owned_jsonl"):
+                                step[key] = [str(ROOT / path) for path in (step[key] or [])]
+                        if (step.get("operation") or {}).get("injection") == "recording_read_failure":
+                            step.update(paths=[str(home / "missing-input")], source_unit=1)
+                        settings = {"cache": False, "model": "jev-latest" if "steps" in value else "jev-1.13.0", "batch": 1, "max_retries": 0}
+                        settings.update(step.get("settings", {}))
+                        settings["base_url"] = f"http://127.0.0.1:{backend.port}/{original['arm'] if value.get('image_variants') else value['arm']}"
+                        replacements = {"$FOLDER": "saved", "$REFRESH": "refreshed", "$PROFILE": "profile.json"}
+                        settings = {k: str(home / replacements[v]) if isinstance(v, str) and v in replacements else v for k, v in settings.items()}
+                        if row["kind"] in ("images", "image-location"):
+                            settings["record"] = str(home / "recorded")
+                        def invoke(given):
+                            framing = {**step, "engine_settings": c_parity.compact(given)}
+                            if step.get("caption_files"):
+                                framing["items"] = [""] * len(step["items"])
+                            framed = c_parity.compact(framing) + "\n"
+                            input_file = home / "fixture.json"
+                            input_file.write_text(c_parity.compact(step))
+                            args = command + [str(input_file), c_parity.compact(given)]
+                            if step.get("held_cancel"):
+                                running = subprocess.Popen(args, env=env, cwd=home, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                                try:
+                                    assert backend.read("wait 1") == "wait 1"
+                                    running.stdin.write("!")
+                                    running.stdin.flush()
+                                    signal = running.stdout.readline()
+                                    assert signal == "cancel-fired\n", (signal, running.stderr.read() if running.poll() is not None else "signal not received")
+                                    backend.process.stdin.write("release\n")
+                                    backend.process.stdin.flush()
+                                    stdout, stderr = running.communicate(timeout=60)
+                                    output = subprocess.CompletedProcess(args, running.returncode, stdout, stderr)
+                                finally:
+                                    backend.process.stdin.write("release\n")
+                                    backend.process.stdin.flush()
+                                    if running.poll() is None:
+                                        running.kill()
+                                        running.wait()
+                            else:
+                                output = subprocess.run(args, env=env, cwd=home, capture_output=True, text=True, timeout=120 if value.get("image_variants") else 60)
+                            assert output.returncode == 0 and not output.stderr, (consumer, row["id"], output.returncode, output.stderr[:1000])
+                            return project_session(json.loads(output.stdout), step)
+                        before = int(backend.read("count"))
+                        got = invoke(settings)
+                        if step["verb"] == "find" and got["code"] == 0:
+                            assert all(r["answer_kind"] == "find" for r in got["rows"]), "find answer discriminator"
+                        if value.get("identity_steps"):
+                            identities.append(got)
+                        if step.get("stored_answers") == 0:
+                            path = home / "saved/thinkthen.sqlite"
                             if path.exists():
-                                with sqlite3.connect(path) as db:assert db.execute('SELECT count(*) FROM answers').fetchone()[0]==0
-                        if value.get('image_variants'):
-                            from c_images import assert_images
-                            assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
-                        shared.assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
-                        if row['id']=='native-filter-first-excluded':
-                            assert [r['index'] for r in got['rows']]==[0,1,2] and [r['value'] for r in got['rows']]==[False,True,True],got
-                            assert int(backend.read('count'))==3,got
-                        if row['id']=='native-duplicate-row-indices':
-                            assert [r['index'] for r in got['rows']]==[0,1] and got['rows'][0]['input']==got['rows'][1]['input'],got
-                            assert got['records']==2 and int(backend.read('count'))==1,got
-                        if row['kind'] in ('images','image-location'):
-                            before=int(backend.read('count'));replay={k:v for k,v in settings.items() if k!='record'};replay['replay']=str(home/'recorded')
-                            repeated=subprocess.run([str(binary),str(input_file),shared.compact(replay)],env=child,cwd=home,capture_output=True,text=True,timeout=60)
-                            assert repeated.returncode==0 and not repeated.stderr,repeated.stderr
-                            saved=native_projection(json.loads(repeated.stdout));shared.assertions(row,step,saved,int(backend.read('count')))
-                            assert saved['requests_sent']==0 and int(backend.read('count'))==before and saved['rows'][0]['answer_id']==got['rows'][0]['answer_id'],saved
-                    if value.get('identity_steps'):
-                        ids=[x['rows'][0]['observation_ids'] for x in identities];assert ids[0]==ids[1]==ids[2] and ids[3]!=ids[0] and ids[4]==ids[3] and ids[5]==ids[0],ids
-                        assert len({x['call_id'] for x in identities})==6
-                        assert len({identities[i]['rows'][0]['answer_id'] for i in (0,1,2,5)})==1
-                        assert identities[3]['rows'][0]['answer_id']==identities[4]['rows'][0]['answer_id']!=identities[0]['rows'][0]['answer_id']
-                finally:backend.close()
-        except (AssertionError,ValueError,KeyError,TypeError,subprocess.SubprocessError,OSError) as f:error=type(f).__name__+': '+str(f)
-        if error:
-            failed+=1;print(CONSUMER+' complete fixture '+row['id']+' failed: '+error,file=sys.stderr)
-        print(('parity: ' if row['id'] in required else 'regression: ')+json.dumps({'consumer':CONSUMER,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail' if error else 'pass'}),flush=True)
-    print(CONSUMER+' complete shared cases: %d/%d passed'%(len(rows)-failed,len(rows)))
-    if failed:raise SystemExit(1)
+                                with sqlite3.connect(path) as db:
+                                    assert db.execute("SELECT count(*) FROM answers").fetchone()[0] == 0
+                        if value.get("image_variants"):
+                            c_images.assert_images(original, got, json.loads(backend.read("capture"))["bodies"])
+                        if step.get("owned_jsonl") and step.get("incremental"):
+                            capture = json.loads(backend.read("capture"))["bodies"]
+                            assert capture, got
+                            request = json.loads(capture[0])
+                            expected = {f"q{i+1}": {"type": "noul", "instructions": f"The text is {c_parity.compact(item)}. {step['question']['decide']}"} for i, item in enumerate(step["items"][:2])}
+                            assert request["questions"] == expected
+                        c_parity.assertions(row, original, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
+                        if row["kind"] in ("images", "image-location"):
+                            before = int(backend.read("count"))
+                            saved = invoke({**{k:v for k,v in settings.items() if k != "record"}, "replay": str(home / "recorded")})
+                            c_parity.assertions(row, original, saved, int(backend.read("count")))
+                            assert saved["requests_sent"] == 0 and int(backend.read("count")) == before
+                            assert saved["rows"][0]["answer_id"] == got["rows"][0]["answer_id"]
+                    if value.get("identity_steps"):
+                        ids = [entry["rows"][0]["observation_ids"] for entry in identities]
+                        assert ids[0] == ids[1] == ids[2] and ids[3] != ids[0] and ids[4] == ids[3] and ids[5] == ids[0]
+                        assert len({entry["call_id"] for entry in identities}) == 6
+                        assert len({identities[i]["rows"][0]["answer_id"] for i in (0,1,2,5)}) == 1
+                        assert identities[3]["rows"][0]["answer_id"] == identities[4]["rows"][0]["answer_id"] != identities[0]["rows"][0]["answer_id"]
+                finally:
+                    backend.close()
+        except (AssertionError, ValueError, KeyError, TypeError, AttributeError, IndexError, subprocess.SubprocessError, OSError) as error:
+            failure = type(error).__name__ + ": " + str(error)
+            failures.append((row["id"], failure))
+            print(f"{consumer} fixture {row['id']} failed: {failure[:1500]}", file=sys.stderr)
+        print("parity: " + json.dumps({"consumer": consumer, "case": row["id"], "checks": row.get("checks", ["named", "runtime"]), "status": "fail" if failure else "pass"}), flush=True)
+    print(f"{consumer} native fixture failures: {len(failures)}")
+    return bool(failures)
 
-with tempfile.TemporaryDirectory(prefix='thinkthen-swift-complete-consumer-') as folder:
-    binary=Path(folder)/'consumer'; package=PACKAGE
-    subprocess.run([os.environ.get('THINKTHEN_SWIFTC','swiftc'),'-swift-version','6','-warnings-as-errors','-j',os.environ.get('CARGO_BUILD_JOBS','2'),'-I',str(package/'Sources/CThinkThen'),
-                    *map(str,sorted((package/'Sources/ThinkThen').glob('*.swift'))),str(FIXTURES/'native_views.swift'),str(FIXTURES/'native_consumer.swift'),
-                    '-L',str(NATIVE/'lib'),'-lthinkthen','-Xlinker','-rpath','-Xlinker',str(NATIVE/'lib'),'-o',str(binary)],env=child_env(keep=('XDG_CACHE_HOME','SWIFTPM_MODULECACHE_OVERRIDE'),HOME=folder,LANG='C.UTF-8'),check=True)
-    native_cases(binary)
+raise SystemExit(native_parity("swift", [str(args.binary.resolve())]))
