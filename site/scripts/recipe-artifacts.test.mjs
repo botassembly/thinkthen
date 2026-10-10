@@ -11,8 +11,10 @@ let cases=0;
 try{
  fs.mkdirSync(path.join(root,'site/examples/recipes'),{recursive:true});
  for(const r of RECIPE_PAGES.filter(r=>!r.draft)) fs.cpSync(new URL('../'+r.example.replace(/^site\//,''),import.meta.url),path.join(root,r.example),{recursive:true});
- fs.mkdirSync(path.join(root,'sdlc/issues'),{recursive:true});
- for(const r of RECIPE_PAGES)fs.copyFileSync(new URL('../../'+r.issue,import.meta.url),path.join(root,r.issue));
+ for(const r of RECIPE_PAGES){
+  fs.mkdirSync(path.dirname(path.join(root,r.issue)),{recursive:true});
+  fs.copyFileSync(new URL('../../'+r.issue,import.meta.url),path.join(root,r.issue));
+ }
  const {sourceProblems}=await import('./check-recipes.mjs');
  const check=()=>sourceProblems(RECIPE_PAGES,root);
  assert.deepEqual(check(),[]);cases++;

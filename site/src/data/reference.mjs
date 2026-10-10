@@ -34,7 +34,7 @@ export const ARGUMENTS = {
   rank: `\`QUESTION\` is asked of each record. \`@FILE\` names a saved \`decide\` or \`score\` question instead. A \`score\` file ranks by its weighted level position. \`rank\` refuses a threshold on the command line and in a question file.`,
   find: '`QUESTION` is the question the selected line or record best answers. It is one argument. Quote a question of several words.',
   annotate: '`FILE` is a saved question set: one JSON file of named questions. Each question names its verb, and it may carry its own threshold.',
-  recognize: `Each \`KIND\` is one kind of name to look for, ${range('Kinds')} of them. With no kinds, every name has the kind \`ENTITY\`. \`none of these\`, \`ENTITY\` and \`ANY\` are reserved. \`@FILE\` names a \`recognize\` question file instead.`,
+  recognize: `Each \`KIND\` is one kind of name to look for. ${setting('Kinds').allowed}. With no kinds, every name has the kind \`ENTITY\`. \`@FILE\` names a \`recognize\` question file instead.`,
   relate: 'Each `RELATION` is one rule, written `NAME=SOURCE_KIND:TARGET_KIND`. A bare `NAME` relates any two kinds. `*` or `ANY` on a side means any kind. `@FILE` names a rules file instead, and it never mixes with inline rules.',
 };
 

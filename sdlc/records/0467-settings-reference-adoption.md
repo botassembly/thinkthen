@@ -19,3 +19,21 @@ The script changes add 32 handwritten lines and remove 6. The page changes add 3
 An inventory must follow shared ownership when a binding sheds local code. Build-time tool homes belong outside the runtime settings inventory. A source negative must still detect a disconnected caller and a removed shared setter.
 
 Fresh read-only review accepts `dc62d9d270aec8d1b337249a2b70f7fb405f779b`. The reviewer checked the C constructor and shared Rust reader, Python timeout chain and schema ownership, and reproduced all fifteen self-tests and the real page with the warm CLI in a cleared environment. The repair adds 54 and removes seven handwritten lines. No runtime source or build changes enter this slice.
+
+## Current CLI examples
+
+Fresh read-only review accepted `2882bbf527363ef96ab9d65e4a9646168ea87226`. The reviewer checked current contracts and the complete passing site build, reproduced the prepared recognition question, and found no blocking defect. This acceptance covers the bounded site corrections, not installed binding parity or release qualification.
+
+This bounded documentation repair starts from `d05def2bb44345c230e76f392f165f6d98d7fde1`. The described-kind recognition example uses `--plan` and shows its actual first question. `core/recognize/questions.rs` gives caller descriptions to every recognition step and uses entity wording for its boundary choices. The saved site answers describe the older name-only questions. Cache conversion preserves stored question identity; it cannot answer the changed wording. The example makes no new model claim. The existing bare-kind recognition example and all recordings remain unchanged.
+
+The located relation output follows `cli/relate/source.rs::Occurrence`, whose serialized ordinal precedes its original record. Its values and physical positions remain unchanged. The answer-cache examples now show the current `PlanSummary` and `cli/facts.rs` request-size fields. Replay facts retain zero actual sends and zero actual sent-body maxima; planned bodies retain their estimated size.
+
+The four affected examples pass against the current development command supplied through `THINKTHEN_BIN`. The complete local site build passes, including every CLI example and the retained bare-kind recognition replay. The build uses an owned scope capped at 4 GiB memory and 1 GiB swap; it rebuilds no Rust artifact. Logs are ticket-owned build output at `target/0467-affected-replays.log` and `target/0467-site-build-current.log`. Sample formatting, ticket records and count-only private-name checks pass. Public install instructions remain at 0.1.2. No provider call, host binding replay, release build, workflow or publication runs.
+
+A saved answer can become incompatible when a caller description changes the generated question. Show the prepared question or retain a compatible recorded case instead of reusing a different question's reply. Compare native serialization and facts before updating example output.
+
+The same current-contract repair moves `--image` from global flags to the shared flags used by commands whose help exposes it. `find` no longer advertises it. Recognition lists its current mode, literal stage contexts, examples, span proposal pointer and snippet width, and reuses the shared record-context flag. Defaults and ranges follow the existing settings table. The positional kind description reads that table's allowed rule instead of asking it for a removed numeric range.
+
+Recipe metadata and its existing scope contract now point to the three owning issues under `sdlc/issues/closed/`. The retained artifact test creates each copied issue's parent directory. No issue record, publication disposition or public recipe claim changes. The catalog/help check, isolated recipe artifact checks and rendered recipe checks pass. The complete local build also verifies links, settings, Chromium redirects, cards, metadata and HTML/Markdown exports. Ticket and count-only privacy checks pass, and the lane remains under its storage cap.
+
+Current help admission decides which commands share a flag. A setting can remain supported after its numeric bound disappears; readers must use the current allowed rule. Test fixtures should create destination directories from the source metadata they copy, so moving an owning issue preserves its validation.

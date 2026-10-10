@@ -1,12 +1,12 @@
 // Environment-neutral recipe selection and closed public content contract.
 import { parseHtml, textContent } from '../lib/html.mjs';
 export const RECIPE_SCOPE = Object.freeze({
-  'rules-propose-model-confirms': '2026-10-03-draft-function-extract.md',
+  'rules-propose-model-confirms': 'closed/2026-10-03-draft-function-extract.md',
   'link-records': '2026-10-03-draft-function-link.md',
-  'verify-a-claim': '2026-10-03-draft-function-verify.md',
+  'verify-a-claim': 'closed/2026-10-03-draft-function-verify.md',
   'navigate-many-documents': '2026-10-03-draft-function-navigate.md',
   'search-transcripts': '2026-10-05-recipe-search-transcripts.md',
-  'ask-your-cache-with-duckdb': '2026-10-05-recipe-ask-your-cache-with-duckdb.md',
+  'ask-your-cache-with-duckdb': 'closed/2026-10-05-recipe-ask-your-cache-with-duckdb.md',
 });
 export function recipeSelection(catalog, preview = false) {
   const published = catalog.filter(r => !r.draft);

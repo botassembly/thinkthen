@@ -3,6 +3,9 @@ true
   "schema": "thinkthen.run/1",
   "records": 1,
   "requests_sent": 0,
+  "largest_request_bytes": 0,
+  "largest_request_estimated_input_tokens": 0,
+  "token_estimate_method": "encoded-body-bytes-908-v1",
   "retries": 0,
   "cache_answers": 0,
   "model": "jev-1.13.0"
