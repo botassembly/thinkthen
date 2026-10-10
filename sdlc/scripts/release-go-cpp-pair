@@ -146,11 +146,15 @@ if [ "$mode" = php-dart ]; then
 		case $name in
 		"$first")
 			{
-				printf '%s\n' ./LICENSE ./README.md ./composer.json ./autoload.php ./THINKTHEN-PACKAGE-INPUTS
+				printf '%s\n' ./LICENSE ./README.md ./composer.json ./autoload.php ./THINKTHEN-PACKAGE-INPUTS \
+					./native/ ./native/libthinkthen.so
 				source_members libraries/php/ libraries/php/src libraries/php/examples
 			} | LC_ALL=C sort >"$work/expected-members"
 			tar -xOzf "$dir/$name" ./composer.json >"$work/package-metadata"
 			python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"} and p["autoload"]=={"files":["autoload.php"]}' "$work/package-metadata" || fail 'PHP Composer identity differs'
+			tar -xOzf "$dir/$c" ./lib/libthinkthen.so >"$work/c-native"
+			tar -xOzf "$dir/$name" ./native/libthinkthen.so >"$work/php-native"
+			cmp -s "$work/c-native" "$work/php-native" || fail 'PHP bundled native differs'
 			;;
 		"$second")
 			check_dart_archive "$name"

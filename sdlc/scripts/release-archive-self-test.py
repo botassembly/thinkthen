@@ -424,7 +424,7 @@ def main():
         fake_cp.chmod(0o755)
         for family, relative in (("ada", "src/thinkthen.ads"),
                                  ("objective-c", "Sources/ThinkThen.m"),
-                                 ("cobol", "src/tt_call.cob")):
+                                 ("cobol", "src/tt_session.c")):
             copied_env = env | {"THINKTHEN_PLANT_SOURCE": f"libraries/{family}/{relative}"}
             output = base / f"{family}-copied-change"
             expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
