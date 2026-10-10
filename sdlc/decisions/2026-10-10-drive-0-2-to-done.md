@@ -38,7 +38,15 @@ Platform qualification does not hold a migration ticket open. Windows, Apple, re
 - Fresh code review, and the reviewer's power to reject.
 - Outside-in behavior tests at the Rust API, the CLI and each installed library.
 - Distinct parser, secrecy, cancellation, cache-miss, invalid-input and conflict regressions.
-- The release hold: no tags, candidates, workflow dispatches or publishing without Ian.
+- Publishing waits for Ian's go.
+
+### Candidates and GitHub testing
+
+Ian added: "I'm fine with them cutting candidates, but then also deleting code. The code is all there in Git." And: "GitHub should be allowed to be used for testing Windows and testing other scenarios that we can't test locally, but testing locally should handle 95%+ of our questions."
+
+- Local tests answer most questions. Use GitHub workflows for Windows, Apple and other platforms the Beelink cannot run.
+- The coordinator may push candidate tags and dispatch release workflows whenever the work is ready, as long as no run publishes to a registry. This lifts the 2026-10-08 hold on candidates and dispatches. Publishing still needs Ian.
+- Deleted code stays recoverable in Git, so deletion needs no extra caution beyond review.
 
 ## Why
 

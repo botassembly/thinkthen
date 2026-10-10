@@ -39,7 +39,7 @@ Read the key from `THINKTHEN_API_KEY`, or from a named backend's own key variabl
 
 `CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. The queue owner owns the whole repo, `site/` included, per `sdlc/planning/ownership.md`. Lasting rulings live in `sdlc/decisions/`; accepted ADRs and specifications retain product contracts. Preserve source links and name what Ian can overturn.
 
-The release process lives in `sdlc/planning/release-process.md`. Ian held release management on 2026-10-08: candidate tags, manual workflow dispatches, release branch advancement and publication require his permission. See `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`.
+The release process lives in `sdlc/planning/release-process.md`. Ian held release management on 2026-10-08 and narrowed the hold on 2026-10-10: the coordinator may push candidate tags and dispatch workflows that do not publish, and use GitHub for Windows and other platforms the Beelink cannot test. Publication requires his permission: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`. See `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`.
 
 ## Outside agents
 
