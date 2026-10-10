@@ -10,8 +10,10 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[1]
 sys.path.insert(0, str(REPO / "conformance/children"))
+sys.path.insert(0, str(REPO / "libraries/cpp/fixtures"))
 from children import child_env
 from backend import Backend
+from session_cases import native_cases
 
 if sys.platform != "darwin":
     print("Foundation installed consumer requires macOS", file=sys.stderr)
@@ -34,12 +36,18 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-foundation-consumer-") as tem
     work = Path(temporary)
     shutil.copytree(package, work / "package", ignore=shutil.ignore_patterns("target", ".build", "checks", "Examples"))
     (work / "Sources/Consumer").mkdir(parents=True)
+    (work / "Sources/Cases").mkdir(parents=True)
+    shutil.copy2(ROOT / "checks/FoundationCases.m", work / "Sources/Cases/main.m")
     shutil.copy2(ROOT / "checks/FoundationConsumer.m", work / "Sources/Consumer/main.m")
     (work / "Package.swift").write_text('''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(name: "FoundationConsumer", platforms: [.macOS(.v15)],
  dependencies: [.package(path: "package")], targets: [
  .executableTarget(name: "Consumer", dependencies: [
+ .product(name: "ThinkThenFoundation", package: "package")],
+ cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
+ linkerSettings: [.linkedFramework("Foundation")]),
+ .executableTarget(name: "Cases", dependencies: [
  .product(name: "ThinkThenFoundation", package: "package")],
  cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
  linkerSettings: [.linkedFramework("Foundation")])])
@@ -61,3 +69,9 @@ let package = Package(name: "FoundationConsumer", platforms: [.macOS(.v15)],
     finally:
         (barrier / "release-hold-foundation").touch()
         server.close()
+
+    # Run the Objective-C inventory against the actual installed named calls.
+    # The full profile removes the routine filter; it is candidate-only.
+    if not (REPO / "target/debug/conformance-backend").is_file():
+        raise RuntimeError("the recorded shared backend must be built before Foundation parity")
+    native_cases(work / ".build/debug/Cases", consumer="objective-c")
