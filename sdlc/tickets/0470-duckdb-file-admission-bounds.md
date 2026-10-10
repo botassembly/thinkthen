@@ -46,3 +46,4 @@ DuckDB complete-file calls feed descriptors to native admission through 0503's b
 
 - 2026-10-10 started
 - 2026-10-10 landed 4b08e6986; next: Reviewed DuckDB file admission design is landed. Implement shared 0503 owned feed controls and eager session admission first, then the calling-thread DuckDB producer; release checks remain held.
+- 2026-10-10 landed 4d7547e02a0aead129bf3c6bc4d55b6fabc04ee2; next: DuckDB file calls now use bounded owned native sessions with caller-thread file handles, shared path admission and prompt cancellation. Focused installed checks and fresh review pass. Full installed parity, aggregate boundary and platform qualification remain held.
