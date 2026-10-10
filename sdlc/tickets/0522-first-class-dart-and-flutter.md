@@ -37,3 +37,4 @@ Dart and Flutter callers install one package, call the ten functions with Dart v
 
 - 2026-10-10 started
 - 2026-10-10 landed 516e1ea57; next: Dart and Flutter now settle recognized stream errors with completed rows and native facts, and cancellation does not await held stream cleanup. Fresh review and focused extracted package cases pass. Final installed distribution and platform qualification remain held.
+- 2026-10-10 started
