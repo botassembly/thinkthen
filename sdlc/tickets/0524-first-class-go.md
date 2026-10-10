@@ -26,3 +26,7 @@ Go callers add one module that carries the native library, call the ten function
   One public API is one coherent family of named typed calls. Claim `libraries/go/**` narrowed and named per slice.
 - Proof: Shared conformance runs through an installed Go consumer, covering absent, null, failures, unknown output fields, files, images and cancellation. One installed held-provider case shows another goroutine progressing, and context cancellation and cleanup returning before the provider is released. Pending final facts stay pending. Record handwritten code removed and added, counting templates, in the landing record.
 - Defers: Final distribution assembly belongs to 0530. Native qualification beyond this machine follows Ian's release hold.
+
+## Progress
+
+- 2026-10-10 started
