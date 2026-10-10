@@ -61,3 +61,4 @@ After the language and database migrations land, the shared documentation descri
 ## Progress
 
 - 2026-10-10 landed 198636def; next: Current CLI examples, help flags, kind rules and recipe references are landed; the complete local site build passes. Finish documentation adoption for the remaining installed surfaces.
+- 2026-10-10 landed b91134af5; next: The development upgrade guide maps confirmed typed replacements and accurately states JVM and Objective-C gaps. Finish owning migrations before final documentation adoption and installed qualification.
