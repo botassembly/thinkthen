@@ -8,7 +8,7 @@ use crate::Door;
 use crate::session::{SessionHandle, SessionResultHandle, errors};
 use std::ffi::c_char;
 use thinkthen::{
-    ErrorKind, Request, RequestReaderFailure, RequestSessionPushStatus, RequestSessionRead,
+    ErrorKind, Request, RequestReaderFailure, RequestSessionPushStatus, RequestSessionRead, Surface,
 };
 
 /// Push transferred one descriptor to the session.
@@ -33,6 +33,7 @@ fn required<T>(slot: *mut T) -> Result<(), ErrorKind> {
 }
 
 /// Admit length-delimited UTF-8 request JSON and create an owned native session.
+/// The engine identifies this invocation as the C surface.
 /// Inputs may be freed or overwritten after return. The engine may be freed
 /// after construction; the worker owns its engine. Immediate errors leave out
 /// unchanged and record only the calling-thread session error slot.
@@ -46,8 +47,47 @@ pub unsafe extern "C" fn thinkthen_session_new(
     request_len: usize,
     out: *mut *mut SessionHandle,
 ) -> std::ffi::c_int {
+    // SAFETY: this export forwards the caller's documented pointer obligations.
+    unsafe { new_session(engine, request_json, request_len, out, || Ok(Surface::C)) }
+}
+
+/// Create an owned session attributed to its outer language wrapper.
+/// surface names an exact native Surface token, without a trailing NUL.
+/// Invalid tokens return Usage without retaining or printing their spelling.
+/// All ownership, diagnostics and output rules match thinkthen_session_new.
+/// # Safety
+/// The thinkthen_session_new obligations apply. surface points at surface_len
+/// readable UTF-8 bytes; NULL requires zero. Extents must fit Rust slices.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_new_with_surface(
+    engine: *const Door,
+    request_json: *const c_char,
+    request_len: usize,
+    surface: *const c_char,
+    surface_len: usize,
+    out: *mut *mut SessionHandle,
+) -> std::ffi::c_int {
+    // SAFETY: both counted inputs obey the caller's readable extent contract.
+    unsafe {
+        new_session(engine, request_json, request_len, out, || {
+            super::text(surface, surface_len)
+                .map_err(|_| ErrorKind::Usage)?
+                .parse::<Surface>()
+                .map_err(|_| ErrorKind::Usage)
+        })
+    }
+}
+
+unsafe fn new_session(
+    engine: *const Door,
+    request_json: *const c_char,
+    request_len: usize,
+    out: *mut *mut SessionHandle,
+    surface: impl FnOnce() -> Result<Surface, ErrorKind>,
+) -> std::ffi::c_int {
     errors::native_call(|| {
         required(out)?;
+        let surface = surface()?;
         // SAFETY: the caller keeps its engine live until this call returns.
         let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
         // SAFETY: the caller supplies the documented readable extent.
@@ -57,7 +97,7 @@ pub unsafe extern "C" fn thinkthen_session_new(
         let session = engine
             .0
             .engine
-            .request_session(request)
+            .request_session_with_surface(request, surface)
             .map_err(errors::Failure::Native)?;
         let owner = Box::into_raw(Box::new(SessionHandle(session)));
         // SAFETY: required checked nonnull and the caller promises writable storage.

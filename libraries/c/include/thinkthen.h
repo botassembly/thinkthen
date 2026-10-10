@@ -8064,6 +8064,7 @@ void thinkthen_session_free(struct thinkthen_session *session);
 
 /*
  Admit length-delimited UTF-8 request JSON and create an owned native session.
+ The engine identifies this invocation as the C surface.
  Inputs may be freed or overwritten after return. The engine may be freed
  after construction; the worker owns its engine. Immediate errors leave out
  unchanged and record only the calling-thread session error slot.
@@ -8075,6 +8076,22 @@ int thinkthen_session_new(const struct thinkthen_engine *engine,
                           const char *request_json,
                           size_t request_len,
                           struct thinkthen_session **out);
+
+/*
+ Create an owned session attributed to its outer language wrapper.
+ surface names an exact native Surface token, without a trailing NUL.
+ Invalid tokens return Usage without retaining or printing their spelling.
+ All ownership, diagnostics and output rules match thinkthen_session_new.
+ # Safety
+ The thinkthen_session_new obligations apply. surface points at surface_len
+ readable UTF-8 bytes; NULL requires zero. Extents must fit Rust slices.
+ */
+int thinkthen_session_new_with_surface(const struct thinkthen_engine *engine,
+                                       const char *request_json,
+                                       size_t request_len,
+                                       const char *surface,
+                                       size_t surface_len,
+                                       struct thinkthen_session **out);
 
 /*
  Release an independent packet owner. NULL is ignored.
