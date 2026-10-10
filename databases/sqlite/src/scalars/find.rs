@@ -7,30 +7,18 @@ use thinkthen::{For, Question, Settings};
 use crate::question::{call_settings, text};
 use crate::{Failure, ffi, guard, worker};
 
-const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
-
 fn units(argument: &str) -> Result<Vec<String>, Failure> {
     let source: serde_json::Value = serde_json::from_str(argument)
         .map_err(|_| Failure::usage("find units are a JSON array of text"))?;
     let array = source
         .as_array()
         .ok_or_else(|| Failure::usage("find units are a JSON array of text"))?;
-    let mut bytes = 0_usize;
     array
         .iter()
         .map(|value| {
             let text = value.as_str().ok_or_else(|| {
                 Failure::usage("each find unit is text, not NULL or another type")
             })?;
-            if text.trim().is_empty() {
-                return Err(Failure::usage("a find unit is text, not white space"));
-            }
-            bytes = bytes
-                .checked_add(text.len())
-                .ok_or_else(|| Failure::usage("find units exceed 16 MiB of text"))?;
-            if bytes > MAX_TEXT_BYTES {
-                return Err(Failure::usage("find units exceed 16 MiB of text"));
-            }
             Ok(text.to_owned())
         })
         .collect()
@@ -64,14 +52,6 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         let units = units(&source)?;
         if units.is_empty() {
             return Ok(None);
-        }
-        let most = if none { 254 } else { 255 };
-        if !(2..=most).contains(&units.len()) {
-            return Err(Failure::usage(if none {
-                "a find question offering none takes 2 to 254 units"
-            } else {
-                "find takes 2 to 255 units"
-            }));
         }
         let question = Question::find(&argument)?;
         let question = match settings.model() {

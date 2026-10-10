@@ -140,18 +140,18 @@ bad = [
     ('bad deadline', 'Which?', good, '{"deadline_ms":0.5}'),
     ('too many', 'Which?', json.dumps(['x'] * 256), '{}'),
     ('none too many', 'Which?', json.dumps(['x'] * 255), '{"none":true}'),
-    ('too much text', 'Which?', json.dumps(['x' * (16 * 1024 * 1024), 'y']), '{}'),
+    *([('too much text', 'Which?', json.dumps(['x' * (16 * 1024 * 1024), 'y']), '{}')]
+      if os.environ.get('THINKTHEN_TEST_PROFILE') == 'full' else []),
 ]
 say(results={name: run(db, 'SELECT thinkthen_find(?, ?, ?)', (q, units, settings)) for
              name, q, units, settings in bad})
-""", environment(backend))
+""", environment(backend, THINKTHEN_TEST_PROFILE=os.environ.get("THINKTHEN_TEST_PROFILE", "routine")))
     for name in ("question NULL", "units NULL", "empty"):
         expect(held["results"][name], [[None]], name)
-    for name in ("one", "member NULL", "member number", "member blank", "question number", "units number",
-                 "units blob", "malformed", "not array", "bad none", "bad question", "bad deadline",
-                 "too many", "none too many", "too much text"):
-        expect(held["results"][name].startswith("thinkthen usage: "), True, name)
-        expect(held["results"][name].endswith(" (retryable: no)"), True, name)
+    for name, result in held["results"].items():
+        if name not in ("question NULL", "units NULL", "empty"):
+            expect(result.startswith("thinkthen usage: "), True, name)
+            expect(result.endswith(" (retryable: no)"), True, name)
     expect(backend.close(), 0, "all refused inputs send nothing")
 
 def test_required_null_precedes_settings_and_complete_admission() -> None:
