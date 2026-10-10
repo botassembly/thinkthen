@@ -183,3 +183,45 @@ def test_named_calls_refuse_invalid_headers_without_sending(backend, tmp_path):
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ['refused']
     assert backend.count() == 0
+
+
+@pytest.mark.parametrize('asynchronous', [False, True])
+@pytest.mark.parametrize('failure', ['admission', 'reader', 'backend'])
+def test_producer_cleanup_preserves_typed_failure_and_prefix(backend, tmp_path, asynchronous, failure):
+    output = run('''
+        import asyncio, os, thinkthen as tt
+        mode = os.environ['FAILURE']
+        closed = []
+        class Inputs:
+            def __init__(self): self.rows = iter(['first', 42, 'later'])
+            def __iter__(self): return self
+            def __next__(self): return next(self.rows)
+            def close(self):
+                closed.append(True)
+                raise RuntimeError('producer cleanup failed')
+        engine = tt.Engine(cache=False, max_retries=0, batch=1, throttle=1)
+        question = {'decide': 'Late?', 'item_schema': {'type': 'string'}}
+        if mode == 'admission': question = {'decide': ''}
+        expected = tt.BackendError if mode == 'backend' else tt.UsageError
+        try:
+            if os.environ['ASYNCHRONOUS'] == 'True':
+                asyncio.run(engine.asyncio.decide(question, Inputs()))
+            else: engine.decide(question, Inputs())
+        except expected as error:
+            assert closed == [True]
+            assert not engine._sessions
+            if mode == 'admission': assert error.facts is None
+            else:
+                assert error.facts.requests_sent == 1
+                assert error.kind == ('backend' if mode == 'backend' else 'usage')
+                assert error.complete.error.kind == error.kind
+                assert error.terminal.failure.to_dict() == error.complete.to_dict()
+                assert [row.input for row in error.results] == ([] if mode == 'backend' else ['first'])
+        else: raise AssertionError('call failure was lost')
+        engine.close()
+        print('preserved')
+    ''', child_env(backend, tmp_path,
+                   'arm/malformed/missing_answer' if failure == 'backend' else 'generic',
+                   FAILURE=failure, ASYNCHRONOUS=str(asynchronous)))
+    assert output.splitlines() == ['preserved']
+    assert backend.count() == (0 if failure == 'admission' else 1)

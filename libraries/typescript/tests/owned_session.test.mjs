@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {startBackend,ask as backendAsk,child as backendChild,within,sleep,INDEX} from './backend.mjs';
+import {startBackend,ask as backendAsk,child as backendChild,within,sleep,until,INDEX} from './backend.mjs';
 
 const face=process.env.THINKTHEN_OWNED_MODULE || 'esm';
 const framed=body=>`const api = ${face==='cjs'?`(await import('node:module')).createRequire(${JSON.stringify(INDEX)})('thinkthen')`:"tt"};\n${body.replace(/\btt\./g,'api.')}`;
@@ -177,4 +177,36 @@ test('Client retains completed native source rows and failure facts',async t=>{
   assert.deepEqual(value.rows.map(r=>r.slice(0,2)),[[0,'first'],[1,'second']]);
   assert.ok(value.rows.every(r=>r[2].endsWith('.txt')&&typeof r[3]==='string'&&r[4]==='live'&&r[5]===64));
   assert.equal(await backend.count(),2);
+});
+
+
+test('Client releases a rejected feed while retaining a held request and failure facts',async t=>{
+  const backend=await startBackend(t);
+  const run=child(backend,`
+    const client=new tt.Client({cache:false,throttle:2});let reads=0,closed=0;
+    async function* inputs(){
+      try {
+        reads++;yield 'first';
+        reads++;yield 42;
+        while(true){reads++;if(reads===3)line({pending:true});yield 'later';}
+      } finally {closed++;line({closed,reads});throw Error('producer cleanup failed');}
+    }
+    try{await client.decide({decide:'Question?',item_schema:{type:'string'}},inputs(),{batch:1});throw Error('failure became value');}
+    catch(error){
+      client.close();process.stdin.destroy();
+      if(!(error instanceof tt.ClientError))throw error;
+      return {kind:error.kind,closed,rows:error.results.map(row=>row.input),sends:error.facts.requests_sent,id:error.facts.call_id.length,complete:error.complete.constructor.name};
+    }
+  `,{arm:'arm/held'});
+  assert.equal(await backend.wait(1),1);
+  try {
+    assert.ok(await until(()=>run.lines.length>0,5000),'another descriptor is produced while the earlier request is held');
+    assert.deepEqual(run.lines[0].value,{pending:true});
+    assert.ok(await until(()=>run.lines.some(row=>row.value.closed===1),5000),'closed intake releases its producer before provider settlement');
+    assert.equal(await backend.count(),1);
+  } finally {backend.release();}
+  const exited=await within(run.exited,5000);assert.ok(exited);assert.equal(exited.code,0);
+  assert.equal(run.lines.filter(row=>row.value.closed===1).length,1);
+  assert.deepEqual(run.lines.at(-1).value,{value:{kind:'usage',closed:1,rows:['first'],sends:1,id:64,complete:'NativeCallError'}});
+  assert.equal(await backend.count(),1);
 });
