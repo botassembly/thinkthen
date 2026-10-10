@@ -1,13 +1,11 @@
 {
   "directory": [
     "lib",
-    "checks/consumers",
     "flutter/lib",
     "flutter/example/lib",
-    "flutter/example/test",
     "checks/session_consumer/bin",
     "hook"
   ],
   "extension": ".dart",
-  "max": 17733
+  "max": 5915
 }

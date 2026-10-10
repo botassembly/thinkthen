@@ -1,35 +1,22 @@
-/// Flutter-facing facade for the separately installed ThinkThen C archive.
-library;
+/// Typed development caller with shared implementation and fixed surface.
+library thinkthen_session;
 
+import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io' show IOException;
+import 'dart:typed_data';
+import 'package:thinkthen_dart/src/session/abi_generated.dart';
+import 'package:thinkthen_dart/src/session/inputs_generated.dart';
+import 'package:thinkthen_dart/src/session/results_generated.dart';
+import 'package:thinkthen_dart/src/session/native.dart';
+import 'package:thinkthen_dart/src/session/values.dart';
+export 'package:thinkthen_dart/src/session/native.dart' show NativeFailure;
+export 'package:thinkthen_dart/src/session/values.dart' show Presence;
+export 'package:thinkthen_dart/src/session/inputs_generated.dart';
+export 'package:thinkthen_dart/src/session/results_generated.dart';
+export 'package:thinkthen_dart/src/session/abi_generated.dart'
+    show NativeErrorKind, UsagePersistenceState;
+part 'package:thinkthen_dart/src/session/client.dart';
 
-import 'package:thinkthen_dart/thinkthen_dart.dart';
-export 'package:thinkthen_dart/thinkthen_dart.dart'
-    show
-        Door,
-        DoorFailure,
-        AnswerValue,
-        Outcome,
-        ErrorKind,
-        AnnotatedField,
-        UnresolvedField,
-        AnswerField,
-        FailedField,
-        readField;
-
-class ThinkThenFlutter {
-  final Door door;
-  ThinkThenFlutter(String nativeLibraryPath) : door = Door(nativeLibraryPath);
-
-  ({AnswerValue value, Map<String, Object?> facts}) decide(
-    String question,
-    String text,
-  ) {
-    final Pointer<Void> engine = door.create();
-    try {
-      return door.decide(engine, question, text);
-    } finally {
-      door.engineFree(engine);
-    }
-  }
-}
+const _surfaceToken = 'flutter';

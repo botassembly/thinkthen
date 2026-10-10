@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:thinkthen_dart/thinkthen_session.dart';
+import 'package:thinkthen_dart/thinkthen_dart.dart';
 import 'stream_cases.dart';
+import 'data_cases.dart';
 
 void check(bool value, String message) {
   if (!value) throw StateError(message);
@@ -291,6 +292,7 @@ Future<void> main(List<String> args) async {
       final result = await methods[i](questions[i], input);
       check(!result.terminal.failure.isPresent, 'named call $i');
     }
+    await dataCases(engine, 'http://127.0.0.1:${server.port}', () => sends);
     final streamed =
         await engine.decide(question, InputRequestInputFeed(name: 'feed'),
             feed: Stream.fromIterable([

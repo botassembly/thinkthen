@@ -62,12 +62,10 @@ def main():
     cached = cache / asset['sha256'] / asset['file']
     consumer = scratch / 'consumer'
     (consumer / 'bin').mkdir(parents=True)
-    shutil.copyfile(ROOT / 'libraries/dart/checks/session_consumer/bin/main.dart', consumer / 'bin/main.dart')
+    shutil.copytree(ROOT / 'libraries/dart/checks/session_consumer/bin', consumer / 'bin', dirs_exist_ok=True)
     spec = ("name: installed_native_assets\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     (consumer / 'pubspec.yaml').write_text(spec)
     run([str(dart), 'pub', 'get', '--offline'], consumer, env)
-    shutil.copyfile(ROOT / 'libraries/dart/checks/consumers/alpha/bin/complete_carriers.dart', consumer / 'bin/complete_carriers.dart')
-    run([str(dart), 'run', 'bin/complete_carriers.dart', str(ROOT / 'libraries/php/fixtures/complete.json')], consumer, env)
     configure(packages / 'dart', native, [packages / 'flutter'])
     run([str(flutter), 'pub', 'get', '--offline'], packages / 'flutter', env)
     cached.rename(cached.with_suffix('.held'))
@@ -76,6 +74,7 @@ def main():
     run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'checksum mismatch')
     cached.with_suffix('.held').replace(cached)
     run([str(dart), 'run', 'bin/main.dart'], consumer, env)
+    run([str(dart), 'run', 'bin/main.dart', 'stream-regressions'], consumer, env)
     # The same installed consumer owns tiny usage cases; it runs one local call.
     for mode in ('written', 'failed', 'disabled'):
         usage_env = dict(env, XDG_STATE_HOME=str(scratch / ('usage-' + mode)))
@@ -136,7 +135,11 @@ def main():
     app = scratch / 'flutter-app'
     shutil.copytree(ROOT / 'libraries/dart/flutter/example/linux', app / 'linux')
     (app / 'lib').mkdir()
-    source = (consumer / 'bin/main.dart').read_text().replace('package:thinkthen_dart/thinkthen_session.dart', 'package:thinkthen_flutter/thinkthen_session_flutter.dart').replace('(dart)', '(flutter)')
+    shutil.copyfile(consumer / 'bin/stream_cases.dart', app / 'lib/stream_cases.dart')
+    shutil.copyfile(consumer / 'bin/data_cases.dart', app / 'lib/data_cases.dart')
+    for streams in [app / 'lib/stream_cases.dart', app / 'lib/data_cases.dart']:
+        streams.write_text(streams.read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart'))
+    source = (consumer / 'bin/main.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart').replace('(dart)', '(flutter)')
     source = source.replace('Future<void> main(List<String> args) async {', 'Future<void> exercise() async {')
     source += '\nFuture<void> main() async {\n  try { await exercise(); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
     (app / 'lib/main.dart').write_text(source)
