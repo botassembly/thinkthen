@@ -59,3 +59,4 @@ Author: project manager.
 - 2026-10-10 landed 474d0116e; next: Committed Dart, Flutter and COBOL archive inventories are landed and fake workflow checks pass. Final installed distribution and platform qualification remain held.
 - 2026-10-10 started
 - 2026-10-10 landed 8dc6be679; next: Managed packages, JVM native classifiers, PHP and Ada archive members and Windows npm addon assembly now follow the current native package contracts. Fresh review and small assembly checks pass. Final installed distribution and platform qualification remain held.
+- 2026-10-10 landed 670c88047; next: Current typed registry consumers and the full Go route are reviewed and pass focused installed checks; assemble final artifacts and run complete installed and platform qualification at the candidate.
