@@ -1048,6 +1048,15 @@ typedef struct thinkthen_answer {
   double probability;
 } thinkthen_answer;
 
+typedef struct thinkthen_complete_usage_persistence_v1 {
+  uint32_t kind;
+} thinkthen_complete_usage_persistence_v1;
+
+typedef struct thinkthen_complete_utf8_v1 {
+  const char *data;
+  size_t len;
+} thinkthen_complete_utf8_v1;
+
 /*
  C descriptor or borrowed view `OptionalStringV1`.
  */
@@ -3574,11 +3583,6 @@ typedef struct thinkthen_summary_v1 {
    */
   struct thinkthen_optional_error_v1 error;
 } thinkthen_summary_v1;
-
-typedef struct thinkthen_complete_utf8_v1 {
-  const char *data;
-  size_t len;
-} thinkthen_complete_utf8_v1;
 
 typedef struct thinkthen_complete_extension_v1 {
   struct thinkthen_complete_utf8_v1 name;
@@ -6707,10 +6711,6 @@ typedef struct thinkthen_complete_persistence_observation_field_advice_presence_
   struct thinkthen_complete_utf8_v1 value;
 } thinkthen_complete_persistence_observation_field_advice_presence_v1;
 
-typedef struct thinkthen_complete_usage_persistence_v1 {
-  uint32_t kind;
-} thinkthen_complete_usage_persistence_v1;
-
 typedef struct thinkthen_complete_persistence_observation_v1 {
   struct thinkthen_complete_persistence_observation_field_advice_presence_v1 advice;
   struct thinkthen_complete_utf8_v1 observed_at;
@@ -7258,6 +7258,19 @@ int thinkthen_decide_with_facts_opts(const struct thinkthen_engine *engine,
                                      size_t *facts_len);
 
 /*
+ Finish this engine's current usage deltas and observe their persistence.
+ Only usage-lock acquisition has a deadline; other filesystem work can take
+ longer. Written covers current deltas only, not future calls or other engines.
+ Failed carries static native safe advice readable after engine destruction
+ while the library remains loaded. Every nonzero return preserves outputs.
+ # Safety
+ The engine and output obligations of usage_persistence_v1 apply.
+ */
+int thinkthen_engine_finish_usage_status_v1(const struct thinkthen_engine *engine,
+                                            struct thinkthen_complete_usage_persistence_v1 *out_state,
+                                            struct thinkthen_complete_utf8_v1 *out_advice);
+
+/*
  Free an engine; null is ignored.
 
  # Safety
@@ -7291,6 +7304,19 @@ struct thinkthen_engine *thinkthen_engine_new(void);
  an explicit base_url receives that key. Building sends nothing.
  */
 struct thinkthen_engine *thinkthen_engine_new_with(const char *settings_json);
+
+/*
+ Observe this engine's live usage persistence without waiting for a writer.
+ On success assign both outputs; Failed is an observation, not an operation
+ error. Advice is a static counted UTF-8 view, or NULL with zero length.
+ Success preserves the calling-thread session diagnostic.
+ # Safety
+ engine is live for the call. Both outputs are nonnull, aligned, writable,
+ nonoverlapping slots. Destruction waits for concurrent callers to return.
+ */
+int thinkthen_engine_usage_persistence_v1(const struct thinkthen_engine *engine,
+                                          struct thinkthen_complete_usage_persistence_v1 *out_state,
+                                          struct thinkthen_complete_utf8_v1 *out_advice);
 
 /*
  The calling thread's last code here; with a null engine, its last failed

@@ -156,15 +156,19 @@ fn explicit_status_finalization_preserves_answers_and_direct_totals() {
     let home = scratch("usage-status-home");
     let mut script = Script::default();
     script.ask("settings", &[&base, r#"{"cache":false}"#]);
-    for request in [
-        r#"{"usage_status":true}"#,
-        r#"{"decide":"asks for a refund","evidence":"Refund me."}"#,
-        r#"{"finish_usage_status":true}"#,
-        r#"{"usage_status":true}"#,
-        r#"{"usage":true}"#,
-    ] {
-        script.ask("call", &[&base, request]);
-    }
+    script.ask("call", &[&base, r#"{"usage_status":true}"#]);
+    script.ask(
+        "call",
+        &[
+            &base,
+            r#"{"decide":"asks for a refund","evidence":"Refund me."}"#,
+        ],
+    );
+    script.ask("finish_native", &[&base, ""]);
+    script.ask("call", &[&base, r#"{"finish_usage_status":true}"#]);
+    script.ask("call", &[&base, r#"{"usage_status":true}"#]);
+    script.ask("call", &[&base, r#"{"usage":true}"#]);
+    script.ask("usage_native", &[&base, ""]);
     let variable = child::Folder::Usage.variable(&home);
     let output = run_with(
         &driver,
@@ -174,7 +178,7 @@ fn explicit_status_finalization_preserves_answers_and_direct_totals() {
     );
     let said = replies(&output.stdout).expect("replies");
     assert!(said.iter().all(|reply| reply.0 == 0), "{said:?}");
-    for index in [1, 3, 4] {
+    for index in [1, 4, 5] {
         assert_eq!(said[index].1, r#"{"state":"written"}"#);
     }
     let answer: serde_json::Value = serde_json::from_str(&said[2].1).expect("answer");
@@ -183,9 +187,11 @@ fn explicit_status_finalization_preserves_answers_and_direct_totals() {
         answer["facts"].get("usage_persistence").is_none(),
         "legacy facts"
     );
-    let totals: serde_json::Value = serde_json::from_str(&said[5].1).expect("totals");
+    let totals: serde_json::Value = serde_json::from_str(&said[6].1).expect("totals");
     assert_eq!(totals["requests_sent"], 1);
     assert!(totals.get("state").is_none());
+    assert_eq!(said[3].1, "3 ");
+    assert_eq!(said[7].1, "3 ");
     assert_eq!(month_counts(&home)["requests_sent"], 1);
     assert_eq!(backend.count(), 1);
 }
@@ -212,15 +218,15 @@ fn held_writer_reports_pending_then_latched_safe_failure_without_losing_answer()
     lock.lock().expect("hold writer");
     let mut script = Script::default();
     script.ask("settings", &[&base, r#"{"cache":false}"#]);
-    for request in [
-        r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"asks for a refund"},"input":{"kind":"text","text":"Refund me."}}}"#,
-        r#"{"usage_status":true}"#,
-        r#"{"finish_usage_status":true}"#,
-        r#"{"usage_status":true}"#,
-        r#"{"usage":true}"#,
-    ] {
-        script.ask("call", &[&base, request]);
-    }
+    script.ask("call", &[&base, r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"asks for a refund"},"input":{"kind":"text","text":"Refund me."}}}"#]);
+    script.ask("usage_native", &[&base, ""]);
+    script.ask("call", &[&base, r#"{"usage_status":true}"#]);
+    script.ask("finish_native", &[&base, ""]);
+    script.ask("call", &[&base, r#"{"finish_usage_status":true}"#]);
+    script.ask("usage_native", &[&base, ""]);
+    script.ask("call", &[&base, r#"{"usage_status":true}"#]);
+    script.ask("call", &[&base, r#"{"usage":true}"#]);
+    script.ask("free_native", &[&base, ""]);
     let variable = child::Folder::Usage.variable(&home);
     let output = run_with(
         &driver,
@@ -230,20 +236,27 @@ fn held_writer_reports_pending_then_latched_safe_failure_without_losing_answer()
     );
     let said = replies(&output.stdout).expect("replies");
     assert!(said.iter().all(|reply| reply.0 == 0), "{said:?}");
-    assert_eq!(said[2].1, r#"{"state":"pending"}"#);
-    let failure =
-        r#"{"state":"failed","advice":"check the usage folder permissions and free space"}"#;
-    assert_eq!(said[3].1, failure);
+    assert_eq!(said[2].1, "2 ");
+    let failure = "4 check the usage folder permissions and free space";
+    assert_eq!(said[3].1, r#"{"state":"pending"}"#);
     assert_eq!(said[4].1, failure);
+    assert_eq!(said[6].1, failure);
+    assert_eq!(said[9].1, failure);
+    for index in [5, 7] {
+        assert_eq!(
+            said[index].1,
+            r#"{"state":"failed","advice":"check the usage folder permissions and free space"}"#
+        );
+    }
     let answer: serde_json::Value = serde_json::from_str(&said[1].1).expect("answer");
     assert_eq!(answer["facts"]["usage_persistence"]["state"], "pending");
     assert_eq!(
         answer["facts"]["usage_persistence"]["observed_at"],
         "facts_snapshot"
     );
-    let totals: serde_json::Value = serde_json::from_str(&said[5].1).expect("totals");
+    let totals: serde_json::Value = serde_json::from_str(&said[8].1).expect("totals");
     assert_eq!(totals["requests_sent"], 1);
-    for index in [2, 3, 4] {
+    for index in [2, 3, 4, 5, 6, 7, 9] {
         assert!(!said[index].1.contains(&home.display().to_string()));
         assert!(!said[index].1.contains("Refund me."));
         assert!(!said[index].1.contains(KEY));

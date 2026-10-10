@@ -189,7 +189,7 @@ def retained_abi(native):
     return {**native,
             'records': {n: v for n, v in native['records'].items() if not n.startswith('thinkthen_complete_')},
             'constants': {n: v for n, v in native['constants'].items() if not n.startswith(('THINKTHEN_COMPLETE_', 'THINKTHEN_SESSION_'))},
-            'functions': {n: v for n, v in native['functions'].items() if not n.startswith('thinkthen_session_') and n != 'thinkthen_request_plan_json'}}
+            'functions': {n: v for n, v in native['functions'].items() if not n.startswith('thinkthen_session_') and n not in ('thinkthen_request_plan_json', 'thinkthen_engine_usage_persistence_v1', 'thinkthen_engine_finish_usage_status_v1')}}
 
 
 def compare_abi(expected, actual):

@@ -181,7 +181,26 @@ int main(void) {
         check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "fixed failure replaces owned message");
         return failed;
     }
-    check(strcmp(thinkthen_session_error_message(), "no session failure yet") == 0, "fresh session error slot");
+    thinkthen_complete_usage_persistence_v1 usage_state = {99};
+    thinkthen_complete_utf8_v1 usage_advice = {(const char *)(uintptr_t)7, 99};
+    typedef int (*usage_operation)(const thinkthen_engine *, thinkthen_complete_usage_persistence_v1 *, thinkthen_complete_utf8_v1 *);
+    usage_operation operations[] = {thinkthen_engine_usage_persistence_v1, thinkthen_engine_finish_usage_status_v1};
+    for (size_t i = 0; i < sizeof operations / sizeof operations[0]; ++i) {
+        check(operations[i](NULL, &usage_state, &usage_advice) == THINKTHEN_EUSAGE, "usage requires engine");
+        check(operations[i](engine, NULL, &usage_advice) == THINKTHEN_EUSAGE, "usage requires state output");
+        check(operations[i](engine, &usage_state, NULL) == THINKTHEN_EUSAGE, "usage requires advice output");
+        union { thinkthen_complete_usage_persistence_v1 state; thinkthen_complete_utf8_v1 advice; } alias;
+        alias.advice = usage_advice;
+        check(operations[i](engine, &alias.state, &alias.advice) == THINKTHEN_EUSAGE, "usage refuses output alias");
+        check(alias.advice.data == usage_advice.data && alias.advice.len == usage_advice.len, "usage alias preserves output");
+        check(usage_state.kind == 99 && usage_advice.data == (const char *)(uintptr_t)7 && usage_advice.len == 99, "usage failure preserves both outputs");
+        const char *diagnostic = thinkthen_session_error_message();
+        check(operations[i](engine, &usage_state, &usage_advice) == THINKTHEN_OK, "live usage observation succeeds");
+        check(usage_state.kind == (getenv("SESSION_USAGE_DISABLED") ? THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1 : THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1) && usage_advice.data == NULL && usage_advice.len == 0, "successful state has no advice");
+        check(diagnostic == thinkthen_session_error_message(), "usage success preserves diagnostic");
+        usage_state.kind = 99; usage_advice.data = (const char *)(uintptr_t)7; usage_advice.len = 99;
+    }
+    check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "usage refusal owns session error slot");
     check(thinkthen_engine_new_with("{\"bad\":1}") == NULL, "saved failed constructor");
     const char *old_error = thinkthen_error_message(NULL);
     const char *bad_requests[] = {"", "{}", "{\"schema\":\"thinkthen.request/1\",\"schema\":\"thinkthen.request/1\"}", "{\"unknown\":0}"};
