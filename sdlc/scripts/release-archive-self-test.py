@@ -339,6 +339,9 @@ def main():
                    str(base / "paired"), *parts, cwd=source, env=env), "", success=True)
         with tarfile.open(next((base / "paired").glob("thinkthen-swift-*.tar.gz"))) as packed:
             assert packed.extractfile(f"./Sources/ThinkThen/Native/{host}/libthinkthen.so").read() == (native / "libthinkthen_c.so").read_bytes()
+        with tarfile.open(next((base / "paired").glob("thinkthen-dart-*.tar.gz"))) as packed:
+            manifest = json.load(packed.extractfile("./native-assets.json"))
+            assert manifest['assets']['linux_x64']['sha256'] == hashlib.sha256((native / 'libthinkthen_c.so').read_bytes()).hexdigest(), 'Dart manifest must identify the packed C bytes'
         for kind in parts:
             if len(list((base / "paired").glob(f"thinkthen-{kind}-*.tar.gz"))) != 1:
                 raise AssertionError(f"missing {kind} fixture archive")
