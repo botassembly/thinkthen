@@ -45,6 +45,7 @@ if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'full':
                     if process.poll() is None: process.kill(); process.wait()
             else:
                 result = subprocess.run(args, env=child, cwd=work, capture_output=True, text=True, timeout=120)
+            assert result.returncode == 0 and not result.stderr, (result.returncode, result.stderr)
             payload = json.loads(result.stdout)
             # Go context cancellation returns no terminal facts. The shared assertion
             # uses the actual loopback count, not invented native facts.

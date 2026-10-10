@@ -16,7 +16,8 @@ from session_projection import project_session
 CONSUMER='cpp'
 
 def descriptor(v,home):
-    definition={**v['question'],**v.get('metadata',{})}
+    definition=dict(v['question'])
+    if 'questions' not in definition:definition.update(v.get('metadata',{}))
     loader=v.get('loader')
     if loader:
         kind={'file':'file','load':'file','named':'name','load_named':'name','reference':'reference','load_reference':'reference'}[loader]
@@ -56,7 +57,7 @@ def descriptor(v,home):
     # A null/non-context value is original JSON data, not a valid ContextSchema
     # descriptor. Select it through the shared native reading rule to test the
     # declaration's exact refusal, preserving the canonical assertion.
-    if v.get('context_present') and not isinstance(v.get('context'), (str,dict)):
+    if input['kind'] != 'source' and any('context' in item and not isinstance(item['context'], (str,dict)) for item in input['items']):
         for item in input['items']:
             original=item['original'].get('value',item['original'].get('text'))
             item['original']={'kind':'json','value':{'item':original,'context':item.pop('context')}}
@@ -85,6 +86,21 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
         try:
             original={'native-filter-first-excluded':'15-rank-records','native-duplicate-row-indices':'complete-decide'}.get(row['id'],row['id'])
             value=shared.document({**row,'id':original},cases,named)
+            # Go's sealed generated definition types cannot carry arbitrary authored
+            # JSON. Its public file selector preserves those bytes and reports Local
+            # (question-file.md); keep the diagnostic and zero-send assertions.
+            if CONSUMER == 'go' and original in (
+                '29-usage-json-text', '31-usage-rank-blank-question',
+                'declaration-shorthand', 'declaration-null', 'declaration-empty',
+                'declaration-nested', 'declaration-unknown-keyword',
+                'declaration-required-unknown', 'declaration-duplicate-required',
+                'wording-version-zero', 'wording-version-overflow', 'wording-version-string',
+                'wording-version-boolean', 'wording-version-null', 'wording-version-fraction',
+                'wording-version-integral-float', 'wording-version-exponent',
+                'author-name-blank', 'author-name-uppercase', 'author-name-leading-digit',
+                'author-name-control', 'author-name-nonascii', 'duplicate-metadata',
+                'duplicate-schema', 'single-format-version'):
+                value['expect']={**value['expect'],'error':'local','requests_sent':0}
             if row['id']=='native-filter-first-excluded':
                 value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
             if row['id']=='native-duplicate-row-indices':value['items'] *= 2
