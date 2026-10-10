@@ -364,6 +364,19 @@ impl RecordReading {
         }
         Ok(())
     }
+    pub(crate) fn compose_images(
+        &self,
+        images: ImageEvidence,
+    ) -> Result<RecordInput<QuestionInput>, Error> {
+        self.admit_images()?;
+        Ok(RecordInput {
+            examples: None,
+            seed_spans: None,
+            original: QuestionInput::Images(images),
+            context: None,
+            options: None,
+        })
+    }
     /// Compose an item from the single native explicit reader without rereading a file.
     /// # Errors
     /// Refuses incompatible image pointers or ordinary record admission failures.
@@ -389,14 +402,7 @@ impl RecordReading {
                 Ok(record.map_original(|original| original.question_input()))
             }
             SourceItem::Image(source) => {
-                self.admit_images()?;
-                Ok(RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: source.question_input(),
-                    context: None,
-                    options: None,
-                })
+                self.compose_images(ImageEvidence::one(source.record).located(source.file))
             }
         }
     }

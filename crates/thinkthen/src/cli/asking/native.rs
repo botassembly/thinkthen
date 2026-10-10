@@ -230,6 +230,23 @@ pub(super) fn compose(
     composition: &crate::RecordReading,
     unit: &Held,
 ) -> Result<crate::RecordInput<crate::QuestionInput>, crate::Error> {
+    if unit.record.text().is_some()
+        && let Some(images) = &unit.images
+    {
+        let mut images = images.clone();
+        if let Some(position) = unit.position.as_ref().filter(|p| p.located)
+            && let Some(file) = &position.file
+        {
+            images = images.with_location(crate::SourceLocation::new(
+                file.clone(),
+                position.first,
+                position.last,
+            )?);
+        }
+        let mut record = composition.compose_images(images)?;
+        record.context = unit.context.clone();
+        return Ok(record);
+    }
     let mut record = composition.compose(crate::RawRecord(Arc::new(unit.record.clone())))?;
     record.context = unit.context.clone();
     if let Some(images) = &unit.images {

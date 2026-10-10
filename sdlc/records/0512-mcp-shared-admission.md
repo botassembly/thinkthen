@@ -168,3 +168,18 @@ The four focused existing cases pass. Strict offline locked library, backend-tes
 The lesson is to retain a structured refusal cause at an adapter boundary. A generic message can preserve the exit code while losing the diagnostic fields the caller needs. Shared text context and explicit per-record typed context also need distinct test expectations because their accepted wire forms differ.
 
 A fresh reviewer accepted `3590246d2c1d9704281194796677cb8ee02f5900` after reproducing the four focused cases and checking both context contracts. Integration preserves the completed-rank record and the Polars conversion; this zero-net-line repair retains their measured ceiling of 183218.
+
+
+## Image-only composition
+
+This repair starts from `11c266c59`. The CLI native bridge composed the caption as text before attaching images. The shared text composer correctly refuses blank evidence, so image-only calls and authored blank captions failed before native image admission. A nonblank literal caption also became a record input, which lost the optional caption representation used by the established image door.
+
+The shared record reader now exposes its existing image-source composition as a private helper over validated image evidence. The explicit file-source composer and the CLI call that same helper. Literal image inputs retain absent captions, exact authored blank or nonblank caption bytes, ordered duplicate attachments and physical locations. Structured caption records retain original records and their existing field, context and option composition. The existing image pointer admission remains shared. No public API, placeholder caption, private validation or second grammar is added.
+
+The unchanged backend image cases verify attachment details, image-only hosted protocols, optional blank captions, original structured rows and independent context and options, cache and replay identities, corrupt image entries and explicit body limits with no extra requests. The unchanged local image-profile case verifies admission and unknown-profile rejection without requests. The release-only oversized-caption case stays excluded.
+
+The measured source total grows by 23 nonblank lines to 183107. The helper replaces the explicit file-source branch instead of duplicating its admission rule. The native bridge adds only the literal-image dispatch and physical-location transfer; its existing size warning remains because this bridge owns native composition and presentation. Other policy warnings concern unchanged larger files. The source ceiling requires reviewer acceptance before landing.
+
+The focused backend image run passes all 11 routine cases. The local profile case and all five native composition cases pass. Offline policy, strict library and command Clippy, formatting, source ratchet and diff checks pass. Cargo uses two jobs with 8 GiB memory and 1 GiB swap limits. No full routine, parity, large-input, load, paid model, remote-machine or release check runs here.
+
+A fresh reviewer accepted `cd6a43c437ebd890e8413ea35ee02ca430746470`, reproduced the focused image and composition cases and explicitly accepted the 23 production lines. Integration preserves the Polars and annotation changes and measures exactly 183241; only the count conflict and appended record sections are combined.
