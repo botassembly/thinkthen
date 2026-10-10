@@ -1,7 +1,7 @@
 name: thinkthen_flutter
 version: 0.2.0
 publish_to: none
-description: Flutter-facing package for the separate ThinkThen Dart FFI binding.
+description: Typed asynchronous ThinkThen caller with bundled native assets.
 environment:
   sdk: '>=3.10.0 <4.0.0'
   flutter: '>=3.38.0'
