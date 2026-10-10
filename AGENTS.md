@@ -19,7 +19,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 
 Add commands and options only for demos. Replay documentation examples when their text or output changes. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews.
 
-Each engine resolves one endpoint, one effective key and one provider API type. Business routing, model groups, fallback providers, A/B policy, curation and automatic threshold tuning belong to the proxy. Keep explicit direct model/reading choices and offline analysis as caller controls; add no SDK business policy.
+Each engine resolves one endpoint, one effective key and one provider API type. The proxy owns business routing, model groups, fallback providers, A/B policy, curation and automatic threshold tuning. Callers control explicit model/reading choices and offline analysis. Add no SDK business policy.
 
 `crates/thinkthen/src/core` touches no file, environment, socket, clock or process. Parse at the command edge; pass typed values inward. Attributes and `policy.py` enforce dependencies.
 
@@ -37,7 +37,7 @@ Read the key from `THINKTHEN_API_KEY`, or from a named backend's own key variabl
 
 ## Where decisions live
 
-`CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. The queue owner owns the whole repo, `site/` included, per `sdlc/planning/ownership.md`. Lasting rulings live in `sdlc/decisions/`; accepted ADRs and specifications retain product contracts. Preserve source links and name what Ian can overturn.
+`CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. The queue owner owns it, including `site/`: `sdlc/planning/ownership.md`. Rulings live in `sdlc/decisions/`; accepted ADRs and specifications own contracts. Keep source links and name what Ian can overturn.
 
 Release process: `sdlc/planning/release-process.md`. Ian's 2026-10-10 ruling permits coordinator candidate tags, nonpublishing workflows and GitHub tests for platforms unavailable locally. Publishing needs his permission: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`, superseding the hold in `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`.
 
