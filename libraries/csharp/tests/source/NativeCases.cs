@@ -7,8 +7,6 @@ using System.Threading;
 using ThinkThen;
 
 // Shared fixture framing stays test data; execution uses the shipped typed API.
-static class NativeCases { public static string Run(string raw) => AsyncFixtureCases.Run(raw); }
-
 static class AsyncFixtureCases
 {
     static JsonElement Get(JsonElement value, string key) => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(key, out var found) ? found : default;
