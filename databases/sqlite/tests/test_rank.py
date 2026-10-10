@@ -40,7 +40,7 @@ def test_ties_keep_keyed_member_order() -> None:
 
 
 def test_batching_packs_one_call_by_the_setting() -> None:
-    for settings, sent in (("{}", 1), ('{"batch":3}', 3), ('{"batch":1}', 7)):
+    for settings, sent in ((None, 1), ("{}", 1), ('{"batch":3}', 3), ('{"batch":1}', 7)):
         backend = Backend()
         held = ranked(backend, "generic", {
             "rows": ("SELECT count(*), max(rank) FROM thinkthen_rank(?, ?, ?)", (QUESTION, SEVEN, settings)),
@@ -75,14 +75,14 @@ def test_the_question_is_literal_text() -> None:
 
 def test_empty_and_null_inputs() -> None:
     backend = Backend()
-    held = ranked(backend, "generic", {
-        "empty": ("SELECT count(*) FROM thinkthen_rank(?, '{}')", (QUESTION,)),
-        "question": ("SELECT count(*) FROM thinkthen_rank(NULL, ?)", ('{"a":"b"}',)),
-        "records": ("SELECT count(*) FROM thinkthen_rank(?, NULL)", (QUESTION,)),
-    })
-    expect(held["empty"], [[0]], "an empty object ranks nothing")
-    expect(held["question"], "thinkthen usage: the question is required (retryable: no)", "a NULL question")
-    expect(held["records"], "thinkthen usage: the keyed records is required (retryable: no)", "NULL keyed records")
+    names = ("thinkthen_decide_many", "thinkthen_choose_many", "thinkthen_score_many",
+             "thinkthen_tag_many", "thinkthen_rank", "thinkthen_rank_set")
+    calls = {"empty": ("SELECT count(*) FROM thinkthen_rank(?, '{}')", (QUESTION,))}
+    for name in names:
+        for at, pair in enumerate(((None, 7), (7, None), (None, '['), ('@unread-null-question', None))):
+            calls[f"{name}_{at}"] = (f"SELECT count(*) FROM {name}(?, ?, ?)", (*pair, 7))
+    held = ranked(backend, "generic", calls)
+    expect(list(held.values()), [[[0]]] * len(calls), "required NULL yields zero rows before partner admission")
     expect(backend.close(), 0, "nothing sent")
 
 

@@ -52,11 +52,14 @@ def test_find_preserves_duplicate_positions_and_strict_ties() -> None:
             held = child(f"""
 db = connect()
 say(result=run(db, "SELECT thinkthen_find(?, ?, ?)",
-               ("Which unit?", {json.dumps(units)!r}, {json.dumps({'none': offered})!r})))
+               ("Which unit?", {json.dumps(units)!r}, {json.dumps({'none': offered})!r})),
+    optional=None if {offered!r} else run(db, "SELECT thinkthen_find(?, ?, NULL)", ("Which unit?", {json.dumps(units)!r})))
 """, environment(backend, THINKTHEN_BASE_URL=proxy.base))
-            expect(proxy.count(), 1, "one find request")
+            expect(proxy.count(), 1 if offered else 2, "one find request per explicit or NULL-settings call")
         result = json.loads(held["result"][0][0])
         expect(result, selected, "original selected unit and input-order probabilities")
+        if not offered:
+            expect(json.loads(held["optional"][0][0]), selected, "NULL optional settings uses default find behavior")
     expect(backend.close(), 0, "fixed replies did not reach the generic arm")
 
 
@@ -150,6 +153,28 @@ say(results={name: run(db, 'SELECT thinkthen_find(?, ?, ?)', (q, units, settings
         expect(held["results"][name].startswith("thinkthen usage: "), True, name)
         expect(held["results"][name].endswith(" (retryable: no)"), True, name)
     expect(backend.close(), 0, "all refused inputs send nothing")
+
+def test_required_null_precedes_settings_and_complete_admission() -> None:
+    backend = Backend()
+    names = SCALARS + ("thinkthen_try_details", "thinkthen_find", "thinkthen_plan") + tuple(
+        f"thinkthen_{verb}_complete" for verb in
+        ("decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate"))
+    held = child(f"""
+db = connect()
+say(**{{name: [run(db, f"SELECT {{name}}(?, ?, ?)", args) for args in
+    ((None, 7, 7), (7, None, 7), ('@unread-null-question', None, '['))]
+    for name in {names!r}}})
+""", environment(backend))
+    expect(held, {name: [[[None]]] * 3 for name in names}, "NULL bypasses malformed partners and settings")
+    tables = child("""
+db = connect()
+say(recognize=run(db, 'SELECT * FROM thinkthen_recognize(NULL, 7, 7)'),
+    relate=[run(db, 'SELECT * FROM thinkthen_relate(?, ?, ?)', args)
+            for args in ((None, 7, 7), (7, None, 7), ('SELECT * FROM unread', None, '['))])
+""", environment(backend))
+    expect(tables, {"recognize": [], "relate": [[], [], []]}, "NULL table operands bypass partners")
+    expect(backend.close(), 0, "required NULL sends nothing")
+
 
 def test_a_null_text_is_null_and_a_bad_value_is_refused_before_any_send() -> None:
     """Branch case 81 and G11, for every scalar that sends."""

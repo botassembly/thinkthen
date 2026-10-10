@@ -100,8 +100,8 @@ def test_invalid_set_controls_keys_and_empty_rows_send_zero():
                   ('deadline', QUERY, (SET, RECORDS, '{"deadline_ms":0}'))]
         got = invoke(backend, calls)
         for name, _, _ in calls:
-            if name == 'empty':
-                expect(got[name], [], 'empty keyed input')
+            if name in ('empty', 'null'):
+                expect(got[name], [], 'empty or NULL keyed input')
             else:
                 expect(got[name].startswith('thinkthen deadline:' if name == 'deadline' else 'thinkthen usage:'), True, name)
                 expect('private-model' in got[name], False, 'model secrecy')

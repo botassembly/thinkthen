@@ -29,6 +29,9 @@ fn prepare(
 
 fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<String>> {
     let result = guard("a complete SQL call", || {
+        if (0..2).any(|slot| matches!(context.get_raw(slot), rusqlite::types::ValueRef::Null)) {
+            return Ok(None);
+        }
         let Some(question) = question::text(context.get_raw(0), "the question")? else {
             return Ok(None);
         };

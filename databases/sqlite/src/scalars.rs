@@ -17,6 +17,9 @@ use crate::{Failure, Registration, ffi, guard, recognize_document, settings, wor
 type Inputs = Option<(Arc<LoadedQuestion>, String, Settings, Option<String>)>;
 
 fn inputs(context: &Context<'_>, requested: Option<For>) -> Result<Inputs, Failure> {
+    if (0..2).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
+        return Ok(None);
+    }
     let settings = if context.len() > 2 {
         call_settings(context.get_raw(2))?
     } else {
@@ -276,6 +279,9 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
 
 fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_annotate", || {
+        if (0..2).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
+            return Ok(None);
+        }
         let settings = if context.len() > 2 {
             call_controls(context.get_raw(2))?
         } else {
