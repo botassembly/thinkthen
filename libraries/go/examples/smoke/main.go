@@ -1,25 +1,39 @@
-// The replay smoke (ticket 0335): one Decide through New, which reads the
-// environment, with the question and text sdlc/scripts/smoke names.
 package main
 
 import (
 	"context"
 	"fmt"
+	tt "github.com/botassembly/thinkthen/libraries/go"
 	"log"
 	"os"
-
-	thinkthen "github.com/botassembly/thinkthen/libraries/go"
 )
 
 func main() {
-	engine, err := thinkthen.New()
+	client, err := tt.NewClient(tt.EngineSettings{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer engine.Close()
-	answer, err := engine.Decide(context.Background(), os.Getenv("THINKTHEN_TEST_SMOKE_QUESTION"), os.Getenv("THINKTHEN_TEST_SMOKE_TEXT"))
+	defer client.Close()
+	call, err := client.Decide(context.Background(), tt.TextQuestion(os.Getenv("THINKTHEN_TEST_SMOKE_QUESTION")), os.Getenv("THINKTHEN_TEST_SMOKE_TEXT"), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("smoke: %s\n", map[thinkthen.Outcome]string{thinkthen.Yes: "true", thinkthen.No: "false", thinkthen.Unsure: "null"}[answer.Value.Outcome])
+	for _, packet := range call.Packets {
+		row, err := packet.AsSessionPacketDecideRow()
+		if err != nil {
+			continue
+		}
+		value := row.Value().Value.Value()
+		if value.Null {
+			fmt.Println("smoke: null")
+			return
+		}
+		answer, err := value.Value.Boolean()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("smoke: %t\n", answer)
+		return
+	}
+	log.Fatal("missing decision row")
 }

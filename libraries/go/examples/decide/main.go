@@ -2,30 +2,31 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	tt "github.com/botassembly/thinkthen/libraries/go"
 	"log"
-
-	thinkthen "github.com/botassembly/thinkthen/libraries/go"
 )
 
 func main() {
-	engine, err := thinkthen.New()
+	client, err := tt.NewClient(tt.EngineSettings{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer engine.Close()
-	answer, err := engine.Decide(context.Background(), "Is it?", "café")
+	defer client.Close()
+	call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), "café", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Facts are JSON; read the members you need and ignore the rest.
-	var facts struct {
-		Records      int `json:"records"`
-		RequestsSent int `json:"requests_sent"`
+	for _, packet := range call.Packets {
+		row, err := packet.AsSessionPacketDecideRow()
+		if err != nil {
+			continue
+		}
+		value := row.Value().Value.Value()
+		answer, err := value.Value.Boolean()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("answer=%t\n", answer)
 	}
-	if err := json.Unmarshal(answer.Facts, &facts); err != nil || facts.Records != 1 || facts.RequestsSent != 1 {
-		log.Fatalf("unexpected call facts: %s", answer.Facts)
-	}
-	fmt.Printf("outcome=%d probability=%.1f\n", answer.Value.Outcome, answer.Value.Probability)
 }
