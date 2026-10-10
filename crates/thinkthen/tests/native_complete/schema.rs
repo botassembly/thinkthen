@@ -14,18 +14,24 @@ pub(super) fn call<T: Serialize>(call: &thinkthen::Call<T>, definition: &str) {
 }
 #[cfg(test)]
 pub(super) fn check(document: &Value, definition: &str) {
+    check_batch(std::slice::from_ref(document), definition);
+}
+#[cfg(test)]
+pub(super) fn check_batch(documents: &[Value], definition: &str) {
     let script = r#"
 import json, sys
 from jsonschema import Draft202012Validator
 case = json.load(sys.stdin)
 schema = case['schema']
 Draft202012Validator.check_schema(schema)
-Draft202012Validator(schema).validate(case['document'])
-if case['definition']:
-    rows = case['document']['value']
-    if not isinstance(rows, list): rows = [rows]
-    validator = Draft202012Validator({'$ref':'#/$defs/'+case['definition'], '$defs':schema['$defs']})
-    for row in rows: validator.validate(row)
+validator = Draft202012Validator(schema)
+value_validator = Draft202012Validator({'$ref':'#/$defs/'+case['definition'], '$defs':schema['$defs']}) if case['definition'] else None
+for document in case['documents']:
+    validator.validate(document)
+    if value_validator:
+        rows = document['value']
+        if not isinstance(rows, list): rows = [rows]
+        for row in rows: value_validator.validate(row)
 "#;
     let mut child = Command::new("python3")
         .clear_environment()
@@ -36,7 +42,7 @@ if case['definition']:
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    let input = json!({"schema":serde_json::from_str::<Value>(thinkthen::complete_call_schema()).unwrap(),"document":document,"definition":definition});
+    let input = json!({"schema":serde_json::from_str::<Value>(thinkthen::complete_call_schema()).unwrap(),"documents":documents,"definition":definition});
     child
         .stdin
         .take()

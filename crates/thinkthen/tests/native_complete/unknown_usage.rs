@@ -3,6 +3,7 @@ use super::*;
 
 #[test]
 fn empty_usage_stays_absent_and_explicit_zero_stays_reported_through_cache_and_replay() {
+    let mut documents = Vec::new();
     for (usage, expected) in [
         (json!({}), None),
         (json!({"input_tokens":0}), Some(json!({"input_tokens":0}))),
@@ -43,7 +44,7 @@ fn empty_usage_stays_absent_and_explicit_zero_stays_reported_through_cache_and_r
             assert_eq!(row["meta"].get("usage"), expected.as_ref());
             assert_eq!(call.value().reported_usage().is_some(), expected.is_some());
             assert_eq!(call.value().answer_id(), live.value().answer_id());
-            schema::call(call, "completeDecide");
+            documents.push(serde_json::to_value(call.complete().unwrap()).unwrap());
         }
         assert_eq!(
             live.facts().input_tokens(),
@@ -64,4 +65,5 @@ fn empty_usage_stays_absent_and_explicit_zero_stays_reported_through_cache_and_r
         drop(engine);
         std::fs::remove_dir_all(root).unwrap();
     }
+    schema::check_batch(&documents, "completeDecide");
 }
