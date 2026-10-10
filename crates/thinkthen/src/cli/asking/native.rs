@@ -418,9 +418,13 @@ fn take(
         crate::RequestValue::Scores(v) => rows!(v),
         crate::RequestValue::Filtered(v) => rows!(v),
         crate::RequestValue::Ranked(v) => {
-            for row in v {
+            for mut row in v {
                 let unit = held.borrow_mut().remove(&row.ordinal());
                 let judged = if rendering.view.details {
+                    row.result.canonical.declarations = rendering.declarations.clone();
+                    if !rendering.streams {
+                        row.result.canonical.clear_batch_metadata();
+                    }
                     rendering.rank_details(&row, unit.and_then(|unit| unit.position))?
                 } else {
                     rendering.row(

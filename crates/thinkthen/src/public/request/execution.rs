@@ -532,7 +532,6 @@ pub(super) fn selected_filter(
 
 #[expect(
     clippy::too_many_arguments,
-    clippy::too_many_lines,
     reason = "one typed dispatch preserves all ten existing native scheduler contracts"
 )]
 fn dispatch<'a>(
