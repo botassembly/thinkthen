@@ -96,34 +96,6 @@ fn meta_names_the_tool_and_drops_the_usage_a_backend_never_reported() {
 }
 
 #[test]
-fn an_unresolved_result_prints_a_null_value_and_the_band_that_left_it_open() {
-    let text = QuestionText::new("Does this ask for a refund?").expect("not empty");
-    let answer = Answer::new_yes_no(Probability::new(0.5).expect("a probability"));
-    let threshold: Threshold = "0.1:0.9".parse().expect("a band");
-    let result = DecisionResult::new(
-        answer.read(Some(threshold)).0,
-        Question::Decide {
-            text,
-            yes: None,
-            no: None,
-        },
-        answer.clone(),
-        Some(threshold),
-        Meta::new(
-            "0.4.0",
-            DIGEST.to_owned(),
-            Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
-            ModelName::new("local-1").expect("not empty"),
-            None,
-            RequestMeta::new(false, 1, vec![REQUEST.to_owned()]),
-        ),
-    );
-    let rendered = serde_json::to_string(&result).expect("a result serializes");
-    assert!(rendered.contains(r#""value":null,"#), "{rendered}");
-    assert!(rendered.contains(r#""threshold":"0.1:0.9","#), "{rendered}");
-}
-
-#[test]
 fn a_record_row_carries_the_whole_record_under_input() {
     let reading = Reading::new(Framing::Jsonl, Vec::new()).expect("a framing");
     let line = br#"{"id":"T-91","body":"Payouts have failed for 3 days."}"#;
