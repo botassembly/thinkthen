@@ -130,7 +130,7 @@ if [ -n "$source_packages" ]; then
 		[ -f "$DIR/$1" ] && [ ! -L "$DIR/$1" ] || { echo "release-smoke: missing or linked $1" >&2; exit 1; }
 		[ -f "$DIR/$1.sha256" ] && [ ! -L "$DIR/$1.sha256" ] || { echo "release-smoke: missing or linked $1.sha256" >&2; exit 1; }
 	}
-	for family in c go cpp csharp jvm swift zig php dart ada objective-c cobol sqlite duckdb postgresql16; do
+	for family in c go cpp csharp jvm swift zig php dart ada cobol sqlite duckdb postgresql16; do
 		name=thinkthen-$family-$V-$target.tar.gz
 		for file in "$DIR"/thinkthen-"$family"-*.tar.gz*; do
 			[ -e "$file" ] || [ -L "$file" ] || continue

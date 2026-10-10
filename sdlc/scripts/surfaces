@@ -306,7 +306,8 @@ code=0
 host=$(rustc -vV | sed -n 's/^host: //p')
 # A publish adds the source wrappers to the default parts, so the smoke checks each pair and install.
 parts=
-[ -z "$publish_tag" ] || parts='command c sqlite duckdb postgresql python typescript ruby first-run go cpp csharp jvm swift zig php dart ada objective-c cobol'
+[ -z "$publish_tag" ] || parts='command c sqlite duckdb postgresql python typescript ruby first-run go cpp csharp jvm swift zig php dart ada cobol'
+case $host in *-apple-darwin) [ -z "$publish_tag" ] || parts="$parts objective-c" ;; esac
 { sh sdlc/scripts/release-pack --reuse "$host" "$packed" $parts &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
 verdict "$mode" "release smoke" "$code"

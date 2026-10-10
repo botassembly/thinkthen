@@ -400,6 +400,12 @@ cobol)
 				}
 				continue
 			fi
+			if [ "$1" = objective-c ]; then
+				case $relative in CThinkThen.xcframework/*)
+					cmp -s "libraries/swift/$relative" "$copied" || { echo 'release-pack: Foundation native input differs' >&2; exit 1; }
+					continue ;;
+				esac
+			fi
 			# The wrapper's C header is copied from the one C header.
 			case $relative in native/*) continue ;; Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
 			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$member" | cmp -s - "$copied" || {
