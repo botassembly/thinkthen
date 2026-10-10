@@ -52,6 +52,7 @@ TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
 # default-path and secrecy fixtures outside this family deliberately set folders;
 # toolchain/container runners also retain their own installation environments.
 OWNED_HOME_CALLERS = {
+    "conformance/c_parity.py", "conformance/cli_parity.py", "libraries/python/tests/native_fixture.py",
     "libraries/mcp/conformance.py", "libraries/mcp/installed.py", "libraries/mcp/test_installed.py",
     "crates/thinkthen/tests/native_named_questions.rs", "crates/thinkthen/tests/native_cache_policy.rs",
     "crates/thinkthen/tests/public_controls/alone.rs",

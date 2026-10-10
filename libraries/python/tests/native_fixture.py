@@ -195,6 +195,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
     import os, subprocess, sys, tempfile, sqlite3
     sys.path.insert(0,str(root/'conformance'))
     import parity,c_parity,c_images
+    from children import child_env
     cases={v['id']:v for v in json.loads((root/'conformance/cases.json').read_text())['cases']}
     named={v['id']:v for v in json.loads((root/'conformance/named-inputs.json').read_text())['cases']}
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
@@ -216,11 +217,11 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
         else:compiler+=['--target-dir',str(root/'libraries/python/target')]
     if compiler:
         with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
-            env={name:value for name in ('PATH','CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS') if (value:=os.environ.get(name)) is not None}
+            env=child_env(keep=('CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS'), home=tmp, LANG='C.UTF-8', LC_ALL='C.UTF-8')
             env.setdefault('CARGO_HOME',str(Path.home()/'.cargo'))
             env.setdefault('RUSTUP_HOME',str(Path.home()/'.rustup'))
             env['CARGO_NET_OFFLINE']='true'
-            env.update(HOME=tmp,XDG_CONFIG_HOME=tmp+'/config',XDG_CACHE_HOME=tmp+'/cache',XDG_STATE_HOME=tmp+'/state',LANG='C.UTF-8',LC_ALL='C.UTF-8',**(extra_env or {}))
+            env.update(extra_env or {})
             subprocess.run(compiler,cwd=source.parent,env=env,check=True)
     failures=[]
     for row in rows:
@@ -231,7 +232,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                 value['metadata_only']=False
             with tempfile.TemporaryDirectory(prefix='thinkthen-0431-') as tmp:
                 home=Path(tmp)
-                env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':tmp,'XDG_CONFIG_HOME':tmp+'/config','XDG_CACHE_HOME':tmp+'/cache','XDG_STATE_HOME':tmp+'/state','LANG':'C.UTF-8','LC_ALL':'C.UTF-8',**(extra_env or {})}
+                env=child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', **(extra_env or {}))
                 backend=c_parity.Backend(root/'target/debug/conformance-backend',env)
                 try:
                     env.update(THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')
