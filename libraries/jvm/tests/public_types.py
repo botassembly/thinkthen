@@ -141,7 +141,12 @@ def native_parity(consumer, command):
                             request = json.loads(capture[0])
                             expected = {f"q{i+1}": {"type": "noul", "instructions": f"The text is {c_parity.compact(item)}. {step['question']['decide']}"} for i, item in enumerate(step["items"][:2])}
                             assert request["questions"] == expected
-                        c_parity.assertions(row, original, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
+                        expected = original
+                        if isinstance(step.get("raw"), str) and original["expect"].get("error") == "usage":
+                            # SessionCases preserves authored bytes through RequestQuestionFile.
+                            # question-file.md assigns malformed local files Local, unlike inline definitions.
+                            expected = {**original, "expect": {**original["expect"], "error": "local"}}
+                        c_parity.assertions(row, expected, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
                         if row["kind"] in ("images", "image-location"):
                             before = int(backend.read("count"))
                             saved = invoke({**{k:v for k,v in settings.items() if k != "record"}, "replay": str(home / "recorded")})
