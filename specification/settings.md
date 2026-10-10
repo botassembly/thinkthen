@@ -40,6 +40,8 @@ A surface cell holds that surface's spelling in backticks. A cell reads `not on 
 
 The DuckDB cells describe the C++ extension selected for Linux x86-64, Linux ARM64, Apple Silicon and Intel macOS.
 
+The public release remains 0.1.2. Development settings and the [binding target](../libraries/BINDING-AUTHOR.md) do not establish published package support. C's retained constructor accepts the settings JSON through [Rust's shared settings reader](../crates/thinkthen/src/public/settings/json.rs), whose admitted fields generate `EngineSettings` in the [Request schema](request.schema.json); its frozen 0.1 symbols remain deprecated compatibility entry points.
+
 Library `usage` results report `retries` beside `requests_sent`. `retries` counts the requests sent again after a retried status, so it never exceeds `requests_sent`. SQL usage output has no `retries`.
 
 ## Settings
@@ -162,7 +164,7 @@ Surface identity is supplied by the outer wrapper using the closed token list in
 
 ## Keeping this page true
 
-A ticket that adds or changes a setting updates its row in the same commit. `sdlc/scripts/settings` fails the `spec` rung when a flag in any command's help has no row, when a `THINKTHEN_` name the product code reads has no row, or when a question-file key has no row. The keys come from the schema, one level of nesting deep, and from the two key lists `crates/thinkthen/src/core/recognize_file.rs` checks a recognize file against. A rule's own members, such as `either`, are not checked. It also fails when a row names one that no longer exists, and when a column moves. It does not read the library and SQL cells, the defaults, or the allowed values against the code. Review holds those.
+A ticket that adds or changes a setting updates its row in the same commit. `sdlc/scripts/settings` fails the `spec` rung when a flag in any command's help has no row, when a `THINKTHEN_` name the product code reads has no row, or when a question-file key or accepted configuration field has no row. Build helpers and test helpers are outside the product environment inventory. The question keys come from the schema, one level of nesting deep, and from the two key lists `crates/thinkthen/src/core/recognize_file.rs` checks a recognize file against. A rule's own members, such as `either`, are not checked. The check also refuses stale names and moved columns. It compares the selected engine-setting cells with their builder calls, following C's constructor into Rust's shared settings reader. It does not validate every library or SQL cell, defaults, allowed values, installed packages or behavioral parity. Review holds those claims.
 
 ## Rank question sets
 
