@@ -19,3 +19,7 @@ Fresh review found a test and evidence defect, not a product defect: the default
 After this repair, the fresh installed archive passes all five owned-session cases through CommonJS and all five through ES modules. Both installed `.cts` and `.mts` consumers compile strictly and execute. All four binding source ratchets match their measured totals. The archive SHA-256 is `57dafb883d4f77dca4a8b3da37405ccb4fa3ed86ac1e3f2f11b2a34510601a86`; it is unchanged because the repair changes tests rather than shipped code. The existing native binary was reused without rebuilding Rust or rerunning the already accepted policy and Clippy checks.
 
 Full shared conformance, routine and release suites, Windows native qualification, paid models, load, alternate machines, final assembly and compatibility retirement remain outside this bounded evidence. The local artifact is `target/0498-pack/thinkthen-0.2.0.tgz`; installed consumers and logs remain under `target/0498-installed/` and `target/0498-*.log`.
+
+## What the build taught us
+
+The Go target registration left its `gofmt` child inheriting the whole parent environment. The shared generator now supplies the existing `child_env` helper with the same kept names as its other formatter children. The child scanner catches this omission; no scanner exemption or new environment list is needed. This repair adds one nonblank generator line and changes no generated declaration.
