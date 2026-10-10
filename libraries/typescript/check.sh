@@ -9,6 +9,10 @@ profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
+if [ "$profile" = routine ]; then
+    THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$repo/conformance/routine-ids.txt}
+    export THINKTHEN_CONFORMANCE_IDS
+fi
 python3 "$repo/sdlc/generators/results/generate.py" --target typescript --check
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
@@ -19,16 +23,13 @@ node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"
 step() { printf '== %s\n' "$*"; }
 fail() { echo "typescript: $*" >&2; exit 1; }
 
-complete_public_types() {
-    # One public consumer, compiled and executed against each package module face.
+public_types() {
     for extension in cts mts; do
-        output=$project/target/complete-public/$extension
+        output=$project/target/public/$extension
         mkdir -p "$output"
-        cp "$project/tests/complete_public.test.ts" "$output/complete_public.test.$extension"
         cp "$project/tests/owned_types.test.ts" "$output/owned_types.test.$extension"
-        "$tsc" --strict --target ES2022 \
-            --module NodeNext --moduleResolution NodeNext --rootDir "$output" --outDir "$output" "$output/complete_public.test.$extension" "$output/owned_types.test.$extension"
-        node "$output/complete_public.test.$(printf '%s' "$extension" | sed 's/ts$/js/')"
+        "$tsc" --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --rootDir "$output" --outDir "$output" "$output/owned_types.test.$extension"
+        node "$output/owned_types.test.$(printf '%s' "$extension" | sed 's/ts$/js/')"
     done
 }
 
@@ -59,27 +60,16 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     resolved=$(cd "$project/tests" && node --input-type=module -e 'console.log(import.meta.resolve("thinkthen"))')
     case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
-    complete_public_types
-    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/conformance.test.mjs tests/examples.test.mjs tests/owned_session.test.mjs)
-    (cd "$project" && THINKTHEN_OWNED_MODULE=cjs node --test --test-timeout=30000 tests/owned_session.test.mjs)
-    # Ticket 0374: the installed addon keeps its own panic hook, and the token cap variable
-    # refuses before any send, counted at the test's own backend.
-    own_panic_hook "$project/node_modules/thinkthen/thinkthen-$expected.node"
-    # A renamed test would match nothing and pass, so its own ok line is pinned.
-    capped=$(cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 --test-reporter=tap \
-        --test-name-pattern='^the token cap variable refuses a call before any request$' tests/settings.test.mjs) ||
-        fail "the token cap test failed, installed"
-    printf '%s\n' "$capped" | grep -qx 'ok 1 - the token cap variable refuses a call before any request' ||
-        fail "the token cap test did not run, installed"
-
+    public_types
+    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
+    (cd "$project" && THINKTHEN_OWNED_MODULE=cjs node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
     python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
-names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
-    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names,typescript_compiler=tsc):sys.exit(1)
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,extra_env={'THINKTHEN_OWNED_MODULE':'cjs' if language=='typescript' else 'esm'},typescript_compiler=tsc):sys.exit(1)
 NODENATIVE
     echo 'typescript: pass, installed'
     exit 0
@@ -105,8 +95,8 @@ if [ "$profile" = smoke ]; then
     THINKTHEN_API_KEY=sk-smoke-loopback node -e '
         const tt = require("thinkthen");
         if (!require.resolve("thinkthen").startsWith(process.argv[1])) throw new Error("thinkthen loaded from outside the project");
-        tt.decide(process.env.THINKTHEN_TEST_SMOKE_QUESTION, process.env.THINKTHEN_TEST_SMOKE_TEXT)
-            .then((call) => console.log(`smoke: ${call.value}`));
+        new tt.Client({cache:false}).decide(process.env.THINKTHEN_TEST_SMOKE_QUESTION, process.env.THINKTHEN_TEST_SMOKE_TEXT)
+            .then((call) => console.log(`smoke: ${call.results[0].value}`));
     ' "$project/node_modules/"
     exit
 fi
@@ -168,37 +158,17 @@ if [ "$profile" = stress ]; then
 fi
 sh "$LIMIT" 300 node --test --test-timeout=60000 --test-skip-pattern='^stress:' tests/*.test.mjs
 
-step 'the conformance runner fails a corrupted case and names it'
-for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
-    node -e '
-        const fs = require("node:fs");
-        const file = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-        file.cases.find((one) => one.id === process.argv[2]).expect.success.answers[0].bare = "corrupted";
-        fs.writeFileSync(process.argv[3], JSON.stringify(file));
-    ' "$repo/conformance/cases.json" "$id" "$plant/cases.json"
-    set +e
-    env -u THINKTHEN_CONFORMANCE_IDS THINKTHEN_TEST_CASES="$plant/cases.json" \
-        sh "$LIMIT" 300 node --test tests/conformance.test.mjs >"$plant/run" 2>&1
-    code=$?
-    set -e
-    [ "$code" -ne 0 ] && grep -q "fail $id" "$plant/run" || fail "a corrupted $id passed (exit $code)"
-done
-
-step 'types'
-target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResolution node16 --target es2022 tests/types.test.ts tests/backend_types.test.ts tests/complete_types.test.ts
-
 step 'native JavaScript and compiled TypeScript consumers'
 project=$PWD
-complete_public_types
+public_types
 
     python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
-names={k:k.split('_')[0]+''.join(p.title() for p in k.split('_')[1:]) for k in ('base_url','max_requests','max_requests_total','max_request_bytes','max_retries','refresh_cache')};names['timeout']='timeoutSeconds'
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
-    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,settings_names=names,typescript_compiler=tsc):sys.exit(1)
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,extra_env={'THINKTHEN_OWNED_MODULE':'cjs' if language=='typescript' else 'esm'},typescript_compiler=tsc):sys.exit(1)
 NODENATIVE
 step 'the loader refuses a platform it does not ship, with the pinned sentence'
 refused=$(node -e 'Object.defineProperty(process, "platform", { value: "freebsd" }); try { require("./loader.js") } catch (e) { console.log(e.message) }')

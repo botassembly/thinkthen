@@ -1,28 +1,30 @@
 'use strict';
 const addon=require('./loader.js');
 const Results=require('./results_generated.js');
-const {ThinkThenError}=require('./index.js');
-class ClientError extends ThinkThenError {}
+class ClientError extends Error {
+  constructor(kind,message,retryable=false) {super(message);this.name='ClientError';this.kind=kind;this.retryable=retryable;}
+}
 const FUNCTIONS=['decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'];
 const sourceTag=Symbol('source'), itemTag=Symbol('item'), questionTag=Symbol('question');
 // Conversion refuses values JSON would silently omit or alter. Rust admits the request.
 function dump(value) {
   const seen=new Set();
   function check(v) {
-    if(v===null || typeof v==='boolean' || v instanceof Results.NativeNumber) return;
-    if(typeof v==='string' && v.isWellFormed()) return;
-    if(typeof v==='number' && Number.isFinite(v)) return;
+    if(v===null || typeof v==='boolean' || v instanceof Results.NativeNumber) return v;
+    if(v instanceof Uint8Array) return Buffer.from(v).toString('base64');
+    if(typeof v==='string' && v.isWellFormed()) return v;
+    if(typeof v==='number' && Number.isFinite(v)) return v;
     if(typeof v!=='object' || seen.has(v) || (!Array.isArray(v) && ![Object.prototype,null].includes(Object.getPrototypeOf(v)))) throw new ClientError('usage','input cannot be converted to native JSON');
     seen.add(v);
     if(Reflect.ownKeys(v).some(k=>typeof k==='symbol')) throw new ClientError('usage','input cannot be converted to native JSON');
-    for(const child of Array.isArray(v)?v:Object.values(v)) check(child);
-    seen.delete(v);
+    const encoded=Array.isArray(v)?Array.from(v,check):Object.fromEntries(Object.entries(v).map(([key,child])=>[key,check(child)]));
+    seen.delete(v);return encoded;
   }
-  check(value);return JSON.stringify(value);
+  return JSON.stringify(check(value));
 }
 function crossing(call) {
   try {return call();} catch(error) {
-    try {const held=JSON.parse(error.message).err; if(held) throw new ClientError(held.kind,held.message,held.retryable);} catch(parsed) {if(parsed instanceof ThinkThenError) throw parsed;}
+    try {const held=JSON.parse(error.message).err; if(held) throw new ClientError(held.kind,held.message,held.retryable);} catch(parsed) {if(parsed instanceof ClientError) throw parsed;}
     throw error;
   }
 }
@@ -43,9 +45,11 @@ class Client {
     if(this.#closed) throw new ClientError('usage','client is closed');
     return Object.freeze(crossing(()=>this.#engine.finishUsageStatus()));
   }
-  static files(paths,reading={unit:'line'},media='text'){return Object.freeze({[sourceTag]:{paths,reading,media}});}
-  static item(value,fields={}) {return Object.freeze({[itemTag]:{original:original(value),...fields}});}
+  static files(paths,reading={unit:'line'},media='text',framing){return Object.freeze({[sourceTag]:{paths,reading,media,...(framing===undefined?{}:{framing})}});}
+  static item(value,fields={}) {return Object.freeze({[itemTag]:{...(value===undefined?{}:{original:original(value)}),...fields}});}
   static questionFile(path){return Object.freeze({[questionTag]:{kind:'file',path}});}
+  static questionName(name){return Object.freeze({[questionTag]:{kind:'name',name}});}
+  static questionReference(reference){return Object.freeze({[questionTag]:{kind:'reference',reference}});}
   start(verb,question,input,controls={}) {
     if(this.#closed) throw new ClientError('usage','client is closed');
     const operation=new Operation(this.#engine,verb,question,input,controls,op=>this.#operations.delete(op));
@@ -102,7 +106,7 @@ class Operation {
             return {done:true,value:undefined};
           }
           if(packet.kind==='row') this.#rows.push(packet.value);
-          if(packet.kind==='aggregate') this.#rows=Array.isArray(packet.value)?[...packet.value]:[packet.value];
+          if(packet.kind==='aggregate') this.#rows.push(...(Array.isArray(packet.value)?packet.value:[packet.value]));
           return {done:false,value:packet};
         }
         if(this.#pending?.text) {

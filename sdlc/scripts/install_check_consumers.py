@@ -9,12 +9,15 @@ call = thinkthen.Engine(replay=str(root / "recording"), cache=False).decide(
 print(json.dumps({"value": call.value, "requests_sent": call.facts["requests_sent"]}))
 ''',
     "node": '''const fs = require('node:fs');
-const {Engine} = require('thinkthen');
+const {Client} = require('thinkthen');
 const root = process.argv[2];
 (async () => {
-  const call = await new Engine({replay: root + '/recording', cache: false}).decide(
+  const client = new Client({replay: root + '/recording', cache: false});
+  try {
+  const call = await client.decide(
     fs.readFileSync(root + '/question.txt', 'utf8'), fs.readFileSync(root + '/report.txt', 'utf8'));
-  console.log(JSON.stringify({value: call.value, requests_sent: call.facts["requests_sent"]}));
+  console.log(JSON.stringify({value: call.results[0].value, requests_sent: call.facts["requests_sent"]}));
+  } finally {client.close();}
 })().catch(error => { console.error(error.message); process.exitCode = 1; });
 ''',
     "ruby": '''require 'json'

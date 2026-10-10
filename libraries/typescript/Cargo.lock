@@ -679,25 +679,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "thinkthen-host"
-version = "0.2.0"
-dependencies = [
- "serde",
- "serde_json",
- "thinkthen",
-]
-
-[[package]]
 name = "thinkthen-typescript"
 version = "0.2.0"
 dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "serde",
  "serde_json",
  "thinkthen",
- "thinkthen-host",
 ]
 
 [[package]]

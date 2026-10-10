@@ -8,7 +8,7 @@ use thinkthen::{
     Request, RequestReaderFailure, RequestSession, RequestSessionPushStatus, RequestSessionRead,
 };
 fn failure(error: thinkthen::Error) -> napi::Error {
-    napi::Error::from_reason(crate::door::Failure::from(error).envelope())
+    napi::Error::from_reason(serde_json::json!({"err":{"kind":error.kind().name(),"message":error.to_string(),"retryable":error.retryable()}}).to_string())
 }
 #[napi]
 #[derive(Debug)]

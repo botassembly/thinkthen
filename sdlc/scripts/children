@@ -37,9 +37,6 @@ EXCLUDED = {
     "databases/duckdb/community/prepare.py": "the community toolchain preparation is a build tool, not a test",
 }
 EXEMPT = {
-    ("libraries/typescript/tests/fork.test.mjs", "inherits",
-     "const forked = fork(${script('fork_child.mjs')}, { execArgv: [] });", 1):
-        "the fork runs inside a child the helper already built",
     ("crates/thinkthen/src/cli/conformance_tests/command.rs", "reads", "let seen = std::env::vars_os()", 1):
         "its form child scans its own whole environment, and that reading is the probe's evidence",
     ("databases/duckdb/tools/databases_suite.py", "inherits",

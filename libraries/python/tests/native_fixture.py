@@ -293,7 +293,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                         def invoke(given):
                             invocation_count=int(backend.read('count'))
                             framed=request(step,root,home,given)
-                            if consumer in ('r','rust','rust-polars'):framed=native_request(framed)
+                            if consumer in ('r','rust','rust-polars','javascript','typescript'):framed=native_request(framed)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
                             if framed['batch_probe'] or (consumer=='r' and framed['held_cancel']):
                                 child=subprocess.Popen(command,cwd=home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
