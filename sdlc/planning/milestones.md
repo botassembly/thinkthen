@@ -51,6 +51,15 @@ Ian held release work on 2026-10-08. [0462](../tickets/0462-after-sprint-review.
 
 Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score, the local MCP surface and additive named question/input declarations. The SDK uses one configured route; business policy belongs to the proxy. [Preserved scope and order](../decisions/2026-10-08-preserve-planning-rulings.md#retained-02-scope-and-order) carries the lasting 0.2 plan rulings; read work status and dispatch order through pm. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. The preserved scope retains the seventeen asks, accepted 0456 intake and dependencies. Read acceptance from the owning tickets through pm.
 
+Exit criteria, under [the done ruling](../decisions/2026-10-10-drive-0-2-to-done.md):
+
+1. Every 0.2 language migration and SQL ticket is closed: its new API passes routine installed checks, and its old public names are deleted.
+2. The shared core tickets 0503, 0511, 0512, 0515 and 0516 are closed.
+3. At the candidate, the release suite passes: `test-full-cases --run`, `package`, `test-stress --run`, and the Windows checks owned by 0383–0385, 0474 and 0480.
+4. 0530 assembles every final artifact, and each installs and runs cleanly.
+5. 0467's documentation pass and 0508's final review are closed.
+6. Ian gives the go to publish.
+
 Retain version and release safety, backends and provider setups, the default of eight requests, rank search, audit and recipe contracts, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, the agent skill, native files and local runtimes. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
 
 The contract owners below retain their distinct outcomes. Read execution order through `pm next`.
