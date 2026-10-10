@@ -179,8 +179,10 @@ def generate(root, graph, prepare, env, check):
         function = arm['properties']['function']['const']
         typename = identifier('RequestCall_' + function)
         declaration = f'procedure {function.title()} (Owner : in out Session; Request : {typename})'
-        calls_spec.append(declaration + ';')
+        shared = declaration.replace('(Owner', '(Client : Engine; Owner')
+        calls_spec += [declaration + ';', shared + ';']
         calls_body.append(declaration + ' is\nbegin\nStart (Owner, (T_schema => (null record), T_call => (Kind => ' + identifier('RequestCall_arm_RequestCall_' + function) + f', V_{i} => Request)));\nend {function.title()};')
+        calls_body.append(shared + ' is\nbegin\nStart (Client, Owner, (T_schema => (null record), T_call => (Kind => ' + identifier('RequestCall_arm_RequestCall_' + function) + f', V_{i} => Request)));\nend {function.title()};')
     calls_spec.append('end Thinkthen.Sessions.Calls;')
     calls_body.append('end Thinkthen.Sessions.Calls;')
     outputs = {'thinkthen-sessions-calls.ads': '\n'.join(calls_spec) + '\n',

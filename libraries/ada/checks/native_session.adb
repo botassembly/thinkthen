@@ -1,22 +1,56 @@
 with Ada.Command_Line;
+with Ada.Environment_Variables;
+with Thinkthen;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 with Interfaces; use Interfaces;
-with Interfaces.C;
+with Interfaces.C; use type Interfaces.C.double;
+with System;
 with Interfaces.C.Strings;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
 with Thinkthen_Session_C; use Thinkthen_Session_C;
 procedure Native_Session is
+   Client : Thinkthen.Engine;
+   use type Thinkthen.Error_Kind;
+   procedure Select_Settings (Route, Settings : String) is
+      Error : Thinkthen.Failure;
+   begin
+      Thinkthen.Configure (Client, "{""base_url"":""" &
+        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route & """," & Settings & "}", Error);
+      if Error.Kind /= Thinkthen.None then raise Program_Error with Thinkthen.Message (Error); end if;
+   end Select_Settings;
+   procedure Select_Route (Route : String) is
+      Error : Thinkthen.Failure;
+   begin
+      Thinkthen.Configure (Client, "{""cache"":false,""base_url"":""" &
+        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route & """}", Error);
+      if Error.Kind /= Thinkthen.None then raise Program_Error with Thinkthen.Message (Error); end if;
+   end Select_Route;
    Owner : Session;
    Value : Packet;
    Read : Read_Status;
    Seen : Boolean;
+   Entity_Count : Natural;
+   procedure Require (Condition : Boolean; Message : String) is
+   begin
+      if not Condition then raise Program_Error with Message; end if;
+   end Require;
+   procedure Metadata (M : access constant thinkthen_complete_meta_v1) is
+   begin
+      Require (M /= null and then Text (M.model)'Length > 0 and then
+        Text (M.tool)'Length > 0 and then Text (M.url)'Length > 0 and then
+        Index (M.requests.len) > 0, "metadata missing");
+      Require (State (M.usage.presence) in Missing | Present and then
+        State (M.question_sha256.presence) in Missing | Present and then
+        State (M.attempts.presence) in Missing | Present, "metadata presence invalid");
+   end Metadata;
    Terminal : Boolean;
-   procedure Drain (Failure : Error_Status := Success; Decision : Integer := -1; Located : Boolean := False) is
+   procedure Drain (Failure : Error_Status := Success; Decision : Integer := -1; Located : Boolean := False; Expected_Sends : Integer := -1; Images : Boolean := False; Cache_Hit : Boolean := False; Odds : Interfaces.C.double := 0.9) is
    begin
       Seen := False;
+      Entity_Count := 0;
       Terminal := False;
       loop
          Try_Read (Owner, Value, Read);
@@ -33,7 +67,16 @@ procedure Native_Session is
                      if Status (Value) /= Failure then raise Program_Error with "wrong terminal failure"; end if;
                      if Failure = Success and then State (P.data.terminal.facts.presence) /= Present then raise Program_Error with "missing facts"; end if;
                      if State (P.data.terminal.facts.presence) = Present and then Text (P.data.terminal.facts.value.call_id.value)'Length = 0 then raise Program_Error with "missing call identity"; end if;
-                     if Failure = Success and then P.data.terminal.facts.value.requests_sent = 0 then raise Program_Error with "missing sends"; end if;
+                     if Failure = Success then
+                        if Expected_Sends < 0 then
+                           Require (P.data.terminal.facts.value.requests_sent > 0, "missing sends");
+                        else
+                           Require (P.data.terminal.facts.value.requests_sent = Unsigned_64 (Expected_Sends), "unexpected sends");
+                        end if;
+                        if Cache_Hit then Require (P.data.terminal.facts.value.cache_answers = 1, "cache miss"); end if;
+                        Require (P.data.terminal.facts.value.records > 0 and then
+                          Text (P.data.terminal.facts.value.token_estimate_method)'Length > 0, "facts missing");
+                     end if;
                      if Failure = Backend then
                         if Text (P.data.terminal.failure.value.error.message)'Length = 0 or else
                            State (P.data.terminal.failure.value.facts.presence) /= Present or else
@@ -60,13 +103,30 @@ procedure Native_Session is
                               raise Program_Error with "null decision lost";
                            end if;
                         end if;
-                        if Located and then State (P.data.decide_row.value.source.presence) /= Present then raise Program_Error with "source missing"; end if;
+                        Metadata (P.data.decide_row.value.meta);
+                        Require (P.data.decide_row.value.answer.kind = K_THINKTHEN_COMPLETE_ANSWER_YES_NO_V1 and then
+                          P.data.decide_row.value.answer.data.yes_no.probability = Odds, "decision odds changed");
+                        if Located then
+                           Require (State (P.data.decide_row.value.source.presence) = Present and then
+                             State (P.data.decide_row.value.source.value.first_line.presence) = Present, "source missing");
+                        end if;
+                        if Images then Require (State (P.data.decide_row.value.images.presence) = Present and then
+                          Index (P.data.decide_row.value.images.value.len) = 2, "ordered images missing"); end if;
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW_V1 =>
                         Seen := Text (P.data.choose_row.value.answer_id.value)'Length > 0;
+                        Metadata (P.data.choose_row.value.meta);
+                        Require (State (P.data.choose_row.value.value.presence) = Present and then
+                          Text (P.data.choose_row.value.value.value) = "billing" and then
+                          P.data.choose_row.value.answer.kind = K_THINKTHEN_COMPLETE_ANSWER_CHOICE_V1 and then
+                          Index (P.data.choose_row.value.answer.data.choice.probabilities.len) = 3, "choice changed");
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_TAG_ROW_V1 =>
                         Seen := Text (P.data.tag_row.value.answer_id.value)'Length > 0;
+                        Metadata (P.data.tag_row.value.meta);
+                        Require (Index (P.data.tag_row.value.value.len) = 2, "tags changed");
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1 =>
                         Seen := Text (P.data.score_row.value.answer_id.value)'Length > 0;
+                        Metadata (P.data.score_row.value.meta);
+                        Require (abs (P.data.score_row.value.value - 1.0) < 0.00001, "score changed");
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW_V1 =>
                         Seen := Text (P.data.filter_row.value.answer_id.value)'Length > 0;
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_RANK_AGGREGATE_V1 =>
@@ -76,7 +136,29 @@ procedure Native_Session is
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_ROW_V1 =>
                         Seen := Text (P.data.annotate_row.value.answer_id.value)'Length > 0;
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_RECOGNIZE_AGGREGATE_V1 =>
-                        Seen := Index (P.data.recognize_aggregate.value.len) > 0;
+                        declare
+                           type Recognition_Access is access constant thinkthen_complete_recognition_v1;
+                           Rows : array (1 .. Index (P.data.recognize_aggregate.value.len)) of Recognition_Access
+                             with Import, Address => P.data.recognize_aggregate.value.data;
+                        begin
+                           for Row of Rows loop
+                              Metadata (Row.meta);
+                              Require (Row.value.kind = K_THINKTHEN_COMPLETE_RECOGNIZE_FIELDS_ENTITIES_V1, "recognition kind changed");
+                              declare
+                                 type Entity_Access is access constant thinkthen_complete_entity_v1;
+                                 Entities : array (1 .. Index (Row.value.data.fields_entities.entities.len)) of Entity_Access
+                                   with Import, Address => Row.value.data.fields_entities.entities.data;
+                              begin
+                                 for Entity of Entities loop
+                                    Entity_Count := Entity_Count + 1;
+                                    Require (Text (Entity.text) = "Maria Chen" and then Text (Entity.kind) = "person" and then
+                                      Entity.start = 10 and then Entity.c_end = 20 and then Entity.length = 10 and then
+                                      abs (Entity.strength - 0.9877) < 0.00001, "Unicode entity changed");
+                                 end loop;
+                              end;
+                           end loop;
+                           Seen := Seen or else Entity_Count > 0;
+                        end;
                      when K_THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE_V1 =>
                         Seen := Text (P.data.relate_aggregate.value.answer_id.value)'Length > 0;
                      when others => null;

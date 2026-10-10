@@ -1,14 +1,10 @@
-with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
 with Thinkthen.Sessions;
 with Thinkthen_Session_C;
-with System;
 package body Thinkthen.Persistence is
    use Ada.Strings.Unbounded;
    use Interfaces.C;
    use Thinkthen_Session_C;
-   type Engine_Access is access constant thinkthen_engine;
-   function Native is new Ada.Unchecked_Conversion (System.Address, Engine_Access);
    function Observe (Client : Engine; Finish : Boolean) return Observation is
       State : aliased thinkthen_complete_usage_persistence_v1;
       Advice : aliased thinkthen_complete_utf8_v1;
@@ -17,10 +13,10 @@ package body Thinkthen.Persistence is
    begin
       if Finish then
          Code := thinkthen_engine_finish_usage_status_v1
-           (Native (Client.Handle), State'Access, Advice'Access);
+           (Client.Handle, State'Access, Advice'Access);
       else
          Code := thinkthen_engine_usage_persistence_v1
-           (Native (Client.Handle), State'Access, Advice'Access);
+           (Client.Handle, State'Access, Advice'Access);
       end if;
       if Code /= 0 then
          -- Status exports report errors in the calling thread's session slot.

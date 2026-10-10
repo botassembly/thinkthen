@@ -20,6 +20,7 @@ package Thinkthen.Sessions is
    Cancelled_Error : exception;
    Defect_Error : exception;
    Representation_Overflow : exception;
+   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_Request);
    procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request);
    procedure Push (Owner : in out Session; Item : Thinkthen.Requests.T_RequestSessionDescriptor;
                    Status : out Push_Status);

@@ -218,7 +218,7 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 			{
 				printf '%s\n' ./ ./LICENSE ./README.md ./thinkthen.gpr \
 					./native/ ./native/include/ ./native/include/thinkthen.h ./native/lib/ ./native/lib/libthinkthen.a \
-					./examples/ ./examples/consumer.adb ./examples/native.adb ./examples/session_demo.adb ./THINKTHEN-PACKAGE-INPUTS
+					./examples/ ./examples/session_demo.adb ./THINKTHEN-PACKAGE-INPUTS
 				source_members libraries/ada/ libraries/ada/src
 			} | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
