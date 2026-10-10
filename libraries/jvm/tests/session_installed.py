@@ -22,13 +22,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--jars',type=Path,required=True)
     parser.add_argument('--out',type=Path,required=True)
+    parser.add_argument('--maven',action='store_true',help='Consume the versioned local Maven files instead of development JAR names')
     args = parser.parse_args()
     version = ET.parse(args.jars / 'pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text
     logs = args.out.resolve()
     logs.mkdir(parents=True,exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="installed-",dir=logs))
     feed = work / 'feed'; feed.mkdir(exist_ok=True)
-    for file in args.jars.glob('*.jar'): shutil.copyfile(file,feed / file.name)
+    if args.maven:
+        project = ET.parse(args.jars / 'pom.xml').getroot()
+        group, artifact = (project.find('{*}' + field).text for field in ('groupId','artifactId'))
+        repository = args.jars.parent / 'maven' / Path(*group.split('.')) / artifact / version
+        prefix = artifact + '-' + version
+        assert (repository / (prefix + '.pom')).read_bytes() == (args.jars / 'pom.xml').read_bytes()
+        for file in args.jars.glob('*.jar'):
+            kind = file.stem.removeprefix('thinkthen-')
+            suffix = '' if kind == 'door' else '-' + kind
+            source = repository / (prefix + suffix + '.jar')
+            assert source.read_bytes() == file.read_bytes(),source
+            shutil.copyfile(source,feed / file.name)
+    else:
+        for file in args.jars.glob('*.jar'): shutil.copyfile(file,feed / file.name)
     for name in ('home','barrier','app'): (work / name).mkdir(exist_ok=True)
     source = ROOT / 'libraries/jvm/tests/SessionConsumer.java'
     shutil.copyfile(source,work / source.name)
@@ -45,13 +59,7 @@ def main():
     backend_source = ROOT / 'libraries/csharp/tests/backend.py'
     spec = importlib.util.spec_from_file_location('shared_package_backend',backend_source)
     backend = importlib.util.module_from_spec(spec); spec.loader.exec_module(backend)
-    class AttributedHandler(backend.Handler):
-        def do_POST(self):
-            self.server.user_agents.append(self.headers.get('User-Agent'))
-            super().do_POST()
-    backend.Handler = AttributedHandler
     server = backend.Backend(work / 'barrier')
-    server.user_agents = []
     env = child_env(home='/work/home',LANG='C.UTF-8',LC_ALL='C.UTF-8',THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',THINKTHEN_API_KEY='tt-canary-290')
     command = ['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind',str(jdk),'/jdk','--bind',str(work),'/work','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--chdir','/work','--','/jdk/bin/java','--enable-native-access=ALL-UNNAMED','-XX:ActiveProcessorCount=2','-Xmx1g','-cp','/work/feed/*:/work/app','SessionConsumer']
     try:

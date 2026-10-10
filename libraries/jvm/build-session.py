@@ -8,10 +8,32 @@ import shutil
 import subprocess
 import sys
 import zipfile
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
+
+
+def maven_package(jars, inventory, classifier):
+    """Assemble the locally supplied family with its ordinary Maven coordinates."""
+    project = ET.parse(jars / 'pom.xml').getroot()
+    group, artifact, version = (project.find('{*}' + field).text for field in ('groupId', 'artifactId', 'version'))
+    dependencies = project.findall('{*}dependencies/{*}dependency')
+    native = [dep for dep in dependencies if dep.find('{*}classifier') is not None]
+    if {dep.find('{*}classifier').text for dep in native} != set(inventory['native']) or len(native) != len(inventory['native']):
+        raise ValueError('Maven native dependencies disagree with the product inventory')
+    for dep in native:
+        if [dep.find('{*}' + field).text for field in ('groupId', 'artifactId', 'version')] != ['${project.groupId}', '${project.artifactId}', '${project.version}']:
+            raise ValueError('Maven native dependencies must use this package version')
+    repository = jars.parent / 'maven' / Path(*group.split('.')) / artifact / version
+    repository.mkdir(parents=True)
+    prefix = artifact + '-' + version
+    shutil.copyfile(jars / 'pom.xml', repository / (prefix + '.pom'))
+    for kind, filename in inventory['jars'].items():
+        suffix = '' if kind == 'door' else '-' + kind
+        shutil.copyfile(jars / filename, repository / (prefix + suffix + '.jar'))
+    shutil.copyfile(jars / ('thinkthen-' + classifier + '.jar'), repository / (prefix + '-' + classifier + '.jar'))
 
 
 def main():
@@ -55,7 +77,8 @@ def main():
         shutil.copyfile(ROOT / 'libraries/jvm' / name,jars / name)
     actual = json.loads(subprocess.check_output([sys.executable, str(ROOT / 'sdlc/scripts/package-inventory.py'), 'jvm', '--out', str(out)], env=env))
     (jars / 'product-inventory.json').write_text(json.dumps(actual,indent=2) + '\n')
-    print('Stable JVM session JARs and inventory-selected native classifier built')
+    maven_package(jars, inventory, classifier)
+    print('Stable JVM session JARs, selected native classifier and local Maven coordinates built')
 
 
 if __name__ == '__main__':
