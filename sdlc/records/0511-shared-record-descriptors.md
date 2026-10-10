@@ -160,3 +160,13 @@ Final policy, formatting, whitespace and measured source checks pass. The existi
 ### What the build taught us
 
 A framing enum does not imply that every source selector carries framing. ADR 0125 separates authorized physical sources from runtime feeds. A shared authorized handle reader can supply typed table originals through existing composed feeds without adding table syntax or filesystem authority to pure core. Native Session needs its own descriptor-to-logical-row association before it can truthfully accept CSV or TSV.
+
+### Terminal table reader failures
+
+The correction starts from `a3d4a53ae3a169e015f7c0c57bb58ae4ad6b1fc1`. Fresh review found that the shared row iterator stopped after width and size errors but continued after I/O and UTF-8 errors. A permanent handle failure after the header could fabricate a row from stale buffered bytes; an invalid UTF-8 row could expose a later suffix. The CLI's immediate error return had concealed this iterator behavior before the public reader made repeated calls possible.
+
+`Rows::next` now marks I/O errors, UTF-8 errors and end of input terminal, retaining the existing width and size stops. Completed rows remain available before the first failure. No grammar, header rule, coordinate calculation or public declaration changes. The existing public table refusal test gains counted authorized handles for header-only permanent I/O failure, permanent I/O failure after a completed row, and invalid UTF-8 followed by a suffix. Each case checks one Local error followed by repeated None and no further handle reads. The regression failed on the starting revision because another item appeared after the error.
+
+The root ceiling increases from 183894 to the measured 183955 nonblank Rust lines. The 61 additional lines supply the shared terminal transitions and extend the existing caller regression rather than adding another parser test or checker. The three native table cases cover the affected public reader. Existing CLI grammar and release-compilation evidence remains applicable; no grammar code changes and no large-input, full-suite, load, release or paid-call run is required for this correction. Strict affected Clippy, policy, formatting, ratchet and public inventory checks run against the committed correction before handoff. Fresh review must accept the source growth before landing.
+
+The lesson is to test repeated calls at an exported iterator boundary. A command that aborts on its first error cannot establish the public iterator's terminal behavior. Shared reader failures must terminate both buffered suffix delivery and future reads.

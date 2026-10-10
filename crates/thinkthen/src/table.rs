@@ -275,8 +275,14 @@ impl<R: Read> Iterator for Rows<R> {
         }
         let row = match self.parsed_row() {
             Ok(Some(row)) => row,
-            Ok(None) => return None,
-            Err(error) => return Some(Err(error)),
+            Ok(None) => {
+                self.stopped = true;
+                return None;
+            }
+            Err(error) => {
+                self.stopped = true;
+                return Some(Err(error));
+            }
         };
         let header = self.header.as_ref()?;
         if row.len() != header.len() {
@@ -293,6 +299,9 @@ impl<R: Read> Iterator for Rows<R> {
                 String::from_utf8(bytes).map_err(|_| ReadError::Table(Error::RecordUtf8(self.kind)))
             })
             .collect::<Result<Vec<_>, _>>();
+        if values.is_err() {
+            self.stopped = true;
+        }
         Some(
             values
                 .map(|values| Record::string_fields(header.iter().cloned().zip(values).collect())),

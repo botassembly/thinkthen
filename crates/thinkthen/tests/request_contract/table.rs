@@ -1,6 +1,24 @@
 //! Authorized table reads retain native originals and physical coordinates.
 use super::*;
-use std::io::Cursor;
+use std::cell::Cell;
+use std::io::{self, Cursor, Read};
+use std::rc::Rc;
+
+struct CountedInput<'a> {
+    input: Cursor<&'a [u8]>,
+    reads: Rc<Cell<usize>>,
+    fail_at_end: bool,
+}
+
+impl Read for CountedInput<'_> {
+    fn read(&mut self, output: &mut [u8]) -> io::Result<usize> {
+        self.reads.set(self.reads.get() + 1);
+        if self.fail_at_end && self.input.position() == self.input.get_ref().len() as u64 {
+            return Err(io::Error::other("private input failure"));
+        }
+        self.input.read(output)
+    }
+}
 
 #[test]
 fn authorized_tables_preserve_strings_order_and_multiline_coordinates() {
@@ -92,9 +110,45 @@ fn authorized_table_refusals_hide_values_and_stop_bad_width_tail() {
         "the CSV record has 3 fields; its header has 2"
     );
     assert!(rows.next().is_none());
-    let mut rows =
-        TableReader::new("caller", Cursor::new(b"body\n\xff\n"), TableFormat::Csv).unwrap();
-    assert_eq!(rows.next().unwrap().unwrap_err().kind(), ErrorKind::Local);
+    for (input, fail_at_end, prefix, message) in [
+        (
+            b"body\n".as_slice(),
+            true,
+            false,
+            "table input could not be read",
+        ),
+        (b"body\nkept\n", true, true, "table input could not be read"),
+        (
+            b"body\nkept\n\xff\ntail\n",
+            false,
+            true,
+            "the CSV record is not valid UTF-8",
+        ),
+    ] {
+        let reads = Rc::new(Cell::new(0));
+        let input = CountedInput {
+            input: Cursor::new(input),
+            reads: Rc::clone(&reads),
+            fail_at_end,
+        };
+        let mut rows = TableReader::new("caller", input, TableFormat::Csv).unwrap();
+        if prefix {
+            let row = rows.next().unwrap().unwrap();
+            assert_eq!((row.first_line, row.last_line), (2, 2));
+            assert_eq!(
+                serde_json::to_string(&row.record).unwrap(),
+                r#"{"body":"kept"}"#
+            );
+        }
+        let error = rows.next().unwrap().unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Local);
+        assert_eq!(error.to_string(), message);
+        assert!(!format!("{error:?}").contains("private"));
+        let stopped_reads = reads.get();
+        assert!(rows.next().is_none());
+        assert!(rows.next().is_none());
+        assert_eq!(reads.get(), stopped_reads);
+    }
     assert!(
         TableReader::new("caller", Cursor::new(b"body\n"), TableFormat::Csv)
             .unwrap()
