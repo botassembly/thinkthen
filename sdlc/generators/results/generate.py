@@ -330,9 +330,26 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "objc":
+        if args.inputs or args.bridge:
+            parser.error("Objective-C generates owned Foundation results only")
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import objc
+        definitions = prepare(graph(json.loads(args.schema.read_text()), objc.ROOTS))
+        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
+        for filename, result in objc.outputs(definitions, version).items():
+            output = ROOT / "libraries/objective-c/Sources/Foundation" / filename
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print("generated Foundation results differ", file=sys.stderr)
+                    return 1
+            else:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(result)
+        return 0
     if args.target == "ada":
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import ada

@@ -93,6 +93,8 @@ GENERATED_BINDING_SOURCES = {
     "libraries/php/src/session/ffi_generated.h",
     "libraries/ruby/src/ffi/results_generated.rs",
     "libraries/ruby/lib/thinkthen/results_generated.rb",
+    "libraries/objective-c/Sources/Foundation/TTResults.g.h",
+    "libraries/objective-c/Sources/Foundation/TTResults.g.m",
     "libraries/jvm/session/thinkthen/Results.java",
     "libraries/jvm/session/thinkthen/Inputs.java",
     "libraries/jvm/session/thinkthen/RequestVersion.java",
