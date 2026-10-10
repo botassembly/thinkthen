@@ -99,6 +99,7 @@ cmp "$static" "$out/install/lib/libthinkthen.a"
 "$cmake_bin" -S fixtures/owned -B "$out/owned-build" -DCMAKE_PREFIX_PATH="$out/install"
 "$cmake_bin" --build "$out/owned-build" --parallel 2
 "$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-build/owned_consumer" "$out/owned-cases"
+"$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-build/owned_consumer" "$out/owned-cases" usage
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 THINKTHEN_PORTABLE_NATIVE="$out/install" "$python_bin" fixtures/portable_batch.py
 for mode in shared static; do

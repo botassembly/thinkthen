@@ -73,7 +73,7 @@ final class Client
         $code = $finish
             ? $this->ffi->thinkthen_engine_finish_usage_status_v1($this->engine, \FFI::addr($state), \FFI::addr($advice))
             : $this->ffi->thinkthen_engine_usage_persistence_v1($this->engine, \FFI::addr($state), \FFI::addr($advice));
-        if ($code !== 0) self::throwImmediate($code, self::text($this->ffi->thinkthen_error_message($this->engine)));
+        if ($code !== 0) self::throwImmediate($code, self::text($this->ffi->thinkthen_session_error_message()));
         return new UsageStatus(UsagePersistenceState::from($state->kind),
             \FFI::isNull($advice->data) ? null : \FFI::string($advice->data, $advice->len));
     }

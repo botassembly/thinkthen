@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     consumer.mkdir()
     (consumer / 'go.mod').write_text('module example.org/owned-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
     shutil.copy2(Path(__file__).with_name('owned_consumer.go'), consumer / 'main.go')
-    env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=str(module.parent/'go-cache'), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
+    env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=str(Path(__file__).resolve().parents[3]/'target/go/cache'), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
     subprocess.run(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.'],cwd=consumer,env=env,check=True)
     linked = subprocess.check_output(['ldd', str(home/'consumer-bin')], text=True, env=env)
     assert 'libthinkthen' not in linked, linked
@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
         if usage_only:
             for mode in ('usage-written', 'usage-failed'):
-                state = home / mode / 'state/thinkthen'; state.mkdir(parents=True)
+                state = home / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
                 before = server.attempts
                 with (state / '.lock').open('w') as lock:
                     (state / '.lock').chmod(0o600)

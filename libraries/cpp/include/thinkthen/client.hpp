@@ -118,7 +118,7 @@ private:
         if(!engine_) throw std::logic_error("C++ client is closed");
         thinkthen_complete_usage_persistence_v1 state{}; thinkthen_complete_utf8_v1 advice{};
         int code=finish ? thinkthen_engine_finish_usage_status_v1(engine_.get(),&state,&advice) : thinkthen_engine_usage_persistence_v1(engine_.get(),&state,&advice);
-        if(code) throw NativeFailure(code,thinkthen_error_message(engine_.get()));
+        detail::check_session(code);
         return {static_cast<UsagePersistenceState>(state.kind), advice.data ? std::optional<std::string>(std::string(advice.data,advice.len)) : std::nullopt};
     }
     void check_engine() {

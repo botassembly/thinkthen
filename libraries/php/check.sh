@@ -94,6 +94,7 @@ locked "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPP
 THINKTHEN_PORTABLE_LIBRARY="$repo/libraries/c/target/debug/libthinkthen_c.so" "$python_bin" fixtures/portable_batch.py
 "$python_bin" fixtures/abi.py
 "$python_bin" fixtures/installed.py
+"$python_bin" fixtures/installed.py usage
 for plant in source header native canary private-key wrong-value; do "$python_bin" fixtures/installed.py "$plant"; done
 "$python_bin" fixtures/run_matrix.py
 "$python_bin" fixtures/plant.py

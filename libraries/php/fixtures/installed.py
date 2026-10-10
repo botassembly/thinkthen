@@ -1,5 +1,6 @@
 """Run two copied PHP installations with matching native header and library."""
 
+import fcntl
 import collections
 import hashlib
 import os
@@ -36,7 +37,7 @@ def verify_install(package, native):
 
 def main():
     plant = sys.argv[1] if len(sys.argv) > 1 else ""
-    assert plant in ("", "source", "header", "native", "canary", "private-key", "wrong-value")
+    assert plant in ("", "source", "header", "native", "canary", "private-key", "wrong-value", "usage")
     for mode in ("alpha", "beta"):
         with tempfile.TemporaryDirectory(prefix="thinkthen-php-installed-") as folder:
             work = Path(folder)
@@ -69,6 +70,26 @@ def main():
                     return
                 raise AssertionError(f"plant passed: {plant}")
             verify_install(package, native)
+            if plant == "usage":
+                sys.path.insert(0, str(ROOT / 'conformance/children'))
+                from children import child_env
+                (package / 'native').symlink_to(native / 'lib', target_is_directory=True)
+                shutil.copy2(PHP / 'fixtures/session_consumer.php', work / 'consumer.php')
+                server = Backend(work)
+                try:
+                    for observation in ('usage-written', 'usage-failed'):
+                        state = work / observation / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
+                        before = server.attempts
+                        env = child_env(home=work / observation, TT_AUTOLOAD=str(package / 'autoload.php'), THINKTHEN_API_KEY='tt-canary-291', THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1')
+                        with (state / '.lock').open('w') as lock:
+                            (state / '.lock').chmod(0o600)
+                            if observation == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
+                            result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(work / 'consumer.php'), observation], env=env, capture_output=True, text=True, timeout=5)
+                            assert result.returncode == 0, (observation, result.stdout, result.stderr)
+                        assert server.attempts == before + 1, server.attempts
+                        print(result.stdout, end='')
+                finally: server.close()
+                return
             barrier = work / "barrier"
             barrier.mkdir()
             (work / "home").mkdir()

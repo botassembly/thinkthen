@@ -90,8 +90,15 @@ func main() {
 		require(err == nil && call.Terminal != nil, "usage call lost answer")
 		earlier, err := json.Marshal(call.Terminal.Facts().Value)
 		require(err == nil, "facts encoding")
-		row, err := call.Packets[0].AsSessionPacketDecideRow()
-		require(err == nil && row.Value().Value.Value().Value == true, "usage call changed answer")
+		answered := false
+		for _, packet := range call.Packets {
+			if row, err := packet.AsSessionPacketDecideRow(); err == nil {
+				answer, err := row.Value().Value.Value().Value.Boolean()
+				require(err == nil && answer, "usage call changed answer")
+				answered = true
+			}
+		}
+		require(answered, "missing decision row")
 		observed, err := client.UsagePersistence()
 		require(err == nil, "usage observation failed")
 		if os.Args[1] == "usage-failed" {

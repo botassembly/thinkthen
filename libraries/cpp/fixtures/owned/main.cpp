@@ -22,10 +22,14 @@ int main(int argc,char** argv) {
     try {
         if(argc!=4) return 2;
         if(std::string(argv[1])=="usage-written" || std::string(argv[1])=="usage-failed") {
-            Client client; auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
+            Client client(Json::Object{{"cache",false}}); auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
             call.finish(); auto packets=call.collect(); auto earlier=packets.back().document().dump();
-            auto row=packets.front().as_SessionPacketDecideRow();
-            if(!row || !*row->value().value->value().value) return 30;
+            bool answered=false;
+            for(const auto& packet:packets) if(auto row=packet.as_SessionPacketDecideRow()) {
+                if(!row->value().value->value().value->value().get<bool>()) return 30;
+                answered=true;
+            }
+            if(!answered) return 30;
             auto terminal=packets.back().as_SessionPacketTerminal();
             if(!terminal || *terminal->facts().value->requests_sent().value!=1) return 31;
             const bool failed=std::string(argv[1])=="usage-failed";

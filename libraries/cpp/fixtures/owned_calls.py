@@ -16,7 +16,10 @@ owned = tempfile.TemporaryDirectory(prefix='caller-',dir=scratch_root)
 scratch = Path(owned.name)
 linked = subprocess.check_output(['ldd',binary],env=child_env(),text=True)
 assert 'libthinkthen.so.0 => ' + str(prefix / 'lib/libthinkthen.so.0') in linked, linked
-subprocess.run([sys.executable,str(Path(__file__).with_name("guard.py")),prefix],env=child_env(),check=True)
+# The focused behavior mode reuses a warm native build; distribution privacy
+# stays on the ordinary installed-package route with qualified artifacts.
+if len(sys.argv) <= 4 or sys.argv[4] != 'usage':
+    subprocess.run([sys.executable,str(Path(__file__).with_name("guard.py")),prefix],env=child_env(),check=True)
 server = Backend(scratch)
 cases = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
 try:
@@ -26,7 +29,7 @@ try:
                     THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
     if len(sys.argv) > 4 and sys.argv[4] == 'usage':
         for mode in ('usage-written', 'usage-failed'):
-            state = scratch / mode / 'state/thinkthen'; state.mkdir(parents=True)
+            state = scratch / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
             before = len(server.requests)
             with (state / '.lock').open('w') as lock:
                 (state / '.lock').chmod(0o600)

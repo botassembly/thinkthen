@@ -341,7 +341,7 @@ func (e *Engine) usageStatus(finish bool) (UsageStatus, error) {
 		code = C.thinkthen_engine_usage_persistence_v1(e.raw, &state, &advice)
 	}
 	if code != 0 {
-		return UsageStatus{}, failure(e.raw, code)
+		return UsageStatus{}, sessionFailure(code)
 	}
 	out := UsageStatus{state: UsagePersistenceState(state.kind)}
 	if advice.data != nil {
