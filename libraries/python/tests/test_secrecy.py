@@ -119,7 +119,7 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
         "UsageError a base address carries no user information",
         *[f"BackendError the backend answered with status {status}"
           for status in (422, 401, 503) for _ in range(15)],
-        "UsageError evidence is text, not white space",
+        "UsageError the evidence is empty or blank",
         "Cancelled the call was cancelled",
         "DeadlineError the deadline of 0 s passed before the call answered",
         "LocalError the question file could not be read",

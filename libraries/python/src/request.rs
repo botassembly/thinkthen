@@ -41,6 +41,16 @@ impl Session {
 
 #[pymethods]
 impl Session {
+    #[staticmethod]
+    fn _definition(py: Python<'_>, raw: &str) -> PyResult<String> {
+        guard(py, || {
+            let definition: thinkthen::RequestDefinition = serde_json::from_str(raw)
+                .map_err(|_| usage(py, "invalid authored question definition"))?;
+            serde_json::to_string(&definition)
+                .map_err(|_| crate::defect(py, "native question could not be serialized"))
+        })
+    }
+
     fn _poll(&self, py: Python<'_>) -> PyResult<Option<String>> {
         guard(py, || {
             let held = self

@@ -121,7 +121,7 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             print("series", call.value.index.tolist(), call.value.name, call.value.dtype.name,
                   call.value.tolist(), call.facts["records"], call.facts["requests_sent"],
                   [detail["index"] for detail in call.details])
-            observed.append([list(detail["requests"]) for detail in call.details])
+            observed.append([list(detail.meta.requests) for detail in call.details])
         frame = rows.to_frame().assign(number=[4, 6, 8])
         saved = {"version": 1, "batch": 1,
                  "questions": {"late": {"decide": "Is it late?"}}}
@@ -134,37 +134,37 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
                   value["late"].dtype.name, value["late"].tolist(),
                   value["failed"].isna().all(), call.facts["records"],
                   call.facts["requests_sent"], [detail["index"] for detail in call.details])
-            observed.append([list(detail["requests"]) for detail in call.details])
+            observed.append([list(detail.meta.requests) for detail in call.details])
         engine_max = tt.Engine(model="jev-latest", batch="max", cache=False)
         overridden = engine_max.annotate(saved, frame, on="body")
         print("engine", overridden.facts["records"], overridden.facts["requests_sent"])
-        observed.append([list(detail["requests"]) for detail in overridden.details])
+        observed.append([list(detail.meta.requests) for detail in overridden.details])
         partial = {"version": 1, "questions": {
             "late": {"decide": "Is it late?"}, "partial": {"decide": "Partial?"}}}
         mixed = engine.annotate(partial, frame, on="body")
-        print("partial", mixed.value["partial"].dtype.name,
+        print(json.dumps([mixed.value["partial"].dtype.name,
               [None if pd.isna(cell) else bool(cell) for cell in mixed.value["partial"]],
-              mixed.value["failed"].tolist(), mixed.facts["records"], mixed.facts["requests_sent"])
-        print("partial details", [(detail["index"], detail["member"], detail.get("answer"),
-                                   dict(detail["failed"]) if "failed" in detail else None,
-                                   detail["requests_sent"]) for detail in mixed.details])
-        observed.append([list(detail["requests"]) for detail in mixed.details])
+              mixed.value["failed"].tolist(), mixed.facts["records"], mixed.facts["requests_sent"]]))
+        print(json.dumps([(row.index, name, value.to_dict() if hasattr(value, 'failed') else value)
+                          for row in mixed.details for name, value in row.value.items()]))
+        observed.append([list(detail.meta.requests) for detail in mixed.details])
         context = engine.decide(question, rows, context="review this claim")
         print("context", context.facts["records"], context.facts["requests_sent"])
-        observed.append([list(detail["requests"]) for detail in context.details])
-        before = engine.usage()["requests_sent"]
-        try:
-            engine.annotate(saved, frame, on="body", context="forbidden")
-        except tt.UsageError as error:
-            print("refused", str(error), engine.usage()["requests_sent"] - before)
-        else:
-            raise AssertionError("annotate context was accepted")
+        observed.append([list(detail.meta.requests) for detail in context.details])
+        contextual = engine.annotate(saved, frame, on="body", context="review annotation")
+        print("annotation context", contextual.facts["records"], contextual.facts["requests_sent"])
+        observed.append([list(detail.meta.requests) for detail in contextual.details])
         print(json.dumps(observed))
         """, env)
         *lines, captured = printed.splitlines()
+        assert json.loads(lines.pop(6)) == ["boolean", [False, None, True],
+            [None, {'partial': {'failed': {'kind': 'backend', 'cause': 'missing_probability'}}}, None], 3, 1]
+        assert json.loads(lines.pop(6)) == [[0, 'late', False], [0, 'partial', False],
+            [1, 'late', True], [1, 'partial', {'failed': {'kind': 'backend', 'cause': 'missing_probability'}}],
+            [2, 'late', True], [2, 'partial', True]]
         assert lines == [
-            "series [9, 5, 7] body boolean [False, True, True] 3 1 [0, 1, 2]",
-            "series [9, 5, 7] body boolean [False, True, True] 3 3 [0, 1, 2]",
+            "series [9, 5, 7] body object [False, True, True] 3 1 [0, 1, 2]",
+            "series [9, 5, 7] body object [False, True, True] 3 3 [0, 1, 2]",
             "frame default [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
             "[False, True, True] True 3 1 [0, 1, 2]",
             "frame saved [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
@@ -172,18 +172,12 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             "frame typed [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
             "[False, True, True] True 3 1 [0, 1, 2]",
             "engine 3 1",
-            "partial boolean [False, None, True] [None, {'partial': {'failed': "
-            "{'kind': 'backend', 'cause': 'missing_probability'}}}, None] 3 1",
-            "partial details [(0, 'late', False, None, 1), (0, 'partial', False, None, 0), "
-            "(1, 'late', True, None, 0), (1, 'partial', None, "
-            "{'cause': 'missing_probability', 'kind': 'backend'}, 0), "
-            "(2, 'late', True, None, 0), (2, 'partial', True, None, 0)]",
             "context 3 1",
-            "refused annotate does not take a shared context 0",
+            "annotation context 3 3",
         ]
         requests = [json.loads(body) for body in bodies]
         assert [len(request["questions"]) for request in requests] == [
-            3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 6, 3]
+            3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 6, 3, 1, 1, 1]
         singleton = (b'{"state":"Each question quotes the text it asks about.","model":"jev-latest",'
                      b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"}}}')
         assert singleton in bodies[1:4]
@@ -201,10 +195,12 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             [[by_state(bodies[5:8])[state]] for state in states],
             each(bodies[8]),
             each(bodies[9]),
-            each(bodies[10]),
+            [question_keys(url, bodies[10], "jev-latest")[i:i+2] for i in (0, 2, 4)],
             each(bodies[11]),
+            [[by_state(bodies[12:15])[state]] for state in states],
         ]
         assert json.loads(captured) == expected_keys
+        assert all(request["state"] == "review annotation" for request in requests[12:15])
         assert bodies[0] != bodies[-1]
     assert backend.count() == 0
 
@@ -357,7 +353,7 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     """Proof 5, with R1-6 (the ``filter`` row) and R2-11 (the frame to
     ``annotate`` without ``on=``): every row pins its whole sentence, and
     the backend counts no request. The first two rows show the route: pandas
-    3 reads its own export, and pandas 2 reads a list."""
+    named calls use the shared native header admission on both pandas versions."""
     printed = run(SETUP + """
     column = pd.Series(texts)
     frame = pd.DataFrame({"body": texts})
@@ -379,13 +375,12 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     said(lambda: engine.recognize(frame.assign(names=1), kinds=["x"], on="body").value)
     said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body").value)
     """, child_env(backend, tmp_path))
-    route = ["UsageError the column's Arrow format is 'l', not text 0"] if THREE else [
-        "UsageError record 0 is not a str 0"]
-    assert printed.splitlines() == route + [
-        "UsageError record 1 is not a str 0",
+    assert printed.splitlines() == [
+        "UsageError invalid canonical request 0",
+        "UsageError invalid canonical request 0",
         "UsageError details reads one str, not a column 0",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on= 0",
-        f"UsageError {LISTS} 0",
+        'UsageError a data frame is not a column; pass df["name"], or annotate with on= 0',
         "UsageError the frame has no column named 'missing' 0",
         "UsageError the frame has more than one column named 'body' 0",
         "UsageError on= reads a frame whose column labels have one level 0",
@@ -475,3 +470,198 @@ def test_pandas_text_uses_the_export_its_version_offers(backend, tmp_path):
         print(dtype, tt._thinkthen._arrow_probe(series) == pandas_sees, len(pandas_sees))
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == ["str True 1000", "string[pyarrow] True 1000"]
+
+
+@pytest.mark.parametrize("shape", ["pandas", "polars"])
+def test_named_frame_calls_keep_native_rows_selectors_and_original_positions(backend, tmp_path, shape):
+    printed = run("""
+        import asyncio, json, os, pathlib, pickle, pandas as pd, polars as pl, thinkthen as tt
+        from thinkthen import complete as c
+        shape = SHAPE
+        def frame(data):
+            return pd.DataFrame(data, index=[9, 9, 2]) if shape == 'pandas' else pl.DataFrame(data, strict=False)
+        source = frame({'body': ['first note', None, 'second note'], 'number': [1,2,3]})
+        engine = tt.Engine(cache=False)
+        for verb, question, kw in [('decide','Late?',{}),
+                ('choose','Which?',{'options':['billing','shipping']}),
+                ('score','Urgent?',{'levels':['low','high']}),
+                ('tag','Kinds?',{'labels':['bill','ship']})]:
+            done = getattr(engine, verb)(question, source, on='body', **kw)
+            assert isinstance(done, tt.Result) and done.positions == (0,2)
+            assert [row.index for row in done.results] == [0,1]
+            assert done.value.to_list()[1] is None and done.value.name == 'body'
+            assert done.facts.requests_sent == 1
+            assert pickle.loads(pickle.dumps(done)).results == done.results
+        kept = engine.filter('Late?', source, on='body')
+        assert kept.value['number'].to_list() == [1,3]
+        ranked = engine.rank('Late?', source, on='body')
+        assert [row['index'] for row in ranked.value] == [0,2] and ranked.facts.requests_sent == 1
+        found = engine.find('Which?', source, on='body')
+        assert found.value['index'] == 0 and found.facts.requests_sent == 1
+        declared = pathlib.Path(os.environ['HOME']) / 'recognition.json'
+        declared.write_text('{"version":1,"recognize":{"kinds":{"note":null}}}')
+        recognized = engine.recognize(source, declared, on='body')
+        assert recognized.positions == (0,2) and recognized.facts.requests_sent == 4
+        assert recognized.results[0].value.entities[0].text == 'first note'
+        if shape == 'pandas':
+            assert recognized.value.index.to_list() == [9,9,2]
+            assert recognized.value['names'].iloc[1] is None
+            assert recognized.value['number'].to_list() == [1,2,3]
+        else:
+            assert recognized.value['row'].to_list() == [1,3]
+        form = {'version':1, 'questions':{'late':{'decide':'Late?'},
+                    'team':{'choose':'Which?', 'options':['billing','shipping']},
+                    'urgent':{'score':'Urgent?', 'levels':['low','high']},
+                    'tags':{'tag':'Kinds?', 'labels':['bill','ship']}}}
+        annotation_file = pathlib.Path(os.environ['HOME']) / 'questions.json'
+        annotation_file.write_text(json.dumps(form))
+        annotated = engine.annotate(annotation_file, source, on='body')
+        assert isinstance(annotated, tt.Result) and annotated.positions == (0,2)
+        assert annotated.value['number'].to_list() == [1,2,3]
+        empty = source.iloc[:0] if shape == 'pandas' else source.head(0)
+        nulls = frame({'body':[None,None,None], 'number':[1,2,3]})
+        for blank in (empty, nulls):
+            selected = engine.filter('Late?', blank, on='body')
+            assert selected.facts.requests_sent == 0 and list(selected.value.columns) == list(blank.columns)
+            assert len(selected.value) == 0
+            got = engine.annotate(form, blank, on='body')
+            assert got.facts.requests_sent == 0 and got.positions == ()
+            if shape == 'pandas':
+                assert [str(got.value[name].dtype) for name in form['questions']] == ['boolean','string','Float64','object']
+            else:
+                assert [got.value.schema[name] for name in form['questions']] == [pl.Boolean,pl.String,pl.Float64,pl.List(pl.String)]
+            assert got.value['failed'].isna().all() if shape == 'pandas' else got.value['failed'].is_null().all()
+        collision = source.assign(late=1) if shape == 'pandas' else source.with_columns(pl.lit(1).alias('late'))
+        before = engine.usage()['requests_sent']
+        try: engine.annotate(form, collision, on='body')
+        except tt.UsageError: pass
+        else: raise AssertionError('annotation overwrote a column')
+        assert engine.usage()['requests_sent'] == before
+        again = pickle.loads(pickle.dumps(recognized))
+        assert again.results == recognized.results
+        async_done = asyncio.run(engine.asyncio.decide('Late?', source, on='body'))
+        assert async_done.positions == (0,2)
+        contextual = frame({'body':['one',None,'two'], 'ctx':['review','skip',''],
+                            'shortlist':[['shipping','billing'],['billing','shipping'],['billing','shipping']]})
+        picked = engine.choose('Which?', contextual, on='body', options=['billing','shipping'],
+                               context_field='/ctx', options_field='/shortlist')
+        assert picked.results[0].input['body'] == 'one' and picked.positions == (0,2)
+        assert picked.value.to_list() == ['shipping',None,'billing']
+        assert picked.facts.requests_sent == 2
+        entities = frame({'entity':[{'name':'Ada','kind':'person'},None,{'name':'Bo','kind':'person'}]})
+        related = engine.relate(entities, on='entity', relations={'knows':('person','person')})
+        assert related.facts.requests_sent == 1 and len(related.value) == 2
+        items = [c.Item(value={'text':'explicit'}), c.Item(value=None), None]
+        explicit = (pd.DataFrame({'body':items}, index=[9,9,2]) if shape == 'pandas'
+                    else pl.DataFrame([pl.Series('body',items,dtype=pl.Object)]))
+        json_done = engine.decide('Late?', explicit, on='body')
+        assert json_done.positions == (0,1)
+        assert json_done.results[0].input == {'text':'explicit'} and json_done.results[1].input is None
+        assert pickle.loads(pickle.dumps(json_done)).results == json_done.results
+        bad_engine = tt.Engine(cache=False, max_retries=0, base_url=os.environ['THINKTHEN_BASE_URL'].replace('/generic/', '/arm/malformed/missing_answer/'))
+        partial = bad_engine.annotate({'version':1,'questions':{'late':{'decide':'Late?'},'bad':{'decide':'Refund?'}}},source,on='body')
+        failure = partial.results[-1].value['bad']
+        assert failure.failed.kind == 'backend' and failure.failed.cause == 'missing_answer'
+        assert pickle.loads(pickle.dumps(failure)) == failure
+        try: bool(failure)
+        except TypeError: pass
+        else: raise AssertionError('frame coerced an embedded failure')
+        before = engine.usage()['requests_sent']
+        for bad in [lambda:engine.decide('Late?',source,on='missing'),
+                    lambda:engine.recognize(source,on='body',relations={'r':('*','*')}),
+                    lambda:engine.decide('',source,on='body')]:
+            try: bad()
+            except tt.UsageError: pass
+            else: raise AssertionError('invalid frame call was accepted')
+        assert engine.usage()['requests_sent'] == before
+        cached = tt.Engine(cache=pathlib.Path(os.environ['HOME']) / 'owned-cache')
+        first = cached.decide('Cached?', source, on='body')
+        second = cached.decide('Cached?', source, on='body')
+        assert first.facts.requests_sent == 1 and second.facts.requests_sent == 0
+        assert first.results[0].answer_id == second.results[0].answer_id
+        engine.close()
+        assert recognized.results[0].value.entities[0].text == 'first note'
+        print('owned frame rows')
+    """.replace('SHAPE', repr(shape)), child_env(backend, tmp_path))
+    assert printed.strip() == 'owned frame rows'
+    assert backend.count() == 19
+
+
+@pytest.mark.parametrize("shape", ["pandas", "polars"])
+def test_saved_member_selectors_read_the_same_json_text_in_eager_feed_source_and_frame(backend, tmp_path, shape):
+    case = next(row for row in json.loads((pathlib.Path(__file__).resolve().parents[3] / 'conformance/cases.json').read_text())['cases'] if row['id'] == '18-annotate-two-groups')
+    output = run(f"""
+        import json, os, pathlib, pandas as pd, polars as pl, thinkthen as tt
+        from thinkthen import complete as c
+        record = {case['record']!r}
+        body = json.dumps(record)
+        root = pathlib.Path(os.environ['HOME'])
+        question = root / 'questions.json'; question.write_text(json.dumps({case['question_set']!r}))
+        document = root / 'document.json'; document.write_text(body)
+        source = (pd.DataFrame({{'input':[body], 'other':['keep']}}, index=[9]) if {shape!r} == 'pandas'
+                  else pl.DataFrame({{'input':[body], 'other':['keep']}}))
+        engine = tt.Engine(cache=False, batch='max')
+        for value, controls in [([body], {{}}), (iter([body]), {{}}),
+                                (c.Files(paths=(str(document),),unit='file'), {{}}), (source, {{'on':'input'}})]:
+            call = engine.annotate(question, value, **controls)
+            assert call.results[0].value == {{'summary':True, 'body':True}}
+            assert call.facts.requests_sent == 1
+            assert call.results[0].input == record
+            if controls:
+                assert call.value['other'].to_list() == ['keep'] and call.positions == (0,)
+            if isinstance(value, c.Files): assert call.results[0].source.file == str(document)
+        explicit = engine.annotate({{'version':1,'questions':{{'selected':{{'decide':'Fits?'}}}}}},
+                                   [c.Item(value=record)], field=['/summary'])
+        assert explicit.results[0].input == record and explicit.results[0].value == {{'selected':True}}
+        before = engine.usage()['requests_sent']
+        for items, controls in [([body], {{'field':['/summary']}}),
+                                ([c.Item(value=body,text=True,images=(c.Image(media='png',data=b''),))], {{}})]:
+            try: engine.annotate(question, items, **controls)
+            except tt.UsageError: pass
+            else: raise AssertionError('annotation accepted unsupported projection or images')
+        assert engine.usage()['requests_sent'] == before
+        print('shared annotation documents')
+    """, child_env(backend, tmp_path))
+    assert output.strip() == 'shared annotation documents'
+    assert backend.count() == 5
+
+
+@pytest.mark.parametrize("shape", ["pandas", "polars"])
+def test_frame_annotation_resolves_every_question_selector_and_empty_metadata(backend, tmp_path, shape):
+    printed = run("""
+        import json, os, pathlib, pandas as pd, polars as pl, thinkthen as tt
+        from thinkthen.complete import QuestionSource
+        shape = SHAPE
+        form = {'version':1, 'questions':{'late':{'decide':'Late?'},
+                'team':{'choose':'Which?', 'options':['billing','shipping']},
+                'urgent':{'score':'Urgent?', 'levels':['low','high']},
+                'tags':{'tag':'Kinds?', 'labels':['bill','ship']}}}
+        raw = json.dumps(form)
+        path = pathlib.Path(os.environ['HOME']) / 'questions.json'
+        path.write_text(raw)
+        named = pathlib.Path(os.environ['XDG_CONFIG_HOME']) / 'thinkthen' / 'questions'
+        named.mkdir(parents=True)
+        (named / 'frame.json').write_text(raw)
+        selectors = [form, QuestionSource(role='set', raw=raw), QuestionSource(role='set', path=path),
+                     QuestionSource(role='set', reference='@' + str(path)), QuestionSource(role='set', name='frame')]
+        engine = tt.Engine(cache=False)
+        for selector in selectors:
+            for values in (['one',None,'two'], [], [None,None]):
+                source = pd.DataFrame({'body':values}) if shape == 'pandas' else pl.DataFrame({'body':values}, schema={'body':pl.String})
+                got = engine.annotate(selector, source, on='body')
+                assert got.facts.requests_sent == (1 if values and values[0] is not None else 0)
+                assert got.positions == ((0,2) if values and values[0] is not None else ())
+                out = got.value
+                assert list(out.columns) == ['body', *form['questions'], 'failed']
+                if shape == 'pandas':
+                    assert [str(out[name].dtype) for name in form['questions']] == ['boolean','string','Float64','object']
+                    assert out['failed'].isna().all()
+                    assert out['late'].isna().to_list() == [value is None for value in values]
+                else:
+                    assert [out.schema[name] for name in form['questions']] == [pl.Boolean,pl.String,pl.Float64,pl.List(pl.String)]
+                    assert out['failed'].is_null().all()
+                    assert out['late'].is_null().to_list() == [value is None for value in values]
+        print('all selectors retain typed frame columns')
+    """.replace('SHAPE', repr(shape)), child_env(backend, tmp_path))
+    assert printed.strip() == 'all selectors retain typed frame columns'
+    assert backend.count() == 5

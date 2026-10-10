@@ -90,3 +90,13 @@ from thinkthen._polars_calls import PolarsResult
 import polars as pl
 polars_result: PolarsResult = ThinkThenNamespace(pl.Series("body", ["note"])).decide("Late?")
 polars_positions: tuple[int | None, ...] = polars_result.positions
+
+from thinkthen import Engine, Result
+from thinkthen._frame_calls import FrameResult
+
+def named_frame(engine: Engine, source: object) -> None:
+    annotated: Result[object] = engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}}}, source, on='body')
+    recognized: Result[object] = engine.recognize(source, on='body', kinds=['note'])
+
+def frame_positions(result: FrameResult) -> tuple[int | None, ...]:
+    return result.positions

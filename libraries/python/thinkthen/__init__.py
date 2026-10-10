@@ -2,8 +2,8 @@
 
 Ordinary direct calls return Result with an ordinary value, generated owned
 complete results, and native final facts. Engine.asyncio mirrors those calls.
-Engine context exit closes active sessions. Curried Judge and frame calls
-retain their compatibility implementation until their migration.
+Engine context exit closes active sessions. Curried Judge and the complete
+frame facade retain their compatibility implementation.
 """
 
 import json
@@ -500,35 +500,16 @@ class Engine:
         holds a question-to-failure map for partial rows and null otherwise.
         A pandas frame keeps its index. A question named as a column is refused first.
         """
-        if on is None:
-            controls = dict(legacy, token=token)
-            for key, item in dict(batch=batch, context=context).items():
-                if item is not None: controls[key] = item
-            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
-            return self._named('annotate', questions, records, **controls)
-        deadline_ms = _due_keyword(deadline_ms, legacy)
-        if context is not None:
-            raise UsageError("annotate does not take a shared context")
-        if isinstance(records, FileSelection):
-            if on is not None:
-                raise UsageError("source annotate takes question-member on, not frame on")
-            return _source_call(self, "annotate", _source_spec(questions), records, batch, None, deadline_ms, token)
-        asked = _spec(_thinkthen._QuestionSet, questions)
-        if "failed" in asked._names():
-            raise UsageError("the question name failed is reserved for frame failures")
-        if _pandas(records) == "DataFrame":
-            column = _on(records, on, (*asked._names(), "failed"))
-            answers = _thinkthen._annotate_column(self._engine, asked, _marked(column, "Series"),
-                                                  batch, deadline_ms, token)
-            def rebuild(columns):
-                out = records.assign()
-                for name, (values, dtype) in columns.items():
-                    out[name] = type(column)(values, index=records.index, dtype=dtype)
-                return out
-            return _mapped(answers, rebuild)
-        result = _thinkthen._annotate_frame(self._engine, asked, records, on,
-                                            batch, deadline_ms, token)
-        return _mapped(result, lambda value: type(records)(_Stream(value)))
+        if on is not None:
+            from ._frame_calls import library
+            if library(records) is None:
+                raise UsageError('annotate with on= takes a Polars or pandas DataFrame; a list of str takes no on=')
+        controls = dict(legacy, token=token)
+        if on is not None: controls['on'] = on
+        for key, item in dict(batch=batch, context=context).items():
+            if item is not None: controls[key] = item
+        if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+        return self._named('annotate', questions, records, **controls)
 
     def recognize(self, text, ask=None, *, kinds=None, relations=None, either=None,
                   threshold=None, relation_threshold=None, on=None, deadline_ms=_MISSING,
@@ -548,57 +529,20 @@ class Engine:
         ``names`` column: one list per row of ``dict`` with those fields but
         ``row``. Relations take one text.
         """
-        if on is None:
-            controls = dict(legacy, token=token)
-            if ask is None:
-                controls.update(kinds=kinds or [], relations=relations, either=either, descriptions=descriptions)
-                if instructions is not None: controls['instructions'] = instructions
-                if entity_definition is not None: controls['entity_definition'] = entity_definition
-            for key, item in dict(threshold=threshold, relation_threshold=relation_threshold).items():
-                if item is not None: controls[key] = item
-            if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
-            return self._named('recognize', ask, text, **controls)
-        deadline_ms = _due_keyword(deadline_ms, legacy)
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
-        if ask is not None:
-            if instructions is not None or entity_definition is not None:
-                raise UsageError("recognize task keywords take an inline declaration")
-            if descriptions is not None:
-                raise UsageError("descriptions= takes kinds=, not a recognize ask")
-            spec = _spec(_thinkthen._Recognize, ask)
-        else:
-            named = _labels(kinds or [], descriptions)
-            if not isinstance(named, dict):
-                named = {name: None for name in named}
-            body = {"version": 1, "recognize": {"kinds": named}}
-            if instructions is not None:
-                body["recognize"]["instructions"] = instructions
-            if entity_definition is not None:
-                body["recognize"]["entity_definition"] = entity_definition
-            rules = _rules(relations, either)
-            if rules:
-                body["recognize"]["relations"] = [
-                    {"name": name, "source": source, "target": target, "either": both}
-                    for name, source, target, both in rules]
-            if threshold is not None:
-                body["threshold"] = threshold
-            if relation_threshold is not None:
-                body["relation_threshold"] = relation_threshold
-            spec = _thinkthen._Recognize._from_json(json.dumps(body))
-        if isinstance(text, FileSelection):
-            if on is not None:
-                raise UsageError("source recognize reads text units; on requires a parser source map")
-            return _source_call(self, "recognize", _source_spec(ask) if ask is not None else json.dumps(body), text, None, None, deadline_ms, token)
-        if on is not None and _pandas(text) == "DataFrame":
-            column = _on(text, on, ["names"])
-            found = _thinkthen._recognize_column(self._engine, spec, _marked(column, "Series"),
-                                                 deadline_ms, token)
-            return _mapped(found, lambda value: text.assign(
-                names=type(column)(value, index=text.index, dtype="object")))
-        if on is not None:
-            result = _thinkthen._recognize_frame(self._engine, spec, text, on, deadline_ms, token)
-            return _mapped(result, lambda value: type(text)(_Stream(value)))
+        controls = dict(legacy, token=token)
+        if on is not None: controls['on'] = on
+        if ask is None:
+            controls.update(kinds=kinds or [], relations=relations, either=either, descriptions=descriptions)
+            if instructions is not None: controls['instructions'] = instructions
+            if entity_definition is not None: controls['entity_definition'] = entity_definition
+        elif instructions is not None or entity_definition is not None or descriptions is not None:
+            raise UsageError("recognize task keywords take an inline declaration")
+        for key, item in dict(threshold=threshold, relation_threshold=relation_threshold).items():
+            if item is not None: controls[key] = item
+        if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
+        return self._named('recognize', ask, text, **controls)
 
     def relate(self, entities, ask=None, *, relations=None, either=None, threshold=None,
                deadline_ms=_MISSING, token=None, **legacy):

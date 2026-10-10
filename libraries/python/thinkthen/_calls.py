@@ -68,7 +68,7 @@ def _question(verb, question, controls):
             value = getattr(question, key)
             if value is not None: selectors[key] = os.fspath(value) if key == 'path' else value
         if question.body is not None: selectors['value'] = _json(question.body)
-        if question.raw is not None: selectors['raw'] = question.raw
+        if question.raw is not None: selectors['value'] = json.loads(native._RequestSession._definition(question.raw))
         if question.none: controls['none'] = True
         kind = 'file' if 'path' in selectors else 'name' if 'name' in selectors else 'reference' if 'reference' in selectors else 'definition'
         return {'kind': kind, **selectors}
@@ -198,20 +198,27 @@ def _cancelled():
 class Operation:
     """A bounded producer and one nonblocking native session."""
     def __init__(self, engine, verb, question, value, controls):
-        from . import _pandas, _frames
-        self.surface = 'pandas' if _pandas(value) == 'Series' else 'python-polars' if _frames.is_series(value) else None
+        from . import _pandas, _frames, _frame_calls
+        frame_surface = _frame_calls.library(value)
+        self.on = None
+        self.surface = frame_surface or ('pandas' if _pandas(value) == 'Series' else 'python-polars' if _frames.is_series(value) else None)
         self.frame = (value.copy() if self.surface == 'pandas' else value.clone()) if self.surface else None
         self.present = ()
-        if self.frame is not None:
+        self.members = ()
+        fields = dict(controls)
+        asked = _question(verb, question, fields)
+        if frame_surface is not None:
+            if verb == 'annotate':
+                self.members = _frame_calls.members(asked)
+            value, self.present, self.on = _frame_calls.records(self.frame, verb, fields, self.surface, self.members)
+        elif self.frame is not None:
             if self.surface == 'pandas':
                 from ._pandas_calls import records
             else:
                 from ._polars_calls import records
             value, self.present = records(self.frame, verb)
-        fields = dict(controls)
         self.details = fields.pop('details', False)
         self.token = fields.pop('token', None)
-        asked = _question(verb, question, fields)
         if 'on' in fields:
             on = fields.pop('on')
             fields['field'] = [on] if isinstance(on, str) else list(on)
@@ -302,6 +309,11 @@ class Operation:
                 self.engine._sessions.discard(self)
 
     def result(self):
+        if self.on is not None:
+            from ._frame_calls import FrameResult, PolarsFrameResult
+            Frame = FrameResult if self.surface == 'pandas' else PolarsFrameResult
+            return Frame(tuple(self.results), self.terminal, self.verb, self.scalar,
+                         self.details, self.frame, self.present, self.on, self.members)
         if self.frame is not None:
             if self.surface == 'pandas':
                 from ._pandas_calls import PandasResult as ColumnResult
