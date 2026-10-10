@@ -25,7 +25,7 @@ def run(command, cwd, env, expected=None, timeout=180):
         assert result.returncode != 0 and expected in result.stdout, result.stdout
     else:
         assert result.returncode == 0, result.stdout
-    print(result.stdout[-2000:])
+    print(result.stdout if timeout is None else result.stdout[-2000:])
     return result
 
 
