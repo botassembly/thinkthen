@@ -1,10 +1,10 @@
 //! Eager Series and frame calls through the shared native engine.
-use super::column::{Answers, Failures, decided, kind_word, streamed, text};
-use super::{MEMBER, PolarsCallOptions, PolarsEngine, PolarsExprOptions, complete, inputs, lazy};
+use super::column::{Answers, Failures, annotated, decided, kind_word, streamed, text};
+use super::{PolarsCallOptions, PolarsEngine, PolarsExprOptions, complete, inputs, lazy, request};
 use crate::public::{
     Annotated, Call, CallOptions, DecisionQuestion, Details, Edge, Engine, Error, Judgment,
     PlanEstimate, Probabilities, Question, QuestionKind, QuestionSet, Recognize, Recognized,
-    Relate,
+    Relate, RequestCall, RequestValue,
 };
 use polars::prelude::{
     BooleanChunkedBuilder, ChunkedBuilder, Column, DataFrame, Expr, Float64Type, IntoSeries,
@@ -163,14 +163,26 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Call<Series>, Error> {
-        let cells = text(texts)?;
-        let mut answers = BooleanChunkedBuilder::new(texts.name().clone(), cells.len());
-        let batch = self.decide_many_with(question, cells.iter().flatten(), options);
-        let facts = streamed(batch, cells, |row| {
-            answers.append_option(row.and_then(|row| decided(*row.value())));
-            Ok(())
-        })?;
-        Ok(Call::new(answers.finish().into_series(), facts))
+        let call = request::execute(
+            self,
+            question.question(),
+            texts,
+            RequestCall::Decide,
+            options,
+        )?;
+        call.try_map(|value| {
+            let RequestValue::Decisions(rows) = value else {
+                return Err(Error::defect(
+                    "a decide column received another result kind",
+                ));
+            };
+            let mut answers = BooleanChunkedBuilder::new(texts.name().clone(), texts.len());
+            request::project(texts, &rows, |row| {
+                answers.append_option(row.and_then(|row| decided(row.value())));
+                Ok(())
+            })?;
+            Ok(answers.finish().into_series())
+        })
     }
 
     fn choose_series(
@@ -235,14 +247,22 @@ impl PolarsEngine for Engine {
             .map(|(name, kind)| Answers::new(name, kind, cells.len()))
             .collect::<Result<Vec<_>, _>>()?;
         let mut failures = Failures::new(&names, cells.len());
-        let batch = self.annotate_with(questions, cells.iter().flatten(), options);
-        let facts = streamed(batch, cells, |record| {
-            for (place, column) in columns.iter_mut().enumerate() {
-                column.push_record(record.as_ref(), place)?;
-            }
-            failures.push(record.as_ref())
-        })?;
-        Call::new((columns, failures), facts).try_map(|(columns, failures)| {
+        let call = request::execute_definition(
+            self,
+            questions.clone().into(),
+            held.as_materialized_series(),
+            RequestCall::Annotate,
+            options,
+        )?;
+        call.try_map(|value| {
+            let RequestValue::Annotations(rows) = value else {
+                return Err(Error::defect(
+                    "an annotation frame received another result kind",
+                ));
+            };
+            request::project(held.as_materialized_series(), &rows, |record| {
+                annotated(&mut columns, &mut failures, record)
+            })?;
             let mut columns = columns
                 .into_iter()
                 .map(|column| column.finish().into())
@@ -253,6 +273,7 @@ impl PolarsEngine for Engine {
                 .map_err(|error| Error::defect(&format!("the frame refused a new column: {error}")))
         })
     }
+
     fn filter_series(
         &self,
         question: &Question,
@@ -310,7 +331,7 @@ pub(super) fn selected_probability(details: &Details) -> Result<Option<f64>, Err
     }
 }
 
-/// One choose, score, or tag column through a one-question set.
+/// Project a named native atomic Request into the caller's column type.
 fn single(
     engine: &Engine,
     wanted: QuestionKind,
@@ -318,21 +339,36 @@ fn single(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<Series>, Error> {
-    if question.kind() != wanted {
-        let word = kind_word(wanted);
-        return Err(Error::usage(format!(
-            "{word}_series needs a {word} question, and this one is a {} question",
-            kind_word(question.kind())
-        )));
-    }
-    let cells = text(texts)?;
-    let set = QuestionSet::builder()
-        .question(MEMBER, question.clone())?
-        .build()?;
-    let mut answers = Answers::new(texts.name().as_str(), wanted, cells.len())?;
-    let batch = engine.annotate_with(&set, cells.iter().flatten(), options);
-    let facts = streamed(batch, cells, |record| {
-        answers.push_record(record.as_ref(), 0)
-    })?;
-    Ok(Call::new(answers.finish(), facts))
+    let named = match wanted {
+        QuestionKind::Choose => RequestCall::Choose,
+        QuestionKind::Score => RequestCall::Score,
+        QuestionKind::Tag => RequestCall::Tag,
+        _ => return Err(Error::defect("the atomic column has no named request")),
+    };
+    request::execute(engine, question, texts, named, options)?.try_map(|value| {
+        let mut answers = Answers::new(texts.name().as_str(), wanted, texts.len())?;
+        match value {
+            RequestValue::Choices(rows) => request::project(texts, &rows, |row| {
+                answers.push(
+                    row.map(|row| Annotated::Choice(row.value().map(str::to_owned)))
+                        .as_ref(),
+                )
+            })?,
+            RequestValue::Scores(rows) => request::project(texts, &rows, |row| {
+                answers.push(row.map(|row| Annotated::Score(row.value())).as_ref())
+            })?,
+            RequestValue::Tags(rows) => request::project(texts, &rows, |row| {
+                answers.push(
+                    row.map(|row| Annotated::Tags(row.value().to_vec()))
+                        .as_ref(),
+                )
+            })?,
+            _ => {
+                return Err(Error::defect(
+                    "an atomic column received another result kind",
+                ));
+            }
+        }
+        Ok(answers.finish())
+    })
 }

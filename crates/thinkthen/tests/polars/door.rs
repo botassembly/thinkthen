@@ -107,13 +107,13 @@ fn every_refusal_is_pinned_and_sends_nothing() {
         ),
         (
             engine.tag_series(&score(), &nulls, options()).map(drop),
-            "tag_series needs a tag question, and this one is a score question",
+            "question kind does not match the requested function",
         ),
         (
             engine
                 .score_series(&decide(), &common::column(&["refund me"]), options())
                 .map(drop),
-            "score_series needs a score question, and this one is a decide question",
+            "this function does not accept this threshold",
         ),
         (
             engine
@@ -176,20 +176,21 @@ fn a_failed_question_keeps_typed_columns_and_a_marker() {
         }}"#,
     )
     .expect("the case's set");
-    let texts = frame(vec![common::column(&[
-        "Refund requested for a failed payment.",
-    ])]);
+    let texts = frame(vec![Series::new(
+        "body".into(),
+        [None, Some("Refund requested for a failed payment."), None],
+    )]);
     let out = engine
         .annotate_frame(&set, &texts, "body", CallOptions::new())
         .expect("the frame");
     let team = out.value().column("team").expect("team");
     assert_eq!(team.dtype(), &DataType::String);
-    assert_eq!(team.null_count(), 1);
+    assert_eq!(team.null_count(), 3);
     let refund = out.value().column("refund").expect("refund");
     assert_eq!(refund.dtype(), &DataType::Boolean);
-    assert_eq!(refund.null_count(), 1, "not sure reads null");
+    assert_eq!(refund.null_count(), 3, "not sure reads null");
     let severity = out.value().column("severity").expect("severity");
-    assert_eq!(severity.f64().expect("Float64").get(0), Some(1.2));
+    assert_eq!(severity.f64().expect("Float64").get(1), Some(1.2));
     assert!(matches!(
         out.value().column("topics").expect("topics").dtype(),
         DataType::List(_)
@@ -200,7 +201,7 @@ fn a_failed_question_keeps_typed_columns_and_a_marker() {
         .expect("failed")
         .struct_()
         .expect("Struct");
-    assert_eq!(failed.null_count(), 0);
+    assert_eq!(failed.null_count(), 2);
     let team = failed.field_by_name("team").expect("team marker");
     let marker = team
         .struct_()
@@ -215,7 +216,7 @@ fn a_failed_question_keeps_typed_columns_and_a_marker() {
             .expect("kind")
             .str()
             .expect("text")
-            .get(0),
+            .get(1),
         Some("backend")
     );
     assert_eq!(
@@ -226,7 +227,7 @@ fn a_failed_question_keeps_typed_columns_and_a_marker() {
             .expect("cause")
             .str()
             .expect("text")
-            .get(0),
+            .get(1),
         Some("missing_probability")
     );
 }
@@ -357,9 +358,9 @@ fn the_callers_columns_come_back_unchanged() {
     );
 }
 
-/// An empty column gives an empty column of the verb's type and sends nothing.
+/// Empty, all-null and duplicate cells keep their physical positions and native dtypes.
 #[test]
-fn an_empty_column_answers_empty() {
+fn nullable_rowwise_columns_keep_types_positions_and_duplicate_answers() {
     let backend = Backend::start().expect("a backend");
     let engine = common::engine(&format!("{}/generic/v1", backend.origin()));
     let empty = common::column(&[]);
@@ -373,31 +374,56 @@ fn an_empty_column_answers_empty() {
         .and_then(|builder| builder.label("billing", None))
         .and_then(|builder| builder.cut_at(0.5))
         .expect("a tag question");
-    let answered = [
-        (
-            engine.decide_series(&decide(), &empty, options()),
-            DataType::Boolean,
-        ),
-        (
-            engine.choose_series(&choose, &empty, options()),
-            DataType::String,
-        ),
-        (
-            engine.score_series(&score(), &empty, options()),
-            DataType::Float64,
-        ),
-        (
-            engine.tag_series(&tag, &empty, options()),
-            DataType::List(Box::new(DataType::String)),
-        ),
-    ];
-    for (series, dtype) in answered {
-        let series = series.expect("an empty answer");
-        assert_eq!((series.value().len(), series.value().dtype()), (0, &dtype));
-        assert_eq!(
-            (series.facts().records(), series.facts().requests_sent()),
-            (0, 0)
-        );
+    for input in [
+        empty.clone(),
+        Series::new("body".into(), [None::<&str>, None]),
+        Series::new("body".into(), [Some("refund me"), None, Some("refund me")]),
+    ] {
+        let answered = [
+            (
+                engine.decide_series(&decide(), &input, options()),
+                DataType::Boolean,
+            ),
+            (
+                engine.choose_series(&choose, &input, options()),
+                DataType::String,
+            ),
+            (
+                engine.score_series(&score(), &input, options()),
+                DataType::Float64,
+            ),
+            (
+                engine.tag_series(&tag, &input, options()),
+                DataType::List(Box::new(DataType::String)),
+            ),
+        ];
+        for (series, dtype) in answered {
+            let series = series.expect("a typed answer");
+            assert_eq!(
+                (series.value().len(), series.value().dtype()),
+                (input.len(), &dtype)
+            );
+            assert_eq!(series.value().null_count(), input.null_count());
+            for at in 0..input.len() {
+                assert_eq!(
+                    series.value().get(at).expect("cell").is_null(),
+                    input.get(at).expect("input").is_null()
+                );
+            }
+            if input.len() == 3 {
+                assert_eq!(
+                    series.value().get(0).expect("first"),
+                    series.value().get(2).expect("duplicate")
+                );
+            }
+            assert_eq!(
+                (series.facts().records(), series.facts().requests_sent()),
+                (
+                    (input.len() - input.null_count()) as u64,
+                    u64::from(input.null_count() < input.len())
+                )
+            );
+        }
     }
     let set = QuestionSet::from_json(
         r#"{"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
@@ -423,5 +449,43 @@ fn an_empty_column_answers_empty() {
             .dtype(),
         DataType::Struct(_)
     ));
+    assert_eq!(backend.count(), 4);
+}
+
+/// Cancellation admits no provider work through any named rowwise Request.
+#[test]
+fn cancelled_rowwise_columns_send_nothing() {
+    let backend = Backend::start().expect("backend");
+    let engine = common::engine(&format!("{}/generic/v1", backend.origin()));
+    let token = thinkthen::CancelToken::new();
+    token.cancel();
+    let options = || CallOptions::new().cancel(&token);
+    let texts = Series::new("body".into(), [None, Some("refund me"), None]);
+    let choose = Question::choose_labels("Which team?")
+        .and_then(|builder| builder.label("billing", None))
+        .and_then(|builder| builder.label("other", None))
+        .and_then(thinkthen::LabelBuilder::build)
+        .expect("choose");
+    let tag = Question::tag_labels("Which labels?")
+        .and_then(|builder| builder.label("billing", None))
+        .and_then(|builder| builder.cut_at(0.5))
+        .expect("tag");
+    let set = QuestionSet::builder()
+        .question("refund", decide())
+        .expect("member")
+        .build()
+        .expect("set");
+    let refused = [
+        engine.decide_series(&decide(), &texts, options()).map(drop),
+        engine.choose_series(&choose, &texts, options()).map(drop),
+        engine.score_series(&score(), &texts, options()).map(drop),
+        engine.tag_series(&tag, &texts, options()).map(drop),
+        engine
+            .annotate_frame(&set, &frame(vec![texts]), "body", options())
+            .map(drop),
+    ];
+    for refused in refused {
+        assert_eq!(refused.expect_err("cancelled").kind(), ErrorKind::Cancelled);
+    }
     assert_eq!(backend.count(), 0);
 }

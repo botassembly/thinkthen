@@ -326,9 +326,6 @@ fn polars_columns_keep_final_call_facts() {
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let body: Value = serde_json::from_slice(&requests[0].body).expect("context request");
-    assert_eq!(
-        body["state"],
-        json!({"context":"forbidden","evidence":"Each question quotes the text it asks about."})
-    );
+    assert_eq!(body["state"], json!("forbidden"));
     assert_eq!(questions(&body).len(), 3);
 }

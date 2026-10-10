@@ -10,7 +10,7 @@ The feature adds `thinkthen::PolarsEngine` to your own `thinkthen::Engine`. Eage
 
 The feature turns on Polars' lazy API and not its streaming engine. The streaming engine brings Polars' cloud storage stack, about 140 more crates. To collect with `polars::prelude::Engine::Streaming`, add `polars = { version = "0.55", default-features = false, features = ["streaming"] }` to your own manifest. The expressions are ordinary column functions, so either engine runs them. The default engine holds the whole frame in memory and judges the column in one call. The streaming engine calls the expression once per morsel, so each morsel is its own call. Bounded memory for the frame itself needs the streaming opt-in or a batched read.
 
-A row-wise text judgment reads the column in place and writes each answer into its output column as the answer arrives. Beyond the input and the output, it holds only the records waiting in the engine's pipeline. Whole-set rank/find and explicit source helpers materialize their complete logical collection. On 100,000 rows answered from a replay folder, `annotate_frame` with two questions peaked at 47 MB of resident memory, down from 109 MB when the door collected every row first; `decide_series` peaked at 37 MB, with 32 MB of that the process and the frame before the call.
+Named eager Series judgments and `annotate_frame` pass native records through shared Request admission and execution, then project joined native complete results into their output columns. These calls retain native results alongside the input and output columns. Use the typed `*_input_column_batch` methods for pull-based results. Whole-set rank/find and explicit source helpers materialize their complete logical collection.
 
 With a cache or recording folder, a lazy frame collected again sends nothing, and a frame sliced before the expression asks only the kept rows that the store does not hold.
 
@@ -83,7 +83,8 @@ Each refusal happens before any request and returns `thinkthen::Error::Usage`:
 - `the column {name} is {dtype}, not text`. Cast a `Categorical` column to `String` first.
 - `the frame holds no column {on}`
 - `the frame already holds a column named {name}`
-- `{method} needs a {verb} question, and this one is a {kind} question`
+- `question kind does not match the requested function`
+- `this function does not accept this threshold`
 
 An empty row-wise or rank column returns a `Call` with an empty value of the method's type and zero records and sends. No message or `Debug` line holds a text from your column.
 
