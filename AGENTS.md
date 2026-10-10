@@ -1,6 +1,6 @@
 # Agent instructions for thinkthen
 
-Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification and `sdlc/planning/milestones.md`. Read status, order and lanes through pm. The workspace instructions load the shared role skills from `repos/agents/skills/`; this file adds repository boundaries and checks.
+Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md`. Follow the specification and `sdlc/planning/milestones.md`. Read status, order and lanes through pm. Workspace instructions load role skills from `repos/agents/skills/`; this file adds boundaries and checks.
 
 ## Build and review
 
@@ -39,3 +39,7 @@ Read the key from `THINKTHEN_API_KEY`, or from a named backend's own key variabl
 `CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. The queue owner owns the whole repo, `site/` included, per `sdlc/planning/ownership.md`. Lasting rulings live in `sdlc/decisions/`; accepted ADRs and specifications retain product contracts. Preserve source links and name what Ian can overturn.
 
 The release process lives in `sdlc/planning/release-process.md`. Ian held release management on 2026-10-08: candidate tags, manual workflow dispatches, release branch advancement and publication require his permission. See `sdlc/decisions/2026-10-08-preserve-planning-rulings.md`.
+
+## Outside agents
+
+Open a GitHub issue with a repository label. Ask questions on the discussion board when enabled. Link a fork in the issue instead of opening a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md#external-contributions).

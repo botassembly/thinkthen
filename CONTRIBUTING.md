@@ -13,9 +13,15 @@ install -m 755 target/release/thinkthen "$HOME/.local/bin/thinkthen"
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-## Before you open a pull request
+## External contributions
 
-Run the gate ladder, cheapest rung first:
+Open a [GitHub issue](https://github.com/botassembly/thinkthen/issues/new/choose) for a bug, documentation correction or proposed change. Choose an existing [repository label](https://github.com/botassembly/thinkthen/labels), such as `bug`, `documentation` or `enhancement`. The bug template supplies the `bug` label and asks for the command, output and version. If GitHub does not let you apply a label, name the label in the issue so a maintainer can apply it.
+
+Ask questions on the [discussion board](https://github.com/botassembly/thinkthen/discussions) when it is enabled. Discussions is currently disabled; until it opens, use an issue and name the `question` label.
+
+Link your fork and the relevant branch or commit in the issue instead of opening a pull request. Include the checks you ran and their results. Keep keys, private data and security reports out of public issues; report security problems as [SECURITY.md](SECURITY.md) directs.
+
+Before you report a proposed code change, run the gate ladder, cheapest rung first:
 
 ```sh
 sdlc/scripts/install
@@ -25,7 +31,7 @@ sdlc/scripts/spec
 sdlc/scripts/surfaces
 ```
 
-No rung touches the network. Tests replay recorded responses, so you need no key. To run the first four rungs in GitHub Actions, start `.github/workflows/gate.yml` by hand.
+No rung touches the network. Tests replay recorded responses, so you need no key. Maintainers can run the first four rungs in GitHub Actions by starting `.github/workflows/gate.yml` by hand.
 
 ## The four names
 

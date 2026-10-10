@@ -47,3 +47,15 @@ This bounded 0467 slice starts from `7785693d7`. The root README, specification 
 Both changed Astro pages parse with the installed compiler. The three changed Markdown documents parse with the site's existing parser; fences balance, 68 local or repository link targets exist, ticket validation reports zero failures, and the focused count-only privacy check finds no private names. `git diff --check` passes. One storage measurement totals 41,861,152,768 bytes across target, libraries and databases, below 40 GiB. No executable example changes, so no replay runs. No full site build, provider call, package build, parity run, release qualification or product source change enters this slice.
 
 Package migration and qualification are different claims. A stable session implementation does not prove the default Maven route uses it, and an approved platform restriction does not prove an Apple facade exists. Shared documentation should link the owning API and preserve those distinctions instead of describing every intended package as installed.
+
+## External contributor reporting
+
+This bounded documentation change starts from `5a7bdcfbe7547079f89e353859efc9e273cb45a9`. `AGENTS.md` adds an outside-agent section and links `CONTRIBUTING.md#external-contributions`. The contribution guide directs external contributors to labelled GitHub issues and fork links instead of pull requests. The existing bug template supplies `bug`; the guide also names existing `documentation`, `enhancement` and `question` labels. Internal pm, ticket, coordinator and release rules retain their scope.
+
+Read-only GitHub queries confirm those labels and report `has_discussions: false` with no discussion categories. The guide retains the approved discussion-board destination conditional on enablement and gives a question-labelled issue as the current fallback. No repository setting changes.
+
+Focused checks verify the contribution anchor, local links, repository URL paths, template label, private-name absence and the 5,000-character limit. `AGENTS.md` measures 4,993 characters; `git diff --check` passes. No executable example changes, provider calls, tests, builds, full site checks, package qualification or publication enter this change.
+
+A reporting flow must state who can apply an issue label and whether its question destination is available. External contributors can name a label for a maintainer when GitHub withholds label controls.
+
+Fresh read-only review accepted `1181338a883bbc71082c315438e56d4fdf92c222`. It checked the approved flow, live labels and disabled Discussions, confirmed the question-issue fallback, and verified that internal pm and safety boundaries remain intact. The agent instructions remain within their character cap.
