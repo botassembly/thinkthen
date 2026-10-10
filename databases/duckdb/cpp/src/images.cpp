@@ -11,7 +11,6 @@
 #include "yyjson.hpp"
 
 extern "C" {
-struct ThinkThenImage { ThinkThenText media; ThinkThenText data; };
 ThinkThenReply thinkthen_cpp_image(ThinkThenText, ThinkThenText);
 ThinkThenReply thinkthen_cpp_validate_images(ThinkThenText, int32_t, const ThinkThenImage *, size_t,
                                             ThinkThenText, ThinkThenText, int32_t);
@@ -26,9 +25,6 @@ namespace {
 constexpr size_t MAX_IMAGE_BYTES = 24 * 1024 * 1024;
 constexpr size_t MAX_IMAGES = 8;
 ThinkThenText View(const string &text) { return {reinterpret_cast<const uint8_t *>(text.data()), text.size()}; }
-LogicalType ImageType() {
-	return LogicalType::STRUCT({{"media", LogicalType::VARCHAR}, {"data", LogicalType::BLOB}, {"file", LogicalType::VARCHAR}});
-}
 Value ImageValue(const string &media, const string &data, Value file = Value(LogicalType::VARCHAR)) {
 	return Value::STRUCT({{"media", Value(media)}, {"data", Value::BLOB_RAW(data)}, {"file", std::move(file)}});
 }
@@ -83,11 +79,7 @@ struct Input {
 	string settings;
 	std::optional<string> text;
 	vector<std::pair<string, string>> images;
-	vector<ThinkThenImage> Views() const {
-		vector<ThinkThenImage> out;
-		for (auto &image : images) { out.push_back({View(image.first), View(image.second)}); }
-		return out;
-	}
+	vector<ThinkThenImage> Views() const { return ImageViews(images); }
 	ThinkThenText Text() const { return text ? View(*text) : ThinkThenText {nullptr, 0}; }
 };
 struct Json {
@@ -124,18 +116,7 @@ void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 		auto setting = args.data[3].GetValue(row), text = args.data[2].GetValue(row);
 		input.settings = setting.IsNull() ? "{}" : setting.GetValue<string>();
 		if (!text.IsNull()) { input.text = text.GetValue<string>(); }
-		auto &members = ListValue::GetChildren(images);
-		if (members.empty() || members.size() > MAX_IMAGES) { throw OrdinaryError("thinkthen usage: image evidence requires 1 to 8 images"); }
-		size_t total = 0;
-		for (auto &image : members) {
-			if (image.IsNull()) { throw OrdinaryError("thinkthen usage: image list contains NULL"); }
-			auto &fields = StructValue::GetChildren(image);
-			if (fields[0].IsNull() || fields[1].IsNull()) { throw OrdinaryError("thinkthen usage: image media and data must be non-NULL"); }
-			auto &bytes = StringValue::Get(fields[1]);
-			if (bytes.size() > MAX_IMAGE_BYTES - total) { throw OrdinaryError("thinkthen usage: image evidence exceeds the 25165824 compressed byte SDK limit"); }
-			total += bytes.size();
-			input.images.emplace_back(fields[0].GetValue<string>(), bytes);
-		}
+		input.images = ImageMembers(images);
 		auto views = input.Views();
 		RustReply checked(thinkthen_cpp_validate_images(View(input.question.text), input.question.from_file, views.data(), views.size(), input.Text(), View(input.settings), kind));
 		Checked(checked.value);
@@ -159,6 +140,30 @@ void Register(ExtensionLoader &loader, const string &name, vector<LogicalType> a
 	loader.RegisterFunction(scalar);
 }
 } // namespace
+LogicalType ImageType() {
+	return LogicalType::STRUCT({{"media", LogicalType::VARCHAR}, {"data", LogicalType::BLOB}, {"file", LogicalType::VARCHAR}});
+}
+vector<std::pair<string, string>> ImageMembers(const Value &images) {
+    vector<std::pair<string, string>> out;
+	auto &members = ListValue::GetChildren(images);
+	if (members.empty() || members.size() > MAX_IMAGES) { throw OrdinaryError("thinkthen usage: image evidence requires 1 to 8 images"); }
+	size_t total = 0;
+	for (auto &image : members) {
+		if (image.IsNull()) { throw OrdinaryError("thinkthen usage: image list contains NULL"); }
+		auto &fields = StructValue::GetChildren(image);
+		if (fields[0].IsNull() || fields[1].IsNull()) { throw OrdinaryError("thinkthen usage: image media and data must be non-NULL"); }
+		auto &bytes = StringValue::Get(fields[1]);
+		if (bytes.size() > MAX_IMAGE_BYTES - total) { throw OrdinaryError("thinkthen usage: image evidence exceeds the 25165824 compressed byte SDK limit"); }
+		total += bytes.size();
+		out.emplace_back(fields[0].GetValue<string>(), bytes);
+	}
+    return out;
+}
+vector<ThinkThenImage> ImageViews(const vector<std::pair<string, string>> &images) {
+    vector<ThinkThenImage> out;
+    for (auto &image : images) { out.push_back({View(image.first), View(image.second)}); }
+    return out;
+}
 void RegisterImages(ExtensionLoader &loader) {
 	Register(loader, "thinkthen_image", {LogicalType::BLOB, LogicalType::VARCHAR}, ImageType(), Constructor, false);
 	Register(loader, "thinkthen_image_file", {LogicalType::VARCHAR}, ImageType(), File, true);

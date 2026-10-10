@@ -22,6 +22,61 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
     session: BridgeSettings,
     stop: BridgeStop,
 ) -> Reply {
+    complete(
+        verb, question, inputs, settings, reference, deadline, session, stop, None,
+    )
+}
+
+/// Execute an existing native binary image collection through the same Request.
+/// # Safety
+/// C++ retains all counted image ranges through synchronous return.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_images(
+    question: BridgeText,
+    images: *const super::images::BridgeImage,
+    count: usize,
+    settings: BridgeText,
+    reference: *const thinkthen::QuestionFileReference,
+    deadline: i64,
+    session: BridgeSettings,
+    stop: BridgeStop,
+) -> Reply {
+    let verb = BridgeText {
+        bytes: b"decide".as_ptr(),
+        len: 6,
+    };
+    let inputs = BridgeText {
+        bytes: b"".as_ptr(),
+        len: 0,
+    };
+    complete(
+        verb,
+        question,
+        inputs,
+        settings,
+        reference,
+        deadline,
+        session,
+        stop,
+        Some((images, count)),
+    )
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the private counted host ABI retains its existing ranges"
+)]
+fn complete(
+    verb: BridgeText,
+    question: BridgeText,
+    inputs: BridgeText,
+    settings: BridgeText,
+    reference: *const thinkthen::QuestionFileReference,
+    deadline: i64,
+    session: BridgeSettings,
+    stop: BridgeStop,
+    images: Option<(*const super::images::BridgeImage, usize)>,
+) -> Reply {
     reply_boundary(|| {
         let verb = text(verb.bytes, verb.len)?;
         let question = text(question.bytes, question.len)?;
@@ -45,14 +100,19 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
                 complete_native::prepare(verb, question, &call)?
             };
             // Explicit files reach this call only after DuckDB authorizes readers.
-            complete_native::Inputs::parse(inputs, false)?;
+            if images.is_none() {
+                complete_native::Inputs::parse(inputs, false)?;
+            }
             let request = request::admit(&prepared)?;
-            Ok::<_, thinkthen::Error>((
-                call,
-                prepared,
-                complete_native::Inputs::parse_request(inputs)?,
-                request,
-            ))
+            let inputs = if let Some((images, count)) = images {
+                complete_native::Inputs::from_record(
+                    super::images::complete_record(images, count)
+                        .map_err(|error| complete_native::usage(&error))?,
+                )
+            } else {
+                complete_native::Inputs::parse_request(inputs)?
+            };
+            Ok::<_, thinkthen::Error>((call, prepared, inputs, request))
         })();
         let (call, prepared, inputs, request) = match parsed {
             Ok(value) => value,

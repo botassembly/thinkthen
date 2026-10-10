@@ -28,7 +28,7 @@ fn image(media: &str, data: &BridgeText) -> Result<ImageInput, String> {
     ImageInput::new(media, bytes).map_err(|error| RowError::from(error).text)
 }
 
-fn input(
+pub(super) fn input(
     images: *const BridgeImage,
     count: usize,
     ancillary: &BridgeText,
@@ -60,6 +60,39 @@ fn input(
     ImageEvidence::new(ancillary, images)
         .map(QuestionInput::Images)
         .map_err(|error| RowError::from(error).text)
+}
+
+/// Convert the existing counted image decoder into one native Request record.
+pub(super) fn complete_record(
+    images: *const BridgeImage,
+    count: usize,
+) -> Result<thinkthen::RequestItem, String> {
+    let QuestionInput::Images(input) = input(
+        images,
+        count,
+        &BridgeText {
+            bytes: std::ptr::null(),
+            len: 0,
+        },
+    )?
+    else {
+        return Err("thinkthen defect: image input held no images".into());
+    };
+    Ok(thinkthen::RequestItem {
+        original: None,
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans: None,
+        images: input
+            .images()
+            .iter()
+            .map(|image| thinkthen::RequestImage::Bytes {
+                media: image.media(),
+                bytes: image.bytes().to_vec(),
+            })
+            .collect(),
+    })
 }
 
 /// Validate explicit compressed bytes without engine construction or transport.

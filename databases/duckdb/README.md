@@ -209,6 +209,8 @@ Ordinary scalar/table signatures and cumulative usage remain compatible. See the
 for explicit records, context, reading, options, images, rank sets, file controls,
 error envelopes and native cache/record/replay behavior.
 
+`thinkthen_decide_complete(question, images, settings := NULL)` also accepts a native list of `thinkthen_image(blob, media)` or `thinkthen_image_file(path)` values. It evaluates the ordered collection as one image-only record, preserving duplicates and native BLOB payloads without a JSON byte array. Its text descriptor form remains available. Both forms use the same Request admission and result facts.
+
 All ten complete calls admit a shared native Request before constructing the
 engine and execute through the same Request owner as SQLite and PostgreSQL.
 Generated SQL results retain the native envelope and its presence distinctions.
