@@ -430,6 +430,9 @@ impl Renderer {
         mut canonical: crate::core::CompleteAtomic,
     ) -> Result<Judged, Failure> {
         canonical.declarations = self.declarations.clone();
+        if !self.streams {
+            canonical.clear_batch_metadata();
+        }
         let value = canonical.value();
         let outcome = match value {
             Value::YesNo(Some(true)) => Outcome::Yes,
