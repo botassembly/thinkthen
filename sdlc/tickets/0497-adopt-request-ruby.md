@@ -37,3 +37,7 @@ A Ruby caller installs the gem, calls the ten functions by name with ordinary Ru
   One public API is one coherent family of named typed calls. Claim `libraries/ruby/**` and its installed typed consumer cases, narrowed per slice before coding.
 - Proof: The full shared cases run through the installed gem's typed interface, including files and images, context and options, original positions, facts, failures, invalid input with zero sends and the two retained recognition cases. One installed held-provider case shows the declared scheduler progressing, cancellation stopping further reads and submissions, and cleanup returning before the provider is released. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
 - Defers: The proxy and platform ruling changes need no 0.2 ticket.
+
+## Progress
+
+- 2026-10-10 landed d943d6103; next: Ordinary Ruby recognition and file callers use native Client, aggregate values are corrected, and focused installed cases pass. Finish current full installed parity, image qualification and compatibility retirement when authorized.
