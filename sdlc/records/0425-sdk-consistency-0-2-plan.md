@@ -214,3 +214,13 @@ Five candidates failed qualification. Candidate six was canceled on Ian's instru
 What the build taught us: I fixed several immediate failures without first checking all consumers of the same dependency, interpreter or configuration path. Warm source checks concealed missing installed dependencies. That caused avoidable candidate repetitions. Before another permitted run, inspect the affected setup as a whole, run existing cold installed-consumer checks, and batch confirmed fixes. Keep real secrecy, ownership and cancellation tests. Add no receipt framework or self-verification tooling. Platform-specific failures still require platform evidence; a Linux pass is not a substitute.
 
 Ian's hold supersedes earlier automatic candidate progression. 0.2 stays open for the after-sprint review and bug sweep under 0462 and the TCGA recognize decision. No new candidate tags, GitHub workflow runs, release branch advancement or publication will occur without Ian's permission. The retained 0461 branch is ready for the PM's scope ruling.
+
+## Windows public installation checks
+
+The 2026-10-10 drive-to-done ruling supersedes the historical candidate hold above and authorizes nonpublishing candidate tags and platform workflows. Publication still requires Ian. The completed proof-spiral cleanup removed the old documentation fingerprint machinery; it is not a candidate requirement.
+
+The public-channel workflow now includes Windows installation through the PowerShell installer, both Cargo routes, pip, uv, npm, NuGet, Maven and the C archive. Shared install checks handle Windows executable paths, virtual environments, Maven classpaths and an MSVC consumer of the downloaded DLL. The workflow requires the dispatched release version and commit to match, and keeps the stable JDK floor. These checks run after publication; local archive checks do not substitute for them.
+
+The first review of `045dfb5b1f0f99b6477aa5446345e9ffb81ef6ef` found that the isolated environment dropped the architecture variables required by the installer. Correction `5d9860455` preserves those two explicit platform values and tests their retention while provider keys and runtime configuration remain excluded. A fresh narrow review accepted the correction. Existing install and workflow self-tests passed; no source ceiling changed. Actual Windows execution and public-channel availability are not established by these local fixtures.
+
+The lesson is the same as candidate four: a minimal child environment must retain the platform values that its real entry point consumes. The repair stays in the existing allowlist and behavior test.
