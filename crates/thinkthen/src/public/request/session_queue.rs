@@ -6,10 +6,16 @@ use super::{
 use crate::{CallOptions, CancelToken, Error};
 use std::sync::{Condvar, Mutex, MutexGuard};
 
+#[derive(Debug)]
+enum Finish {
+    Transport(Option<RequestReaderFailure>),
+    Native(Option<Error>),
+}
+
 #[derive(Debug, Default)]
 struct State {
     input: Option<RequestSessionDescriptor>,
-    finish: Option<Option<RequestReaderFailure>>,
+    finish: Option<Finish>,
     intake_closed: bool,
     output: Option<RequestSessionResult>,
     terminal: Option<RequestSessionTerminal>,
@@ -56,15 +62,22 @@ impl Queue {
         }
     }
     pub(super) fn finish(&self, failure: Option<RequestReaderFailure>) -> Result<(), Error> {
+        self.finish_input(Finish::Transport(failure))
+    }
+    pub(super) fn finish_native(&self, error: Error) -> Result<(), Error> {
+        self.finish_input(Finish::Native(Some(error)))
+    }
+    fn finish_input(&self, finish: Finish) -> Result<(), Error> {
         let mut state = self.lock();
         if let Some(previous) = &state.finish {
-            if previous != &failure {
+            if !matches!((previous, &finish), (Finish::Transport(previous), Finish::Transport(next)) if previous == next)
+            {
                 return Err(Error::usage(
                     "session input was already finished differently",
                 ));
             }
         } else {
-            state.finish = Some(failure);
+            state.finish = Some(finish);
         }
         self.wake.notify_all();
         Ok(())
@@ -86,8 +99,11 @@ impl Queue {
                 self.wake.notify_all();
                 return Some(Ok(item));
             }
-            if let Some(failure) = &state.finish {
-                let error = failure.as_ref().map(RequestReaderFailure::error);
+            if let Some(failure) = &mut state.finish {
+                let error = match failure {
+                    Finish::Transport(failure) => failure.as_ref().map(RequestReaderFailure::error),
+                    Finish::Native(error) => error.take(),
+                };
                 state.intake_closed = true;
                 return error.map(Err);
             }

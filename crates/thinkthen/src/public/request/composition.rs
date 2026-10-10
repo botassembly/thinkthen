@@ -130,8 +130,8 @@ impl AdmittedRequest {
                         controls,
                     );
                 }
-                if let super::execution::FeedContents::Session(queue) = feed.contents {
-                    return self.session_records(definition, queue, controls, image_refusal);
+                if matches!(feed.contents, super::execution::FeedContents::Session(_)) {
+                    return self.session_records(definition, feed, controls, image_refusal);
                 }
                 let super::execution::FeedContents::Items(items) = feed.contents else {
                     return super::native_feed::records(
@@ -156,19 +156,29 @@ impl AdmittedRequest {
     fn session_records<'a>(
         &'a self,
         definition: &RequestDefinition,
-        queue: std::sync::Arc<super::session_queue::Queue>,
+        feed: super::RequestFeed<'a>,
         controls: CallOptions<'a>,
         image_refusal: Option<String>,
     ) -> Result<Inputs<'a>, Error> {
+        let super::execution::FeedContents::Session(queue) = feed.contents else {
+            return Err(Error::defect("session feed lost its queue"));
+        };
         let options = &self.request.call.arguments().options;
         super::framing::reading(self, definition)?;
-        let reading = reading(definition, options)?;
         let schema = context_schema(definition).cloned();
-        let reading = schema.clone().map_or(reading.clone(), |schema| {
-            reading.with_context_schema(schema)
-        });
-        let annotate =
-            matches!(definition, RequestDefinition::Annotate(_)) && !explicit_projection(options);
+        let supplied_reading = feed.record_reading.is_some();
+        let reading = match feed.record_reading {
+            Some(reading) => reading,
+            None => {
+                let reading = reading(definition, options)?;
+                schema.clone().map_or(reading.clone(), |schema| {
+                    reading.with_context_schema(schema)
+                })
+            }
+        };
+        let annotate = matches!(definition, RequestDefinition::Annotate(_))
+            && !explicit_projection(options)
+            && !supplied_reading;
         let RequestInput::Feed {
             images, framing, ..
         } = &self.request.call.arguments().input
@@ -494,7 +504,7 @@ pub(super) fn reading(
     };
     Ok(reading)
 }
-fn explicit_projection(options: &super::RequestOptions) -> bool {
+pub(super) fn explicit_projection(options: &super::RequestOptions) -> bool {
     options.field.is_some()
         || options.context_field.is_some()
         || options.options_field.is_some()

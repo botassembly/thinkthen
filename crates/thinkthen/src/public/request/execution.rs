@@ -11,7 +11,8 @@ pub struct RequestFeed<'a> {
     pub(super) contents: FeedContents<'a>,
     pub(super) eager: bool,
     pub(super) image_inputs: bool,
-    all_filter_results: bool,
+    pub(super) all_filter_results: bool,
+    pub(super) record_reading: Option<crate::RecordReading>,
 }
 pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
@@ -36,6 +37,7 @@ impl<'a> RequestFeed<'a> {
             eager: false,
             image_inputs: false,
             all_filter_results: false,
+            record_reading: None,
         }
     }
     #[cfg(feature = "cli")]
@@ -50,6 +52,7 @@ impl<'a> RequestFeed<'a> {
             eager: true,
             image_inputs,
             all_filter_results: false,
+            record_reading: None,
         }
     }
     /// Supply native item descriptors without collecting or serializing the feed.
@@ -64,6 +67,7 @@ impl<'a> RequestFeed<'a> {
             eager: false,
             image_inputs: false,
             all_filter_results: false,
+            record_reading: None,
         }
     }
     /// Supply already composed native records, retaining original locations and images.
@@ -81,6 +85,7 @@ impl<'a> RequestFeed<'a> {
             eager: false,
             image_inputs: false,
             all_filter_results: false,
+            record_reading: None,
         }
     }
     /// Admit the entire supplied feed before any sends, using native eager execution.
@@ -173,6 +178,10 @@ impl Engine {
                 request.request.call.arguments().input,
                 RequestInput::Feed { .. } | RequestInput::Source { .. }
             );
+        let owned_feed = environment
+            .feed
+            .as_ref()
+            .is_some_and(|feed| matches!(feed.contents, FeedContents::Session(_)));
         let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
         let rows = rows.enumerate().map(|(at, row)| {
             let row = row.map_err(|error| error.at_record(at))?;
@@ -180,7 +189,7 @@ impl Engine {
                 .map_err(|error| error.at_record(at))?;
             Ok(row)
         });
-        let rows: super::composition::Inputs<'_> = if eager {
+        let rows: super::composition::Inputs<'_> = if eager && !owned_feed {
             Box::new(rows.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
         } else {
             Box::new(rows)
@@ -284,10 +293,24 @@ pub(super) fn feed_projection(
     if all
         && (request.request.call.function() != Function::Filter
             || !matches!(args.input, RequestInput::Feed { .. })
-            || feed.is_none_or(|feed| !matches!(feed.contents, FeedContents::Records(_))))
+            || feed.is_none_or(|feed| {
+                !matches!(
+                    feed.contents,
+                    FeedContents::Records(_) | FeedContents::Session(_)
+                )
+            }))
     {
         return Err(Error::usage(
             "all filter results require a native composed filter feed",
+        ));
+    }
+    if feed.is_some_and(|feed| feed.record_reading.is_some())
+        && (!matches!(args.input, RequestInput::Feed { .. })
+            || feed.is_none_or(|feed| !matches!(feed.contents, FeedContents::Session(_)))
+            || super::composition::explicit_projection(&args.options))
+    {
+        return Err(Error::usage(
+            "owned record reading requires a session feed without request projections",
         ));
     }
     Ok(all)
