@@ -13,7 +13,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 - Run checks that read Git history after committing the changes, and finish them before committing again.
 - Beelink is primary. M5 may run experiments and Mac-specific checks, including before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
 - Cap each lane at 40 GB, including `libraries/` and `databases/`. Delete its regenerable output and caches at the cap or when a build needs room. Preserve other lanes' active work. Keep 50 GB free and branch-specific source copies.
-- Delete old code without asking: each language's old public API once its replacement passes routine installed checks, dead code and scaffolding tests. A migration ticket closes on routine installed checks, deletion of its old API, one `lint` and `test` run and a fresh code review. Platform qualification belongs to the candidate: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`.
+- Delete dead code, scaffolding tests and old language APIs once replacements pass routine installed checks. Close migrations after those checks, API deletion, one `lint` and `test` run and fresh code review. Qualify platforms at the candidate: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`.
 
 ## Boundaries
 
@@ -21,9 +21,9 @@ Add commands and options only for demos. Replay documentation examples when thei
 
 Each engine resolves one endpoint, one effective key and one provider API type. Business routing, model groups, fallback providers, A/B policy, curation and automatic threshold tuning belong to the proxy. Keep explicit direct model/reading choices and offline analysis as caller controls; add no SDK business policy.
 
-`crates/thinkthen/src/core` touches no file, environment, socket, clock, or process. The command parses at the edge and passes typed values inward; attributes and `policy.py` enforce inward dependencies.
+`crates/thinkthen/src/core` touches no file, environment, socket, clock or process. Parse at the command edge; pass typed values inward. Attributes and `policy.py` enforce dependencies.
 
-`thinkthen` judges and never acts: it runs no commands or free-text instructions. It writes only user-named files, its platform cache, and count-only usage totals in its platform state folder; it never creates or edits read-only configuration.
+`thinkthen` judges without running commands or free-text instructions. It writes only user-named files, its platform cache and count-only platform-state usage totals. Never create or edit read-only configuration.
 
 Tests replay saved responses. A paid call runs only through `sdlc/scripts/live`, by hand, under a token cap and Ian's authorization. Git's common-directory live ledger is the sole runtime authority: never manually edit, replace, remove, or copy it. Audit with `live --status`; only a ticket permits migration under `sdlc/scripts/README.md`.
 
@@ -43,4 +43,4 @@ Release process: `sdlc/planning/release-process.md`. Ian's 2026-10-10 ruling per
 
 ## Outside agents
 
-Open a GitHub issue with a repository label. Ask questions on the discussion board when enabled. Link a fork in the issue instead of opening a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md#external-contributions).
+Open a GitHub issue with a repository label and fork link, not a pull request. Use the discussion board for questions when enabled. See [CONTRIBUTING.md](CONTRIBUTING.md#external-contributions).
