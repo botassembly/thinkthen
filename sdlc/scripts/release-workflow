@@ -67,10 +67,12 @@ ada_objc_cobol_names() {
 		if [ "$target" = x86_64-unknown-linux-gnu ]; then
 			case $name in
 			"thinkthen-ada-$version-$target.tar.gz" | "thinkthen-ada-$version-$target.tar.gz.sha256" | \
-			"thinkthen-objective-c-$version-$target.tar.gz" | "thinkthen-objective-c-$version-$target.tar.gz.sha256" | \
 			"thinkthen-cobol-$version-$target.tar.gz" | "thinkthen-cobol-$version-$target.tar.gz.sha256") ;;
 			*) fail "unexpected Ada/Objective-C/COBOL family entry $name" ;;
 			esac
+		elif [ "$target" = aarch64-apple-darwin ] || [ "$target" = x86_64-apple-darwin ]; then
+			case $name in "thinkthen-objective-c-$version-$target.tar.gz" | "thinkthen-objective-c-$version-$target.tar.gz.sha256") ;;
+			*) fail "unsupported target has $name" ;; esac
 		else
 			fail "unsupported target has $name"
 		fi
@@ -492,15 +494,19 @@ ada-objc-cobol-gate)
 		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail 'Ada/Objective-C/COBOL gate requires its installed x86 host'
 		ada_objc_cobol_names "$dir" "$target"
 		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir" ada-objective-c-cobol
-		for family in ada objective-c cobol; do
+		for family in ada cobol; do
 			archive=$dir/thinkthen-$family-$version-$target.tar.gz
 			tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
 				grep -Fxq "source_commit=$selected" || fail "$family source differs from resolved SHA"
 		done
 		;;
-	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin)
+	aarch64-apple-darwin | x86_64-apple-darwin)
 		ada_objc_cobol_names "$dir" "$target"
+		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir" foundation
+		tar -xOzf "$dir/thinkthen-objective-c-$version-$target.tar.gz" ./THINKTHEN-PACKAGE-INPUTS |
+			grep -Fxq "source_commit=$selected" || fail 'Foundation source differs from resolved SHA'
 		;;
+	aarch64-unknown-linux-gnu) ada_objc_cobol_names "$dir" "$target" ;;
 	*) fail "no Ada/Objective-C/COBOL release route for $target" ;;
 	esac
 	;;
@@ -543,8 +549,6 @@ ada-objc-cobol-tools)
 	gnatmake --version >/dev/null || fail 'gnatmake version probe failed'
 	gcc --version >/dev/null || fail 'GCC version probe failed'
 	case $(cobc --version | head -n 1) in *' 4.'*) ;; *) fail 'GnuCOBOL 4 is required' ;; esac
-	scratch_dir tool_probe
-	printf 'int main(void) { return 0; }\n' | gcc -x objective-c - -lobjc -o "$tool_probe/objc-probe" || fail 'GNU Objective-C runtime is not linkable'
 	;;
 php-dart-tools)
 	[ "$#" = 3 ] || fail 'php-dart-tools TARGET OUT'

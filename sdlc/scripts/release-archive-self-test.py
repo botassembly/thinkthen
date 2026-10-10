@@ -317,7 +317,13 @@ def main():
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
                    THINKTHEN_ARCHIVED_SOURCE_COMMIT=commit)
         # Keep the held SQL/DataFrame families out of execution; their allowlist is unchanged.
-        parts = ("c", "go", "cpp", "swift", "zig", "php", "dart", "ada", "objective-c", "cobol")
+        before = (base / "cargo-calls").read_bytes() if (base / "cargo-calls").exists() else b""
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                   str(base / "refused-foundation"), "c", "objective-c", cwd=source, env=env),
+               "Objective-C Foundation requires an Apple target")
+        assert not (base / "refused-foundation").exists()
+        assert ((base / "cargo-calls").read_bytes() if (base / "cargo-calls").exists() else b"") == before
+        parts = ("c", "go", "cpp", "swift", "zig", "php", "dart", "ada", "cobol")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "paired"), *parts, cwd=source, env=env), "", success=True)
         with tarfile.open(next((base / "paired").glob("thinkthen-swift-*.tar.gz"))) as packed:
@@ -398,7 +404,7 @@ def main():
                                  ("php", "autoload.php"),
                                  ("dart", "lib/src/session/client.dart"),
                                  ("ada", "src/thinkthen.ads"),
-                                 ("objective-c", "Sources/ThinkThen.m"),
+                                 ("objective-c", "Sources/Foundation/ThinkThen.m"),
                                  ("cobol", "src/tt_session.c")):
             copied = source / "libraries" / family / relative
             original = copied.read_bytes()
@@ -423,7 +429,6 @@ def main():
                            "fi; done\n")
         fake_cp.chmod(0o755)
         for family, relative in (("ada", "src/thinkthen.ads"),
-                                 ("objective-c", "Sources/ThinkThen.m"),
                                  ("cobol", "src/tt_session.c")):
             copied_env = env | {"THINKTHEN_PLANT_SOURCE": f"libraries/{family}/{relative}"}
             output = base / f"{family}-copied-change"
@@ -432,12 +437,12 @@ def main():
                    f"{family} source differs from archived commit: {relative}")
             if list(output.glob(f"thinkthen-{family}-*")):
                 raise AssertionError(f"changed {family} copied member created wrapper output")
-        # The old Objective-C package held ThinkThen.h beside thinkthen.h.
-        output = base / "objective-c-twin"
+        # The archive writer still refuses names that collide on case-blind Apple volumes.
+        output = base / "swift-twin"
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host, str(output), *parts, cwd=source,
-                   env=env | {"THINKTHEN_PLANT_TWIN": "libraries/objective-c/Sources/ThinkThen.h"}),
-               "objective-c holds names that differ only in case: ./sources/thinkthen.h")
-        if list(output.glob("thinkthen-objective-c-*")):
+                   env=env | {"THINKTHEN_PLANT_TWIN": "libraries/swift/Sources/ThinkThen/OwnedSession.swift"}),
+               "swift holds names that differ only in case: ./sources/thinkthen/ownedsession.swift")
+        if list(output.glob("thinkthen-swift-*")):
             raise AssertionError("case-only twin created wrapper output")
         fake_cp.unlink()
         missing_pair = base / "missing-pair"
@@ -459,7 +464,7 @@ def main():
                 file.unlink()
             expect(run("sh", gate, "php-dart-gate", str(missing), host, commit),
                    f"missing or linked thinkthen-{family}-")
-        for family in ("ada", "objective-c", "cobol"):
+        for family in ("ada", "cobol"):
             missing = base / f"missing-{family}"
             shutil.copytree(base / "paired", missing)
             for file in missing.glob(f"thinkthen-{family}-*"):
@@ -605,7 +610,7 @@ def main():
             raise AssertionError("extra COBOL asset created collected output")
         extra_cobol.unlink()
         for target, family in ((other_target, "ada"),
-                               ("aarch64-apple-darwin", "objective-c"),
+                               ("aarch64-unknown-linux-gnu", "objective-c"),
                                ("x86_64-apple-darwin", "cobol")):
             foreign = platform / f"platform-{target}/thinkthen-{family}-{version}-{target}.tar.gz"
             foreign.write_bytes(b"unsupported language asset")
@@ -625,8 +630,18 @@ def main():
                "unexpected platform folder platform-extra")
         if refused_output.exists():
             raise AssertionError("extra platform folder created collected output")
-        for family in ("ada", "objective-c", "cobol"):
+        for family in ("ada", "cobol"):
             script = (REPO / "libraries" / family / "check.sh").read_text()
+            if family == "ada":
+                # The current Ada gate installs supplied native-bearing archives
+                # in native_session.py rather than the obsolete shell dispatcher.
+                missing = base / "missing-installed-ada.tar.gz"
+                refused = run(sys.executable, str(REPO / "libraries/ada/checks/native_session.py"),
+                              env=os.environ | {"THINKTHEN_ARTIFACT": str(missing)})
+                expect(refused, "FileNotFoundError")
+                if str(missing) not in refused.stderr:
+                    raise AssertionError("Ada did not refuse the supplied missing archive")
+                continue
             if "import jsonschema" not in script:
                 # Generated session consumers no longer use the legacy source
                 # grammar. They must still unpack and test the installed package.
