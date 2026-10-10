@@ -93,6 +93,40 @@ impl PlanEstimate {
     }
 }
 
+/// Original-byte admission shared by native source preview and rank composition.
+pub(crate) struct SourceBudget {
+    remaining: usize,
+    message: &'static str,
+}
+impl SourceBudget {
+    pub(crate) fn for_source(rank: bool, plan: bool) -> Option<Self> {
+        if rank {
+            Some(Self::rank())
+        } else {
+            plan.then(Self::plan)
+        }
+    }
+    pub(crate) fn plan() -> Self {
+        Self {
+            remaining: crate::core::MAX_RECORD_BYTES,
+            message: "source plan input exceeds 16 MiB",
+        }
+    }
+    pub(crate) fn rank() -> Self {
+        Self {
+            remaining: crate::core::MAX_RECORD_BYTES,
+            message: "source rank reads at most 16 MiB across all input records",
+        }
+    }
+    pub(crate) fn charge(&mut self, bytes: usize) -> Result<(), Error> {
+        self.remaining = self
+            .remaining
+            .checked_sub(bytes)
+            .ok_or_else(|| Error::usage(self.message))?;
+        Ok(())
+    }
+}
+
 impl Engine {
     /// Validate all records, bound initial requests and preview uninterrupted packing.
     /// This reads no key, cache or network and sends nothing.
@@ -124,6 +158,29 @@ impl Engine {
         I::Item: Evidence,
     {
         self.try_plan_with(question, records.into_iter().map(Ok), options)
+    }
+
+    /// Preview located text sources with cumulative original-byte admission.
+    /// Source locations stay outside evidence. No input after the first failure advances.
+    ///
+    /// # Errors
+    /// As [`Engine::try_plan_with`], also refusing cumulative source input above its bound.
+    pub fn try_plan_source_with<Q: DetailQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        records: impl IntoIterator<Item = Result<crate::SourceRecord<String>, Error>>,
+        options: CallOptions<'_>,
+    ) -> Result<PlanEstimate, Error> {
+        let mut budget = SourceBudget::plan();
+        self.try_plan_with(
+            question,
+            records.into_iter().map(|record| {
+                let record = record?;
+                budget.charge(record.record.len())?;
+                Ok(record)
+            }),
+            options,
+        )
     }
 
     /// Preview fallible records incrementally under the same admission and packing rules.

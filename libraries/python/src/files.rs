@@ -4,8 +4,6 @@ use crate::engine::{Arg, Engine, Held, batch, context};
 use crate::{guard, input, raised, result, worker};
 use pyo3::prelude::*;
 
-#[path = "../../r/thinkthen/src/rust/src/source/plan.rs"]
-mod planning;
 #[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
 mod source;
 
@@ -23,7 +21,7 @@ impl SourceIterator {
             .0
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        planning::estimate(engine, question, records.by_ref(), options)
+        engine.try_plan_source_with(question, records.by_ref(), options)
     }
 }
 

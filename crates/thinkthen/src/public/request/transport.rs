@@ -134,9 +134,8 @@ pub(crate) fn source_records<'a>(
     mut source: impl Iterator<Item = Result<crate::SourceItem, Error>> + 'a,
     controls: crate::CallOptions<'a>,
     annotate: bool,
-    rank: bool,
+    mut budget: Option<crate::public::SourceBudget>,
 ) -> super::composition::Inputs<'a> {
-    let mut remaining = crate::core::MAX_RECORD_BYTES;
     let mut stopped = false;
     Box::new(std::iter::from_fn(move || {
         if stopped {
@@ -148,10 +147,10 @@ pub(crate) fn source_records<'a>(
         {
             Ok(None) => return None,
             Ok(Some(item)) => (|| {
-                if rank && let crate::SourceItem::Text(text) = &item {
-                    remaining = remaining
-                        .checked_sub(text.record.len())
-                        .ok_or_else(rank_budget_error)?;
+                if let Some(budget) = &mut budget
+                    && let crate::SourceItem::Text(text) = &item
+                {
+                    budget.charge(text.record.len())?;
                 }
                 super::composition::source_row(item, annotate, &reading)
             })(),
@@ -160,10 +159,6 @@ pub(crate) fn source_records<'a>(
         stopped = result.is_err();
         Some(result)
     }))
-}
-
-pub(super) fn rank_budget_error() -> Error {
-    Error::usage("source rank reads at most 16 MiB across all input records")
 }
 
 /// Decode the existing complete-call record envelope at the public Request edge.

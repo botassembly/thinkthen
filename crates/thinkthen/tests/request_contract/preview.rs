@@ -339,3 +339,93 @@ fn unsupported_preview_refuses_before_advancing_the_feed() {
     assert!(!advanced);
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn source_preview_preserves_count_refusal_and_unread_tail() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .no_cache()
+        .max_requests(Some(1))
+        .unwrap()
+        .build()
+        .unwrap();
+    let question = Question::decide("Fits?").unwrap().cut();
+    let mut pulls = 0;
+    let records = std::iter::from_fn(|| {
+        pulls += 1;
+        assert!(
+            pulls <= 2,
+            "source preview must leave the refused tail unread"
+        );
+        Some(Ok(SourceRecord {
+            record: "Alpha.".to_owned(),
+            file: "private.txt".to_owned(),
+            first_line: pulls,
+            last_line: pulls,
+        }))
+    });
+    let error = engine
+        .try_plan_source_with(&question, records, CallOptions::new())
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.detail().message(),
+        "this engine answers at most 1 records in one call"
+    );
+    assert_eq!(pulls, 2);
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+#[ignore = "release suite: cumulative source boundary retains more than 16 MiB"]
+fn release_only_canonical_source_preview_bounds_originals_before_projection_and_unread_tail() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("request-preview-budget-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let paths: Vec<_> = (0..3)
+        .map(|at| folder.join(format!("{at}.jsonl")))
+        .collect();
+    let original = format!(
+        "{{\"body\":\"small\",\"private\":\"{}\"}}",
+        "x".repeat(8 * 1024 * 1024)
+    );
+    for path in &paths[..2] {
+        std::fs::write(path, &original).unwrap();
+    }
+    std::fs::write(&paths[2], [0xff]).unwrap();
+    for framing in [None, Some(RequestFraming::Jsonl)] {
+        let mut arguments = args(
+            Question::decide("Fits?").unwrap().cut().into(),
+            RequestInput::Source {
+                source: RequestSource {
+                    paths: paths.clone(),
+                    framing,
+                    reading: ReaderOptions {
+                        unit: if framing.is_none() {
+                            SourceUnit::File
+                        } else {
+                            SourceUnit::Line
+                        },
+                        ..ReaderOptions::default()
+                    },
+                    media: ReaderMedia::Text,
+                },
+            },
+        );
+        arguments.options.field = Some(vec!["/body".into()]);
+        let request = Request::new(RequestCall::Decide(arguments))
+            .admit()
+            .unwrap();
+        let error = engine
+            .plan_request(&request, RequestEnvironment::default())
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(error.detail().message(), "source plan input exceeds 16 MiB");
+    }
+    assert_eq!(listener.count(), 0);
+    std::fs::remove_dir_all(folder).unwrap();
+}

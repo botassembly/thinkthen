@@ -18,9 +18,6 @@ use thinkthen::{
 
 use crate::failures::Failure;
 
-#[path = "../../r/thinkthen/src/rust/src/source/plan.rs"]
-mod source;
-
 /// The closed input object. Serde refuses an unknown or repeated member.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -95,10 +92,10 @@ pub(crate) fn plan(engine: &Engine, text: &str) -> Result<String, Failure> {
             let records = super::call::source::parse(source.get())?.read()?;
             match &question {
                 LoadedQuestion::Question(question) => {
-                    source::estimate(engine, question, records, options)?
+                    engine.try_plan_source_with(question, records, options)?
                 }
                 LoadedQuestion::Banded(question) => {
-                    source::estimate(engine, question, records, options)?
+                    engine.try_plan_source_with(question, records, options)?
                 }
             }
         }

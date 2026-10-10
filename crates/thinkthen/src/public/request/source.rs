@@ -118,33 +118,68 @@ pub(super) fn records<'a>(
     reading: crate::RecordReading,
     controls: crate::CallOptions<'a>,
     annotate: bool,
-    rank: bool,
+    budget: Option<crate::public::SourceBudget>,
     attachment_remaining: Option<usize>,
 ) -> Result<super::composition::Inputs<'a>, Error> {
-    let Some(framing) = source.framing else {
+    if source.framing.is_none() {
         let items = super::composition::read_source(source, attachment_remaining)?;
         return Ok(super::transport::source_records(
-            reading, items, controls, annotate, rank,
+            reading, items, controls, annotate, budget,
         ));
     };
-    let mut paths = crate::enumerate_files(&source.paths)?.into_iter();
-    let options = source.reading;
-    let mut current: Option<RequestSourceReader<std::io::BufReader<std::fs::File>>> = None;
-    let mut remaining = crate::core::MAX_RECORD_BYTES;
+    let mut originals = source.read_framed(controls)?;
+    let mut budget = budget;
     let mut stopped = false;
     Ok(Box::new(std::iter::from_fn(move || {
         if stopped {
             return None;
         }
-        let result =
-            next_source(&mut paths, &mut current, framing, options, controls).and_then(|source| {
-                source
-                    .map(|source| compose(source, &reading, annotate, rank, &mut remaining))
-                    .transpose()
-            });
+        let result = originals
+            .next()?
+            .and_then(|source| compose(source, &reading, annotate, &mut budget));
         stopped = result.is_err();
-        result.transpose()
+        Some(result)
     })))
+}
+
+impl RequestSource {
+    /// Validate source framing and physical controls without enumerating or opening paths.
+    /// # Errors
+    /// Retains shared reader-option and explicit-framing refusals.
+    pub fn validate_reading(&self) -> Result<(), Error> {
+        validate(self.framing, self.reading, self.media)
+    }
+    /// Read explicit logical framing through the native ordered path authority.
+    /// Validation precedes enumeration; content opens lazily and errors terminate intake.
+    /// Omitted framing retains the caller's existing physical reader path.
+    /// # Errors
+    /// Refuses absent or contradictory framing, invalid paths, and native reader failures.
+    #[expect(
+        clippy::type_complexity,
+        reason = "the public path reader returns owned fallible originals without exposing reader state"
+    )]
+    pub fn read_framed<'a>(
+        &self,
+        controls: crate::CallOptions<'a>,
+    ) -> Result<Box<dyn Iterator<Item = Result<SourceRecord<RawRecord>, Error>> + 'a>, Error> {
+        let framing = self
+            .framing
+            .ok_or_else(|| Error::usage("framed source reading requires explicit framing"))?;
+        self.validate_reading()?;
+        controls.admission()?;
+        let mut paths = crate::enumerate_files(&self.paths)?.into_iter();
+        let options = self.reading;
+        let mut current = None;
+        let mut stopped = false;
+        Ok(Box::new(std::iter::from_fn(move || {
+            if stopped {
+                return None;
+            }
+            let result = next_source(&mut paths, &mut current, framing, options, controls);
+            stopped = result.is_err();
+            result.transpose()
+        })))
+    }
 }
 
 fn next_source(
@@ -178,13 +213,10 @@ fn compose(
     source: SourceRecord<RawRecord>,
     reading: &crate::RecordReading,
     annotate: bool,
-    rank: bool,
-    remaining: &mut usize,
+    budget: &mut Option<crate::public::SourceBudget>,
 ) -> Result<crate::RecordInput<crate::QuestionInput>, Error> {
-    if rank {
-        *remaining = remaining
-            .checked_sub(source.record.retained_bytes()?)
-            .ok_or_else(super::transport::rank_budget_error)?;
+    if let Some(budget) = budget {
+        budget.charge(source.record.retained_bytes()?)?;
     }
     let location =
         crate::SourceLocation::new(source.file, Some(source.first_line), Some(source.last_line))?;

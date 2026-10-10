@@ -81,7 +81,8 @@ impl Engine {
         {
             return Err(Error::usage(message.clone()));
         }
-        let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
+        let rows =
+            request.records_for_plan(&reading_definition, environment, controls, image_refusal)?;
         let mut groups = annotation_groups(&definition, annotation)?;
         let mut dropped = false;
         let asks = rows.enumerate().map(|(at, row)| {

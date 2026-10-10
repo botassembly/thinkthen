@@ -74,6 +74,9 @@ struct RequestSourceReader<R>
 fn RequestSourceReader::new(impl Into<String>, R, RequestFraming, ReaderOptions) -> Result<RequestSourceReader<R>, Error>
 impl Iterator for RequestSourceReader
 type RequestSourceReader::Item = Result<SourceRecord<RawRecord>, Error>
+fn Engine::try_plan_source_with<Q: DetailQuestion + ?Sized>(&self, &Q, impl IntoIterator<Item = Result<SourceRecord<String>, Error>>, CallOptions<'_>) -> Result<PlanEstimate, Error>
+fn RequestSource::validate_reading(&self) -> Result<(), Error>
+fn RequestSource::read_framed<'a>(&self, CallOptions<'a>) -> Result<Box<(dyn Iterator<Item = Result<SourceRecord<RawRecord>, Error>> + 'a)>, Error>
 ```
 
 ## Progress
