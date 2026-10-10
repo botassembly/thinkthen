@@ -16,10 +16,6 @@ pub(super) type Inputs<'a> =
 impl AdmittedRequest {
     pub(super) fn annotation_document(&self, definition: &RequestDefinition) -> bool {
         matches!(definition, RequestDefinition::Annotate(_))
-            && matches!(
-                self.request.call.arguments().input,
-                RequestInput::Text { .. }
-            )
             && !explicit_projection(&self.request.call.arguments().options)
     }
     /// Obtain typed projection for a caller composing native records.
@@ -41,7 +37,7 @@ impl AdmittedRequest {
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.request.call.arguments().options;
         let mut budget = AttachmentBudget::new(self.attachment_limit);
-        let explicit = explicit_projection(options);
+        let annotate = self.annotation_document(definition);
         let reading = reading(definition, options)?;
         let context = context_schema(definition).cloned();
         let reading = context.clone().map_or(reading.clone(), |schema| {
@@ -55,7 +51,7 @@ impl AdmittedRequest {
                     .iter()
                     .map(|item| {
                         controls.admission()?;
-                        compose_item(item, &reading, context.as_ref(), &mut budget)
+                        compose_document(item, &reading, context.as_ref(), &mut budget, annotate)
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Box::new(rows.into_iter().map(Ok)))
@@ -66,7 +62,7 @@ impl AdmittedRequest {
                 &reading,
                 context.as_ref(),
                 &mut budget,
-                self.annotation_document(definition),
+                annotate,
             ),
             RequestInput::Json { value, images } => singleton(
                 RequestOriginal::Json {
@@ -81,7 +77,6 @@ impl AdmittedRequest {
             RequestInput::Source { source } => {
                 controls.admission()?;
                 let items = read_source(source, budget.remaining())?;
-                let annotate = matches!(definition, RequestDefinition::Annotate(_)) && !explicit;
                 let rank = self.request.call.function() == super::RequestFunction::Rank;
                 Ok(super::transport::source_records(
                     reading, items, controls, annotate, rank,
@@ -122,7 +117,7 @@ impl AdmittedRequest {
                     let item = attach_shared(item?, images)?;
                     super::admission::admit_item(self.request.call.function(), &item, options)?;
                     admit_image_route(&item, image_refusal.as_deref())?;
-                    compose_item(&item, &reading, context.as_ref(), &mut budget)
+                    compose_document(&item, &reading, context.as_ref(), &mut budget, annotate)
                 })))
             }
         }
@@ -159,13 +154,8 @@ impl AdmittedRequest {
             let item = attach_shared(descriptor.item, images)?;
             super::admission::admit_item(self.request.call.function(), &item, options)?;
             admit_image_route(&item, image_refusal.as_deref())?;
-            let mut row = compose_item(&item, &reading, schema.as_ref(), &mut budget)?;
-            if annotate
-                && item.images.is_empty()
-                && let Some(RequestOriginal::Text { text }) = &item.original
-            {
-                row.original = QuestionInput::annotation_document(text)?;
-            }
+            let mut row =
+                compose_document(&item, &reading, schema.as_ref(), &mut budget, annotate)?;
             if let Some(location) = descriptor.location {
                 row.original = located(row.original, location)?;
             }
@@ -222,6 +212,23 @@ fn singleton(
     let row = compose_item(&item, reading, schema, budget)?;
     Ok(Box::new(std::iter::once(Ok(row))))
 }
+fn compose_document(
+    item: &RequestItem,
+    reading: &RecordReading,
+    schema: Option<&crate::InputDeclaration>,
+    budget: &mut AttachmentBudget,
+    annotate: bool,
+) -> Result<RecordInput<QuestionInput>, Error> {
+    let mut row = compose_item(item, reading, schema, budget)?;
+    if annotate
+        && item.images.is_empty()
+        && let Some(RequestOriginal::Text { text }) = &item.original
+    {
+        row.original = QuestionInput::annotation_document(text)?;
+    }
+    Ok(row)
+}
+
 pub(super) fn compose_item(
     item: &RequestItem,
     reading: &RecordReading,

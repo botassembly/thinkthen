@@ -60,7 +60,7 @@ def test_a_column_answers_as_its_list_does(backend, tmp_path):
 
 def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     """Decisions 4, 5, and 6: frames that are neither Polars nor pandas and
-    list-only verbs and a number column are refused.
+    unsupported entity inputs and a number column are refused.
     Ticket 0136: a question named as a column, after a missing ``on``, and a
     column nested past 64 levels are refused too. Nothing reaches the backend."""
     printed = run(SETUP + """
@@ -72,8 +72,9 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     try:
         engine.decide(late, pl.Series([1, 2])).value
     except tt.UsageError as error:
-        assert (error.facts["records"], error.facts["requests_sent"]) == (0, 0)
-        assert error.details == ()
+        assert str(error) == 'invalid canonical request'
+        assert error.facts is None
+        assert not hasattr(error, 'details')
         print(type(error).__name__, error)
     else:
         raise AssertionError("a number column was accepted")
@@ -87,22 +88,22 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     deep = pl.Series("deep", [1])
     for _ in range(70):
         deep = deep.implode()
-    said(lambda: engine.annotate(form, pl.DataFrame({"body": texts[:1], "deep": deep}), on="body").value)
+    said(lambda: engine.annotate(form, pl.DataFrame({"body": texts[:1], "deep": deep}), on="deep").value)
     said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body").value)
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         FRAMES,
         FRAMES,
-        "UsageError entity 0 is not a (name, kind) pair, a dict with name and kind, or an Entity",
+        "UsageError --lines takes only bare relation names or NAME=*:*",
         "UsageError details reads one str, not a column",
-        "UsageError the column's Arrow format is 'l', not text",
+        "UsageError invalid canonical request",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on=",
         "UsageError the frame has no column named 'missing'",
         "UsageError the frame already has a column named 'late'; rename it first",
         "UsageError the frame already has a column named 'failed'; rename it first",
         "UsageError the question name failed is reserved for frame failures",
         "UsageError the frame has no column named 'missing'",
-        "UsageError a column's schema nests deeper than 64 levels",
+        "UsageError input cannot be converted to native JSON",
         "UsageError recognize with on= takes no relations; ask them of one text",
     ]
     assert backend.count() == 0
@@ -210,8 +211,8 @@ def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):
                   for span in got.select("text", "kind").to_dicts()}.values())
     rules = {"knows": ("*", "*")}
     direct = engine.relate([(span["text"], span["kind"]) for span in spans],
-                           relations=rules).value
-    handed = engine.relate(spans, relations=rules).value
+                           relations=rules).value[0]
+    handed = engine.relate(spans, relations=rules).value[0]
     edges = lambda rows: [(one.relation, one.source.name, one.target.name) for one in rows]
     print(got.columns == ["row", "text", "start", "end", "length", "kind", "strength"],
           got.rows() == alone, len(spans) > 1, len(edges(handed)) > 0,

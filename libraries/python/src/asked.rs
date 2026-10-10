@@ -22,6 +22,17 @@ pub(crate) enum Asked {
     Banded(BandedQuestion),
 }
 
+fn kind_name(kind: QuestionKind) -> &'static str {
+    match kind {
+        QuestionKind::Decide => "decide",
+        QuestionKind::Choose => "choose",
+        QuestionKind::Tag => "tag",
+        QuestionKind::Score => "score",
+        QuestionKind::Rank => "rank",
+        QuestionKind::Find => "find",
+    }
+}
+
 impl Asked {
     /// The word for its kind. A banded question reads `decide`.
     pub(crate) fn kind(&self) -> &'static str {
@@ -29,14 +40,7 @@ impl Asked {
             Self::Plain(question) => question.kind(),
             Self::Banded(_) => QuestionKind::Decide,
         };
-        match kind {
-            QuestionKind::Decide => "decide",
-            QuestionKind::Choose => "choose",
-            QuestionKind::Tag => "tag",
-            QuestionKind::Score => "score",
-            QuestionKind::Rank => "rank",
-            QuestionKind::Find => "find",
-        }
+        kind_name(kind)
     }
 
     /// Either form, for a call that takes a cut or a band.
@@ -218,6 +222,14 @@ impl QuestionSet {
     #[staticmethod]
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
         loaded(py, thinkthen::QuestionSet::load(path)).map(Self)
+    }
+
+    /// Native declared kinds for dataframe column construction, including empty frames.
+    fn _members(&self) -> Vec<(String, &'static str)> {
+        self.0
+            .members()
+            .map(|(name, kind)| (name.to_owned(), kind_name(kind)))
+            .collect()
     }
 
     /// The question names, in set order, for a pandas frame's clash check.
