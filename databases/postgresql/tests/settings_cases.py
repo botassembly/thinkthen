@@ -2,10 +2,14 @@
 """The nine shared settings cases through one PostgreSQL backend at a time."""
 
 import json
+import datetime
+import fcntl
+import os
 import pathlib
 import sqlite3
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
 from children import child_env  # noqa: E402
@@ -40,6 +44,57 @@ def saved_calibration(socket: str) -> None:
     assert detail["meta"]["question_sha256"] == case["question_sha256"], detail
     assert detail["meta"]["profile_warning"] == case["warning"], detail
     assert detail["meta"]["model"] == case["model"], detail
+
+
+def usage_status(socket: str, folder: str, held: bool) -> None:
+    """Observe two retained engines, keeping a good answer and safe failure."""
+    usage = pathlib.Path(folder)
+    usage.mkdir(mode=0o700, parents=True, exist_ok=True)
+    month = usage / (datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m") + ".json")
+    with (usage / ".lock").open("w") as lock:
+        os.chmod(lock.name, 0o600)
+        if held:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        process = subprocess.Popen(["psql", "-X", "-q", "-At", "-v", "ON_ERROR_STOP=1",
+                                    "-h", socket, "-U", "postgres", "-d", "postgres"],
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, text=True, env=child_env())
+        try:
+            def ask(sql):
+                process.stdin.write(sql + ";\n")
+                process.stdin.flush()
+                return process.stdout.readline().strip()
+            assert json.loads(ask("SELECT thinkthen_usage_status()")) == {"state": "disabled"}
+            process.stdin.write("SET thinkthen.cache = 'off';\n")
+            assert ask("SELECT thinkthen_decide('Is it a refund?', 'refund now')") == "t"
+            if held:
+                assert json.loads(ask("SELECT thinkthen_usage_status()")) == {"state": "pending"}
+            process.stdin.write("SET thinkthen.model = 'another';\n")
+            json.loads(ask('SELECT thinkthen_plan(\'{"decide":"Is it a refund?"}\', \'{"a":"refund now"}\'::jsonb)'))
+            if held:
+                assert json.loads(ask("SELECT thinkthen_usage_status()")) == {"state": "pending"}
+                month.write_text("not JSON")
+                month.chmod(0o600)
+                fcntl.flock(lock, fcntl.LOCK_UN)
+            wanted = {"state": "failed", "advice": "check the usage folder permissions and free space"} if held else {"state": "written"}
+            end = time.monotonic() + 3
+            while time.monotonic() < end:
+                state = json.loads(ask("SELECT thinkthen_usage_status()"))
+                if state == wanted:
+                    break
+                time.sleep(.01)
+            assert state == wanted, state
+            assert json.loads(ask("SELECT thinkthen_usage_status()")) == wanted
+            assert ask("SELECT requests_sent FROM thinkthen_usage()") == "1"
+            process.stdin.close()
+            assert process.wait(timeout=5) == 0, process.stderr.read()
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
+            if held:
+                month.unlink(missing_ok=True)
+    print("pass PostgreSQL usage status, aggregation, unchanged counts")
 
 
 def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
@@ -90,6 +145,9 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
 
 
 def main() -> None:
+    if sys.argv[1] == "usage-status":
+        usage_status(sys.argv[2], sys.argv[3], sys.argv[4] == "held")
+        return
     if sys.argv[1] == "calibration":
         saved_calibration(sys.argv[2])
         print("pass calibration")

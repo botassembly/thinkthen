@@ -73,7 +73,10 @@ ORDER BY abbey_road.rank;
 | `thinkthen_relate(query, rules[, settings])` | rows of relation, source id, target id, probability, and `either`, 1 for an edge of a both-ways rule (its ends then in query order) and 0 otherwise |
 | `thinkthen_plan(question, keyed_json[, settings])` | JSON text with planned records, requests, bytes, input token band and the first exact request body as `first_body_utf8` |
 | `thinkthen_usage()` | cumulative request, cache-answer and reported token totals; the process also adds them to the command's usage totals when it exits, so `thinkthen status` shows them (ADR 0113) |
+| `thinkthen_usage_status()` | live JSON persistence observation; builds no engine and sends no request |
 | `thinkthen_configure(json)` | the selected engine settings object, before engine build |
+
+`thinkthen_usage_status()` returns `{"state":"disabled"}` before an engine is built. The native engine can report `pending`, `written` or latched `failed`. Failed adds only `"advice":"check the usage folder permissions and free space"`. Observation does not wait for the writer. Written covers this engine's current deltas, not future calls or other processes. A persistence failure leaves good answers and in-memory `thinkthen_usage()` counters intact.
 
 The optional settings slot is JSON text in the shared `thinkthen.settings/1` grammar. Question fields such as `threshold`, `options`, `levels`, `labels` and `model` affect question bytes; `context`, `batch` and `deadline_ms` control the call. Choose, score and tag can take a plain question when their members are in settings. Duplicate fields in a complete question and settings refuse before sending. `deadline_ms` is an integer: `-1` removes a call deadline, `0` is already spent, and positive values are milliseconds. The parser checks its range before a worker starts. Find alone accepts `none: true`. Aggregate verbs take call controls, not judgment fields, in their settings object.
 

@@ -12,6 +12,14 @@ struct UsageState : GlobalTableFunctionState {
 	bool done = false;
 };
 
+void UsageStatus(DataChunk &input, ExpressionState &, Vector &output) {
+	for (idx_t row = 0; row < input.size(); ++row) {
+		RustReply reply(thinkthen_cpp_usage_status());
+		Checked(reply.value);
+		output.SetValue(row, Value(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
+	}
+}
+
 unique_ptr<FunctionData> BindUsage(ClientContext &, TableFunctionBindInput &,
                                    vector<LogicalType> &types, vector<string> &names) {
 	types = {LogicalType::VARCHAR, LogicalType::BIGINT};
@@ -49,6 +57,9 @@ void ScanUsage(ClientContext &, TableFunctionInput &input, DataChunk &output) {
 void RegisterUsage(ExtensionLoader &loader) {
 	TableFunction function("thinkthen_usage", {}, ScanUsage, BindUsage, InitUsage);
 	loader.RegisterFunction(function);
+	ScalarFunction status("thinkthen_usage_status", {}, LogicalType::VARCHAR, UsageStatus);
+	status.SetStability(FunctionStability::VOLATILE);
+	loader.RegisterFunction(status);
 }
 
 } // namespace duckdb

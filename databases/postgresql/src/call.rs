@@ -173,6 +173,16 @@ pub(crate) fn totals() -> Counters {
     engines().iter().map(|(_, engine)| engine.usage()).sum()
 }
 
+/// Observe every engine built by this backend, without waiting on its registry.
+pub(crate) fn usage_status() -> thinkthen::UsagePersistence {
+    match ENGINES.try_lock() {
+        Ok(all) => thinkthen::UsagePersistence::aggregate(
+            all.iter().map(|(_, engine)| engine.usage_persistence()),
+        ),
+        Err(_) => thinkthen::UsagePersistence::Pending,
+    }
+}
+
 /// What a call read on the backend thread before its worker starts.
 #[derive(Debug)]
 pub(crate) struct Call {

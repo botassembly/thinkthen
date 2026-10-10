@@ -69,6 +69,70 @@ def the_exit_flushes_a_call_while_the_usage_lock_is_held():
 
 
 @case
+def usage_status_retains_failure_discovered_at_eviction():
+    """Retiring the answered engine observes its held writer's failure."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        env = child_env(backend.base(), Path(folder))
+        usage = usage_folder(env)
+        usage.mkdir(mode=0o700, parents=True)
+        with (usage / ".lock").open("w") as lock:
+            os.chmod(lock.name, 0o600)
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            script = r'''
+import duckdb, json, sys
+db = duckdb.connect(config={"allow_unsigned_extensions":"true"})
+db.execute(f"LOAD '{sys.argv[1]}'")
+def status(): return json.loads(db.execute("SELECT thinkthen_usage_status()").fetchone()[0])
+before = status()
+answer = db.execute("SELECT thinkthen_decide('Is it a refund?', 'refund now')").fetchall()
+pending = status()
+for limit in range(2, 18):
+    db.execute(f"SET thinkthen_max_requests = {limit}")
+    db.execute('SELECT thinkthen_plan(?, ?)', ['{"decide":"Is it a refund?"}', '{"a":"refund now"}']).fetchall()
+print(json.dumps({"before":before,"answer":answer,"pending":pending,"failed":status(),
+                  "again":status(),"totals":dict(db.execute("SELECT * FROM thinkthen_usage()").fetchall())}),flush=True)
+'''
+            done = subprocess.run([sys.executable, "-c", script, str(EXTENSION)], env=env,
+                                  capture_output=True, text=True, timeout=10, check=True)
+        got = json.loads(done.stdout)
+        failure = {"state": "failed", "advice": "check the usage folder permissions and free space"}
+        expect(got["before"], {"state": "disabled"}, "no engine built")
+        expect(got["answer"], [[True]], "good answer survives")
+        expect(got["pending"], {"state": "pending"}, "live nonblocking observation")
+        expect(got["failed"], failure, "eviction finalization retains failure")
+        expect(got["again"], failure, "retired failure beats resident written engines")
+        expect(got["totals"]["requests_sent"], 1, "historical totals unchanged")
+        expect(backend.count(), 1, "plans and observation add no sends")
+
+
+@case
+def usage_status_written_covers_current_engines():
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        script = r'''
+import duckdb, json, sys, time
+db = duckdb.connect(config={"allow_unsigned_extensions":"true"})
+db.execute(f"LOAD '{sys.argv[1]}'")
+def status(): return json.loads(db.execute("SELECT thinkthen_usage_status()").fetchone()[0])
+before = status()
+db.execute("SELECT thinkthen_decide('Is it a refund?', 'refund now')").fetchall()
+end = time.monotonic() + 3
+while time.monotonic() < end:
+    state = status()
+    if state['state'] == 'written': break
+    time.sleep(.01)
+print(json.dumps({"before":before,"status":state,"totals":dict(db.execute("SELECT * FROM thinkthen_usage()").fetchall())}),flush=True)
+'''
+        done = subprocess.run([sys.executable, "-c", script, str(EXTENSION)],
+                              env=child_env(backend.base(), Path(folder)), capture_output=True,
+                              text=True, timeout=10, check=True)
+        got = json.loads(done.stdout)
+        expect(got["before"], {"state": "disabled"}, "unbuilt status")
+        expect(got["status"], {"state": "written"}, "current deltas drained")
+        expect(got["totals"]["requests_sent"], 1, "unchanged totals")
+        expect(backend.count(), 1, "status adds no send")
+
+
+@case
 def a_cached_rerun_sends_nothing_and_adds_a_cache_answer():
     """ADR 0113: a second process answers from the named cache folder, sends
     nothing, and its exit adds one cache answer to the month file."""

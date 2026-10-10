@@ -136,6 +136,7 @@ struct Registry {
     pid: u32,
     clock: u64,
     historical: Counters,
+    persistence_failed: bool,
     kept: Vec<Entry>,
 }
 
@@ -143,6 +144,7 @@ static ENGINES: Mutex<Registry> = Mutex::new(Registry {
     pid: 0,
     clock: 0,
     historical: Counters::ZERO,
+    persistence_failed: false,
     kept: Vec::new(),
 });
 
@@ -170,6 +172,7 @@ fn registry() -> std::sync::MutexGuard<'static, Registry> {
         held.pid = pid;
         held.clock = 0;
         held.historical = Counters::ZERO;
+        held.persistence_failed = false;
         held.kept.clear();
     }
     held
@@ -193,6 +196,10 @@ impl Registry {
             .map(|(at, _)| at)
             .ok_or_else(|| usage("16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process"))?;
         let old = self.kept.remove(at);
+        // Retirement already waits for the writer in Engine's drop. Observe
+        // that same finalization before losing its failure latch.
+        self.persistence_failed |=
+            old.engine.finish_usage_status() == thinkthen::UsagePersistence::Failed;
         self.historical = self.historical + old.engine.usage();
         Ok(())
     }
@@ -425,6 +432,25 @@ pub(crate) fn usage_totals() -> [(&'static str, u64); 4] {
         ("input_tokens", totals.input_tokens()),
         ("output_tokens", totals.output_tokens()),
     ]
+}
+
+/// Observe resident engines and failures retained at retirement without waiting.
+pub(crate) fn usage_status() -> thinkthen::UsagePersistence {
+    use thinkthen::UsagePersistence;
+    match ENGINES.try_lock() {
+        Ok(held) if held.pid == std::process::id() => {
+            let historical = held.persistence_failed.then_some(UsagePersistence::Failed);
+            UsagePersistence::aggregate(
+                historical.into_iter().chain(
+                    held.kept
+                        .iter()
+                        .map(|entry| entry.engine.usage_persistence()),
+                ),
+            )
+        }
+        Ok(_) => UsagePersistence::Disabled,
+        Err(_) => UsagePersistence::Pending,
+    }
 }
 
 fn complete_builder(asked: &Asked, mut builder: EngineBuilder) -> Result<EngineBuilder, RowError> {
