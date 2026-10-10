@@ -35,3 +35,7 @@ A Python caller has one obvious way in. Named calls take ordinary Python values 
   One public API is one coherent family of named typed calls. Frames issue whole-set calls, never per-row aggregate calls. Claim `libraries/python/**` and its installed typed consumer cases, narrowed per slice before coding.
 - Proof: The full shared cases run through the installed wheel's typed interface, including files and images, context and options, original positions, facts, failures and invalid input with zero sends. One installed held-provider case in the existing runner shows another coroutine progressing, cancellation stopping further reads and submissions, and cleanup returning before the provider is released. Pending final facts stay pending. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
 - Defers: Rust Polars goes to 0527. The proxy and platform ruling changes need no 0.2 ticket.
+
+## Progress
+
+- 2026-10-10 landed 5959fcd40d3eda08d3cdf14b5b8b6ae87eacca9b; next: Python producer cleanup now preserves active native failures, completed rows and facts while standalone cleanup errors remain visible. Six red/green cases, three retained cases and fresh review pass in shared 0498 slice E. Current installed-wheel parity and platform qualification remain held.
