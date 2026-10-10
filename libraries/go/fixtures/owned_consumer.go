@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	tt "github.com/botassembly/thinkthen/libraries/go"
+	"io"
 	"os"
 	"sync/atomic"
 	"time"
@@ -16,12 +17,78 @@ func require(ok bool, message string) {
 		panic(message)
 	}
 }
+
+type producerFunc func(context.Context) (any, error)
+
+func (f producerFunc) Next(ctx context.Context) (any, error) { return f(ctx) }
+
+func feedChecks(client *tt.Client) {
+	index := 0
+	producer := producerFunc(func(ctx context.Context) (any, error) {
+		if index == 3 {
+			return nil, io.EOF
+		}
+		index++
+		return tt.Item{Original: fmt.Sprintf("record-%d", index)}, nil
+	})
+	call, err := client.Decide(context.Background(), "Is it?", producer, map[string]any{"batch": 1})
+	require(err == nil && index == 3 && call.Terminal != nil, "bounded feed did not finish")
+	rows := 0
+	for _, packet := range call.Packets {
+		if row, err := packet.AsSessionPacketDecideRow(); err == nil {
+			rows++
+			original := row.Value().Value.Input()
+			require(original.Present && original.Value == fmt.Sprintf("record-%d", rows), "feed changed input order")
+		}
+	}
+	require(rows == 3, "bounded feed lost ordered rows")
+	started := 0
+	invalid := producerFunc(func(context.Context) (any, error) { started++; return nil, io.EOF })
+	_, err = client.Decide(context.Background(), "Is it?", invalid, map[string]any{"field": []string{"bad pointer"}})
+	require(err != nil && started == 0, "invalid request started intake")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = client.Decide(ctx, "Is it?", invalid, nil)
+	require(errors.Is(err, context.Canceled) && started == 0, "precancelled feed started intake")
+	read := 0
+	broken := producerFunc(func(context.Context) (any, error) {
+		read++
+		if read == 1 {
+			return "text", nil
+		}
+		return nil, errors.New("private reader diagnostic")
+	})
+	_, err = client.Decide(context.Background(), "Is it?", broken, map[string]any{"batch": 1})
+	var failure *tt.SessionError
+	require(errors.As(err, &failure) && failure.Call.Terminal != nil, "reader failure lost typed terminal")
+	prefix := 0
+	for _, packet := range failure.Call.Packets {
+		if _, err := packet.AsSessionPacketDecideRow(); err == nil {
+			prefix++
+		}
+	}
+	kind, kindErr := failure.Detail.Kind().Value.JSONValue()
+	require(prefix == 1 && kindErr == nil && kind == "local", "reader failure lost completed prefix")
+	client.Close()
+	for i, result := range []tt.OwnedCall{call, failure.Call} {
+		facts := result.Terminal.Facts()
+		require(facts.Present && facts.Value.CallId().Present, "feed facts lost after close")
+		sent, err := facts.Value.RequestsSent().Value.Int64()
+		require(err == nil && sent == []int64{3, 1}[i], "feed request facts changed")
+	}
+	fmt.Println("bounded-feed-results-pass requests=4")
+}
+
 func main() {
 	client, err := tt.NewClient(map[string]any{"base_url": os.Getenv("THINKTHEN_BASE_URL"), "cache": false})
 	if err != nil {
 		panic(err)
 	}
 	defer client.Close()
+	if len(os.Args) > 1 && os.Args[1] == "feed" {
+		feedChecks(client)
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "surface" {
 		call, err := client.Decide(context.Background(), "Is it?", "text", nil)
 		require(err == nil && call.Terminal != nil, "surface decision failed")
@@ -40,7 +107,7 @@ func main() {
 		fmt.Println("surface-owned-results-pass requests=2")
 		return
 	}
-	if len(os.Args) > 1 && (os.Args[1] == "cancel" || os.Args[1] == "close") {
+	if len(os.Args) > 1 && (os.Args[1] == "cancel" || os.Args[1] == "close" || os.Args[1] == "feed-cancel" || os.Args[1] == "feed-close" || os.Args[1] == "feed-full") {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		var ticks atomic.Int64
@@ -60,7 +127,7 @@ func main() {
 		go func() {
 			for {
 				if _, err := os.Stat(os.Getenv("TT_CANCEL_FILE")); err == nil {
-					if os.Args[1] == "close" {
+					if os.Args[1] == "close" || os.Args[1] == "feed-close" {
 						client.Close()
 					} else {
 						cancel()
@@ -74,8 +141,46 @@ func main() {
 				}
 			}
 		}()
-		_, err = client.Decide(ctx, "Is it?", "hold-go", nil)
-		if os.Args[1] == "close" {
+		var pulled atomic.Int64
+		readerStopped := make(chan struct{})
+		var input any = "hold-go"
+		var options map[string]any
+		feeding := os.Args[1] == "feed-cancel" || os.Args[1] == "feed-close" || os.Args[1] == "feed-full"
+		if feeding {
+			options = map[string]any{"batch": 1}
+			input = producerFunc(func(readerCtx context.Context) (any, error) {
+				n := pulled.Add(1)
+				if n == 1 {
+					return "hold-go", nil
+				}
+				if os.Args[1] == "feed-full" {
+					if n == 3 {
+						require(os.WriteFile(os.Getenv("HOME")+"/reader-ready", nil, 0600) == nil, "reader signal")
+					}
+					return fmt.Sprintf("extra-%d", n), nil
+				}
+				require(os.WriteFile(os.Getenv("HOME")+"/reader-ready", nil, 0600) == nil, "reader signal")
+				<-readerCtx.Done()
+				close(readerStopped)
+				return nil, readerCtx.Err()
+			})
+		}
+		result, callErr := client.Decide(ctx, "Is it?", input, options)
+		err = callErr
+		if feeding {
+			require(result.Terminal == nil, "cancellation fabricated terminal facts")
+			if os.Args[1] == "feed-full" {
+				require(pulled.Load() == 3, "native backpressure did not bound producer intake")
+			} else {
+				require(pulled.Load() == 2, "blocked reader did not start")
+				select {
+				case <-readerStopped:
+				default:
+					panic("reader was not joined")
+				}
+			}
+		}
+		if os.Args[1] == "close" || os.Args[1] == "feed-close" {
 			require(errors.Is(err, tt.ErrClosed), "client close did not stop the host reader")
 		} else {
 			require(errors.Is(err, context.Canceled), "context cancellation lost")
