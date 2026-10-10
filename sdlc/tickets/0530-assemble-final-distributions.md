@@ -66,3 +66,4 @@ Author: project manager.
 - 2026-10-10 landed 670c88047; next: Current typed registry consumers and the full Go route are reviewed and pass focused installed checks; assemble final artifacts and run complete installed and platform qualification at the candidate.
 - 2026-10-10 next: Fix final NuGet assembly to include every native RID and add required Windows installed SDK consumers, then build and qualify the final candidate packages.
 - 2026-10-10 landed f415310b07a536a24cb4c90c5f98c8f6a0ac5bf7; next: NuGet now assembles all five native RIDs from captured C archives; finish the Windows installed SDK job and qualify final packages.
+- 2026-10-10 landed 8aadd204de37aa071373cfc341a5745e8bc324e7; next: The required Windows SDK candidate job is reviewed and landed; build fresh local packages and run the complete installed release checkpoint.
