@@ -146,7 +146,7 @@ if [ "$mode" = php-dart ]; then
 		case $name in
 		"$first")
 			{
-				printf '%s\n' ./ ./LICENSE ./README.md ./composer.json ./autoload.php ./THINKTHEN-PACKAGE-INPUTS
+				printf '%s\n' ./LICENSE ./README.md ./composer.json ./autoload.php ./THINKTHEN-PACKAGE-INPUTS
 				source_members libraries/php/ libraries/php/src libraries/php/examples
 			} | LC_ALL=C sort >"$work/expected-members"
 			tar -xOzf "$dir/$name" ./composer.json >"$work/package-metadata"
