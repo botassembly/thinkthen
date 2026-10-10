@@ -279,6 +279,7 @@ fn arguments(
             || (common.unit.is_none()
                 && common.window.is_none()
                 && !common.input.is_empty()
+                && common.image.is_empty()
                 && !common.lines
                 && !common.jsonl
                 && !common.csv
