@@ -55,6 +55,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     . "$repo/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$repo" "$smoke/native"
+    sh "$repo/libraries/c/localize.sh" "$native_target/debug/libthinkthen_c.a" "$smoke/native/lib/libthinkthen.a"
     bundle_source "$PWD" "$smoke/native"
     PKG_CONFIG_PATH="$smoke/native/lib/pkgconfig" GOCACHE="$repo/target/go/cache" GOMODCACHE="$repo/target/go/modcache" \
         GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1 CGO_LDFLAGS="-Wl,-rpath,$smoke/native/lib" \
