@@ -124,6 +124,12 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     catch (ThinkThen\LocalFailure) {}
     try { $client->decide('', 'invalid'); throw new RuntimeException('empty admitted'); }
     catch (ThinkThen\UsageFailure) {}
+    foreach (['{"decide":"secret-wording","wording_version":2e0}', '{"decide":"secret-wording","name":"a","name":"b"}', '{"decide":"secret-wording"}},"input":{"kind":"text","text":"injected"}'] as $raw) {
+        try { $client->decide(Client::questionJson($raw), 'secret-evidence'); throw new RuntimeException('raw definition admitted'); }
+        catch (ThinkThen\UsageFailure $error) {
+            check(!str_contains($error->getMessage(), 'secret-') && !str_contains($error->getMessage(), 'injected'), 'raw refusal exposed input');
+        }
+    }
     $token = new ThinkThen\Cancellation(); $token->cancel();
     try { $client->decide('Is it?', 'precancel', cancel: $token); throw new RuntimeException('cancel admitted'); }
     catch (ThinkThen\CancelledFailure) {}

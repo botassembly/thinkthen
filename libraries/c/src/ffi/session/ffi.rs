@@ -93,7 +93,13 @@ unsafe fn new_session(
         // SAFETY: the caller supplies the documented readable extent.
         let text =
             unsafe { super::text(request_json, request_len) }.map_err(|_| ErrorKind::Usage)?;
-        let request = Request::from_json(text).map_err(|error| error.kind())?;
+        let request = Request::from_json(text).map_err(|error| {
+            if error.to_string() == "invalid canonical request" {
+                errors::Failure::Kind(ErrorKind::Usage)
+            } else {
+                errors::Failure::Native(error)
+            }
+        })?;
         let session = engine
             .0
             .engine

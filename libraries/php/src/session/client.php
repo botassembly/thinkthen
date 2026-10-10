@@ -31,6 +31,7 @@ final class Client
         catch (\JsonException $error) { throw new UsageFailure('input cannot be converted to native JSON', previous: $error); }
     }
     public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): FileInput { return new FileInput($paths, $reading, $framing, $media); }
+    public static function questionJson(string $json): QuestionInput { return new QuestionInput(['kind' => 'definition'], $json); }
     public static function questionFile(string $path): QuestionInput { return new QuestionInput(['kind' => 'file', 'path' => $path]); }
     public static function questionNamed(string $name): QuestionInput { return new QuestionInput(['kind' => 'name', 'name' => $name]); }
     public static function questionReference(string $reference): QuestionInput { return new QuestionInput(['kind' => 'reference', 'reference' => $reference]); }
@@ -121,5 +122,11 @@ final readonly class UsageStatus
 
 final readonly class QuestionInput
 {
-    public function __construct(public array $descriptor) {}
+    public function __construct(public array $descriptor, public ?string $definitionJson = null)
+    {
+        if ($definitionJson === null) return;
+        // Validate one JSON value before inserting its original bytes into the request.
+        try { json_decode($definitionJson, flags: JSON_THROW_ON_ERROR); }
+        catch (\JsonException $error) { throw new UsageFailure('question is not one JSON value', previous: $error); }
+    }
 }
