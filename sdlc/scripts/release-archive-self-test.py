@@ -799,8 +799,15 @@ def main():
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
                    f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}
-            expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env),
-                   f"{family}: not run: Python jsonschema is unavailable")
+            result = run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env)
+            if family == "cpp":
+                # The generated C++ source check invokes Python before building;
+                # it propagates the failed generator's exit rather than a legacy
+                # jsonschema prerequisite diagnostic.
+                if result.returncode != 1:
+                    raise AssertionError(("C++ unavailable Python was not refused", result))
+            else:
+                expect(result, f"{family}: not run: Python jsonschema is unavailable")
     print("release archive self-test: gitless legacy, Go/C++, Swift/Zig and PHP/Dart inputs pass")
 
 
