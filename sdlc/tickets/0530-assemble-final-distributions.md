@@ -131,3 +131,4 @@ Author: project manager.
 - 2026-10-10 landed 6db7b7497; next: CLI, Rust, C, Go and C# required cases pass with retained and repaired evidence; finish the Python settings repair and remaining installed families before candidate qualification.
 - 2026-10-10 landed d7d0c058e; next: Python settings and JSONL file framing are repaired and reviewed; retain passing cases with the replacement wheel, finish JavaScript fixture repairs, and continue the remaining installed families.
 - 2026-10-10 landed 10569dd97; next: JavaScript construction and streaming fixtures are repaired; finish its full installed run, correct the shared JVM raw-file expectations, and continue remaining families with retained passing evidence.
+- 2026-10-10 landed 2f340c32e; next: JVM raw-file error checks are repaired for Java, Kotlin and Scala; finish their remaining cases and the remaining installed families, preserving passing runs and focused corrections.
