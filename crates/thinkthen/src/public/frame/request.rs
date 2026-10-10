@@ -1,10 +1,10 @@
 //! Native column conversion delegates admission and execution to Request.
 use super::column::text;
 use crate::{
-    Call, CallOptions, CompleteRecord, Engine, Error, Question, QuestionInput, RecordInput,
-    Request, RequestArguments, RequestCall, RequestDefinition, RequestEnvironment, RequestFeed,
-    RequestFraming, RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue,
-    Surface,
+    Call, CallOptions, CompleteRecord, CompleteScore, Engine, Error, InputEvidence, Question,
+    QuestionInput, RecordInput, Request, RequestArguments, RequestCall, RequestDefinition,
+    RequestEnvironment, RequestFeed, RequestFraming, RequestInput, RequestOptions, RequestOutcome,
+    RequestQuestion, RequestValue, Surface,
 };
 use polars::prelude::Series;
 
@@ -53,6 +53,22 @@ pub(super) fn execute_records(
     controls: CallOptions<'_>,
     rows: impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>>,
 ) -> Result<Call<RequestValue>, Error> {
+    execute_feed(
+        engine,
+        definition,
+        call,
+        controls,
+        RequestFeed::from_records("column", rows),
+    )
+}
+
+fn execute_feed(
+    engine: &Engine,
+    definition: RequestDefinition,
+    call: fn(RequestArguments) -> RequestCall,
+    controls: CallOptions<'_>,
+    feed: RequestFeed<'_>,
+) -> Result<Call<RequestValue>, Error> {
     let request = Request::new(call(RequestArguments {
         question: RequestQuestion::Definition { value: definition },
         input: RequestInput::Feed {
@@ -68,7 +84,7 @@ pub(super) fn execute_records(
         &request,
         RequestEnvironment {
             controls: controls.surface(Surface::RustPolars),
-            feed: Some(RequestFeed::from_records("column", rows)),
+            feed: Some(feed),
         },
     )? {
         RequestOutcome::Complete(call) => Ok(call),
@@ -110,4 +126,58 @@ pub(super) fn project<R>(
         ));
     }
     Ok(())
+}
+
+/// Retain caller-owned originals while shared Request admits native score evidence.
+#[allow(
+    clippy::type_complexity,
+    reason = "the existing complete API retains generic originals and native scores"
+)]
+pub(super) fn score_records<T: InputEvidence>(
+    engine: &Engine,
+    question: &Question,
+    records: Vec<RecordInput<T>>,
+    controls: CallOptions<'_>,
+) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error> {
+    let mut originals = Vec::with_capacity(records.len());
+    let rows = records.into_iter().map(|record| {
+        Ok(record.map_original(|original| {
+            let input = original.question_input();
+            originals.push(original);
+            input
+        }))
+    });
+    let call = execute_feed(
+        engine,
+        question.clone().into(),
+        RequestCall::Score,
+        controls,
+        RequestFeed::from_records("column", rows).eager(),
+    )?;
+    call.try_map(|value| {
+        let RequestValue::Scores(rows) = value else {
+            return Err(Error::defect("a score column returned another result kind"));
+        };
+        let mut originals = originals.into_iter();
+        let values = rows
+            .into_iter()
+            .enumerate()
+            .map(|(at, row)| {
+                if row.ordinal() != at {
+                    return Err(Error::defect("a score column changed its occurrence order"));
+                }
+                Ok(CompleteRecord {
+                    original: originals
+                        .next()
+                        .ok_or_else(|| Error::defect("a score column lost its original"))?,
+                    ordinal: at,
+                    result: row.into_parts().1,
+                })
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        if originals.next().is_some() {
+            return Err(Error::defect("a score column lost an answer"));
+        }
+        Ok(values)
+    })
 }

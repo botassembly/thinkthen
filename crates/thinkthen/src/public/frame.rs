@@ -26,7 +26,9 @@ pub use options::PolarsCallOptions;
 /// The Series and frame door, implemented for [`Engine`]. It needs the
 /// `polars` feature, and takes the Polars version [`crate::polars`] names.
 ///
-/// Row-wise text judgments read a column in place at the native throttle.
+/// Joined text judgments retain native complete results alongside the input
+/// and output columns. Typed pull methods let callers consume answers at the
+/// native throttle.
 /// Whole-set rank/find and explicit source helpers materialize their logical
 /// collection once; they never judge each lazy morsel as a complete set.
 /// Nullable outputs retain their input positions and names.
