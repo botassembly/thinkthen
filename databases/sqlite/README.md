@@ -191,8 +191,7 @@ produce no rows without reading question files or sending; NULL settings uses de
 `thinkthen_find_complete`, `thinkthen_annotate_complete`,
 `thinkthen_recognize_complete` and `thinkthen_relate_complete` take
 `(question TEXT, inputs TEXT, settings TEXT := NULL)` and return JSON text.
-These are additive doors; existing scalar/table calls and usage totals keep
-their signatures. PostgreSQL returns `json` for the same three arguments;
+Complete calls and ordinary scalar/table calls form the current SQL function family. Ordinary calls and usage totals keep their signatures. PostgreSQL returns `json` for the same three arguments;
 DuckDB returns JSON text. Each complete invocation evaluates once.
 
 Use native saved-question JSON, including authored descriptions, declarations,
@@ -302,9 +301,28 @@ Annotation declarations validate each member's selected evidence. Complete filte
 calls retain both passing and rejected observations and their original ordinals,
 including completed rows before an incremental failure. Ordinary native Request
 filtering retains its passing-row behavior; SQL explicitly selects all results.
-Top-level input descriptors validate before SQL resolves a saved question. Request admits the canonical saved selector before SQLite runs its authorized file reader. SQLite supplies the resolved native definition for Request admission without granting Request filesystem permission. Its legacy scalar and table judgments also execute through Request. PostgreSQL imports the shared SQL preparation and Request helpers; DuckDB retains the compatibility dispatcher until its Request migration.
+Top-level input descriptors validate before SQL resolves a saved question. Request admits the canonical saved selector before SQLite runs its authorized file reader. SQLite supplies the resolved native definition for Request admission without granting Request filesystem permission. Its ordinary scalar and table judgments also execute through Request. The `thinkthen-host` crate owns shared SQL preparation, native descriptors, result envelopes and the Request adapter. SQLite keeps registration, value conversion, file authority, interruption and SQL projections. PostgreSQL and DuckDB depend on that crate directly.
 
 The existing surface checks execute all applicable shared cases through these
 named calls against counted owned loopback, check known JSON fields using SQL
 types, and repeat them against the installed extension package. They also retain
 ordinary compatibility, secrecy, cancellation and wrong-model regressions.
+
+## Request migration and SQL compatibility
+
+The Request migration changes execution inside the extension. It preserves SQL function names and arguments. Ordinary SQL calls project Rust-owned results into their established SQL values; complete calls return the same evaluation with complete observations. Callers can choose the result shape they need:
+
+| Existing SQL call | Complete result call |
+| --- | --- |
+| `thinkthen_decide`, `thinkthen_decide_images` | `thinkthen_decide_complete` |
+| `thinkthen_choose`, `thinkthen_choose_images` | `thinkthen_choose_complete` |
+| `thinkthen_tag` | `thinkthen_tag_complete` |
+| `thinkthen_score`, `thinkthen_score_images` | `thinkthen_score_complete` |
+| `thinkthen_decide_many` and its keyed join | `thinkthen_filter_complete` |
+| `thinkthen_rank`, `thinkthen_rank_set` | `thinkthen_rank_complete` |
+| `thinkthen_find` | `thinkthen_find_complete` |
+| `thinkthen_annotate` | `thinkthen_annotate_complete` |
+| `thinkthen_recognize` | `thinkthen_recognize_complete` |
+| `thinkthen_relate` | `thinkthen_relate_complete` |
+
+The complete input descriptor above differs from ordinary call arguments. No caller needs to rename an existing SQL call. `thinkthen_details`, `thinkthen_try_details` and image details retain their documented ordinary result and error behavior. Existing removed-spelling migration errors remain part of the SQL contract. No old SQLite execution dispatcher or result-generation template remains; reachable question preparation, image conversion, reader, keyed-row and SQL result helpers support this function family.
