@@ -119,11 +119,12 @@ fn decoded(text: &str) -> Crossed<Value> {
 // R conditions retain their flat complete-error carrier. The shared graph's
 // error and facts converters own each nested field; only R's layout differs.
 fn failed(value: &Value) -> Crossed<Robj> {
-    let error = List::try_from(convert(
-        "completeError",
-        value.get("error").unwrap_or(value),
-    )?)
-    .map_err(|_| crate::defect("native error is not an R list"))?;
+    let mut error = value.get("error").unwrap_or(value).clone();
+    if let Some(Value::String(message)) = error.get_mut("message") {
+        *message = message.replace('\0', "\\u0000");
+    }
+    let error = List::try_from(convert("completeError", &error)?)
+        .map_err(|_| crate::defect("native error is not an R list"))?;
     let mut fields = error
         .iter()
         .filter(|(key, _)| *key != "facts")
