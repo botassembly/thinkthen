@@ -39,15 +39,25 @@ pub(crate) fn ask(
     };
     let options = options.observe(&observer);
     let mut storage = Storage::default();
-    let records = inputs::records(engine, source, kind, question.reading.as_ref())?;
-    let rows = execute(
-        engine,
-        kind,
-        question,
-        records,
-        options,
-        (&mut storage, &events, completed),
-    )?;
+    let rows = if let (Native::Relate(q), RELATE) = (&question.native, kind) {
+        let records = source.read()?.enumerate().map(|(at, record)| {
+            engine.check_record_limit(at)?;
+            inputs::compose(record?, kind, question.reading.as_ref())
+        });
+        let call = engine.try_relate_records_complete_with(q, records, options)?;
+        *completed = Some(call.facts().clone());
+        vec![structured::relate(&mut storage, call.value())?]
+    } else {
+        let records = inputs::records(engine, source, kind, question.reading.as_ref())?;
+        execute(
+            engine,
+            kind,
+            question,
+            records,
+            options,
+            (&mut storage, &events, completed),
+        )?
+    };
     let events = events.into_inner().unwrap_or_else(PoisonError::into_inner);
     let facts = completed
         .as_ref()
@@ -212,11 +222,6 @@ fn execute(
                 engine.recognize_records_complete_with(q, records, options),
                 |r| structured::recognize(s, r)
             )
-        }
-        (Native::Relate(q), RELATE) => {
-            let call = engine.relate_records_complete_with(q, records, options)?;
-            *completed = Some(call.facts().clone());
-            Ok(vec![structured::relate(s, call.value())?])
         }
         (Native::RankSet(set), RANK) => {
             collect!(completed;

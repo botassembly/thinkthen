@@ -196,8 +196,12 @@ int main(void) {
     if(getenv("TYPED_RELATE_BOUND")) {
         size_t count=(size_t)strtoul(getenv("TYPED_RELATE_BOUND"),NULL,10);
         thinkthen_question *q=make(e,10); thinkthen_result *result=NULL;
+        thinkthen_cancel_token *cancel=NULL;
+        if(count==0) { cancel=thinkthen_cancel_token_new(); assert(cancel); thinkthen_cancel(cancel); controls.cancel=cancel; }
         int code=thinkthen_relate_complete(e,q,source,&controls,&result);
-        if(count==255) {
+        if(count==0) {
+            assert(code==THINKTHEN_ECANCELLED && result==NULL);
+        } else if(count==255) {
             assert(code==0 && result);
             thinkthen_relate_view_v1 view={0}; assert(thinkthen_result_relate(result,0,&view)==0);
             thinkthen_details_v1 details={0}; assert(thinkthen_result_details(result,0,&details)==0);
@@ -205,9 +209,9 @@ int main(void) {
             thinkthen_result_free(result);
         } else {
             assert(code==THINKTHEN_EUSAGE && result==NULL);
-            assert(strcmp(thinkthen_error_message(e),"relate takes at most 255 records")==0);
+            assert(strcmp(thinkthen_error_message(e),"source relate takes at most 255 source records")==0);
         }
-        thinkthen_question_free(q); thinkthen_source_free(source); thinkthen_engine_free(e);
+        thinkthen_question_free(q); thinkthen_source_free(source); thinkthen_cancel_token_free(cancel); thinkthen_engine_free(e);
         return 0;
     }
     thinkthen_result *results[10]={0};
