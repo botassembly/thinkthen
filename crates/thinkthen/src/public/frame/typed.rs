@@ -72,10 +72,18 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteDecision>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.decide_records_complete_with(
-            question,
+        let call = super::request::complete_records(
+            self,
+            question.question().clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Decide,
+            |value| match value {
+                RequestValue::Decisions(rows) => Ok(rows),
+                _ => Err(Error::defect(
+                    "a decide column returned another result kind",
+                )),
+            },
         )?;
         Ok((call, positions))
     }
@@ -267,10 +275,18 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.annotate_records_complete_with(
-            question,
+        let call = super::request::complete_records(
+            self,
+            question.clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Annotate,
+            |value| match value {
+                RequestValue::Annotations(rows) => Ok(rows),
+                _ => Err(Error::defect(
+                    "a annotate column returned another result kind",
+                )),
+            },
         )?;
         Ok((call, positions))
     }
@@ -292,10 +308,18 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.recognize_records_complete_with(
-            question,
+        let call = super::request::complete_records(
+            self,
+            question.clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Recognize,
+            |value| match value {
+                RequestValue::Recognized(rows) => Ok(rows),
+                _ => Err(Error::defect(
+                    "a recognize column returned another result kind",
+                )),
+            },
         )?;
         Ok((call, positions))
     }
