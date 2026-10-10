@@ -1,5 +1,7 @@
 # Settings reference adoption
 
+Fresh read-only review accepted the development upgrade documentation at `ae72e2568b5c99e6011dc49bc15fa4f7dc37f467`. It compared all six changed files with the owning guides and API sources, confirming migration mappings, MCP limits and the published/development distinction. JVM and Foundation implementation gaps remain explicit; no package qualification is claimed.
+
 This bounded 0467 slice starts from `0d1f76bf84c7787558e6fae00c60e8cd2e2e3d1f`. It repairs the existing settings inventory without changing a product API or certifying the remaining cross-surface documentation work.
 
 `sdlc/scripts/settings` excludes build helpers from the runtime environment scan. The JVM session builder's JDK, Kotlin and Scala homes select build tools; they are not engine settings. The C constructor delegates to `EngineBuilder::from_settings_json`. Its canonical `Document::apply` applies the Rust builder setters, and its admitted fields generate `EngineSettings` in `specification/request.schema.json`. The inventory follows that existing call instead of requiring removed C-local setters. Python still applies timeout through its wrapped builder chain.
@@ -37,3 +39,11 @@ The same current-contract repair moves `--image` from global flags to the shared
 Recipe metadata and its existing scope contract now point to the three owning issues under `sdlc/issues/closed/`. The retained artifact test creates each copied issue's parent directory. No issue record, publication disposition or public recipe claim changes. The catalog/help check, isolated recipe artifact checks and rendered recipe checks pass. The complete local build also verifies links, settings, Chromium redirects, cards, metadata and HTML/Markdown exports. Ticket and count-only privacy checks pass, and the lane remains under its storage cap.
 
 Current help admission decides which commands share a flag. A setting can remain supported after its numeric bound disappears; readers must use the current allowed rule. Test fixtures should create destination directories from the source metadata they copy, so moving an owning issue preserves its validation.
+
+## Development API and upgrade links
+
+This bounded 0467 slice starts from `7785693d7`. The root README, specification index and site installation pages link the binding guide and `libraries/UPGRADING-0.2.md`. The guide collects confirmed R and C# replacement mappings and links additive Go, Ruby, JVM and Dart APIs to their owning package documentation. It adds no surface inventory. The shared text distinguishes public 0.1.2 installation, the stable JDK 22 session and the approved Apple Foundation replacement. The current JVM default build still compiles the JDK 21 preview door; the current Objective-C sources still use GNU `Object`. Neither is described as a finished public API switch. MCP framing text follows `mcp/protocol.rs::MAX_MESSAGE` and the transport attachment admission in `mcp/request.rs`.
+
+Both changed Astro pages parse with the installed compiler. The three changed Markdown documents parse with the site's existing parser; fences balance, 68 local or repository link targets exist, ticket validation reports zero failures, and the focused count-only privacy check finds no private names. `git diff --check` passes. One storage measurement totals 41,861,152,768 bytes across target, libraries and databases, below 40 GiB. No executable example changes, so no replay runs. No full site build, provider call, package build, parity run, release qualification or product source change enters this slice.
+
+Package migration and qualification are different claims. A stable session implementation does not prove the default Maven route uses it, and an approved platform restriction does not prove an Apple facade exists. Shared documentation should link the owning API and preserve those distinctions instead of describing every intended package as installed.

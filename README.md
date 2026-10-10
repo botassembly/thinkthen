@@ -143,11 +143,15 @@ Install or unpack the reviewed candidate command, put it on PATH, and configure 
 {"command":"thinkthen","args":["mcp"]}
 ```
 
-The Rust server uses local stdio, one native engine and the same cache. It exposes exactly the ten functions above. It starts no shell and no process per call. A `decide` tool call accepts `{"question":"Does the writer request a refund?","evidence":"Please refund my order."}`. Use `question_file`, `question_name` or `question_reference` for explicit file, named or @ lookup; those selectors are exclusive with literal `question`. Literal @ text is never treated as a path. Ordered images are admitted only for decide/choose/score. The [MCP guide](libraries/mcp/README.md) gives source inputs, per-record context, complete results and a no-key recorded call. Final platform and release qualification remain required.
+The Rust server uses local stdio, one native engine and the same cache. It exposes exactly the ten functions above. It starts no shell and no process per call. A `decide` tool call accepts `{"question":"Does the writer request a refund?","evidence":"Please refund my order."}`. Use `question_file`, `question_name` or `question_reference` for explicit file, named or @ lookup; those selectors are exclusive with literal `question`. Literal @ text is never treated as a path. Ordered images are admitted only for decide/choose/score. The [MCP guide](libraries/mcp/README.md) gives source inputs, per-record context, complete results and a no-key recorded call.
+
+MCP accepts newline-delimited JSON-RPC frames. Its incoming frame limit also bounds the aggregate original compressed attachment bytes in a call, counting ordered duplicates. Use explicit native text-file inputs for captions too large for a frame; native input and provider body limits still apply. See the [framing and attachment contract](specification/mcp.md). Final platform and release qualification remain required.
 
 ## Languages
 
-Every language uses the same Rust engine. Each page below gives the install line and a first call.
+Every language uses the same Rust engine. Each page below gives the published install line and a first call. The [0.2 upgrade guide](libraries/UPGRADING-0.2.md) maps changed calls and links the package documentation for development APIs. The [binding guide](libraries/BINDING-AUTHOR.md) defines the one typed function family per language; it does not certify completed package migration.
+
+The development JVM session uses stable JDK 22 or later without preview features. Its packaged native loader needs no manual library path. The released JVM API still uses JDK 21 preview features and a separate C archive. The approved 0.2 Objective-C replacement is Apple-only on Foundation; the current GNU Objective-C package does not implement that replacement. The [package design](sdlc/decisions/2026-10-09-native-package-design.md) defines the intended targets and runtime floors. Installed and platform qualification remain separate requirements.
 
 The Rust crate supports Linux, macOS and Windows x86-64. Add it to a Rust project with `cargo add thinkthen`. The Windows C archive contains the header, `thinkthen.dll` and its MSVC import library. The Windows command archive contains `thinkthen.exe` alone. Native C runner proof remains pending.
 
