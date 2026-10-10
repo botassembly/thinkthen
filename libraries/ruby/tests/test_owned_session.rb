@@ -70,6 +70,38 @@ class TestOwnedSession < Minitest::Test
     end
   end
 
+  def test_a_child_after_fork_owns_its_engine_and_parent_counters_hold
+    lines, count = TestBackend.run(<<~RUBY)
+      require "timeout"
+      client = T::Client.new(cache: false)
+      client.decide("Is it urgent?", "before the fork")
+      before = client.usage
+      reader, writer = IO.pipe
+      pid = Process.fork do
+        reader.close
+        T::Client.open(cache: false) do |owned|
+          value = owned.decide("Is it urgent?", "in the forked child").value
+          writer.write(JSON.generate([value, owned.usage[:requests_sent]]))
+        end
+        writer.close
+        exit!(0)
+      end
+      writer.close
+      begin
+        forked = Timeout.timeout(5) { reader.read }
+      rescue Timeout::Error
+        Process.kill("KILL", pid)
+        raise
+      ensure
+        Process.wait(pid)
+      end
+      say [forked, client.usage == before]
+      client.close
+    RUBY
+    assert_equal [["[true,1]", true]], lines
+    assert_equal 2, count
+  end
+
   def test_saved_question_selectors_keep_native_lookup_and_literal_strings
     TestBackend.with(<<~RUBY) do |backend, child|
       require "fileutils"
