@@ -26,6 +26,8 @@ Reviews: revision fcb87c804225e8daf212bf918195d5686a6f56d0, reject
 
 Reviews: revision 5df36c0f8e2d5e2d606d0883b70e5ee142f889c9, reject
 
+Reviews: revision 2a0356e04907ec98bb08738f327b92ece1ea2ea4, accept
+
 ## Outcome
 
 A C# developer installs the NuGet package and calls named functions with native typed inputs. They get generated typed results and typed exceptions, cancel with a `CancellationToken`, and release resources with `SafeHandle` and disposal. No library path, hand-built JSON or result decoding is needed. The pilot sets the wait, cancellation, cleanup and packaging pattern that every other C-interface language follows.
