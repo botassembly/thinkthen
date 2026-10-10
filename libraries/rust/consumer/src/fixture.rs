@@ -1,6 +1,6 @@
 //! Shared caller fixture framing; admission and evidence composition stay native.
 use serde::Deserialize;
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, value::RawValue};
 use thinkthen::{
     AdmittedRequest, Call, Engine, EngineBuilder, Error, ErrorKind, Facts, InputEvidence,
     InputReaderOptions, QuestionInput, Request, RequestCall, RequestInput, RequestOptions,
@@ -15,7 +15,7 @@ pub(super) type Original = QuestionInput;
 #[derive(Deserialize)]
 pub(super) struct Fixture {
     pub verb: String,
-    pub question: Value,
+    pub question: Box<RawValue>,
     pub input: RequestInput,
     pub settings: Map<String, Value>,
     #[serde(default)]
@@ -37,10 +37,12 @@ impl Fixture {
     }
     pub(super) fn request_input(&self, input: RequestInput) -> Result<Request, Error> {
         // Keep authored bytes intact and let the public parser own refusal messages.
-        let question = if let Some(raw) = self.question.get("raw").and_then(Value::as_str) {
+        let selector: Value = serde_json::from_str(self.question.get())
+            .map_err(|_| usage("invalid fixture question"))?;
+        let question = if let Some(raw) = selector.get("raw").and_then(Value::as_str) {
             format!(r#"{{"kind":"definition","value":{raw}}}"#)
         } else {
-            serde_json::to_string(&self.question).map_err(|_| usage("invalid fixture question"))?
+            self.question.get().to_owned()
         };
         let verb =
             serde_json::to_string(&self.verb).map_err(|_| usage("invalid fixture function"))?;
