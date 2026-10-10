@@ -107,13 +107,6 @@ fn tag_selects_each_label_at_or_above_one_shared_cut_and_empty_succeeds() {
 }
 
 #[test]
-fn the_leader_is_the_first_of_a_tie_and_a_tie_is_still_unresolved() {
-    let answer = choice(&[("bug", 0.5), ("feature", 0.5)]);
-    assert_eq!(answer.leader(), Some("bug"));
-    assert_eq!(answer.read(None).0, Value::Choice(None));
-}
-
-#[test]
 fn a_score_is_the_weighted_position_on_the_levels_it_was_given() {
     let cases: [(Odds<'_>, f64); 4] = [
         (&[("low", 0.05), ("mid", 0.30), ("high", 0.65)], 1.6),

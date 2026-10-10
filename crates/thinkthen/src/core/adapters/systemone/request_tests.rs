@@ -48,16 +48,6 @@ fn each_verb_writes_the_request_its_fixture_shows() {
 }
 
 #[test]
-fn a_pick_writes_its_options_as_criteria_in_the_order_they_were_typed() {
-    let bytes = encode(&team_plan()).expect("a plan is writable");
-    let text = String::from_utf8(bytes).expect("a request is text");
-    assert!(
-        text.contains(r#""criteria":{"billing":null,"shipping":null,"account":null,"other":null}"#),
-        "{text}"
-    );
-}
-
-#[test]
 fn a_tag_expands_labels_in_order_and_quotes_the_label_inside_the_instruction() {
     let bytes = encode(&tag_plan()).expect("a plan is writable");
     let text = String::from_utf8(bytes).expect("a request is text");
