@@ -83,3 +83,38 @@ fn decision(answer: thinkthen::Answer) -> Value {
         thinkthen::Answer::Unsure => Value::Null,
     }
 }
+
+/// Borrow an owned native snapshot through the existing SQL event serializer.
+pub(crate) fn owned_event(
+    event: &thinkthen::OwnedRecordObservation,
+) -> Result<Value, thinkthen::Error> {
+    use thinkthen::{ObservedRow, OwnedObservedRow as Row, OwnedRecordObservation as Event};
+    match event {
+        Event::Question {
+            index,
+            member,
+            stage,
+            position,
+            detail,
+        } => self::event(&RecordObservation::Question {
+            index: *index,
+            member: member.as_deref(),
+            stage: *stage,
+            position: *position,
+            detail: detail.detail(),
+        }),
+        Event::Row { index, value } => {
+            let borrowed = match value {
+                Row::Judgment(v) => ObservedRow::Judgment(v),
+                Row::Annotated(v) => ObservedRow::Annotated(v),
+                Row::Recognized(v) => ObservedRow::Recognized(v),
+                Row::Find(v) => ObservedRow::Find(*v),
+                Row::Relations(v) => ObservedRow::Relations(v),
+            };
+            self::event(&RecordObservation::Row {
+                index: *index,
+                value: borrowed,
+            })
+        }
+    }
+}

@@ -157,7 +157,23 @@ impl Inputs {
                 record.compose_record(reading.unwrap_or(&default)),
             )));
         }
-        let reading = if let Some(value) = self.raw.get("reading") {
+        let reading = self.record_reading(reading)?;
+        if let Some(files) = self.raw.get("files") {
+            return self.file_records(files.get(), reading);
+        }
+        let records: Vec<Box<RawValue>> =
+            serde_json::from_str(self.raw.get("records").ok_or_else(defect)?.get())
+                .map_err(|_| usage("records is an ordered array"))?;
+        Ok(Box::new(records.into_iter().map(move |raw| {
+            compose(raw.get(), &reading, self.native_request)
+        })))
+    }
+    /// Parse SQL reading through the native validators before advancing readers.
+    pub(crate) fn record_reading(
+        &self,
+        reading: Option<&RecordReading>,
+    ) -> Result<RecordReading, Error> {
+        Ok(if let Some(value) = self.raw.get("reading") {
             let given: Value =
                 serde_json::from_str(value.get()).map_err(|_| usage("reading is one object"))?;
             let object = given
@@ -204,16 +220,7 @@ impl Inputs {
             reading
                 .cloned()
                 .unwrap_or(RecordReading::new(&[], None, None)?)
-        };
-        if let Some(files) = self.raw.get("files") {
-            return self.file_records(files.get(), reading);
-        }
-        let records: Vec<Box<RawValue>> =
-            serde_json::from_str(self.raw.get("records").ok_or_else(defect)?.get())
-                .map_err(|_| usage("records is an ordered array"))?;
-        Ok(Box::new(records.into_iter().map(move |raw| {
-            compose(raw.get(), &reading, self.native_request)
-        })))
+        })
     }
     fn file_records(&self, files: &str, reading: RecordReading) -> Result<Records<'_>, Error> {
         let value = fields(files)?;

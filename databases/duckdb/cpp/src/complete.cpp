@@ -58,10 +58,8 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
         if (inputs.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
         if (!session) { session.emplace(Settings(*context)); }
         auto settings = args.data[2].GetValue(row);
-        string failure;
         const bool binary = inputs.type().id() == LogicalTypeId::LIST;
-        const auto source = question.GetValue<string>(), input = binary ? string() : CompleteFileInputs(*context,inputs.GetValue<string>(),failure), controls = settings.IsNull() ? "{}" : settings.GetValue<string>();
-        if (!failure.empty()) { result.SetValue(row,Value(FailureEnvelope(failure))); continue; }
+        const auto source = question.GetValue<string>(), input = binary ? string() : inputs.GetValue<string>(), controls = settings.IsNull() ? "{}" : settings.GetValue<string>();
         try {
         QuestionSelection selection;
         string content = source;
@@ -72,6 +70,10 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
             AuthorizeLocalSource(FileSystem::GetFileSystem(*context), path);
             content = ReadQuestion(*context, path, "question", true);
         }
+        string file_result;
+        if (!binary && CompleteFileCall(*context,verb,content,input,controls,selection.value,owner->Remaining(*context),session->Bridge(),file_result)) {
+            result.SetValue(row,Value(file_result)); continue;
+        }
         auto images = binary ? ImageMembers(inputs) : vector<std::pair<string, string>>();
         auto views = ImageViews(images);
         RustReply reply(binary
@@ -80,7 +82,7 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
         Checked(reply.value);
         result.SetValue(row, Value(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
         } catch (const Exception &error) {
-            if (ErrorData(error).Type()==ExceptionType::INTERRUPT) { throw; }
+            if (ErrorData(error).Type()==ExceptionType::INTERRUPT || QueryInterrupted(*context)) { throw; }
             result.SetValue(row,Value(FailureEnvelope(CompleteAdmissionError(error))));
         }
     }

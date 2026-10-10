@@ -116,6 +116,15 @@ def held_cancel(query: str, in_flight: int) -> None:
 
 
 @case
+def complete_file_cancel_returns_while_provider_remains_held():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-held-file-') as tmp:
+        path=Path(tmp)/'source';path.write_text('Refund held file.')
+        inputs=json.dumps({'files':{'paths':[str(path)]},'incremental':True})
+        literal=lambda value:"'"+value.replace("'","''")+"'"
+        held_cancel("SELECT thinkthen_decide_complete('Refund?',"+literal(inputs)+",'{\"batch\":1}')",1)
+
+
+@case
 def rank_set_cancel_stops_the_shared_worker_without_later_sends():
     held_cancel("SELECT key FROM thinkthen_rank_set('{\"version\":1,\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}', '{\"batch\":\"max\"}')", 1)
 

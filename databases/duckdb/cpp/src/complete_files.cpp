@@ -4,13 +4,22 @@
 #include "duckdb/common/file_system.hpp"
 #include "yyjson.hpp"
 #include "duckdb/common/error_data.hpp"
+#include "scalar_owner.hpp"
+#include <thread>
+#include <chrono>
 extern "C" {
 ThinkThenReply thinkthen_cpp_complete_file_plan(ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete_admission_error(ThinkThenText,ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete_reader_new(ThinkThenText, ThinkThenText, int32_t, void *, int64_t (*)(void *,uint8_t *,size_t),void **);
 ThinkThenReply thinkthen_cpp_complete_reader_next(void *);
 void thinkthen_cpp_complete_reader_free(void *);
-ThinkThenReply thinkthen_cpp_complete_file_records(ThinkThenText, ThinkThenText);
+ThinkThenReply thinkthen_cpp_complete_feed_new(ThinkThenText,ThinkThenText,ThinkThenText,ThinkThenText,const void *,int64_t,ThinkThenSettings,void **);
+ThinkThenReply thinkthen_cpp_complete_feed_push(void *,ThinkThenText);
+ThinkThenReply thinkthen_cpp_complete_feed_read(void *);
+ThinkThenReply thinkthen_cpp_complete_feed_finish(void *,void *,int32_t);
+void thinkthen_cpp_complete_feed_free(void *);
+ThinkThenReply thinkthen_cpp_complete_feed_render(ThinkThenText);
+ThinkThenReply thinkthen_cpp_complete_failure_envelope(ThinkThenText);
 }
 namespace duckdb {
 namespace {
@@ -48,68 +57,90 @@ string CompleteAdmissionError(const std::exception &error) {
     Checked(reply.value);
     return ReplyText(reply.value);
 }
-string CompleteFileInputs(ClientContext &context,const string &inputs,string &failure) {
-    try {
+bool CompleteFileCall(ClientContext &context,const string &verb,const string &question,const string &inputs,const string &controls,const void *reference,int64_t deadline,ThinkThenSettings settings,string &result) {
     RustReply planned(thinkthen_cpp_complete_file_plan(View(inputs)));
-    if (planned.value.status!=0) { failure=ReplyText(planned.value); return inputs; }
-    if (planned.value.len==0) { return inputs; }
+    if (planned.value.status!=0) {
+        RustReply failed(thinkthen_cpp_complete_failure_envelope(View(ReplyText(planned.value))));
+        Checked(failed.value); result=ReplyText(failed.value); return true;
+    }
+    if (planned.value.len==0) { return false; }
     Json parsed(planned.value);
     auto root=yyjson_doc_get_root(parsed.doc);
-    auto paths=yyjson_obj_get(root,"paths"), settings=yyjson_obj_get(root,"options");
-    if (!yyjson_is_arr(paths)) { throw OrdinaryError("thinkthen usage: file paths is a text array"); }
+    auto paths=yyjson_obj_get(root,"paths"), reader_options=yyjson_obj_get(root,"options");
     vector<string> operands;
     size_t at,max; yyjson_val *path;
-    yyjson_arr_foreach(paths,at,max,path) {
-        if (!yyjson_is_str(path)) { throw OrdinaryError("thinkthen usage: file path is text"); }
-        operands.emplace_back(yyjson_get_str(path),yyjson_get_len(path));
-    }
-    auto encoded=yyjson_val_write(settings,0,nullptr);
+    yyjson_arr_foreach(paths,at,max,path) { operands.emplace_back(yyjson_get_str(path),yyjson_get_len(path)); }
+    auto encoded=yyjson_val_write(reader_options,0,nullptr);
     if (!encoded) { throw OrdinaryError("thinkthen defect: native reader options did not encode"); }
     string options(encoded); free(encoded);
     const auto framing=yyjson_get_int(yyjson_obj_get(root,"framing"));
-    auto &files=FileSystem::GetFileSystem(context);
-    const auto manifest=FileManifest(files,operands);
-    string records="[";
-    bool terminal=false;
-    for (auto &name:manifest) {
-        try {
-        AuthorizeLocalSource(files,name);
-        Handle held{files,files.OpenFile(name,FileOpenFlags::FILE_FLAGS_READ)};
-        if (files.GetFileType(*held.handle)!=FileType::FILE_TYPE_REGULAR) { throw OrdinaryError("thinkthen local: source file must be regular"); }
-        RustReply created(thinkthen_cpp_complete_reader_new(View(name),View(options),static_cast<int32_t>(framing),&held,Read,&held.reader));
-        if (created.value.status!=0) {
-            if (records.size()>1) { records+=","; }
-            records+="{\"read_error\":"+ReplyText(created.value)+"}";
-            break;
-        }
+    struct Feed {
+        void *value=nullptr;
+        ~Feed() { thinkthen_cpp_complete_feed_free(value); }
+    } feed;
+    RustReply started(thinkthen_cpp_complete_feed_new(View(verb),View(question),View(inputs),View(controls),reference,deadline,settings,&feed.value));
+    Checked(started.value);
+    if (!feed.value) { result=ReplyText(started.value); return true; }
+    string packets="[";
+    bool ended=false,closed=false,finished=false;
+    auto check_stop=[&]() { if (QueryInterrupted(context)) { throw InvalidInputException("%s",BridgeErrorText("thinkthen cancelled: the call was cancelled").c_str()); } };
+    auto drain=[&]() {
+        check_stop();
         for (;;) {
-            RustReply next(thinkthen_cpp_complete_reader_next(held.reader));
-            if (next.value.status!=0) {
-                if (records.size()>1) { records+=","; }
-                records+="{\"read_error\":"+ReplyText(next.value)+"}";
-                terminal=true;
-                break;
-            }
+            RustReply next(thinkthen_cpp_complete_feed_read(feed.value)); Checked(next.value);
             if (next.value.len==0) { break; }
-            if (records.size()>1) { records+=","; }
-            records.append(reinterpret_cast<char *>(next.value.bytes),next.value.len);
+            auto packet=ReplyText(next.value);
+            if (packet=="E") { ended=true;closed=true;break; }
+            if (packets.size()>1) { packets+=","; }
+            packets+=packet;
+            check_stop();
         }
-        if (terminal) { break; }
-        } catch (const Exception &error) {
-            if (ErrorData(error).Type()==ExceptionType::INTERRUPT) { throw; }
-            if (records.size()>1) { records+=","; }
-            records+="{\"read_error\":"+CompleteAdmissionError(error)+"}";
-            break;
+    };
+    auto finish=[&](void *reader,int32_t failed) {
+        if (!finished) {
+            RustReply reply(thinkthen_cpp_complete_feed_finish(feed.value,reader,failed)); Checked(reply.value); finished=true;
         }
-    }
-    records+="]";
-    RustReply replaced(thinkthen_cpp_complete_file_records(View(inputs),View(records)));
-    Checked(replaced.value);
-    return ReplyText(replaced.value);
+    };
+    auto pause=[&]() { check_stop();std::this_thread::sleep_for(std::chrono::milliseconds(5));check_stop(); };
+    auto &files=FileSystem::GetFileSystem(context);
+    try {
+        check_stop();
+        const auto manifest=FileManifest(files,operands);
+        for (auto &name:manifest) {
+            drain(); if (closed) { break; } check_stop();
+            AuthorizeLocalSource(files,name);
+            Handle held{files,files.OpenFile(name,FileOpenFlags::FILE_FLAGS_READ)};
+            if (files.GetFileType(*held.handle)!=FileType::FILE_TYPE_REGULAR) { throw OrdinaryError("thinkthen local: source file must be regular"); }
+            check_stop();
+            RustReply created(thinkthen_cpp_complete_reader_new(View(name),View(options),static_cast<int32_t>(framing),&held,Read,&held.reader));
+            if (created.value.status!=0) { finish(held.reader,1);closed=true;break; }
+            for (;;) {
+                drain(); if (closed) { break; } check_stop();
+                RustReply next(thinkthen_cpp_complete_reader_next(held.reader));
+                if (next.value.status!=0) { finish(held.reader,0);closed=true;break; }
+                if (next.value.len==0) { break; }
+                const auto descriptor=ReplyText(next.value);
+                for (;;) {
+                    check_stop();
+                    RustReply pushed(thinkthen_cpp_complete_feed_push(feed.value,View(descriptor))); Checked(pushed.value);
+                    const auto status=ReplyText(pushed.value);
+                    drain();
+                    if (status=="C") { closed=true;break; }
+                    if (status=="A" || closed) { break; }
+                    pause();
+                }
+                if (closed) { break; }
+            }
+            if (closed) { break; }
+        }
+        if (!closed) { finish(nullptr,0); }
     } catch (const Exception &error) {
-        if (ErrorData(error).Type()==ExceptionType::INTERRUPT) { throw; }
-        failure=CompleteAdmissionError(error);
-        return inputs;
+        if (ErrorData(error).Type()==ExceptionType::INTERRUPT || QueryInterrupted(context)) { throw; }
+        finish(nullptr,1);
     }
+    while (!ended) { drain(); if (!ended) { pause(); } }
+    packets+="]";
+    RustReply rendered(thinkthen_cpp_complete_feed_render(View(packets))); Checked(rendered.value);
+    result=ReplyText(rendered.value); return true;
 }
 }

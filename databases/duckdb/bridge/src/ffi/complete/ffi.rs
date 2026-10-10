@@ -6,7 +6,7 @@ use super::{
 use crate::{complete_native, engines};
 
 #[path = "../../../../../sqlite/src/complete/request.rs"]
-mod request;
+pub(super) mod request;
 
 /// Execute one named complete call; C++ retains readable ranges through return.
 /// # Safety
@@ -169,4 +169,125 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_failure_envelope(
             .to_string()
             .into_bytes())
     })
+}
+
+/// Admit a file feed with all borrowed SQL state copied before return.
+/// # Safety
+/// All counted ranges and the selection remain readable through return; out takes one session.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
+    verb: BridgeText,
+    question: BridgeText,
+    inputs: BridgeText,
+    settings: BridgeText,
+    reference: *const thinkthen::QuestionFileReference,
+    deadline: i64,
+    session: BridgeSettings,
+    out: *mut *mut thinkthen::RequestSession,
+) -> Reply {
+    reply_boundary(|| {
+        if out.is_null() {
+            return Err("thinkthen defect: missing session output".to_owned());
+        }
+        let parsed = (|| {
+            let verb = text(verb.bytes, verb.len).map_err(|_| complete_native::defect())?;
+            let question =
+                text(question.bytes, question.len).map_err(|_| complete_native::defect())?;
+            let raw = text(settings.bytes, settings.len).map_err(|_| complete_native::defect())?;
+            let call = thinkthen::Settings::parse(raw)
+                .map_err(|e| complete_native::usage(&e.to_string()))?;
+            // SAFETY: the caller retains the selection only for this call. Preparation owns it.
+            let saved = unsafe { reference.as_ref() }
+                .map(|held| complete_native::settings::parse_file(verb, question, held))
+                .transpose()?;
+            if saved.is_none() && question.starts_with('@') {
+                return Err(complete_native::usage(
+                    "the question reference was not read by this database",
+                ));
+            }
+            let prepared = if let Some(saved) = saved {
+                complete_native::settings::prepare_file(verb, question, &call, saved)?
+            } else {
+                complete_native::prepare(verb, question, &call)?
+            };
+            let input = complete_native::Inputs::parse_request(
+                text(inputs.bytes, inputs.len).map_err(|_| complete_native::defect())?,
+            )?;
+            let reading = input.record_reading(prepared.reading())?;
+            Ok::<_, thinkthen::Error>((call, prepared, input, reading))
+        })();
+        let (call, prepared, input, reading) = match parsed {
+            Ok(v) => v,
+            Err(e) => return Ok(complete_native::admission(&e).to_string().into_bytes()),
+        };
+        let held = asked(&session)?;
+        let engine = engines::engine_for(&held, |path| probe(&session, path))?;
+        let batch = if call.batch_max() {
+            Some(thinkthen::RequestBatch::Named("max".to_owned()))
+        } else if let Some(n) = call.batch_records() {
+            Some(thinkthen::RequestBatch::Count(n))
+        } else {
+            batch(&session)?.map(request_batch)
+        };
+        let due = match call.deadline_ms() {
+            None | Some(-1) => deadline,
+            Some(value) if deadline < 0 => value,
+            Some(value) => value.min(deadline),
+        };
+        let options = thinkthen::RequestOptions {
+            batch,
+            context: call.context().map(str::to_owned),
+            deadline_ms: Some(due),
+            attempts: input.attempts,
+            max_requests_total: held
+                .max_requests_total
+                .map(u64::try_from)
+                .transpose()
+                .map_err(|_| {
+                    "thinkthen usage: a request total is a whole number of 0 or more".to_owned()
+                })?,
+            ..Default::default()
+        };
+        let started = (|| {
+            let request = request::request(&prepared, options)?;
+            engine.request_session_with_feed_options(
+                request,
+                thinkthen::Surface::Duckdb,
+                thinkthen::RequestSessionFeedOptions {
+                    eager: !input.incremental,
+                    image_inputs: input.image_inputs()?,
+                    all_filter_results: matches!(prepared, complete_native::Prepared::Filter(_)),
+                    record_reading: Some(reading),
+                },
+            )
+        })();
+        match started {
+            Err(e) => Ok(complete_native::admission(&e).to_string().into_bytes()),
+            Ok(feed) => {
+                if input.cancelled {
+                    feed.cancel();
+                }
+                // SAFETY: exclusive ownership of the existing session allocation passes to the caller.
+                unsafe {
+                    out.write(Box::into_raw(Box::new(feed)));
+                }
+                Ok(Vec::new())
+            }
+        }
+    })
+}
+
+pub(super) fn supplement(
+    value: &mut serde_json::Value,
+    result: &thinkthen::RequestValue,
+) -> Result<(), thinkthen::Error> {
+    request::supplement(value, result)
+}
+
+fn request_batch(value: String) -> thinkthen::RequestBatch {
+    if value == "max" {
+        thinkthen::RequestBatch::Named(value)
+    } else {
+        thinkthen::RequestBatch::Count(value.parse().unwrap_or_default())
+    }
 }
