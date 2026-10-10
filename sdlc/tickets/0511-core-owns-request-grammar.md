@@ -129,3 +129,4 @@ fn RequestSource::read_framed<'a>(&self, CallOptions<'a>) -> Result<Box<(dyn Ite
 - 2026-10-10 landed d697fc147; next: SQLite and PostgreSQL relation admission now share native raw count limits; PostgreSQL derives bounded intake from core. Focused callers preserve diagnostics and send nothing on refusals. Remaining compatibility and boundary enforcement await adopted callers and installed qualification.
 - 2026-10-10 landed 26e11eca8; next: SQLite inline and JSON relation definitions now share native rule validation. Focused callers and fresh review preserve exact refusals and zero sends; compatibility retirement and boundary enforcement remain.
 - 2026-10-10 landed f27b497d7; next: The CLI find reader derives its maximum from core with identical boundary, diagnostic and unread-suffix behavior. Remaining compatibility and cross-crate grammar retirement follow adopted callers and installed qualification.
+- 2026-10-10 started
