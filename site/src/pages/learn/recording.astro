@@ -13,15 +13,15 @@ const spec = (name, anchor = '') => `https://github.com/botassembly/thinkthen/bl
 
 const MODES = [
   ['`--replay DIR`', 'yes', 'nothing; a miss exits 5', 'no'],
-  ['`--record DIR`', 'no', 'every question', 'yes, replacing a held answer'],
-  ['`--cache DIR`, `THINKTHEN_CACHE`, or the default cache', 'yes', 'the questions it misses', 'yes'],
-  ['a cache with `--refresh-cache`, or the model `jev-latest`', 'no', 'every question', 'yes, replacing a held answer'],
+  ['`--record DIR`', 'no', 'every question', 'if storage is permitted, replacing a held answer'],
+  ['`--cache DIR`, `THINKTHEN_CACHE`, or the default cache', 'yes', 'the questions it misses', 'if storage is permitted'],
+  ['a cache with `--refresh-cache`, or the model `jev-latest`', 'no', 'every question', 'if storage is permitted, replacing a held answer'],
   ['`--no-cache`', 'no', 'every question', 'no'],
 ];
 ---
 <Base title="Recording and the answer cache" description={'How ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.'}>
   <h1>Recording and the answer cache</h1>
-  <p class="lede">ThinkThen saves every good answer, one per question. Ask the same question again and it reads the saved answer instead of sending a request. <a href="/learn/caching/">Caching and replay</a> shows it at work.</p>
+  <p class="lede">When storage is permitted, ThinkThen saves good answers, one per question. A matching saved answer lets a later run avoid sending a request. <a href="/learn/caching/">Caching and replay</a> shows it at work.</p>
 
   <h2 id="plan">--plan</h2>
   <p><code>--plan</code> reads the whole input and prints the first request it would send, then one summary line. It sends nothing and needs no key. The <a href="/install/backends/">Backends page</a> shows the request.</p>
@@ -35,7 +35,7 @@ const MODES = [
 
   <h2 id="the-key">What makes two questions the same</h2>
   <p>Each saved answer has a key. The versioned key includes the adapter, the address, the requested and reported models, the shared state, and the question as sent. The question as sent includes the quoted evidence. So <code>hello\n</code> and <code>hello\r\n</code> make two keys, and a cosmetic change to the text misses. In a stream, the framing may strip a line end or re-encode parsed JSON before the question is built. Answers from two addresses never mix, because the address is part of every key.</p>
-  <p>The answer cache keeps its answers in <code>thinkthen.sqlite</code>. A folder committed for replay keeps the same rows in <code>thinkthen.jsonl</code>. A saved answer holds the question and the reply's answer, never a header. No API key can reach it. Only a good answer is saved. A failure is never saved. A later run asks only the questions that failed.</p>
+  <p>The answer cache keeps its answers in <code>thinkthen.sqlite</code>. A folder committed for replay keeps the same rows in <code>thinkthen.jsonl</code>. A saved answer holds the question and the reply's answer, never a header. No API key can reach it. Only a good answer with storage permission is saved. A failure is never saved. A later cache run asks any question without a matching saved answer.</p>
 
   <h2 id="modes">The modes</h2>
   <table>
@@ -45,6 +45,8 @@ const MODES = [
     ))}
   </table>
   <p><code>--record</code> sends every question, even one the folder already holds, and may charge for it again. Use <code>--cache DIR</code> to reuse what a folder holds. An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run. The <a href={spec('recording', '#the-question-store')}>recording specification</a> holds the full table.</p>
+
+  <p>A reply with <code>Cache-Control: no-store</code>, or malformed or over-bound cache instructions, cannot be saved. Cache mode returns an otherwise valid answer without saving it; a repeat without a saved match sends again and may charge again. Explicit <code>--record</code> fails after sending with exit 5 when the reply forbids storage, so the failed recording may still incur a charge. The <a href={spec('cache', '#response-cache-control')}>storage contract</a> gives the rules.</p>
 
   <h2 id="a-replay-miss">A replay miss</h2>
   <p><code>--replay DIR</code> answers from the folder alone, with no key and no network. A question the folder lacks exits 5, and the message names its key.</p>

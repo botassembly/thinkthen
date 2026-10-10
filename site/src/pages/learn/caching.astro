@@ -12,12 +12,12 @@ const [replay, batchOne, unused] = captioned('learn/caching', CACHING_SEE);
 const [used] = files('learn/caching');
 const spec = `${REPO}/blob/main/specification/recording.md#pruning-a-cache`;
 ---
-<Base title="Caching and replay" description="ThinkThen saves each answer under its question. A later run, or a test with no key, reads the saved answer and sends nothing.">
+<Base title="Caching and replay" description="ThinkThen caches answers when storage is permitted. A matching saved answer lets a later run or test avoid sending a request.">
   <h1>Caching and replay</h1>
-  <p class="lede">ThinkThen saves each answer under its question. Ask the same question again, and it reads the saved answer. Nothing is sent, and nothing is charged.</p>
+  <p class="lede">When storage is permitted, ThinkThen saves each good answer under its question. A matching cache hit sends nothing and incurs no new provider charge.</p>
 
   <h2>Ask once</h2>
-  <p>The answer cache is on by default. A second run of the same question over the same text reads the cache. <a href="/learn/recording/#the-key">What makes two questions the same</a> says which changes make a new question. The <a href="/install/configuration/#locations">Configuration page</a> says where the cache lives.</p>
+  <p>The answer cache is on by default. A second run of the same question over the same text can reuse a matching saved answer. If the provider forbids storage, cache mode returns the valid answer without saving it. A repeat without a saved match sends again and may charge again. Explicit recording instead fails after sending when storage is forbidden, so it may still incur a charge. The <a href={`${REPO}/blob/main/specification/cache.md#response-cache-control`}>storage contract</a> explains these rules. <a href="/learn/recording/#the-key">What makes two questions the same</a> says which changes make a new question. The <a href="/install/configuration/#locations">Configuration page</a> says where the cache lives.</p>
 
   <h2>Replay in a test</h2>
   <p>A folder of saved answers can sit beside your tests. <code>--replay</code> reads that folder alone. A test that names it runs with no key and no network. Every run on this page replays one small folder.</p>
