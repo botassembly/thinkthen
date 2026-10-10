@@ -73,7 +73,7 @@ def abi_check(header, jar, library):
     from children import child_env
     # ABI checks need only the actual JDK used by this public FFM boundary.
     jdk = Path(os.environ.get('THINKTHEN_JDK_HOME', '/usr/lib/jvm/java-21-openjdk-amd64'))
-    native = abi.header_abi(header)
+    native = abi.retained_abi(abi.header_abi(header))
     with tempfile.TemporaryDirectory(prefix='thinkthen-jvm-abi-') as folder:
         scratch = Path(folder)
         unit = scratch / 'AbiProbe.java'
@@ -100,7 +100,65 @@ def abi_check(header, jar, library):
         function['return'] = 'record' if function['return_shape'] else function['return']
         function['arguments'] = ['record' if shape else kind for kind, shape in zip(function['arguments'], function['argument_shapes'])]
     abi.compare_abi(expected, actual)
+    session_abi_check(header, jar, library)
     print(f'JVM C ABI: {len(actual["records"])} actual JAR layouts, {len(actual["constants"])} represented constants, {len(actual["functions"])} linked descriptors match')
+
+
+def session_abi_check(header, jar, library):
+    """Compile the layout expressions at actual session call sites, without calling them."""
+    spec = importlib.util.spec_from_file_location('c_abi', ROOT.parents[1] / 'sdlc/scripts/check-c-exports.py')
+    abi = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(abi)
+    from children import child_env
+    declarations = {}
+    sources = list((ROOT / 'session/thinkthen').glob('*.java'))
+    text = '\n'.join(p.read_text() for p in sources)
+    # The free helper is itself an actual descriptor declaration, shared by its callers.
+    size = re.search(r'static final [\w.]+ SIZE = ([^;]+);', text)[1].replace('LINKER', 'linker')
+    free = re.search(r'call\(name, (null), new MemoryLayout\[\]\{([^}]*)\}', text)
+    for source in sources:
+        unit = source.read_text()
+        for found in re.finditer(r'(?:NativeSession\.)?call\("(thinkthen_\w+)",\s*([\w.]+),\s*(new MemoryLayout\[\]\{[^}]*\}|\w+)', unit):
+            name, returned, arguments = found.groups()
+            if not arguments.startswith('new '):
+                definitions = list(re.finditer(r'(?:var|MemoryLayout\[\])\s+' + arguments + r'\s*=\s*(new MemoryLayout\[\]\{[^}]*\})', unit[:found.start()]))
+                if not definitions:
+                    raise ValueError('C ABI mismatch: JVM session unresolved layout ' + name)
+                arguments = definitions[-1][1]
+            declaration = (returned, arguments)
+            if name in declarations and declarations[name] != declaration:
+                raise ValueError('C ABI mismatch: JVM session conflicting declaration ' + name)
+            declarations[name] = declaration
+        for name in re.findall(r'NativeSession\.free\("(thinkthen_\w+)"', unit):
+            declarations[name] = (free[1], 'new MemoryLayout[]{' + free[2] + '}')
+    required = set(re.findall(r'"(thinkthen_\w+)"', text))
+    if required != set(declarations):
+        raise ValueError('C ABI mismatch: JVM session unmeasured import')
+    lines = [JVM_ABI_PROBE.split(' public static void main(')[0],
+             ' public static void main(String[] args)throws Exception {',
+             ' var linker=Linker.nativeLinker();',
+             ' var SIZE=' + size + ';',
+             ' var symbols=SymbolLookup.libraryLookup(args[0],Arena.global());',
+             ' Map<String,Object> functions=new TreeMap<>();']
+    for name, (returned, arguments) in sorted(declarations.items()):
+        returned, arguments = returned.replace('NativeSession.SIZE', 'SIZE'), arguments.replace('NativeSession.SIZE', 'SIZE')
+        descriptor = f'FunctionDescriptor.ofVoid({arguments})' if returned == 'null' else f'FunctionDescriptor.of({returned},{arguments})'
+        lines += ['{ var d=' + descriptor + ';',
+                  ' linker.downcallHandle(symbols.find("' + name + '").orElseThrow(),d);',
+                  ' functions.put("' + name + '",Map.of("return",d.returnLayout().map(AbiProbe::kind).orElse("void"),"return_width",d.returnLayout().map(MemoryLayout::byteSize).orElse(0L),"arguments",d.argumentLayouts().stream().map(AbiProbe::kind).toList(),"argument_widths",d.argumentLayouts().stream().map(MemoryLayout::byteSize).toList(),"calling_convention",System.getProperty("os.name").startsWith("Windows")?"cdecl":"C")); }']
+    lines += [' System.out.println(Json.write(Map.of("functions",functions)));', ' }', '}']
+    jdk = Path(os.environ.get('THINKTHEN_SESSION_JDK_HOME', os.environ.get('THINKTHEN_JDK_HOME', '/usr/lib/jvm/java-22-openjdk-amd64')))
+    with tempfile.TemporaryDirectory(prefix='thinkthen-jvm-session-abi-') as folder:
+        scratch = Path(folder)
+        unit = scratch / 'AbiProbe.java'
+        unit.write_text('\n'.join(lines))
+        env = child_env(HOME=str(scratch / 'home'))
+        subprocess.run([str(jdk / 'bin/javac'), '--release', '22', '-cp', str(jar), '-d', str(scratch), str(unit)], env=env, check=True, stdout=sys.stderr)
+        actual = json.loads(subprocess.check_output([str(jdk / 'bin/java'), '--enable-native-access=ALL-UNNAMED', '-XX:ActiveProcessorCount=1', '-cp', str(jar) + os.pathsep + str(scratch), 'thinkthen.AbiProbe', str(library.resolve())], env=env, text=True))
+    native = abi.header_abi(header)
+    expected = abi.represented_abi(native, [], declarations, [], signed=False)
+    abi.compare_abi(expected, actual)
+    print(f'JVM session C ABI: {len(declarations)} source-declared, compiled and linked descriptors match')
 
 
 def abi_plants(header, library):

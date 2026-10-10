@@ -179,6 +179,19 @@ def header_abi(header, compiler=None):
     return facts
 
 
+def retained_abi(native):
+    """Scope frozen carriers/imports before owned sessions added the complete graph.
+
+    This inventory is independent of the declarations under test, so a removed
+    compatibility member still fails. Session packages must be checked separately.
+    Named union aliases remain covered by compare_abi's measured parent rule.
+    """
+    return {**native,
+            'records': {n: v for n, v in native['records'].items() if not n.startswith('thinkthen_complete_')},
+            'constants': {n: v for n, v in native['constants'].items() if not n.startswith(('THINKTHEN_COMPLETE_', 'THINKTHEN_SESSION_'))},
+            'functions': {n: v for n, v in native['functions'].items() if not n.startswith('thinkthen_session_') and n != 'thinkthen_request_plan_json'}}
+
+
 def compare_abi(expected, actual):
     """Compare independently selected represented declarations, including omissions."""
     def represented(name, source, other):

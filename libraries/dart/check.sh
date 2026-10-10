@@ -109,7 +109,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     '  thinkthen_dart:' "    path: $ROOT" >"$smoke/app/pubspec.yaml"
   python3 "$CHECKS/native_assets.py" configure "$ROOT" "$smoke/native/lib/libthinkthen.so" "$smoke/app"
   "$TT_DART" pub get --offline --directory "$smoke/app" >&2
-  (cd "$smoke/app" && "$TT_DART" run bin/smoke.dart "$smoke/native/lib/libthinkthen.so")
+  (cd "$smoke/app" && "$TT_DART" run --verbosity=error bin/smoke.dart "$smoke/native/lib/libthinkthen.so")
   exit
 fi
 if [ ! -x "$TT_DART" ] || [ ! -x "$TT_FLUTTER" ]; then

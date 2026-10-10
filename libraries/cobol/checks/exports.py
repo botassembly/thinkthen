@@ -119,7 +119,7 @@ def bridge(header, package, native, scratch):
 
 
 def check(header, package):
-    native, records = abi.header_abi(header), declarations(package)
+    native, records = abi.retained_abi(abi.header_abi(header)), declarations(package)
     with tempfile.TemporaryDirectory(prefix='thinkthen-cobol-abi-') as folder:
         scratch = pathlib.Path(folder)
         output = compiled_storage(header, package.resolve(), records, scratch)
