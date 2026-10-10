@@ -1,6 +1,6 @@
 # 0510: Keep only ranked records at or above a probability cutoff
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -18,6 +18,8 @@ Reviews: revision a087f6dc3, accept
 Reviews: revision ac60aee9d21141d4961ab7ee9027da2fc031ebdf, accept
 
 Reviews: revision 0011f905b3632815c2044050839f4a8c4be5c85d, accept
+
+Landed: 1cc8564
 
 ## Outcome
 
