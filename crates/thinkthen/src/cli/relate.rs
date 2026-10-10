@@ -161,6 +161,17 @@ fn records<'a>(
         .iter()
         .enumerate()
         .map(move |(ordinal, original)| {
+            if sources.is_none()
+                && let Some(text) = original.text()
+            {
+                return Ok(crate::RecordInput {
+                    original: crate::QuestionInput::Text(text.to_owned()),
+                    context: None,
+                    options: None,
+                    examples: None,
+                    seed_spans: None,
+                });
+            }
             let mut row =
                 composition.compose(crate::RawRecord(std::sync::Arc::new(original.clone())))?;
             if let Some(sources) = sources {
