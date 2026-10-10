@@ -40,6 +40,50 @@ def request(value, root, home, settings):
         for at,row in enumerate(source['records']):row['options']=[{'name':n} for n in value['candidate_orders'][at]]
     return {'verb':verb,'question':q,'input':source,'settings':settings,'cancel':operation.get('injection')=='cancel_token', 'deadline_ms':0 if operation.get('injection')=='expired_deadline' else None, 'shared_context':value.get('shared_context'), 'held_cancel':bool(value.get('held_cancel')), 'incremental':bool(value.get('incremental')), 'batch_probe':bool(value.get('batch_probe'))}
 
+def native_request(document):
+    """Translate the existing caller fixture into canonical Request selectors."""
+    q=document['question']
+    selector=next(({'kind':kind,key:q[key]} for key,kind in
+        [('path','file'),('name','name'),('reference','reference')] if key in q),None)
+    if selector is None:
+        selector={'kind':'definition','value':json.loads(q['raw']) if 'raw' in q else q['body']}
+    source=document['input']
+    if source['kind']=='files':
+        if source.get('jsonl'):raise ValueError('native source JSONL requires its owning feed consumer')
+        source={'kind':'source','source':{'paths':source['paths'],**source['options']}}
+    else:
+        items=[]
+        for record in source['records']:
+            content=record['content'];item={}
+            if content['kind']!='images':
+                item['original']={'kind':content['kind'],
+                    'text' if content['kind']=='text' else 'value':content['value']}
+            for key in ('context','options'):
+                if key in record:
+                    item[key]=record[key]['value'] if key=='context' else record[key]
+            item['images']=[{'kind':'bytes','media':image['media'],
+                'bytes':base64.b64encode(bytes(image['bytes'])).decode()} for image in record['images']]
+            items.append(item)
+        source={'kind':'records','items':items}
+    options={'attempts':True}
+    if q.get('none'):options['none']=True
+    if document.get('shared_context') is not None:options['context']=document['shared_context']
+    if document.get('deadline_ms') is not None:options['deadline_ms']=document['deadline_ms']
+    return {**document,'question':selector,'input':source,'options':options}
+
+
+def native_inputs(result, verb):
+    """Read admitted originals and locations from actual complete documents."""
+    if verb=='find':
+        return [{'original':candidate['input'],'location':candidate.get('source',{}),'images':[]}
+                for candidate in result['candidates'] if candidate['index'] is not None]
+    if verb=='relate':
+        sources={entry['index']:entry['source'] for entry in result.get('input_sources',[])}
+        return [{'original':original,'location':sources.get(index,{}),'images':[]}
+                for index,original in enumerate(result['input'])]
+    return [{'original':result.get('input'),'location':result.get('source',{}),
+             'images':result.get('images',[])}]
+
 def project(packet,verb):
     if 'error' in packet:
         e=packet['error'];out={'code':ERRORS[e['kind']],'message':e['message']}
@@ -54,17 +98,17 @@ def project(packet,verb):
     results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
     for at,r in enumerate(results):
         meta=r['meta'];v=r['value'];answer=r.get('answer',{})
-        row={'value':v,'index':packet['ordinals'][at],'answer_id':r['answer_id'], 'origin':{'live':1,'cache':2,'replay':3,None:None}[meta['origin']], 'answered_by':meta.get('answered_by'), 'observations':len(meta['observations']),'sources':len(meta['question_sources']), 'observation_ids':[o.get('observation_id',o.get('failure_id')) for o in meta['observations']], 'input':r.get('input'), 'question_digest':meta.get('question_sha256'), 'cache_keys':meta['requests']}
+        row={'value':v,'index':r.get('index') if packet.get('native') else packet['ordinals'][at],'answer_id':r['answer_id'], 'origin':{'live':1,'cache':2,'replay':3,None:None}[meta['origin']], 'answered_by':meta.get('answered_by'), 'observations':len(meta['observations']),'sources':len(meta['question_sources']), 'observation_ids':[o.get('observation_id',o.get('failure_id')) for o in meta['observations']], 'input':r.get('input'), 'question_digest':meta.get('question_sha256'), 'cache_keys':meta['requests']}
         if verb=='decide' and isinstance(v,bool):row['value']=r['question'].get('true' if v else 'false',v)
         row.update(r.get('source',{}))
-        if row['index'] is not None:row.update(packet['inputs'][row['index']].get('location',{}))
+        if not packet.get('native') and row['index'] is not None:row.update(packet['inputs'][row['index']].get('location',{}))
         if 'probability' in answer:row['probability']=answer['probability']
         if 'probabilities' in answer:row['probabilities']=answer['probabilities']
         for key in ['file','first_line','last_line']: 
             if key in r:row[key]=r[key]
         row.update({k:r.get('question',{}).get(k) for k in ['name','wording_version'] if k in r.get('question',{})})
         row['member_authors']=[{k:a['question'][k] for k in ['name','wording_version'] if k in a['question']} for a in r.get('answers',{}).values()]
-        inputs=packet['inputs'] if verb in ('find','relate') else [packet['inputs'][row['index']]]
+        inputs=native_inputs(r,verb) if packet.get('native') else packet['inputs'] if verb in ('find','relate') else [packet['inputs'][row['index']]]
         row['detail_inputs']=[{'input':i['original'],**i.get('location',{})} for i in inputs]
         images=[im for i in inputs for im in i['images']]
         if images:
@@ -88,7 +132,13 @@ def project(packet,verb):
 
 def assert_required(packet,row,value,bodies,root):
     """Compare required known fields and independent selected-content expectations."""
-    if 'error' in packet:return
+    if 'error' in packet:
+        if 'prefix_indexes' in value['expect']:
+            completed=project(packet,value['verb'])
+            assert [r['index'] for r in completed['completed']]==value['expect']['prefix_indexes'],completed
+            assert completed['records']==len(completed['completed']),completed
+            assert all(len(r['answer_id'])==64 and r['observations']==r['sources']>0 for r in completed['completed']),completed
+        return
     results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
     expect=value['expect']
     for result in results:
@@ -108,7 +158,14 @@ def assert_required(packet,row,value,bodies,root):
             if 'ordered_properties' in expect:assert list(question['item_schema']['properties'])==expect['ordered_properties']
             if 'required_properties' in expect:assert question['item_schema']['required']==expect['required_properties']
         # Complete records retain caller originals; selected evidence is pinned below.
-        if 'selected_item' in expect:assert result['input']==packet['inputs'][0]['original'],(result,packet)
+        if 'selected_item' in expect:
+            original=value['items'][result['index']] if packet.get('native') else packet['inputs'][0]['original']
+            assert result['input']==original,(result,original)
+    if packet.get('native') and value['verb']=='find':
+        for result in results:
+            originals=native_inputs(result,'find')
+            assert [item['original'] for item in originals]==value['items'],(originals,value['items'])
+            if 'index' in expect:assert result['index']==expect['index'],result
     if 'capture_request' in expect:
         assert [json.loads(body) for body in bodies]==[expect['capture_request']],(bodies,expect)
     if 'per_item_context' in expect:
@@ -121,7 +178,15 @@ def assert_required(packet,row,value,bodies,root):
         # Native quoted instructions preserve the selected value, including false/null/Unicode.
         assert bodies and any(selected in q['instructions'] or json.loads(body)['state']==expect['selected_item'] for body in bodies for q in json.loads(body)['questions'].values()),(bodies,selected)
     if row['kind']=='located':
-        for original in packet['inputs']:
+        if packet.get('native') and value['verb']=='relate':
+            paths=[file for path in value['paths']
+                for file in (sorted((root/path).rglob('*')) if (root/path).is_dir() else [root/path])
+                if file.is_file()]
+            for result in results:
+                assert result['input']==[path.read_text() for path in paths],result
+                assert [entry['index'] for entry in result['input_sources']]==list(range(len(paths))),result
+                assert [entry['source']['file'] for entry in result['input_sources']]==[str(path) for path in paths],result
+        for original in ([item for result in results for item in native_inputs(result,value['verb'])] if packet.get('native') else packet['inputs']):
             location=original['location'];path=Path(location['file'])
             assert original['original']==path.read_text()
             assert location['first_line']==1 and location['last_line']==len(path.read_text().splitlines())
@@ -178,6 +243,20 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                     if row['id'] in batch_cases:
                         steps=[*steps,{**value,'incremental':True,'batch_probe':True,'count_delta':True},
                             {**value,'items':value['items'][:1],'incremental':True,'held_cancel':True,'arm':'arm/held/v1','override_arm':'arm/held/v1','settings':{**value.get('settings',{}),'timeout':1},'count_delta':True,'expect':{'error':'cancelled','requests_sent':1}}]
+                    if consumer=='r' and row['id']=='01-decide-yes-captured':
+                        bad=home/'invalid-utf8.txt';bad.write_bytes(b'\xff')
+                        for incremental in (False,True):
+                            steps.append({**value,'paths':[str(root/'specification/fixtures/files/documents/01-policy.txt'),
+                                str(root/'specification/fixtures/files/documents/02-contract.txt'),str(bad)],
+                                'source_unit':3,'incremental':incremental,'count_delta':True,'override_arm':'arm/full/capture/v1',
+                                'expect':{'error':'usage','requests_sent':2,'prefix_indexes':[0,1]}})
+                    if consumer=='r' and row['id']=='19-find-none':
+                        steps.append({**value,'items':[None,'other'],'text':False,'count_delta':True,
+                            'override_arm':'arm/full/capture/v1','expect':{'value':None,'index':0,'requests_sent':1}})
+                    if consumer=='r' and row['id']=='files-relate':
+                        for count in (1,2):
+                            steps.append({**value,'paths':['specification/fixtures/files/documents/01-policy.txt']*count,
+                                'zero_observations':True,'count_delta':True,'expect':{}})
                     if row['id']=='06-choose-billing':
                         steps.append({**value,'question':{k:v for k,v in value['question'].items() if k!='options'},
                             'record_options':dict.fromkeys(value['question']['options']),
@@ -206,6 +285,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                         def invoke(given):
                             invocation_count=int(backend.read('count'))
                             framed=request(step,root,home,given)
+                            if consumer=='r':framed=native_request(framed)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
                             if framed['batch_probe'] or (consumer=='r' and framed['held_cancel']):
                                 child=subprocess.Popen(command,cwd=home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
