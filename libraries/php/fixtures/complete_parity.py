@@ -27,7 +27,7 @@ def main():
     dart=os.environ.get('TT_DART',str(Path.home()/'.local/opt/flutter/bin/dart'))
     flutter=os.environ.get('TT_FLUTTER',str(Path.home()/'.local/opt/flutter/bin/flutter'))
     package = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / ('libraries/php' if consumer == 'php' else 'libraries/dart'))).resolve(strict=True)
-    dart_consumer = Path(os.environ.get('THINKTHEN_DART_CONSUMER', ROOT / 'libraries/dart/checks/consumers/alpha')).resolve(strict=True)
+    dart_consumer = Path(os.environ.get('THINKTHEN_DART_CONSUMER', ROOT / 'libraries/dart/checks/session_consumer')).resolve(strict=True) if consumer != 'php' else None
     dart_binary = Path(os.environ.get('THINKTHEN_DART_BINARY', ROOT / 'libraries/dart/checks/scratch/complete-native'))
     flutter_consumer = Path(os.environ.get('THINKTHEN_FLUTTER_CONSUMER', ROOT / 'libraries/dart/flutter/example'))
     if os.environ.get('THINKTHEN_ARTIFACT'):

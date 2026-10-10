@@ -14,6 +14,17 @@ fi
 for tool in go gofmt python3 cargo cc nm node git flock; do
     command -v "$tool" >/dev/null 2>&1 || { echo "go: not run: no $tool" >&2; exit 77; }
 done
+# The go.mod floor is the package authority; refuse unsupported toolchains before building.
+minimum=$(awk '$1 == "go" { print $2; exit }' go.mod)
+installed=$(go version | sed -n 's/^go version go\([0-9][0-9.]*\).*/\1/p')
+python3 - "$minimum" "$installed" <<'PYVERSION'
+import sys
+minimum, installed = sys.argv[1:]
+def parts(value):
+    return tuple(map(int, value.split('.')))
+if not installed or parts(installed)[:2] < parts(minimum)[:2]:
+    raise SystemExit('Go ' + minimum + ' or newer is required')
+PYVERSION
 lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     export THINKTHEN_HEAVY_LOCK_HELD="$lock"
