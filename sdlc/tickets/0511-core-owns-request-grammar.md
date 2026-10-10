@@ -153,3 +153,4 @@ The remaining retirement list is exact: R `src/rust/src/ffi/complete.rs` and `fi
 - 2026-10-10 landed 26e11eca8; next: SQLite inline and JSON relation definitions now share native rule validation. Focused callers and fresh review preserve exact refusals and zero sends; compatibility retirement and boundary enforcement remain.
 - 2026-10-10 landed f27b497d7; next: The CLI find reader derives its maximum from core with identical boundary, diagnostic and unread-suffix behavior. Remaining compatibility and cross-crate grammar retirement follow adopted callers and installed qualification.
 - 2026-10-10 started
+- 2026-10-10 landed b57f7fde8; next: Shared host grammar uses normal dependencies and passes compilation, installed checks and fresh review; retire the named R, Python, Ruby, TypeScript and Rust/Polars legacy callers before closure.
