@@ -252,11 +252,14 @@ class RefusalTable(unittest.TestCase):
         self.refusal('R-universe lists thinkthen 0.1.2 only as source; a Linux binary is required', check_index, 'R-universe', '0.1.2', '0.1.2', False)
 
     def test_clean_environment(self):
-        with tempfile.TemporaryDirectory() as own, patch.dict('os.environ', {'THINKTHEN_API_KEY': 'fixture', 'OPENAI_API_KEY': 'fixture', 'THINKTHEN_CACHE': '/unowned', 'THINKTHEN_CONFIG': '/unowned'}):
+        with tempfile.TemporaryDirectory() as own, patch.dict('os.environ', {'THINKTHEN_API_KEY': 'fixture', 'OPENAI_API_KEY': 'fixture', 'THINKTHEN_CACHE': '/unowned', 'THINKTHEN_CONFIG': '/unowned',
+                                                                           'PROCESSOR_ARCHITECTURE': 'x86', 'PROCESSOR_ARCHITEW6432': 'AMD64'}):
             env = clean_environment(Path(own))
             self.assertFalse(any(key.endswith('KEY') or key.startswith('THINKTHEN_') for key in env))
             self.assertEqual(env['HOME'], own)
             self.assertEqual(env['HOMEBREW_NO_AUTO_UPDATE'], '1')
+            self.assertEqual(env['PROCESSOR_ARCHITECTURE'], 'x86')
+            self.assertEqual(env['PROCESSOR_ARCHITEW6432'], 'AMD64')
 
     def test_homebrew_history_and_routing(self):
         current = 'class Thinkthen < Formula\n  version "0.2.0"\nend\n'

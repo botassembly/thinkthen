@@ -59,7 +59,8 @@ def check_index(channel, version, listed, binary=True):
 
 
 def clean_environment(home):
-    env = child_env(keep=("JAVA_HOME", "INCLUDE", "LIB", "LIBPATH", "COMSPEC", "PATHEXT"),
+    env = child_env(keep=("JAVA_HOME", "INCLUDE", "LIB", "LIBPATH", "COMSPEC", "PATHEXT",
+                          "PROCESSOR_ARCHITECTURE", "PROCESSOR_ARCHITEW6432"),
                     home=str(home), USERPROFILE=str(home),
                     PATH=os.environ.get("PATH", "/usr/bin:/bin"),
                     LANG="en_US.UTF-8",
