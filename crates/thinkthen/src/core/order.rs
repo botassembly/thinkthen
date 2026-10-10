@@ -65,13 +65,6 @@ mod tests {
     use proptest::{prop_assert, prop_assert_eq, proptest};
 
     #[test]
-    fn the_highest_probability_comes_first_and_an_exact_tie_keeps_input_order() {
-        assert_eq!(ranking(&[0.1, 0.9, 0.5], None), [1, 2, 0]);
-        assert_eq!(ranking(&[0.4, 0.4, 0.4], None), [0, 1, 2]);
-        assert_eq!(ranking(&[0.4, 0.9, 0.4, 0.9], None), [1, 3, 0, 2]);
-    }
-
-    #[test]
     fn top_takes_the_first_places_of_the_order_and_never_more_than_there_are() {
         let odds = [0.1, 0.9, 0.5];
         assert_eq!(ranking(&odds, Some(1)), [1]);

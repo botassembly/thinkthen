@@ -57,3 +57,14 @@ Fresh review accepted `5df81fd366c77332f10891e3f443caf212a30a72` and its one-lin
 ## What the build taught us
 
 Extracted test helpers use ordinary error propagation. Returning setup errors to the runner preserves the outside-in check without a lint exemption or another test.
+
+The bounded source-test removal starts at `3f820a351008abad387bc6e55f61ca2c2128972d`. Three existing CLI behavior tests own the claims below, so their source assertions add no independent contract:
+
+- `core::threshold::tests::an_outcome_carries_the_bare_value_it_prints`: `backend` test `exchange::every_answer_prints_its_bare_value_and_earns_its_own_exit_code` asserts exact `true\n`, `false\n` and `null\n` outputs and their exit codes through the compiled command.
+- `core::order::tests::the_highest_probability_comes_first_and_an_exact_tie_keeps_input_order`: `keeping::rank_prints_every_record_with_the_most_likely_yes_first` asserts descending probability order through the compiled command; `keeping::an_exact_tie_keeps_input_order_and_top_prints_the_first_places` asserts stable ties with the same alternating probabilities `[0.4, 0.9, 0.4, 0.9]`. Equal probabilities retain input order in both tied groups.
+
+The threshold parser negatives, default equality, worked boundary table, serialization and numeric or round-trip properties retain distinct checks. The order top-limit and empty-input table and both order properties remain. No production statement changes. Counting nonblank Rust source with the existing ratchet reduces the measured ceiling from 185166 to 185154; counting literal `#[test]` declarations in tracked `crates/*/src/**/*.rs` files reduces the total from 521 to 519. No new test, checker or record file is needed.
+
+A test name does not establish duplicate coverage. The default-threshold permutation case explicitly passes `0.5`, so it does not prove omitted-threshold behavior. Comparing its setup and assertions prevents deleting the separate default-equality contract. Stable ties and descending order have direct CLI owners; parser error causes and randomized numeric properties do not become redundant merely because a CLI example exercises the same module.
+
+Offline policy, formatting, the exact source ratchet, strict library and backend Clippy, and diff whitespace checks pass for this diff. The three named CLI owners pass under the default nextest profile with two build jobs inside an eight-GiB memory and one-GiB swap scope. The final check log is `target/0484-covered-source-tests/final-checks.log`. Policy's file-size warnings concern unchanged files. An earlier scratch invocation passed the bare-value owner but ended with a shell parse error after its script was edited during execution; the stable final script selected and passed all three owners. No routine full suite, release, load or parity check belongs to this bounded deletion.
