@@ -104,15 +104,12 @@ pub(super) fn run(
     let records = records(&configuration, reading, source)?;
     if configuration.common.dry_run {
         let context = configuration.context.as_ref().map(super::Context::evidence);
-        let inputs = if !reading.streams() {
-            Some(1)
+        let setting = if !reading.streams() {
+            Some(Setting::Records(std::num::NonZeroUsize::MIN))
         } else {
-            setting.and_then(|setting| match setting {
-                Setting::Records(most) => Some(most.get()),
-                Setting::Max => None,
-            })
+            setting
         };
-        return super::plan::packed(&configuration, reading, records, context, inputs, output);
+        return super::plan::packed(&configuration, reading, records, context, setting, output);
     }
     let admitted = configuration.admitted.take().ok_or(Failure::Defect(
         "judgment execution has no admitted request",

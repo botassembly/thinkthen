@@ -5,7 +5,9 @@ use std::process::ExitCode;
 
 use super::JudgingInput;
 use super::judged::Records;
-use crate::core::{Backend, Evidence, PlanDocument, PlanSummary, Reading, Sources, json_line};
+use crate::core::{
+    Backend, Evidence, PlanDocument, PlanSummary, Reading, Setting, Sources, json_line,
+};
 use crate::edge;
 use crate::failure::Failure;
 use crate::profile::Mismatch;
@@ -33,7 +35,7 @@ pub(super) fn packed(
     reading: &Reading,
     records: Records,
     context: Option<Evidence>,
-    inputs: Option<usize>,
+    setting: Option<Setting>,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let backend = &configuration.backend;
@@ -69,11 +71,11 @@ pub(super) fn packed(
     if let Some(shared) = &shared {
         controls = controls.context(shared);
     }
-    if let Some(inputs) = inputs {
-        controls = controls.batch(crate::BatchSetting::Records(
-            std::num::NonZeroUsize::new(inputs)
-                .ok_or(Failure::Defect("a plan has no input capacity"))?,
-        ));
+    if let Some(setting) = setting {
+        controls = controls.batch(match setting {
+            Setting::Max => crate::BatchSetting::Max,
+            Setting::Records(count) => crate::BatchSetting::Records(count),
+        });
     }
     let mut feed = crate::RequestFeed::from_records("cli-plan", rows);
     if configuration.common.images() {
