@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "distribution": "development-only",
+  "assets": {
+    "linux_x64": {
+      "target": "x86_64-unknown-linux-gnu",
+      "file": "libthinkthen.so",
+      "sha256": "781ab99bf0c8690549fe5bbf4d1051ade9637f86ca2d7dcecf26cc9841b202b0",
+      "url": null
+    }
+  }
+}

@@ -19,8 +19,10 @@ final class NativeFailure implements Exception {
 final class NativeOwner implements Finalizable {
   final NativeFinalizer _finalizer;
   Pointer<Void> pointer;
-  NativeOwner(DynamicLibrary library, String freeSymbol, this.pointer)
-      : _finalizer = NativeFinalizer(library.lookup(freeSymbol)) {
+  NativeOwner(
+    Pointer<NativeFunction<Void Function(Pointer<Void>)>> free,
+    this.pointer,
+  ) : _finalizer = NativeFinalizer(free) {
     _finalizer.attach(this, pointer, detach: this);
   }
   void close() {
@@ -55,5 +57,9 @@ String nativeText(Pointer<Uint8> pointer) =>
 void checkSession(NativeAbi abi, int code) {
   if (code != 0)
     throw NativeFailure(
-        code, false, nativeText(abi.thinkthen_session_error_message()), null);
+      code,
+      false,
+      nativeText(abi.thinkthen_session_error_message()),
+      null,
+    );
 }

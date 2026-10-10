@@ -7,10 +7,13 @@ import subprocess
 import sys
 from urllib.parse import unquote, urlparse
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'checks'))
+from native_assets import configure, package_members
+
 dart_root, flutter_stage, native_root = (Path(arg).resolve() for arg in sys.argv[1:])
 flutter_root = flutter_stage / "flutter"
 expected = {
-    "README.md", "pubspec.yaml", "pubspec.lock", "lib/thinkthen_flutter.dart", "lib/thinkthen_complete_flutter.dart",
+    "README.md", "pubspec.yaml",
     "example/.metadata", "example/README.md", "example/pubspec.yaml",
     "example/pubspec.lock", "example/analysis_options.yaml", "example/lib/main.dart",
     "example/linux/CMakeLists.txt", "example/linux/flutter/CMakeLists.txt",
@@ -20,6 +23,7 @@ expected = {
     "example/linux/runner/CMakeLists.txt", "example/linux/runner/main.cc",
     "example/linux/runner/my_application.cc", "example/linux/runner/my_application.h",
 }
+expected |= package_members(Path(__file__).resolve().parent)
 members = {str(path.relative_to(flutter_root)) for path in flutter_root.rglob("*") if path.is_file()}
 assert members == expected and not any(path.is_symlink() for path in flutter_stage.rglob("*")), ("FLUTTER_ARCHIVE_MEMBERS", members)
 flutter_manifest = flutter_stage / "THINKTHEN-PACKAGE-INPUTS"
@@ -30,7 +34,7 @@ assert {str(path.relative_to(flutter_stage)) for path in flutter_stage.rglob("*"
 }, "FLUTTER_ARCHIVE_ROOT"
 wrapper_spec = (flutter_root / "pubspec.yaml").read_text()
 example_spec = (flutter_root / "example/pubspec.yaml").read_text()
-assert "name: thinkthen_flutter\n" in wrapper_spec and "publish_to: none\n" in wrapper_spec and "path: ..\n" in wrapper_spec, "FLUTTER_PRIVATE_WRAPPER"
+assert "name: thinkthen_flutter\n" in wrapper_spec and "publish_to: none\n" in wrapper_spec and "thinkthen_dart: 0.2.0\n" in wrapper_spec, "FLUTTER_PRIVATE_WRAPPER"
 assert "name: thinkthen_flutter_example\n" in example_spec and "publish_to: none\n" in example_spec and "path: ..\n" in example_spec and "path: ../..\n" in example_spec, "FLUTTER_PRIVATE_EXAMPLE"
 assert "name: thinkthen_dart\n" in (dart_root / "pubspec.yaml").read_text(), "FLUTTER_DART_IDENTITY"
 dart_manifest_bytes = dart_manifest.read_bytes()
@@ -45,6 +49,7 @@ env.update(HOME=str(work / "home"), XDG_CACHE_HOME=str(work / "cache"),
            XDG_CONFIG_HOME=str(work / "config"),
            TT_FLUTTER_SOURCE=str(dart_root / "flutter"), TT_EMBEDDER_LOGS=str(work / "logs"),
            TT_NATIVE_LIBRARY=str(native_root / "lib/libthinkthen.so"))
+configure(dart_root, native_root / "lib/libthinkthen.so", [dart_root / "flutter", dart_root / "flutter/example"])
 flutter = env["TT_FLUTTER"]
 for project in (dart_root / "flutter", dart_root / "flutter/example"):
     result = subprocess.run([flutter, "pub", "get", "--offline"], cwd=project, env=env,

@@ -6,6 +6,12 @@ FLUTTER="$ROOT/flutter"
 # The pinned Flutter holds the same Dart 3.13.4; the surfaces rung's allow-list drops TT_DART and TT_FLUTTER.
 TT_DART=${TT_DART:-$(command -v dart || echo "$HOME/.local/opt/flutter/bin/dart")}
 TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || echo "$HOME/.local/opt/flutter/bin/flutter")}
+# Explicit development packaging check; it never builds the Rust engine.
+if [ "${1:-}" = --native-assets ]; then
+  shift
+  [ "$#" -eq 3 ] || { echo 'usage: check.sh --native-assets NATIVE_LIBRARY SCRATCH PUB_CACHE' >&2; exit 2; }
+  exec python3 "$CHECKS/installed_native_assets.py" "$TT_DART" "$TT_FLUTTER" "$1" "$2" "$3"
+fi
 # Run one command under the named lock. A caller that already holds it, such as the surfaces
 # rung, exports THINKTHEN_HEAVY_LOCK_HELD; waiting on it again would only time out.
 locked() {
@@ -36,6 +42,7 @@ case ${THINKTHEN_ARTIFACT:-} in
     export TT_DART TT_FLUTTER PUB_CACHE=${PUB_CACHE:-"$HOME/.pub-cache"} FLUTTER_SUPPRESS_ANALYTICS=true
     [ -d "$PUB_CACHE/hosted/pub.dev/ffi-2.2.0" ] || { echo 'Flutter installed: offline ffi 2.2.0 cache missing' >&2; exit 77; }
     export PATH="$(dirname "$TT_DART"):$(dirname "$TT_FLUTTER"):$PATH"
+    python3 "$CHECKS/native_assets.py" configure "$scratch/dart" "$scratch/native/lib/libthinkthen.so" "$scratch/dart"
     "$TT_DART" pub get --offline --enforce-lockfile --directory "$scratch/dart"
     python3 "$CHECKS/exports.py" "$scratch/native/lib/libthinkthen.so" "$scratch/native/include/thinkthen.h" "$scratch/exports.txt" "$scratch/dart"
     locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" \
@@ -64,17 +71,18 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   [ -d "$PUB_CACHE/hosted/pub.dev/ffi-2.2.0" ] || { echo 'Dart installed: offline ffi 2.2.0 cache missing' >&2; exit 77; }
   scratch_dir locked_package
   tar -xzf "$THINKTHEN_ARTIFACT" -C "$locked_package"
+  python3 "$CHECKS/native_assets.py" configure "$locked_package" "$native/lib/libthinkthen.so" "$locked_package"
   "$TT_DART" pub get --offline --enforce-lockfile --directory "$locked_package"
   python3 "$CHECKS/exports.py" "$native/lib/libthinkthen.so" "$native/include/thinkthen.h" "$native/exports.txt" "$locked_package"
   cmp "$package/pubspec.lock" "$locked_package/pubspec.lock" || { echo 'Dart installed: archived lock changed' >&2; exit 1; }
   locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
     env CARGO_TARGET_DIR="$ROOT/../../target" CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$ROOT/../../Cargo.toml" --package conformance-backend -j2
+  python3 "$CHECKS/release_plants.py" "$package" "$native"
   TT_DART="$TT_DART" TT_NATIVE_LIBRARY="$native/lib/libthinkthen.so" \
     THINKTHEN_RELEASE_DART_DIR="$package" THINKTHEN_RELEASE_C_DIR="$native" \
     THINKTHEN_BACKEND_BIN="$ROOT/../../target/debug/conformance-backend" \
     python3 "$CHECKS/portable_batch.py"
-  python3 "$CHECKS/release_plants.py" "$package" "$native"
   export TT_DART
   python3 "$CHECKS/installed_complete.py" "$package" "$native" dart
   echo 'Dart installed release PASS: legacy and complete typed rows, two requests per route, zero-send cancellation and usage'
@@ -90,6 +98,8 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   . "$ROOT/../../sdlc/scripts/installed.sh"
   scratch_dir smoke
   native_install "$(cd "$ROOT/../.." && pwd)" "$smoke/native"
+  ROOT=$(python3 "$CHECKS/native_assets.py" development "$ROOT" "$smoke/native/lib/libthinkthen.so" "$smoke/development")
+  CHECKS="$ROOT/checks"
   "$TT_DART" pub get --offline --directory "$ROOT" >&2
   export TT_DART
   python3 "$CHECKS/exports.py" "$smoke/native/lib/libthinkthen.so" "$smoke/native/include/thinkthen.h" "$smoke/exports.txt" "$ROOT"
@@ -97,6 +107,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   cp "$CHECKS/consumers/smoke.dart" "$smoke/app/bin/smoke.dart"
   printf '%s\n' 'name: thinkthen_smoke' 'publish_to: none' 'environment:' '  sdk: ">=3.3.0 <4.0.0"' 'dependencies:' \
     '  thinkthen_dart:' "    path: $ROOT" >"$smoke/app/pubspec.yaml"
+  python3 "$CHECKS/native_assets.py" configure "$ROOT" "$smoke/native/lib/libthinkthen.so" "$smoke/app"
   "$TT_DART" pub get --offline --directory "$smoke/app" >&2
   (cd "$smoke/app" && "$TT_DART" run bin/smoke.dart "$smoke/native/lib/libthinkthen.so")
   exit
@@ -123,11 +134,16 @@ export PATH="$(dirname "$TT_DART"):$(dirname "$TT_FLUTTER"):$PATH"
 LOCK=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}
 locked "$LOCK" cargo build --offline --release -j2 --manifest-path "$ROOT/../c/Cargo.toml"
 cp "$CARGO_TARGET_DIR/release/libthinkthen_c.so" "$TT_NATIVE_LIBRARY"
+scratch_dir development
+ROOT=$(python3 "$CHECKS/native_assets.py" development "$ROOT" "$TT_NATIVE_LIBRARY" "$development/tree")
+CHECKS="$ROOT/checks"
+FLUTTER="$ROOT/flutter"
 "$TT_DART" pub get --offline --directory "$ROOT"
 python3 "$CHECKS/exports.py" "$TT_NATIVE_LIBRARY" "$ROOT/../c/include/thinkthen.h" "$CHECKS/logs/exports.txt"
 "$TT_DART" format --output=none --set-exit-if-changed "$ROOT/lib" "$CHECKS/consumers"
 "$TT_DART" analyze "$ROOT/lib"
-"$TT_DART" run "$CHECKS/consumers/alpha/bin/complete_carriers.dart" "$ROOT/../php/fixtures/complete.json"
+"$TT_DART" pub get --offline --directory "$CHECKS/consumers/alpha"
+(cd "$CHECKS/consumers/alpha" && "$TT_DART" run bin/complete_carriers.dart "$ROOT/../php/fixtures/complete.json")
 for consumer in alpha bravo; do
   "$TT_DART" pub get --offline --directory "$CHECKS/consumers/$consumer"
   "$TT_DART" analyze "$CHECKS/consumers/$consumer/bin"
@@ -150,7 +166,10 @@ python3 "$FLUTTER/plant-check.py"
 python3 "$FLUTTER/embedder.py"
 
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ]; then
-  "$TT_DART" compile exe "$CHECKS/consumers/alpha/bin/complete_native.dart" -o "$CHECKS/scratch/complete-native"
+  (cd "$CHECKS/consumers/alpha" && "$TT_DART" build cli -t bin/complete_native.dart -o "$CHECKS/scratch/complete-build")
+  export THINKTHEN_PARITY_PACKAGE="$ROOT" THINKTHEN_DART_CONSUMER="$CHECKS/consumers/alpha"
+  export THINKTHEN_DART_BINARY="$CHECKS/scratch/complete-build/bundle/bin/complete_native"
+  export THINKTHEN_FLUTTER_CONSUMER="$FLUTTER/example"
   THINKTHEN_COMPLETE_LIBRARY="$TT_NATIVE_LIBRARY" python3 "$ROOT/../php/fixtures/complete_parity.py" dart
   THINKTHEN_COMPLETE_LIBRARY="$TT_NATIVE_LIBRARY" python3 "$ROOT/../php/fixtures/complete_parity.py" flutter
 fi

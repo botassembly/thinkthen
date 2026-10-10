@@ -291,13 +291,10 @@ php)
 		cp libraries/php/src/native/abi.h libraries/php/src/native/*.php "$folder/src/native/"
 		;;
 dart)
-		mkdir -p "$folder/lib/src/native"
+		mkdir -p "$folder"
 		cp libraries/dart/CHANGELOG.md libraries/dart/LICENSE libraries/dart/README.md \
-			libraries/dart/pubspec.yaml libraries/dart/pubspec.lock "$folder/"
-		cp libraries/dart/lib/thinkthen_dart.dart libraries/dart/lib/thinkthen_complete.dart "$folder/lib/"
-		cp libraries/dart/lib/src/allocator.dart libraries/dart/lib/src/door.dart \
-			libraries/dart/lib/src/typed.dart "$folder/lib/src/"
-		cp libraries/dart/lib/src/native/*.dart "$folder/lib/src/native/"
+			libraries/dart/pubspec.yaml libraries/dart/pubspec.lock libraries/dart/native-assets.json "$folder/"
+		cp -R libraries/dart/lib libraries/dart/hook "$folder/"
 		;;
 flutter)
 		[ "$dart_built" = 1 ] || { echo 'release-pack: flutter needs dart built earlier in this invocation' >&2; exit 1; }
@@ -306,10 +303,9 @@ flutter)
 		dart_digest=$(sha256 "$OUT/$dart_name" | awk '{print $1}')
 		mkdir -p "$folder/flutter/lib" "$folder/flutter/example/lib" \
 			"$folder/flutter/example/linux/flutter" "$folder/flutter/example/linux/runner"
-		cp libraries/dart/flutter/README.md libraries/dart/flutter/pubspec.yaml \
-			libraries/dart/flutter/pubspec.lock "$folder/flutter/"
-		cp libraries/dart/flutter/lib/thinkthen_flutter.dart \
-			libraries/dart/flutter/lib/thinkthen_complete_flutter.dart "$folder/flutter/lib/"
+		cp libraries/dart/flutter/README.md libraries/dart/flutter/pubspec.yaml "$folder/flutter/"
+		cp -R libraries/dart/flutter/lib/. "$folder/flutter/lib/"
+		cp -R libraries/dart/flutter/linux "$folder/flutter/"
 		cp libraries/dart/flutter/example/.metadata libraries/dart/flutter/example/README.md \
 			libraries/dart/flutter/example/pubspec.yaml libraries/dart/flutter/example/pubspec.lock \
 			libraries/dart/flutter/example/analysis_options.yaml "$folder/flutter/example/"

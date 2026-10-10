@@ -829,15 +829,18 @@ def dart_manifest_failures(source: str | None, flutter_source: str | None,
     expected = {
         "name": "thinkthen_dart", "version": VERSION,
         "repository": "https://github.com/botassembly/thinkthen",
-        "environment": {"sdk": ">=3.3.0 <4.0.0"},
-        "dependencies": {"ffi": "^2.1.4"},
+        "environment": {"sdk": ">=3.10.0 <4.0.0"},
+        "dependencies": {"ffi": "^2.1.4", "hooks": "^2.0.2",
+                         "code_assets": "^1.2.1", "crypto": "^3.0.7"},
     }
     if any(package.get(key) != value for key, value in expected.items()) or "publish_to" in package:
-        held.append("libraries/dart pubspec names the publishable Dart binding and ffi dependency")
+        held.append("libraries/dart pubspec names the Dart binding and approved native-asset dependencies")
     flutter_expected = {"name": "thinkthen_flutter", "version": VERSION, "publish_to": "none",
-                        "dependencies": {"flutter": {"sdk": "flutter"}, "thinkthen_dart": {"path": ".."}}}
+                        "environment": {"sdk": ">=3.10.0 <4.0.0", "flutter": ">=3.38.0"},
+                        "dependencies": {"flutter": {"sdk": "flutter"}, "thinkthen_dart": VERSION},
+                        "flutter": {"plugin": {"platforms": {"linux": {"ffiPlugin": "true"}}}}}
     if any(flutter.get(key) != value for key, value in flutter_expected.items()):
-        held.append("libraries/dart/flutter stays private and depends on the sibling Dart package")
+        held.append("libraries/dart/flutter stays private and declares the same-version Dart dependency and Linux FFI plugin")
     example_expected = {"name": "thinkthen_flutter_example", "version": VERSION, "publish_to": "none",
                         "dependencies": {"flutter": {"sdk": "flutter"},
                                          "thinkthen_flutter": {"path": ".."},
@@ -978,13 +981,14 @@ def check_bindings() -> None:
             flutter = (REPO / "libraries/dart/flutter/pubspec.yaml").read_text()
             example = (REPO / "libraries/dart/flutter/example/pubspec.yaml").read_text()
             plants = (
-                (source, flutter.replace("path: ..", "path: planted", 1), example),
+                (source, flutter.replace(f"thinkthen_dart: {VERSION}", "thinkthen_dart: planted", 1), example),
+                (source, flutter.replace("ffiPlugin: true", "ffiPlugin: false", 1), example),
                 (source, flutter.replace("publish_to: none", "publish_to: pub.dev", 1), example),
                 (source, flutter, example.replace("path: ../..", "path: planted", 1)),
                 (source, flutter, None),
             )
             if not all(dart_manifest_failures(*plant) for plant in plants):
-                fail("binding", "Dart with a planted Flutter path, publish setting, or missing example is refused")
+                fail("binding", "Dart with a planted Flutter dependency, plugin, publish setting, or missing example is refused")
     if "libraries/r" in crates and (REPO / crates["libraries/r"] / "Cargo.toml").is_file():
         crate = crates["libraries/r"]
         files = binding_files("libraries/r", crate)

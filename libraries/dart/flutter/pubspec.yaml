@@ -3,10 +3,14 @@ version: 0.2.0
 publish_to: none
 description: Flutter-facing package for the separate ThinkThen Dart FFI binding.
 environment:
-  sdk: '>=3.3.0 <4.0.0'
-  flutter: '>=3.24.0'
+  sdk: '>=3.10.0 <4.0.0'
+  flutter: '>=3.38.0'
 dependencies:
   flutter:
     sdk: flutter
-  thinkthen_dart:
-    path: ..
+  thinkthen_dart: 0.2.0
+flutter:
+  plugin:
+    platforms:
+      linux:
+        ffiPlugin: true

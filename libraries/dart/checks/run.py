@@ -32,7 +32,7 @@ env = {
     'HOME': str(home), 'XDG_CONFIG_HOME': str(home), 'XDG_CACHE_HOME': str(home / 'cache'),
     'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1',
     'THINKTHEN_API_KEY': 'tt-canary-300', 'THINKTHEN_CACHE': str(home / 'cache'),
-    'TT_BARRIER_DIR': str(barrier), 'TT_PLANT': plant, 'PUB_CACHE': str(root / 'scratch/pub-cache'),
+    'TT_BARRIER_DIR': str(barrier), 'TT_PLANT': plant, 'PUB_CACHE': os.environ['PUB_CACHE'],
 }
 command = [dart, 'run', str(root / 'consumers' / consumer / 'bin/main.dart'), str(root / 'scratch/libthinkthen.so')]
 if plant == 'owned-facts': command.append('owned-facts')
@@ -40,7 +40,7 @@ receipt = {'command': command, 'pid': None, 'pgid': None, 'exit': None, 'signals
 process = None
 try:
     with (logs / 'consumer.log').open('wb') as output:
-        process = subprocess.Popen(command, cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
+        process = subprocess.Popen(command, cwd=root / 'consumers' / consumer, env=env, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
         receipt['pid'] = receipt['pgid'] = process.pid
         try:
             receipt['exit'] = process.wait(timeout=140)

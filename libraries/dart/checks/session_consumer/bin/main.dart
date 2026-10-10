@@ -50,7 +50,7 @@ Future<void> main(List<String> args) async {
     }));
     await request.response.close();
   });
-  final engine = Engine.open(args.single,
+  final engine = Engine.open(
       settings: InputEngineSettings(
           backend: const Presence.present('typesafe'),
           baseUrl: Presence.present('http://127.0.0.1:${server.port}'),

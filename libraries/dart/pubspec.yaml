@@ -3,6 +3,9 @@ version: 0.2.0
 description: Thin typed Dart FFI bindings for the ThinkThen C interface.
 repository: https://github.com/botassembly/thinkthen
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.10.0 <4.0.0'
 dependencies:
   ffi: ^2.1.4
+  hooks: ^2.0.2
+  code_assets: ^1.2.1
+  crypto: ^3.0.7
