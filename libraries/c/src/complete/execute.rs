@@ -39,24 +39,41 @@ pub(crate) fn ask(
     };
     let options = options.observe(&observer);
     let mut storage = Storage::default();
-    let rows = if let (Native::Relate(q), RELATE) = (&question.native, kind) {
-        let records = source.read()?.enumerate().map(|(at, record)| {
-            engine.check_record_limit(at)?;
-            inputs::compose(record?, kind, question.reading.as_ref())
-        });
-        let call = engine.try_relate_records_complete_with(q, records, options)?;
-        *completed = Some(call.facts().clone());
-        vec![structured::relate(&mut storage, call.value())?]
-    } else {
-        let records = inputs::records(engine, source, kind, question.reading.as_ref())?;
-        execute(
-            engine,
-            kind,
-            question,
-            records,
-            options,
-            (&mut storage, &events, completed),
-        )?
+    let rows = match (&question.native, kind) {
+        (Native::Find(_), FIND) | (Native::Relate(_), RELATE) => {
+            let records = source.read()?.enumerate().map(|(at, record)| {
+                engine.check_record_limit(at)?;
+                inputs::compose(record?, kind, question.reading.as_ref())
+            });
+            match &question.native {
+                Native::Find(q) => {
+                    let call = engine.try_find_records_complete_with(q, records, options)?;
+                    *completed = Some(call.facts().clone());
+                    vec![rows::find(
+                        &mut storage,
+                        call.value(),
+                        &events.lock().unwrap_or_else(PoisonError::into_inner),
+                    )?]
+                }
+                Native::Relate(q) => {
+                    let call = engine.try_relate_records_complete_with(q, records, options)?;
+                    *completed = Some(call.facts().clone());
+                    vec![structured::relate(&mut storage, call.value())?]
+                }
+                _ => return Err(Failure::defect("whole-set route lost its question")),
+            }
+        }
+        _ => {
+            let records = inputs::records(engine, source, kind, question.reading.as_ref())?;
+            execute(
+                engine,
+                kind,
+                question,
+                records,
+                options,
+                (&mut storage, &events, completed),
+            )?
+        }
     };
     let events = events.into_inner().unwrap_or_else(PoisonError::into_inner);
     let facts = completed
@@ -203,15 +220,6 @@ fn execute(
         }
         (Native::DynamicChoose(q), CHOOSE) => {
             collect!(completed; engine.choose_dynamic_records_complete_with(q, records, options), |r| rows::choose(s, r))
-        }
-        (Native::Find(q), FIND) => {
-            let call = engine.find_records_complete_with(q, records, options)?;
-            *completed = Some(call.facts().clone());
-            Ok(vec![rows::find(
-                s,
-                call.value(),
-                &events.lock().unwrap_or_else(PoisonError::into_inner),
-            )?])
         }
         (Native::Set(q), ANNOTATE) => collect!(completed;
             engine.annotate_records_complete_with(q, records, options),
