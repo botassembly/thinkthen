@@ -1435,6 +1435,14 @@ shared_settings_cases() {
 	done <"$RUN/settings.plan"
 }
 check shared_settings_cases
+usage_persistence_status() {
+	for mode in held written; do
+		fresh generic
+		python3 tests/settings_cases.py usage-status "$SOCK" "$SCRATCH/.local/state/thinkthen" "$mode"
+		same "$(bcount)" 1
+	done
+}
+check usage_persistence_status
 calibration_saved_profile() {
 	fresh generic
 	line=$(python3 tests/settings_cases.py calibration "$SOCK")
