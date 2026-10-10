@@ -20,3 +20,24 @@ int TT_SESSION_TEXT(const thinkthen_complete_utf8_v1 *value,char *out,uint64_t *
     *written=value->len;
     return 0;
 }
+static int usage_status(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,
+                        char *advice,uint64_t *written,int finish) {
+    if(!state || !advice || !written) return THINKTHEN_COBOL_REPRESENTATION;
+    thinkthen_complete_usage_persistence_v1 observed;
+    thinkthen_complete_utf8_v1 text;
+    int code=finish ? thinkthen_engine_finish_usage_status_v1(engine,&observed,&text)
+                    : thinkthen_engine_usage_persistence_v1(engine,&observed,&text);
+    if(code) return code;
+    code=TT_SESSION_TEXT(&text,advice,written);
+    if(code) return code;
+    *state=observed;
+    return 0;
+}
+int TT_ENGINE_USAGE_PERSISTENCE(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,
+                              char *advice,uint64_t *written) {
+    return usage_status(engine,state,advice,written,0);
+}
+int TT_ENGINE_FINISH_USAGE_STATUS(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,
+                                char *advice,uint64_t *written) {
+    return usage_status(engine,state,advice,written,1);
+}

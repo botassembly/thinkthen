@@ -319,6 +319,15 @@ package Thinkthen_Session_C is
       probability : aliased double;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_usage_persistence_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_utf8_v1 is record
+      data : Interfaces.C.Strings.chars_ptr;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_optional_string_v1 is record
       present : aliased int;
       value : aliased thinkthen_string_v1;
@@ -1204,11 +1213,6 @@ package Thinkthen_Session_C is
       facts : aliased thinkthen_optional_facts_v1;
       attempts : aliased thinkthen_optional_attempts_v1;
       error : aliased thinkthen_optional_error_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_utf8_v1 is record
-      data : Interfaces.C.Strings.chars_ptr;
-      len : aliased Interfaces.C.size_t;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_extension_v1 is record
@@ -4468,10 +4472,6 @@ package Thinkthen_Session_C is
       value : aliased thinkthen_complete_utf8_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_usage_persistence_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_persistence_observation_v1 is record
       advice : aliased thinkthen_complete_persistence_observation_field_advice_presence_v1;
       observed_at : aliased thinkthen_complete_utf8_v1;
@@ -4893,6 +4893,13 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_decide_with_facts_opts";
+   function thinkthen_engine_finish_usage_status_v1
+     (engine : access constant thinkthen_engine;
+      out_state : access thinkthen_complete_usage_persistence_v1;
+      out_advice : access thinkthen_complete_utf8_v1) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_engine_finish_usage_status_v1";
    procedure thinkthen_engine_free (engine : access thinkthen_engine)
    with Import => True,
         Convention => C,
@@ -4905,6 +4912,13 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_engine_new_with";
+   function thinkthen_engine_usage_persistence_v1
+     (engine : access constant thinkthen_engine;
+      out_state : access thinkthen_complete_usage_persistence_v1;
+      out_advice : access thinkthen_complete_utf8_v1) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_engine_usage_persistence_v1";
    function thinkthen_error_code (engine : access constant thinkthen_engine) return int
    with Import => True,
         Convention => C,
