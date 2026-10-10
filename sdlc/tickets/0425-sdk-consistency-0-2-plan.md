@@ -38,3 +38,7 @@ After the 0508 final review, one reviewed commit passes a hosted release candida
   - After publication. Run 0398's install check on every channel, including R-universe once it syncs. Each channel installs 0.2.0 and replays the first-run sample. On Ruby 3.3 and on macOS's Python 3.9, install fails with the diagnostic message and never installs a 0.0.1 placeholder. The experiments team runs its selective 0035 follow-up against public 0.2 for the affected steps.
 - Proof: The 0425 record names each candidate run, the QA result, the publication run and the install-check run.
 - Defers: An approval notice, reuse of the rehearsal's built files, version-only proof hashing, install-text automation, a switch to silence the spend warning, Maven trusted publishing and an app token for the tap. They are ideas for after 0.2. The transcript-search recipe stays with the later issue `2026-10-05-recipe-search-transcripts.md`.
+
+## Progress
+
+- 2026-10-10 started
