@@ -1,10 +1,9 @@
 //! Reading a text column in place, and building answer columns as rows arrive.
 //!
-//! Each builder takes one row at a time, so a call holds its output columns
-//! and the pipeline's window, never a list of every row (ticket 0304 slice 3c).
+//! Builders project nullable rows from native Request results or pull batches.
 
 use crate::public::{
-    Annotated, AnnotatedRecord, Answer, Batch, Error, Facts, NamedAnnotation, QuestionKind,
+    Annotated, Answer, Batch, CompleteAnnotated, Error, ErrorKind, Facts, Judgment, QuestionKind,
 };
 use polars::prelude::{
     BooleanChunked, BooleanChunkedBuilder, ChunkedBuilder, DataType, Float64Type, IntoSeries,
@@ -137,22 +136,15 @@ impl Answers {
         Ok(())
     }
 
-    /// Add one annotated record's member at `place`, or a null cell's null.
-    pub(crate) fn push_record(
-        &mut self,
-        record: Option<&AnnotatedRecord<&str>>,
-        place: usize,
-    ) -> Result<(), Error> {
-        let value = record
-            .map(|record| {
-                record
-                    .values()
-                    .get(place)
-                    .map(NamedAnnotation::value)
-                    .ok_or_else(|| Error::defect(&format!("a record has no member {}", self.name)))
-            })
-            .transpose()?;
-        self.push(value)
+    /// Project a successful native judgment; absent and failed members leave null cells.
+    pub(super) fn push_judgment(&mut self, value: Option<Judgment>) -> Result<(), Error> {
+        let value = value.map(|value| match value {
+            Judgment::Decision(value) => Annotated::Decision(value),
+            Judgment::Choice(value) => Annotated::Choice(value),
+            Judgment::Score(value) => Annotated::Score(value),
+            Judgment::Tags(value) => Annotated::Tags(value),
+        });
+        self.push(value.as_ref())
     }
 
     pub(crate) fn finish(self) -> Series {
@@ -197,8 +189,11 @@ impl Failures {
         }
     }
 
-    /// Add one record's failures, or a null cell's null.
-    pub(crate) fn push(&mut self, record: Option<&AnnotatedRecord<&str>>) -> Result<(), Error> {
+    /// Preserve native failed members without reading a result JSON document.
+    pub(super) fn push_complete(
+        &mut self,
+        record: Option<&CompleteAnnotated>,
+    ) -> Result<(), Error> {
         let mut any = false;
         for (place, member) in self.members.iter_mut().enumerate() {
             let failed = record
@@ -207,9 +202,10 @@ impl Failures {
                 .flatten();
             member.present.push(failed.is_some());
             any |= failed.is_some();
-            let (kind, cause) = failed.unzip();
-            member.kinds.append_option(kind);
-            member.causes.append_option(cause);
+            member
+                .kinds
+                .append_option(failed.as_ref().map(|_| ErrorKind::Backend.name()));
+            member.causes.append_option(failed);
         }
         self.any.push(any);
         Ok(())
@@ -236,37 +232,46 @@ impl Failures {
 }
 
 impl Member {
-    /// The member's failure marker in this record, if its question failed.
-    fn failure(
-        &self,
-        record: &AnnotatedRecord<&str>,
-        place: usize,
-    ) -> Result<Option<(String, String)>, Error> {
-        let value = record
-            .values()
+    fn failure(&self, record: &CompleteAnnotated, place: usize) -> Result<Option<String>, Error> {
+        let (name, value) = record
+            .canonical
+            .members
             .get(place)
-            .ok_or_else(|| Error::defect(&format!("a record has no member {}", self.name)))?;
-        matches!(value.value(), Annotated::Failed(_))
-            .then(|| marker(record, &self.name))
-            .transpose()
+            .ok_or_else(|| Error::defect("an annotation lost its failure member"))?;
+        if name != &self.name {
+            return Err(Error::defect("an annotation changed its member order"));
+        }
+        let Some((_, failure, _)) = value.legacy.failed() else {
+            return Ok(None);
+        };
+        // Serialize only the native enum's declared spelling for the String column.
+        let cause = serde_json::to_value(crate::core::FailedValue::new(failure).cause())
+            .map_err(|_| Error::defect("a native failure cause could not be projected"))?;
+        cause
+            .as_str()
+            .map(|cause| Some(cause.to_owned()))
+            .ok_or_else(|| Error::defect("a native failure cause has no spelling"))
     }
 }
 
-fn marker(record: &AnnotatedRecord<&str>, name: &str) -> Result<(String, String), Error> {
-    let json: serde_json::Value = serde_json::from_str(&record.value_json())
-        .map_err(|error| Error::defect(&format!("the record's JSON did not parse: {error}")))?;
-    let failed = json
-        .get(name)
-        .and_then(|value| value.get("failed"))
-        .ok_or_else(|| Error::defect(&format!("the record has no failure marker for {name}")))?;
-    let field = |key| {
-        failed
-            .get(key)
-            .and_then(serde_json::Value::as_str)
-            .map(str::to_owned)
-            .ok_or_else(|| Error::defect(&format!("the failure marker has no {key}")))
-    };
-    Ok((field("kind")?, field("cause")?))
+pub(super) fn annotated(
+    columns: &mut [Answers],
+    failures: &mut Failures,
+    record: Option<&CompleteAnnotated>,
+) -> Result<(), Error> {
+    for (place, column) in columns.iter_mut().enumerate() {
+        let value = record
+            .map(|record| {
+                record
+                    .members()
+                    .nth(place)
+                    .ok_or_else(|| Error::defect("an annotation lost its named member"))
+            })
+            .transpose()?
+            .and_then(|member| member.value());
+        column.push_judgment(value)?;
+    }
+    failures.push_complete(record)
 }
 
 fn struct_with_validity(name: &str, fields: &[Series], present: &[bool]) -> Result<Series, Error> {

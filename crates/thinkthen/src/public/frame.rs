@@ -23,9 +23,6 @@ mod typed_series;
 pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
 
-/// The one member name of the set a single-question column asks.
-const MEMBER: &str = "answer";
-
 /// The Series and frame door, implemented for [`Engine`]. It needs the
 /// `polars` feature, and takes the Polars version [`crate::polars`] names.
 ///

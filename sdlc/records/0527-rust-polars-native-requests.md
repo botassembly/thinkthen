@@ -1,4 +1,4 @@
-# 0527: Rust Polars named collection calls
+# 0527: Rust Polars named calls
 
 The existing `filter_series`, `rank_series` and `find_series` calls now use a private native Request feed. The adapter converts text cells into native records and omits null cells. Shared Request admission owns execution. Named rank retains its existing question contract through the shared `engine::only` helper; the adapter keeps no independent input grammar, cache key or result reader.
 
@@ -14,6 +14,22 @@ Review of `3f6083956` found that shared Request rank admission also accepts deci
 
 The typed Request result already carries compact native occurrence ordinals and the complete find candidate list. Mapping those ordinals through actual present-cell positions removes the old private indexed-original carrier without serializing results or changing the caller API. Rank now shares identical pending judgments through the native scheduler: the nullable duplicate fixture asks twice for three present occurrences and still returns all three rows. The old carrier prevented that sharing. Structured relation entities cannot be represented by a text-only adapter and remain on their existing path.
 
+## Named rowwise Request conversion
+
+`decide_series`, `choose_series`, `score_series`, `tag_series` and `annotate_frame` use the same private native Request feed as the collection calls. The feed accepts a native Question or QuestionSet definition and omits null input cells. A shared projector restores nullable physical positions around ordered native complete occurrences. Public signatures, column names and dtypes remain intact. Native Request owns question-kind and threshold refusals, cancellation and call facts. The old one-question annotation carrier and JSON failure-marker reader are removed. Annotation columns read native judgments and failed members; the failure cause text comes from serialization of the native enum alone, preserving its declared spelling without a copied table or result-document reader.
+
+[ADR 0111 section 1](../planning/adr/0111-question-cache-and-one-batching-path.md) specifies plain shared context as the request state. The existing Polars batching assertion expected an older wrapper containing context and the default evidence sentence. Its expected state becomes the plain context string. The existing wrong-kind table retains Usage and zero sends but reads the shared admission diagnostics: tag with a score question reports a kind mismatch; score with a cut decide question reports an unsupported threshold before its kind mismatch.
+
+The existing outside-in rowwise table now covers empty columns, all-null columns and nullable duplicate text cells for each atomic dtype. The partial-annotation case surrounds its unresolved and failed answers with null input rows and retains the native backend failure marker. A compact precancelled table checks all five named calls with zero loopback requests. The focused door cases and lazy-expression cases pass against isolated local fake backends. Strict Polars library/test Clippy, formatting, policy and the exact source ratchet pass. No full parity, large-input or provider run belongs to this conversion.
+
+Joined eager Request execution retains native complete results alongside the input and output columns. The consumer README replaces the old bounded-pipeline memory claim with this ownership behavior and points callers to the existing typed pull methods. The earlier large-input measurements describe the retired rowwise path and cannot establish memory bounds for the native complete graph. This conversion adds 276 handwritten Rust source/test lines and removes 139; no generator or template changes are involved. A fresh reviewer accepted `5936c885998a4df7b63e766f47d0dd97c3be2f09`, reproduced all 13 door and four lazy cases against its exact compiled artifact, and explicitly accepted the source growth and measured ceiling of 183191. Integration preserves main's independently reviewed 27-line rank repair and measures 183218; only the count conflict is resolved.
+
+## What the build taught us
+
+Native result ordinals provide one shared way to restore nullable physical positions. Reading typed annotation members also removes the old JSON failure reader. Shared context follows its declared plain-text format; per-record context keeps its separate typed representation.
+
+Complete eager results have different memory ownership from the old streaming adapter. Document that ownership instead of carrying forward a memory claim established on retired code. Reusing the matching compiled feature target avoids rebuilding dependencies to verify the same small behavior cases.
+
 ## Remaining outcomes
 
-The other named Series/frame methods, typed complete and pull-based column methods, native columns beyond text, and their installed shared-case consumers still need adoption. The current consumer's R-private projector and Python input decoder must move to a shared native consumer boundary. Ordinary Rust callers, rustdoc and package call mappings need the same owning acceptance checks. Compatibility APIs remain reachable until installed replacement parity justifies retirement. This slice does not certify full Rust or Rust Polars parity.
+The remaining probability, recognition and relation paths, typed complete and pull-based column methods, native columns beyond text, and their installed shared-case consumers still need adoption. The current consumer's R-private projector and Python input decoder must move to a shared native consumer boundary. Ordinary Rust callers, rustdoc and package call mappings need the same owning acceptance checks. Compatibility APIs remain reachable until installed replacement parity justifies retirement. This slice does not certify full Rust or Rust Polars parity.
