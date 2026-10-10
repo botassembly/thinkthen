@@ -49,6 +49,53 @@ A Rust caller uses one named API with typed Rust values and Rust-owned complete 
 - Proof: The full shared cases run through the existing `libraries/rust` and `libraries/polars` consumers, with and without the Polars feature. Polars cases check column types, null rows, original indices and complete-set rank and find, and invalid input with zero sends. Record handwritten code removed and added in the landing record.
 - Defers: Python pandas and Python Polars belong to 0496. The proxy needs no 0.2 ticket.
 
+### Retired public declarations
+
+The named Engine methods replace these crate-global calls. `default_engine` and `usage` remain hidden support for the four callers recorded in 0511; they leave the documented public inventory here and their implementation leaves with the last caller.
+
+```text
+fn annotate<'a, I>(&'a QuestionSet, I) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence
+fn annotate_with<'a, I>(&'a QuestionSet, I, CallOptions<'a>) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence
+fn choose<C: Choice>(&ChooseQuestion<C>, &str) -> Result<Call<Option<C>>, Error>
+fn choose_input<C: Choice>(&ChooseQuestion<C>, &QuestionInput) -> Result<Call<Option<C>>, Error>
+fn choose_input_with<C: Choice>(&ChooseQuestion<C>, &QuestionInput, CallOptions<'_>) -> Result<Call<Option<C>>, Error>
+fn choose_many<'a, I, C: Choice>(&'a ChooseQuestion<C>, I) -> Batch<'a, Row<I::Item, Option<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn choose_many_with<'a, I, C: Choice>(&'a ChooseQuestion<C>, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Option<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn choose_with<C: Choice>(&ChooseQuestion<C>, &str, CallOptions<'_>) -> Result<Call<Option<C>>, Error>
+fn decide<Q: DecisionQuestion + ?Sized>(&Q, &str) -> Result<Call<Answer>, Error>
+fn decide_input<Q: DecisionQuestion + ?Sized>(&Q, &QuestionInput) -> Result<Call<Answer>, Error>
+fn decide_input_with<Q: DecisionQuestion + ?Sized>(&Q, &QuestionInput, CallOptions<'_>) -> Result<Call<Answer>, Error>
+fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(&'a Q, I) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence
+fn decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(&'a Q, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence
+fn decide_with<Q: DecisionQuestion + ?Sized>(&Q, &str, CallOptions<'_>) -> Result<Call<Answer>, Error>
+fn default_engine() -> Result<&'static Engine, Error>
+fn details<Q: DetailQuestion + ?Sized>(&Q, &str) -> Result<Call<Details>, Error>
+fn details_input<Q: DetailQuestion + ?Sized>(&Q, &QuestionInput) -> Result<Call<Details>, Error>
+fn details_input_with<Q: DetailQuestion + ?Sized>(&Q, &QuestionInput, CallOptions<'_>) -> Result<Call<Details>, Error>
+fn details_with<Q: DetailQuestion + ?Sized>(&Q, &str, CallOptions<'_>) -> Result<Call<Details>, Error>
+fn filter<'a, I>(&'a Question, I) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence
+fn filter_with<'a, I>(&'a Question, I, CallOptions<'a>) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence
+fn find<I>(&Question, I) -> Result<Call<Found<I::Item>>, Error> where I: IntoIterator, I::Item: Evidence
+fn find_with<I>(&Question, I, CallOptions<'_>) -> Result<Call<Found<I::Item>>, Error> where I: IntoIterator, I::Item: Evidence
+fn rank<I>(&Question, I) -> Result<Call<Vec<Ranked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
+fn rank_with<I>(&Question, I, CallOptions<'_>) -> Result<Call<Vec<Ranked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
+fn recognize(&Recognize, &str) -> Result<Call<Recognized>, Error>
+fn recognize_with(&Recognize, &str, CallOptions<'_>) -> Result<Call<Recognized>, Error>
+fn relate<I>(&Relate, I) -> Result<Call<Vec<Edge>>, Error> where I: IntoIterator<Item = Entity>
+fn relate_with<I>(&Relate, I, CallOptions<'_>) -> Result<Call<Vec<Edge>>, Error> where I: IntoIterator<Item = Entity>
+fn score(&Question, &str) -> Result<Call<f64>, Error>
+fn score_input(&Question, &QuestionInput) -> Result<Call<f64>, Error>
+fn score_input_with(&Question, &QuestionInput, CallOptions<'_>) -> Result<Call<f64>, Error>
+fn score_many<'a, I>(&'a Question, I) -> Batch<'a, Row<I::Item, f64>> where I: IntoIterator + 'a, I::Item: Evidence
+fn score_many_with<'a, I>(&'a Question, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, f64>> where I: IntoIterator + 'a, I::Item: Evidence
+fn score_with(&Question, &str, CallOptions<'_>) -> Result<Call<f64>, Error>
+fn tag<C: Choice>(&TagQuestion<C>, &str) -> Result<Call<Vec<C>>, Error>
+fn tag_many<'a, I, C: Choice>(&'a TagQuestion<C>, I) -> Batch<'a, Row<I::Item, Vec<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn tag_many_with<'a, I, C: Choice>(&'a TagQuestion<C>, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Vec<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn tag_with<C: Choice>(&TagQuestion<C>, &str, CallOptions<'_>) -> Result<Call<Vec<C>>, Error>
+fn usage() -> Result<Counters, Error>
+```
+
 ## Progress
 
 - 2026-10-10 landed 0399d25ec; next: All ten basic named Polars paths use native Requests. Typed score complete conversion is in review; remaining typed complete groups, bounded pull methods and installed consumers stay open.

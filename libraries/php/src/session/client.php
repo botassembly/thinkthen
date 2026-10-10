@@ -30,15 +30,20 @@ final class Client
         try { return json_encode($value, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION); }
         catch (\JsonException $error) { throw new UsageFailure('input cannot be converted to native JSON', previous: $error); }
     }
-    public static function files(array $paths, array $reading = []): FileInput { return new FileInput($paths, $reading); }
+    public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): FileInput { return new FileInput($paths, $reading, $framing, $media); }
+    public static function questionFile(string $path): QuestionInput { return new QuestionInput(['kind' => 'file', 'path' => $path]); }
+    public static function questionNamed(string $name): QuestionInput { return new QuestionInput(['kind' => 'name', 'name' => $name]); }
+    public static function questionReference(string $reference): QuestionInput { return new QuestionInput(['kind' => 'reference', 'reference' => $reference]); }
+    public static function images(array $images): ItemInput { return new ItemInput(null, ['images' => $images], false); }
     public static function item(mixed $value, array $fields = []): ItemInput { return new ItemInput($value, $fields); }
     public static function descriptor(mixed $value): array
     {
         $fields = $value instanceof ItemInput ? $value->fields : [];
+        $original = !($value instanceof ItemInput) || $value->original;
         if ($value instanceof ItemInput) $value = $value->value;
-        return ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value], ...$fields];
+        return [...($original ? ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value]] : []), ...$fields];
     }
-    public function start(string $function, string|array|\stdClass $question, mixed $input,
+    public function start(string $function, string|array|\stdClass|QuestionInput $question, mixed $input,
         array $options = [], ?Cancellation $cancel = null): Operation
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
@@ -47,22 +52,22 @@ final class Client
         $this->operations[$operation] = true;
         return $operation;
     }
-    private function call(string $function, string|array|\stdClass $question, mixed $input,
+    private function call(string $function, string|array|\stdClass|QuestionInput $question, mixed $input,
         array $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
     {
         $operation = $this->start($function, $question, $input, $options, $cancel);
         try { return $operation->result(); } finally { $operation->close(); }
     }
-    public function decide(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('decide', $question, $input, $options, $cancel); }
-    public function choose(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('choose', $question, $input, $options, $cancel); }
-    public function tag(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('tag', $question, $input, $options, $cancel); }
-    public function score(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('score', $question, $input, $options, $cancel); }
-    public function filter(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('filter', $question, $input, $options, $cancel); }
-    public function rank(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('rank', $question, $input, $options, $cancel); }
-    public function find(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('find', $question, $input, $options, $cancel); }
-    public function annotate(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('annotate', $question, $input, $options, $cancel); }
-    public function recognize(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('recognize', $question, $input, $options, $cancel); }
-    public function relate(string|array|\stdClass $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('relate', $question, $input, $options, $cancel); }
+    public function decide(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('decide', $question, $input, $options, $cancel); }
+    public function choose(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('choose', $question, $input, $options, $cancel); }
+    public function tag(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('tag', $question, $input, $options, $cancel); }
+    public function score(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('score', $question, $input, $options, $cancel); }
+    public function filter(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('filter', $question, $input, $options, $cancel); }
+    public function rank(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('rank', $question, $input, $options, $cancel); }
+    public function find(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('find', $question, $input, $options, $cancel); }
+    public function annotate(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('annotate', $question, $input, $options, $cancel); }
+    public function recognize(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('recognize', $question, $input, $options, $cancel); }
+    public function relate(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('relate', $question, $input, $options, $cancel); }
     public function usage_persistence(): UsageStatus { return $this->usageStatus(false); }
     public function finish_usage_status(): UsageStatus { return $this->usageStatus(true); }
     private function usageStatus(bool $finish): UsageStatus
@@ -102,14 +107,19 @@ final class Client
 
 final readonly class FileInput
 {
-    public function __construct(public array $paths, public array $reading = []) {}
+    public function __construct(public array $paths, public array $reading = [], public ?string $framing = null, public ?string $media = null) {}
 }
 final readonly class ItemInput
 {
-    public function __construct(public mixed $value, public array $fields = []) {}
+    public function __construct(public mixed $value, public array $fields = [], public bool $original = true) {}
 }
 
 final readonly class UsageStatus
 {
     public function __construct(public UsagePersistenceState $state, public ?string $advice) {}
+}
+
+final readonly class QuestionInput
+{
+    public function __construct(public array $descriptor) {}
 }
