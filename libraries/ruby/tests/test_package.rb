@@ -104,7 +104,7 @@ class TestPackage < Minitest::Test
         # Only the actual host's native binary is an import claim.
         next unless supported && platform == Gem::Platform.local.to_s
 
-        out, errors, status = child(home, 'require "thinkthen"; abort unless ThinkThen::Engine && ThinkThen::VERSION == ARGV[0]; abort unless $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)}).all? { |path| path.start_with?(ENV.fetch("GEM_HOME")) }', VERSION)
+        out, errors, status = child(home, 'require "thinkthen"; abort unless ThinkThen::Client && ThinkThen::VERSION == ARGV[0]; abort unless $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)}).all? { |path| path.start_with?(ENV.fetch("GEM_HOME")) }', VERSION)
         assert_equal 0, status.exitstatus, "#{out} #{errors}"
       end
     end

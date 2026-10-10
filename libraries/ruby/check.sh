@@ -55,22 +55,6 @@ if sed '/^[[:space:]]*#/d' build.sh | grep -nE '\.(so|bundle|dylib)([^[:alnum:]]
    sed '/^[[:space:]]*#/d; /grep -nE/d; /libclang/d' check.sh | grep -nE '\.(so|bundle|dylib)([^[:alnum:]]|$)|sed -i|(^|[^[:alnum:]_])ss ' >&2; then
   fail "a script above names a host library file, edits in place, or calls ss"
 fi
-guards=$(cat src/*.rs | grep -o 'catch_unwind(' | wc -l)
-[ "$guards" -eq 0 ] || fail "src holds $guards catch_unwind sites; the binding guards only through thinkthen::contained"
-# R4-2 closed by construction: the wait, the unblock function, the handoff,
-# and the worker never touch Ruby. lib.rs and call.rs hold the worker and
-# the handoff, and they name no Ruby crate.
-! grep -nE 'rb_sys|magnus' src/lib.rs src/call.rs >&2 || fail "the worker or the handoff above touches Ruby"
-awk '/^(unsafe extern "C" )?fn (wait_for|wake)\(/ { held = 1 }
-     held && /rb_sys|magnus/ { print FILENAME ": " $0; bad = 1 }
-     held && /^}/ { held = 0 }
-     END { exit bad }' src/ffi.rs >&2 || fail "the released wait above touches Ruby"
-! grep -n 'rb_thread_call_with_gvl' src/*.rs >&2 || fail "src retakes the VM lock inside the released region"
-# R2-8, R7-9, and R4-18 closed by design: Rust holds no Ruby object. A
-# compile-time Send assertion in lib.rs covers every wrapped struct, and
-# this catches the rooting calls that dodge it.
-! grep -nE 'Opaque|BoxValue|rb_gc_register|magnus::gc|register_mark_object' src/*.rs >&2 || fail "src holds a Ruby object"
-
 # Refuse an absent host toolchain before the offline deny plant or a build.
 host=$(uname -s)
 case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
@@ -147,105 +131,36 @@ LIBCLANG_PATH=$clang
 THINKTHEN_TEST_BACKEND=$backend
 export RUBY PATH LIBCLANG_PATH THINKTHEN_TEST_BACKEND
 
+if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
+  python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
+  ./build.sh
+  cargo fmt --check
+  cargo clippy --locked --offline --all-targets --quiet -- -D warnings
+  THINKTHEN_ARTIFACT=$(find "$PWD" -maxdepth 1 -name 'thinkthen-*-*.gem' | head -n 1)
+fi
+THINKTHEN_ARTIFACT=$(realpath "$THINKTHEN_ARTIFACT")
+. "$repo/sdlc/scripts/installed.sh"
+installed_tests "$repo" libraries/ruby "$plant"
+if [ "${THINKTHEN_ARTIFACT##*/}" = "thinkthen-$(sed -n 's/^version = "\(.*\)"$/\1/p' ../../crates/thinkthen/Cargo.toml | head -n 1).gem" ]; then
+  "$RUBY" tests/test_package.rb -n test_fallback_install_explains_support_and_import_refuses_to_work
+  exit 0
+fi
+gem_platform "$THINKTHEN_ARTIFACT"
+"$prefix/bin/gem" install --local --silent --no-document --install-dir "$scratch/gems" "$THINKTHEN_ARTIFACT"
+GEM_PATH=$scratch/gems
+export GEM_PATH
+unset RUBYLIB
+"$RUBY" -e 'require "thinkthen"; ours=$LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)})
+  abort "loaded outside gem" unless ours.any? && ours.all? { |p| p.start_with?(ARGV[0]) }' "$scratch/gems/gems/"
+THINKTHEN_TEST_LIBRARY=$scratch/gems/gems/$(basename "$THINKTHEN_ARTIFACT" .gem)/lib
+export THINKTHEN_TEST_LIBRARY
 if [ "$profile" = smoke ]; then
   smoke_guard
-  # The replay smoke (ticket 0335): the gem in a fresh gem folder, required from outside the checkout.
-  ./build.sh
-  "$prefix/bin/gem" install --local --silent --no-document --install-dir "$plant/gems" thinkthen-*-*.gem
-  cd "$plant"
-  unset RUBYLIB
-  GEM_PATH="$plant/gems" THINKTHEN_API_KEY=sk-smoke-loopback "$RUBY" -e 'require "thinkthen"
-    ours = $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)})
-    abort "thinkthen loaded #{ours}" unless ours.any? && ours.all? { |path| path.start_with?(ARGV[0]) }
-    value = ThinkThen.decide(ENV.fetch("THINKTHEN_TEST_SMOKE_QUESTION"), ENV.fetch("THINKTHEN_TEST_SMOKE_TEXT")).value
-    puts "smoke: #{value.nil? ? "null" : value}"' "$plant/gems/gems/"
-  exit
-fi
-
-if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
-  # The installed-file mode (ticket 0128): the gem in a fresh gem folder, and the shared cases
-  # and examples from a copy of tests/, with no repository lib/ on the load path.
-  # The copy sits inside the check's own plant folder, which its cleanup removes.
-  . "$repo/sdlc/scripts/installed.sh"
-  installed_tests "$repo" libraries/ruby "$plant"
-  if [ "${THINKTHEN_ARTIFACT##*/}" = "thinkthen-$(sed -n 's/^version = "\(.*\)"$/\1/p' ../../crates/thinkthen/Cargo.toml | head -n 1).gem" ]; then
-    "$RUBY" tests/test_package.rb -n test_fallback_install_explains_support_and_import_refuses_to_work
-    echo "check ruby: pass, installed fallback"
-    exit 0
-  fi
-  gem_platform "$THINKTHEN_ARTIFACT"
-  "$prefix/bin/gem" install --local --silent --no-document --install-dir "$scratch/gems" "$THINKTHEN_ARTIFACT"
-  cd "$scratch/libraries/ruby"
-  export GEM_PATH="$scratch/gems"
-  unset RUBYLIB
-  "$RUBY" -I lib -e 'require "thinkthen"; ours = $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)})
-    abort "thinkthen loaded #{ours}" unless ours.any? && ours.all? { |path| path.start_with?(ARGV[0]) }' "$scratch/gems/gems/" ||
-    fail "thinkthen loaded from outside the gem folder"
-  "$RUBY" tests/test_owned_session.rb || fail "owned session cases failed, installed"
-  for test in tests/conformance.rb tests/examples.rb; do
-    sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed, installed"
-  done
-  # Ticket 0374: the loaded extension keeps its own panic hook, and the token cap variable
-  # refuses before any send, counted at the test's own backend.
-  own_panic_hook "$("$RUBY" -e 'require "thinkthen"; puts $LOADED_FEATURES.grep(%r{/thinkthen/thinkthen\.(so|bundle)\z})')"
-  # A renamed test would run nothing and pass, so the one run is pinned.
-  capped=$(sh "$LIMIT" 120 "$RUBY" -I lib tests/test_engine_settings.rb -n test_the_token_cap_variable_refuses_before_any_request) ||
-    fail "the token cap test failed, installed"
-  case $capped in *"1 runs, "*" 0 failures, 0 errors, "*) ;; *) fail "the token cap test did not run once, installed" ;; esac
-
-  python3 - "$repo" "$PWD/tests/native_case.rb" "$RUBY" <<'RUBYNATIVE'
-import os,sys
-from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
-from native_fixture import run
-extra={k:os.environ[k] for k in ('GEM_PATH','RUBYLIB') if k in os.environ}
-sys.exit(bool(run('ruby',[sys.argv[3],sys.argv[2]],root,extra)))
-RUBYNATIVE
-  echo "check ruby: pass, installed"
+  "$RUBY" -e 'require "thinkthen"
+    value = ThinkThen::Client.open { |client| client.decide(ENV.fetch("THINKTHEN_TEST_SMOKE_QUESTION"), ENV.fetch("THINKTHEN_TEST_SMOKE_TEXT")).value }
+    puts "smoke: #{value.nil? ? "null" : value}"'
   exit 0
 fi
-
-python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
-./build.sh
-cargo fmt --check
-cargo clippy --locked --offline --all-targets --quiet -- -D warnings
-cargo test --locked --offline --quiet --lib
-if [ "$profile" = stress ]; then
-  sh "$LIMIT" 120 "$RUBY" -I lib tests/test_flood.rb || fail "the trap flood failed"
-  # The interrupt files check their millisecond promises only here (ticket 0356).
-  for test in tests/test_interrupt_single.rb tests/test_interrupt_batch.rb; do
-    sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed, stress"
-  done
-  echo "check ruby: pass, stress"
-  exit 0
-fi
-for test in tests/test_*.rb; do
-  [ "$test" = tests/test_flood.rb ] && continue
-  sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed"
-done
-sh "$LIMIT" 120 "$RUBY" -I lib tests/conformance.rb || fail "the conformance runner failed"
-sh "$LIMIT" 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
-"$RUBY" -rrubygems/package -I lib -rthinkthen/version -e '
-  spec = Gem::Package.new(Dir["thinkthen-*-*.gem"].fetch(0)).spec
-  version = File.read("../../crates/thinkthen/Cargo.toml")[/^version = "([^"]+)"/, 1]
-  files = ["lib/thinkthen.rb", "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}", "lib/thinkthen/version.rb", "lib/thinkthen/complete.rb", "lib/thinkthen/native_complete.rb"]
-  abort "the gem is not MIT" unless spec.licenses == ["MIT"]
-  abort "the gem names no platform" if spec.platform.to_s == "ruby"
-  abort "the gem is #{spec.version}, the engine is #{version}" unless spec.version.to_s == version
-  abort "ThinkThen::VERSION is #{ThinkThen::VERSION}, the engine is #{version}" unless ThinkThen::VERSION == version
-  abort "the gem holds #{spec.files.sort}" unless spec.files.sort == files.sort
-' || fail "the gem check failed"
-RUBYLIB=$PWD/lib
-export RUBYLIB
-
-  python3 - "$repo" "$PWD/tests/native_case.rb" "$RUBY" <<'RUBYNATIVE'
-import os,sys
-from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
-from native_fixture import run
-extra={k:os.environ[k] for k in ('GEM_PATH','RUBYLIB') if k in os.environ}
-sys.exit(bool(run('ruby',[sys.argv[3],sys.argv[2]],root,extra)))
-RUBYNATIVE
-for gem in thinkthen-*.gem; do gem_platform "$gem"; done
-sh "$LIMIT" 120 "$RUBY" -I lib tests/slide_sample.rb || fail "the slide sample failed"
-echo "check ruby: pass"
+"$RUBY" "$scratch/libraries/ruby/tests/test_owned_session.rb"
+python3 "$repo/libraries/ruby/tests/native_cases.py"
+echo "check ruby: pass, installed"

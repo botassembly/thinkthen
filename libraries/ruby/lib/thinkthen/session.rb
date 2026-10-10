@@ -11,9 +11,9 @@ module ThinkThen
     # A native failure never becomes a value. Read .value to branch on decisions:
     # Ruby treats every object as true, including a result whose value is false.
     class Completed
-      attr_reader :results, :terminal
-      def initialize(results, terminal, scalar, verb)
-        @results, @terminal, @scalar, @verb = results.freeze, terminal, scalar, verb
+      attr_reader :results, :terminal, :observations
+      def initialize(results, terminal, scalar, verb, observations)
+        @results, @terminal, @scalar, @verb, @observations = results.freeze, terminal, scalar, verb, observations.freeze
         freeze
       end
       def facts = terminal.facts
@@ -27,8 +27,7 @@ module ThinkThen
     end
   end
 
-  # One canonical family of named calls. The compatibility Engine remains
-  # available until installed migration parity permits its removal.
+  # One family of named calls over the owned native engine.
   class Client
     FUNCTIONS = %w[decide choose tag score filter rank find annotate recognize relate].freeze
     Source = Struct.new(:source) do
@@ -90,6 +89,15 @@ module ThinkThen
     def self.descriptor(value)
       value.is_a?(Item) ? value.descriptor : {original: original(value)}
     end
+    def self.request(verb, question, input, options)
+      asked = question.is_a?(Question) ? question.selector : question.is_a?(String) ? {kind: "text", text: question} : {kind: "definition", value: question}
+      {schema: REQUEST_VERSION, call: {function: verb, question: asked, input: input, options: options}}
+    end
+    def plan(verb, question, input, **options)
+      raise UsageError.new("client is closed", "usage") if @closed
+      source = input.is_a?(Source) ? {kind: "source", source: input.source} : {kind: "records", items: Array(input).map { |value| Client.descriptor(value) }}
+      @native.plan(Client.dump(Client.request(verb, question, source, options)))
+    end
     FUNCTIONS.each do |verb|
       define_method(verb) do |question, input, cancel: nil, **options|
         operation = start(verb, question, input, cancel: cancel, **options)
@@ -125,7 +133,7 @@ module ThinkThen
       nil
     end
     def inspect = "<ThinkThen::Client>"
-    def usage = @native.usage
+    def usage = @native.usage.transform_keys(&:to_sym)
     def usage_persistence
       raise UsageError.new("client is closed", "usage") if @closed
       UsageStatus.new(*@native.usage_persistence)
@@ -140,6 +148,7 @@ module ThinkThen
       def initialize(engine, verb, question, input, token, options, &remove)
         @remove, @token, @verb = remove, token, verb
         @rows = []
+        @observations = []
         @closed = false
         @scalar = %w[find relate].include?(verb) || (!input.is_a?(Array) && !input.is_a?(Source) && !input.is_a?(Enumerable))
         source = if input.is_a?(Source)
@@ -154,12 +163,7 @@ module ThinkThen
           @scalar = true
           {kind: "records", items: [Client.descriptor(input)]}
         end
-        asked = if question.is_a?(Question)
-          question.selector
-        else
-          question.is_a?(String) ? {kind: "text", text: question} : {kind: "definition", value: question}
-        end
-        request = {schema: REQUEST_VERSION, call: {function: verb, question: asked, input: source, options: options}}
+        request = Client.request(verb, question, source, options)
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")
         end
@@ -174,14 +178,17 @@ module ThinkThen
       end
       def result
         loop do
-          raise CancelledError.new("the call was cancelled", "cancelled") if @closed
-          raise CancelledError.new("the call was cancelled", "cancelled") if @token&.cancelled?
+          raise cancelled if @closed
+          raise cancelled if @token&.cancelled?
           packet = @session.poll
           if packet
-            return Results::Completed.new(@rows, @terminal, @scalar, @verb) if packet == "end"
+            return Results::Completed.new(@rows, @terminal, @scalar, @verb, @observations) if packet == "end"
             case packet.kind
             when "row" then @rows << packet.value
-            when "aggregate" then @rows = packet.value.is_a?(Array) ? packet.value : [packet.value]
+            when "observation" then @observations << packet
+            when "aggregate"
+              values = packet.value.is_a?(Array) ? packet.value : [packet.value]
+              @verb == "recognize" ? @rows.concat(values) : @rows.replace(values)
             when "terminal"
               @terminal = packet
               if packet.key?("failure")
@@ -192,9 +199,10 @@ module ThinkThen
                 error.instance_variable_set(:@complete, failure)
                 error.instance_variable_set(:@results, @rows.freeze)
                 error.instance_variable_set(:@terminal, packet)
+                error.instance_variable_set(:@observations, @observations.freeze)
                 raise error
               end
-              return Results::Completed.new(@rows, packet, @scalar, @verb)
+              return Results::Completed.new(@rows, packet, @scalar, @verb, @observations)
             end
           end
           feed if @producer
@@ -202,6 +210,13 @@ module ThinkThen
         end
       ensure
         Client.cleanup(self)
+      end
+      def cancelled
+        error = CancelledError.new("the call was cancelled", "cancelled")
+        error.instance_variable_set(:@results, @rows.dup.freeze)
+        error.instance_variable_set(:@terminal, @terminal)
+        error.instance_variable_set(:@facts, @terminal&.facts)
+        error
       end
       def feed
         unless @pending
@@ -244,6 +259,6 @@ module ThinkThen
     end
   end
   class Error
-    attr_reader :results, :terminal
+    attr_reader :results, :terminal, :observations
   end
 end

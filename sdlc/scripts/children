@@ -99,7 +99,6 @@ OWNED_HOME_CALLERS = {
     "libraries/python/tests/conftest.py", "libraries/python/tests/test_named_backends.py",
     "libraries/python/tests/test_backend_setups.py", "libraries/python/tests/examples.py",
     "libraries/ruby/tests/backend.rb", "libraries/ruby/tests/test_package.rb",
-    "libraries/ruby/tests/test_public_names.rb",
     "libraries/typescript/tests/backend.mjs", "libraries/typescript/tests/named_backends.test.mjs",
     "libraries/typescript/tests/shapes.test.mjs", "libraries/typescript/tests/examples.test.mjs",
 }

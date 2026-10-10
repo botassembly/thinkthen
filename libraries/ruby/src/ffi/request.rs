@@ -86,6 +86,31 @@ fn request_engine(ruby: &Ruby, text: String) -> Result<EngineValue, Error> {
     )
     .map(|engine| EngineValue { engine })
 }
+fn plan(ruby: &Ruby, engine: &EngineValue, text: String) -> Result<Value, Error> {
+    let request = checked(
+        ruby,
+        Request::from_json(&text)
+            .and_then(Request::admit)
+            .map_err(Fault::from),
+    )?;
+    let planned = checked(
+        ruby,
+        engine
+            .engine
+            .plan_request(&request, thinkthen::RequestEnvironment::default())
+            .map_err(Fault::from),
+    )?;
+    let json = checked(
+        ruby,
+        serde_json::to_value(planned).map_err(|_| {
+            Fault::of(
+                thinkthen::ErrorKind::Defect,
+                "native preview could not be read",
+            )
+        }),
+    )?;
+    super::native_result::plain(ruby, &json)
+}
 pub(super) fn register(ruby: &Ruby, native: RModule, engine: RClass) -> Result<(), Error> {
     native.define_module_function("request_engine", function!(request_engine, 1))?;
     let session = native.define_class("RequestSession", ruby.class_object())?;
@@ -95,5 +120,6 @@ pub(super) fn register(ruby: &Ruby, native: RModule, engine: RClass) -> Result<(
     session.define_method("cancel", method!(Session::cancel, 0))?;
     session.define_method("close", method!(Session::close, 0))?;
     engine.define_method("request_session", method!(start, 1))?;
+    engine.define_method("plan", method!(plan, 1))?;
     Ok(())
 }

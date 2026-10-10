@@ -755,25 +755,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "thinkthen-host"
-version = "0.2.0"
-dependencies = [
- "serde",
- "serde_json",
- "thinkthen",
-]
-
-[[package]]
 name = "thinkthen-ruby"
 version = "0.2.0"
 dependencies = [
- "libc",
  "magnus",
  "rb-sys",
  "serde",
  "serde_json",
  "thinkthen",
- "thinkthen-host",
 ]
 
 [[package]]
