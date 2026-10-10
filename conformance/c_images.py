@@ -57,7 +57,14 @@ def assert_images(step, got, bodies):
         if construction.get('dimensions'):
             media=1 if construction.get('media')=='image/jpeg' else 2
             assert row['image_properties'] == [[media,*construction['dimensions']]] * len(images), scenario['id']
-        assert row['input'] == step['items'][row['index']], scenario['id']
+        original = row['input']
+        if isinstance(original, dict):
+            width, height = construction.get('dimensions', [1, 1])
+            assert original == {'text': step['items'][row['index']], 'images': [
+                {'media': step['media'], 'base64': base64.b64encode(raw).decode(),
+                 'width': width, 'height': height} for raw in images]}, scenario['id']
+            original = original['text']
+        assert original == step['items'][row['index']], scenario['id']
         assert row['value'] == {'decide': True, 'choose': 'red', 'score': .8}[step['verb']], (scenario['id'],row['value'])
         if step['verb'] == 'decide':
             assert abs(row['probability'] - .9) < 1e-10, (scenario['id'],row['probability'])
