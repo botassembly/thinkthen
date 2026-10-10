@@ -49,6 +49,7 @@ mod options;
 pub(crate) use options::cli_reader;
 mod panic;
 mod plan;
+pub(crate) use plan::SourceBudget;
 mod proxy;
 mod pull;
 mod question;

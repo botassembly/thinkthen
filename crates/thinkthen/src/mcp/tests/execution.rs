@@ -97,7 +97,7 @@ fn release_only_source_rank_charges_original_utf8_bytes_before_projection_and_ne
         source,
         CallOptions::new(),
         false,
-        true,
+        Some(crate::public::SourceBudget::rank()),
     );
     assert!(records.next().unwrap().is_ok());
     assert_eq!(

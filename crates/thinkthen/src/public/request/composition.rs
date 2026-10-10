@@ -14,6 +14,12 @@ pub(super) type Inputs<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
 
 impl AdmittedRequest {
+    fn source_budget(&self, plan: bool) -> Option<crate::public::SourceBudget> {
+        crate::public::SourceBudget::for_source(
+            self.request.call.function() == super::RequestFunction::Rank,
+            plan,
+        )
+    }
     pub(super) fn annotation_document(&self, definition: &RequestDefinition) -> bool {
         matches!(definition, RequestDefinition::Annotate(_))
             && !explicit_projection(&self.request.call.arguments().options)
@@ -34,6 +40,25 @@ impl AdmittedRequest {
         environment: RequestEnvironment<'a>,
         controls: CallOptions<'a>,
         image_refusal: Option<String>,
+    ) -> Result<Inputs<'a>, Error> {
+        self.records_with_budget(definition, environment, controls, image_refusal, false)
+    }
+    pub(super) fn records_for_plan<'a>(
+        &'a self,
+        definition: &RequestDefinition,
+        environment: RequestEnvironment<'a>,
+        controls: CallOptions<'a>,
+        image_refusal: Option<String>,
+    ) -> Result<Inputs<'a>, Error> {
+        self.records_with_budget(definition, environment, controls, image_refusal, true)
+    }
+    fn records_with_budget<'a>(
+        &'a self,
+        definition: &RequestDefinition,
+        environment: RequestEnvironment<'a>,
+        controls: CallOptions<'a>,
+        image_refusal: Option<String>,
+        source_plan: bool,
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.request.call.arguments().options;
         let mut budget = AttachmentBudget::new(self.attachment_limit);
@@ -76,13 +101,13 @@ impl AdmittedRequest {
             ),
             RequestInput::Source { source } => {
                 controls.admission()?;
-                let rank = self.request.call.function() == super::RequestFunction::Rank;
+                let source_budget = self.source_budget(source_plan);
                 super::source::records(
                     source,
                     reading,
                     controls,
                     annotate,
-                    rank,
+                    source_budget,
                     budget.remaining(),
                 )
             }
