@@ -271,7 +271,15 @@ def main():
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET, str(mapped), "command", env=mapped_env))
         expect(run("python3", str(SCRIPT), "check", str(mapped / archive.name)))
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET,
-                   str(base / "unsupported"), "typescript", env=env), 2, "not a Windows stage 1 command part")
+                   str(base / "unsupported"), "ruby", env=env), 2, "not a Windows stage 1 command part")
+        addon_pack = source / 'libraries/typescript/target/pack'
+        addon_pack.mkdir(parents=True)
+        addon = addon_pack / f'thinkthen-{VERSION}.tgz'
+        addon.write_bytes(b'synthetic win32-x64 addon package')
+        packed_addon = base / 'packed-addon'
+        expect(run('sh', str(scripts / 'release-pack'), '--reuse', TARGET, str(packed_addon), 'typescript', env=env))
+        assert (packed_addon / addon.name).read_bytes() == addon.read_bytes()
+        assert (packed_addon / (addon.name + '.sha256')).read_text() == f'{hashlib.sha256(addon.read_bytes()).hexdigest()}  {addon.name}\n'
         # Five-target collection includes Windows and refuses bad Windows assets before copying.
         platforms = base / "platforms"
         for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
