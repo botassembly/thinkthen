@@ -79,3 +79,8 @@ def generated_known(row: NativeSessionPacketDecideRow, terminal: NativeSessionPa
     failed: str = terminal.failure.error.kind
     present: bool = 'failure' in terminal
     raw: dict[str, object] = terminal.to_dict()
+
+from thinkthen.pandas import ThinkThenAccessor
+from thinkthen._pandas_calls import PandasResult
+pandas_result: PandasResult = ThinkThenAccessor(None).decide("Late?")
+pandas_positions: tuple[int | None, ...] = pandas_result.positions

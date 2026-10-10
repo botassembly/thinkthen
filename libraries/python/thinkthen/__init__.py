@@ -432,7 +432,7 @@ class Engine:
         return self._judged("filter", question, records, token, keywords)
 
     def _judged(self, verb, question, value, token, keywords):
-        if value is not _MISSING and not _frames.is_series(value):
+        if value is not _MISSING and (not _frames.is_series(value) or _pandas(value) == "Series"):
             return self._named(verb, question, value, token=token, **keywords)
         fields = dict(keywords)
         deadline_ms = fields.pop("deadline_ms", _MISSING)
@@ -473,7 +473,7 @@ class Engine:
 
         ``question`` is the question text. ``top`` keeps the first entries.
         """
-        if not _frames.is_series(records):
+        if not _frames.is_series(records) or _pandas(records) == "Series":
             controls = dict(legacy)
             for key, item in dict(top=top, batch=batch, context=context).items():
                 if item is not None: controls[key] = item
@@ -500,7 +500,7 @@ class Engine:
         """The unit that answers the question best, as ``{"index", "unit",
         "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
         a none candidate, as ``find --none`` does."""
-        if not _frames.is_series(units):
+        if not _frames.is_series(units) or _pandas(units) == "Series":
             controls = dict(legacy, none=none, token=token)
             if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
             return self._named('find', question, units, **controls)
@@ -539,7 +539,7 @@ class Engine:
         holds a question-to-failure map for partial rows and null otherwise.
         A pandas frame keeps its index. A question named as a column is refused first.
         """
-        if on is None and not _frames.is_series(records):
+        if on is None and (not _frames.is_series(records) or _pandas(records) == "Series"):
             controls = dict(legacy, token=token)
             for key, item in dict(batch=batch, context=context).items():
                 if item is not None: controls[key] = item
@@ -591,7 +591,7 @@ class Engine:
         ``names`` column: one list per row of ``dict`` with those fields but
         ``row``. Relations take one text.
         """
-        if on is None and not _frames.is_series(text):
+        if on is None and (not _frames.is_series(text) or _pandas(text) == "Series"):
             controls = dict(legacy, token=token)
             if ask is None:
                 controls.update(kinds=kinds or [], relations=relations, either=either, descriptions=descriptions)
@@ -656,7 +656,7 @@ class Engine:
         named by its ``text``. ``relations`` and ``either`` read as for
         ``recognize``.
         """
-        if not _frames.is_series(entities):
+        if not _frames.is_series(entities) or _pandas(entities) == "Series":
             controls = dict(legacy, token=token)
             if ask is None: controls.update(relations=relations, either=either)
             if threshold is not None: controls['threshold'] = threshold

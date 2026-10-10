@@ -198,6 +198,12 @@ def _cancelled():
 class Operation:
     """A bounded producer and one nonblocking native session."""
     def __init__(self, engine, verb, question, value, controls):
+        from . import _pandas
+        from ._pandas_calls import records
+        self.frame = value.copy() if _pandas(value) == 'Series' else None
+        self.present = ()
+        if self.frame is not None:
+            value, self.present = records(self.frame, verb)
         fields = dict(controls)
         self.details = fields.pop('details', False)
         self.token = fields.pop('token', None)
@@ -211,7 +217,7 @@ class Operation:
             self._close_producer()
             raise _cancelled()
         try:
-            self.session = engine._engine._request_session(_dump(request))
+            self.session = engine._engine._request_session(_dump(request), 'pandas' if self.frame is not None else None)
         except native.ThinkThenError as error:
             self._close_producer()
             if hasattr(error, 'native_complete'):
@@ -292,6 +298,10 @@ class Operation:
                 self.engine._sessions.discard(self)
 
     def result(self):
+        if self.frame is not None:
+            from ._pandas_calls import PandasResult
+            return PandasResult(tuple(self.results), self.terminal, self.verb, self.scalar,
+                                self.details, self.frame, self.present)
         return Result(tuple(self.results), self.terminal, self.verb, self.scalar, self.details)
 
 

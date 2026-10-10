@@ -8,6 +8,55 @@ from test_named_backends import configuration, isolated
 CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/cases.json"
 
 
+def test_pandas_named_and_async_calls_keep_owned_rows_and_original_positions(backend, tmp_path):
+    printed = run('''
+        import asyncio, pickle, pandas as pd, thinkthen as tt, thinkthen.pandas
+        from thinkthen import complete as c
+        source = pd.Series(['first', pd.NA, 'second'], index=[9, 9, 2], name='body', dtype=object)
+        with tt.Engine(cache=False, batch=1) as engine:
+            done = source.tt.decide('Late?', engine=engine)
+            assert isinstance(done, tt.Result)
+            assert done.positions == (0, 2)
+            assert [row.index for row in done.results] == [0, 1]
+            assert done.value.index.tolist() == [9, 9, 2]
+            assert done.value.tolist() == [True, None, True]
+            assert done.probability.tolist() == [.9, None, .9]
+            assert done.facts.requests_sent == 2
+            assert pickle.loads(pickle.dumps(done)).value.equals(done.value)
+            detailed = engine.decide('Late?', source, details=True)
+            assert detailed.value.iloc[0] is detailed.results[0]
+            assert detailed.value.iloc[1] is None
+            async_done = asyncio.run(engine.asyncio.decide('Late?', source))
+            assert async_done.value.equals(done.value)
+            ranked = engine.rank('Late?', source)
+            assert [row['index'] for row in ranked.value] == [0, 2]
+            assert ranked.facts.requests_sent == 2
+            kept = source.tt.filter('Late?', engine=engine)
+            assert kept.value.index.tolist() == [9, 2]
+            assert kept.positions == (0, 2)
+            explicit = pd.Series([c.Item(value=None), None], dtype=object)
+            null = engine.decide('Late?', explicit)
+            assert null.positions == (0,) and null.results[0].input is None
+            entities = pd.Series([('Ada', 'person'), None, ('Bo', 'person')], dtype=object)
+            related = entities.tt.relate(engine=engine, relations={'knows': ('person', 'person')})
+            assert related.facts.requests_sent == 1
+            assert [(edge.source.name, edge.target.name) for edge in related.value] == [('Ada', 'Bo'), ('Bo', 'Ada')]
+            failed_engine = tt.Engine(cache=False, max_retries=0, base_url=__import__('os').environ['THINKTHEN_BASE_URL'].replace('/generic/', '/arm/malformed/missing_answer/'))
+            failed = failed_engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, pd.Series(['note', None], dtype=object))
+            embedded = failed.value.iloc[0]['bad']
+            assert failed.value.iloc[1] is None and embedded.failed.kind == 'backend'
+            assert embedded.failed.cause == 'missing_answer' and failed.facts.requests_sent == 1
+            try: bool(embedded)
+            except TypeError: pass
+            else: raise AssertionError('pandas coerced an embedded failure')
+            assert pickle.loads(pickle.dumps(embedded)) == embedded
+        assert done.results[0].schema == 'thinkthen.result/2'
+        print('owned pandas rows')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'owned pandas rows'
+    assert backend.count() == 13
+
+
 def test_priced_recognition_collection_uses_native_checked_cost(backend, tmp_path):
     configuration(tmp_path, {"usd_per_million_input": "0", "usd_per_million_output": "0"})
     env = child_env(backend, tmp_path, "case/41-offsets-past-an-accent-and-an-emoji")
@@ -50,7 +99,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
             assert result.value.name == "body"
             if shape == "pandas": assert result.value.index.to_list() == [9, 9, 2]
             assert result.facts["records"] == 2
-            assert [row["index"] for row in result.details] == [0, 2]
+            assert (list(result.positions) if shape == "pandas" else [row["index"] for row in result.details]) == [0, 2]
             print(verb, json.dumps(values))
         kept = call("filter", "Late?")
         print("filter", kept.value.to_list(), kept.value.name)
@@ -58,17 +107,17 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         ranked = call("rank", "Relevant?")
         print("rank", [(row["index"], row["record"], row["probability"]) for row in ranked.value])
         found = call("find", "Which?")
-        print("find", dict(found.value), [list(row["probabilities"]) for row in found.details])
+        print("find", dict(found.value), [list(row.answer.probabilities.items()) if shape == "pandas" else list(row["probabilities"]) for row in found.details])
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
         annotated = call("annotate", form)
-        print("annotate", list(annotated.value.columns), annotated.facts["records"])
+        print("annotate", (list(annotated.value.iloc[0]) if shape == "pandas" else list(annotated.value.columns)), annotated.facts["records"])
         if shape == "pandas": assert annotated.value.index.to_list() == [9, 9, 2]
         recognized = (texts.tt.recognize(engine=engine, kinds=["note"]) if shape == "pandas"
                       else engine.recognize(texts, kinds=["note"]))
         rows = recognized.value.to_list()
         assert rows[1] is None
         print("recognize", [[(e.text, e.start, e.end, e.kind) for e in row.entities]
-                             if row else None for row in rows])
+                             if row is not None else None for row in rows])
         entities = (pd.Series([("Ada", "person"), None, ("Bo", "person")],
                              index=[9,9,2], name="entities", dtype=object)
                     if shape == "pandas" else pl.Series("entities",
@@ -83,11 +132,11 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         "filter ['one note', 'one note'] body",
         "rank [(0, 'one note', 0.9), (2, 'one note', 0.9)]",
         "find {'index': 0, 'unit': 'one note', 'probability': 0.9} [[('u001', 0.9), ('u002', 0.1)]]",
-        "annotate ['body', 'late', 'failed'] 2",
+        ("annotate ['late'] 2" if shape == "pandas" else "annotate ['body', 'late', 'failed'] 2"),
         "recognize [[('one note', 0, 8, 'note')], None, [('one note', 0, 8, 'note')]]",
         "relate [('knows', 'Ada', 'Bo'), ('knows', 'Bo', 'Ada')]",
     ]
-    assert backend.count() == 20
+    assert backend.count() == (19 if shape == "pandas" else 20)
 
 
 def test_series_filter_replay_retains_original_rows_and_sends_nothing(backend, tmp_path):
@@ -132,11 +181,11 @@ def test_series_find_reads_the_whole_candidate_set_and_keeps_original_positions(
         call = units.tt.find('Which passage answers the question?', none=True,
                              engine=tt.Engine(cache=False))
         print(dict(call.value))
-        print([list(row['probabilities']) for row in call.details])
+        print([list(row.answer.probabilities.items()) for row in call.details])
     """, child_env(backend, tmp_path, "case/18-find-second"))
     assert printed.splitlines() == [
         "{'index': 2, 'unit': 'Second passage.', 'probability': 0.8}",
-        "[[('u001', 0.1), ('u002', 0.8), ('u003', 0.05), ('none', 0.05)]]",
+        "[[('none', 0.05), ('u001', 0.1), ('u002', 0.8), ('u003', 0.05)]]",
     ]
     assert backend.count() == 1
 
@@ -153,7 +202,7 @@ def test_series_recognition_keeps_saved_spans_and_relation_endpoints(backend, tm
             found = call.value.iloc[at]
             print([(e.text, e.start, e.end, e.kind) for e in found.entities])
             print([(e.relation, e.source.text, e.target.text) for e in found.relations])
-        assert set(row['index'] for row in call.details) == {{0, 2}}
+        assert set(call.positions) == {{0, 2}}
         print(call.facts['records'], call.facts['requests_sent'])
     """, child_env(backend, tmp_path, "case/42-recognize-C01-relations"))
     assert printed.splitlines()[:4] == 2 * [
