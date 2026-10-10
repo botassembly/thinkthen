@@ -154,3 +154,19 @@ Handwritten R consumer source adds 24 nonblank lines and removes 15. The propose
 ## What the build taught us
 
 Source input is now a selector for the same named function family. Generated fields preserve physical provenance separately from whole originals; aggregate functions expose it through candidates or indexed input sources. Migrate the owning consumer at that boundary instead of rebuilding the old source result frame in R.
+
+## Adopt named scalar consumers
+
+This bounded consumer slice starts from `55ef577b7`. The scalar section in `libraries/r/tests/verbs.R` now supplies native question definitions to decide, choose, score and tag, and supplies per-call thresholds through `options`. It preserves logical and missing columns, unsure answers, weighted score columns, label lists and singleton label arrays. The former built-question JSON inspection now checks the returned unsure native value alongside its ordinary R column view. No adapter, native implementation, generator or template changes accompany this slice.
+
+The preceding scalar section fails against the retained installed package because `tt_question` no longer accepts `decide` and `threshold` keywords. The migrated scalar family passes 37 existing checks with exactly 15 requests counted by its owned loopback backend. The selected script contains the existing primitive column, duplicate-option, deadline, usage-condition, named-model and counter sections and the existing helper's terminal count check; it introduces no runner feature. Output lives in `target/0494-scalars-{red,green}.log`.
+
+The retained installed native library SHA-256 is `704e7316dc6387bb6fde499866519719512ab2270cecb68cc2945a317258f842`. It predates later shared source repairs and establishes consumer adoption only. Current installed package qualification remains unclaimed. No package build, full suite, full parity, large-input, load, paid or release check runs for this slice. The initial target, libraries and databases total measures 40,324,215,604 bytes, below 40 GiB; warm builds remain present.
+
+The remaining aggregate filter/rank/find and annotate sections in `verbs.R` still need ordinary consumer adoption. The `tt_details` alias checks and the malformed annotate-cell block retain former compatibility shapes; the block also checks a former positional choose call. Recording-read condition checks already use the named decision call and remain unchanged. `complete_input_admission.R` deliberately targets the retained legacy complete-call grammar. `recognize.R` also retains prior frame, relation-attribute and host-deduplication behavior; the native typed family instead exposes scalar offsets and rejects duplicate entity identities. Rewriting those assertions mechanically would change their claims. This scalar migration leaves their separate qualification and compatibility retirement held.
+
+Handwritten R source replaces 18 nonblank lines with 18. Both owning source counts remain unchanged: host R 3165 and binding Rust 5954. R parsing, whitespace and both source ratchets pass. Source policy output lives in `target/0494-scalars-policy.log`; unchanged file warnings remain.
+
+## What the build taught us
+
+Consumer migration must distinguish ordinary call behavior from assertions about the former adapter's containers. Native question definitions and call options preserve scalar behavior without reconstructing a question JSON wrapper. Retain compatibility-specific claims until their owning migration establishes the replacement behavior.

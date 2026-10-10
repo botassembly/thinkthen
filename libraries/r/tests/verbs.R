@@ -10,23 +10,23 @@ levels3 <- c("Routine.", "Soon.", "Immediate.")
 check("decide answers a logical column", identical(tt_decide("Is this a complaint?", c("refund me", "thanks"))$value, c(TRUE, TRUE)))
 check("NA evidence is NA and sends nothing", sent_by(check("NA stays NA",
   identical(tt_decide("Is this a complaint?", c(NA, "refund me now"))$value, c(NA, TRUE)))) == 1L)
-built <- tt_question(decide = "Is this a complaint?", threshold = c(0.2, 0.95))
+built <- list(decide = "Is this a complaint?", threshold = "0.2:0.95")
 check("a band answers unsure as NA", identical(tt_decide(built, "maybe there is a problem")$value, NA))
 check("the text form equals the built form", identical(
-  tt_decide("Is this a complaint?", "maybe there is a problem", threshold = c(0.2, 0.95))$value, NA))
+  tt_decide("Is this a complaint?", "maybe there is a problem", options = list(threshold = "0.2:0.95"))$value, NA))
 
-# choose, score, and tag: one annotate crossing a column (R2-23 counts it).
-check("choose picks the first option", identical(tt_choose("Which team?", c("a", NA), c("billing", "shipping"))$value, c("billing", NA)))
-# The threshold is local judgment; the dynamic-details route reuses the first
-# answer for the same prompt and text without another send.
-check("choose under a cut it cannot reach is NA", is.na(tt_choose("Which team?", "a", c("billing", "shipping"), threshold = 0.95)$value))
-saved_choice <- tt_question(choose = "Which team?", options = c("billing", "shipping"), threshold = 0.95)
-check("a built choose question accepts the same threshold field", identical(saved_choice$kind, "choose") &&
-      grepl('"threshold":0.95', saved_choice$json, fixed = TRUE))
-check("score is the weighted position", isTRUE(all.equal(tt_score("How urgent?", c("a", NA), levels3)$value, c(0.15, NA))))
-check("tag answers every label that held", identical(tt_tag("What is in this?", c("a", NA), c("refund", "billing"))$value,
+# Named choose, score, and tag calls retain ordinary column views.
+check("choose picks the first option", identical(tt_choose(list(choose = "Which team?", options = c("billing", "shipping")), c("a", NA))$value, c("billing", NA)))
+# Native threshold judgment reuses the cached answer for the same
+# prompt and text without another send.
+check("choose under a cut it cannot reach is NA", is.na(tt_choose(list(choose = "Which team?", options = c("billing", "shipping")), "a", options = list(threshold = 0.95))$value))
+saved_choice <- list(choose = "Which team?", options = c("billing", "shipping"), threshold = 0.95)
+check("a built choose question retains the same unsure answer", is.na((built_choice <- tt_choose(saved_choice, "a"))$value) &&
+      is.null(built_choice$results[[1L]]$value))
+check("score is the weighted position", isTRUE(all.equal(tt_score(list(score = "How urgent?", levels = levels3), c("a", NA))$value, c(0.15, NA))))
+check("tag answers every label that held", identical(tt_tag(list(tag = "What is in this?", labels = c("refund", "billing")), c("a", NA))$value,
                                                      list(c("refund", "billing"), character())))
-check("R6-10: one label stays an array", identical(tt_tag("Tags?", "refund me", labels = "refund")$value, list("refund")))
+check("R6-10: one label stays an array", identical(tt_tag(list(tag = "Tags?", labels = I("refund")), "refund me")$value, list("refund")))
 
 # filter, rank, and find keep the ruled shapes.
 check("filter keeps the records that held", identical(tt_filter("Is this a complaint?", c("x1", "x2"))$value, c("x1", "x2")))
@@ -84,11 +84,11 @@ check("R3-3: a NUL name is refused and the process lives", identical(message_of(
 # R2-5 and R5-11: a percent and the separator reach the engine's refusal
 # with the kind intact. Main's messages name no option, and the Rust unit
 # test pins the doubled percent.
-held <- tryCatch(tt_choose("Which?", "t", options = c("100% sure %s", "100% sure %s"))$value, error = function(e) e)
+held <- tryCatch(tt_choose(list(choose = "Which?", options = c("100% sure %s", "100% sure %s")), "t")$value, error = function(e) e)
 check("R2-5: a duplicate percent option is usage", inherits(held, "thinkthen_usage") &&
-      identical(conditionMessage(held), "the question file's `options`: a list holds each option once"))
+      identical(conditionMessage(held), "invalid canonical request"))
 check("R5-11: a separator in an option keeps the usage kind",
-      inherits(tryCatch(tt_choose("Which?", "t", options = c("a\x1fb", "a\x1fb"))$value, error = function(e) e), "thinkthen_usage"))
+      inherits(tryCatch(tt_choose(list(choose = "Which?", options = c("a\x1fb", "a\x1fb")), "t")$value, error = function(e) e), "thinkthen_usage"))
 
 # The deadline rules (R7-11, R2-10, R1-11): each refusal sends nothing.
 deadline_kind <- function(value) {
@@ -152,8 +152,8 @@ check("a broken choose column raises backend", grepl(
 
 # A question that names a model still answers through the dynamic many path.
 # Batch one preserves this older file's per-record request count.
-named <- tt_question(choose = "Which team?", options = c("billing", "shipping"), model = "other-model")
-check("a named-model choose answers every row", identical(tt_choose(named, c("n1", "n2"), batch = 1L)$value, c("billing", "billing")))
+named <- list(choose = "Which team?", options = c("billing", "shipping"), model = "other-model")
+check("a named-model choose answers every row", identical(tt_choose(named, c("n1", "n2"), options = list(batch = 1L))$value, c("billing", "billing")))
 
 # The counters count sends, as doubles.
 before <- tt_usage()
