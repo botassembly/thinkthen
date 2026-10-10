@@ -85,6 +85,8 @@ if [ "$mode" = go-cpp ]; then
 	{
 		printf '%s\n' ./ ./LICENSE ./README.md ./go.mod ./examples/ ./examples/decide/ \
 			./examples/decide/main.go ./THINKTHEN-PACKAGE-INPUTS
+		printf '%s\n' ./native/ "./native/$target/" "./native/$target/include/" \
+			"./native/$target/include/thinkthen.h" "./native/$target/lib/" "./native/$target/lib/libthinkthen.a"
 		sed -n 's|^libraries/go/\([^/]*\.go\)$|./\1|p' "$work/go-source"
 	} | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail 'Go source members differ'

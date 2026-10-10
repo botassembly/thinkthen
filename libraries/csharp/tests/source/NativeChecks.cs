@@ -72,9 +72,14 @@ static class NativeChecks
             var annotate = ReadAnnotate(await engine.AnnotateAsync(annotateQuestion, source, completeControls));
             Check(annotate.Count == 2 && annotate[0].Answers.Count == 2 && annotate[0].Answers["check"] is R.AnnotationMemberAnswerId { Answer: R.AnswerYesNo { Probability: .9 } }, "annotation members");
             var recognizeQuestion = Define(new InputRequestDefinitionAlternative6 { Recognize = new InputRequestDefinitionAlternative6Recognize() });
-            var recognize = Aggregate<R.SessionPacketRecognizeAggregate>(await engine.RecognizeAsync(recognizeQuestion, source, completeControls)).Value;
-            Check(recognize.Count == 2 && recognize[0].Value is R.RecognizeFieldsEntities entities && entities.Entities.Count > 0, "recognized spans");
-            Check((recognize[0].Source.State == R.PresenceState.Value) == files, "recognized location");
+            var recognized = await engine.RecognizeAsync(recognizeQuestion, source, completeControls);
+            Call(recognized);
+            var recognize = recognized.Packets.OfType<R.SessionPacketRecognizeAggregate>().SelectMany(p => p.Value).ToArray();
+            Check(recognize.Length == 2 && recognize.Select(r => r.Index.Value).SequenceEqual(new ulong[] { 0, 1 }), "recognized ordered occurrences");
+            Check(recognize.Select(r => r.Input.Value.GetString()).SequenceEqual(new[] { "Maria Chen", "Alex Lee" }), "recognized originals");
+            Check(recognize.All(r => r.Value is R.RecognizeFieldsEntities entities && entities.Entities.Count > 0), "recognized spans");
+            Check(recognize.All(r => (r.Source.State == R.PresenceState.Value) == files), "recognized location");
+            if (files) Check(recognize[0].Source.Value.FirstLine.Value == 1 && recognize[1].Source.Value.LastLine.Value == 2, "recognized physical lines");
             InputRequestInput relationInput = source;
             if (!files)
             {

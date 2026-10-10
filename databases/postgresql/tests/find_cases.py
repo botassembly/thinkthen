@@ -115,10 +115,10 @@ def invalid(socket):
         raise AssertionError(f"spent request total: {error}")
 
 
-def required_null(socket):
+def required_null(socket, scratch):
     """Required NULL wins over malformed partners, settings and unread files."""
     bad = "'{\"threshold\":\"bad\"}'::json"
-    unread = quoted('@' + str(pathlib.Path(os.environ['SCRATCH']) / 'unread-null-question.json'))
+    unread = quoted('@' + str(pathlib.Path(scratch) / 'unread-null-question.json'))
     scalars = []
     for name in ('decide', 'choose', 'score', 'tag', 'details', 'try_details'):
         members = ',NULL::text[]' if name in ('choose', 'score', 'tag') else ''

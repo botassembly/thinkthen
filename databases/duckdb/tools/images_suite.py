@@ -155,7 +155,7 @@ def described_recognize_kinds_use_native_grammar_and_keep_list_names():
         expect('rows' in got[0] and 'rows' in got[1], True, 'described kinds and retained name list execute')
         bodies = [json.loads(body) for body in backend.capture()]
         criteria = [question.get('criteria') for body in bodies for question in body['questions'].values()]
-        expect({'Person':'A human','Place':'A locality','none of these':'They are not a proper name, or no listed kind covers what they name.'} in criteria, True, 'authored descriptions reach native wire criteria')
+        expect({'Person':'A human','Place':'A locality','none of these':'The span fails the caller declaration or no listed kind applies.'} in criteria, True, 'authored descriptions reach native wire criteria')
 
 
 @case

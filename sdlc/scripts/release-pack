@@ -235,9 +235,13 @@ part_source_wrapper() {
 	folder=$(fresh "$1")
 	case $1 in
 	go)
+		[ "$TARGET" = x86_64-unknown-linux-gnu ] || { echo 'release-pack: Go requires the qualified Linux amd64 static asset' >&2; exit 1; }
+		scratch_dir go_native
+		tar -xzf "$OUT/$c_name" -C "$go_native" ./include ./lib/libthinkthen.a
+		rmdir "$folder"
+		python3 libraries/go/fixtures/package_owned.py libraries/go "$go_native" "$folder"
+		scratch_remove "$go_native"
 		mkdir -p "$folder/examples/decide"
-		cp libraries/go/LICENSE libraries/go/README.md libraries/go/go.mod \
-			libraries/go/*.go "$folder/"
 		cp libraries/go/examples/decide/main.go "$folder/examples/decide/"
 		;;
 cpp)
@@ -403,6 +407,26 @@ cobol)
 				echo "release-pack: $1 source differs from archived commit: $relative" >&2; exit 1;
 			}
 		done
+	fi
+	if [ "$1" = dart ]; then
+		python3 - "$folder/native-assets.json" "$OUT/$c_name" "$TARGET" <<'DART_ASSET'
+import hashlib, json, sys, tarfile
+from pathlib import Path
+definition = Path(sys.argv[1])
+manifest = json.loads(definition.read_text())
+assets = [asset for asset in manifest['assets'].values() if asset['target'] == sys.argv[3]]
+if len(assets) != 1:
+    raise SystemExit('release-pack: Dart native target is unsupported')
+asset = assets[0]
+with tarfile.open(sys.argv[2]) as archive:
+    payload = archive.extractfile('./lib/' + asset['file']).read()
+digest = hashlib.sha256(payload).hexdigest()
+if manifest['distribution'] == 'development-only':
+    asset.update(sha256=digest, url=None)
+    definition.write_text(json.dumps(manifest, indent=2) + '\n')
+elif asset['sha256'] != digest:
+    raise SystemExit('release-pack: Dart native asset checksum mismatch')
+DART_ASSET
 	fi
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
