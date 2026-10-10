@@ -49,6 +49,7 @@ def outputs(definitions, version, header):
     declarations = declarations.replace('extern "C" {', '').replace('} // extern "C"', '')
     # cbindgen closes the C++ linkage block with a bare brace.
     declarations = re.sub(r'^}\s*$', '', declarations, flags=re.M)
+    declarations = '\n'.join(line.rstrip() for line in declarations.splitlines())
     constants = ['<?php', '// Generated from the native C header; do not edit.',
                  'declare(strict_types=1);', 'namespace ThinkThen\\Session;',
                  'const REQUEST_VERSION = ' + repr(version) + ';']

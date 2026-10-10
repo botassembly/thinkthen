@@ -252,43 +252,43 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 
 
 typedef enum thinkthen_input_declaration_kind_v1 {
-  
+
   THINKTHEN_DECLARATION_ABSENT_V1 = 0,
-  
+
   THINKTHEN_DECLARATION_STRING_V1 = 1,
-  
+
   THINKTHEN_DECLARATION_OBJECT_V1 = 2,
 } thinkthen_input_declaration_kind_v1;
 
 
 typedef enum thinkthen_input_property_kind_v1 {
-  
+
   THINKTHEN_PROPERTY_STRING_V1 = 1,
-  
+
   THINKTHEN_PROPERTY_NUMBER_V1 = 2,
-  
+
   THINKTHEN_PROPERTY_BOOLEAN_V1 = 3,
-  
+
   THINKTHEN_PROPERTY_STRING_LIST_V1 = 4,
 } thinkthen_input_property_kind_v1;
 
 
 typedef enum thinkthen_question_loader_role_v1 {
-  
+
   THINKTHEN_LOAD_ATOMIC_V1 = 1,
-  
+
   THINKTHEN_LOAD_SET_V1 = 2,
-  
+
   THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1 = 3,
-  
+
   THINKTHEN_LOAD_RECOGNIZE_V1 = 4,
-  
+
   THINKTHEN_LOAD_RELATE_V1 = 5,
-  
+
   THINKTHEN_LOAD_RANK_V1 = 6,
-  
+
   THINKTHEN_LOAD_RANK_SET_V1 = 7,
-  
+
   THINKTHEN_LOAD_FIND_V1 = 8,
 } thinkthen_question_loader_role_v1;
 
@@ -318,1447 +318,1447 @@ typedef struct thinkthen_source thinkthen_source;
 
 
 typedef struct thinkthen_string_v1 {
-  
+
   const char *data;
-  
+
   size_t len;
 } thinkthen_string_v1;
 
 
 typedef struct thinkthen_content_v1 {
-  
+
   uint32_t kind;
-  
+
   struct thinkthen_string_v1 data;
 } thinkthen_content_v1;
 
 
 typedef struct thinkthen_optional_content_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_content_v1 value;
 } thinkthen_optional_content_v1;
 
 
 typedef struct thinkthen_optional_size_v1 {
-  
+
   int present;
-  
+
   size_t value;
 } thinkthen_optional_size_v1;
 
 
 typedef struct thinkthen_controls_v1 {
-  
+
   int64_t deadline_ms;
-  
+
   thinkthen_cancel_token *cancel;
-  
+
   struct thinkthen_optional_content_v1 context;
-  
+
   struct thinkthen_optional_size_v1 batch;
-  
+
   int batch_max;
-  
+
   int attempts;
-  
+
   struct thinkthen_string_v1 surface;
 } thinkthen_controls_v1;
 
 
 typedef struct thinkthen_answer {
-  
+
   int outcome;
-  
+
   double probability;
 } thinkthen_answer;
 
 
 typedef struct thinkthen_optional_string_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_string_v1 value;
 } thinkthen_optional_string_v1;
 
 
 typedef struct thinkthen_image_view_v1 {
-  
+
   uint32_t media;
-  
+
   const uint8_t *bytes;
-  
+
   size_t bytes_len;
-  
+
   uint32_t width;
-  
+
   uint32_t height;
-  
+
   struct thinkthen_optional_string_v1 filename;
 } thinkthen_image_view_v1;
 
 
 typedef struct thinkthen_optional_u64_v1 {
-  
+
   int present;
-  
+
   uint64_t value;
 } thinkthen_optional_u64_v1;
 
 
 typedef struct thinkthen_input_property_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   uint32_t kind;
 } thinkthen_input_property_v1;
 
 
 typedef struct thinkthen_input_properties_v1 {
-  
+
   const struct thinkthen_input_property_v1 *data;
-  
+
   size_t len;
 } thinkthen_input_properties_v1;
 
 
 typedef struct thinkthen_strings_v1 {
-  
+
   const struct thinkthen_string_v1 *data;
-  
+
   size_t len;
 } thinkthen_strings_v1;
 
 
 typedef struct thinkthen_input_declaration_v1 {
-  
+
   uint32_t kind;
-  
+
   struct thinkthen_input_properties_v1 properties;
-  
+
   struct thinkthen_strings_v1 required;
 } thinkthen_input_declaration_v1;
 
 
 typedef struct thinkthen_question_author_v1 {
-  
+
   struct thinkthen_optional_string_v1 name;
-  
+
   struct thinkthen_optional_u64_v1 wording_version;
-  
+
   struct thinkthen_input_declaration_v1 item_schema;
-  
+
   struct thinkthen_input_declaration_v1 context_schema;
 } thinkthen_question_author_v1;
 
 
 typedef struct thinkthen_optional_double_v1 {
-  
+
   int present;
-  
+
   double value;
 } thinkthen_optional_double_v1;
 
 
 typedef struct thinkthen_choice_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   struct thinkthen_optional_content_v1 description;
-  
+
   struct thinkthen_optional_double_v1 weight;
 } thinkthen_choice_v1;
 
 
 typedef struct thinkthen_choices_v1 {
-  
+
   const struct thinkthen_choice_v1 *data;
-  
+
   size_t len;
 } thinkthen_choices_v1;
 
 
 typedef struct thinkthen_rule_v1 {
-  
+
   uint32_t kind;
-  
+
   double low;
-  
+
   double high;
 } thinkthen_rule_v1;
 
 
 typedef struct thinkthen_member_spec_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   const struct thinkthen_question *question;
 } thinkthen_member_spec_v1;
 
 
 typedef struct thinkthen_member_specs_v1 {
-  
+
   const struct thinkthen_member_spec_v1 *data;
-  
+
   size_t len;
 } thinkthen_member_specs_v1;
 
 
 typedef struct thinkthen_relation_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   struct thinkthen_string_v1 source;
-  
+
   struct thinkthen_string_v1 target;
-  
+
   struct thinkthen_optional_string_v1 reads;
-  
+
   int either;
-  
+
   int single;
 } thinkthen_relation_v1;
 
 
 typedef struct thinkthen_relations_v1 {
-  
+
   const struct thinkthen_relation_v1 *data;
-  
+
   size_t len;
 } thinkthen_relations_v1;
 
 
 typedef struct thinkthen_question_spec_v1 {
-  
+
   uint32_t kind;
-  
+
   struct thinkthen_content_v1 text;
-  
+
   struct thinkthen_optional_content_v1 yes;
-  
+
   struct thinkthen_optional_content_v1 no;
-  
+
   struct thinkthen_choices_v1 choices;
-  
+
   struct thinkthen_rule_v1 threshold;
-  
+
   struct thinkthen_rule_v1 relation_threshold;
-  
+
   struct thinkthen_optional_string_v1 model;
-  
+
   struct thinkthen_optional_string_v1 profile;
-  
+
   struct thinkthen_optional_size_v1 batch;
-  
+
   int batch_max;
-  
+
   int none;
-  
+
   struct thinkthen_strings_v1 on;
-  
+
   struct thinkthen_member_specs_v1 members;
-  
+
   struct thinkthen_choices_v1 kinds;
-  
+
   struct thinkthen_relations_v1 relations;
-  
+
   struct thinkthen_optional_string_v1 name_pointer;
-  
+
   struct thinkthen_optional_string_v1 kind_pointer;
 } thinkthen_question_spec_v1;
 
 
 typedef struct thinkthen_recognition_task_v1 {
-  
+
   struct thinkthen_optional_string_v1 instructions;
-  
+
   struct thinkthen_optional_string_v1 entity_definition;
 } thinkthen_recognition_task_v1;
 
 
 typedef struct thinkthen_question_member_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   const struct thinkthen_question_view_v1 *question;
 } thinkthen_question_member_v1;
 
 
 typedef struct thinkthen_question_members_v1 {
-  
+
   const struct thinkthen_question_member_v1 *data;
-  
+
   size_t len;
 } thinkthen_question_members_v1;
 
 
 typedef struct thinkthen_question_view_v1 {
-  
+
   uint32_t kind;
-  
+
   struct thinkthen_content_v1 text;
-  
+
   struct thinkthen_optional_content_v1 yes;
-  
+
   struct thinkthen_optional_content_v1 no;
-  
+
   struct thinkthen_choices_v1 choices;
-  
+
   struct thinkthen_rule_v1 threshold;
-  
+
   struct thinkthen_rule_v1 relation_threshold;
-  
+
   struct thinkthen_optional_string_v1 model;
-  
+
   struct thinkthen_optional_string_v1 profile;
-  
+
   struct thinkthen_optional_size_v1 batch;
-  
+
   int batch_max;
-  
+
   int none;
-  
+
   struct thinkthen_strings_v1 on;
-  
+
   struct thinkthen_question_members_v1 members;
-  
+
   struct thinkthen_choices_v1 kinds;
-  
+
   struct thinkthen_relations_v1 relations;
-  
+
   struct thinkthen_optional_string_v1 name_pointer;
-  
+
   struct thinkthen_optional_string_v1 kind_pointer;
 } thinkthen_question_view_v1;
 
 
 typedef struct thinkthen_optional_question_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_question_view_v1 value;
 } thinkthen_optional_question_v1;
 
 
 typedef struct thinkthen_probability_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   double probability;
 } thinkthen_probability_v1;
 
 
 typedef struct thinkthen_probabilities_v1 {
-  
+
   const struct thinkthen_probability_v1 *data;
-  
+
   size_t len;
 } thinkthen_probabilities_v1;
 
 
 typedef struct thinkthen_named_answer_v1 {
-  
+
   struct thinkthen_string_v1 pick;
-  
+
   struct thinkthen_probabilities_v1 probabilities;
-  
+
   struct thinkthen_optional_double_v1 confidence;
 } thinkthen_named_answer_v1;
 
 
 typedef struct thinkthen_score_answer_v1 {
-  
+
   struct thinkthen_string_v1 level;
-  
+
   struct thinkthen_probabilities_v1 probabilities;
-  
+
   struct thinkthen_optional_double_v1 confidence;
 } thinkthen_score_answer_v1;
 
 
 typedef union thinkthen_answer_data_v1 {
-  
+
   double probability;
-  
+
   struct thinkthen_named_answer_v1 choice;
-  
+
   struct thinkthen_probabilities_v1 tag;
-  
+
   struct thinkthen_score_answer_v1 score;
-  
+
   struct thinkthen_named_answer_v1 find;
 } thinkthen_answer_data_v1;
 
 
 typedef struct thinkthen_answer_v1 {
-  
+
   uint32_t kind;
-  
+
   union thinkthen_answer_data_v1 data;
 } thinkthen_answer_v1;
 
 
 typedef struct thinkthen_optional_answer_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_answer_v1 value;
 } thinkthen_optional_answer_v1;
 
 
 typedef struct thinkthen_optional_rule_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_rule_v1 value;
 } thinkthen_optional_rule_v1;
 
 
 typedef struct thinkthen_location_v1 {
-  
+
   struct thinkthen_optional_string_v1 file;
-  
+
   struct thinkthen_optional_size_v1 first_line;
-  
+
   struct thinkthen_optional_size_v1 last_line;
 } thinkthen_location_v1;
 
 
 typedef struct thinkthen_optional_location_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_location_v1 value;
 } thinkthen_optional_location_v1;
 
 
 typedef struct thinkthen_usage_v1 {
-  
+
   uint64_t input_tokens;
-  
+
   uint64_t output_tokens;
 } thinkthen_usage_v1;
 
 
 typedef struct thinkthen_optional_usage_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_usage_v1 value;
 } thinkthen_optional_usage_v1;
 
 
 typedef struct thinkthen_profile_warning_v1 {
-  
+
   struct thinkthen_string_v1 tuned_for;
-  
+
   struct thinkthen_string_v1 running;
 } thinkthen_profile_warning_v1;
 
 
 typedef struct thinkthen_optional_profile_warning_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_profile_warning_v1 value;
 } thinkthen_optional_profile_warning_v1;
 
 
 typedef struct thinkthen_batch_v1 {
-  
+
   uint32_t kind;
-  
+
   size_t records;
 } thinkthen_batch_v1;
 
 
 typedef struct thinkthen_optional_batch_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_batch_v1 value;
 } thinkthen_optional_batch_v1;
 
 
 typedef struct thinkthen_batch_warning_v1 {
-  
+
   struct thinkthen_batch_v1 tuned_for;
-  
+
   struct thinkthen_batch_v1 running;
 } thinkthen_batch_warning_v1;
 
 
 typedef struct thinkthen_optional_batch_warning_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_batch_warning_v1 value;
 } thinkthen_optional_batch_warning_v1;
 
 
 typedef struct thinkthen_optional_u16_v1 {
-  
+
   int present;
-  
+
   uint16_t value;
 } thinkthen_optional_u16_v1;
 
 
 typedef struct thinkthen_attempt_v1 {
-  
+
   uint64_t ordinal;
-  
+
   struct thinkthen_string_v1 request_sha256;
-  
+
   uint64_t wall_ms;
-  
+
   uint32_t outcome;
-  
+
   struct thinkthen_string_v1 sdk_request_id;
-  
+
   struct thinkthen_optional_u16_v1 status;
-  
+
   struct thinkthen_optional_u64_v1 server_ms;
-  
+
   struct thinkthen_optional_string_v1 request_id;
 } thinkthen_attempt_v1;
 
 
 typedef struct thinkthen_attempts_v1 {
-  
+
   const struct thinkthen_attempt_v1 *data;
-  
+
   size_t len;
 } thinkthen_attempts_v1;
 
 
 typedef struct thinkthen_optional_attempts_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_attempts_v1 value;
 } thinkthen_optional_attempts_v1;
 
 
 typedef struct thinkthen_optional_discriminator_v1 {
-  
+
   int present;
-  
+
   uint32_t value;
 } thinkthen_optional_discriminator_v1;
 
 
 typedef struct thinkthen_question_source_v1 {
-  
+
   uint32_t origin;
-  
+
   struct thinkthen_string_v1 answered_by;
 } thinkthen_question_source_v1;
 
 
 typedef struct thinkthen_question_sources_v1 {
-  
+
   const struct thinkthen_question_source_v1 *data;
-  
+
   size_t len;
 } thinkthen_question_sources_v1;
 
 
 typedef union thinkthen_observation_identity_data_v1 {
-  
+
   struct thinkthen_string_v1 observation_id;
-  
+
   struct thinkthen_string_v1 failure_id;
 } thinkthen_observation_identity_data_v1;
 
 
 typedef struct thinkthen_observation_identity_v1 {
-  
+
   uint32_t kind;
-  
+
   union thinkthen_observation_identity_data_v1 data;
 } thinkthen_observation_identity_v1;
 
 
 typedef struct thinkthen_observation_identities_v1 {
-  
+
   const struct thinkthen_observation_identity_v1 *data;
-  
+
   size_t len;
 } thinkthen_observation_identities_v1;
 
 
 typedef struct thinkthen_meta_v1 {
-  
+
   struct thinkthen_string_v1 tool;
-  
+
   struct thinkthen_optional_string_v1 question_sha256;
-  
+
   struct thinkthen_optional_string_v1 questions_sha256;
-  
+
   struct thinkthen_string_v1 url;
-  
+
   struct thinkthen_string_v1 model;
-  
+
   struct thinkthen_optional_usage_v1 usage;
-  
+
   uint64_t requests_sent;
-  
+
   int cached;
-  
+
   struct thinkthen_strings_v1 requests;
-  
+
   size_t failed_questions;
-  
+
   struct thinkthen_optional_profile_warning_v1 profile_warning;
-  
+
   struct thinkthen_optional_batch_v1 batch_setting;
-  
+
   struct thinkthen_optional_batch_warning_v1 batch_warning;
-  
+
   struct thinkthen_optional_string_v1 context_sha256;
-  
+
   struct thinkthen_optional_attempts_v1 attempts;
-  
+
   struct thinkthen_optional_discriminator_v1 origin;
-  
+
   struct thinkthen_question_sources_v1 question_sources;
-  
+
   struct thinkthen_observation_identities_v1 observations;
-  
+
   struct thinkthen_optional_string_v1 answered_by;
 } thinkthen_meta_v1;
 
 
 typedef struct thinkthen_image_views_v1 {
-  
+
   const struct thinkthen_image_view_v1 *data;
-  
+
   size_t len;
 } thinkthen_image_views_v1;
 
 
 typedef struct thinkthen_optional_image_views_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_image_views_v1 value;
 } thinkthen_optional_image_views_v1;
 
 
 typedef struct thinkthen_row_v1 {
-  
+
   struct thinkthen_string_v1 answer_id;
-  
+
   struct thinkthen_optional_content_v1 input;
-  
+
   struct thinkthen_optional_question_v1 question;
-  
+
   struct thinkthen_optional_answer_v1 answer;
-  
+
   struct thinkthen_optional_rule_v1 threshold;
-  
+
   struct thinkthen_optional_location_v1 position;
-  
+
   struct thinkthen_optional_string_v1 input_file;
-  
+
   struct thinkthen_meta_v1 meta;
-  
+
   struct thinkthen_optional_image_views_v1 images;
 } thinkthen_row_v1;
 
 
 typedef union thinkthen_decide_value_data_v1 {
-  
+
   int boolean;
-  
+
   struct thinkthen_content_v1 authored;
 } thinkthen_decide_value_data_v1;
 
 
 typedef struct thinkthen_decide_value_v1 {
-  
+
   uint32_t kind;
-  
+
   union thinkthen_decide_value_data_v1 data;
 } thinkthen_decide_value_v1;
 
 
 typedef union thinkthen_member_value_data_v1 {
-  
+
   struct thinkthen_decide_value_v1 decide;
-  
+
   struct thinkthen_optional_string_v1 choose;
-  
+
   struct thinkthen_strings_v1 tag;
-  
+
   double score;
 } thinkthen_member_value_data_v1;
 
 
 typedef struct thinkthen_member_value_v1 {
-  
+
   uint32_t kind;
-  
+
   union thinkthen_member_value_data_v1 data;
 } thinkthen_member_value_v1;
 
 
 typedef struct thinkthen_member_success_v1 {
-  
+
   struct thinkthen_string_v1 answer_id;
-  
+
   struct thinkthen_member_value_v1 value;
-  
+
   struct thinkthen_answer_v1 answer;
-  
+
   struct thinkthen_rule_v1 threshold;
 } thinkthen_member_success_v1;
 
 
 typedef struct thinkthen_member_failure_v1 {
-  
+
   struct thinkthen_string_v1 failure_id;
-  
+
   uint32_t cause;
 } thinkthen_member_failure_v1;
 
 
 typedef union thinkthen_member_data_v1 {
-  
+
   struct thinkthen_member_success_v1 success;
-  
+
   struct thinkthen_member_failure_v1 failure;
 } thinkthen_member_data_v1;
 
 
 typedef struct thinkthen_member_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   struct thinkthen_string_v1 request;
-  
+
   struct thinkthen_question_view_v1 question;
-  
+
   uint32_t state;
-  
+
   union thinkthen_member_data_v1 data;
 } thinkthen_member_v1;
 
 
 typedef struct thinkthen_members_v1 {
-  
+
   const struct thinkthen_member_v1 *data;
-  
+
   size_t len;
 } thinkthen_members_v1;
 
 
 typedef struct thinkthen_annotate_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_members_v1 answers;
 } thinkthen_annotate_view_v1;
 
 
 typedef struct thinkthen_choose_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_optional_string_v1 value;
 } thinkthen_choose_view_v1;
 
 
 typedef struct thinkthen_decide_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_decide_value_v1 value;
 } thinkthen_decide_view_v1;
 
 
 typedef struct thinkthen_reported_usage_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_optional_u64_v1 input_tokens;
-  
+
   struct thinkthen_optional_u64_v1 output_tokens;
 } thinkthen_reported_usage_v1;
 
 
 typedef struct thinkthen_source_detail_v1 {
-  
+
   uint32_t origin;
-  
+
   struct thinkthen_string_v1 answered_by;
-  
+
   struct thinkthen_optional_size_v1 batch_size;
 } thinkthen_source_detail_v1;
 
 
 typedef struct thinkthen_source_details_v1 {
-  
+
   const struct thinkthen_source_detail_v1 *data;
-  
+
   size_t len;
 } thinkthen_source_details_v1;
 
 
 typedef struct thinkthen_input_view_v1 {
-  
+
   struct thinkthen_optional_content_v1 original;
-  
+
   struct thinkthen_optional_location_v1 position;
-  
+
   struct thinkthen_optional_image_views_v1 images;
 } thinkthen_input_view_v1;
 
 
 typedef struct thinkthen_input_views_v1 {
-  
+
   const struct thinkthen_input_view_v1 *data;
-  
+
   size_t len;
 } thinkthen_input_views_v1;
 
 
 typedef struct thinkthen_details_v1 {
-  
+
   struct thinkthen_optional_question_v1 question;
-  
+
   struct thinkthen_optional_rule_v1 threshold;
-  
+
   struct thinkthen_optional_string_v1 raw_pick;
-  
+
   struct thinkthen_reported_usage_v1 usage;
-  
+
   struct thinkthen_source_details_v1 question_sources;
-  
+
   struct thinkthen_observation_identities_v1 observations;
-  
+
   struct thinkthen_input_views_v1 inputs;
 } thinkthen_details_v1;
 
 
 typedef struct thinkthen_filter_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   int value;
 } thinkthen_filter_view_v1;
 
 
 typedef struct thinkthen_find_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_optional_content_v1 value;
-  
+
   struct thinkthen_optional_size_v1 index;
 } thinkthen_find_view_v1;
 
 
 typedef union thinkthen_observed_probabilities_data_v1 {
-  
+
   double yes;
-  
+
   struct thinkthen_probabilities_v1 named;
 } thinkthen_observed_probabilities_data_v1;
 
 
 typedef struct thinkthen_observed_probabilities_v1 {
-  
+
   uint32_t kind;
-  
+
   union thinkthen_observed_probabilities_data_v1 data;
 } thinkthen_observed_probabilities_v1;
 
 
 typedef struct thinkthen_observation_success_v1 {
-  
+
   struct thinkthen_string_v1 answer_id;
-  
+
   struct thinkthen_string_v1 observation_id;
-  
+
   struct thinkthen_member_value_v1 value;
-  
+
   struct thinkthen_observed_probabilities_v1 probabilities;
-  
+
   struct thinkthen_optional_double_v1 confidence;
 } thinkthen_observation_success_v1;
 
 
 typedef union thinkthen_question_observation_data_v1 {
-  
+
   struct thinkthen_observation_success_v1 success;
-  
+
   struct thinkthen_member_failure_v1 failure;
 } thinkthen_question_observation_data_v1;
 
 
 typedef struct thinkthen_question_observation_v1 {
-  
+
   size_t index;
-  
+
   struct thinkthen_optional_string_v1 member;
-  
+
   struct thinkthen_optional_discriminator_v1 stage;
-  
+
   size_t position;
-  
+
   struct thinkthen_string_v1 question_sha256;
-  
+
   struct thinkthen_string_v1 model;
-  
+
   struct thinkthen_string_v1 url;
-  
+
   struct thinkthen_strings_v1 requests;
-  
+
   uint64_t requests_sent;
-  
+
   int cached;
-  
+
   size_t failed_questions;
-  
+
   struct thinkthen_optional_usage_v1 usage;
-  
+
   struct thinkthen_question_sources_v1 question_sources;
-  
+
   uint32_t state;
-  
+
   union thinkthen_question_observation_data_v1 data;
 } thinkthen_question_observation_v1;
 
 
 typedef struct thinkthen_tag_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_strings_v1 value;
 } thinkthen_tag_view_v1;
 
 
 typedef struct thinkthen_score_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   double value;
 } thinkthen_score_view_v1;
 
 
 typedef struct thinkthen_rank_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_optional_size_v1 value;
-  
+
   struct thinkthen_optional_string_v1 question_name;
 } thinkthen_rank_view_v1;
 
 
 typedef struct thinkthen_entity_v1 {
-  
+
   struct thinkthen_string_v1 text;
-  
+
   size_t start;
-  
+
   size_t end;
-  
+
   size_t length;
-  
+
   struct thinkthen_string_v1 kind;
-  
+
   double strength;
 } thinkthen_entity_v1;
 
 
 typedef struct thinkthen_entities_v1 {
-  
+
   const struct thinkthen_entity_v1 *data;
-  
+
   size_t len;
 } thinkthen_entities_v1;
 
 
 typedef struct thinkthen_entity_edge_v1 {
-  
+
   struct thinkthen_string_v1 relation;
-  
+
   struct thinkthen_entity_v1 source;
-  
+
   struct thinkthen_entity_v1 target;
-  
+
   double probability;
-  
+
   int either;
 } thinkthen_entity_edge_v1;
 
 
 typedef struct thinkthen_entity_edges_v1 {
-  
+
   const struct thinkthen_entity_edge_v1 *data;
-  
+
   size_t len;
 } thinkthen_entity_edges_v1;
 
 
 typedef struct thinkthen_optional_entity_edges_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_entity_edges_v1 value;
 } thinkthen_optional_entity_edges_v1;
 
 
 typedef struct thinkthen_recognize_value_v1 {
-  
+
   struct thinkthen_entities_v1 entities;
-  
+
   struct thinkthen_optional_entity_edges_v1 relations;
 } thinkthen_recognize_value_v1;
 
 
 typedef struct thinkthen_piece_v1 {
-  
+
   size_t start;
-  
+
   size_t end;
-  
+
   struct thinkthen_probabilities_v1 tags;
 } thinkthen_piece_v1;
 
 
 typedef struct thinkthen_pieces_v1 {
-  
+
   const struct thinkthen_piece_v1 *data;
-  
+
   size_t len;
 } thinkthen_pieces_v1;
 
 
 typedef struct thinkthen_optional_probabilities_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_probabilities_v1 value;
 } thinkthen_optional_probabilities_v1;
 
 
 typedef struct thinkthen_name_v1 {
-  
+
   size_t start;
-  
+
   size_t end;
-  
+
   struct thinkthen_optional_probabilities_v1 kinds;
-  
+
   struct thinkthen_optional_probabilities_v1 edges;
 } thinkthen_name_v1;
 
 
 typedef struct thinkthen_names_v1 {
-  
+
   const struct thinkthen_name_v1 *data;
-  
+
   size_t len;
 } thinkthen_names_v1;
 
 
 typedef struct thinkthen_place_v1 {
-  
+
   size_t start;
-  
+
   size_t end;
 } thinkthen_place_v1;
 
 
 typedef struct thinkthen_pair_v1 {
-  
+
   struct thinkthen_string_v1 relation;
-  
+
   struct thinkthen_place_v1 source;
-  
+
   struct thinkthen_place_v1 target;
-  
+
   double probability;
 } thinkthen_pair_v1;
 
 
 typedef struct thinkthen_pairs_v1 {
-  
+
   const struct thinkthen_pair_v1 *data;
-  
+
   size_t len;
 } thinkthen_pairs_v1;
 
 
 typedef struct thinkthen_recognize_answer_v1 {
-  
+
   struct thinkthen_pieces_v1 pieces;
-  
+
   struct thinkthen_names_v1 names;
-  
+
   struct thinkthen_pairs_v1 pairs;
 } thinkthen_recognize_answer_v1;
 
 
 typedef struct thinkthen_recognize_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_recognize_value_v1 value;
-  
+
   struct thinkthen_recognize_answer_v1 answer;
 } thinkthen_recognize_view_v1;
 
 
 typedef struct thinkthen_endpoint_v1 {
-  
+
   struct thinkthen_string_v1 name;
-  
+
   struct thinkthen_string_v1 kind;
 } thinkthen_endpoint_v1;
 
 
 typedef struct thinkthen_edge_v1 {
-  
+
   struct thinkthen_string_v1 relation;
-  
+
   struct thinkthen_endpoint_v1 source;
-  
+
   struct thinkthen_endpoint_v1 target;
-  
+
   double probability;
-  
+
   int either;
 } thinkthen_edge_v1;
 
 
 typedef struct thinkthen_edges_v1 {
-  
+
   const struct thinkthen_edge_v1 *data;
-  
+
   size_t len;
 } thinkthen_edges_v1;
 
 
 typedef struct thinkthen_optional_endpoint_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_endpoint_v1 value;
 } thinkthen_optional_endpoint_v1;
 
 
 typedef struct thinkthen_relation_success_v1 {
-  
+
   struct thinkthen_string_v1 answer_id;
-  
+
   double probability;
-  
+
   int accepted;
 } thinkthen_relation_success_v1;
 
 
 typedef union thinkthen_relation_answer_data_v1 {
-  
+
   struct thinkthen_relation_success_v1 success;
-  
+
   struct thinkthen_member_failure_v1 failure;
 } thinkthen_relation_answer_data_v1;
 
 
 typedef struct thinkthen_relation_answer_v1 {
-  
+
   struct thinkthen_string_v1 relation;
-  
+
   struct thinkthen_string_v1 reads;
-  
+
   uint32_t method;
-  
+
   uint32_t direction;
-  
+
   struct thinkthen_endpoint_v1 source;
-  
+
   struct thinkthen_optional_endpoint_v1 target;
-  
+
   struct thinkthen_string_v1 request;
-  
+
   uint32_t state;
-  
+
   union thinkthen_relation_answer_data_v1 data;
 } thinkthen_relation_answer_v1;
 
 
 typedef struct thinkthen_relation_answers_v1 {
-  
+
   const struct thinkthen_relation_answer_v1 *data;
-  
+
   size_t len;
 } thinkthen_relation_answers_v1;
 
 
 typedef struct thinkthen_relate_view_v1 {
-  
+
   struct thinkthen_row_v1 common;
-  
+
   struct thinkthen_edges_v1 value;
-  
+
   struct thinkthen_relation_answers_v1 questions;
 } thinkthen_relate_view_v1;
 
 
 typedef union thinkthen_row_observation_data_v1 {
-  
+
   struct thinkthen_decide_view_v1 decide;
-  
+
   struct thinkthen_choose_view_v1 choose;
-  
+
   struct thinkthen_tag_view_v1 tag;
-  
+
   struct thinkthen_score_view_v1 score;
-  
+
   struct thinkthen_filter_view_v1 filter;
-  
+
   struct thinkthen_rank_view_v1 rank;
-  
+
   struct thinkthen_find_view_v1 find;
-  
+
   struct thinkthen_annotate_view_v1 annotate;
-  
+
   struct thinkthen_recognize_view_v1 recognize;
-  
+
   struct thinkthen_relate_view_v1 relate;
 } thinkthen_row_observation_data_v1;
 
 
 typedef struct thinkthen_row_observation_v1 {
-  
+
   size_t index;
-  
+
   uint32_t function;
-  
+
   union thinkthen_row_observation_data_v1 data;
 } thinkthen_row_observation_v1;
 
 
 typedef union thinkthen_observation_data_v1 {
-  
+
   struct thinkthen_question_observation_v1 question;
-  
+
   struct thinkthen_row_observation_v1 row;
 } thinkthen_observation_data_v1;
 
 
 typedef struct thinkthen_observation_v1 {
-  
+
   uint32_t kind;
-  
+
   union thinkthen_observation_data_v1 data;
 } thinkthen_observation_v1;
 
 
 typedef struct thinkthen_source_entity_v1 {
-  
+
   struct thinkthen_entity_v1 entity;
-  
+
   struct thinkthen_optional_location_v1 position;
 } thinkthen_source_entity_v1;
 
 
 typedef struct thinkthen_source_entities_v1 {
-  
+
   const struct thinkthen_source_entity_v1 *data;
-  
+
   size_t len;
 } thinkthen_source_entities_v1;
 
 
 typedef struct thinkthen_source_entity_edge_v1 {
-  
+
   struct thinkthen_string_v1 relation;
-  
+
   struct thinkthen_source_entity_v1 source;
-  
+
   struct thinkthen_source_entity_v1 target;
-  
+
   double probability;
-  
+
   int either;
 } thinkthen_source_entity_edge_v1;
 
 
 typedef struct thinkthen_source_entity_edges_v1 {
-  
+
   const struct thinkthen_source_entity_edge_v1 *data;
-  
+
   size_t len;
 } thinkthen_source_entity_edges_v1;
 
 
 typedef struct thinkthen_optional_source_entity_edges_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_source_entity_edges_v1 value;
 } thinkthen_optional_source_entity_edges_v1;
 
 
 typedef struct thinkthen_source_recognition_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_source_entities_v1 entities;
-  
+
   struct thinkthen_optional_source_entity_edges_v1 relations;
 } thinkthen_source_recognition_v1;
 
 
 typedef struct thinkthen_source_endpoint_v1 {
-  
+
   size_t ordinal;
-  
+
   struct thinkthen_endpoint_v1 endpoint;
-  
+
   struct thinkthen_content_v1 record;
-  
+
   struct thinkthen_optional_location_v1 position;
 } thinkthen_source_endpoint_v1;
 
 
 typedef struct thinkthen_source_edge_v1 {
-  
+
   struct thinkthen_string_v1 relation;
-  
+
   struct thinkthen_source_endpoint_v1 source;
-  
+
   struct thinkthen_source_endpoint_v1 target;
-  
+
   double probability;
-  
+
   int either;
 } thinkthen_source_edge_v1;
 
 
 typedef struct thinkthen_source_edges_v1 {
-  
+
   const struct thinkthen_source_edge_v1 *data;
-  
+
   size_t len;
 } thinkthen_source_edges_v1;
 
 
 typedef struct thinkthen_source_relations_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_source_edges_v1 edges;
 } thinkthen_source_relations_v1;
 
 
 typedef struct thinkthen_optional_meta_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_meta_v1 value;
 } thinkthen_optional_meta_v1;
 
 
 typedef struct thinkthen_facts_v1 {
-  
+
   struct thinkthen_string_v1 call_id;
-  
+
   uint64_t cache_answers;
-  
+
   struct thinkthen_optional_string_v1 estimated_cost_usd;
-  
+
   struct thinkthen_optional_u64_v1 input_tokens;
-  
+
   struct thinkthen_optional_string_v1 model;
-  
+
   struct thinkthen_optional_u64_v1 output_tokens;
-  
+
   uint64_t records;
-  
+
   uint64_t requests_sent;
-  
+
   double seconds;
-  
+
   struct thinkthen_optional_u64_v1 command_ms;
 } thinkthen_facts_v1;
 
 
 typedef struct thinkthen_optional_facts_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_facts_v1 value;
 } thinkthen_optional_facts_v1;
 
 
 typedef struct thinkthen_stopped_v1 {
-  
+
   struct thinkthen_optional_size_v1 at;
-  
+
   uint32_t cause;
-  
+
   struct thinkthen_optional_u16_v1 status;
-  
+
   int retryable;
 } thinkthen_stopped_v1;
 
 
 typedef struct thinkthen_optional_stopped_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_stopped_v1 value;
 } thinkthen_optional_stopped_v1;
 
 
 typedef struct thinkthen_error_v1 {
-  
+
   int code;
-  
+
   struct thinkthen_string_v1 message;
-  
+
   int retryable;
-  
+
   struct thinkthen_optional_stopped_v1 stopped;
 } thinkthen_error_v1;
 
 
 typedef struct thinkthen_optional_error_v1 {
-  
+
   int present;
-  
+
   struct thinkthen_error_v1 value;
 } thinkthen_optional_error_v1;
 
 
 typedef struct thinkthen_summary_v1 {
-  
+
   uint32_t state;
-  
+
   struct thinkthen_string_v1 schema;
-  
+
   struct thinkthen_optional_string_v1 answer_id;
-  
+
   struct thinkthen_optional_discriminator_v1 function;
-  
+
   size_t count;
-  
+
   size_t observation_count;
-  
+
   struct thinkthen_optional_meta_v1 meta;
-  
+
   struct thinkthen_optional_facts_v1 facts;
-  
+
   struct thinkthen_optional_attempts_v1 attempts;
-  
+
   struct thinkthen_optional_error_v1 error;
 } thinkthen_summary_v1;
 
@@ -5088,31 +5088,31 @@ typedef struct thinkthen_complete_session_packet_v1 {
 
 
 typedef struct thinkthen_source_spec_v1 {
-  
+
   struct thinkthen_strings_v1 paths;
-  
+
   uint32_t unit;
-  
+
   size_t window;
 } thinkthen_source_spec_v1;
 
 
 typedef struct thinkthen_images_v1 {
-  
+
   const struct thinkthen_image *const *data;
-  
+
   size_t len;
 } thinkthen_images_v1;
 
 
 typedef struct thinkthen_record_v1 {
-  
+
   struct thinkthen_optional_content_v1 original;
-  
+
   struct thinkthen_optional_content_v1 context;
-  
+
   struct thinkthen_choices_v1 options;
-  
+
   struct thinkthen_images_v1 images;
 } thinkthen_record_v1;
 
