@@ -10,4 +10,3 @@ print.thinkthen_identity <- function(x, ...) { cat("<complete identity>\n"); inv
   }
   value
 }
-
