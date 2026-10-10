@@ -80,6 +80,7 @@ GENERATED_BINDING_SOURCES = {
     "libraries/typescript/results_generated.js",
     "libraries/typescript/results_generated.d.ts",
     "libraries/go/owned_results_generated.go",
+    "libraries/php/src/session/ffi_generated.h",
     "libraries/ruby/src/ffi/results_generated.rs",
     "libraries/ruby/lib/thinkthen/results_generated.rb",
     "libraries/jvm/session/thinkthen/Results.java",

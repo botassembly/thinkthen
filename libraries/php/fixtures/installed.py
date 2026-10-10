@@ -15,16 +15,8 @@ ROOT = Path(__file__).resolve().parents[3]
 PHP = ROOT / "libraries/php"
 NATIVE = ROOT / "libraries/c/target/debug/libthinkthen_c.so"
 HEADER = ROOT / "libraries/c/include/thinkthen.h"
-PACKAGE_FILES = sorted(["LICENSE", "README.md", "autoload.php", "composer.json", "examples/direct.php", "src/ThinkThen.php",
-    'src/complete/models.php',
-    'src/native/abi.h',
-    'src/native/views.php',
-    'src/native/input.php',
-    'src/native/question.php',
-    'src/native/question_adapter.php',
-    'src/native/result.php',
-    'src/native/batch.php',
-    'src/native/engine.php'])
+PACKAGE_FILES = sorted(["LICENSE", "README.md", "autoload.php", "composer.json", "examples/direct.php",
+    *(str(file.relative_to(PHP)) for file in (PHP / 'src').rglob('*') if file.is_file())])
 PRIVATE_PATTERNS = (b"tt-canary-291", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
