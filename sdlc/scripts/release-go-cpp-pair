@@ -229,19 +229,13 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 				./Sources/TTNativeAPI.h ./Sources/TTNativeAPI.m ./Sources/TTNativeViews.c \
 				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$third")
-			source_members libraries/cobol/ libraries/cobol/copybooks >"$work/cobol-source"
 			{
 				printf '%s\n' ./ ./LICENSE ./README.md \
 					./source-package.json ./copybooks/ \
-					./src/ ./src/TTJSON.c ./src/TTJSON.h \
-					./src/tt_call.cob ./src/tt_complete.c ./src/tt_native.h ./src/tt_counted.c \
-					./src/tt_decide.cob ./src/tt_engine.cob ./src/tt_error.cob \
-					./src/tt_files.cob ./src/tt_inputs.c ./src/tt_plan.cob \
-					./src/tt_shape.c ./src/tt_validate.cob ./src/tt_session.h ./src/tt_session.c \
+					./copybooks/tt-native-generated.cpy ./src/ ./src/tt_session.h ./src/tt_session.c \
 					./src/tt_requests_generated.h ./src/tt_requests_generated.c ./examples/ \
-					./examples/direct.cob ./examples/settings.cob ./examples/types.cob \
-					./examples/native.cob ./examples/session.cob ./THINKTHEN-PACKAGE-INPUTS
-				sed -n '\|^\./copybooks/[^/]*\.cpy$|p' "$work/cobol-source"
+					./examples/session.cob ./THINKTHEN-PACKAGE-INPUTS ./native/
+				tar -tzf "$dir/$c" | sed -n '\|^\./include/|s|^\./|./native/|p; \|^\./lib/|s|^\./|./native/|p'
 			} | LC_ALL=C sort >"$work/expected-members" ;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
@@ -251,7 +245,7 @@ import sys, tarfile
 for index, filename in enumerate(sys.argv[1:]):
     with tarfile.open(filename, "r:gz") as archive:
         for member in archive:
-            if index == 0 and member.name == "./lib/libthinkthen.so.0":
+            if (index == 0 and member.name == "./lib/libthinkthen.so.0") or (index == 3 and member.name == "./native/lib/libthinkthen.so.0"):
                 assert member.issym() and member.linkname == "libthinkthen.so"
             else:
                 assert member.isfile() or member.isdir(), (filename, member.name)
@@ -259,8 +253,13 @@ PY
 	for name in "$second" "$third"; do
 		tar -xOzf "$dir/$name" ./source-package.json >"$work/package-metadata"
 		case $name in "$second") package_name=thinkthen-objective-c ;; "$third") package_name=thinkthen-cobol ;; esac
-		python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p=={"name":sys.argv[2],"version":sys.argv[3],"source_only":True,"native_dependency":"thinkthen-c","bundles_native":False}' \
+		python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); bundled=sys.argv[2]=="thinkthen-cobol"; assert p=={"name":sys.argv[2],"version":sys.argv[3],"source_only":not bundled,"native_dependency":"thinkthen-c","bundles_native":bundled}' \
 			"$work/package-metadata" "$package_name" "$version" || fail "source package identity differs for $name"
+	done
+	for member in include/thinkthen.h lib/libthinkthen.a lib/libthinkthen.so lib/pkgconfig/thinkthen.pc; do
+		tar -xOzf "$dir/$c" "./$member" >"$work/c-member"
+		tar -xOzf "$dir/$third" "./native/$member" >"$work/cobol-member"
+		cmp -s "$work/c-member" "$work/cobol-member" || fail "COBOL bundled native differs for $member"
 	done
 fi
 case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; swift-zig) echo 'release-go-cpp-pair: swift-zig pass' ;; php-dart) echo 'release-go-cpp-pair: php-dart pass' ;; dart-flutter) echo 'release-go-cpp-pair: dart-flutter pass' ;; ada-objective-c-cobol) echo 'release-go-cpp-pair: ada-objective-c-cobol pass' ;; esac

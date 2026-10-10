@@ -399,7 +399,7 @@ def main():
                                  ("dart", "lib/src/session/client.dart"),
                                  ("ada", "src/thinkthen.ads"),
                                  ("objective-c", "Sources/ThinkThen.m"),
-                                 ("cobol", "src/tt_call.cob")):
+                                 ("cobol", "src/tt_session.c")):
             copied = source / "libraries" / family / relative
             original = copied.read_bytes()
             copied.write_bytes(original + b"\n// altered archived wrapper\n")
@@ -627,6 +627,12 @@ def main():
             raise AssertionError("extra platform folder created collected output")
         for family in ("ada", "objective-c", "cobol"):
             script = (REPO / "libraries" / family / "check.sh").read_text()
+            if "import jsonschema" not in script:
+                # Generated session consumers no longer use the legacy source
+                # grammar. They must still unpack and test the installed package.
+                if "installed_unpack" not in script or "THINKTHEN_PARITY_PACKAGE" not in script:
+                    raise AssertionError(f"{family} gate does not check the installed package")
+                continue
             installed_end = script.index("  exit 0\nfi\n")
             source_start = script.index("unset THINKTHEN_API_KEY", installed_end)
             source_only = script[installed_end:source_start]
