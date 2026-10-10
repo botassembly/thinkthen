@@ -29,3 +29,7 @@ COBOL callers use one named callable interface with generated copybooks. Results
   One public API is one coherent family of named typed calls. Claim `libraries/cobol/**` narrowed and named per slice.
 - Proof: An installed COBOL consumer reads every known field and failure facts through shared cases, including a value that exceeds a COBOL representation limit and receives the explicit refusal. Record handwritten code removed and added, counting generator changes, in the landing record.
 - Defers: Final distribution assembly belongs to 0530.
+
+## Progress
+
+- 2026-10-10 landed 7e6992ad8; next: Typed COBOL native sessions and generated request graph are landed with explicit scalar bounds. Final installed archive parity and platform qualification remain.
