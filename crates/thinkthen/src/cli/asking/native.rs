@@ -42,7 +42,7 @@ pub(super) fn run(
     let readiness = crate::public::cli_reader::CliReader::new(&ready, environment.input_pause());
     reader.wake(readiness.wake());
     let rows = std::iter::from_fn(|| {
-        reader.next().map(|row| {
+        reader.next(environment.cancel()).map(|row| {
             let unit = row.map_err(|placed| input_error(placed.cause, placed.at))?;
             let record = compose(&composition, &unit)?;
             held.borrow_mut().insert(unit.ordinal, unit);

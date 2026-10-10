@@ -54,11 +54,20 @@ pub(super) fn run(
         .collect::<Vec<_>>();
     let composition = crate::RecordReading::new(&fields, None, None).map_err(Failure::from)?;
     let records = std::iter::from_fn(|| {
-        reader.next().map(|frame| {
+        reader.next(judging.environment.cancel()).map(|frame| {
             let (ordinal, original) =
                 frame.map_err(|placed| input_error(placed.cause, placed.at))?;
-            let record = compose(judging, &composition, &original.record)
+            let mut record = compose(judging, &composition, &original.record)
                 .map_err(|error| input_error(error, Some(ordinal + 1)))?;
+            if let Some(position) = original.position.as_ref().filter(|p| p.located)
+                && let Some(file) = &position.file
+            {
+                record.original = record.original.with_location(crate::SourceLocation::new(
+                    file.clone(),
+                    position.first,
+                    position.last,
+                )?);
+            }
             held.borrow_mut().insert(ordinal, original);
             Ok(record.map_original(crate::QuestionInput::Record))
         })
