@@ -148,6 +148,14 @@ public final class Engine implements AutoCloseable {
     public CompletableFuture<OwnedCall> annotate(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("annotate", question, input, options); }
     public CompletableFuture<OwnedCall> recognize(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("recognize", question, input, options); }
     public CompletableFuture<OwnedCall> relate(Map<String,?> question, Map<String,?> input, Map<String,?> options) { return call("relate", question, input, options); }
+    /** Observe persistence without waiting for the usage writer. */
+    public synchronized UsagePersistence usagePersistence() {
+        live(); return NativeSession.usage(pointer, "thinkthen_engine_usage_persistence_v1");
+    }
+    /** Drain current deltas; only usage-lock acquisition has a deadline. */
+    public synchronized UsagePersistence finishUsageStatus() {
+        live(); return NativeSession.usage(pointer, "thinkthen_engine_finish_usage_status_v1");
+    }
     @Override public synchronized void close() {
         if (!pointer.equals(MemorySegment.NULL)) { NativeSession.free("thinkthen_engine_free", pointer); pointer = MemorySegment.NULL; }
     }

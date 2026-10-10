@@ -5,7 +5,7 @@ import java.lang.invoke.MethodHandle;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Stable JDK FFM calls; no native structure or result field copies. */
+/** Stable JDK FFM calls with compiler-derived carriers and owned results. */
 final class NativeSession {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup SYMBOLS = NativeLoader.load();
@@ -38,6 +38,22 @@ final class NativeSession {
         if (code == 0) return;
         MemorySegment message = (MemorySegment)call("thinkthen_session_error_message", ValueLayout.ADDRESS, new MemoryLayout[]{});
         throw new NativeFailure(code, false, message.reinterpret(Long.MAX_VALUE).getString(0), null);
+    }
+    static UsagePersistence usage(MemorySegment engine, String function) {
+        try (Arena outputs = Arena.ofConfined()) {
+            var state = outputs.allocate(NativeUsageLayouts.STATE);
+            var advice = outputs.allocate(NativeUsageLayouts.ADVICE);
+            int code = (int)call(function, ValueLayout.JAVA_INT,
+                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, engine, state, advice);
+            check(code);
+            var data = advice.get(ValueLayout.ADDRESS, NativeUsageLayouts.ADVICE_DATA);
+            long length = advice.get(SIZE, NativeUsageLayouts.ADVICE_LEN);
+            if (length < 0 || length > Integer.MAX_VALUE || (data.equals(MemorySegment.NULL) && length != 0))
+                throw new IllegalStateException("Invalid native usage advice view");
+            String copied = data.equals(MemorySegment.NULL) ? null :
+                new String(data.reinterpret(length).toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8);
+            return new UsagePersistence(UsagePersistence.State.read(state.get(ValueLayout.JAVA_INT, NativeUsageLayouts.STATE_KIND)), copied);
+        }
     }
     static Object copied(MemorySegment pointer, long length) {
         if (length > Integer.MAX_VALUE) throw new IllegalStateException("Result exceeds Java array size");
