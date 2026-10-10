@@ -520,16 +520,16 @@ fn choose_raw_prints_an_empty_line_for_an_unresolved_record() {
 }
 
 #[test]
-fn compact_row_count_equals_the_record_count_for_every_run_that_finishes() {
-    row_count_equals_record_count(&["--field", "/body"]);
+fn compact_row_count_equals_the_record_count_for_every_run_that_finishes() -> io::Result<()> {
+    row_count_equals_record_count(&["--field", "/body"])
 }
 
 #[test]
-fn detailed_row_count_equals_the_record_count_for_every_run_that_finishes() {
-    row_count_equals_record_count(&["--field", "/body", "--details"]);
+fn detailed_row_count_equals_the_record_count_for_every_run_that_finishes() -> io::Result<()> {
+    row_count_equals_record_count(&["--field", "/body", "--details"])
 }
 
-fn row_count_equals_record_count(view: &[&str]) {
+fn row_count_equals_record_count(view: &[&str]) -> io::Result<()> {
     // One row per record, in input order, for every count and output view.
     for count in 0..9_usize {
         let probabilities: Vec<&str> = (0..count)
@@ -538,9 +538,9 @@ fn row_count_equals_record_count(view: &[&str]) {
         let input: String = (0..count)
             .map(|place| format!("{{\"body\":\"record {place}\"}}\n"))
             .collect();
-        let listener = serving(&probabilities).expect("a loopback listener");
+        let listener = serving(&probabilities)?;
         let arguments = [&["--jsonl"][..], view].concat();
-        let output = decide(listener.base(), &arguments, &input).expect("the compiled binary runs");
+        let output = decide(listener.base(), &arguments, &input)?;
 
         assert_eq!(output.status.code(), Some(0), "{count} records, {view:?}");
         assert_eq!(
@@ -549,4 +549,5 @@ fn row_count_equals_record_count(view: &[&str]) {
             "{count} records, {view:?}"
         );
     }
+    Ok(())
 }
