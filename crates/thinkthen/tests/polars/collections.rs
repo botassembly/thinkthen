@@ -60,7 +60,9 @@ fn filter_and_rank_keep_nullable_duplicate_row_positions() {
             .collect::<Vec<_>>(),
         [Some(0.9), Some(0.9), Some(0.2)]
     );
-    assert_eq!(listener.count(), 6);
+    // Native rank shares identical pending judgments while retaining both occurrences.
+    assert_eq!(ranked.facts().requests_sent(), 2);
+    assert_eq!(listener.count(), 5);
 }
 
 #[test]
@@ -247,6 +249,41 @@ fn empty_invalid_and_cancelled_collections_do_not_send() {
             .kind(),
         ErrorKind::Cancelled
     );
+    assert_eq!(backend.count(), 0);
+    let wrong = Question::choose_labels("Which?")
+        .expect("choose")
+        .label("a", None)
+        .expect("label")
+        .label("b", None)
+        .expect("label")
+        .build()
+        .expect("question");
+    let text = common::column(&["one", "two"]);
+    let numbers = Series::new("numbers".into(), [1_i64, 2]);
+    let filter = Question::decide("Relevant?").expect("filter").cut();
+    for error in [
+        engine
+            .filter_series(&wrong, &text, CallOptions::new())
+            .expect_err("wrong filter question"),
+        engine
+            .rank_series(&rank, &numbers, CallOptions::new())
+            .expect_err("non-text rank"),
+        engine
+            .find_series(&find, &numbers, CallOptions::new())
+            .expect_err("non-text find"),
+    ] {
+        assert_eq!(error.kind(), ErrorKind::Usage);
+    }
+    for error in [
+        engine
+            .filter_series(&filter, &text, CallOptions::new().cancel(&token))
+            .expect_err("cancel filter"),
+        engine
+            .find_series(&find, &text, CallOptions::new().cancel(&token))
+            .expect_err("cancel find"),
+    ] {
+        assert_eq!(error.kind(), ErrorKind::Cancelled);
+    }
     assert_eq!(backend.count(), 0);
 }
 

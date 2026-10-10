@@ -16,6 +16,7 @@ mod eager;
 mod inputs;
 mod lazy;
 mod options;
+mod request;
 mod typed;
 mod typed_batches;
 mod typed_series;

@@ -50,6 +50,8 @@ Null input cells are omitted from requests and restored as nulls in their origin
 
 `rank_lazy` and `find_lazy` collect the whole logical frame before asking its selected text column. They compare the complete collection once, including duplicate candidates. They are eager calls after collection; no morsel is treated as a whole candidate set. Ranking retains stable ties. Null candidates are omitted, and result indices refer to original column positions. `find_series` returns every candidate, including synthetic none with null index/unit, rather than discarding the probability vector. `selected` marks the native selected real unit; a none/abstained selection marks no real unit. Empty find input keeps the native count refusal.
 
+`filter_series`, `rank_series` and `find_series` retain their existing arguments and output columns. Their native Request execution applies the same question admission, cancellation and call facts as the other Request callers. No caller-side request document, JSON result reader or new call name is needed. Existing code using these methods, including `rank_lazy` and `find_lazy`, keeps working.
+
 Complete dataframe methods use the native result/2 calls and readers. Recognition collections now use one native collection call and its checked once-rounded cost. The shared native scheduler retains one deadline, cancellation scope and request budget for the whole collection.
 
 ## Lazy expressions
