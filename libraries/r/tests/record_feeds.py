@@ -22,6 +22,7 @@ class Handler(BaseHTTPRequestHandler):
         body = b'{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}'
         self.send_response(200)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
     def log_message(self, *_args):
