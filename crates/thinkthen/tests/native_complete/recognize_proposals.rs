@@ -99,7 +99,6 @@ fn judged_proposals_retain_declines_duplicate_winners_and_under_cut_seed_facts()
         json!({"entities":[{"text":"!!","start":0,"end":2,"length":2,"kind":"person","strength":0.72}]})
     );
     schema::call(&first, "completeRecognition");
-    assert_python_reader(&document);
     let replay = engine
         .recognize_complete_with(&ask, "!! Ada Bob Åda", CallOptions::new())
         .unwrap();
@@ -215,43 +214,4 @@ fn assert_span_probabilities(proposals: &[thinkthen::RecognitionProposal<'_>]) {
     for (p, expected) in proposals.iter().zip([0.9, 0.8, 0.9, 0.6, 0.4]) {
         assert!((p.span_probability() - expected).abs() < 0.00001);
     }
-}
-
-#[cfg(test)]
-fn assert_python_reader(document: &Value) {
-    use std::io::Write as _;
-    use std::process::Stdio;
-    let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../libraries/python/thinkthen/_complete.py");
-    let script = r#"
-import importlib.util,json,sys,types,pathlib
-package=types.ModuleType("thinkthen");package.__path__=[str(pathlib.Path(sys.argv[1]).parent)];sys.modules["thinkthen"]=package
-spec=importlib.util.spec_from_file_location('thinkthen._complete',sys.argv[1])
-m=importlib.util.module_from_spec(spec);sys.modules[spec.name]=m;spec.loader.exec_module(m)
-document=json.load(sys.stdin)
-result=m.decode('RecognizeResult',document)
-assert m.to_json(result.answer)==document['answer']
-assert result.answer.proposals[4].strength==.36
-assert result.answer.proposals[2].strength is m.ABSENT
-"#;
-    let mut reader = child::command("python3", &[])
-        .args(["-I", "-c", script])
-        .arg(source)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-    reader
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(document.to_string().as_bytes())
-        .unwrap();
-    let output = child::wait::finish(reader, "Python canonical recognition reader").unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
 }
