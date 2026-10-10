@@ -11,6 +11,8 @@ Reviews: revision a087f6dc3, accept
 
 Reviews: revision 47e7b9d518c372cbdaaf2eda003e26fd20dff5d2, reject
 
+Reviews: revision 1ae8c48ef60315bde3f9dc1c1bd46efe023c7163, accept
+
 ## Outcome
 
 PHP callers install one Composer package that carries the native library, call the ten functions with PHP arrays and values, and read generated PHP result classes with explicit presence. Failures are typed exceptions with retained facts. Every native resource is freed when its object is destroyed, including an engine with open batches. Hand-copied views, readers and old public names are gone.
