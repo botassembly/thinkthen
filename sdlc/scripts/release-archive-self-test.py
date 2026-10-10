@@ -311,6 +311,16 @@ def main():
             'const char *thinkthen_fixture(void) { return "/build/home/.rustup/library/std/src/lib.rs"; }\n')
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
+        cpp_guard = str(REPO / "libraries/cpp/fixtures/guard.py")
+        expect(run(sys.executable, cpp_guard, str(native)), "PRIVATE_PACKAGE_PASS", success=True)
+        private_cpp = base / "private-cpp"
+        private_cpp.mkdir()
+        for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
+                              b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-273",
+                              b"/build/home/home/private", b"/build/home/Users/private",
+                              b"/build/home/auth.json", b"/build/home/tt-canary-273"):
+            (private_cpp / "libthinkthen.a").write_bytes((native / "libthinkthen_c.a").read_bytes() + private_bytes)
+            expect(run(sys.executable, cpp_guard, str(private_cpp)), "private pattern in libthinkthen.a")
         env = os.environ.copy()
         env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
                    CARGO_TARGET_DIR=str(native.parent),

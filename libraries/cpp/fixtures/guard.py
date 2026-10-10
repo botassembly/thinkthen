@@ -9,6 +9,8 @@ files = [p for p in root.rglob("*") if p.is_file() and "fixtures" not in p.parts
               or p.name.startswith("libthinkthen"))]
 assert files, "no source scanned"
 for path in files:
-    if any(needle in path.read_bytes() for needle in needles):
+    # release-pack remaps the builder's home; scan the rest of each path.
+    data = path.read_bytes().replace(b"/build/home/", b"/build/")
+    if any(needle in data for needle in needles):
         raise SystemExit(f"private pattern in {path.name}")
 print(f"PRIVATE_PACKAGE_PASS {len(files)} files")
