@@ -132,6 +132,7 @@ impl AdmittedRequest {
         image_refusal: Option<String>,
     ) -> Result<Inputs<'a>, Error> {
         let options = &self.request.call.arguments().options;
+        super::framing::reading(self, definition)?;
         let reading = reading(definition, options)?;
         let schema = context_schema(definition).cloned();
         let reading = schema.clone().map_or(reading.clone(), |schema| {
@@ -139,28 +140,40 @@ impl AdmittedRequest {
         });
         let annotate =
             matches!(definition, RequestDefinition::Annotate(_)) && !explicit_projection(options);
-        let RequestInput::Feed { images, .. } = &self.request.call.arguments().input else {
+        let RequestInput::Feed {
+            images, framing, ..
+        } = &self.request.call.arguments().input
+        else {
             return Err(Error::defect("session feed lost its declaration"));
         };
         let mut budget = AttachmentBudget::new(self.attachment_limit);
         let items = std::iter::from_fn(move || queue.next(controls));
-        Ok(Box::new(items.map(move |descriptor| {
+        let rows = items.map(move |descriptor| -> Result<Option<_>, Error> {
             let descriptor = descriptor?;
             if options.files_only && descriptor.location.is_none() {
                 return Err(Error::usage(
                     "file selection requires a source location on every session descriptor",
                 ));
             }
-            let item = attach_shared(descriptor.item, images)?;
+            let Some(item) = super::framing::item(descriptor.item, *framing)? else {
+                return Ok(None);
+            };
+            let item = attach_shared(item, images)?;
             super::admission::admit_item(self.request.call.function(), &item, options)?;
             admit_image_route(&item, image_refusal.as_deref())?;
-            let mut row =
-                compose_document(&item, &reading, schema.as_ref(), &mut budget, annotate)?;
+            let mut row = compose_document(
+                &item,
+                &reading,
+                schema.as_ref(),
+                &mut budget,
+                annotate && matches!(framing, super::RequestFraming::Document),
+            )?;
             if let Some(location) = descriptor.location {
                 row.original = located(row.original, location)?;
             }
-            Ok(row)
-        })))
+            Ok(Some(row))
+        });
+        Ok(Box::new(rows.filter_map(Result::transpose)))
     }
 }
 fn located(input: QuestionInput, location: crate::SourceLocation) -> Result<QuestionInput, Error> {
