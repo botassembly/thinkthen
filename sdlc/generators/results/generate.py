@@ -330,9 +330,14 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "ada":
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import ada
+        ada.generate(ROOT, graph, prepare, child_env(), args.check)
+        return
     if args.target == "dart":
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import dart

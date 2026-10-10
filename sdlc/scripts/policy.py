@@ -77,6 +77,11 @@ BINDING_SOURCE_EXTENSIONS = {
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 GENERATED_BINDING_SOURCES = {
+    "libraries/ada/src/thinkthen-requests.ads",
+    "libraries/ada/src/thinkthen-requests.adb",
+    "libraries/ada/src/thinkthen-sessions-calls.ads",
+    "libraries/ada/src/thinkthen-sessions-calls.adb",
+    "libraries/ada/src/thinkthen_session_c.ads",
     "libraries/dart/lib/src/session/results_generated.dart",
     "libraries/dart/lib/src/session/inputs_generated.dart",
     "libraries/dart/lib/src/session/abi_generated.dart",

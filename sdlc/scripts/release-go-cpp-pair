@@ -211,7 +211,12 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 		case $name in
 		"$first")
 			printf '%s\n' ./ ./LICENSE ./README.md \
-				./thinkthen.gpr ./src/ ./src/thinkthen-buffers.adb \
+				./thinkthen.gpr ./native/ ./native/include/ ./native/include/thinkthen.h \
+				./native/lib/ ./native/lib/libthinkthen.a \
+				./src/ ./src/thinkthen-requests.ads ./src/thinkthen-requests.adb \
+				./src/thinkthen-sessions.ads ./src/thinkthen-sessions.adb \
+				./src/thinkthen-sessions-calls.ads ./src/thinkthen-sessions-calls.adb \
+				./src/thinkthen_session_c.ads ./src/thinkthen-buffers.adb \
 				./src/thinkthen-buffers.ads ./src/thinkthen-native-batches.adb ./src/thinkthen-native-batches.ads \
 				./src/thinkthen-native-inputs.ads ./src/thinkthen-native-results.ads ./src/thinkthen-native.adb \
 				./src/thinkthen-native.ads ./src/thinkthen-typed-complete-batches.adb ./src/thinkthen-typed-complete-batches.ads \
@@ -221,7 +226,7 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 				./src/thinkthen_c_answers.ads ./src/thinkthen_c_entities.ads ./src/thinkthen_c_events.ads \
 				./src/thinkthen_c_extensions.ads ./src/thinkthen_c_inputs.ads ./src/thinkthen_c_metadata.ads \
 				./src/thinkthen_c_rows.ads ./examples/ ./examples/consumer.adb \
-				./examples/native.adb ./THINKTHEN-PACKAGE-INPUTS \
+				./examples/native.adb ./examples/session_demo.adb ./THINKTHEN-PACKAGE-INPUTS \
 				| LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./Sources/ \

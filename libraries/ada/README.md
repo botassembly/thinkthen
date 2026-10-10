@@ -1,21 +1,35 @@
 # ThinkThen Ada
 
-GNAT 13.3 / gprbuild, Linux x86_64 glibc. This is the source package for the Linux Ada binding. Each GitHub release ships `thinkthen-ada-0.1.2-x86_64-unknown-linux-gnu.tar.gz` beside a separate `thinkthen-c-0.1.2-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest before installing. The native archive contains the header, shared library and soname link, static archive, pkg-config file and LICENSE. Ada links the native library; it does not compile the C header. Keep the library available through a trusted rpath or LD_LIBRARY_PATH, not a world-writable directory.
+The development package supports Linux x86-64 with GNAT 13.3, gprbuild and Ada 2022. Its generated sources and exported `thinkthen.gpr` travel with `native/include/thinkthen.h` and `native/lib/libthinkthen.a`. The project supplies package-relative static linking and platform dependencies. An installed caller needs GNAT and gprbuild. Final platform distribution assembly belongs to the release process; the published 0.1.2 package retains its existing contract.
 
-From a source checkout, build the native library and Ada package before copying their outputs into a project (or take the matching versioned archives from the same GitHub release):
+Extract the development package into a `thinkthen/` directory beside your application. Import its project:
 
-```sh
-git clone https://github.com/botassembly/thinkthen.git
-cd thinkthen
-cargo build --locked --offline --release -p thinkthen-c --manifest-path libraries/c/Cargo.toml
-cd libraries/ada
-gprbuild -P thinkthen.gpr -j2
-# Copy this directory's src/ and thinkthen.gpr (or the matching release archive)
-# plus libraries/c/target/release/libthinkthen_c.so and libraries/c/include/thinkthen.h
-# into your project, preserving their matching version and header manifest.
+```ada
+with "thinkthen/thinkthen.gpr";
+project Application is
+   for Main use ("session_demo.adb");
+   for Object_Dir use "obj";
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnat2022");
+   end Compiler;
+end Application;
 ```
 
-The source checkout must already contain its Cargo dependencies for `--offline`; acquire dependencies in an authorized setup step if needed. The Cargo build's `libthinkthen_c.so` is installed as `libthinkthen.so` (soname `libthinkthen.so.0`) in a trusted library directory. Link Ada clients against both `-lthinkthen_ada` and `-lthinkthen`, with that `lib/` on the link and runtime search path. For example, after `gprbuild` and installing the native library, compile the example with `gnatmake -gnat2022 -Isrc examples/consumer.adb -D obj -o obj/consumer -largs -L/path/to/native/lib -lthinkthen -Wl,-rpath,/path/to/native/lib`, then run `obj/consumer` with a configured backend. Consult `examples/consumer.adb`. `Call` returns the generic C JSON door's `{"value":VALUE,"facts":FACTS}` envelope as JSON text; `Member (Text, "value")` and `Member (Text, "facts")` return each part. The `.gpr` project is suitable for a future Alire wrapper; no Alire index submission occurs. No Alire publication or Apple claim is made here.
+Copy `thinkthen/examples/session_demo.adb` beside this project, then build with `gprbuild -p -P application.gpr -j2`. Configure a backend before executing a judgment. The installed focused check uses a synthetic loopback backend and the package's bundled static engine.
+
+`Thinkthen.Sessions.Calls` provides named typed calls for all ten functions. Each accepts its generated `Thinkthen.Requests.T_RequestCall_*` record. Callers populate records, discriminated alternatives and vectors; the generated transport serializes them internally. Absent optional records omit their member. A present false remains false. Schema-declared arbitrary JSON content uses `JSON_Value`; native Rust owns its parsing and admission. The binding copies no label grammar, semantic validator or cache policy into this family.
+
+A controlled `Session` owns cancellation and closes without waiting for provider work. `Push` and `Finish` accept generated descriptors and reader failures. `Try_Read` transfers a controlled independent `Packet`; `View` borrows the complete generated graph while that packet lives, including failure facts and extension JSON. Every nested pointer ends at packet finalization. Join concurrent Ada tasks before closing their owners. Immediate failures raise typed exceptions; execution failures retain a declared `Status` and the typed terminal failure. A terminal before execution can have missing facts. Check presence before dereferencing.
+
+`Thinkthen_Session_C` is generated from the canonical C header through GNAT. C macros use a `K_` prefix because Ada identifiers ignore case and some C constants share names with types. Its fixed records and discriminated unchecked unions preserve the C layout. Check native kind and presence tags before selecting union arms. `State` distinguishes missing, null and present values. Native counts retain their full unsigned width. `Text` and `Index` refuse extents above `Natural'Last` with `Representation_Overflow` before allocation or conversion.
+
+| Retained call | Generated Session call |
+| --- | --- |
+| `Thinkthen.Decide` or `Thinkthen.Typed.Complete.Decide` | `Thinkthen.Sessions.Calls.Decide` with `T_RequestCall_decide` |
+| Other `Thinkthen.Typed.Complete` named calls | Same function under `Thinkthen.Sessions.Calls` with its generated request record |
+| JSON `Thinkthen.Call` | Named generated request records and typed packet views |
+
+The retained APIs remain reachable until complete installed migration parity permits removal. The following sections describe their compatibility contracts.
 
 The four retained compatibility procedures `Decide`, `Decide_Many`, `Recognize`, and `Relate` return their value plus the run facts from the same native operation. Facts, recognize and relate values, and plans are the engine's JSON text, as `specification/result.schema.json` describes; Ada has no standard JSON value, so the package does not copy them into records. `Member (Text, Name)` returns one object member's JSON text and `Element (Text, Index)` one array element's, counting from 1; each returns `""` when absent and ignores members it is not asked for. A reported model can exist without usage. `Decide_Many` still refuses an empty input before sending. Every sending procedure takes `Deadline_Ms` (`-1` for none) and an optional `Cancel_Token`.
 
