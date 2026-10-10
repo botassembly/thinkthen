@@ -28,6 +28,9 @@ module ThinkThen
     Source = Struct.new(:source) do
       def inspect = "<ThinkThen::Client::Source: content withheld>"
     end
+    Question = Struct.new(:selector) do
+      def inspect = "<ThinkThen::Client::Question: content withheld>"
+    end
     Item = Struct.new(:descriptor) do
       def inspect = "<ThinkThen::Client::Item: content withheld>"
     end
@@ -53,8 +56,13 @@ module ThinkThen
     rescue JSON::GeneratorError, TypeError
       raise UsageError.new("settings cannot be converted to native JSON", "usage")
     end
-    def self.files(paths, **reading)
-      Source.new({paths: Array(paths), reading: reading, media: "text"}).freeze
+    def self.question_file(path)
+      Question.new({kind: "file", path: path}).freeze
+    end
+    def self.files(paths, framing: nil, media: "text", **reading)
+      source = {paths: Array(paths), reading: reading, media: media}
+      source[:framing] = framing unless framing.nil?
+      Source.new(source).freeze
     end
     def self.item(value, **fields)
       Item.new({original: original(value), **fields}).freeze
@@ -105,6 +113,7 @@ module ThinkThen
       nil
     end
     def inspect = "<ThinkThen::Client>"
+    def usage = @native.usage
 
     class Operation
       attr_reader :terminal
@@ -112,7 +121,7 @@ module ThinkThen
         @remove, @token, @verb = remove, token, verb
         @rows = []
         @closed = false
-        @scalar = !input.is_a?(Array) && !input.is_a?(Source) && !input.is_a?(Enumerable)
+        @scalar = %w[find relate].include?(verb) || (!input.is_a?(Array) && !input.is_a?(Source) && !input.is_a?(Enumerable))
         source = if input.is_a?(Source)
           {kind: "source", source: input.source}
         elsif input.is_a?(Array)
@@ -125,7 +134,11 @@ module ThinkThen
           @scalar = true
           {kind: "records", items: [Client.descriptor(input)]}
         end
-        asked = question.is_a?(String) ? {kind: "text", text: question} : {kind: "definition", value: question}
+        asked = if question.is_a?(Question)
+          question.selector
+        else
+          question.is_a?(String) ? {kind: "text", text: question} : {kind: "definition", value: question}
+        end
         request = {schema: REQUEST_VERSION, call: {function: verb, question: asked, input: source, options: options}}
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")

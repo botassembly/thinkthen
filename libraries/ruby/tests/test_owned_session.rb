@@ -34,6 +34,8 @@ class TestOwnedSession < Minitest::Test
       say retained.first.last.value
       say retained[1].last.value
       say retained[3].last.value
+      say retained[6].last.value
+      say retained[9].last.value.map(&:relation)
     RUBY
     TestBackend.with(script) do |backend, child|
       results = child.hear
@@ -42,6 +44,8 @@ class TestOwnedSession < Minitest::Test
       assert_equal true, child.hear
       assert_equal "billing", child.hear
       assert_equal 0.15, child.hear
+      assert_equal "first", child.hear
+      assert_equal %w[knows knows], child.hear
       status, errors = child.finish
       assert status.success?, errors
       assert_operator backend.count, :>=, 10
@@ -57,18 +61,27 @@ class TestOwnedSession < Minitest::Test
         path = File.join(ENV.fetch("HOME"), "input.txt")
         File.write(path, "first\\n\\nthird\\n")
         located = client.decide("Question?", T::Client.files([path], unit: "line"))
-        [missing, authored_null, unresolved, located]
+        File.write(path, JSON.generate(body: "framed text") + "\\n")
+        framed = client.decide("Question?", T::Client.files([path], framing: "jsonl"), field: ["/body"])
+        selector = T::Client.question_file(path)
+        raise "path leak" if selector.inspect.include?(path)
+        empty_edges = client.relate({version: 1, relate: {relations: [{name: "knows", source: "person", target: "person", either: false}]}, threshold: 0.95}, [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}])
+        [missing, authored_null, unresolved, located, framed, empty_edges]
       end
-      missing, authored_null, unresolved, located = retained
+      missing, authored_null, unresolved, located, framed, empty_edges = retained
       say [missing.value, authored_null.value, unresolved.value]
       say [missing.results.first.question.key?("true"), authored_null.results.first.question.key?("true"), authored_null.results.first.question["true"]]
       say located.results.map { |row| [row.index, row.source.first_line, row.source.last_line, row.input] }
       say located.facts.records
+      say [framed.results.first.input.to_h, framed.results.first.value]
+      say empty_edges.value
     RUBY
       assert_equal [false, nil, nil], child.hear
       assert_equal [false, true, nil], child.hear
       assert_equal [[0, 1, 1, "first"], [1, 3, 3, "third"]], child.hear
       assert_equal 2, child.hear
+      assert_equal [{"body" => "framed text"}, true], child.hear
+      assert_equal [], child.hear
       status, errors = child.finish
       assert status.success?, errors
       assert_operator backend.count, :>=, 3
@@ -122,13 +135,34 @@ class TestOwnedSession < Minitest::Test
     end
   end
 
-  def test_thread_progress_and_cancel_cleanup_precede_held_provider_release
+  def test_fiber_progress_and_cancel_cleanup_precede_held_provider_release
     TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
       token = T::Cancel.new
       client = T::Client.new(cache: false)
       ticks = 0
       running = true
-      ticker = Thread.new { while running; ticks += 1; sleep 0.001; end }
+      scheduler = Class.new do
+        def initialize = (@waiting = [])
+        def fiber(&block) = Fiber.new(blocking: false, &block).tap(&:resume)
+        def kernel_sleep(duration = 0)
+          @waiting << [Process.clock_gettime(Process::CLOCK_MONOTONIC) + duration, Fiber.current]
+          Fiber.yield
+          duration
+        end
+        def block(_blocker, timeout = nil) = kernel_sleep(timeout || 0)
+        def unblock(_blocker, fiber) = (@waiting << [0, fiber])
+        def io_wait(*) = raise("unexpected scheduler IO")
+        def close
+          until @waiting.empty?
+            ready, @waiting = @waiting.partition { |at, _| at <= Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+            ready.each { |_, fiber| fiber.resume if fiber.alive? }
+            sleep 0.001 unless @waiting.empty?
+          end
+        end
+      end.new
+      producer = ["first", "second"].lazy
+      closed = false
+      producer.define_singleton_method(:close) { closed = true }
       Thread.new do
         hear
         before = ticks
@@ -137,21 +171,25 @@ class TestOwnedSession < Minitest::Test
         hear
         token.cancel
       end
-      begin
-        client.decide("Question?", ["first", "second"].lazy, cancel: token, batch: 1)
-      rescue T::CancelledError => error
-        client.close
-        say [error.kind, ticks.positive?, error.facts]
-      ensure
-        running = false
-        ticker.join
+      Fiber.set_scheduler(scheduler)
+      Fiber.schedule { while running; ticks += 1; sleep 0.001; end }
+      Fiber.schedule do
+        begin
+          client.decide("Question?", producer, cancel: token, batch: 1)
+        rescue T::CancelledError => error
+          client.close
+          say [error.kind, ticks.positive?, error.facts, closed]
+        ensure
+          running = false
+        end
       end
+      Fiber.set_scheduler(nil)
     RUBY
       assert_equal 1, backend.wait(1)
       child.tell
       assert_equal ["progress", true], child.hear
       child.tell
-      assert_equal ["cancelled", true, nil], child.hear
+      assert_equal ["cancelled", true, nil, true], child.hear
       status, errors = child.finish
       assert status.success?, errors
       assert_equal 1, backend.count
