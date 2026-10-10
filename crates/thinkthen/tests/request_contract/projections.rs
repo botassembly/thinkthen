@@ -463,11 +463,11 @@ fn located_find_keeps_duplicate_occurrences_and_separates_the_none_candidate() {
                 .collect::<serde_json::Map<_, _>>();
             Canned::ok(&json!({"model":"fixed","answers":{"q1":{"type":"choice","probabilities":probabilities}}}).to_string())
         }).unwrap();
-        let engine = engine(&listener);
         let mut arguments = args(
             RequestDefinition::Find(FindQuestionFile::from_json(r#"{"find":"Which?"}"#).unwrap()),
             RequestInput::Source {
                 source: RequestSource {
+                    framing: None,
                     paths: vec![path.clone(), path.clone()],
                     reading: ReaderOptions { unit, window: None },
                     media: ReaderMedia::Text,
@@ -475,7 +475,7 @@ fn located_find_keeps_duplicate_occurrences_and_separates_the_none_candidate() {
             },
         );
         arguments.options.none = true;
-        let session = engine
+        let session = engine(&listener)
             .request_session(Request::new(RequestCall::Find(arguments)))
             .unwrap();
         let mut documents = vec![];
@@ -573,6 +573,7 @@ fn located_relation_session_retains_duplicate_sources_without_question_observati
     let session = engine(&listener).request_session(Request::new(RequestCall::Relate(args(
         Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),
         RequestInput::Source { source: RequestSource {
+            framing: None,
             paths: vec![path.clone(), path.clone()],
             reading: ReaderOptions { unit: SourceUnit::Line, window: None },
             media: ReaderMedia::Text,

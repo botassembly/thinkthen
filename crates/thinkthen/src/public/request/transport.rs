@@ -110,6 +110,7 @@ impl AdmittedRequest {
             }
             if source.paths.is_empty()
                 || source.paths.iter().any(|path| path.as_os_str().is_empty())
+                || source.framing.is_some()
                 || source.media != crate::ReaderMedia::Text
                 || source.reading.unit != crate::SourceUnit::File
             {
@@ -161,7 +162,7 @@ pub(crate) fn source_records<'a>(
     }))
 }
 
-fn rank_budget_error() -> Error {
+pub(super) fn rank_budget_error() -> Error {
     Error::usage("source rank reads at most 16 MiB across all input records")
 }
 

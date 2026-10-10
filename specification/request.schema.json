@@ -2242,6 +2242,10 @@
       "description": "Explicit source paths and physical-unit controls.",
       "type": "object",
       "properties": {
+        "framing": {
+          "description": "Explicit logical framing; omission retains physical text/image reading.",
+          "$ref": "#/$defs/RequestFraming"
+        },
         "media": {
           "description": "Whole-file media; text is the default.",
           "$ref": "#/$defs/ReaderMedia",

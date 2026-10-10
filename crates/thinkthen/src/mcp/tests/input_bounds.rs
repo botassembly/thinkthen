@@ -165,6 +165,7 @@ fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
                 ],
             },
             source: Some(crate::RequestSource {
+                framing: None,
                 paths: vec![if missing {
                     folder.join("absent.txt")
                 } else {
@@ -239,6 +240,7 @@ fn transport_image_sources_retain_the_sent_prefix_on_budget_exhaustion() {
         question: crate::RequestQuestion::Text { text: "q".into() },
         input: crate::RequestInput::Source {
             source: crate::RequestSource {
+                framing: None,
                 paths: vec![
                     fixture.clone(),
                     fixture.clone(),

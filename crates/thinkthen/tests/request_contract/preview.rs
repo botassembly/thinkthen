@@ -23,6 +23,7 @@ fn canonical_preview_resolves_question_files_and_ordered_duplicate_sources() {
         },
         input: RequestInput::Source {
             source: RequestSource {
+                framing: None,
                 paths: vec![source_path.clone(), source_path],
                 reading: ReaderOptions::default(),
                 media: ReaderMedia::Text,

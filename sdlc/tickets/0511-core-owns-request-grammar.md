@@ -67,6 +67,11 @@ struct TableReader<R>
 fn TableReader::new(impl Into<String>, R, TableFormat) -> Result<TableReader<R>, Error>
 impl Iterator for TableReader
 type TableReader::Item = Result<SourceRecord<RawRecord>, Error>
+RequestSource::framing: Option<RequestFraming>
+struct RequestSourceReader<R>
+fn RequestSourceReader::new(impl Into<String>, R, RequestFraming, ReaderOptions) -> Result<RequestSourceReader<R>, Error>
+impl Iterator for RequestSourceReader
+type RequestSourceReader::Item = Result<SourceRecord<RawRecord>, Error>
 ```
 
 ## Progress

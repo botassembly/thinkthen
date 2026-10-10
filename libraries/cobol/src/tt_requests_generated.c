@@ -1220,6 +1220,7 @@ raw(w,"}");
 static inline void emit_RequestSource(writer *w,const void *input) { const thinkthen_cobol_RequestSource *p=input;
 if(!p) {w->code=THINKTHEN_COBOL_REPRESENTATION; return;}
 int comma=0; raw(w,"{");
+if(p->m_framing) { if(comma++) raw(w,","); raw(w,"\"framing\":"); emit_RequestFraming(w,p->m_framing); }
 if(p->m_media) { if(comma++) raw(w,","); raw(w,"\"media\":"); emit_ReaderMedia(w,p->m_media); }
 if(p->m_paths) { if(comma++) raw(w,","); raw(w,"\"paths\":"); emit_RequestSource_member_paths(w,p->m_paths); }
 if(p->m_reading) { if(comma++) raw(w,","); raw(w,"\"reading\":"); emit_RequestReader(w,p->m_reading); }

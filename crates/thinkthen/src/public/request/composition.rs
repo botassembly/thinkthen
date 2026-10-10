@@ -76,11 +76,15 @@ impl AdmittedRequest {
             ),
             RequestInput::Source { source } => {
                 controls.admission()?;
-                let items = read_source(source, budget.remaining())?;
                 let rank = self.request.call.function() == super::RequestFunction::Rank;
-                Ok(super::transport::source_records(
-                    reading, items, controls, annotate, rank,
-                ))
+                super::source::records(
+                    source,
+                    reading,
+                    controls,
+                    annotate,
+                    rank,
+                    budget.remaining(),
+                )
             }
             RequestInput::Feed { name, images, .. } => {
                 let feed = environment
@@ -182,7 +186,7 @@ impl AdmittedRequest {
         Ok(Box::new(rows))
     }
 }
-fn located_row(
+pub(super) fn located_row(
     mut row: RecordInput<QuestionInput>,
     location: Option<crate::SourceLocation>,
 ) -> Result<RecordInput<QuestionInput>, Error> {
@@ -578,7 +582,7 @@ fn compose_descriptors(
     Ok(Box::new(rows.into_iter().map(Ok)))
 }
 
-fn read_source(
+pub(super) fn read_source(
     source: &super::RequestSource,
     remaining: Option<usize>,
 ) -> Result<crate::SourceItems, Error> {

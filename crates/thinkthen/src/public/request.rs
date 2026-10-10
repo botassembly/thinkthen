@@ -13,6 +13,8 @@ mod native_feed;
 mod options;
 mod preview;
 mod result;
+mod source;
+pub use source::RequestSourceReader;
 mod session;
 mod session_queue;
 mod session_result;

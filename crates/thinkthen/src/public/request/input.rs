@@ -15,6 +15,14 @@ pub struct RequestSource {
     #[serde(default, with = "reader")]
     #[cfg_attr(test, schemars(with = "RequestReader"))]
     pub reading: ReaderOptions,
+    /// Explicit logical framing; omission retains physical text/image reading.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[cfg_attr(test, schemars(with = "RequestFraming"))]
+    pub framing: Option<RequestFraming>,
     /// Whole-file media; text is the default.
     #[serde(default)]
     pub media: ReaderMedia,

@@ -1172,6 +1172,8 @@ pub const RequestSessionDescriptor = struct {
 };
 
 pub const RequestSource = struct {
+    framing: ?RequestFraming = null,
+
     media: ?ReaderMedia = null,
 
     paths: []const []const u8,

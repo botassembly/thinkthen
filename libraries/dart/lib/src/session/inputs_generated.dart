@@ -2257,14 +2257,19 @@ final class InputRequestSource extends NativeObject {
   factory InputRequestSource.read(Object? value) =>
       InputRequestSource._(readObject(value));
   InputRequestSource(
-      {Presence<String> media = const Presence.absent(),
+      {Presence<String> framing = const Presence.absent(),
+      Presence<String> media = const Presence.absent(),
       required List<String> paths,
       Presence<InputRequestReader> reading = const Presence.absent()})
       : super({
+          if (framing.isPresent) "framing": framing.value,
           if (media.isPresent) "media": media.value,
           "paths": paths,
           if (reading.isPresent) "reading": reading.value
         });
+  Presence<String> get framing => json.containsKey("framing")
+      ? Presence.present(json["framing"] as String)
+      : const Presence.absent();
   Presence<String> get media => json.containsKey("media")
       ? Presence.present(json["media"] as String)
       : const Presence.absent();
