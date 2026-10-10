@@ -38,7 +38,7 @@ pub const Request = struct {
     }
     pub fn start(self: Request, engine: *tt.Engine) tt.session.Error!tt.session.Session {
         var raw: ?*c.thinkthen_session = null;
-        try tt.session.checked(c.thinkthen_session_new(engine.raw, self.json.ptr, self.json.len, &raw));
+        try tt.session.checked(c.thinkthen_session_new_with_surface(engine.raw, self.json.ptr, self.json.len, "zig", "zig".len, &raw));
         return .{ .raw = raw orelse return error.Defect };
     }
     /// Native preview reads no key or cache and sends no request.

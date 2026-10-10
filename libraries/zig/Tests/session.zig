@@ -48,14 +48,21 @@ pub fn main() !void {
     if (plan.value.records != 1 or plan.value.requests != 1 or plan.value.largest_request_bytes == 0 or plan.value.estimated_input_tokens.upper == 0) return error.WrongPlan;
     const args = try std.process.argsAlloc(a);
     defer std.process.argsFree(a, args);
-    if (args.len > 1) {
+    const invalid = tt.Request{ .allocator = a, .json = "{" };
+    if (invalid.start(&engine)) |unexpected| {
+        var owned = unexpected;
+        owned.deinit();
+        return error.InvalidRequestAccepted;
+    } else |err| if (err != error.Usage) return err;
+    const failure_case = args.len > 1 and std.mem.eql(u8, args[1], "failure");
+    if (args.len > 1 and !failure_case) {
         engine.deinit();
         if (plan.value.first_body_utf8 == null) return error.MissingPlanBody;
         std.debug.print("installed Zig plan PASS\n", .{});
         return;
     }
     var session = try tt.session.decide(&engine, .{ .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .feed = .{ .name = "owned" } } });
-    if (try session.push(a, .{ .item = .{ .original = .{ .text = .{ .text = "Evidence." } } }, .location = .{ .file = "owned.txt", .first_line = 1, .last_line = 1 } }) != .accepted) return error.FeedRefused;
+    if (try session.push(a, .{ .item = .{ .original = .{ .text = .{ .text = if (failure_case) "status-401" else "Evidence." } } }, .location = .{ .file = "owned.txt", .first_line = 1, .last_line = 1 } }) != .accepted) return error.FeedRefused;
     try session.finish();
     engine.deinit();
     var retained: ?tt.session.Packet = null;
@@ -78,11 +85,21 @@ pub fn main() !void {
     }
     session.deinit();
     const packet = retained orelse return error.MissingTerminal;
-    if (packet.failure() != null) return error.NativeFailure;
     const facts = packet.facts() orelse return error.MissingFacts;
     const retained_author = try question.author();
     if (!std.mem.eql(u8, try tt.native.bytes(retained_author.name.value), "pass")) return error.QuestionLifetime;
-    if (facts.records != 1 or facts.requests_sent != 1) return error.WrongFacts;
+    if (facts.requests_sent != 1) return error.WrongFacts;
     if (!terminal or packets == 0 or plan.value.first_body_utf8 == null) return error.MissingTerminal;
+    if (failure_case) {
+        const failure = packet.failure() orelse return error.MissingFailure;
+        const failure_facts = tt.session.optional(failure.facts) orelse return error.MissingFailureFacts;
+        if (failure_facts[0].requests_sent != facts.requests_sent) return error.WrongFailureFacts;
+        if (failure.@"error"[0].kind[0].kind != tt.c.THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1) return error.WrongFailureKind;
+        if (tt.session.bytes(failure.@"error"[0].message).len == 0) return error.MissingFailureMessage;
+        std.debug.print("installed Zig failure PASS\n", .{});
+        return;
+    }
+    if (packet.failure() != null) return error.NativeFailure;
+    if (facts.records != 1) return error.WrongRecords;
     std.debug.print("installed Zig session PASS\n", .{});
 }

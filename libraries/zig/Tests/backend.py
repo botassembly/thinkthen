@@ -32,6 +32,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(int(self.headers['Content-Length']))
         with self.server.lock:
             self.server.arrivals.append(json.loads(body))
+            self.server.user_agents.append(self.headers.get('User-Agent'))
         if self.path != '/generic/v1/systemone' or self.headers.get('Authorization') != 'Bearer tt-canary-273':
             self.send_error(403)
             return
@@ -127,6 +128,7 @@ class Backend(http.server.ThreadingHTTPServer):
         self.bulk_completion = []
         self.lock = threading.Lock()
         self.arrivals = []
+        self.user_agents = []
         self.thread = threading.Thread(target=self.serve_forever)
         self.thread.start()
     def close(self):
