@@ -186,6 +186,15 @@ and checks the same opened descriptor against its allowed directory and the
 captured named root before reading content. Native parsing receives the original
 bytes; resolution grants no read permission.
 
+SQLite also accepts the persistent BLOB from `thinkthen_images` as the input to `thinkthen_decide_complete`. It evaluates the collection as one image-only record and returns the same complete envelope. For example, with `photos.image` holding values built by `thinkthen_image`:
+
+```sql
+SELECT thinkthen_decide_complete('Is red visible?', thinkthen_images(image))
+FROM photos;
+```
+
+The tagged collection reuses native image decoding, admission and request execution. NULL question or collection returns NULL before inspecting partners; NULL settings uses defaults. Existing text descriptors remain valid.
+
 The ordered input descriptor is explicit:
 
 ```sql

@@ -52,6 +52,45 @@ say(error=run(db, 'SELECT thinkthen_decide_images(?, ?, ?)', ('A different quest
         expect(backend.count(), 4, 'replay and misses send nothing')
 
 
+def test_complete_decide_accepts_stored_blob_and_strict_replay():
+    with ImageBackend() as backend:
+        env = environment(None, THINKTHEN_BASE_URL=backend.base, THINKTHEN_BACKEND='liquid', LIQUIDAI_API_KEY='fake-sql-image-key')
+        record = str(pathlib.Path(env['SCRATCH']) / 'complete-record')
+        code = STORED + f'''
+db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":False,"record":{record!r}}}),))
+value = json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', packed)).fetchone()[0])
+say(value=value)
+'''
+        got = child(code, env)['value']
+        expect(got['ordinals'], [0], 'one native image record')
+        expect(got['native']['value'][0]['value'], True, 'complete native decision')
+        expect(got['native']['facts']['requests_sent'], 1, 'one complete image evaluation')
+        expect(backend.bodies, [expected_body('decide', text='')], 'stored order and duplicate image bytes')
+        replay = child(STORED.replace('images.sqlite', 'complete-replay.sqlite') + f'''
+db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":False,"replay":{record!r}}}),))
+say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?, NULL)', ('Is red visible?', packed)).fetchone()[0]))
+''', {**env, 'THINKTHEN_MAX_REQUESTS_TOTAL':'0'})['value']
+        expect([(row['value'], row['answer_id'], row['input']) for row in replay['native']['value']],
+               [(row['value'], row['answer_id'], row['input']) for row in got['native']['value']], 'strict complete replay values')
+        expect(replay['native']['facts']['requests_sent'], 0, 'strict replay sends nothing')
+        invalid = child(STORED.replace('images.sqlite', 'complete-invalid.sqlite') + '''
+say(nulls=[run(db, 'SELECT thinkthen_decide_complete(?, ?, ?)', args) for args in [(None,b'bad','bad'),('@unread-question.json',None,'bad')]],
+ bad=[json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', value)).fetchone()[0])['native']['error']['kind'] for value in [b'bad', packed+b'x']])
+''', env)
+        expect(invalid['nulls'], [[[None]], [[None]]], 'NULL ignores malformed partners')
+        expect(invalid['bad'], ['usage', 'usage'], 'bad tagged collections refuse')
+        expect(backend.count(), 1, 'replay and malformed collections send nothing')
+        backend.status = 503
+        backend.reply = b'{"error":"private-backend-body"}'
+        failed = child(STORED.replace('images.sqlite', 'complete-failed.sqlite') + '''
+db.execute('SELECT thinkthen_configure(?)', ('{"model":"d1","cache":false,"max_retries":0}',))
+say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', packed)).fetchone()[0]))
+''', env)['value']
+        expect(failed['native']['error']['kind'], 'backend', 'backend failure keeps its complete kind')
+        assert 'private-backend-body' not in json.dumps(failed)
+        expect(backend.count(), 2, 'one failing attempt follows one successful call')
+
+
 def test_null_bad_tags_media_pixels_count_and_implicit_blob_send_nothing():
     with ImageBackend() as backend:
         env = environment(None, THINKTHEN_BASE_URL=backend.base, THINKTHEN_API_KEY='fake-sql-image-key', LIQUIDAI_API_KEY='fake-sql-image-key', THINKTHEN_BACKEND='liquid')
