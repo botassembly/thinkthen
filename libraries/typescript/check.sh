@@ -61,15 +61,15 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
     public_types
-    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/owned_session.test.mjs)
-    (cd "$project" && THINKTHEN_OWNED_MODULE=cjs node --test --test-timeout=30000 tests/owned_session.test.mjs)
+    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
+    (cd "$project" && THINKTHEN_OWNED_MODULE=cjs node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
     python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
-    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,typescript_compiler=tsc):sys.exit(1)
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,extra_env={'THINKTHEN_OWNED_MODULE':'cjs' if language=='typescript' else 'esm'},typescript_compiler=tsc):sys.exit(1)
 NODENATIVE
     echo 'typescript: pass, installed'
     exit 0
@@ -168,7 +168,7 @@ from pathlib import Path
 root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
 from native_fixture import run
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
-    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,typescript_compiler=tsc):sys.exit(1)
+    if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,extra_env={'THINKTHEN_OWNED_MODULE':'cjs' if language=='typescript' else 'esm'},typescript_compiler=tsc):sys.exit(1)
 NODENATIVE
 step 'the loader refuses a platform it does not ship, with the pinned sentence'
 refused=$(node -e 'Object.defineProperty(process, "platform", { value: "freebsd" }); try { require("./loader.js") } catch (e) { console.log(e.message) }')

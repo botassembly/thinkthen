@@ -6,4 +6,4 @@ async function typed(client:Client,q:Question,input:Input) {
 }
 void typed;
 // Execute the same fixture consumer after the compiler checks named calls.
-import './native_case.mjs';
+void import('./native_case.mjs');

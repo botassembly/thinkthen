@@ -1,4 +1,6 @@
-import * as tt from 'thinkthen';
+import * as esm from 'thinkthen';
+import {createRequire} from 'node:module';
+const tt=process.env.THINKTHEN_OWNED_MODULE==='cjs'?createRequire(import.meta.url)('thinkthen'):esm;
 import { readSync } from 'node:fs';
 function line() {
  const bytes=new Uint8Array(65536),decoder=new TextDecoder();let text='';
@@ -11,7 +13,7 @@ try {
  const selector=document.question;
  const question=selector.kind==='file'?tt.Client.questionFile(selector.path):selector.kind==='name'?tt.Client.questionName(selector.name):selector.kind==='reference'?tt.Client.questionReference(selector.reference):selector.value;
  const source=document.input;
- const input=source.kind==='source'?tt.Client.files(source.source.paths,source.source.reading,source.source.media,source.source.framing):source.items.map(item=>tt.Client.item(item.original?.kind==='text'?item.original.text:item.original?.value,Object.fromEntries(Object.entries(item).filter(([key])=>key!=='original'))));
+ const input=source.kind==='source'?tt.Client.files(source.source.paths,source.source.reading,source.source.media,source.source.framing):source.items.map(item=>tt.Client.item(item.original?.kind==='text'?item.original.text:item.original?.value,Object.fromEntries(Object.entries({...item,images:(item.images??[]).map(image=>image.kind==='bytes'?{...image,bytes:Uint8Array.from(Buffer.from(image.bytes,'base64'))}:image)}).filter(([key])=>key!=='original'))));
  const controller=new AbortController();
  if(document.cancel)controller.abort();
  if(document.held_cancel)setTimeout(()=>controller.abort(),150);
