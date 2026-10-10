@@ -7,11 +7,11 @@ import 'package:thinkthen_dart/thinkthen_dart.dart';
 
 final engine = Engine.open();
 try {
-  final call = await engine.decide(
+  final refundDecision = await engine.decide(
     InputRequestQuestionText(text: 'Does this ask for a refund?'),
     InputRequestInputText(text: 'Refund me please.'),
   );
-  final row = call.packets.whereType<SessionPacketDecideRow>().single;
+  final row = refundDecision.packets.whereType<SessionPacketDecideRow>().single;
   print(row.value.answer);
 } finally {
   engine.close();
