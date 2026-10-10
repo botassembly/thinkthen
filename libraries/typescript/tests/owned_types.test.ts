@@ -1,5 +1,5 @@
-import {Client,ClientError,Engine,Results,type UsageStatus} from 'thinkthen';
-function usage(owner:Client|Engine) {
+import {Client,ClientError,Results,type UsageStatus} from 'thinkthen';
+function usage(owner:Client) {
  const status:UsageStatus=owner.usagePersistence();
  const state:Results.NativeUsagePersistence=owner.finishUsageStatus().state;
  const advice:string|undefined=status.advice;

@@ -28,9 +28,11 @@ export class Client {
  constructor(settings?:Readonly<Record<string,R.JsonValue>>);
  usagePersistence():UsageStatus;
  finishUsageStatus():UsageStatus;
- static files(paths:readonly string[],reading?:Readonly<Record<string,R.JsonValue>>,media?:string):Source;
- static item(value:R.JsonValue,fields?:Readonly<Record<string,R.JsonValue>>):Item;
+ static files(paths:readonly string[],reading?:Readonly<Record<string,R.JsonValue>>,media?:string,framing?:string):Source;
+ static item(value:R.JsonValue|undefined,fields?:Readonly<Record<string,R.JsonValue>>):Item;
  static questionFile(path:string):QuestionFile;
+ static questionName(name:string):QuestionFile;
+ static questionReference(reference:string):QuestionFile;
  start(verb:string,question:Question,input:Input,controls?:Controls):Operation;
  close():void;
  decide(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeDecideResult>>;
@@ -47,7 +49,6 @@ export class Client {
 
 export class ClientError extends Error {
  readonly kind:'usage'|'backend'|'local'|'cancelled'|'deadline'|'defect';
- readonly code:number;
  readonly retryable:boolean;
  readonly complete?:R.NativeCallError;
  readonly facts?:R.NativeFacts;

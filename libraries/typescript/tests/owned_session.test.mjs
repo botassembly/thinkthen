@@ -11,9 +11,9 @@ const ask=async(backend,body,options)=>{
 };
 const child=(backend,body,options)=>backendChild(backend,framed(body),options);
 
-test('Engine and Client report owned written usage without changing call facts',async t=>{
+test('Client report owned written usage without changing call facts',async t=>{
   const backend=await startBackend(t);
-  for(const owner of ['Engine','Client']) {
+  for(const owner of ['Client']) {
     const {value}=await ask(backend,`
       const client=new tt.${owner}({cache:false});
       const done=await client.decide('Question?','text');
@@ -28,16 +28,16 @@ test('Engine and Client report owned written usage without changing call facts',
           catch(error){if(!(error instanceof tt.ClientError) || error.kind!=='usage' || error.message!=='client is closed')throw error;}
         }
       }
-      return [written,observed,${owner==='Client'?'done.results[0].value':'done.value'}];
+      return [written,observed,done.results[0].value];
     `);
     assert.deepEqual(value,[{state:'written'},{state:'written'},true]);
   }
-  assert.equal(await backend.count(),2);
+  assert.equal(await backend.count(),1);
 });
 
-test('Engine and Client latch held usage writer failure with safe owned advice',{skip:process.platform!=='linux'},async t=>{
+test('Client latch held usage writer failure with safe owned advice',{skip:process.platform!=='linux'},async t=>{
   const backend=await startBackend(t);
-  for(const owner of ['Engine','Client']) {
+  for(const owner of ['Client']) {
     const {value}=await ask(backend,`
       const {spawn}=await import('node:child_process');
       const {childEnv}=await import(${JSON.stringify(CHILD_ENV)});
@@ -53,26 +53,26 @@ test('Engine and Client latch held usage writer failure with safe owned advice',
         if(JSON.stringify(done)!==earlier)throw Error('changed historical facts');
         if(client.close)client.close();
         if(!Object.isFrozen(failed) || typeof failed.advice!=='string')throw Error('unowned advice');
-        return [pending,failed,repeated,${owner==='Client'?'done.results[0].value':'done.value'}];
+        return [pending,failed,repeated,done.results[0].value];
       } finally {lock.stdin.end();await exited;}
     `);
     const failed={state:'failed',advice:'check the usage folder permissions and free space'};
     assert.deepEqual(value,[{state:'pending'},failed,[failed,failed],true]);
   }
-  assert.equal(await backend.count(),2);
+  assert.equal(await backend.count(),1);
 });
 
-test('Engine and Client report disabled usage when the environment selects no storage',async t=>{
+test('Client report disabled usage when the environment selects no storage',async t=>{
   const backend=await startBackend(t);
   const {value}=await ask(backend,`
-    return [tt.Engine,tt.Client].map(Owner=>{
+    return [tt.Client].map(Owner=>{
       const client=new Owner({cache:false});
       const states=[client.usagePersistence(),client.finishUsageStatus()];
       if(client.close)client.close();
       return states;
     });
   `,{env:{HOME:'',XDG_STATE_HOME:'',LOCALAPPDATA:''}});
-  assert.deepEqual(value,[[{state:'disabled'},{state:'disabled'}],[{state:'disabled'},{state:'disabled'}]]);
+  assert.deepEqual(value,[[{state:'disabled'},{state:'disabled'}]]);
   assert.equal(await backend.count(),0);
 });
 
@@ -213,4 +213,24 @@ test('Client releases a rejected feed while retaining a held request and failure
   assert.equal(run.lines.filter(row=>row.value.closed===1).length,1);
   assert.deepEqual(run.lines.at(-1).value,{value:{kind:'usage',closed:1,rows:[{body:'first'}],sends:1,id:64,complete:'NativeCallError'}});
   assert.equal(await backend.count(),1);
+});
+
+test('Client recognize retains every aggregate chunk and its completed failure prefix',async t=>{
+  const backend=await startBackend(t);
+  const {value}=await ask(backend,`
+    const {writeFileSync}=await import('node:fs');
+    const root=process.env.HOME,paths=[root+'/one.txt',root+'/two.txt',root+'/bad.txt'];
+    writeFileSync(paths[0],'Ana Lima');writeFileSync(paths[1],'Bob Smith');writeFileSync(paths[2],new Uint8Array([255]));
+    const client=new tt.Client({cache:false});
+    const question={version:1,recognize:{kinds:{person:null}}};
+    const done=await client.recognize(question,tt.Client.files(paths.slice(0,2),{unit:'file'}));
+    const empty=await client.recognize(question,[]);
+    let failed;
+    try {await client.recognize(question,tt.Client.files(paths,{unit:'file'}));throw Error('failure became answer');}
+    catch(error){if(!(error instanceof tt.ClientError))throw error;failed={kind:error.kind,rows:error.results.map(row=>row.index),sends:error.facts.requests_sent};}
+    client.close();
+    return {rows:done.results.map(row=>row.index),nonempty:done.results.every(row=>row.value.entities.length>0),empty:empty.results,failed};
+  `,{arm:'arm/full/capture'});
+  assert.deepEqual(value.rows,[0,1]);assert.equal(value.nonempty,true);assert.deepEqual(value.empty,[]);
+  assert.deepEqual(value.failed,{kind:'usage',rows:[0,1],sends:4});
 });
