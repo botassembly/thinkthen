@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / 'conformance/children'))
@@ -42,6 +43,13 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
         assert result.returncode == 0, result.stderr
         assert result.stderr == 'installed Zig session PASS\n', result.stderr
         assert len(backend.arrivals) == 1, backend.arrivals
+        failed = subprocess.run([str(project / 'zig-out/bin/session'), 'failure'], cwd=project, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert failed.returncode == 0, failed.stderr
+        assert failed.stderr == 'installed Zig failure PASS\n', failed.stderr
+        assert len(backend.arrivals) == 2, backend.arrivals
+        version = tomllib.loads((REPO / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
+        assert backend.user_agents == [f'thinkthen/{version} (zig)'] * 2, backend.user_agents
         print('installed Zig: bundled static native session PASS')
     finally:
         backend.close()
