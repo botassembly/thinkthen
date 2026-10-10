@@ -20,6 +20,8 @@ Reviews: revision 1f8bc0179286c6b3ec6a87b11618e4fca5057be9, accept
 
 Reviews: revision 37e6828a03d0cdfe1e168b4b7afbc0bffc1dbd7c, accept
 
+Reviews: revision 045dfb5b1f0f99b6477aa5446345e9ffb81ef6ef, reject
+
 ## Outcome
 
 After the 0508 final review, one reviewed commit passes a hosted release candidate on Linux, macOS and Windows, plus release QA by a fresh agent with only the public docs. On Ian's explicit go, that same commit is released as 0.2.0. Every published package then installs and runs from its public channel on a clean machine. This ticket is the single owner of candidate qualification, publication and the after-publication checks.
