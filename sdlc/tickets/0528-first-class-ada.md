@@ -29,3 +29,7 @@ Ada callers use one named package API with generated package specifications, fix
   One public API is one coherent family of named typed calls. Claim `libraries/ada/**` narrowed and named per slice.
 - Proof: An installed Ada consumer reads every known field and failure facts through shared cases, including a value that exceeds an Ada representation limit and receives the explicit refusal. Record handwritten code removed and added, counting generator changes, in the landing record.
 - Defers: Final distribution assembly belongs to 0530.
+
+## Progress
+
+- 2026-10-10 landed e07d475bd; next: Generated typed Ada requests and native sessions are landed with counted-string ownership repaired. Final installed archive parity and platform qualification remain.
