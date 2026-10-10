@@ -49,8 +49,6 @@ class PandasResult(Result):
             return [dict(row, index=self.present[row['index']]) for row in value]
         if self.function == 'find' and not self.detailed:
             return None if value is None else dict(value, index=self.present[value['index']])
-        if self.function == 'relate' and not self.detailed:
-            return value[0] if value else []
         if self.function in ('rank', 'find', 'relate'):
             return value
         rows = [None] * len(self.source)

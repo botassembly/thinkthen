@@ -160,6 +160,7 @@ class Result(Generic[T]):
 
 
 def _bare(verb, results, scalar):
+    if verb == 'relate': return results[0].value if results else []
     if verb == 'filter': return [row.input for row in results]
     if verb == 'rank':
         return [{'index': row.index, 'record': row.input, 'probability': getattr(row.answer, 'probability', None)}
