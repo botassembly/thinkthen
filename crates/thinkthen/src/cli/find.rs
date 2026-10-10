@@ -60,7 +60,7 @@ pub(crate) fn run(
         backend.clone(),
         profile.clone(),
     )?;
-    let most = if arguments.none { 254 } else { 255 };
+    let most = crate::core::Find::maximum(arguments.none);
     let units = input_units(
         common,
         input,

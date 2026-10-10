@@ -352,3 +352,17 @@ The SQLite Rust ceiling drops from 5194 to 5191. The Python ceiling grows from 4
 A rule cap survived the SQL signature change because only the inline carrier applied it. Comparing carriers at the real SQL boundary exposed the mismatch without a model request. Removing the adapter check also lets the existing native validator reject empty rule sets with the truthful shared diagnostic.
 
 Fresh read-only review accepted `11f51eda194c1f80e8cfa46fff1c159008577772`, 25 Python caller lines and the three-line Rust reduction. The reviewer reproduced carrier parity, exact zero-send refusals and edge expansion, and confirmed that the retained positional interface still refuses with its existing sentence. Native grammar supersedes the old inline cap under ADR 0105 and the October 9 ruling.
+
+## Derive the CLI find reader maximum
+
+This slice starts from `decfa0539c6765c680f9795cd9b11afcfd395f9d`. The CLI aggregate reader duplicated the semantic maximum already owned by `core::Find::maximum`. Its existing `most` value now calls that owner. Both plain and located readers retain their existing bounded intake, minimum-count check, `Failure::FindCount` diagnostics and error order. The shared function returns the same value for each `none` setting, so accepted boundaries and refusal before the invalid suffix remain equivalent. The scoped search found no other maximum literal in this production reader owner. No public API, validator or test changes.
+
+The warm CLI was rebuilt with locked offline Cargo. The unchanged backend test executable ran eleven routine find-edge cases, with three release-only byte boundaries ignored. The existing exact count table proves accepted limits, over-limit refusal and refusal before an invalid UTF-8 suffix. The keyed preflight caller and saved-question file refusal caller each passed with zero counted loopback requests. The unchanged native preview cancellation and reader-failure case passed from its existing executable; its native implementation is unaffected by this CLI-only change. The existing test harnesses clear the child environment and own their home folders.
+
+`cargo fmt --all -- --check`, strict CLI Clippy, offline `policy.py`, whitespace checks and the root source ratchet pass. Policy retains existing warnings in untouched files. Root Rust remains 187866 nonblank lines; the one-line replacement adds no source and leaves the ratchet unchanged. Cargo and caller runs use bounded scopes with 8 GiB memory and 1 GiB swap; Cargo uses two jobs and mold. The initial lane allocation is 41281300 KiB across target, libraries and databases, below 40 GiB. Logs live under `target/0511-cli-find-*.log`. Full routine, parity, release, load, large-input, remote-machine and paid checks are outside this slice.
+
+### What the build taught us
+
+A bounded adapter reader can derive its existing intake limit from the core owner without moving error checks or adding another validation interface. Existing caller boundary cases prove equivalence and avoid duplicate tests.
+
+Fresh read-only review accepted `127d97271e1f49497bfb46fb05c59b98a4a124d7`. Six built boundary and invalid-suffix cases and policy passed independently; both readers retain their diagnostics and check order. No source growth or new test is required.
