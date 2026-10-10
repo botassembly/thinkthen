@@ -9,7 +9,7 @@ use crate::schedule::{Judged, Output};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::process::ExitCode;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 #[expect(
     clippy::too_many_lines,
@@ -63,7 +63,22 @@ pub(super) fn run(
         .map(super::Context::evidence)
         .map(|c| c.as_text().map(|s| s.into_owned()))
         .transpose()?;
-    let controls = controls(
+    let guard = Mutex::new((crate::schedule::ModelGuard::default(), None));
+    let observe = |event: crate::RecordObservation<'_>| {
+        if let crate::RecordObservation::Question { detail, .. } = event {
+            let mut guard = guard.lock().unwrap_or_else(PoisonError::into_inner);
+            if guard.1.is_none() {
+                guard.1 = guard
+                    .0
+                    .check_sources(detail.question_sources().iter())
+                    .err();
+            }
+            if guard.1.is_some() {
+                token.cancel();
+            }
+        }
+    };
+    let mut controls = controls(
         (environment, common, configuration.streams),
         &token,
         &signal,
@@ -71,6 +86,9 @@ pub(super) fn run(
         setting,
         context.as_deref(),
     );
+    if configuration.keeping == crate::judge::Keeping::Ordered {
+        controls = controls.observe(&observe);
+    }
     let mut feed = crate::RequestFeed::from_records("cli-atomic", rows);
     if common.images() {
         feed = feed.with_image_inputs();
@@ -113,6 +131,9 @@ pub(super) fn run(
         &release,
         None,
     );
+    if let Some(failure) = guard.into_inner().unwrap_or_else(PoisonError::into_inner).1 {
+        ended.borrow_mut().failure.get_or_insert(failure);
+    }
     let result = if configuration.keeping == crate::judge::Keeping::Ordered {
         result.map(|outcome| match outcome {
             crate::RequestOutcome::Complete(call) => {
@@ -420,16 +441,13 @@ impl Renderer {
             .identity
             .question_sources()
             .iter()
-            .all(|s| s.origin() == crate::core::Origin::Replay);
-        let model = (!replayed)
-            .then(|| {
-                canonical
-                    .identity
-                    .question_sources()
-                    .first()
-                    .map(|s| s.model().clone())
-            })
-            .flatten();
+            .all(|s| s.origin() != crate::core::Origin::Live);
+        let model = canonical
+            .identity
+            .question_sources()
+            .iter()
+            .find(|source| source.origin() == crate::core::Origin::Live)
+            .map(|source| source.model().clone());
         let passing = self.keeping == crate::judge::Keeping::Passing;
         let mut printed = if passing && outcome != Outcome::Yes {
             None
