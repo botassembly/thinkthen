@@ -49,7 +49,8 @@ fn document_descriptors_preserve_typed_originals_and_explicit_context() {
 fn session_line_projection_refuses_before_intake() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    for framing in [RequestFraming::Lines] {
+    {
+        let framing = RequestFraming::Lines;
         let mut arguments = request(feed()).call.arguments().clone();
         arguments.input = RequestInput::Feed {
             name: "records".into(),
@@ -179,7 +180,7 @@ fn jsonl_projects_located_text_and_preserves_prefix_on_later_syntax_failure() {
     assert!(!body.contains("rows.jsonl"));
 }
 
-fn table_request(framing: RequestFraming) -> Request {
+pub(super) fn table_request(framing: RequestFraming) -> Request {
     let mut arguments = request(feed()).call.arguments().clone();
     let RequestInput::Feed {
         framing: declared, ..
@@ -191,6 +192,11 @@ fn table_request(framing: RequestFraming) -> Request {
     Request::new(RequestCall::Decide(arguments))
 }
 
+#[allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    reason = "owned session fixtures must remain admitted while retrying backpressure"
+)]
 pub(super) fn push(session: &RequestSession, mut value: RequestSessionDescriptor) {
     let until = Instant::now() + Duration::from_secs(5);
     loop {
@@ -329,10 +335,10 @@ fn table_headers_and_complete_descriptors_refuse_before_sending() {
                 push(&session, descriptor("body\n"));
             }
             let mut item = item.clone();
-            if matches!(framing, RequestFraming::Tsv) {
-                if let Some(text) = item["original"]["text"].as_str() {
-                    item["original"]["text"] = json!(text.replace(',', "\t"));
-                }
+            if matches!(framing, RequestFraming::Tsv)
+                && let Some(text) = item["original"]["text"].as_str()
+            {
+                item["original"]["text"] = json!(text.replace(',', "\t"));
             }
             push(
                 &session,
@@ -355,6 +361,12 @@ fn table_headers_and_complete_descriptors_refuse_before_sending() {
                 RequestSessionPush::Closed(_)
             ));
         }
+    }
+}
+
+#[test]
+fn table_reader_units_refuse_before_intake() {
+    for framing in [RequestFraming::Csv, RequestFraming::Tsv] {
         for reading in [
             ReaderOptions {
                 unit: SourceUnit::File,

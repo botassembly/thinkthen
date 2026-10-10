@@ -102,13 +102,7 @@ fn held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts() {
         )
         .unwrap();
         let engine = engine(&listener);
-        let mut arguments = request(feed()).call.arguments().clone();
-        if let RequestInput::Feed {
-            framing: declared, ..
-        } = &mut arguments.input
-        {
-            *declared = framing;
-        }
+        let arguments = framing::table_request(framing).call.arguments().clone();
         let session = engine
             .request_session(Request::new(RequestCall::Decide(arguments)))
             .unwrap();
