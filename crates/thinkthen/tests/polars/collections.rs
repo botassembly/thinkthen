@@ -283,10 +283,22 @@ fn empty_invalid_and_cancelled_collections_do_not_send() {
     let text = common::column(&["one", "two"]);
     let numbers = Series::new("numbers".into(), [1_i64, 2]);
     let filter = Question::decide("Relevant?").expect("filter").cut();
+    let decide = Question::decide("Relevant?").expect("decide").cut();
+    let score = Question::score("How relevant?")
+        .and_then(|builder| builder.level("low", None))
+        .and_then(|builder| builder.level("high", None))
+        .and_then(thinkthen::ScoreBuilder::build)
+        .expect("score");
     for error in [
         engine
             .filter_series(&wrong, &text, CallOptions::new())
             .expect_err("wrong filter question"),
+        engine
+            .rank_series(&decide, &text, CallOptions::new())
+            .expect_err("decide rank question"),
+        engine
+            .rank_series(&score, &text, CallOptions::new())
+            .expect_err("score rank question"),
         engine
             .rank_series(&rank, &numbers, CallOptions::new())
             .expect_err("non-text rank"),

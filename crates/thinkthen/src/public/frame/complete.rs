@@ -38,6 +38,7 @@ pub(super) fn rank(
     options: CallOptions<'_>,
 ) -> Result<Call<DataFrame>, Error> {
     let positions = request::positions(texts)?;
+    crate::public::engine::only(question, &[crate::public::question::Kind::Rank], "rank")?;
     request::execute(engine, question, texts, RequestCall::Rank, options)?.try_map(|value| {
         let RequestValue::Ranked(rows) = value else {
             return Err(Error::defect("rank returned another result kind"));
