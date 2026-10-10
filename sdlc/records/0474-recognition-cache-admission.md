@@ -24,10 +24,14 @@ New-file creation has the same lock-loss hazard once its inode becomes visible. 
 
 ## Remaining
 
-The original cache snapshot and the reported startup remain unavailable for reproduction. Ticket 0480 supplies bounded replay snapshot waiting and conversion coexistence checks. Native Windows writer and reader fixtures remain owed to the first authorized candidate; keep both tickets open for that proof. This builder ran no paid call or release workflow.
+The original cache snapshot and the reported startup remain unavailable for reproduction. Ticket 0480 supplies bounded replay snapshot waiting and conversion coexistence checks. Native Windows writer and reader fixtures belong to candidate qualification under the [closure ruling](../decisions/2026-10-10-drive-0-2-to-done.md); they do not hold this ticket open. This builder ran no paid call or release workflow.
 
 ## TCGA jobs-eight rerun
 
 The TCGA team reported its requested rerun on main `11eca8b69a86e22de889170bc8789410adf30689` in `inbox/thinkthen/2026-10-09-tcga-demo-eight-job-tcga-cache-rerun-completed-on-the-named-build.md`. Both original groups completed all fifteen section records with eight jobs sharing one cache. Fresh creation, warm reopen and exclusive offline replay produced no storage error; replay made zero requests and retained the live answers and values. The team's evidence is `experiments/479-tcga-demo-cache-rerun/report.md` on its `ticket/0024-grow-the-gold-by-40-reports` branch at `39a5ed5d`. This records the team's result, not an independent rerun by the builder.
 
 The original cache snapshot was unavailable, so this result does not prove compatibility with that snapshot. The four team-recorded live runs cost $0.049147938 with no pending charges; this builder made no additional call. Successful fresh and reopened caches resolve the requested operational rerun while preserving the original-snapshot and native-Windows limits.
+
+## Closure
+
+The accepted cache correction, routine cache checks, functional suite and lint documented above satisfy the local outcome. The TCGA jobs-eight rerun confirms fresh creation, warm reopen and exclusive replay on a named main build. No superseded public API belongs to this cache repair, so closure deletes no product source and changes no source ceiling. The original private snapshot remains unavailable; native platform fixtures remain candidate work.
