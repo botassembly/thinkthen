@@ -171,6 +171,7 @@ fn source_schema(file_only: bool, images: bool, canonical: &Value) -> Value {
         && let Some(properties) = source.get_mut("properties").and_then(Value::as_object_mut)
     {
         properties.remove("window");
+        properties.remove("framing");
     }
     if !file_only && let Some(map) = source.as_object_mut() {
         map.insert(

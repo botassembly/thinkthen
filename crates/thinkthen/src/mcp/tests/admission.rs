@@ -160,6 +160,12 @@ fn source_framing_discovery_uses_native_values_and_invalid_controls_send_nothing
             tool["inputSchema"]["properties"]["source"]["properties"]["framing"],
             canonical["$defs"]["RequestSource"]["properties"]["framing"]
         );
+        assert!(
+            tool["inputSchema"]["properties"]["inputs"]["items"]["properties"]["source"]
+                ["properties"]
+                .get("framing")
+                .is_none()
+        );
     }
     let backend = Backend::start().unwrap();
     for controls in [
