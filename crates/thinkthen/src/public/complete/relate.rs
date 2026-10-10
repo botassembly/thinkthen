@@ -109,7 +109,7 @@ fn admitted(
 ) -> Result<Vec<core::RelationEntity>, Error> {
     let pairs = entities
         .into_iter()
-        .take(256)
+        .take(core::RelateSpec::MAX_ENTITIES + 1)
         .map(|entity| (entity.name().to_owned(), entity.kind().to_owned()))
         .collect::<Vec<_>>();
     let entities = ask.0.admit(&pairs).map_err(Error::refused)?;

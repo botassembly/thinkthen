@@ -19,14 +19,20 @@ mod records;
 use crate::public::results::observe_question;
 use observation::observe_row;
 
-/// The most entities one `relate` call takes.
-const MOST_ENTITIES: usize = 255;
-
 /// A relate request: its rules, cut, and model.
 #[derive(Clone, PartialEq)]
 pub struct Relate(pub(crate) RelateSpec);
 
 impl Relate {
+    /// Admit a whole-set record count before retaining or deduplicating source occurrences.
+    ///
+    /// # Errors
+    /// Returns [`Error::Usage`] when the raw record count exceeds the relation set bound.
+    pub fn admit_record_count(count: usize) -> Result<(), Error> {
+        RelateSpec::admit_count(count)
+            .map_err(|_| Error::usage("source relate takes at most 255 source records"))
+    }
+
     /// Start one.
     #[must_use]
     pub fn builder() -> RelateBuilder {
@@ -312,7 +318,7 @@ impl Engine {
     {
         let pairs: Vec<(String, String)> = entities
             .into_iter()
-            .take(MOST_ENTITIES + 1)
+            .take(RelateSpec::MAX_ENTITIES + 1)
             .map(|entity| (entity.name, entity.kind))
             .collect();
         let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
