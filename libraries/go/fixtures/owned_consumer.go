@@ -85,6 +85,53 @@ func main() {
 		panic(err)
 	}
 	defer client.Close()
+	if len(os.Args) > 1 && (os.Args[1] == "usage-written" || os.Args[1] == "usage-failed") {
+		call, err := client.Decide(context.Background(), "Is it?", "surface-attribution", nil)
+		require(err == nil && call.Terminal != nil, "usage call lost answer")
+		earlier, err := json.Marshal(call.Terminal.Facts().Value)
+		require(err == nil, "facts encoding")
+		answered := false
+		for _, packet := range call.Packets {
+			if row, err := packet.AsSessionPacketDecideRow(); err == nil {
+				answer, err := row.Value().Value.Value().Value.Boolean()
+				require(err == nil && answer, "usage call changed answer")
+				answered = true
+			}
+		}
+		require(answered, "missing decision row")
+		observed, err := client.UsagePersistence()
+		require(err == nil, "usage observation failed")
+		if os.Args[1] == "usage-failed" {
+			require(observed.State() == tt.UsagePending && !observed.Advice().Present, "held writer not pending")
+		}
+		finished, err := client.FinishUsageStatus()
+		require(err == nil, "usage finalization failed")
+		expected := tt.UsageWritten
+		if os.Args[1] == "usage-failed" {
+			expected = tt.UsageFailed
+		}
+		require(finished.State() == expected, "wrong finalized state")
+		require(finished.Advice().Present == (expected == tt.UsageFailed), "wrong advice presence")
+		if expected == tt.UsageFailed {
+			require(finished.Advice().Value == "check the usage folder permissions and free space", "unsafe advice")
+		}
+		repeated, err := client.UsagePersistence()
+		require(err == nil && repeated == finished, "state not retained")
+		repeated, err = client.FinishUsageStatus()
+		require(err == nil && repeated == finished, "finalization not retained")
+		after, err := json.Marshal(call.Terminal.Facts().Value)
+		require(err == nil && string(after) == string(earlier), "status mutated retained facts")
+		sent, err := call.Terminal.Facts().Value.RequestsSent().Value.Int64()
+		require(err == nil && sent == 1, "usage changed sends")
+		client.Close()
+		_, err = client.UsagePersistence()
+		require(errors.Is(err, tt.ErrClosed), "closed observation admitted")
+		_, err = client.FinishUsageStatus()
+		require(errors.Is(err, tt.ErrClosed), "closed finalization admitted")
+		require(finished.State() == expected, "owned status lost after close")
+		fmt.Println("usage-status-pass requests=1")
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "feed" {
 		feedChecks(client)
 		return

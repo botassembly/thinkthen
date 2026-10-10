@@ -2016,3 +2016,13 @@ inline Presence<uint64_t> TokenUsage::input_tokens() const { return member_value
 inline Presence<uint64_t> TokenUsage::output_tokens() const { return member_value<uint64_t>(value_, "output_tokens"); }
 inline std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double> Value::value() const { return decode<std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double>>(value_); }
 }
+// Generated from the compiler-derived C header; do not edit.
+#include <thinkthen/thinkthen.h>
+namespace tt {
+enum class UsagePersistenceState : uint32_t {
+disabled = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1,
+failed = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1,
+pending = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1,
+written = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1,
+};
+}

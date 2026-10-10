@@ -33,3 +33,10 @@ def render(definitions):
             cn=name(child)
             lines += [f'func (v {n}) As{cn.removeprefix("Owned")}() ({cn}, error) {{ if !({condition(tag)}) {{ return {cn}{{}}, errOwnedAlternative }}; return ownedDecode[{cn}](v.raw) }}']
     return '\n'.join(lines)+'\n'
+
+
+def usage(header):
+    members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
+    lines = ['// Generated from the compiler-derived C header; do not edit.', 'package thinkthen', 'type UsagePersistenceState uint32', 'const (']
+    lines += ['Usage' + word.title() + ' UsagePersistenceState = ' + value for _, word, value in members]
+    return '\n'.join(lines + [')']) + '\n'

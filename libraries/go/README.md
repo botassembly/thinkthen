@@ -68,3 +68,9 @@ The client retains one pending descriptor and requests another value only after 
 The staged Linux amd64 module carries its static native library under `native/x86_64-unknown-linux-gnu`. A consumer needs Go and a C compiler, with no pkg-config, Rust compiler or library-path setup. Other target assets and final distribution assembly still require their owning package work. Development source checks stage their own native build separately.
 
 Existing `Engine` calls remain compatibility APIs until installed migration parity permits retirement: `Engine.Decide` becomes `Client.Decide`, the generic `Call` becomes a named method, and `Files` becomes a named method with `FileRecords`. This additive slice does not retire the compatibility readers. Named sessions identify the Go surface through the native constructor.
+
+## Live usage persistence
+
+`Client.UsagePersistence()` and `Client.FinishUsageStatus()` return an immutable `UsageStatus` and an error. The compatibility `Engine` exposes the same methods. Read the generated state through `State()` and the copied optional advice through `Advice()`.
+
+These methods observe the native engine directly and refuse calls after close. Failed persistence leaves successful answers and their earlier facts intact. Written covers this engine's current deltas, not future calls or other engines. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Returned observations remain readable after close. See [the C engine contract](../c/DESIGN.md) for native observation semantics.

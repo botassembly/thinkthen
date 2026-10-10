@@ -89,3 +89,9 @@ Include `<thinkthen/native.hpp>`. `tt::native::create(settings)` owns an engine.
 Counted C input descriptors borrow caller buffers only through the constructor call. Use `counted(string)` for a bounded string and explicit `thinkthen_content_v1` text/JSON tags; constructors clone every nested buffer. Returned C++ strings/vectors contain no borrowed C pointers.
 
 Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+
+## Live usage persistence
+
+The ordinary `tt::Client` exposes `usage_persistence()` and `finish_usage_status()`. Each returns a `UsageStatus` with constant `state` and optional copied `advice` members. The state uses the generated `UsagePersistenceState` enum. The compatibility native engine alias keeps its existing API.
+
+These methods observe the native engine directly and refuse calls after close. Failed persistence leaves successful answers and their earlier facts intact. Written covers this engine's current deltas, not future calls or other engines. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Returned observations remain readable after close. See [the C engine contract](../c/DESIGN.md) for native observation semantics.

@@ -87,6 +87,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     installed_unpack
     native=$scratch
     if [ ! -d "$wrapper/native/x86_64-unknown-linux-gnu" ]; then bundle_source "$wrapper" "$native"; fi
+    "$python_bin" fixtures/owned_installed.py "$wrapper" usage
     cp portable_batch_test.go "$wrapper/portable_batch_test.go"
     cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
     THINKTHEN_PORTABLE_NATIVE="$native" THINKTHEN_PORTABLE_MODULE="$wrapper" "$python_bin" fixtures/portable_batch.py
@@ -128,6 +129,7 @@ Cflags: -I\${includedir}
 EOF
 "$python_bin" fixtures/abi.py
 bundle_source "$PWD" "$out/native"
+"$python_bin" fixtures/owned_installed.py "$PWD" usage
 export PKG_CONFIG_PATH="$out/native/lib/pkgconfig" LD_LIBRARY_PATH="$out/native/lib"
 export GOCACHE="$out/cache" GOMODCACHE="$out/modcache" GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2

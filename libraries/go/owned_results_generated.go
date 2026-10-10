@@ -2596,3 +2596,13 @@ func (v OwnedTokenUsage) OutputTokens() Presence[json.Number] {
 type OwnedValue struct{ ownedJSON }
 
 const OwnedRequestVersion = "thinkthen.request/1"
+
+// Generated from the compiler-derived C header; do not edit.
+type UsagePersistenceState uint32
+
+const (
+	UsageDisabled UsagePersistenceState = 1
+	UsageFailed   UsagePersistenceState = 4
+	UsagePending  UsagePersistenceState = 2
+	UsageWritten  UsagePersistenceState = 3
+)

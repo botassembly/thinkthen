@@ -374,6 +374,15 @@ typedef struct thinkthen_answer {
   double probability;
 } thinkthen_answer;
 
+typedef struct thinkthen_complete_usage_persistence_v1 {
+  uint32_t kind;
+} thinkthen_complete_usage_persistence_v1;
+
+typedef struct thinkthen_complete_utf8_v1 {
+  const char *data;
+  size_t len;
+} thinkthen_complete_utf8_v1;
+
 
 typedef struct thinkthen_optional_string_v1 {
 
@@ -1761,11 +1770,6 @@ typedef struct thinkthen_summary_v1 {
 
   struct thinkthen_optional_error_v1 error;
 } thinkthen_summary_v1;
-
-typedef struct thinkthen_complete_utf8_v1 {
-  const char *data;
-  size_t len;
-} thinkthen_complete_utf8_v1;
 
 typedef struct thinkthen_complete_extension_v1 {
   struct thinkthen_complete_utf8_v1 name;
@@ -4894,10 +4898,6 @@ typedef struct thinkthen_complete_persistence_observation_field_advice_presence_
   struct thinkthen_complete_utf8_v1 value;
 } thinkthen_complete_persistence_observation_field_advice_presence_v1;
 
-typedef struct thinkthen_complete_usage_persistence_v1 {
-  uint32_t kind;
-} thinkthen_complete_usage_persistence_v1;
-
 typedef struct thinkthen_complete_persistence_observation_v1 {
   struct thinkthen_complete_persistence_observation_field_advice_presence_v1 advice;
   struct thinkthen_complete_utf8_v1 observed_at;
@@ -5265,6 +5265,11 @@ int thinkthen_decide_with_facts_opts(const struct thinkthen_engine *engine,
                                      size_t *facts_len);
 
 
+int thinkthen_engine_finish_usage_status_v1(const struct thinkthen_engine *engine,
+                                            struct thinkthen_complete_usage_persistence_v1 *out_state,
+                                            struct thinkthen_complete_utf8_v1 *out_advice);
+
+
 void thinkthen_engine_free(struct thinkthen_engine *engine);
 
 
@@ -5272,6 +5277,11 @@ struct thinkthen_engine *thinkthen_engine_new(void);
 
 
 struct thinkthen_engine *thinkthen_engine_new_with(const char *settings_json);
+
+
+int thinkthen_engine_usage_persistence_v1(const struct thinkthen_engine *engine,
+                                          struct thinkthen_complete_usage_persistence_v1 *out_state,
+                                          struct thinkthen_complete_utf8_v1 *out_advice);
 
 
 int thinkthen_error_code(const struct thinkthen_engine *engine);

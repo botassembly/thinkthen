@@ -53,8 +53,11 @@ def outputs(definitions, version, header):
     constants = ['<?php', '// Generated from the native C header; do not edit.',
                  'declare(strict_types=1);', 'namespace ThinkThen\\Session;',
                  'const REQUEST_VERSION = ' + repr(version) + ';']
-    for key, value in re.findall(r'^#define (THINKTHEN_(?:SESSION_\w+|E\w+)) (\d+)\s*$', header, flags=re.M):
+    for key, value in re.findall(r'^#define (THINKTHEN_(?:SESSION_\w+|E\w+|COMPLETE_USAGE_PERSISTENCE_\w+)) (\d+)\s*$', header, flags=re.M):
         constants += [f'const {key} = {value};']
+    constants += ['namespace ThinkThen;', 'enum UsagePersistenceState: int {']
+    constants += ['case ' + word.title() + ' = ' + value + ';' for word, value in re.findall(r'^#define THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1 (\d+)\s*$', header, flags=re.M)]
+    constants += ['}']
     return {'results_generated.php': '\n'.join(lines) + '\n',
             'graph_generated.json': json.dumps(graph, indent=2) + '\n',
             'ffi_generated.h': declarations.strip() + '\n',

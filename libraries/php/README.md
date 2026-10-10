@@ -100,3 +100,9 @@ Calls throw `UsageFailure`, `BackendFailure`, `DeadlineFailure`, `LocalFailure`,
 For the migration, released `ThinkThen` and `ThinkThen\Native\Engine` calls stay available. Their corresponding new calls use `Client` and return `Completed::results` plus terminal facts. The old readers are removed only after full installed parity. Native session calls identify PHP in the compiled engine User-Agent.
 
 Focused installed consumer checks build a local archive with `fixtures/package.py`, install it through Composer, and run `fixtures/session_installed.py`. They use a synthetic loopback backend. A fixture archive carrying a debug native library does not qualify a production distribution.
+
+## Live usage persistence
+
+The ordinary `ThinkThen\Client` exposes `usage_persistence()` and `finish_usage_status()`. Each returns a readonly `UsageStatus` whose `state` uses the generated `UsagePersistenceState` enum and whose `advice` is a copied string or null.
+
+These methods observe the native engine directly and refuse calls after close. Failed persistence leaves successful answers and their earlier facts intact. Written covers this engine's current deltas, not future calls or other engines. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Returned observations remain readable after close. See [the C engine contract](../c/DESIGN.md) for native observation semantics.
