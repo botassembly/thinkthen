@@ -2,10 +2,8 @@
 
 use thinkthen::{Evidence, For, Question, Settings};
 
-use super::{BridgeSettings, BridgeStop, asked, probe, run_detached};
+use super::{BridgeSettings, BridgeStop, BridgeText, asked, probe, run_detached, text};
 use crate::engines;
-
-const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
 
 #[derive(Debug)]
 struct Indexed {
@@ -17,33 +15,6 @@ impl Evidence for Indexed {
     fn evidence(&self) -> &str {
         &self.text
     }
-}
-
-fn validated(texts: Vec<String>, none: bool) -> Result<Vec<Indexed>, String> {
-    let most = if none { 254 } else { 255 };
-    if !(2..=most).contains(&texts.len()) {
-        return Err(format!(
-            "thinkthen usage: find takes 2 to {most} units{}",
-            if none { " when offering none" } else { "" }
-        ));
-    }
-    let mut bytes = 0_usize;
-    texts
-        .into_iter()
-        .enumerate()
-        .map(|(position, text)| {
-            if text.trim().is_empty() {
-                return Err("thinkthen usage: a find unit is text, not white space".to_owned());
-            }
-            bytes = bytes
-                .checked_add(text.len())
-                .ok_or_else(|| "thinkthen usage: find units exceed 16 MiB of text".to_owned())?;
-            if bytes > MAX_TEXT_BYTES {
-                return Err("thinkthen usage: find units exceed 16 MiB of text".to_owned());
-            }
-            Ok(Indexed { position, text })
-        })
-        .collect()
 }
 
 fn frame(found: &thinkthen::Found<Indexed>) -> Result<Vec<u8>, String> {
@@ -74,12 +45,11 @@ fn frame(found: &thinkthen::Found<Indexed>) -> Result<Vec<u8>, String> {
 
 struct PreparedFind {
     question: Question,
-    units: Vec<Indexed>,
     call: Settings,
     model: Option<String>,
 }
 
-fn portable(question: &str, units: Vec<String>, settings: &str) -> Result<PreparedFind, String> {
+fn portable(question: &str, units: &[BridgeText], settings: &str) -> Result<PreparedFind, String> {
     let call = Settings::parse(settings)
         .and_then(|value| {
             value.check(For::Find)?;
@@ -92,7 +62,6 @@ fn portable(question: &str, units: Vec<String>, settings: &str) -> Result<Prepar
         .ok()
         .and_then(|value| value.get("model")?.as_str().map(str::to_owned));
     let none = call.none().unwrap_or(false);
-    let units = validated(units, none)?;
     let question = Question::find(question)
         .and_then(|value| {
             if none {
@@ -102,9 +71,15 @@ fn portable(question: &str, units: Vec<String>, settings: &str) -> Result<Prepar
             }
         })
         .map_err(|error| crate::errors::RowError::from(error).text)?;
+    let texts = units
+        .iter()
+        .map(|unit| text(unit.bytes, unit.len))
+        .collect::<Result<Vec<_>, _>>()?;
+    question
+        .admit_find_units(texts.into_iter().map(Ok))
+        .map_err(|error| crate::errors::RowError::from(error).text)?;
     Ok(PreparedFind {
         question,
-        units,
         call,
         model,
     })
@@ -112,7 +87,7 @@ fn portable(question: &str, units: Vec<String>, settings: &str) -> Result<Prepar
 
 pub(super) fn validate_portable(
     question: &str,
-    units: Vec<String>,
+    units: &[BridgeText],
     settings: &str,
 ) -> Result<Vec<u8>, String> {
     portable(question, units, settings).map(|_| Vec::new())
@@ -120,7 +95,7 @@ pub(super) fn validate_portable(
 
 pub(super) fn run_portable(
     question: &str,
-    units: Vec<String>,
+    units: &[BridgeText],
     settings: &str,
     query_deadline_ms: i64,
     session: BridgeSettings,
@@ -128,10 +103,19 @@ pub(super) fn run_portable(
 ) -> Result<Vec<u8>, String> {
     let PreparedFind {
         question,
-        units,
         call,
         model,
     } = portable(question, units, settings)?;
+    let units = units
+        .iter()
+        .enumerate()
+        .map(|(position, unit)| {
+            text(unit.bytes, unit.len).map(|text| Indexed {
+                position,
+                text: text.to_owned(),
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let mut asked = asked(&session)?;
     if let Some(model) = model {
         asked.model = Some(model);

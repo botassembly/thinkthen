@@ -59,6 +59,7 @@ The first slice adds these public Request-edge methods for the separate SQL crat
 ### Added public declarations
 
 ```text
+fn Question::admit_find_units<'a>(&self, impl IntoIterator<Item = Result<&'a str, Error>>) -> Result<(), Error>
 fn RequestItem::from_record_descriptor(&str) -> Result<RequestItem, Error>
 fn RequestItem::compose_record(&self, &RecordReading) -> Result<RecordInput<QuestionInput>, Error>
 fn RequestItem::with_options_descriptor(self, &str) -> Result<RequestItem, Error>

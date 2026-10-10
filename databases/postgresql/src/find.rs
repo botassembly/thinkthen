@@ -8,23 +8,27 @@ use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
 use crate::forms::{self, Named};
 
-const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
+type Units = Option<(Question, Vec<String>)>;
 
-fn indexed(array: Array<'_, &str>) -> Result<Vec<String>, Error> {
-    let mut bytes = 0_usize;
-    array
-        .iter()
-        .map(|member| {
-            let text = member.ok_or_else(|| call::usage("a find unit is text, not NULL"))?;
-            bytes = bytes
-                .checked_add(text.len())
-                .ok_or_else(|| call::usage("find units exceed 16 MiB of text"))?;
-            if bytes > MAX_TEXT_BYTES {
-                return Err(call::usage("find units exceed 16 MiB of text"));
-            }
-            Ok(text.to_owned())
-        })
-        .collect()
+fn indexed(array: Array<'_, &str>, question: &str, none: bool) -> Result<Units, Error> {
+    // Keep host NULL refusal ahead of question construction without copying text.
+    if array.iter().any(|member| member.is_none()) {
+        return Err(call::usage("a find unit is text, not NULL"));
+    }
+    if array.is_empty() {
+        return Ok(None);
+    }
+    let question = Question::find(question)?;
+    let question = if none {
+        question.offering_none()?
+    } else {
+        question
+    };
+    question.admit_find_units(array.iter().flatten().map(Ok))?;
+    Ok(Some((
+        question,
+        array.iter().flatten().map(str::to_owned).collect(),
+    )))
 }
 
 fn found(
@@ -50,16 +54,7 @@ fn found(
             call = call.with_model(model);
         }
     }
-    let units = indexed(units).or_raise();
-    if units.is_empty() {
-        return None;
-    }
-    let question = Question::find(question).or_raise();
-    let question = if none {
-        question.offering_none().or_raise()
-    } else {
-        question
-    };
+    let (question, units) = indexed(units, question, none).or_raise()?;
     let answer = call::run(call, move |engine, options| {
         let call = crate::request::run(
             engine,

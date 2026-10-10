@@ -121,7 +121,11 @@ pub(super) fn only(question: &Question, kinds: &[Kind], call: &str) -> Result<()
 }
 
 pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
-    core::Evidence::new(text).map_err(|_| Error::usage("evidence is text, not white space"))
+    core::Evidence::new(text).map_err(evidence_error)
+}
+
+pub(crate) fn evidence_error(_: core::BlankTextError) -> Error {
+    Error::usage("evidence is text, not white space")
 }
 
 pub(super) const DECISIONS: &[Kind] = &[Kind::Decide, Kind::Banded];

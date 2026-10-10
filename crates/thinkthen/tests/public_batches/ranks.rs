@@ -112,6 +112,52 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
 }
 
 #[test]
+fn borrowed_find_admission_refuses_invalid_sets_without_sending_or_reading_the_tail() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let asked = Question::find("Q?").expect("find");
+    for none in [false, true] {
+        let question = if none {
+            asked.clone().offering_none().expect("none")
+        } else {
+            asked.clone()
+        };
+        for units in [vec![], vec!["one"], vec!["one", " \t"]] {
+            let error = question
+                .admit_find_units(units.into_iter().map(Ok))
+                .expect_err("invalid set");
+            assert_eq!(error.kind(), ErrorKind::Usage);
+        }
+        question
+            .admit_find_units([Ok("one"), Ok("two")])
+            .expect("valid set");
+        let maximum = if none { 254 } else { 255 };
+        let pulls = AtomicUsize::new(0);
+        let units = std::iter::from_fn(|| {
+            let at = pulls.fetch_add(1, Ordering::SeqCst);
+            assert!(at <= maximum, "tail stays unread");
+            Some(Ok(if at == 0 { "  " } else { "one" }))
+        });
+        assert_eq!(
+            question.admit_find_units(units).expect_err("count").kind(),
+            ErrorKind::Usage
+        );
+        assert_eq!(pulls.load(Ordering::SeqCst), maximum + 1);
+    }
+    let mut units = [Ok("  "), Err(Error::new(ErrorKind::Local, "reader failed"))]
+        .into_iter()
+        .chain(std::iter::from_fn(|| panic!("reader tail stays unread")));
+    assert_eq!(
+        asked
+            .admit_find_units(&mut units)
+            .expect_err("reader")
+            .to_string(),
+        "reader failed"
+    );
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
 fn saved_rank_cutoff_reads_yes_probabilities_and_keeps_exact_ties_and_originals() {
     let _serial = serial();
     let listener = Listener::answering(|body| {

@@ -108,7 +108,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_portable_find(
     reply_boundary(|| {
         find::validate_portable(
             text(question, question_len)?,
-            copied_texts(units, count)?,
+            borrowed_texts(units, count)?,
             text(settings, settings_len)?,
         )
     })
@@ -133,7 +133,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_find(
     reply_boundary(|| {
         find::run_portable(
             text(question, question_len)?,
-            copied_texts(units, count)?,
+            borrowed_texts(units, count)?,
             text(settings, settings_len)?,
             query_deadline_ms,
             session,
@@ -393,16 +393,20 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_listed(
     })
 }
 
-pub(crate) fn copied_texts(rows: *const BridgeText, count: usize) -> Result<Vec<String>, String> {
+fn borrowed_texts<'a>(rows: *const BridgeText, count: usize) -> Result<&'a [BridgeText], String> {
     if count > 2048 || (rows.is_null() && count != 0) {
         return Err("thinkthen defect: the bridge got an invalid chunk size".to_owned());
     }
     if count == 0 {
-        return Ok(Vec::new());
+        return Ok(&[]);
     }
     // SAFETY: C++ owns the fixed array through the synchronous call.
-    let rows = unsafe { std::slice::from_raw_parts(rows, count) };
-    rows.iter()
+    Ok(unsafe { std::slice::from_raw_parts(rows, count) })
+}
+
+pub(crate) fn copied_texts(rows: *const BridgeText, count: usize) -> Result<Vec<String>, String> {
+    borrowed_texts(rows, count)?
+        .iter()
         .map(|row| text(row.bytes, row.len).map(str::to_owned))
         .collect()
 }

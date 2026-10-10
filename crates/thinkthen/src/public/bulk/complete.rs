@@ -2,7 +2,7 @@
 
 use super::observation::observe_find;
 use crate::core::{self, Find, ranking_under};
-use crate::public::engine::{Engine, Evidence, evidence, only};
+use crate::public::engine::{Engine, Evidence, evidence, evidence_error, only};
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
@@ -184,33 +184,8 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
-        only(question, &[Kind::Find, Kind::FindNone], "find")?;
         let none = question.kind == Kind::FindNone;
-        let maximum = Find::maximum(none);
-        let count_message = if none {
-            "a find question offering none takes 2 to 254 units"
-        } else {
-            "find takes 2 to 255 units"
-        };
-        let mut held = Vec::new();
-        let mut bytes = 0usize;
-        let mut units = units.into_iter();
-        loop {
-            options.admission()?;
-            let Some(unit) = units.next() else { break };
-            options.admission()?;
-            let unit = unit?;
-            self.check_record_limit(held.len())?;
-            if held.len() == maximum {
-                return Err(Error::usage(count_message));
-            }
-            bytes = bytes
-                .checked_add(unit.evidence().len())
-                .filter(|&bytes| bytes <= 16 * 1024 * 1024)
-                .ok_or_else(|| Error::usage("find input exceeds 16 MiB"))?;
-            held.push(unit);
-        }
-        let units = held;
+        let units = admit_find(question, units, options, |at| self.check_record_limit(at))?;
         let texts = units
             .iter()
             .map(|unit| evidence(unit.evidence()))
@@ -220,7 +195,7 @@ impl Engine {
         };
         let engine = crate::public::complete::contextual(self.asking(question)?, options)?;
         let find = Find::new(text.clone(), &texts, engine.backend().model().clone(), none)
-            .map_err(|_| Error::usage(count_message))?;
+            .map_err(|_| Error::usage(count_message(none)))?;
         let find = crate::public::find_question::profiled(find, question);
         Ok((units, find, engine))
     }
@@ -242,4 +217,69 @@ impl Engine {
     {
         self.try_within_admission(records, &CallOptions::new())
     }
+}
+
+impl Question {
+    /// Validate a complete borrowed find set before copying or sending it.
+    /// Reader errors and the first excess unit stop intake without reading the tail.
+    /// This checks find semantics; engine limits and call controls apply at execution.
+    ///
+    /// # Errors
+    /// Returns the first reader failure or [`Error::Usage`] for a wrong question
+    /// kind, invalid unit count, aggregate byte overflow or blank evidence.
+    pub fn admit_find_units<'a>(
+        &self,
+        units: impl IntoIterator<Item = Result<&'a str, Error>>,
+    ) -> Result<(), Error> {
+        let units = admit_find(self, units, &CallOptions::new(), |_| Ok(()))?;
+        if units.len() < 2 {
+            return Err(Error::usage(count_message(self.kind == Kind::FindNone)));
+        }
+        Ok(())
+    }
+}
+
+fn count_message(none: bool) -> &'static str {
+    if none {
+        "a find question offering none takes 2 to 254 units"
+    } else {
+        "find takes 2 to 255 units"
+    }
+}
+
+fn admit_find<I, T>(
+    question: &Question,
+    units: I,
+    options: &CallOptions<'_>,
+    check_limit: impl Fn(usize) -> Result<(), Error>,
+) -> Result<Vec<T>, Error>
+where
+    I: IntoIterator<Item = Result<T, Error>>,
+    T: Evidence,
+{
+    only(question, &[Kind::Find, Kind::FindNone], "find")?;
+    let none = question.kind == Kind::FindNone;
+    let maximum = Find::maximum(none);
+    let mut held = Vec::new();
+    let mut bytes = 0usize;
+    let mut units = units.into_iter();
+    loop {
+        options.admission()?;
+        let Some(unit) = units.next() else { break };
+        options.admission()?;
+        let unit = unit?;
+        check_limit(held.len())?;
+        if held.len() == maximum {
+            return Err(Error::usage(count_message(none)));
+        }
+        bytes = bytes
+            .checked_add(unit.evidence().len())
+            .filter(|&bytes| bytes <= 16 * 1024 * 1024)
+            .ok_or_else(|| Error::usage("find input exceeds 16 MiB"))?;
+        held.push(unit);
+    }
+    for unit in &held {
+        core::Evidence::validate_text(unit.evidence()).map_err(evidence_error)?;
+    }
+    Ok(held)
 }

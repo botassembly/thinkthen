@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 from harness import Backend, case, expect, main, rows, run, said
@@ -59,9 +60,12 @@ def null_empty_and_invalid_units_do_not_send() -> None:
         "SELECT thinkthen_find('   ', ['one','two'])",
         "SELECT thinkthen_find('Which?', list_transform(range(256), x -> 'x'))",
         "SELECT thinkthen_find('Which?', list_transform(range(255), x -> 'x'), '{\"none\":true}')",
-        "SELECT thinkthen_find('Which?', [repeat('x', 16777216), 'y'])",
+        *(["SELECT thinkthen_find('Which?', [repeat('x', 16777216), 'y'])"]
+          if os.environ.get("THINKTHEN_TEST_PROFILE") == "full" else []),
         "SELECT thinkthen_find('Which?', ['a','b'], '{\"deadline_ms\":-2}')",
         "SELECT thinkthen_find('Which?', units) FROM (VALUES (0, ['a','b']), (1, ['a',NULL])) t(i,units) ORDER BY i",
+        "SELECT thinkthen_find('Which?', units) FROM (VALUES (0, ['a','b']), (1, ['a','  '])) t(i,units) ORDER BY i",
+        "SELECT thinkthen_find('Which?', units) FROM (VALUES (0, ['a','b']), (1, list_transform(range(256), x -> 'x'))) t(i,units) ORDER BY i",
     )
     with Backend() as backend:
         got = run([*nulls, *invalid], backend.base())
