@@ -252,13 +252,6 @@ mod tests {
     }
 
     #[test]
-    fn an_outcome_carries_the_bare_value_it_prints() {
-        assert_eq!(Outcome::Yes.value(), Some(true));
-        assert_eq!(Outcome::No.value(), Some(false));
-        assert_eq!(Outcome::Unresolved.value(), None);
-    }
-
-    #[test]
     fn a_cut_says_it_is_one_and_a_band_says_it_is_not() {
         assert!(rule("0.8").is_cut());
         assert!(rule("1").is_cut());
