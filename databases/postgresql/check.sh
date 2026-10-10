@@ -1538,7 +1538,7 @@ check a_panic_is_an_error
 
 find_inputs() {
 	fresh generic
-	python3 tests/find_cases.py required-null "$SOCK"
+	python3 tests/find_cases.py required-null "$SOCK" "$SCRATCH"
 	python3 tests/find_cases.py invalid "$SOCK"
 	same "$(bcount)" 0
 }

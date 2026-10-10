@@ -235,9 +235,13 @@ part_source_wrapper() {
 	folder=$(fresh "$1")
 	case $1 in
 	go)
+		[ "$TARGET" = x86_64-unknown-linux-gnu ] || { echo 'release-pack: Go requires the qualified Linux amd64 static asset' >&2; exit 1; }
+		scratch_dir go_native
+		tar -xzf "$OUT/$c_name" -C "$go_native" ./include ./lib/libthinkthen.a
+		rmdir "$folder"
+		python3 libraries/go/fixtures/package_owned.py libraries/go "$go_native" "$folder"
+		scratch_remove "$go_native"
 		mkdir -p "$folder/examples/decide"
-		cp libraries/go/LICENSE libraries/go/README.md libraries/go/go.mod \
-			libraries/go/*.go "$folder/"
 		cp libraries/go/examples/decide/main.go "$folder/examples/decide/"
 		;;
 cpp)
