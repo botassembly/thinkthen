@@ -190,3 +190,68 @@ fn typed_aggregates_refuse_late_controls_and_cancel_without_sending() {
     assert_eq!(drops.get(), 8);
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn typed_aggregates_keep_started_error_facts_and_empty_set_behavior() {
+    let listener = Listener::answering(|_| Canned::status(422, "refused")).expect("listener");
+    let engine = common::engine(listener.base());
+    let drops = Rc::new(Cell::new(0));
+    let ids = [Some(7u32), None, Some(9)];
+    let column = Series::new("original".into(), ids);
+    for function in ["find", "relate"] {
+        let inputs = records(&drops, &ids);
+        let error = if function == "find" {
+            engine
+                .find_input_column_complete(
+                    &Question::find("Which?").expect("find"),
+                    &column,
+                    inputs,
+                    CallOptions::new(),
+                )
+                .expect_err("backend refusal")
+        } else {
+            engine
+                .relate_input_column_complete(
+                    &relation().expect("relate"),
+                    &column,
+                    inputs,
+                    CallOptions::new(),
+                )
+                .expect_err("backend refusal")
+        };
+        assert_eq!(error.kind(), thinkthen::ErrorKind::Backend);
+        assert_eq!(error.facts().expect("started facts").requests_sent(), 1);
+        for cells in [vec![], vec![None, None]] {
+            let column = Series::new("original".into(), cells as Vec<Option<u32>>);
+            let inputs: Vec<Option<RecordInput<Original>>> =
+                (0..column.len()).map(|_| None).collect();
+            if function == "find" {
+                let error = engine
+                    .find_input_column_complete(
+                        &Question::find("Which?").expect("find"),
+                        &column,
+                        inputs,
+                        CallOptions::new(),
+                    )
+                    .expect_err("empty find");
+                assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
+                assert!(error.facts().is_none_or(|facts| facts.requests_sent() == 0));
+            } else {
+                let (call, positions) = engine
+                    .relate_input_column_complete(
+                        &relation().expect("relate"),
+                        &column,
+                        inputs,
+                        CallOptions::new(),
+                    )
+                    .expect("empty relate");
+                assert!(call.value().original().is_empty());
+                assert!(call.value().result().value().is_empty());
+                assert_eq!(call.facts().requests_sent(), 0);
+                assert!(positions.is_empty());
+            }
+        }
+    }
+    assert_eq!(drops.get(), 4);
+    assert_eq!(listener.requests().len(), 2);
+}
