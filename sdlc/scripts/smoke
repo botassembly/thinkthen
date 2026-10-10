@@ -1,5 +1,5 @@
 #!/bin/sh
-# One replay smoke per binding (ticket 0335), four at a time. `test` runs it beside nextest.
+# One replay smoke per binding (ticket 0335), four at a time. `test-full-cases --run` owns these nested package builds.
 #
 # For each surface, this script starts its own loopback backend and seeds a fresh cache folder
 # with conformance case 01's recorded decide exchange, through the command. The binding's
