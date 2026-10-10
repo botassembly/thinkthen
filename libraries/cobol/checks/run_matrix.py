@@ -10,6 +10,8 @@ import time
 import threading
 from collections import Counter
 from backend import Backend, one_record
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 here = pathlib.Path(__file__).resolve().parent
 repo = here.parents[2]
@@ -20,11 +22,15 @@ barrier.mkdir()
 home = logs / "home"
 (home / "cache").mkdir(parents=True)
 backend = Backend(barrier)
-env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home), "XDG_CONFIG_HOME": str(home),
-       "XDG_CACHE_HOME": str(home), "LD_LIBRARY_PATH": str(here / "target"),
-       "THINKTHEN_BASE_URL": f"http://127.0.0.1:{backend.server_port}/generic/v1",
-       "THINKTHEN_API_KEY": "tt-fixture-key", "THINKTHEN_CACHE": str(home / "cache"),
-       "TT_BARRIER_DIR": str(barrier)}
+env = child_env(home=str(home),
+                PATH=os.environ.get("PATH", "/usr/bin:/bin"),
+                XDG_CONFIG_HOME=str(home),
+                XDG_CACHE_HOME=str(home),
+                LD_LIBRARY_PATH=str(here / "target"),
+                THINKTHEN_BASE_URL=f"http://127.0.0.1:{backend.server_port}/generic/v1",
+                THINKTHEN_API_KEY="tt-fixture-key",
+                THINKTHEN_CACHE=str(home / "cache"),
+                TT_BARRIER_DIR=str(barrier))
 receipts = []
 active = None
 

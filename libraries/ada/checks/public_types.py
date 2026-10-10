@@ -1,4 +1,5 @@
 """Run the shared J1 result corpus through the public Ada binding."""
+import pathlib
 import importlib.util
 import json
 import os
@@ -6,6 +7,8 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
@@ -42,8 +45,12 @@ try:
         # Ticket 0291, before any case sends: P1 and one invalid plan run with
         # no key through the public Plan; the zero budgets and the zero cap
         # refuse; the backend has read no request.
-        env = {"PATH": os.environ["PATH"], "HOME": cache, "XDG_CACHE_HOME": cache, "LD_LIBRARY_PATH": str(HERE / "target"),
-               "THINKTHEN_BASE_URL": f"http://127.0.0.1:{port}/generic/v1", "THINKTHEN_CACHE": str(Path(cache) / "plan")}
+        env = child_env(home=cache,
+                        PATH=os.environ["PATH"],
+                        XDG_CACHE_HOME=cache,
+                        LD_LIBRARY_PATH=str(HERE / "target"),
+                        THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
+                        THINKTHEN_CACHE=str(Path(cache) / "plan"))
         p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
         given = p1["plan_input"]
         plan = ["plan", given["verb"], given["question"]]

@@ -1,4 +1,5 @@
 """Run the product Zig consumer matrix against one owned loopback backend."""
+import pathlib
 from collections import Counter
 import json
 import os
@@ -8,6 +9,8 @@ import sys
 
 from backend import Backend, one_record
 from process_group import run
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 PACKAGE = Path(__file__).resolve().parent.parent
 BIN = PACKAGE / "Tests/zig-out/bin"
@@ -22,11 +25,14 @@ with tempfile.TemporaryDirectory(prefix="zig-matrix-", dir=ROOT) as folder:
     backend = Backend(barrier)
     receipts = []
     try:
-        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
-               "XDG_CONFIG_HOME": str(home), "THINKTHEN_CACHE": str(cache),
-               "THINKTHEN_API_KEY": "tt-canary-273", "TT_BARRIER_DIR": str(barrier),
-               "THINKTHEN_BASE_URL": f"http://127.0.0.1:{backend.server_port}/generic/v1",
-               "LD_LIBRARY_PATH": str(PACKAGE / "target/native/lib")}
+        env = child_env(home=str(home),
+                        PATH=os.environ.get("PATH", "/usr/bin:/bin"),
+                        XDG_CONFIG_HOME=str(home),
+                        THINKTHEN_CACHE=str(cache),
+                        THINKTHEN_API_KEY="tt-canary-273",
+                        TT_BARRIER_DIR=str(barrier),
+                        THINKTHEN_BASE_URL=f"http://127.0.0.1:{backend.server_port}/generic/v1",
+                        LD_LIBRARY_PATH=str(PACKAGE / "target/native/lib"))
         def case(name, command, expected, marker):
             result = run(command, cwd=PACKAGE / "Tests", env=env, timeout=60)
             output = result.stdout + result.stderr

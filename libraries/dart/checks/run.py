@@ -10,6 +10,8 @@ import sys
 import urllib.request
 from fixture import Backend
 from request_identity import matches
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 root = pathlib.Path(__file__).resolve().parent
 package = root.parent
@@ -27,13 +29,15 @@ barrier.mkdir()
 home = logs / 'home'
 (home / 'cache').mkdir(parents=True)
 server = Backend(barrier, plant)
-env = {
-    'PATH': os.environ['PATH'],
-    'HOME': str(home), 'XDG_CONFIG_HOME': str(home), 'XDG_CACHE_HOME': str(home / 'cache'),
-    'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1',
-    'THINKTHEN_API_KEY': 'tt-canary-300', 'THINKTHEN_CACHE': str(home / 'cache'),
-    'TT_BARRIER_DIR': str(barrier), 'TT_PLANT': plant, 'PUB_CACHE': os.environ['PUB_CACHE'],
-}
+env = child_env(home=str(home),
+                PATH=os.environ['PATH'],
+                XDG_CONFIG_HOME=str(home),
+                THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
+                THINKTHEN_API_KEY='tt-canary-300',
+                THINKTHEN_CACHE=str(home / 'cache'),
+                TT_BARRIER_DIR=str(barrier),
+                TT_PLANT=plant,
+                PUB_CACHE=os.environ['PUB_CACHE'])
 command = [dart, 'run', str(root / 'consumers' / consumer / 'bin/main.dart'), str(root / 'scratch/libthinkthen.so')]
 if plant == 'owned-facts': command.append('owned-facts')
 receipt = {'command': command, 'pid': None, 'pgid': None, 'exit': None, 'signals': [], 'timeout_seconds': 140}

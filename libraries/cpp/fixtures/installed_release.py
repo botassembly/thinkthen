@@ -34,13 +34,13 @@ barrier = home / "barrier"
 barrier.mkdir()
 server = Backend(barrier)
 try:
-    env = {
-        "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
-        "XDG_CONFIG_HOME": str(home), "XDG_CACHE_HOME": str(home / "cache"),
-        "THINKTHEN_BASE_URL": f"http://127.0.0.1:{server.server_port}/generic/v1",
-        "THINKTHEN_API_KEY": "tt-canary-301", "THINKTHEN_CACHE": str(home / "cache"),
-        "TT_BARRIER_DIR": str(barrier),
-    }
+    env = child_env(home=str(home),
+                    PATH=os.environ.get("PATH", "/usr/bin:/bin"),
+                    XDG_CONFIG_HOME=str(home),
+                    THINKTHEN_BASE_URL=f"http://127.0.0.1:{server.server_port}/generic/v1",
+                    THINKTHEN_API_KEY="tt-canary-301",
+                    THINKTHEN_CACHE=str(home / "cache"),
+                    TT_BARRIER_DIR=str(barrier))
     fixture = Path(__file__).with_name("installed_release")
     for mode in ("shared", "static"):
         consumer_build = home / (mode + "-build")

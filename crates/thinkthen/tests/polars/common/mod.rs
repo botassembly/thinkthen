@@ -7,6 +7,7 @@
 
 #![allow(dead_code, reason = "each test file uses its own part of the helper")]
 
+use crate::child::ChildEnvironment as _;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -87,6 +88,9 @@ pub(crate) fn alone(path: &str, body: impl FnOnce()) {
             "TMPDIR",
         ],
     );
+    if let Some(home) = std::env::var_os("HOME") {
+        command.home(home);
+    }
     for name in ["THINKTHEN_BASE_URL", "THINKTHEN_CACHE"] {
         if let Some(value) = std::env::var_os(name) {
             command.env(name, value);

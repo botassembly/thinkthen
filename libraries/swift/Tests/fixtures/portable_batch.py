@@ -34,14 +34,12 @@ with tempfile.TemporaryDirectory(prefix="swift-portable-", dir=PACKAGE / "target
                                    text=True, env=child_env(THINKTHEN_TEST_MARKERS=json.dumps({"local":"tt-named-loopback"})))
         try:
             port = int(backend.stdout.readline())
-            env = child_env()
-            env.update(HOME=str(scratch), XDG_CACHE_HOME=str(scratch), XDG_CONFIG_HOME=str(scratch),
+            env = child_env(home=str(scratch), XDG_CACHE_HOME=str(scratch), XDG_CONFIG_HOME=str(scratch),
                        LD_LIBRARY_PATH=str(NATIVE / "lib"), THINKTHEN_CACHE=str(scratch / "cache"),
                        THINKTHEN_API_KEY="tt-portable-loopback",
                        THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/arm/full/capture/v1")
             if named:
                 row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
                 base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
                 configuration(env, {"local": alias(row, base)})
                 env[row["key"]] = "tt-named-loopback"

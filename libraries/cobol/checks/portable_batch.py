@@ -61,13 +61,12 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cobol-portable-") as scratch:
             base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
             settings = json.dumps({"base_url": base, "model": corpus["model"], "batch": "max",
                                    "cache": False, "max_retries": 0, "throttle": 1})
-            env = child_env()
+            env = child_env(home=scratch, XDG_CONFIG_HOME=scratch if named else str(Path(scratch) / "config"))
             env.update(THINKTHEN_API_KEY="sk-loopback-cobol-portable", THINKTHEN_BASE_URL=base,
-                       HOME=scratch, THINKTHEN_CACHE=str(target / "cache"),
+                       THINKTHEN_CACHE=str(target / "cache"),
                        LD_LIBRARY_PATH=str(LIB_DIR))
             if named:
                 backend_row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
                 base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
                 configuration(env, {"local": alias(backend_row, base)})
                 env[backend_row["key"]] = "tt-named-loopback"

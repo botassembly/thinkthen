@@ -119,8 +119,7 @@ def child_env(base: str, folder: Path, extra: dict[str, str] | None = None, *, k
     folder.mkdir(parents=True, exist_ok=True)
     for name in ("cache", "config", "home", "state"):
         (folder / name).mkdir(exist_ok=True)
-    env = clean_env(**{
-        "HOME": str(folder / "home"),
+    env = clean_env(home=folder / "home", **{
         "XDG_CACHE_HOME": str(folder / "cache"),
         "XDG_STATE_HOME": str(folder / "state"),
         # Ticket 0318: a SQL host caches only in a folder the operator names.

@@ -9,6 +9,8 @@ import subprocess
 import sys
 import urllib.request
 from fixture import Backend
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / 'checks'))
 from request_identity import matches
 
@@ -26,14 +28,15 @@ barrier.mkdir()
 home = logs / 'home'
 (home / 'cache').mkdir(parents=True)
 server = Backend(barrier, plant)
-env = {
-    'PATH': os.environ['PATH'],
-    'HOME': str(home), 'XDG_CONFIG_HOME': str(home), 'XDG_CACHE_HOME': str(home / 'cache'),
-    'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1',
-    'THINKTHEN_API_KEY': 'tt-canary-300', 'THINKTHEN_CACHE': str(home / 'cache'),
-    'PUB_CACHE': os.environ['PUB_CACHE'],
-    'TT_NATIVE_LIBRARY': str(native), 'FLUTTER_SUPPRESS_ANALYTICS': 'true',
-}
+env = child_env(home=str(home),
+                PATH=os.environ['PATH'],
+                XDG_CONFIG_HOME=str(home),
+                THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
+                THINKTHEN_API_KEY='tt-canary-300',
+                THINKTHEN_CACHE=str(home / 'cache'),
+                PUB_CACHE=os.environ['PUB_CACHE'],
+                TT_NATIVE_LIBRARY=str(native),
+                FLUTTER_SUPPRESS_ANALYTICS='true')
 command = [flutter, 'test', '--no-pub', '--reporter=expanded', 'test/facade_test.dart']
 receipt = {'command': command, 'pid': None, 'pgid': None, 'exit': None, 'signals': [], 'timeout_seconds': 210}
 process = None

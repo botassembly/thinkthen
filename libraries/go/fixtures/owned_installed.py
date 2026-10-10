@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     consumer.mkdir()
     (consumer / 'go.mod').write_text('module example.org/owned-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
     shutil.copy2(Path(__file__).with_name('owned_consumer.go'), consumer / 'main.go')
-    env = child_env(HOME=str(home), XDG_CONFIG_HOME=str(home/'config'), XDG_STATE_HOME=str(home/'state'), XDG_CACHE_HOME=str(home/'cache'), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=str(module.parent/'go-cache'), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
+    env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=str(module.parent/'go-cache'), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
     subprocess.run(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.'],cwd=consumer,env=env,check=True)
     linked = subprocess.check_output(['ldd', str(home/'consumer-bin')], text=True, env=env)
     assert 'libthinkthen' not in linked, linked

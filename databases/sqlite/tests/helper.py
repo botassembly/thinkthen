@@ -121,7 +121,7 @@ def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> 
     fresh folders. The loopback key rides only beside a loopback address."""
     scratch = pathlib.Path(tempfile.mkdtemp(prefix="thinkthen-sqlite-"))
     held = child_env(
-        keep=("LD_LIBRARY_PATH",),
+        keep=("LD_LIBRARY_PATH",), home=scratch,
         THINKTHEN_CACHE=str(scratch / "cache"),
         XDG_CACHE_HOME=str(scratch / "xdg-cache"),
         XDG_STATE_HOME=str(scratch / "xdg-state"),

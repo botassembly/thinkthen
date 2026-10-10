@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 
-from helper import ROOT, Backend, Child, child, environment, expect, main
+from helper import ROOT, Backend, Child, child, child_env, environment, expect, main
 
 COMMAND = os.environ.get("THINKTHEN_COMMAND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "thinkthen"))
 HOLD = 0.3
@@ -43,7 +43,7 @@ def held_lock(env: dict[str, str]) -> int:
 
 
 def totals(env: dict[str, str]) -> dict:
-    status = subprocess.run([COMMAND, "status", "--json"], env={"PATH": env["PATH"], "HOME": env["HOME"], "XDG_STATE_HOME": env["XDG_STATE_HOME"]},
+    status = subprocess.run([COMMAND, "status", "--json"], env=child_env(home=env["HOME"], PATH=env["PATH"], XDG_STATE_HOME=env["XDG_STATE_HOME"]),
                             capture_output=True, text=True, timeout=30, check=True)
     return json.loads(status.stdout)["usage"]["total"]
 

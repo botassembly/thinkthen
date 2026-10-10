@@ -1,4 +1,5 @@
 """Run the unchanged shared canonical cases through each real family public door."""
+import pathlib
 import json
 import os
 from pathlib import Path
@@ -6,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 import time
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'conformance'))
@@ -40,10 +43,12 @@ def main():
         subprocess.run(['cc','-shared','-fPIC','-pthread','-Wall','-Wextra','-Werror',str(ROOT/'libraries/php/fixtures/cancel_reader.c'),'-ldl','-o',str(helper)],env={'PATH':os.environ['PATH'],'LANG':'C.UTF-8'},check=True)
         # Counted descriptor constructors are an additional public door, with no synthetic parity cells.
         with tempfile.TemporaryDirectory(prefix='constructors-',dir=scratch) as owned:
-            env={'PATH':os.environ['PATH'],'HOME':owned,'XDG_CONFIG_HOME':owned+'/config',
-                 'XDG_CACHE_HOME':owned+'/cache','XDG_STATE_HOME':owned+'/state','LANG':'C.UTF-8',
-                 'PUB_CACHE':os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
-                 'FLUTTER_SUPPRESS_ANALYTICS':'true','CI':'true'}
+            env=child_env(home=owned,
+                          PATH=os.environ['PATH'],
+                          LANG='C.UTF-8',
+                          PUB_CACHE=os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
+                          FLUTTER_SUPPRESS_ANALYTICS='true',
+                          CI='true')
             backend=Backend(ROOT/'target/debug/conformance-backend',env)
             try:
                 settings=compact({'base_url':f'http://127.0.0.1:{backend.port}/generic/v1','cache':False,'max_retries':0})
@@ -66,7 +71,14 @@ def main():
                 value=document(row,cases,named)
                 with tempfile.TemporaryDirectory(prefix='case-',dir=scratch) as owned:
                     home=Path(owned)
-                    child={'PATH':os.environ['PATH'],'HOME':str(home),'XDG_CONFIG_HOME':str(home/'config'), 'XDG_CACHE_HOME':str(home/'cache'),'XDG_STATE_HOME':str(home/'state'), 'LANG':'C.UTF-8','TT_REPO':str(ROOT),'TT_CANCEL_HELPER':str(helper),'PUB_CACHE':os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),'FLUTTER_SUPPRESS_ANALYTICS':'true','CI':'true'}
+                    child=child_env(home=str(home),
+                          PATH=os.environ['PATH'],
+                          LANG='C.UTF-8',
+                          TT_REPO=str(ROOT),
+                          TT_CANCEL_HELPER=str(helper),
+                          PUB_CACHE=os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
+                          FLUTTER_SUPPRESS_ANALYTICS='true',
+                          CI='true')
                     backend=Backend(ROOT/'target/debug/conformance-backend',child)
                     try:
                         child.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{value["arm"]}', THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')

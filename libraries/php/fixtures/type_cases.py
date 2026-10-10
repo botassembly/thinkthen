@@ -1,4 +1,6 @@
 """Run the shared J1 corpus through the public PHP binding and saved backend."""
+import sys
+import pathlib
 
 import importlib.util
 import json
@@ -6,6 +8,8 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 ROOT = Path(__file__).resolve().parents[3]
 PHP = ROOT / "libraries/php"
@@ -43,10 +47,12 @@ def main():
             # Ticket 0291, before any case sends: P1 and one invalid plan run
             # with no key through ThinkThen::plan; the zero cap and the zero
             # budgets refuse; the backend has read no request.
-            env = {"PATH": "/usr/bin:/bin", "HOME": folder, "XDG_CACHE_HOME": folder,
-                   "THINKTHEN_BASE_URL": f"http://127.0.0.1:{port}/generic/v1",
-                   "THINKTHEN_CACHE": str(Path(folder) / "plan"),
-                   "TT_LIBRARY": str(ROOT / "libraries/c/target/debug/libthinkthen_c.so")}
+            env = child_env(home=folder,
+                            PATH="/usr/bin:/bin",
+                            XDG_CACHE_HOME=folder,
+                            THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
+                            THINKTHEN_CACHE=str(Path(folder) / "plan"),
+                            TT_LIBRARY=str(ROOT / "libraries/c/target/debug/libthinkthen_c.so"))
             p1 = next(case for case in cases if case["name"] == "plan-p1")
             given = p1["plan_input"]
             plan = ["plan", given["verb"], given["question"]]

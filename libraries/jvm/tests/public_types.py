@@ -81,10 +81,11 @@ def native_parity(consumer, command):
             value = c_parity.document(row, cases, named)
             with tempfile.TemporaryDirectory(prefix=f"thinkthen-{consumer}-parity-") as folder:
                 home = Path(folder)
-                env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": folder,
-                       "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
-                       "XDG_STATE_HOME": str(home / "state"), "LC_ALL": "C.UTF-8",
-                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": str(native)}
+                env = child_env(home=folder,
+                                PATH=os.environ.get("PATH", "/usr/bin:/bin"),
+                                LC_ALL="C.UTF-8",
+                                DOTNET_CLI_TELEMETRY_OPTOUT="1",
+                                LD_LIBRARY_PATH=str(native))
                 backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
@@ -248,7 +249,7 @@ try:
             path=Path(folder)/"unicode.txt"
             path.write_bytes("Maria Chen\r\nAlex Lee\r\n".encode())
             settings=json.dumps({"base_url":f"http://127.0.0.1:{port}/arm/full/v1","model":"fixed","cache":False,"batch":"max","throttle":1,"max_retries":0})
-            env=child_env(HOME=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
+            env=child_env(home=folder,XDG_CONFIG_HOME=folder,XDG_CACHE_HOME=folder,XDG_STATE_HOME=folder,
                           THINKTHEN_API_KEY="sk-native-complete-loopback",THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                           TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path),LD_LIBRARY_PATH=str(native))
             for lang in ("java","kotlin","scala"):

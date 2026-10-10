@@ -57,18 +57,17 @@ for named in (False, True):
         port = int(server.stdout.readline())
         with tempfile.TemporaryDirectory(prefix="thinkthen-php-portable-") as scratch:
             base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
-            env = child_env()
+            env = child_env(home=scratch, XDG_CONFIG_HOME=scratch if named else str(Path(scratch) / "config"))
             env.update(THINKTHEN_API_KEY="sk-loopback-php-portable", THINKTHEN_BASE_URL=base,
                        TT_PORTABLE_SETTINGS=json.dumps({"base_url": base, "model": corpus["model"],
                                                         "batch": "max", "cache": False, "max_retries": 0,
                                                         "throttle": 1}),
                        TT_PORTABLE_CORPUS=str(CORPUS), TT_AUTOLOAD=str(autoload),
                        TT_LIBRARY=str(library),
-                       HOME=scratch, THINKTHEN_CACHE=scratch,
+                       THINKTHEN_CACHE=scratch,
                        LD_LIBRARY_PATH=str(library.parent) if RELEASE_PACKAGE else str(NATIVE / "lib"))
             if named:
                 row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
                 base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
                 configuration(env, {"local": alias(row, base)})
                 env[row["key"]] = "tt-named-loopback"

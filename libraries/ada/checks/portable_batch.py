@@ -53,16 +53,15 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-ada-portable-") as scratch:
         try:
             port = int(server.stdout.readline())
             base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
-            env = child_env()
+            env = child_env(home=scratch, XDG_CONFIG_HOME=scratch if named else str(Path(scratch) / "config"))
             env.update(THINKTHEN_API_KEY="sk-loopback-ada-portable", THINKTHEN_BASE_URL=base,
                        TT_PORTABLE_SETTINGS=json.dumps({"base_url": base, "model": corpus["model"],
                                                         "batch": "max", "cache": False,
                                                         "max_retries": 0, "throttle": 1}),
-                       HOME=scratch, THINKTHEN_CACHE=str(target / "cache"),
+                       THINKTHEN_CACHE=str(target / "cache"),
                        LD_LIBRARY_PATH=str(LIB_DIR))
             if named:
                 row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
                 base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
                 configuration(env, {"local": alias(row, base)})
                 env[row["key"]] = "tt-named-loopback"

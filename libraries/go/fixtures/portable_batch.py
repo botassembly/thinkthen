@@ -28,20 +28,19 @@ for named in (False, True):
     try:
         port = int(server.stdout.readline())
         with tempfile.TemporaryDirectory(prefix="thinkthen-go-portable-") as scratch:
-            env = child_env(HOME=scratch, GOMODCACHE=str(Path(scratch) / "modcache"))
+            env = child_env(home=scratch, XDG_CONFIG_HOME=scratch if named else str(Path(scratch) / "config"), GOMODCACHE=str(Path(scratch) / "modcache"))
             env.update(THINKTHEN_API_KEY="sk-loopback-go-portable",
                        THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/arm/full/capture/v1",
                        TT_PORTABLE_SETTINGS=json.dumps({"base_url": f"http://127.0.0.1:{port}/arm/full/capture/v1",
                                                         "model": corpus["model"], "batch": "max", "cache": False,
                                                         "max_retries": 0, "throttle": 1}),
-                       TT_PORTABLE_CORPUS=str(CORPUS), HOME=scratch, THINKTHEN_CACHE=scratch,
+                       TT_PORTABLE_CORPUS=str(CORPUS), THINKTHEN_CACHE=scratch,
                        PKG_CONFIG_PATH=str(NATIVE / "lib/pkgconfig"), LD_LIBRARY_PATH=str(NATIVE / "lib"),
                        GOPROXY="off", GOSUMDB="off", GOTOOLCHAIN="local", CGO_ENABLED="1",
                        GOCACHE=str(ROOT / "target/0260-wrapper/go-cache"))
             Path(env["GOCACHE"]).mkdir(parents=True, exist_ok=True)
             if named:
                 row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
                 base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
                 configuration(env, {"local": alias(row, base)})
                 env[row["key"]] = "tt-named-loopback"
