@@ -80,3 +80,4 @@ type TableReader::Item = Result<SourceRecord<RawRecord>, Error>
 - 2026-10-09 landed ced19b30f; next: Native settings and generated proxy input types agree. Rerun combined checks after the generated-file repair and finish consumer translations.
 - 2026-10-10 landed 649fd2412; next: Native JSONL and line session framing is landed. Shared CSV/TSV reader is in repair review; session table framing and remaining consumer grammar stay open.
 - 2026-10-10 landed d8ee56da4; next: Shared authorized CSV/TSV reader is landed with terminal iterator errors fixed. Descriptor table sessions are being implemented from the reviewed logical-row design; remaining consumer grammar stays open.
+- 2026-10-10 landed 19ba6aecc; next: Native CSV and TSV sessions are landed with bounded complete-row descriptors, shared parsing and completed-prefix failure handling. Finish remaining consumer grammar and adoption; large-input boundaries remain release-only.
