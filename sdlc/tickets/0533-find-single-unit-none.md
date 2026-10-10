@@ -1,6 +1,6 @@
 # 0533: Admit one source unit when find offers none
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Reviews: revision 50a02c080178af023455f735a7b6d43ddad069f2, accept
 Reviews: revision 5dbeba68ee7bbe647260b7c8dcac8c29ecda4dfe, accept
 
 Reviews: revision 0f5c33f9381eaf2385aa7b7744fab5d92ccb2df9, accept
+
+Landed: f47a8a1
 
 ## Outcome
 
