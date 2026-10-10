@@ -50,7 +50,8 @@ try:
  counted={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,'pid':result.pid,'pgid':result.pgid,'exit':result.exit,'signals':result.signals}
  (work/'receipt.json').write_text(json.dumps(counted,indent=2)+'\n')
  assert result.exit==0,(result.exit,result.stdout[-1500:],result.stderr[-1500:])
- bodies=(barrier/'wire-requests.jsonl').read_bytes().splitlines()
+ wire=barrier/'wire-requests.jsonl'
+ bodies=wire.read_bytes().splitlines() if wire.exists() else []
  if mode.startswith('usage-'):
   assert b'INSTALLED_CSHARP_USAGE_PASS' in result.stdout,result.stdout
   wanted=[] if mode=='usage-disabled' else ['consumer-csharp']
