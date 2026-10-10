@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:thinkthen_dart/thinkthen_dart.dart';
 
@@ -54,6 +55,34 @@ Future<void> dataCases(
       }
     }
     requireData(sends() == beforeImage, 'unadmitted image routes send nothing');
+    final admittedBytes = base64Decode('__CANONICAL_IMAGE__');
+    final admittedFile = File('${scratch.path}/image.png')
+      ..writeAsBytesSync(admittedBytes);
+    final admitted = Engine.open(
+        settings: InputEngineSettings(
+            backend: const Presence.present('liquid'),
+            model: const Presence.present('d1'),
+            baseUrl: Presence.present(endpoint),
+            cache: const Presence.present(
+                InputCacheDocument.alternative1(false))));
+    try {
+      final beforeAdmitted = sends();
+      final result = await admitted.decide(
+          question,
+          InputRequestInputText(
+              text: 'image-caption',
+              images: Presence.present([
+                imageBytes(admittedBytes, media: 'image/png'),
+                InputRequestImageFile(path: admittedFile.path)
+              ])));
+      requireData(
+          result.packets.whereType<SessionPacketDecideRow>().single.value.answer
+                  is AnswerYesNo &&
+              sends() == beforeAdmitted + 1,
+          'admitted byte and file images produce one answer');
+    } finally {
+      admitted.close();
+    }
     final recording = '${scratch.path}/recording';
     InputEngineSettings settings({bool replay = false}) => InputEngineSettings(
         backend: const Presence.present('typesafe'),

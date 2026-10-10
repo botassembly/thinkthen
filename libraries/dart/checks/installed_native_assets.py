@@ -1,5 +1,6 @@
 """Install development packages and exercise SDK-owned Linux native assets offline."""
 import fcntl
+import base64
 import os
 import hashlib
 import http.server
@@ -63,6 +64,8 @@ def main():
     consumer = scratch / 'consumer'
     (consumer / 'bin').mkdir(parents=True)
     shutil.copytree(ROOT / 'libraries/dart/checks/session_consumer/bin', consumer / 'bin', dirs_exist_ok=True)
+    data_case = consumer / 'bin/data_cases.dart'
+    data_case.write_text(data_case.read_text().replace('__CANONICAL_IMAGE__', base64.b64encode((ROOT / 'specification/fixtures/images/red.png').read_bytes()).decode()))
     spec = ("name: installed_native_assets\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     (consumer / 'pubspec.yaml').write_text(spec)
     run([str(dart), 'pub', 'get', '--offline'], consumer, env)
