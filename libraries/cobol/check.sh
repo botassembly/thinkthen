@@ -109,6 +109,7 @@ cobc -x -free -I "$ROOT/copybooks" -o "$TARGET/carrier_bounds" \
 python3 "$ROOT/checks/files.py"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
+THINKTHEN_C_LIBRARY="$TT_NATIVE" python3 "$REPO/libraries/ada/checks/usage_installed.py" --family cobol
 python3 "$ROOT/checks/failure.py"
 python3 "$ROOT/checks/run_matrix.py"
 python3 "$ROOT/checks/negative.py"

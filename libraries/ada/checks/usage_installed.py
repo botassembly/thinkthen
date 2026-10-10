@@ -1,4 +1,5 @@
 """Exercise installed Ada and COBOL persistence with real owned usage locks."""
+import argparse
 import fcntl
 import importlib.util
 import json
@@ -13,6 +14,11 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--family', choices=('ada', 'cobol'))
+args = parser.parse_args()
+families = (args.family,) if args.family else ('ada', 'cobol')
 
 NATIVE = Path(os.environ.get('THINKTHEN_C_LIBRARY', ROOT / 'libraries/c/target/debug/libthinkthen_c.so'))
 
@@ -135,39 +141,43 @@ def cobol_source(package):
 with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
     work = Path(temporary)
     (work / 'OWNER').write_text('0468 Ada and COBOL installed persistence consumer\n')
-    for family in ('ada', 'cobol'):
+    for family in families:
         shutil.copytree(ROOT / 'libraries' / family / 'src', work / family / 'src')
-    shutil.copytree(ROOT / 'libraries/cobol/copybooks', work / 'cobol/copybooks')
-    shutil.copytree(ROOT / 'libraries/cobol/examples', work / 'cobol/examples')
-    shutil.copy2(ROOT / 'libraries/c/include/thinkthen.h', work / 'cobol/src/thinkthen.h')
+    if 'cobol' in families:
+        shutil.copytree(ROOT / 'libraries/cobol/copybooks', work / 'cobol/copybooks')
+        shutil.copytree(ROOT / 'libraries/cobol/examples', work / 'cobol/examples')
+        shutil.copy2(ROOT / 'libraries/c/include/thinkthen.h', work / 'cobol/src/thinkthen.h')
     shutil.copy2(NATIVE, work / 'libthinkthen.so.0')
     (work / 'libthinkthen.so').symlink_to('libthinkthen.so.0')
-    shutil.copy2(ROOT / 'libraries/ada/checks/usage_status.adb', work / 'usage_status.adb')
-    (work / 'ada-objects').mkdir()
-    build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(work / 'ada/src'),
-                            str(work / 'usage_status.adb'), '-D', str(work / 'ada-objects'),
-                            '-o', str(work / 'ada-consumer'), '-largs', '-L' + str(work),
-                            '-lthinkthen', '-Wl,-rpath,$ORIGIN'], cwd=work, env=child_env(), capture_output=True, text=True, timeout=60)
-    assert build.returncode == 0, build.stdout + build.stderr
-    (work / 'usage_status.cob').write_text(cobol_source(work / 'cobol'))
-    subprocess.run(['cobc', '-x', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call',
-                    '-I', str(work / 'cobol/copybooks'), '-A', '-include ' + str(work / 'cobol/src/tt_session.h') + ' -Wno-incompatible-pointer-types',
-                    '-o', str(work / 'cobol-consumer'), str(work / 'usage_status.cob'),
-                    str(work / 'cobol/src/tt_session.c'), str(work / 'cobol/src/tt_requests_generated.c'),
-                    '-Q', str(work / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'], env=child_env(), check=True, timeout=30)
+    if 'ada' in families:
+        shutil.copy2(ROOT / 'libraries/ada/checks/usage_status.adb', work / 'usage_status.adb')
+        (work / 'ada-objects').mkdir()
+        build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(work / 'ada/src'),
+                                str(work / 'usage_status.adb'), '-D', str(work / 'ada-objects'),
+                                '-o', str(work / 'ada-consumer'), '-largs', '-L' + str(work),
+                                '-lthinkthen', '-Wl,-rpath,$ORIGIN'], cwd=work, env=child_env(), capture_output=True, text=True, timeout=60)
+        assert build.returncode == 0, build.stdout + build.stderr
+    if 'cobol' in families:
+        (work / 'usage_status.cob').write_text(cobol_source(work / 'cobol'))
+        subprocess.run(['cobc', '-x', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call',
+                        '-I', str(work / 'cobol/copybooks'), '-A', '-include ' + str(work / 'cobol/src/tt_session.h') + ' -Wno-incompatible-pointer-types',
+                        '-o', str(work / 'cobol-consumer'), str(work / 'usage_status.cob'),
+                        str(work / 'cobol/src/tt_session.c'), str(work / 'cobol/src/tt_requests_generated.c'),
+                        '-Q', str(work / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'], env=child_env(), check=True, timeout=30)
     spec = importlib.util.spec_from_file_location('usage_backend', ROOT / 'libraries/csharp/tests/backend.py')
     backend = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(backend)
     server = backend.Backend(work)
     expected = []
     try:
-        bounds = subprocess.run([str(work / 'cobol-consumer')],
-                                env=child_env(home=work / 'bounds-home', TT_USAGE_MODE='bounds'),
-                                capture_output=True, text=True, timeout=5)
-        assert bounds.returncode == 0 and 'BOUNDS_PASS' in bounds.stdout, (bounds.stdout, bounds.stderr)
+        if 'cobol' in families:
+            bounds = subprocess.run([str(work / 'cobol-consumer')],
+                                    env=child_env(home=work / 'bounds-home', TT_USAGE_MODE='bounds'),
+                                    capture_output=True, text=True, timeout=5)
+            assert bounds.returncode == 0 and 'BOUNDS_PASS' in bounds.stdout, (bounds.stdout, bounds.stderr)
         question = work / 'question.json'
         question.write_text(json.dumps({'decide': 'Is it?'}))
-        for family in ('ada', 'cobol'):
+        for family in families:
             for mode in ('written', 'failed', 'disabled'):
                 home = work / (family + '-' + mode)
                 usage = home / 'state/thinkthen'
@@ -207,7 +217,7 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
                     finally:
                         if child.poll() is None:
                             child.kill(); child.communicate()
-        assert server.attempts == server.connections == len(expected) == 4
-        print('Installed persistence, retained answers/facts/advice and four exact requests PASS')
+        assert server.attempts == server.connections == len(expected) == 2 * len(families)
+        print('Installed persistence, retained answers/facts/advice and', len(expected), 'exact requests PASS')
     finally:
         server.close()
