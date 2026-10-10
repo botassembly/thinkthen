@@ -320,6 +320,8 @@ def main():
         parts = ("c", "go", "cpp", "swift", "zig", "php", "dart", "ada", "objective-c", "cobol")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "paired"), *parts, cwd=source, env=env), "", success=True)
+        with tarfile.open(next((base / "paired").glob("thinkthen-swift-*.tar.gz"))) as packed:
+            assert packed.extractfile(f"./Sources/ThinkThen/Native/{host}/libthinkthen.so").read() == (native / "libthinkthen_c.so").read_bytes()
         for kind in parts:
             if len(list((base / "paired").glob(f"thinkthen-{kind}-*.tar.gz"))) != 1:
                 raise AssertionError(f"missing {kind} fixture archive")
