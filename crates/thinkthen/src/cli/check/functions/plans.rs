@@ -29,7 +29,13 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
         let request = admitted(call, definition, text(TEXT))?;
         let (summary, _) = engine
             .plan_request_summary(&request, Environment::default())
-            .map_err(invalid)?;
+            .map_err(|error| {
+                if name == "rank" {
+                    Failure::from(error)
+                } else {
+                    Failure::Usage("a backend setup cannot fit a minimal function check")
+                }
+            })?;
         summaries.push((name, summary));
     }
     staged(inner, &engine, decide, &mut summaries)?;
@@ -65,7 +71,7 @@ fn staged(
     )?;
     let (_, summary) = find
         .plan_find(engine, Environment::default())
-        .map_err(invalid)?;
+        .map_err(Failure::from)?;
     summaries.push((
         "find",
         probe_summary(inner.backend(), summary.first_body().into_iter(), 0)?,
@@ -82,7 +88,7 @@ fn staged(
     )?;
     let (summary, _, _) = engine
         .plan_annotation_request(&annotation, Environment::default())
-        .map_err(invalid)?;
+        .map_err(Failure::from)?;
     summaries.push(("annotate", summary));
     let recognition = admitted(
         Call::Recognize,
@@ -101,7 +107,7 @@ fn staged(
             Environment::default(),
             crate::core::MAX_RECORD_BYTES,
         )
-        .map_err(invalid)?;
+        .map_err(Failure::from)?;
     let first = preview
         .first
         .ok_or(Failure::Defect("a check preview has no first request"))?;
@@ -122,7 +128,7 @@ fn staged(
     )?;
     let preview = relation
         .plan_relations(inner.backend(), inner.profile(), Environment::default())
-        .map_err(invalid)?;
+        .map_err(Failure::from)?;
     let summary = probe_summary(
         inner.backend(),
         preview
