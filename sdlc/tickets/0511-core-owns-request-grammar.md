@@ -112,7 +112,7 @@ fn RequestSource::read_framed<'a>(&self, CallOptions<'a>) -> Result<Box<(dyn Ite
 
 ## Progress
 
-### Remaining caller ownership at the closure audit
+### Caller inventory and retained ownership
 
 The closure audit starts at `b13c802b7`. These are live consumers, not unused imports. Host translation preserves the existing accepted wire grammar and diagnostics; it does not duplicate native admission. Language migration tickets still own deleting their old public APIs.
 
@@ -129,9 +129,11 @@ Same-crate path declarations, host pointer representability, file authority, SQL
 
 The remaining common translations move to the private `thinkthen-host` crate through normal path dependencies. No public SDK endpoint is added. SQL execution enters the existing Request edge; the unused direct SQL dispatcher is deleted. The legacy language packet and source translators remain only for their named family migrations and the frozen C exports. Native fixture settings use `EngineBuilder::from_settings_json` instead of a second settings-key matcher. The host crate is shipped as a source dependency where R and archive-built Rust consumers need it; its relocated lines remain visible in the root source ceiling and are not counted as deletion.
 
-The remaining retirement list is exact: Python `src/engine/complete_calls.rs`, `complete_stream.rs` and `files.rs` (0496); Ruby `src/ffi/complete.rs` and the `Ask::Complete`/`Ask::Files` branches in `src/call.rs` (0497); TypeScript `src/complete_node.rs` and legacy `src/door/result.rs` calls (0498). Their first-class replacement APIs already enter canonical Request sessions. Remove these legacy callers in their migration tickets rather than convert dispatchers that those tickets delete. The frozen C `src/call.rs`, `call/legacy.rs` and `plan.rs` retain the shared source translation under 0515; they are the explicit compatibility exception, not a replacement SDK route. The shared test owner `libraries/python/tests/native_fixture.py` supplies case framing and assertions for current Python, R, Ruby and TypeScript runners; retain it until those callers move to the common fixture owner. It is not a product compatibility API.
+The retirement inventory names Python `src/engine/complete_calls.rs`, `complete_stream.rs` and `files.rs` (0496); Ruby `src/ffi/complete.rs` and the `Ask::Complete`/`Ask::Files` branches in `src/call.rs` (0497); TypeScript `src/complete_node.rs` and legacy `src/door/result.rs` calls (0498). Their owning migrations remove these callers; the final caller inspection finds none. R and Rust/Polars likewise use the canonical Request edge. With those consumers removed, 0515 deletes the unused shared host packet translator.
 
-The remaining hidden support calls also belong to those family retirements: Python `src/engine.rs` uses `thinkthen::default_engine()`; Ruby `src/ffi.rs` uses it; TypeScript `src/door.rs` uses it and `thinkthen::usage()`. Keep these two support names while those live callers remain. The last owning family removes the names after checking all current callers, including the frozen C compatibility exception.
+The last owning family, TypeScript 0498, removes the hidden `thinkthen::default_engine()` and `thinkthen::usage()` support names after Python and Ruby retire their callers. Frozen C callers use the retained shared source adapter and do not need these names.
+
+Retained owners are explicit: `thinkthen-host::source` translates accepted frozen C inputs; `complete_native` and `sql_request` prepare SQL arguments for Request; native typed APIs own admission and limits. C pointer representability, SQL host conversion and file authority remain host responsibilities. The shared `libraries/python/tests/native_fixture.py` owns test framing and assertions for Python, R, Ruby and TypeScript; it is not a product compatibility API. These retained callers require no further semantic migration.
 
 - 2026-10-09 started
 - 2026-10-09 landed 2dbccdf0e; next: Shared SQL record descriptors are landed. Continue named consumer migrations and remove remaining duplicated request grammar and cross-crate includes; this first slice does not complete the whole ticket.
