@@ -9,6 +9,7 @@ case ${1:-} in
     echo 'THINKTHEN_CONFORMANCE_IDS is unset; no required cell may be skipped'
     echo 'sdlc/scripts/test (routine behavior tests, doctests, consumer, self-tests)'
     echo 'cargo test release_only_ -- --ignored (large-input boundaries and nested package builds in both workspaces)'
+    echo 'sdlc/scripts/smoke (installed binding replay smokes and nested package builds)'
     echo 'surfaces --full-functional (required public parity, C safety and release smoke)'
     exit 0 ;;
 --run) ;;
@@ -27,11 +28,30 @@ cd -- "$REPO"
 . sdlc/scripts/scratch.sh
 usage_guard
 config_home
+# One replay smoke per binding, four at a time beside the release boundary tests.
+# It runs in its own process group, so a failed step here stops every smoke before the lock frees.
+scratch_dir smoke_log
+# macOS has no setsid, so perl makes the group there.
+if command -v setsid >/dev/null 2>&1; then
+    setsid sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
+else
+    perl -e 'setpgrp(0, 0); exec @ARGV' sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
+fi
+smoke=$!
+trap 'code=$?; set +e; [ -z "$smoke" ] || { kill -TERM -"$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; }; scratch_clean; exit "$code"' EXIT
+
 # The name prefix selects release boundaries without running subprocess helpers
 # or the independent ignored load and timing campaigns.
 cargo test --locked --offline --workspace --all-targets release_only_ -- --ignored
 cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace release_only_ -- --ignored
+
+smoke_code=0
+wait "$smoke" || smoke_code=$?
+smoke=
+cat -- "$smoke_log/out"
+[ "$smoke_code" -eq 0 ] || { echo "test-full-cases: a binding smoke failed (exit $smoke_code)" >&2; exit 1; }
+
 THINKTHEN_TEST_PROFILE=full
 export THINKTHEN_TEST_PROFILE
 unset THINKTHEN_CONFORMANCE_IDS
