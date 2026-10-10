@@ -30,3 +30,4 @@ Swift callers add one SwiftPM dependency that carries the native library, call t
 ## Progress
 
 - 2026-10-10 landed 00ad0813e; next: Swift exposes owned native usage observation and finalization in the shared reviewed 0505 batch. Its corrected thread diagnostic and focused installed status checks pass. The canonical batch record is 0505; final installed Apple and distribution qualification remain held.
+- 2026-10-10 landed 00ad0813e; next: Owned usage-status observation is landed, but the full Swift migration remains implementation work: generated Swift session inputs and results, typed failures, async calls and task cancellation, and the SwiftPM native package. Complete that implementation before final installed and Apple qualification.
