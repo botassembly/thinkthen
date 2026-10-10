@@ -2,7 +2,7 @@ using System.Text.Json;
 using ThinkThen;
 using ThinkThen.Inputs;
 
-if(args.Length>=1 && args[0]=="complete"){Console.WriteLine(NativeCases.Run(args.Length==2?args[1]:Console.ReadLine()!));return;}
+if(args.Length>=1 && args[0]=="complete"){Console.WriteLine(AsyncFixtureCases.Run(args.Length==2?args[1]:Console.ReadLine()!));return;}
 if(args.Length==1 && args[0]=="native"){NativeChecks.Run();Console.WriteLine("{\"native\":\"pass\"}");return;}
 if(args.Length==1 && args[0]=="carriers"){CarrierChecks.Run();Console.WriteLine("{\"carriers\":\"pass\"}");return;}
 using var engine=Engine.Open(new InputEngineSettings());

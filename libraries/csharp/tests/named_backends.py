@@ -1,5 +1,6 @@
 """Public C# settings constructor selects the counted configured backend."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -15,9 +16,9 @@ from backend_cases import ROWS, alias, configuration, paths
 with tempfile.TemporaryDirectory(prefix="csharp-named-") as scratch:
     env = child_env(home=scratch,
                     DOTNET_CLI_HOME=scratch, DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_NOLOGO="1",
-                    NUGET_PACKAGES=str(PACKAGE / "target/scratch/nuget"))
+                    NUGET_PACKAGES=os.environ.get("NUGET_PACKAGES", str(PACKAGE / "target/scratch/nuget")))
     subprocess.run([str(dotnet()), "build", str(PACKAGE / "tests/Consumer.csproj"), "--configuration", "Release",
-                    "--source", str(PACKAGE / "target/scratch/nuget"), "-v", "quiet"], env=env, check=True, timeout=120)
+                    "--source", str(PACKAGE / "target/scratch/managed"), "-v", "quiet"], env=env, check=True, timeout=120)
     server = subprocess.Popen([ROOT / "target/debug/conformance-backend"],
                               env=child_env(THINKTHEN_TEST_MARKERS='{"local":"tt-named-loopback"}'),
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
