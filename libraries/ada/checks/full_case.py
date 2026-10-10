@@ -1,7 +1,6 @@
 """Compile a generated named Ada caller against an installed release package."""
 import importlib.util
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -36,4 +35,6 @@ build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src
                         str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'],
                        env=child_env(), text=True, capture_output=True, timeout=120)
 assert build.returncode == 0, build.stdout + build.stderr
-os.execve(str(binary), [str(binary)], env=child_env(home=home, THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback', OPENROUTER_API_KEY='sk-conformance-loopback', PERPLEXITY_API_KEY='sk-conformance-loopback'))
+result = subprocess.run([str(binary)], stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr,
+                        env=child_env(home=home, THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback', OPENROUTER_API_KEY='sk-conformance-loopback', PERPLEXITY_API_KEY='sk-conformance-loopback'))
+raise SystemExit(result.returncode)

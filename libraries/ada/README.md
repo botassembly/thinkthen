@@ -36,6 +36,8 @@ The convenience named calls create an engine using the ordinary environment and 
 | `Thinkthen.Native` handle operations | Controlled session and packet owners; generated C declarations remain available for direct ABI callers |
 | `Call`, `Files`, label constructors and JSON readers | Generated request records, native source descriptors and typed packet fields |
 | Root cancellation token | `Thinkthen.Sessions.Cancel` |
-| Root `Plan` JSON builder | The frozen generated `thinkthen_plan_json` declaration for direct ABI callers |
+| Root `Plan` JSON builder | Canonical preview through generated native `thinkthen_request_plan_json`; frozen `thinkthen_plan_json` also remains declared |
+
+The old JSON `Plan` wrapper is removed. Preview remains available to direct ABI callers through generated native declarations and their byte-buffer lifetime support. This package claims no named typed Ada Plan result.
 
 The old host judging APIs, handwritten C carriers, JSON validator and label grammar are removed. Frozen C declarations remain in the generated header package. The routine archive consumer exercises the shared named functions, presence, failure facts, cache and replay, files, ordered images, cancellation, cleanup, explicit overflow refusal and compiler-measured layouts. Full parity and platform checks belong to the release suite.
