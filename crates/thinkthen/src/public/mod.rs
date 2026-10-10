@@ -10,6 +10,7 @@ pub use images::{
     ImageAdmission, ImageEvidence, ImageInput, ImageMedia, InputEvidence, InputFunction,
     MAX_IMAGE_BYTES, MAX_IMAGES, QuestionInput,
 };
+pub use request::*;
 mod input_files;
 pub use input_files::{
     ImageSourceRecord, InputFileReader, InputReaderOptions, ReaderMedia, SourceItem, SourceItems,
