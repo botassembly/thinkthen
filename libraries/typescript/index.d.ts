@@ -447,3 +447,6 @@ export interface SourceRecord { record: string; file: string; first_line: number
 export interface LocatedRow extends SourceRecord { value: JsonValue; }
 /** Explicit files through the native JSON grammar, for any of the ten verbs. */
 export function files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: ManyCallOptions): Promise<Call<JsonValue>>;
+
+export { Client, ClientError } from "./native.js";
+export * as Results from "./results_generated.js";

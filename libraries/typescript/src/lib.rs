@@ -20,3 +20,6 @@ mod door;
 
 #[cfg(not(test))]
 pub mod node;
+
+#[cfg(not(test))]
+pub mod request_node;

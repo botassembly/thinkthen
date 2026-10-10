@@ -511,3 +511,8 @@ const exported = { complete, CompleteTypes: require('./_complete.js'), ThinkThen
 for (const [name, verb] of Object.entries(verbs)) exported[name] = (...args) => verb(null, ...args);
 
 module.exports = exported;
+
+// Lazy load keeps the existing error class shared by both API families.
+Object.defineProperty(module.exports, "Client", { enumerable: true, get: () => require("./native.js").Client });
+Object.defineProperty(module.exports, "Results", { enumerable: true, get: () => require("./results_generated.js") });
+Object.defineProperty(module.exports, "ClientError", { enumerable: true, get: () => require("./native.js").ClientError });
