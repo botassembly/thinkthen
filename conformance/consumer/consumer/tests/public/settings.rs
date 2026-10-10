@@ -2,6 +2,7 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
+use super::child::ChildEnvironment as _;
 use thinkthen::{Answer, Engine, Entity, ErrorKind, Judgment, Question, Relate};
 
 fn related(engine: &Engine, case: &serde_json::Value, step: &serde_json::Value, id: &str) {
@@ -463,7 +464,8 @@ fn relate_follows_the_engine_profile_like_the_command() {
             "--profile",
         ])
         .arg(&profile)
-        .env_clear()
+        .clear_environment()
+        .isolated_home(&folder)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

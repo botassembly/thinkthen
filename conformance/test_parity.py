@@ -433,7 +433,10 @@ class FullCheckpoint(unittest.TestCase):
                         shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
                     files = {
                         'sdlc/scripts/heavy-lock': '',
-                        'sdlc/scripts/scratch.sh': 'usage_guard() { :; }\nscratch_dir() { packed=$PWD/packed; mkdir -p "$packed"; }\n',
+                        'sdlc/scripts/scratch.sh': (
+                            'usage_guard() { :; }\n'
+                            'config_home() { XDG_CONFIG_HOME=$PWD/config; export XDG_CONFIG_HOME; }\n'
+                            'scratch_dir() { packed=$PWD/packed; mkdir -p "$packed"; }\n'),
                         'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
                         'sdlc/scripts/test': 'printf "workspace\\n" >> calls\n',
                         'sdlc/surfaces.txt': 'libraries/c landed\n',
@@ -444,6 +447,16 @@ class FullCheckpoint(unittest.TestCase):
                         'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
                         'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
                         'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
+                        'bin/cargo': (
+                            '#!/bin/sh\nset -eu\n'
+                            'test "$XDG_CONFIG_HOME" = "$PWD/config"\n'
+                            'case "$*" in\n'
+                            '"test --locked --offline --workspace --all-targets release_only_ -- --ignored") '
+                            'printf "release-workspace\\n" >> calls ;;\n'
+                            '"test --locked --offline --manifest-path conformance/consumer/Cargo.toml '
+                            '--target-dir target/consumer --workspace release_only_ -- --ignored") '
+                            'printf "release-consumer\\n" >> calls ;;\n'
+                            '*) exit 2 ;;\nesac\n'),
                         'conformance/parity.py': (
                             'import os,sys\n'
                             'if sys.argv[1:] != ["--validate"]:\n'
@@ -459,6 +472,7 @@ class FullCheckpoint(unittest.TestCase):
                         target.write_text(text)
                     (root / 'bin/rustc').chmod(0o755)
                     (root / 'bin/git').chmod(0o755)
+                    (root / 'bin/cargo').chmod(0o755)
                     env = {'PATH': str(root / 'bin') + ':' + os.defpath,
                            'HOME': str(root / 'home'), 'SAFETY_CODE': '77' if failed == 'safety' else '0',
                            'PARITY_CODE': '1' if failed == 'parity' else '0',
@@ -471,7 +485,7 @@ class FullCheckpoint(unittest.TestCase):
                     if failed not in ('safety', 'parity') and not installed:
                         expected += ['pack', 'smoke']
                     if entry == 'test-full-cases':
-                        expected.insert(0, 'workspace')
+                        expected[:0] = ['workspace', 'release-workspace', 'release-consumer']
                     if '--publish' in args:
                         expected.insert(0, 'stage-check')
                         if failed is None:
