@@ -371,7 +371,7 @@ class InstalledInputs(unittest.TestCase):
                  'thinkthen-0.2.0-cp310-abi3-linux_x86_64.whl', 'thinkthen-0.2.0.tgz',
                  'thinkthen-0.2.0-x86_64-linux.gem', 'thinkthen_0.2.0.tar.gz']
         names += [f'thinkthen-{family}-0.2.0-x86_64-unknown-linux-gnu.tar.gz' for family in
-                  ['go', 'csharp', 'jvm', 'cpp', 'swift', 'zig', 'objective-c', 'php',
+                  ['go', 'csharp', 'jvm', 'cpp', 'swift', 'zig', 'php',
                    'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16']]
         for name in names:
             (folder / name).touch()
@@ -387,7 +387,7 @@ class InstalledInputs(unittest.TestCase):
             folder = Path(scratch)
             self.packages(folder)
             inputs, command, native = self.select(folder)
-            self.assertEqual(set(inputs), set(self.consumers))
+            self.assertEqual(set(inputs), set(self.consumers) - {'objective-c'})
             self.assertEqual(Path(command).name, self.command)
             self.assertEqual(Path(native).name, self.native)
             for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
@@ -400,6 +400,59 @@ class InstalledInputs(unittest.TestCase):
                 self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
                 self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
                 self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+
+    def test_apple_requires_its_objective_c_archive(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch)
+            for name in [self.command, self.native, self.dart]:
+                (folder / name.replace('x86_64-unknown-linux-musl', 'aarch64-apple-darwin')
+                 .replace('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin')).touch()
+            with patch.object(parity.sys, 'platform', 'darwin'), patch.object(
+                    parity.subprocess, 'check_output', return_value='host: aarch64-apple-darwin\n'):
+                consumers = {'objective-c': self.consumers['objective-c']}
+                with self.assertRaisesRegex(ValueError, 'thinkthen-objective-c'):
+                    parity.installed_artifacts(folder, consumers)
+                archive = folder / 'thinkthen-objective-c-0.2.0-aarch64-apple-darwin.tar.gz'
+                archive.touch()
+                inputs, _, _ = parity.installed_artifacts(folder, consumers)
+                self.assertEqual(inputs['objective-c']['THINKTHEN_ARTIFACT'], str(archive))
+
+    def test_apple_execution_requires_every_foundation_cell(self):
+        contract = parity.inventory()
+        contract = contract | {'consumers': [self.consumers['objective-c']], 'pending_consumers': []}
+        with tempfile.TemporaryDirectory() as scratch:
+            def command(args, **kwargs):
+                self.assertIn('libraries/objective-c/check.sh', args)
+                return subprocess.CompletedProcess(args, 0)
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                self.assertEqual(parity.run('12345'), 1)
+            row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
+            self.assertNotIn('platform_pending', row)
+            self.assertEqual(set(row['cells'].values()), {'missing'})
+
+    def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
+        contract = parity.inventory()
+        contract = contract | {'consumers': [self.consumers['objective-c'], self.consumers['c']],
+                               'pending_consumers': []}
+        for missing in (False, True):
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as scratch:
+                def command(args, **kwargs):
+                    self.assertNotIn('libraries/objective-c/check.sh', args)
+                    for case in list(parity.required_cases(contract, 'c').values())[int(missing):]:
+                        kwargs['stdout'].write(parity.PREFIX + json.dumps({
+                            'consumer': 'c', 'case': case['id'], 'status': 'pass',
+                            'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
+                    return subprocess.CompletedProcess(args, 0)
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                    self.assertEqual(parity.run('12345'), int(missing))
+                matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
+                apple = next(row for row in matrix if row['consumer'] == 'objective-c')
+                self.assertEqual(set(apple['cells']), set(parity.required_cases(contract, 'objective-c')))
+                self.assertEqual(set(apple['cells'].values()), {'platform-pending'})
+                self.assertIsNone(apple['named_typed_functions'])
+                table = (Path(scratch) / 'target/parity/matrix.md').read_text()
+                self.assertIn('Apple qualification pending', table)
+                self.assertIn('Apple-only ruling 0518', table)
 
     def test_missing_ambiguous_linked_and_non_file_inputs_refuse(self):
         for defect in ['missing', 'ambiguous', 'linked', 'directory']:

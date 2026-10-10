@@ -273,6 +273,11 @@ def consumer_environment(scratch, port):
     return env
 
 
+def apple_pending(consumer):
+    # 0518 ends GNU Objective-C support; every Foundation case still runs on Apple.
+    return consumer == 'objective-c' and sys.platform != 'darwin'
+
+
 def installed_artifacts(directory, consumers):
     """Select the actual release inputs before any public consumer starts."""
     directory = Path(directory).resolve(strict=True)
@@ -298,6 +303,8 @@ def installed_artifacts(directory, consumers):
     dart = select([f'thinkthen-dart-{version}-{target}.tar.gz'])
     found = {}
     for consumer, row in consumers.items():
+        if apple_pending(consumer):
+            continue
         surface = row['surface']
         if consumer in ('cli', 'mcp'):
             artifact = command
@@ -359,6 +366,9 @@ def support_table(parity, matrix):
         images = capability({'images', 'image-location', 'image-admission', 'refusal'})
         # Written limits describe the public contract, never pass an assertion.
         images += '; text-only: tag/filter/rank/annotate/find/recognize/relate'
+        if row.get('platform_pending'):
+            count = files = images = 'Apple qualification pending'
+            remaining = f'{len(gaps)} required assertions pending on macOS; Apple-only ruling 0518'
         if rulings:
             remaining += '; written ruling: ' + '; '.join(rulings)
         for case_id, ruling in row.get('case_rulings', {}).items():
@@ -417,7 +427,8 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
         label = '+'.join(ids)
         log = output_dir / (label + '.log')
         code, seen, error = None, {}, None
-        execute = not baseline or set(ids) <= {'cli', 'rust', 'c'}
+        platform_pending = ids == ['objective-c'] and apple_pending('objective-c')
+        execute = not platform_pending and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
         if execute:
             print(f'parity consumer: {label}', flush=True)
             args = list(command) + ([] if command[0] == 'cargo' else [port])
@@ -445,13 +456,16 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             dependency = parity.get('unavailable_dependencies', {}).get(consumer)
             row = summarize(consumer, required_cases(parity, consumer), code, seen, error or dependency,
                             str(log.relative_to(ROOT)) if execute else None)
+            if platform_pending:
+                row['platform_pending'] = 'Apple-only ruling 0518; qualification requires macOS'
+                row['cells'] = dict.fromkeys(row['cells'], 'platform-pending')
             row['case_rulings'] = consumers[consumer].get('case_rulings', {})
             matrix.append(row)
     (output_dir / 'matrix.json').write_text(json.dumps(matrix, indent=2) + '\n')
     table = support_table(parity, matrix)
     (output_dir / 'matrix.md').write_text(table)
     print(table, end='')
-    return int(any(row['baseline_exit'] != 0 or row['baseline_error'] or any(state != 'pass' for state in row['cells'].values()) for row in matrix))
+    return int(any(row['baseline_exit'] != 0 or row['baseline_error'] or any(state != 'pass' for state in row['cells'].values()) for row in matrix if not row.get('platform_pending')))
 
 
 def main():
