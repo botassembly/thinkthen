@@ -90,8 +90,8 @@ Future<void> dataCases(
         settings: InputEngineSettings(
             backend: const Presence.present('typesafe'),
             baseUrl: Presence.present(endpoint),
-            cache:
-                const Presence.present(InputCacheDocument.alternative1(true))));
+            cache: Presence.present(
+                InputCacheDocument.alternative0('${scratch.path}/cache'))));
     try {
       await cached.decide(
           question, InputRequestInputText(text: 'cached-evidence'));
