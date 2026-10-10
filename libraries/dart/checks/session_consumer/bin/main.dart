@@ -234,9 +234,23 @@ Future<void> main(List<String> args) async {
       check(error.kind == NativeErrorKind.usage, 'native typed usage error');
     }
     check(sends == before, 'invalid admission sends nothing');
+    var cleanupCalls = 0;
     final cancellation = Cancellation();
-    final held = engine.decide(question, InputRequestInputText(text: 'held'),
-        cancellation: cancellation);
+    final heldFeed =
+        StreamController<InputRequestSessionDescriptor>(onCancel: () {
+      cleanupCalls++;
+      throw StateError('feed cleanup failed');
+    });
+    var intake = 0;
+    final held = engine.decide(question, InputRequestInputFeed(name: 'feed'),
+        cancellation: cancellation, feed: heldFeed.stream.map((item) {
+      intake++;
+      return item;
+    }));
+    heldFeed.add(InputRequestSessionDescriptor(
+        item: InputRequestItem(
+            original:
+                Presence.present(InputRequestOriginalText(text: 'held')))));
     await arrived.future.timeout(const Duration(seconds: 5));
     var progressed = false;
     await Future<void>(() {
@@ -249,12 +263,19 @@ Future<void> main(List<String> args) async {
       await held.timeout(const Duration(seconds: 1));
       throw StateError('cancel returned answer');
     } on CallCancelled {}
+    heldFeed.add(InputRequestSessionDescriptor(
+        item: InputRequestItem(
+            original:
+                Presence.present(InputRequestOriginalText(text: 'extra')))));
+    await Future<void>(() {});
+    check(intake == 1 && cleanupCalls == 1,
+        'throwing cleanup cancels each feed without extra reads');
     engine.close();
     check(!release.isCompleted, 'cancel and cleanup precede provider release');
     check(
         call.terminal.facts.value != null, 'terminal survives engine cleanup');
     print(
-        'PASS: ten named calls, presence/null/false/unknown/wide original, typed terminal failure, zero-send invalid, held cancellation and host progress');
+        'PASS: ten named calls, presence/null/false/unknown/wide original, typed terminal failure, zero-send invalid, throwing stream cleanup preserves cancellation, held cancellation and no extra reads');
   } finally {
     engine.close();
     if (!release.isCompleted) release.complete();

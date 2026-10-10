@@ -23,6 +23,13 @@ final class CallCancelled implements Exception {
   const CallCancelled();
 }
 
+final class StreamCleanupFailure implements Exception {
+  final Object cause;
+  StreamCleanupFailure(this.cause);
+  @override
+  String toString() => 'Input stream cleanup failed: $cause';
+}
+
 final class OwnedCall {
   final List<SessionPacket> packets;
   final SessionPacketTerminal terminal;
@@ -199,6 +206,7 @@ final class Engine implements Finalizable {
     final session = startSession(question, input, function, options: options);
     StreamSubscription<InputRequestSessionDescriptor>? subscription;
     Object? readerFailure;
+    var failed = false;
     void stop() {
       session.cancel();
       session.close();
@@ -244,13 +252,19 @@ final class Engine implements Finalizable {
         throw SessionFailure(error, call);
       return call;
     } catch (_) {
+      failed = true;
       cancellation?._check();
       if (readerFailure != null) throw readerFailure!;
       rethrow;
     } finally {
       cancellation?._callbacks.remove(stop);
-      await subscription?.cancel();
-      session.close();
+      try {
+        await subscription?.cancel();
+      } catch (error) {
+        if (!failed) throw StreamCleanupFailure(error);
+      } finally {
+        session.close();
+      }
     }
   }
 
