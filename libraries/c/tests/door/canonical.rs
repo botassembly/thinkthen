@@ -90,6 +90,9 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
         "input":{"kind":"records","items":[{"original":{"kind":"text","text":r#"{"a":1}"#}}]}
     }});
     script.ask("call", &[base, &canonical.to_string()]);
+    let mut text_document = canonical;
+    text_document["call"]["input"]["items"][0]["original"]["text"] = json!("{not json");
+    script.ask("call", &[base, &text_document.to_string()]);
     let output = run(
         &compile(&crate_dir().join("tests/c/driver.c")),
         base,
@@ -99,7 +102,7 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
     let got = replies(&output.stdout).unwrap();
     assert_eq!(
         got.iter().map(|reply| reply.0).collect::<Vec<_>>(),
-        [0, 0, 0, 1, 0, 1]
+        [0, 0, 0, 1, 0, 0, 1]
     );
     let first: Value = serde_json::from_str(&got[1].1).unwrap();
     let cached: Value = serde_json::from_str(&got[2].1).unwrap();
@@ -113,11 +116,11 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
         "a JSON record holds each member name once, and one name arrived twice"
     );
     assert_eq!(
-        got[5].1,
+        got[6].1,
         "question `check` reads `on`, and this record's evidence is text with no members"
     );
     let requests = listener.requests();
-    assert_eq!(requests.len(), 2, "cached and refused records send nothing");
+    assert_eq!(requests.len(), 3, "cached and refused records send nothing");
     let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
     assert_eq!(
         body["questions"]["q1"]["instructions"],
@@ -129,5 +132,14 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
     assert_eq!(
         fallback["questions"]["q1"]["instructions"],
         "The text is \"{not json\". Q?"
+    );
+    let projected: Value = serde_json::from_str(&got[5].1).unwrap();
+    assert_eq!(projected["value"][0]["input"], json!({"a":1}));
+    assert_eq!(projected["value"][0]["value"], json!({"check":true}));
+    assert_eq!(projected["facts"]["requests_sent"], 1);
+    let body: Value = serde_json::from_slice(&requests[2].body).unwrap();
+    assert_eq!(
+        body["questions"]["q1"]["instructions"],
+        "The text is \"1\". Q?"
     );
 }
