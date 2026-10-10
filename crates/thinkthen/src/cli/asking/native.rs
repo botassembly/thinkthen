@@ -419,12 +419,12 @@ fn take(
         crate::RequestValue::Filtered(v) => rows!(v),
         crate::RequestValue::Ranked(v) => {
             for mut row in v {
+                if rendering.view.details && !rendering.streams {
+                    row.result.canonical.clear_batch_metadata();
+                }
                 let unit = held.borrow_mut().remove(&row.ordinal());
                 let judged = if rendering.view.details {
                     row.result.canonical.declarations = rendering.declarations.clone();
-                    if !rendering.streams {
-                        row.result.canonical.clear_batch_metadata();
-                    }
                     rendering.rank_details(&row, unit.and_then(|unit| unit.position))?
                 } else {
                     rendering.row(
