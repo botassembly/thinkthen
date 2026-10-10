@@ -329,6 +329,33 @@ say(edges=run(db, "SELECT relation, source, target FROM thinkthen_relate('SELECT
 """
 
 
+def test_relate_inline_rules_share_native_admission_before_any_send() -> None:
+    """Inline arrays and JSON definitions share native rule validation."""
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute('CREATE TABLE e(id, name, kind)')
+db.execute("INSERT INTO e VALUES (1, 'Ada', 'person')")
+sql = "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM e', ?)"
+names = ['knows', 'helps', 'supports', 'follows', 'trusts']
+definition = {'relations': [{'name': name, 'source': '*', 'target': '*'} for name in names]}
+say(inline=run(db, sql, (json.dumps(names),)),
+    definition=run(db, sql, (json.dumps(definition),)),
+    invalid=[run(db, sql, (rules,)) for rules in
+             ('[]', '["knows", "knows"]', '["=person:person"]',
+              '["knows=person"]', '["knows", 7]')])
+""", environment(backend))
+    expect((held['inline'], held['definition']), ([], []), "five rules admit a zero-pair entity set")
+    expect(held['invalid'], [
+        "thinkthen usage: relate takes one or more distinct relation rules (retryable: no)",
+        "thinkthen usage: relate takes one or more distinct relation rules (retryable: no)",
+        "thinkthen usage: a relate relation is NAME=SOURCE_KIND:TARGET_KIND, or a bare NAME (retryable: no)",
+        "thinkthen usage: the relation rule knows=person names one end; write NAME=SOURCE:TARGET (retryable: no)",
+        "thinkthen usage: relate rules are a JSON array of text (retryable: no)",
+    ], "native and host conversion refusals")
+    expect(backend.close(), 0, "accepted zero-pair and invalid rules send nothing")
+
+
 def test_relate_returns_each_edge_once_for_every_row_holding_its_ends() -> None:
     """Decision 11: two rows share one name and kind, and each edge joins back to both ids."""
     backend = Backend()
