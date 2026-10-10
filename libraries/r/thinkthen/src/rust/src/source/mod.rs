@@ -35,6 +35,7 @@ impl Selection {
     )]
     pub(crate) fn request_source(&self) -> thinkthen::RequestSource {
         thinkthen::RequestSource {
+            framing: None,
             paths: self.paths.iter().map(std::path::PathBuf::from).collect(),
             reading: self.options,
             media: thinkthen::ReaderMedia::Text,

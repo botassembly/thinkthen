@@ -110,6 +110,7 @@ impl AdmittedRequest {
             }
             if source.paths.is_empty()
                 || source.paths.iter().any(|path| path.as_os_str().is_empty())
+                || source.framing.is_some()
                 || source.media != crate::ReaderMedia::Text
                 || source.reading.unit != crate::SourceUnit::File
             {

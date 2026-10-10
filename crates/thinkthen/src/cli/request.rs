@@ -322,6 +322,7 @@ fn arguments(
     } else {
         RequestInput::Source {
             source: RequestSource {
+                framing: None,
                 paths: common.input.clone(),
                 reading,
                 media: if common.media.as_deref() == Some("image") {

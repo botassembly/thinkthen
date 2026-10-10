@@ -169,6 +169,7 @@ fn item(original: Option<RequestOriginal>, images: Vec<crate::RequestImage>) -> 
 impl super::admission::Source {
     pub(super) fn native(&self) -> RequestSource {
         RequestSource {
+            framing: None,
             paths: self.paths.clone(),
             reading: self.reading,
             media: self.media,

@@ -24,11 +24,18 @@ pub(super) fn reading(
     definition: &RequestDefinition,
 ) -> Result<(), Error> {
     let args = request.request.call.arguments();
-    if let RequestInput::Feed {
-        framing: RequestFraming::Lines,
-        ..
-    } = args.input
-    {
+    if matches!(
+        &args.input,
+        RequestInput::Feed {
+            framing: RequestFraming::Lines,
+            ..
+        } | RequestInput::Source {
+            source: super::RequestSource {
+                framing: Some(RequestFraming::Lines),
+                ..
+            }
+        }
+    ) {
         let reading = super::composition::reading(definition, &args.options)?;
         crate::core::Reading::new(crate::core::Framing::Lines, reading.fields().to_vec())
             .map_err(Error::refused)?;

@@ -8,6 +8,8 @@ mod native_feed;
 mod preview;
 #[path = "request_contract/projections.rs"]
 mod projections;
+#[path = "request_contract/source.rs"]
+mod source;
 #[path = "request_contract/table.rs"]
 mod table;
 

@@ -76,6 +76,15 @@ impl AdmittedRequest {
             ),
             RequestInput::Source { source } => {
                 controls.admission()?;
+                if source.framing.is_some() {
+                    return super::source::records(
+                        source,
+                        reading,
+                        controls,
+                        annotate,
+                        self.request.call.function() == super::RequestFunction::Rank,
+                    );
+                }
                 let items = read_source(source, budget.remaining())?;
                 let rank = self.request.call.function() == super::RequestFunction::Rank;
                 Ok(super::transport::source_records(
@@ -182,7 +191,7 @@ impl AdmittedRequest {
         Ok(Box::new(rows))
     }
 }
-fn located_row(
+pub(super) fn located_row(
     mut row: RecordInput<QuestionInput>,
     location: Option<crate::SourceLocation>,
 ) -> Result<RecordInput<QuestionInput>, Error> {

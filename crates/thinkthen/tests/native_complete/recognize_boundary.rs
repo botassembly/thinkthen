@@ -393,6 +393,7 @@ fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundar
             },
             input: RequestInput::Source {
                 source: RequestSource {
+                    framing: None,
                     paths: vec![root.join("missing-evidence")],
                     reading: thinkthen::ReaderOptions::default(),
                     media: thinkthen::ReaderMedia::Text,
