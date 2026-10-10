@@ -4,5 +4,5 @@
     "examples"
   ],
   "extension": ".rs",
-  "max": 4082
+  "max": 4096
 }

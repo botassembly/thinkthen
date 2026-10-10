@@ -100,7 +100,7 @@ for path in {paths!r}:
         errors.append([value['native']['error']['kind'],value['native']['error']['message'],'facts' in value['native'],value['observations']])
 say(errors=errors)
 """,environment(backend),5)
-        expect(held['errors'],[['usage','file format is jsonl',False,[]]]*24,'present format must be JSON lines before I/O')
+        expect(held['errors'],[['usage','file format is jsonl, csv or tsv',False,[]]]*24,'unknown explicit formats refuse before I/O')
         expect(backend.close(),0,'unknown complete formats send nothing')
 
 
