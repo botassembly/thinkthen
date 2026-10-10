@@ -141,6 +141,29 @@ pub(super) fn complete_records<T: InputEvidence, R>(
     function: fn(RequestArguments) -> RequestCall,
     unpack: fn(RequestValue) -> Result<Vec<CompleteRecord<QuestionInput, R>>, Error>,
 ) -> Result<Call<Vec<CompleteRecord<T, R>>>, Error> {
+    let count = records.len();
+    complete_occurrences(engine, definition, records, controls, function, |value| {
+        let rows = unpack(value)?;
+        if rows.len() != count || rows.iter().enumerate().any(|(at, row)| row.ordinal() != at) {
+            return Err(Error::defect("a typed column changed its occurrence order"));
+        }
+        Ok(rows)
+    })
+}
+
+/// Restore owned originals by native ordinal, including reordered or omitted inputs.
+#[allow(
+    clippy::type_complexity,
+    reason = "ranked native occurrences retain generic originals without cloning"
+)]
+pub(super) fn complete_occurrences<T: InputEvidence, R>(
+    engine: &Engine,
+    definition: RequestDefinition,
+    records: Vec<RecordInput<T>>,
+    controls: CallOptions<'_>,
+    function: fn(RequestArguments) -> RequestCall,
+    unpack: impl FnOnce(RequestValue) -> Result<Vec<CompleteRecord<QuestionInput, R>>, Error>,
+) -> Result<Call<Vec<CompleteRecord<T, R>>>, Error> {
     let mut originals = Vec::with_capacity(records.len());
     let rows = records.into_iter().map(|record| {
         Ok(record.map_original(|original| {
@@ -158,26 +181,20 @@ pub(super) fn complete_records<T: InputEvidence, R>(
     )?;
     call.try_map(|value| {
         let rows = unpack(value)?;
-        let mut originals = originals.into_iter();
-        let values = rows
-            .into_iter()
-            .enumerate()
-            .map(|(at, row)| {
-                if row.ordinal() != at {
-                    return Err(Error::defect("a typed column changed its occurrence order"));
-                }
+        let mut originals: Vec<_> = originals.into_iter().map(Some).collect();
+        rows.into_iter()
+            .map(|row| {
+                let ordinal = row.ordinal();
+                let original = originals
+                    .get_mut(ordinal)
+                    .and_then(Option::take)
+                    .ok_or_else(|| Error::defect("a typed column lost its original occurrence"))?;
                 Ok(CompleteRecord {
-                    original: originals
-                        .next()
-                        .ok_or_else(|| Error::defect("a typed column lost its original"))?,
-                    ordinal: at,
+                    original,
+                    ordinal,
                     result: row.into_parts().1,
                 })
             })
-            .collect::<Result<Vec<_>, Error>>()?;
-        if originals.next().is_some() {
-            return Err(Error::defect("a typed column lost an answer"));
-        }
-        Ok(values)
+            .collect()
     })
 }

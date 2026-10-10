@@ -225,10 +225,16 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteRank>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.rank_records_complete_with(
-            question,
+        let call = super::request::complete_occurrences(
+            self,
+            question.clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Rank,
+            |value| match value {
+                RequestValue::Ranked(rows) => Ok(rows),
+                _ => Err(Error::defect("a rank column returned another result kind")),
+            },
         )?;
         Ok((call, positions))
     }
@@ -250,10 +256,18 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteSetRank>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.rank_set_records_complete_with(
-            question,
+        let call = super::request::complete_occurrences(
+            self,
+            question.clone().into(),
             records,
-            options.surface(Surface::RustPolars),
+            options,
+            RequestCall::Rank,
+            |value| match value {
+                RequestValue::SetRanked(rows) => Ok(rows),
+                _ => Err(Error::defect(
+                    "a rank_set column returned another result kind",
+                )),
+            },
         )?;
         Ok((call, positions))
     }
