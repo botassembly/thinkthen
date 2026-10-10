@@ -232,7 +232,9 @@ error envelopes and native cache/record/replay behavior.
 All ten complete calls admit a shared native Request before constructing the
 engine and execute through the same Request owner as SQLite and PostgreSQL.
 Generated SQL results retain the native envelope and its presence distinctions.
-DuckDB returns JSON text. Explicit native file inputs read DuckDB-authorized
+Use the complete function family for complete results; the ordinary scalar and
+table function family remains supported for native SQL answers.
+DuckDB returns its native JSON type. Explicit native file inputs read DuckDB-authorized
 handles. Complete question `@reference` and `@@NAME` use native metadata
 selection, then the executing session authorizes the selected path and reads
 capped UTF-8 through DuckDB. The same retained selection parses the original
