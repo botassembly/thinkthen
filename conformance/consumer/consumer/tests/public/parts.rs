@@ -44,15 +44,24 @@ fn offering_none_takes_find_questions_alone() {
 }
 
 #[test]
-fn a_none_question_takes_2_to_254_units() {
+fn a_none_question_takes_1_to_254_units() {
     let backend = Backend::start().expect("backend");
     let engine = engine(&format!("{}/generic/v1", backend.origin())).expect("engine");
     let plain = Question::find("Which one?").expect("find");
     let none = plain.clone().offering_none().expect("none");
-    let limit = "a find question offering none takes 2 to 254 units";
+    let limit = "a find question offering none takes 1 to 254 units";
     usage(&engine.find(&none, units(255)).expect_err("255"), limit);
-    usage(&engine.find(&none, units(1)).expect_err("1"), limit);
+    usage(&engine.find(&none, units(0)).expect_err("0"), limit);
     assert_eq!(backend.count(), 0);
+    let found = engine.find(&none, units(1)).expect("1").into_value();
+    assert_eq!(found.candidates().len(), 2);
+    assert_eq!(
+        found.candidates()[0].input().map(String::as_str),
+        Some("unit 0")
+    );
+    assert!(found.candidates()[1].is_none());
+    assert_eq!(found.selected().map(String::as_str), Some("unit 0"));
+    assert_eq!(backend.count(), 1);
     let found = engine.find(&none, units(254)).expect("254").into_value();
     let last = found.candidates().last().expect("a candidate");
     assert!(last.is_none() && found.candidates().len() == 255);
@@ -60,7 +69,7 @@ fn a_none_question_takes_2_to_254_units() {
     engine
         .find(&plain, units(255))
         .expect("a plain find of 255");
-    assert_eq!(backend.count(), 2);
+    assert_eq!(backend.count(), 3);
 }
 
 /// Every request body the listener saw, answering each yes question at 0.9.
