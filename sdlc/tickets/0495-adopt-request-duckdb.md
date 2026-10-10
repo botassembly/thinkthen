@@ -1,6 +1,6 @@
 # 0495: Make DuckDB thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -17,6 +17,8 @@ Reviews: revision 4d59e7c6a, accept
 Reviews: revision a087f6dc3, accept
 
 Reviews: revision 9a882af553fc03b5136b23eb33d0a3be5cf23f59, accept
+
+Landed: 9b03d58
 
 ## Outcome
 
