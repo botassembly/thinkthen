@@ -69,8 +69,9 @@ def main():
             with tarfile.open(archive, 'w:gz') as output:
                 for member in sorted(package_members(staged)):
                     output.add(staged / member, arcname=member)
-        target = packages / name
-        target.mkdir()
+        # The shipping Flutter archive already owns its flutter/ package root.
+        target = packages if supplied and name == 'flutter' else packages / name
+        target.mkdir(exist_ok=target == packages)
         with tarfile.open(archive) as content:
             content.extractall(target, filter='data')
         archives.append(archive)
