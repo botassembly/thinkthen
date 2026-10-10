@@ -184,7 +184,8 @@ thinkthen::choices! { enum Twice { One => "same", Two => "same" } }
 ];
 
 #[test]
-fn every_contract_fixture_compiles_or_fails_as_its_row_says() {
+#[ignore = "release-only: builds a separate Cargo package for the public contract fixtures"]
+fn release_only_every_contract_fixture_compiles_or_fails_as_its_row_says() {
     let crate_dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("compile-contract");
     let bins = crate_dir.join("src/bin");
     let _ = fs::remove_dir_all(&bins);
