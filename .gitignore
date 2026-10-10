@@ -7,3 +7,5 @@ libraries/swift/Sources/CThinkThen/include/thinkthen.h
 
 # Python runners create bytecode beside shared offline fixtures.
 __pycache__/
+
+libraries/swift/Sources/ThinkThen/Native/*/libthinkthen.so

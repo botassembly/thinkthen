@@ -78,6 +78,7 @@ BINDING_SOURCE_EXTENSIONS = {
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 GENERATED_BINDING_SOURCES = {
     "libraries/swift/Sources/ThinkThen/ABIGenerated.swift",
+    "libraries/swift/Sources/CThinkThen/bridge.c",
     "libraries/swift/Sources/ThinkThen/InputsGenerated.swift",
     "libraries/swift/Sources/ThinkThen/ResultsGenerated.swift",
     "libraries/ada/src/thinkthen-requests.ads",
@@ -903,10 +904,10 @@ def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
         if (package is None or package[1] != "ThinkThen" or
                 '.library(name: "ThinkThen", targets: ["ThinkThen"])' not in source or
                 '.binaryTarget(name: "CThinkThen", path: "CThinkThen.xcframework")' not in source or
-                'nativeRoot + "/lib/libthinkthen.a"' not in source or '.macOS(.v15)' not in source or
-                '.target(name: "ThinkThen", dependencies: ["CThinkThen"], path: "Sources/ThinkThen")' not in source or
+                '.copy("Native")' not in source or '.unsafeFlags(' in source or '.macOS(.v15)' not in source or
+                '.target(name: "ThinkThen", dependencies: ["CThinkThen"], path: "Sources/ThinkThen", resources: nativeResources)' not in source or
                 '.systemLibrary(' in source or '.package(url:' in source):
-            return ["libraries/swift SwiftPM manifest must select its packaged Apple binary or Linux static C asset"]
+            return ["libraries/swift SwiftPM manifest must select its packaged Apple binary or Linux bundled shared C asset"]
         return []
     if name == "libraries/zig":
         module = re.search(r'(?m)^\s*\.name\s*=\s*\.([A-Za-z_][A-Za-z_0-9]*)\s*,', source)

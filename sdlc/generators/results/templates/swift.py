@@ -132,3 +132,40 @@ def bridge(abi):
                   for key, value in abi['constants'].items() if key.startswith(prefix) and key.endswith(suffix)]
         lines += ['}']
     return '\n'.join(lines) + '\n'
+
+
+def linux_bridge(functions):
+    lines = ['// Generated from compiler-derived C declarations. Do not edit.',
+             '#include <dlfcn.h>', '#include <pthread.h>', '#include <stdlib.h>',
+             '#include <string.h>', '#pragma GCC visibility push(hidden)',
+             '#include "loader.h"', 'struct native_functions {']
+    for name, prototype in functions.items():
+        arguments = ', '.join(prototype['arguments']) or 'void'
+        lines.append(f'    {prototype["return"]} (*{name})({arguments});')
+    lines += ['};', 'static struct native_functions native;',
+              'static pthread_mutex_t loading = PTHREAD_MUTEX_INITIALIZER;',
+              'static int state;', 'static void *native_handle;',
+              'int thinkthen_swift_load(const char *path) {',
+              '    pthread_mutex_lock(&loading);',
+              '    if (!state) {', '        state = -1;',
+              '        void *handle = path && path[0] == \'/\' ? dlopen(path, RTLD_NOW | RTLD_LOCAL) : NULL;',
+              '        if (handle) {', '            struct native_functions candidate;',
+              '            void *symbol;']
+    for name in functions:
+        lines += [f'            symbol = dlsym(handle, "{name}");',
+                  '            if (!symbol) goto failed;',
+                  f'            _Static_assert(sizeof(candidate.{name}) == sizeof(symbol), "function pointer width");',
+                  f'            memcpy(&candidate.{name}, &symbol, sizeof(symbol));']
+    lines += ['            native = candidate;',
+              '            native_handle = handle; // Workers may outlive Swift owners; retain until process exit.',
+              '            state = 1;', '            goto done;',
+              'failed:', '            dlclose(handle);', '        }', '    }',
+              'done:;', '    int result = state == 1 ? 0 : THINKTHEN_ELOCAL;',
+              '    pthread_mutex_unlock(&loading);', '    return result;', '}']
+    for name, prototype in functions.items():
+        arguments = ', '.join(f'{kind} arg{i}' for i, kind in enumerate(prototype['arguments'])) or 'void'
+        passed = ', '.join(f'arg{i}' for i in range(len(prototype['arguments'])))
+        returned = '' if prototype['return'] == 'void' else 'return '
+        lines += [f'{prototype["return"]} {name}({arguments}) {{',
+                  f'    if (!native.{name}) abort();', f'    {returned}native.{name}({passed});', '}']
+    return '\n'.join(lines + ['#pragma GCC visibility pop']) + '\n'

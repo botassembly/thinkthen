@@ -167,6 +167,7 @@ public final class Client: @unchecked Sendable {
     private let authoredLock = NSLock()
     private var owner: ClientOwner?
     public init(settings: InputEngineSettings = InputEngineSettings()) throws {
+        try requireNativePackage()
         let bytes = try settings.json.data()
         let handle = Array(bytes).map { CChar(bitPattern: $0) } + [0]
         let pointer = handle.withUnsafeBufferPointer { thinkthen_engine_new_with($0.baseAddress) }

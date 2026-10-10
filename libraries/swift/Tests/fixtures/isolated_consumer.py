@@ -14,7 +14,7 @@ if mode == 'owned':
     (W/'module.modulemap').write_text('module CThinkThen { header "' + str(R.parent/'c/include/thinkthen.h') + '" export * }\n')
     compiler = shutil.which('swiftc')
     assert compiler, 'Swift compiler unavailable'
-    sources = [str(R/'Sources/ThinkThen'/name) for name in ('OwnedJSON.swift','InputsGenerated.swift','ResultsGenerated.swift','ABIGenerated.swift','OwnedInputs.swift','OwnedSession.swift')]
+    sources = [str(R/'Sources/ThinkThen'/name) for name in ('OwnedJSON.swift','InputsGenerated.swift','ResultsGenerated.swift','ABIGenerated.swift','OwnedInputs.swift','OwnedSession.swift','NativePackage.swift')]
     env = child_env(home=W/'home', TMPDIR=str(W), LANG='C.UTF-8', LC_ALL='C.UTF-8')
     build = run([compiler,'-swift-version','6','-warnings-as-errors','-j','2','-module-cache-path',str(L/'modules'),'-I',str(W),*sources,str(R/'Tests/fixtures/owned_consumer.swift'),'-L',str(native.parent),'-lthinkthen_c','-Xlinker','-rpath','-Xlinker','/native','-Xlinker','-rpath','-Xlinker','/swift/usr/lib/swift/linux','-o',str(W/'consumer')], timeout=180, env=env)
     (L/'owned-build.log').write_bytes(build.stdout + build.stderr)
@@ -94,7 +94,7 @@ try:
         if wanted: assert snapshots[0]['rows'][0]['data']['decide']['value']['data']['boolean']==1,snapshots[0]
         print('installed Swift',mode,'PASS retained answer/facts; exact requests',len(wanted),flush=True)
         sys.exit(0)
-    build=execute('swift-build',['/swift/usr/bin/swift','build','--package-path',pkg,'--scratch-path','/work/swift-build','--jobs','2','-Xlinker','-L','-Xlinker',native,'-Xlinker','-rpath','-Xlinker',native],timeout=180)
+    build=execute('swift-build',['/swift/usr/bin/swift','build','--package-path',pkg,'--scratch-path','/work/swift-build','--jobs','2'],timeout=180)
     # The packaged executable is the independent installed Swift consumer.
     result=execute('installed-example',['/work/swift-build/debug/ThinkThenExample'],timeout=50)
     assert b'INSTALLED_SWIFT_CONSUMER_PASS outcome=yes' in result.stdout,result.stdout

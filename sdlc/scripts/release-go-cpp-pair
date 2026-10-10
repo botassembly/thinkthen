@@ -94,14 +94,14 @@ if [ "$mode" = swift-zig ]; then
 		"$first")
 			printf '%s\n' ./ ./LICENSE ./README.md ./Package.swift ./Examples/ ./Examples/main.swift \
 				./Sources/ ./Sources/CThinkThen/ ./Sources/CThinkThen/include/ \
-				./Sources/CThinkThen/include/thinkthen.h ./Sources/CThinkThen/module.modulemap \
+				./Sources/CThinkThen/include/thinkthen.h ./Sources/CThinkThen/include/loader.h ./Sources/CThinkThen/module.modulemap \
 				./Sources/CThinkThen/bridge.c \
 				./Sources/ThinkThen/ ./Sources/ThinkThen/ThinkThen.swift ./Sources/ThinkThen/Complete.swift \
 				./Sources/ThinkThen/Native.swift ./Sources/ThinkThen/NativeResult.swift \
 				./Sources/ThinkThen/NativeViews.swift ./Sources/ThinkThen/NativeQuestionViews.swift \
 				./Sources/ThinkThen/ABIGenerated.swift ./Sources/ThinkThen/InputsGenerated.swift ./Sources/ThinkThen/ResultsGenerated.swift \
-				./Sources/ThinkThen/OwnedJSON.swift ./Sources/ThinkThen/OwnedSession.swift ./Sources/ThinkThen/OwnedInputs.swift \
-				./native/ "./native/$target/" "./native/$target/lib/" "./native/$target/lib/libthinkthen.a" ./Tests/ ./Tests/TypeCase/ \
+				./Sources/ThinkThen/NativePackage.swift ./Sources/ThinkThen/OwnedJSON.swift ./Sources/ThinkThen/OwnedSession.swift ./Sources/ThinkThen/OwnedInputs.swift \
+				./Sources/ThinkThen/Native/ ./Sources/ThinkThen/Native/README.txt "./Sources/ThinkThen/Native/$target/" "./Sources/ThinkThen/Native/$target/libthinkthen.so" ./Tests/ ./Tests/TypeCase/ \
 				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \

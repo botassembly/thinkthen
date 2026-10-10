@@ -91,6 +91,7 @@ public enum AnnotatedField {
 public final class CancelToken: @unchecked Sendable {
     public let handle: OpaquePointer
     public init() throws {
+        try requireNativePackage()
         guard let value = thinkthen_cancel_token_new() else {
             throw DoorFailure(code: 4, retryable: false, message: "native token allocation failed")
         }
@@ -114,6 +115,7 @@ public final class Engine: @unchecked Sendable {
         set { owner = newValue.map(EngineOwner.init) }
     }
     public init() throws {
+        try requireNativePackage()
         guard let engine = thinkthen_engine_new() else {
             throw DoorFailure(code: thinkthen_error_code(nil), retryable: thinkthen_error_retryable(nil) != 0,
                               message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "native constructor failed")
@@ -121,6 +123,7 @@ public final class Engine: @unchecked Sendable {
         handle = engine
     }
     public init(settingsJSON: String) throws {
+        try requireNativePackage()
         let engine = try withInput(settingsJSON) { thinkthen_engine_new_with($0) }
         guard let engine else {
             throw DoorFailure(code: thinkthen_error_code(nil), retryable: thinkthen_error_retryable(nil) != 0,

@@ -1,4 +1,5 @@
 module CThinkThen {
     header "include/thinkthen.h"
+    header "include/loader.h"
     export *
 }
