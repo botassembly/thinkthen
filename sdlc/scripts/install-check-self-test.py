@@ -11,10 +11,11 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 from install_check import CHANNELS, Check, Failure, check_index, check_result, main as install_main, clean_environment, extract_archive, validate_version, verify_checksum
-from install_check_channels import INSTALLERS, dcf_packages, homebrew, local_tap, r_universe, selected_formula, sqlite, duckdb
+from install_check_channels import download, python, rust, maven, c, INSTALLERS, dcf_packages, homebrew, local_tap, r_universe, selected_formula, sqlite, duckdb
 
 
 class NativeInstallation(unittest.TestCase):
@@ -450,6 +451,93 @@ class RefusalTable(unittest.TestCase):
             self.refusal('R-universe binary address returned a source archive; a Linux binary is required', r_universe, check)
             self.assertEqual(check.commands, [])
 
+    def test_windows_installers_select_owned_executables_and_keep_failures(self):
+        for channel, install in [('download', download), ('pip', python), ('cargo-install', rust)]:
+            with self.subTest(channel=channel), tempfile.TemporaryDirectory() as own:
+                check = Fixture(Path(own), channel)
+                check.windows = True
+                urls, replays = [], []
+                def fetch(url, path):
+                    urls.append(url)
+                    return path
+                check.fetch = fetch
+                check.command_replay = lambda path: (replays.append(path) or check.version, {'value': True, 'requests_sent': 0})
+                check.outputs = {'-c': check.version, 'consumer.py': '{"value":true,"requests_sent":0}'}
+                if channel == 'pip':
+                    check.response = lambda *args: {'value': True, 'requests_sent': 0}
+                installed, reply, _ = install(check)
+                check_result(check.version, installed, reply)
+                if channel == 'download':
+                    self.assertEqual(urls, ['https://raw.githubusercontent.com/botassembly/thinkthen/v0.1.2/install.ps1'])
+                    self.assertEqual(check.commands, [('pwsh', '-NoProfile', '-NonInteractive', '-File', str(check.root / 'install.ps1'), '-Version', '0.1.2')])
+                    self.assertEqual(replays, [check.root / 'command/thinkthen.exe'])
+                    self.assertEqual(check.env['THINKTHEN_INSTALL_DIR'], str(check.root / 'command'))
+                elif channel == 'pip':
+                    self.assertEqual(check.commands[1], (str(check.root / 'venv/Scripts/python.exe'), '-m', 'pip', 'install', '--only-binary=:all:', 'thinkthen==0.1.2'))
+                else:
+                    self.assertIn('--version', check.commands[0])
+                    self.assertIn('0.1.2', check.commands[0])
+                    self.assertEqual(replays, [check.root / 'cargo-bin/bin/thinkthen.exe'])
+                check.run = lambda *args, **kwargs: (_ for _ in ()).throw(Failure('fixture installation failed'))
+                self.refusal('fixture installation failed', install, check)
+
+    def test_windows_maven_uses_stable_floor_and_host_classpath_separator(self):
+        with tempfile.TemporaryDirectory() as own:
+            check = Fixture(Path(own), 'maven')
+            check.windows = True
+            pom = check.root / 'maven-cache/io/github/botassembly/thinkthen-jvm/0.1.2/thinkthen-jvm-0.1.2.pom'
+            pom.parent.mkdir(parents=True)
+            pom.write_text('<project><version>0.1.2</version><properties><thinkthen.session.jdk>22</thinkthen.session.jdk></properties></project>')
+            check.outputs = {'java': '{"value":true,"requests_sent":0}'}
+            with patch('install_check_channels.os.pathsep', ';'):
+                installed, reply, _ = maven(check)
+            check_result(check.version, installed, reply)
+            self.assertEqual(check.commands[1][:3], ('javac', '--release', '22'))
+            self.assertIn(str(check.project) + ';' + str(check.project / 'dependencies/*'), check.commands[2])
+            self.assertNotIn('--enable-preview', ' '.join(check.commands[2]))
+
+    def test_windows_c_installs_checked_zip_and_links_its_dll(self):
+        with tempfile.TemporaryDirectory() as own:
+            check = Fixture(Path(own), 'c')
+            check.windows = True
+            name = 'thinkthen-c-0.1.2-x86_64-pc-windows-msvc.zip'
+            archive = check.root / name
+            with zipfile.ZipFile(archive, 'w') as packed:
+                for member in ('include/thinkthen.h', 'lib/thinkthen.dll.lib', 'bin/thinkthen.dll'):
+                    packed.writestr(member, 'fixture')
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            urls = []
+            check.fetch = lambda url, destination: (urls.append(url) or archive)
+            check.text = lambda url, destination: digest + '  ' + name
+            check.outputs = {'--version': check.version}
+            check.response = lambda *args: {'value': True, 'requests_sent': 0}
+            with patch('install_check.os.pathsep', ';'):
+                installed, reply, _ = c(check)
+            check_result(check.version, installed, reply)
+            self.assertEqual(urls, ['https://github.com/botassembly/thinkthen/releases/download/v0.1.2/' + name])
+            self.assertEqual(check.commands[0][0], 'cl.exe')
+            self.assertIn(str(check.root / 'native/lib/thinkthen.dll.lib'), check.commands[0])
+            self.assertTrue(check.env['PATH'].startswith(str(check.root / 'native/bin') + ';'))
+            self.assertEqual((check.root / 'native/bin/thinkthen.dll').read_text(), 'fixture')
+            check.text = lambda url, destination: '0' * 64 + '  ' + name
+            self.refusal(f'release asset {name} differs from its checksum', check.release, name)
+
+    def test_windows_dispatch_refuses_another_version_or_commit(self):
+        import yaml
+        repo = Path(__file__).resolve().parents[2]
+        workflow = yaml.safe_load((repo / '.github/workflows/install-check.yml').read_text())
+        step = next(step for step in workflow['jobs']['windows']['steps']
+                    if step.get('name') == 'Require the dispatched release version and commit')
+        sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip()
+        for ref, commit, status in [('refs/tags/v0.2.0', sha, 0), ('refs/heads/main', sha, 1),
+                                    ('refs/tags/v0.1.2', sha, 1), ('refs/tags/v0.2.0', '0' * 40, 1)]:
+            with self.subTest(ref=ref, commit=commit), tempfile.TemporaryDirectory() as own:
+                env = clean_environment(Path(own))
+                env.update(VERSION='0.2.0', REF=ref, SHA=commit)
+                result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', step['run']],
+                                        env=env, cwd=repo, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, status)
+
     def test_workflow_cells(self):
         import yaml
         workflow = Path(__file__).resolve().parents[2] / '.github/workflows/install-check.yml'
@@ -467,11 +555,14 @@ class RefusalTable(unittest.TestCase):
                 if 'uses' in step: self.assertRegex(step['uses'], r'@[0-9a-f]{40}$')
                 self.assertNotIn('inputs.', step.get('run', ''))
                 self.assertNotIn('secrets.', json.dumps(step))
-        self.assertEqual(len(cells), 47)
+        self.assertEqual(len(cells), 56)
+        windows = {'download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'nuget', 'maven', 'c'}
+        self.assertEqual({channel for runner, channel in cells if runner == 'windows-2025'}, windows)
         self.assertEqual({channel for _, channel in cells}, set(CHANNELS))
         all_five = {'ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26'}
         for channel in ('download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'rubygems'):
-            self.assertEqual({runner for runner, member in cells if member == channel}, all_five)
+            self.assertEqual({runner for runner, member in cells if member == channel},
+                             all_five | ({'windows-2025'} if channel in windows else set()))
 
 
 class Fixture(Check):

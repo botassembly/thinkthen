@@ -6,6 +6,7 @@ import os
 import posixpath
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -58,7 +59,8 @@ def check_index(channel, version, listed, binary=True):
 
 
 def clean_environment(home):
-    env = child_env(home=str(home),
+    env = child_env(keep=("JAVA_HOME", "INCLUDE", "LIB", "LIBPATH", "COMSPEC", "PATHEXT"),
+                    home=str(home), USERPROFILE=str(home),
                     PATH=os.environ.get("PATH", "/usr/bin:/bin"),
                     LANG="en_US.UTF-8",
                     LC_ALL="en_US.UTF-8",
@@ -85,6 +87,7 @@ def clean_environment(home):
 class Check:
     def __init__(self, root, channel, version):
         self.root, self.channel, self.version = root, channel, version
+        self.windows = os.name == "nt"
         self.env = clean_environment(root)
         self.sample = root / "sample/thinkthen-first-run"
         self.project = root / "consumer"
@@ -93,7 +96,10 @@ class Check:
         self.retain_scratch = False
 
     def run(self, *args, cwd=None, input=None):
-        result = subprocess.run([str(arg) for arg in args], cwd=cwd or self.project, env=self.env,
+        command = [str(arg) for arg in args]
+        if self.windows:
+            command[0] = shutil.which(command[0], path=self.env["PATH"]) or command[0]
+        result = subprocess.run(command, cwd=cwd or self.project, env=self.env,
                                 input=input, text=True, capture_output=True, timeout=1800)
         if result.returncode:
             # Children have only this run's clean environment, with no provider keys.
@@ -103,7 +109,8 @@ class Check:
     def fetch(self, url, output):
         output.parent.mkdir(parents=True, exist_ok=True)
         helper = '. "$1"; shift; fetch_url "$@" --proto =https --tlsv1.2'
-        self.run("sh", "-c", helper, "install-check-fetch", REPO / "sdlc/scripts/fetch.sh", output, url)
+        self.run("sh", "-c", helper, "install-check-fetch",
+                 (REPO / "sdlc/scripts/fetch.sh").as_posix(), output.as_posix(), url)
         return output
 
     def text(self, url, name):
@@ -117,6 +124,9 @@ class Check:
         return archive
 
     def unpack(self, archive, destination):
+        if archive.suffix == ".zip":
+            from install_check_tools import unzip
+            return unzip(archive, destination)
         destination.mkdir(parents=True)
         extract_archive(archive, destination)
         return destination
@@ -134,10 +144,13 @@ class Check:
 
     def c_archive(self):
         if self.native is None:
-            name = f"thinkthen-c-{self.version}-x86_64-unknown-linux-gnu.tar.gz"
+            target = "x86_64-pc-windows-msvc.zip" if self.windows else "x86_64-unknown-linux-gnu.tar.gz"
+            name = f"thinkthen-c-{self.version}-{target}"
             self.native = self.unpack(self.release(name), self.root / "native")
             self.env["LD_LIBRARY_PATH"] = str(self.native / "lib")
             self.env["PKG_CONFIG_PATH"] = str(self.native / "lib/pkgconfig")
+            if self.windows:
+                self.env["PATH"] = str(self.native / "bin") + os.pathsep + self.env["PATH"]
         return self.native
 
     def response(self, *command):
@@ -151,13 +164,14 @@ class Check:
         installed = observed.removeprefix("thinkthen ")
         # CLI facts and the answer use separate streams; retain both from the same call.
         result = subprocess.run([str(command), "decide", QUESTION, "--replay", str(self.sample / "recording"),
-                                 "--facts"], input=(self.sample / "report.txt").read_text(),
-                                env=self.env, cwd=self.project, text=True, capture_output=True, timeout=60)
+                                 "--facts"], input=(self.sample / "report.txt").read_bytes(),
+                                env=self.env, cwd=self.project, capture_output=True, timeout=60)
+        stdout, stderr = result.stdout.decode("utf-8"), result.stderr.decode("utf-8")
         if result.returncode != 0:
-            raise Failure(f"{self.channel} replay failed ({result.returncode}): {result.stderr.strip()}")
+            raise Failure(f"{self.channel} replay failed ({result.returncode}): {stderr.strip()}")
         try:
-            facts = next(json.loads(line) for line in result.stderr.splitlines() if line.startswith('{'))
-            reply = {"value": json.loads(result.stdout), "requests_sent": facts["requests_sent"]}
+            facts = next(json.loads(line) for line in stderr.splitlines() if line.startswith('{'))
+            reply = {"value": json.loads(stdout), "requests_sent": facts["requests_sent"]}
         except (ValueError, KeyError, StopIteration) as error:
             raise Failure("command replay is missing its answer or request facts") from error
         return installed, reply
