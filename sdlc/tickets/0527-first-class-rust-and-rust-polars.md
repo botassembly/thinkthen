@@ -30,3 +30,7 @@ A Rust caller uses one named API with typed Rust values and Rust-owned complete 
   One public API is one coherent family of named typed calls. Claim `crates/thinkthen/src/public/frame.rs`, `crates/thinkthen/src/public/frame/**`, the public exports they touch, the affected native tests, `libraries/rust/**` and `libraries/polars/**`. Narrow to the actual files per slice before editing.
 - Proof: The full shared cases run through the existing `libraries/rust` and `libraries/polars` consumers, with and without the Polars feature. Polars cases check column types, null rows, original indices and complete-set rank and find, and invalid input with zero sends. Record handwritten code removed and added in the landing record.
 - Defers: Python pandas and Python Polars belong to 0496. The proxy needs no 0.2 ticket.
+
+## Progress
+
+- 2026-10-10 landed 0399d25ec; next: All ten basic named Polars paths use native Requests. Typed score complete conversion is in review; remaining typed complete groups, bounded pull methods and installed consumers stay open.
