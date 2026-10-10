@@ -1,6 +1,6 @@
 # 0524: Make Go thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -10,6 +10,8 @@ Depends on: 0517
 Reviews: revision a087f6dc3, accept
 
 Reviews: revision 8d4a86bf92aec9fb3fa6ac7eeb7772cc330b821b, accept
+
+Landed: 8a9ec2d
 
 ## Outcome
 
