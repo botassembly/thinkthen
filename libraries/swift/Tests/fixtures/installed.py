@@ -24,6 +24,7 @@ args.out.mkdir(parents=True, exist_ok=True)
 work = Path(tempfile.mkdtemp(prefix='installed-', dir=args.out.resolve()))
 package = work / 'package'
 shutil.copytree(args.package, package)
+apple = sys.platform == 'darwin'
 version = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
 for name in ('home', 'cache', 'barrier', 'consumer/Sources/Owned', 'consumer/Sources/Parity'):
     (work / name).mkdir(parents=True, exist_ok=True)
@@ -31,8 +32,8 @@ shutil.copyfile(HERE / 'owned_consumer.swift', work / 'consumer/Sources/Owned/ma
 shutil.copyfile(PACKAGE / 'Tests/TypeCase/main.swift', work / 'consumer/Sources/Parity/main.swift')
 (work / 'consumer/Package.swift').write_text('''// swift-tools-version: 6.0
 import PackageDescription
-let package = Package(name: "InstalledConsumer", dependencies: [
-    .package(url: "file:///work/package", exact: "''' + version + '''")
+let package = Package(name: "InstalledConsumer", platforms: [.macOS(.v15)], dependencies: [
+    .package(url: "''' + (package.as_uri() if apple else 'file:///work/package') + '''", exact: "''' + version + '''")
 ], targets: [
     .executableTarget(name: "Owned", dependencies: [.product(name: "ThinkThen", package: "package")]),
     .executableTarget(name: "Parity", dependencies: [.product(name: "ThinkThen", package: "package")])
@@ -46,14 +47,15 @@ for command in (['git', 'init', '-q', str(package)], ['git', '-C', str(package),
 (work / 'empty-tool').write_bytes(b'')
 swift = Path(shutil.which('swift')).resolve()
 toolchain = swift.parents[2]
-base = ['bwrap', '--unshare-all', '--share-net', '--die-with-parent', '--ro-bind', '/usr', '/usr', '--symlink', 'usr/bin', '/bin',
+base = [] if apple else ['bwrap', '--unshare-all', '--share-net', '--die-with-parent', '--ro-bind', '/usr', '/usr', '--symlink', 'usr/bin', '/bin',
         '--ro-bind', '/lib', '/lib', '--ro-bind', '/lib64', '/lib64', '--ro-bind', str(toolchain), '/swift',
         '--ro-bind', str(work / 'empty-tool'), '/usr/bin/cargo', '--ro-bind', str(work / 'empty-tool'), '/usr/bin/rustc',
         '--bind', str(work), '/work', '--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp', '--chdir', '/work/consumer', '--']
-env = child_env(home='/work/home', PATH='/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
-                SWIFTPM_MODULECACHE_OVERRIDE='/work/cache/modules', XDG_CACHE_HOME='/work/cache', THINKTHEN_API_KEY='tt-canary-294')
+location = str(work) if apple else '/work'
+env = child_env(home=location + '/home', PATH='/usr/bin:/bin' if apple else '/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
+                SWIFTPM_MODULECACHE_OVERRIDE=location + '/cache/modules', XDG_CACHE_HOME=location + '/cache', THINKTHEN_API_KEY='tt-canary-294')
 try:
-    built = subprocess.run(base + ['/swift/usr/bin/swift', 'build', '--jobs', '2'], env=env, capture_output=True, timeout=300)
+    built = subprocess.run(base + [str(swift) if apple else '/swift/usr/bin/swift', 'build', '--jobs', '2'], cwd=work / 'consumer', env=env, capture_output=True, timeout=300)
     (args.out / 'installed-build.log').write_bytes(built.stdout + built.stderr)
     assert built.returncode == 0, (built.stdout + built.stderr)[-5000:]
     resolution = json.loads((work / 'consumer/Package.resolved').read_text())
@@ -61,23 +63,24 @@ try:
     server = Backend(work / 'barrier')
     try:
         settings = json.dumps({'base_url': f'http://127.0.0.1:{server.server_port}/generic/v1', 'cache': False, 'max_retries': 0})
-        result = subprocess.run(base + ['/work/consumer/.build/debug/Owned', settings, '/work/barrier'], env=env, capture_output=True, timeout=30)
+        result = subprocess.run(base + [location + '/consumer/.build/debug/Owned', settings, location + '/barrier'], env=env, capture_output=True, timeout=30)
         (args.out / 'installed-owned.log').write_bytes(result.stdout + result.stderr)
         assert result.returncode == 0 and b'OWNED_SWIFT_PASS' in result.stdout, (result.stdout, result.stderr)
         assert server.arrivals == ['hold-owned-swift', 'owned-swift', 'status-401'] and server.attempts == server.connections == 3, server.arrivals
         print(result.stdout.decode(), end='')
-        asset = work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native/x86_64-unknown-linux-gnu/libthinkthen.so'
-        if not asset.exists():
-            asset = next((work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native').glob('*/libthinkthen.so'))
-        hidden = asset.with_suffix('.missing')
-        asset.rename(hidden)
-        try:
-            refused = subprocess.run(base + ['/work/consumer/.build/debug/Owned', settings, '/work/barrier'], env=env, capture_output=True, timeout=5)
-            assert refused.returncode != 0 and b'ThinkThen native package could not be loaded' in refused.stderr, (refused.stdout, refused.stderr)
-            assert server.attempts == 3, server.arrivals
-            print('Missing bundled native asset refuses locally with zero extra requests')
-        finally:
-            hidden.rename(asset)
+        if not apple:
+            asset = work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native/x86_64-unknown-linux-gnu/libthinkthen.so'
+            if not asset.exists():
+                asset = next((work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native').glob('*/libthinkthen.so'))
+            hidden = asset.with_suffix('.missing')
+            asset.rename(hidden)
+            try:
+                refused = subprocess.run(base + ['/work/consumer/.build/debug/Owned', settings, '/work/barrier'], env=env, capture_output=True, timeout=5)
+                assert refused.returncode != 0 and b'ThinkThen native package could not be loaded' in refused.stderr, (refused.stdout, refused.stderr)
+                assert server.attempts == 3, server.arrivals
+                print('Missing bundled native asset refuses locally with zero extra requests')
+            finally:
+                hidden.rename(asset)
     finally:
         (work / 'barrier/release-hold-owned-swift').touch()
         server.close()

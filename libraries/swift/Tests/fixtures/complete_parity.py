@@ -25,7 +25,7 @@ if args.routine:
     required_ids = parity.required_cases(parity.inventory(), "swift")
     selected.update(line for line in (ROOT / "conformance/routine-ids.txt").read_text().splitlines() if line in required_ids)
     selected.update(("complete-decide", "complete-find", "complete-annotate", "files-annotate", "images-decide", "image-file-decide", "settings-cache-off-sends-again", "settings-replay-answers-from-the-folder-alone", "declared-object-context", "context-null", "recognize-record-contexts"))
-native = Path(shutil.which("swift")).resolve().parents[2] / "usr/lib/swift/linux"
+native = Path(shutil.which("swift")).resolve().parents[2] / "usr/lib/swift/linux" if sys.platform != "darwin" else None
 def native_parity(consumer, command):
     # Shared recipes/assertions are read-only; execution uses each actual named consumer.
     import sqlite3
@@ -49,7 +49,7 @@ def native_parity(consumer, command):
                                 PATH=os.environ.get("PATH", "/usr/bin:/bin"),
                                 LC_ALL="C.UTF-8",
                                 DOTNET_CLI_TELEMETRY_OPTOUT="1",
-                                LD_LIBRARY_PATH=str(native))
+                                **({"LD_LIBRARY_PATH": str(native)} if native else {}))
                 backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
