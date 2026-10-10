@@ -520,9 +520,17 @@ fn choose_raw_prints_an_empty_line_for_an_unresolved_record() {
 }
 
 #[test]
-fn the_row_count_equals_the_record_count_for_every_run_that_finishes() {
-    // The property the whole record surface rests on: one row per record, in
-    // input order, whatever the view and whatever the answers.
+fn compact_row_count_equals_the_record_count_for_every_run_that_finishes() {
+    row_count_equals_record_count(&["--field", "/body"]);
+}
+
+#[test]
+fn detailed_row_count_equals_the_record_count_for_every_run_that_finishes() {
+    row_count_equals_record_count(&["--field", "/body", "--details"]);
+}
+
+fn row_count_equals_record_count(view: &[&str]) {
+    // One row per record, in input order, for every count and output view.
     for count in 0..9_usize {
         let probabilities: Vec<&str> = (0..count)
             .map(|place| if place % 2 == 0 { "0.97" } else { "0.02" })
@@ -530,22 +538,15 @@ fn the_row_count_equals_the_record_count_for_every_run_that_finishes() {
         let input: String = (0..count)
             .map(|place| format!("{{\"body\":\"record {place}\"}}\n"))
             .collect();
+        let listener = serving(&probabilities).expect("a loopback listener");
+        let arguments = [&["--jsonl"][..], view].concat();
+        let output = decide(listener.base(), &arguments, &input).expect("the compiled binary runs");
 
-        for view in [
-            &["--field", "/body"][..],
-            &["--field", "/body", "--details"],
-        ] {
-            let listener = serving(&probabilities).expect("a loopback listener");
-            let arguments = [&["--jsonl"][..], view].concat();
-            let output =
-                decide(listener.base(), &arguments, &input).expect("the compiled binary runs");
-
-            assert_eq!(output.status.code(), Some(0), "{count} records, {view:?}");
-            assert_eq!(
-                printed(&output).lines().count(),
-                count,
-                "{count} records, {view:?}"
-            );
-        }
+        assert_eq!(output.status.code(), Some(0), "{count} records, {view:?}");
+        assert_eq!(
+            printed(&output).lines().count(),
+            count,
+            "{count} records, {view:?}"
+        );
     }
 }
