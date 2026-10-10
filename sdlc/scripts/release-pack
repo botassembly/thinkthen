@@ -303,6 +303,12 @@ zig)
 php)
 		cp libraries/php/LICENSE libraries/php/README.md libraries/php/composer.json libraries/php/autoload.php "$folder/"
 		cp -R libraries/php/src libraries/php/examples "$folder/"
+        case $TARGET in
+        *-unknown-linux-gnu)
+            mkdir -p "$folder/native"
+            tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$folder/native/libthinkthen.so" ;;
+        *) echo 'release-pack: PHP native package target is unsupported' >&2; exit 1 ;;
+        esac
 		;;
 dart)
 		mkdir -p "$folder"

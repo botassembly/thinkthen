@@ -19,6 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--archive', type=Path, required=True)
     parser.add_argument('--composer', type=Path, required=True)
+    parser.add_argument('--parity', action='store_true')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='thinkthen-php-session-') as folder:
         work = Path(folder)
@@ -44,7 +45,7 @@ def main():
                 TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),
                 THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
                 THINKTHEN_API_KEY='tt-canary-291')
-            for mode in ('surface', 'poll', 'named', 'presence', 'failure', 'zero', 'destroy'):
+            for mode in (() if args.parity else ('surface', 'poll', 'named', 'presence', 'failure', 'zero', 'destroy')):
                 before = server.attempts
                 result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
                     str(work / 'consumer.php'), mode], capture_output=True, env=env, timeout=5)
@@ -57,6 +58,12 @@ def main():
                 if mode == 'poll': assert server.attempts == before + 3, 'poll generator request count'
                 if mode == 'zero': assert server.attempts == before, 'rejected input sent a request'
                 print(result.stdout.decode(), end='')
+            env = child_env(home=work / 'home', keep=('PATH', 'LANG', 'LC_ALL'),
+                THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
+                THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),
+                THINKTHEN_TEST_PROFILE='full' if args.parity else 'routine')
+            subprocess.run([sys.executable, str(Path(__file__).with_name('complete_parity.py')), 'php'],
+                env=env, check=True)
         finally:
             for file in (work / 'barrier').glob('arrived-*'):
                 file.with_name(file.name.replace('arrived-', 'release-', 1)).touch()

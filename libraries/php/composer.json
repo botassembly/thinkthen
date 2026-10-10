@@ -1,6 +1,6 @@
 {
   "name": "botassembly/thinkthen",
-  "description": "ThinkThen PHP binding for the separately installed C library",
+  "description": "ThinkThen typed PHP client with its native library",
   "type": "library",
   "license": "MIT",
   "require": {
@@ -8,6 +8,8 @@
     "ext-ffi": "*"
   },
   "autoload": {
-    "files": ["autoload.php"]
+    "files": [
+      "autoload.php"
+    ]
   }
 }

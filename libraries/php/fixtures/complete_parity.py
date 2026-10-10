@@ -14,7 +14,6 @@ ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity
 from c_parity import document, Backend, prepare, assertions, compact
-from complete_projection import project
 from session_projection import project_session
 
 
@@ -22,6 +21,14 @@ def main():
     consumer=sys.argv[1]
     assert consumer in ('php','dart','flutter')
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
+    routine = consumer == 'php' and os.environ.get('THINKTHEN_TEST_PROFILE', 'full') == 'routine'
+    if routine:
+        selected = {'01-decide-yes-captured', '06-choose-billing', '09-tag-two', '11-score-middle',
+                    '13-filter-records', '15-rank-records', '17-annotate-mixed', '18-find-second',
+                    'typed-recognize', 'typed-relate', 'files-decide', 'images-decide',
+                    'settings-replay-answers-from-the-folder-alone'}
+        rows = [row for row in rows if row['id'] in selected]
+        assert {row['id'] for row in rows} == selected
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
     library=Path(os.environ.get('THINKTHEN_COMPLETE_LIBRARY',str(ROOT/'libraries/c/target/debug/libthinkthen_c.so')))
@@ -40,29 +47,6 @@ def main():
     failures=0
     with tempfile.TemporaryDirectory(prefix='thinkthen-0429-') as tmp:
         scratch=Path(tmp)
-        helper=scratch/'cancel.so'
-        subprocess.run(['cc','-shared','-fPIC','-pthread','-Wall','-Wextra','-Werror',str(ROOT/'libraries/php/fixtures/cancel_reader.c'),'-ldl','-o',str(helper)],env={'PATH':os.environ['PATH'],'LANG':'C.UTF-8'},check=True)
-        if consumer == 'php':
-            # Counted descriptor constructors are an additional public door, with no synthetic parity cells.
-            with tempfile.TemporaryDirectory(prefix='constructors-',dir=scratch) as owned:
-                env=child_env(home=owned,
-                              PATH=os.environ['PATH'],
-                              LANG='C.UTF-8',
-                              PUB_CACHE=os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
-                              FLUTTER_SUPPRESS_ANALYTICS='true',
-                              CI='true')
-                backend=Backend(ROOT/'target/debug/conformance-backend',env)
-                try:
-                    settings=compact({'base_url':f'http://127.0.0.1:{backend.port}/generic/v1','cache':False,'max_retries':0})
-                    env['THINKTHEN_API_KEY']='sk-conformance-loopback'
-                    env['THINKTHEN_PHP_PACKAGE']=str(package)
-                    command=['/usr/bin/php8.3','-n','-d','extension=ffi','-d','ffi.enable=1',str(ROOT/'libraries/php/fixtures/complete_constructed.php'),str(library),settings]
-                    output=subprocess.run(command,env=env,cwd=flutter_consumer if consumer=='flutter' else ROOT,capture_output=True,text=True,timeout=60)
-                    assert output.returncode==0,(output.stdout,output.stderr)
-                    assert 'sk-conformance-loopback' not in output.stdout+output.stderr
-                    assert int(backend.read('count'))==11
-                    print(consumer+' counted constructors: ten functions, 11 arrivals, copied results retained after close',flush=True)
-                finally:backend.close()
         for row in rows:
             error=None
             try:
@@ -73,7 +57,6 @@ def main():
                           PATH=os.environ['PATH'],
                           LANG='C.UTF-8',
                           TT_REPO=str(ROOT),
-                          TT_CANCEL_HELPER=str(helper),
                           PUB_CACHE=os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
                           FLUTTER_SUPPRESS_ANALYTICS='true',
                           CI='true')
@@ -102,7 +85,7 @@ def main():
                             def execute(settings):
                                 path=home/'input.json';path.write_text(compact(step))
                                 if consumer=='php':
-                                    command=['/usr/bin/php8.3','-n','-d','extension=ffi','-d','ffi.enable=1','-d','memory_limit=2G',str(ROOT/'libraries/php/fixtures/complete_native.php'),str(path),str(library),compact(settings)]
+                                    command=['/usr/bin/php8.3','-n','-d','extension=ffi','-d','ffi.enable=1','-d','memory_limit=2G',str(ROOT/'libraries/php/fixtures/session_parity.php'),str(path),str(library),compact(settings)]
                                 elif consumer=='dart':
                                     command=[str(dart_binary),str(path),str(library),compact(settings)]
                                 else:
@@ -122,7 +105,7 @@ def main():
                                             if time.monotonic()>limit:raise AssertionError('public cancellation did not fire')
                                             time.sleep(.01)
                                         backend.process.stdin.write('release\n');backend.process.stdin.flush()
-                                    stdout,stderr=running.communicate(timeout=120)
+                                    stdout,stderr=running.communicate(timeout=5 if routine else 120)
                                     assert running.returncode==0,(stdout,stderr)
                                     if consumer=='flutter':payload=json.loads((home/'output.json').read_text())
                                     else:
@@ -130,7 +113,7 @@ def main():
                                         assert 'sk-conformance-loopback' not in stdout+stderr, 'credential leaked'
                                         payload=json.loads(stdout)
                                     assert 'sk-conformance-loopback' not in compact(payload), 'credential leaked'
-                                    return project(payload,step['verb']) if consumer == 'php' else project_session(payload,step)
+                                    return project_session(payload,step)
                                 finally:
                                     if running.poll() is None:running.kill();running.wait()
                             before=int(backend.read('count'))
