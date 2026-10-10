@@ -45,3 +45,6 @@ This is an unpublished integration API. The family ticket and root review own fi
 Caller-supplied counted option/question descriptors borrow their buffers through construction only; keep their `NativeBuffers` live until construction returns. Native record/image constructors clone those buffers and compressed bytes.
 
 Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+
+`Engine.usagePersistence()` observes live usage persistence without waiting. `Engine.finishUsageStatus()` drains this engine’s current deltas. Both return an owned `UsageStatus` with a `UsagePersistence` state and optional copied native advice. Written covers current deltas only; later calls and other engines can write more. Failed is latched and does not turn a good answer into a call failure. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Observation never derives state from earlier call facts.
+Swift status fields are immutable values and survive engine close. Both methods throw on a closed engine.

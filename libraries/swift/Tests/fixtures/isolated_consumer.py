@@ -1,5 +1,5 @@
 """Extract independently installed Swift package/native archives and build in bwrap."""
-import collections,json,os,pathlib,shutil,sys,tarfile,zipfile,tempfile
+import collections,fcntl,json,os,pathlib,shutil,sys,tarfile,zipfile,tempfile
 from backend import Backend
 from process_group import run
 R=pathlib.Path(__file__).resolve().parents[2]
@@ -36,11 +36,32 @@ def execute(label,args,timeout=120):
     with (W/'receipts.json').open('a') as f:f.write(json.dumps(receipt)+'\n')
     assert result.exit==0,(label,result.exit,(result.stdout+result.stderr)[-2000:])
     return result
+usage_lock=None
+if mode.startswith('usage-'):
+    env['XDG_STATE_HOME']='/work/state'
+    if mode=='usage-disabled': env.update(HOME='relative',XDG_STATE_HOME='')
+    if mode=='usage-failed':
+        state=W/'state/thinkthen';state.mkdir(parents=True,mode=0o700)
+        usage_lock=(state/'.lock').open('w');os.chmod(state/'.lock',0o600);fcntl.flock(usage_lock,fcntl.LOCK_EX)
 try:
     # Direct namespace checks, not host-path checks: the cargo binary and pinned
     # source must not be addressable from the consumer process.
     execute('namespace',['/bin/sh','-c','test ! -x /usr/bin/cargo && test ! -x /usr/bin/rustc && test ! -e /home && test ! -e /Users && echo NAMESPACE_PASS'],timeout=20)
     pkg='/work/installed package with spaces/package';native='/work/installed package with spaces/native/lib'
+    if mode.startswith('usage-'):
+        for name in ('native_views.swift','native_consumer.swift'): shutil.copyfile(R/'Tests/fixtures'/name,W/name)
+        sources=[str(path).replace(str(W),'/work',1) for path in sorted((install/'package/Sources/ThinkThen').glob('*.swift'))]
+        execute('native-build',['/swift/usr/bin/swiftc','-swift-version','6','-warnings-as-errors','-j','2','-module-cache-path','/work/cache/modules','-I',pkg+'/Sources/CThinkThen',*sources,'/work/native_views.swift','/work/native_consumer.swift','-L',native,'-lthinkthen','-Xlinker','-rpath','-Xlinker',native,'-o','/work/consumer'])
+        settings=json.dumps({'base_url':env['THINKTHEN_BASE_URL'],'cache':False})
+        result=execute('usage',['/work/consumer',mode,settings],timeout=15)
+        assert b'USAGE_PASS' in result.stdout,result.stdout
+        snapshots=[json.loads(line) for line in result.stdout.splitlines() if line.startswith(b'{')]
+        wanted=[] if mode=='usage-disabled' else ['consumer-swift']
+        assert server.arrivals==wanted and server.attempts==server.connections==len(wanted),(server.arrivals,server.attempts)
+        assert not snapshots if not wanted else len(snapshots)==2 and snapshots[0]==snapshots[1],snapshots
+        if wanted: assert snapshots[0]['rows'][0]['data']['decide']['value']['data']['boolean']==1,snapshots[0]
+        print('installed Swift',mode,'PASS retained answer/facts; exact requests',len(wanted),flush=True)
+        sys.exit(0)
     build=execute('swift-build',['/swift/usr/bin/swift','build','--package-path',pkg,'--scratch-path','/work/swift-build','--jobs','2','-Xlinker','-L','-Xlinker',native,'-Xlinker','-rpath','-Xlinker',native],timeout=180)
     # The packaged executable is the independent installed Swift consumer.
     result=execute('installed-example',['/work/swift-build/debug/ThinkThenExample'],timeout=50)
@@ -53,3 +74,5 @@ try:
 finally:
     (W/'counts.json').write_text(json.dumps({'arrivals':server.arrivals,'attempts':server.attempts},indent=2)+'\n')
     server.close()
+    if usage_lock is not None: usage_lock.close()
+    if mode.startswith('usage-'): shutil.rmtree(W)

@@ -142,12 +142,70 @@ fn ownedImage(allocator: std.mem.Allocator, engine: *tt.Engine, data: []const u8
     try std.testing.expectEqualSlices(u8, data, copied.value.bytes[0..copied.value.bytes_len]);
     try std.testing.expectEqualStrings("copied.png", try n.bytes(copied.value.filename.value));
 }
+fn usage(a: std.mem.Allocator, mode: []const u8, settings: [:0]const u8) !void {
+    var engine = switch (try tt.Engine.initWithSettings(a, settings)) {
+        .ok => |e| e,
+        .failed => |f| {
+            tt.releaseFailure(a, f);
+            return error.UsageConstructorFailed;
+        },
+    };
+    defer engine.deinit();
+    if (std.mem.eql(u8, mode, "usage-disabled")) {
+        const observed = try engine.usagePersistence();
+        defer observed.deinit(a);
+        const finished = try engine.finishUsageStatus();
+        defer finished.deinit(a);
+        try std.testing.expectEqual(tt.UsagePersistence.disabled, observed.state);
+        try std.testing.expectEqual(tt.UsagePersistence.disabled, finished.state);
+        _ = io.puts("USAGE_PASS disabled");
+        return;
+    }
+    const q = try take(n.Question, try n.parse(&engine, .atomic, "{\"decide\":\"Is it?\"}"));
+    defer q.deinit();
+    var row = std.mem.zeroes(c.thinkthen_record_v1);
+    row.original = .{ .present = 1, .value = n.text("consumer-zig") };
+    const source = try take(n.Source, try n.records(&engine, &.{row}));
+    defer source.deinit();
+    var answer = try take(n.Snapshot, try n.decide(&engine, q, source, n.controls()));
+    defer answer.deinit();
+    try emit(&answer);
+    try std.testing.expectEqual(@as(u64, 1), answer.summary.facts.value.requests_sent);
+    const failing = std.mem.eql(u8, mode, "usage-failed");
+    const observed = try engine.usagePersistence();
+    defer observed.deinit(a);
+    if (failing) {
+        try std.testing.expectEqual(tt.UsagePersistence.pending, observed.state);
+        try std.testing.expect(observed.advice == null);
+    }
+    const finished = try engine.finishUsageStatus();
+    defer finished.deinit(a);
+    const expected: tt.UsagePersistence = if (failing) .failed else .written;
+    try std.testing.expectEqual(expected, finished.state);
+    if (failing) try std.testing.expectEqualStrings("check the usage folder permissions and free space", finished.advice.?) else try std.testing.expect(finished.advice == null);
+    const repeated = try engine.usagePersistence();
+    defer repeated.deinit(a);
+    const drained = try engine.finishUsageStatus();
+    defer drained.deinit(a);
+    try std.testing.expectEqual(expected, repeated.state);
+    try std.testing.expectEqual(expected, drained.state);
+    engine.deinit();
+    try std.testing.expectError(error.ClosedEngine, engine.usagePersistence());
+    try std.testing.expectError(error.ClosedEngine, engine.finishUsageStatus());
+    if (failing) try std.testing.expectEqualStrings("check the usage folder permissions and free space", finished.advice.?);
+    try emit(&answer);
+    _ = io.puts("USAGE_PASS");
+}
 fn run() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const a = arena.allocator();
     const args = try std.process.argsAlloc(a);
     if (args.len != 3) return error.FixtureArgumentsRequired;
+    if (std.mem.startsWith(u8, args[1], "usage-")) {
+        try usage(a, args[1], try a.dupeZ(u8, args[2]));
+        return;
+    }
     const data = try std.fs.cwd().readFileAlloc(a, args[1], std.math.maxInt(usize));
     const parsed = try std.json.parseFromSlice(std.json.Value, a, data, .{});
     const v = parsed.value;
