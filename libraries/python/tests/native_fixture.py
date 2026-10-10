@@ -178,6 +178,12 @@ def assert_required(packet,row,value,bodies,root):
         # Native quoted instructions preserve the selected value, including false/null/Unicode.
         assert bodies and any(selected in q['instructions'] or json.loads(body)['state']==expect['selected_item'] for body in bodies for q in json.loads(body)['questions'].values()),(bodies,selected)
     if row['kind']=='located':
+        if packet.get('native') and value['verb']=='relate':
+            paths=[root/path for path in value['paths']]
+            for result in results:
+                assert result['input']==[path.read_text() for path in paths],result
+                assert [entry['index'] for entry in result['input_sources']]==list(range(len(paths))),result
+                assert [entry['source']['file'] for entry in result['input_sources']]==[str(path) for path in paths],result
         for original in ([item for result in results for item in native_inputs(result,value['verb'])] if packet.get('native') else packet['inputs']):
             location=original['location'];path=Path(location['file'])
             assert original['original']==path.read_text()
