@@ -72,3 +72,31 @@ Cache, record, refresh and strict replay use the engine settings and native stor
 Run the existing canonical suite with `python3 libraries/php/fixtures/complete_parity.py php` from the checkout; it counts owned loopback arrivals and emits cells only for actual public calls. No paid backend is used.
 
 Rank-set rows retain every member in saved declaration order. Each member exposes its native positive rank position, probability, answer identity, author declarations and complete details. Details preserve independently reported token dimensions and source batch sizes. Parent and member metadata overlap; read final call facts for invocation usage.
+
+## Native session API in development 0.2
+
+`ThinkThen\Client` adds the ten named calls over the shared native request contract. A local Composer archive can carry `native/libthinkthen.so`; the constructor uses that library by default. Final platform distribution assembly remains separate. PHP 8.3 with `ext-ffi` and FFI enabled is required.
+
+```php
+require 'vendor/autoload.php';
+$client = new ThinkThen\Client(['cache' => false]);
+try {
+    $call = $client->decide('Does the message ask for a refund?', 'Please refund my order.');
+    $value = $call->results[0]->value();
+    if ($value->present && $value->value === true) {
+        echo "refund requested\n";
+    }
+} finally {
+    $client->close();
+}
+```
+
+The result classes are generated from the Rust result graph. Each field accessor returns a `Presence` with separate `present` and `value` members, so absent, null and false differ. Property access returns the field value. `has()` also checks unknown extensions, and `toObject()` retains their PHP representation. Integers outside PHP's signed integer range become exact decimal strings, never rounded floats. `Completed::packets` retains every native packet, including observations; each packet's `nativeJson()` keeps the original JSON bytes and numeric types. Read an answer's value explicitly: PHP treats every result object as true. Results own PHP values and survive operation and client closure.
+
+All ten methods accept a text question or a PHP question-definition array/object, PHP values, arrays of records, `Client::files($paths, $reading)`, or a fresh `Traversable`. A PHP list means several records; wrap a list with `Client::item()` to make it one JSON item. `Client::item($value, $fields)` carries explicit per-item context, options or images. PHP preserves JSON objects as `stdClass` and JSON arrays as arrays. Native code checks the request, selects the route, computes cache identity and owns reading rules.
+
+Calls throw `UsageFailure`, `BackendFailure`, `DeadlineFailure`, `LocalFailure`, `CancelledFailure` or `DefectFailure`. An execution failure retains generated `failure`, `terminal`, completed `results` and `facts()`. Immediate conversion/admission refusals have no invented facts. Pass a `Cancellation` as the fourth argument or start an `Operation`, call `poll()`, then `cancel()` or `close()`. A client destructor closes its open operations before freeing the engine. It does not wait for a provider reply.
+
+For the migration, released `ThinkThen` and `ThinkThen\Native\Engine` calls stay available. Their corresponding new calls use `Client` and return `Completed::results` plus terminal facts. The old readers are removed only after full installed parity. The C session currently reports its native default Rust surface; this API preserves that report and does not claim PHP-specific attribution.
+
+Focused installed consumer checks build a local archive with `fixtures/package.py`, install it through Composer, and run `fixtures/session_installed.py`. They use a synthetic loopback backend. A fixture archive carrying a debug native library does not qualify a production distribution.
