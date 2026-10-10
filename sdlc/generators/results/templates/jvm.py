@@ -103,3 +103,98 @@ def render(definitions):
             lines.append(f'public {target} value() {{ return {decode}; }}')
         lines.append('}')
     return '\n'.join(lines + ['}']) + '\n'
+
+INPUT_ROOTS = ('Request', 'EngineSettings', 'RequestSessionDescriptor', 'RequestReaderFailure')
+
+
+def inputs(definitions):
+    """Mechanical schema builders; admission, defaults and bounds remain native."""
+    definitions = dict(definitions)
+    # Ordinary inline objects also need named host types, including recognition.
+    def lift(value, path):
+        if isinstance(value, list):
+            return [lift(child, path + '_' + str(index)) for index, child in enumerate(value)]
+        if not isinstance(value, dict):
+            return value
+        if (value.get('type') == 'object' and 'properties' in value) or 'anyOf' in value or 'oneOf' in value:
+            key = path
+            definitions[key] = {key: lift(child, path + '_' + key) for key, child in value.items()}
+            return {'$ref': '#/$defs/' + key}
+        return {key: lift(child, path + '_' + key) for key, child in value.items()}
+    for key, source in list(definitions.items()):
+        definitions[key] = {field: lift(value, key + '_' + field) for field, value in source.items()}
+    parents = {}
+    for key, source in definitions.items():
+        for child, _ in source.get('variants', []):
+            parents.setdefault(child, []).append(name(key))
+    def target(source):
+        if source is True or source == {}:
+            return 'Object'
+        if 'const' in source:
+            value = source['const']
+            return 'String' if isinstance(value, str) else 'Boolean' if isinstance(value, bool) else 'Number' if isinstance(value, (int, float)) else 'Object'
+        if '$ref' in source:
+            key = source['$ref'].removeprefix('#/$defs/')
+            source = definitions[key]
+            if 'properties' in source or 'variants' in source or enum_values(source) or 'anyOf' in source or 'oneOf' in source or 'primitive_variants' in source or isinstance(source.get('type'), list):
+                return name(key)
+            return target(source)
+        if source.get('type') == 'array':
+            return 'List<? extends ' + target(source.get('items', {})) + '>'
+        if source.get('type') == 'object':
+            return 'Map<String,? extends ' + target(source.get('additionalProperties', {})) + '>'
+        if isinstance(source.get('type'), list):
+            kinds = [kind for kind in source['type'] if kind != 'null']
+            if len(kinds) == 1:
+                return target({**source, 'type': kinds[0]})
+        if 'anyOf' in source or 'oneOf' in source or isinstance(source.get('type'), list) or 'primitive_variants' in source:
+            raise ValueError(f'JVM input union needs a named schema shape: {source}')
+        return {'string':'String', 'integer':'Number', 'number':'Number', 'boolean':'Boolean', 'null':'Object'}.get(source.get('type'), 'Object')
+    lines = ['// Generated from the shared Rust Request schema. Do not edit.',
+             'package thinkthen;', 'import java.util.*;',
+             '/** Typed wire builders. Native code owns grammar and admission errors. */',
+             'public final class Inputs {', 'private Inputs() {}']
+    for key, source in sorted(definitions.items()):
+        typ = name(key)
+        if 'variants' in source:
+            lines.append(f'public sealed interface {typ} extends Values.Value permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {}')
+            continue
+        values = enum_values(source)
+        if values:
+            constants = ','.join(member(value).upper() + '(' + json.dumps(value) + ')' for value in values)
+            lines += [f'public enum {typ} implements Values.Value {{ {constants};',
+                      f'private final String value; {typ}(String value) {{ this.value = value; }}',
+                      'public Object json() { return value; }', '}']
+            continue
+        if 'properties' not in source:
+            alternatives = source.get('anyOf', source.get('oneOf', []))
+            if 'primitive_variants' in source:
+                alternatives = list(source.get('primitive_schemas', {}).values()) or [{'type': kind} for kind in source['primitive_variants']]
+            if isinstance(source.get('type'), list):
+                alternatives = [{**source, 'type': kind} for kind in source['type']]
+            if alternatives:
+                types = dict.fromkeys(target(item) for item in alternatives if item.get('type') != 'null')
+                lines += [f'public static final class {typ} implements Values.Value {{', 'private final Object value;']
+                for value_type in types:
+                    lines.append(f'public {typ}({value_type} value) {{ this.value = Values.freeze(value); }}')
+                lines += ['public Object json() { return value; }', '}']
+            continue
+        interfaces = ' implements ' + ','.join(parents[key]) if key in parents else ''
+        lines += [f'public static final class {typ} extends Values.Builder<{typ}>{interfaces} {{', f'public {typ}() {{']
+        for field, spec in source['properties'].items():
+            if field in source.get('required', []) and isinstance(spec, dict):
+                resolved = definitions[spec['$ref'].removeprefix('#/$defs/')] if '$ref' in spec else spec
+                values = enum_values(resolved)
+                constant = resolved.get('const', values[0] if values and len(values) == 1 else None)
+                if constant is not None:
+                    lines.append(f'put({json.dumps(field)}, {json.dumps(constant)});')
+        lines += ['}', f'protected {typ} self() {{ return this; }}']
+        for field, spec in source['properties'].items():
+            if isinstance(spec, dict) and 'const' in spec:
+                continue
+            quoted, method = json.dumps(field), member(field)
+            lines += [f'public {typ} {method}({target(spec)} value) {{ return put({quoted}, value); }}',
+                      f'public {typ} {method}Null() {{ return put({quoted}, null); }}',
+                      f'public {typ} omit{method[0].upper() + method[1:]}() {{ return omit({quoted}); }}']
+        lines.append('}')
+    return '\n'.join(lines + ['}']) + '\n'

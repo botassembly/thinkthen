@@ -8,6 +8,16 @@ import java.util.function.Function;
 public final class Values {
     private Values() {}
     public interface Value { Object json(); }
+    /** Fluent generated input state retains omission and explicit null separately. */
+    public abstract static class Builder<T extends Builder<T>> implements Value {
+        private final Map<String,Object> members = new LinkedHashMap<>();
+        protected abstract T self();
+        protected final T put(String member, Object value) { members.put(member, freeze(value)); return self(); }
+        protected final T omit(String member) { members.remove(member); return self(); }
+        /** Forward an unknown member for native closed-grammar admission. */
+        public final T extension(String member, Object value) { return put(member, value); }
+        public final Object json() { return freeze(members); }
+    }
     public static class View implements Value {
         private final Object value;
         protected View(Object value) { this.value = freeze(value); }

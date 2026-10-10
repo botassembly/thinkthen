@@ -12,7 +12,17 @@ Run `libraries/jvm/tests/session_installed.py --jars /absolute/output/jars --out
 
 Add `--maven` to consume the assembled versioned Maven files in that installed check. This checks the supplied local artifacts without running a Maven resolver or contacting a registry.
 
-The old `Door.decideComplete` family maps to the corresponding `Engine.decide` family and its generated session packet classes. The slice accepts ordinary JSON-valued maps for question, input, and options. Generated input builders, Kotlin and Scala result representations, default build routing, and removal of the old facades belong to the remaining migration. The existing build and gate below still exercise the older API; this development slice does not certify the completed migration or an ordinary one-dependency Maven install.
+The old `Door.decideComplete` family maps to the corresponding `Engine.decide` family and its generated session packet classes. The recommended calls accept generated `Inputs.RequestQuestion`, `Inputs.RequestInput`, `Inputs.RequestOptions` and `Inputs.EngineSettings` builders. The shared Request schema supplies question selectors, authored definitions, sources, images, records and controls. Native code supplies defaults and rejects invalid grammar. Setting a member to null preserves explicit null; `omitMember()` removes it. Ordered lists and originals retain their values. Java and Kotlin use their ordinary lists and maps for original JSON data; Scala converts typed list arguments with `asJava`, and the facade converts nested Scala originals and numeric values. Map overloads retain compatibility during the migration. Kotlin and Scala result representations, default build routing, and removal of the old facades remain in the 0.2 migration.
+
+```java
+try (var engine = new thinkthen.Engine(new thinkthen.Inputs.EngineSettings())) {
+    var call = engine.decide(
+        new thinkthen.Inputs.RequestQuestionText().text("Does the writer ask for a refund?"),
+        new thinkthen.Inputs.RequestInputText().text("Please refund my order."));
+    var complete = call.join();
+    // Inspect generated Results packets and terminal facts, or cancel call.
+}
+``` The existing build and gate below still exercise the older API; this development slice does not certify the completed migration or an ordinary one-dependency Maven install.
 
 This Linux x86_64 package builds Java, Kotlin, and Scala JARs from the same source checkout as the separate ThinkThen C library. Maven Central holds the JARs as `io.github.botassembly:thinkthen-jvm:0.1.2`, with Kotlin and Scala classifiers. The C library comes from `thinkthen-c-0.1.2-x86_64-unknown-linux-gnu.tar.gz` on the same GitHub release. `sh libraries/jvm/build.sh` builds `thinkthen-door.jar`, `thinkthen-kotlin.jar`, and `thinkthen-scala.jar` under `target/jars/`.
 
