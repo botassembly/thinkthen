@@ -67,7 +67,8 @@ ASSEMBLY
     exit 0
 fi
 mkdir -p "$here/target/scratch/lib" "$here/target/scratch/nuget" "$here/target/scratch/dotnet-home" "$here/target/scratch/managed" "$here/target/artifacts/native/lib" "$here/target/logs"
-export DOTNET_CLI_HOME="$here/target/scratch/dotnet-home" NUGET_PACKAGES="$here/target/scratch/nuget"
+scratch_dir package_cache
+export DOTNET_CLI_HOME="$here/target/scratch/dotnet-home" NUGET_PACKAGES="$package_cache"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 native=${THINKTHEN_NATIVE_ASSET:-$root/libraries/c/target/debug/libthinkthen_c.so}
