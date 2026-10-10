@@ -1,6 +1,6 @@
 # 0515: Remove dead binding code and mark the frozen C exports
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -21,6 +21,8 @@ Reviews: revision 88cb91582492daf8129a23704040d42f7ff01d8d, accept
 Reviews: revision 7f67064f891ebc504d8fa9334b654f16b6231bf3, accept
 
 Reviews: revision e300f4266f9cc6f9636bdf76f9b513b5300336ae, accept
+
+Landed: 3c2816a
 
 ## Outcome
 
