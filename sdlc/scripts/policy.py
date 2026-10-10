@@ -77,6 +77,9 @@ BINDING_SOURCE_EXTENSIONS = {
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 GENERATED_BINDING_SOURCES = {
+    "libraries/dart/lib/src/session/results_generated.dart",
+    "libraries/dart/lib/src/session/inputs_generated.dart",
+    "libraries/dart/lib/src/session/abi_generated.dart",
     "libraries/cpp/include/thinkthen/results_generated.hpp",
     "libraries/cpp/include/thinkthen/inputs_generated.hpp",
     "libraries/typescript/results_generated.js",

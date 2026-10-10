@@ -4,8 +4,9 @@
     "checks/consumers",
     "flutter/lib",
     "flutter/example/lib",
-    "flutter/example/test"
+    "flutter/example/test",
+    "checks/session_consumer/bin"
   ],
   "extension": ".dart",
-  "max": 11939
+  "max": 17262
 }
