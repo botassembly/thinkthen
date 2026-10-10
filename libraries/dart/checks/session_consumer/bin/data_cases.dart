@@ -31,7 +31,9 @@ Future<void> dataCases(
       throw StateError('missing file accepted');
     } on SessionFailure catch (error) {
       requireData(
-          error.call.terminal.facts.isPresent, 'file failure retains facts');
+          !error.call.terminal.facts.isPresent &&
+              error.failure.error.kind == 'local',
+          'file failure before start keeps facts absent');
     } on NativeFailure catch (error) {
       requireData(error.kind == NativeErrorKind.local,
           'prestart file failure is local');
