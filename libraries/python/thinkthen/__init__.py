@@ -54,11 +54,12 @@ class Engine:
     """An engine with its own settings, each keyword-only.
 
     ``backend``, ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight), ``batch``,
-    ``max_requests``, ``max_request_bytes``, ``cache`` (a folder, ``False`` for none, or ``True``
+    ``max_requests``, ``max_request_bytes``, ``refresh_cache``, ``cache`` (a folder, ``False`` for none, or ``True``
     for the default folder), ``timeout``, ``max_retries``, ``record``, ``replay``, and ``profile``. An omitted setting comes
     from the environment. ``backend`` selects its captured named key; an explicit
     ``base_url`` receives that key and retains its setup path and limits. The throttle is one per loaded copy of this
     package: a second, different throttle raises ``UsageError``.
+    ``proxy`` is reserved; supplying it raises ``UsageError`` before any request.
 
     Each verb takes an authored question dictionary, an explicit question selector or its text. Beside a text,
     ``choose`` takes ``options``, ``score`` takes ``levels``, and ``tag``
@@ -75,19 +76,16 @@ class Engine:
     def __init__(self, *, backend=None, base_url=None, model=None, throttle=None,
                  batch=None,
                  max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None,
-                 record=None, replay=None, profile=None):
+                 record=None, replay=None, profile=None, refresh_cache=None, proxy=None):
         self._sessions = set()
-        self._engine = _thinkthen._Engine(json.dumps({key: value for key, value in dict(
-            backend=backend, base_url=base_url, model=model, throttle=throttle, batch=batch,
-            max_requests=max_requests, max_requests_total=max_requests_total, max_request_bytes=max_request_bytes,
-            cache=cache, timeout=timeout, max_retries=max_retries, record=record, replay=replay, profile=profile).items()
-            if value is not None}, default=os.fspath))
         given = dict(backend=backend, base_url=base_url, model=model, throttle=throttle, batch=batch,
                      max_requests=max_requests, max_requests_total=max_requests_total,
                      max_request_bytes=max_request_bytes, cache=cache, timeout=timeout,
-                     max_retries=max_retries, record=record, replay=replay, profile=profile)
+                     max_retries=max_retries, record=record, replay=replay, profile=profile,
+                     refresh_cache=refresh_cache, proxy=proxy)
         self._settings_json = json.dumps({key: value for key, value in given.items()
                                           if value is not None}, default=os.fspath)
+        self._engine = _thinkthen._Engine(self._settings_json)
 
     def __repr__(self):
         return "Engine()"

@@ -26,7 +26,9 @@ def main():
             values.append(tt.Item(value=content.get('value'), text=content['kind']=='text', image_only=content['kind']=='images',
                 images=tuple(tt.Image(data=bytes(image['bytes']), media=image['media']) for image in row.get('images', [])), context=context, options=options))
         source = tt.Records(tuple(values))
-        if LIBRARY == 'pandas':
+        if document.get('incremental'):
+            source = iter(values)
+        elif LIBRARY == 'pandas':
             import pandas as pd
             import thinkthen.pandas
             source = pd.Series(values, index=[7]*len(values), name='original', dtype=object)
@@ -68,7 +70,10 @@ def main():
             for result in results:
                 assert result.schema=='thinkthen.result/2'
                 assert isinstance(result.answer_id,str) and len(result.answer_id)==64
-                assert result.meta.origin in ('live','cache','replay','proxy','memory')
+                if result.meta.observations:
+                    assert result.meta.origin in ('live','cache','replay','proxy','memory')
+                else:
+                    assert result.meta.origin is None and result.meta.answered_by is None
                 assert result.to_dict()['answer_id']==result.answer_id
                 if verb=='recognize':
                     if 'entities' in result.value:
