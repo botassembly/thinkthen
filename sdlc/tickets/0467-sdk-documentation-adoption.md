@@ -45,6 +45,8 @@ Reviews: revision 1181338a883bbc71082c315438e56d4fdf92c222, accept
 
 Reviews: revision 219008c3d076a8c5f747c096c7b879b3a78c2f48, accept
 
+Reviews: revision 9c8094b4e4298b13f83aad37ca78b58cc8b524d1, accept
+
 ## Outcome
 
 After the language and database migrations land, the shared documentation describes the final 0.2 experience on every surface. A reader of the root README, the site or the specification finds the one recommended API per language, its install route and its real platform limits. The migrations that own the four files the 0462 review found stale (0518, 0523, 0505 and 0496) fix those statements. One upgrade guide maps each removed 0.1 call to its replacement.
