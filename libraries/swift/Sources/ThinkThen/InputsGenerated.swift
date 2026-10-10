@@ -832,18 +832,23 @@ public indirect enum InputEngineSettingsMaxRequestsTotal: JSONRepresentable {
         }
     }
 }
-public indirect enum InputImageMedia: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
+public enum InputImageMedia: JSONRepresentable {
+    case `imageJpeg`
+    case `imagePng`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> InputImageMedia {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        throw JSONConversionError("Unknown InputImageMedia value")
+        let value = try String.read(json)
+        switch value {
+        case "image/jpeg": return .`imageJpeg`
+        case "image/png": return .`imagePng`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
+        case .`imageJpeg`: return .string("image/jpeg")
+        case .`imagePng`: return .string("image/png")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -869,18 +874,23 @@ public struct InputOptionSchema: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum InputReaderMedia: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
+public enum InputReaderMedia: JSONRepresentable {
+    case `text`
+    case `image`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> InputReaderMedia {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        throw JSONConversionError("Unknown InputReaderMedia value")
+        let value = try String.read(json)
+        switch value {
+        case "text": return .`text`
+        case "image": return .`image`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
+        case .`text`: return .string("text")
+        case .`image`: return .string("image")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -947,18 +957,23 @@ public struct InputRecognitionExampleText: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum InputRecognitionMode: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
+public enum InputRecognitionMode: JSONRepresentable {
+    case `whole`
+    case `boundaryOnly`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> InputRecognitionMode {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        throw JSONConversionError("Unknown InputRecognitionMode value")
+        let value = try String.read(json)
+        switch value {
+        case "whole": return .`whole`
+        case "boundary_only": return .`boundaryOnly`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
+        case .`whole`: return .string("whole")
+        case .`boundaryOnly`: return .string("boundary_only")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -1973,27 +1988,32 @@ public indirect enum InputRequestDefinitionFieldsTagBatch: JSONRepresentable {
         }
     }
 }
-public indirect enum InputRequestFraming: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
-    case alternative3(String)
-    case alternative4(String)
+public enum InputRequestFraming: JSONRepresentable {
+    case `document`
+    case `lines`
+    case `jsonl`
+    case `csv`
+    case `tsv`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> InputRequestFraming {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        if let value = try? String.read(json) { return .alternative3(value) }
-        if let value = try? String.read(json) { return .alternative4(value) }
-        throw JSONConversionError("Unknown InputRequestFraming value")
+        let value = try String.read(json)
+        switch value {
+        case "document": return .`document`
+        case "lines": return .`lines`
+        case "jsonl": return .`jsonl`
+        case "csv": return .`csv`
+        case "tsv": return .`tsv`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
-        case .alternative3(let value): return value.json
-        case .alternative4(let value): return value.json
+        case .`document`: return .string("document")
+        case .`lines`: return .string("lines")
+        case .`jsonl`: return .string("jsonl")
+        case .`csv`: return .string("csv")
+        case .`tsv`: return .string("tsv")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -2713,15 +2733,20 @@ public indirect enum InputRequestThreshold: JSONRepresentable {
         }
     }
 }
-public indirect enum InputRequestVersion: JSONRepresentable {
-    case alternative0(String)
+public enum InputRequestVersion: JSONRepresentable {
+    case `thinkthenRequest_1`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> InputRequestVersion {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        throw JSONConversionError("Unknown InputRequestVersion value")
+        let value = try String.read(json)
+        switch value {
+        case "thinkthen.request/1": return .`thinkthenRequest_1`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
+        case .`thinkthenRequest_1`: return .string("thinkthen.request/1")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -2749,21 +2774,26 @@ public struct InputSessionSourceLocation: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum InputSourceUnit: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
+public enum InputSourceUnit: JSONRepresentable {
+    case `line`
+    case `window`
+    case `file`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> InputSourceUnit {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        throw JSONConversionError("Unknown InputSourceUnit value")
+        let value = try String.read(json)
+        switch value {
+        case "line": return .`line`
+        case "window": return .`window`
+        case "file": return .`file`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
+        case .`line`: return .string("line")
+        case .`window`: return .string("window")
+        case .`file`: return .string("file")
+        case .unknown(let value): return .string(value)
         }
     }
 }

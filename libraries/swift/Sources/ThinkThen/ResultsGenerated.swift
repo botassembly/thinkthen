@@ -1014,7 +1014,23 @@ public indirect enum OwnedBatch: JSONRepresentable {
         }
     }
 }
-public typealias OwnedBoundaryMode = String
+public enum OwnedBoundaryMode: JSONRepresentable {
+    case `boundaryOnly`
+    case unknown(String)
+    public static func read(_ json: JSONValue) throws -> OwnedBoundaryMode {
+        let value = try String.read(json)
+        switch value {
+        case "boundary_only": return .`boundaryOnly`
+        default: return .unknown(value)
+        }
+    }
+    public var json: JSONValue {
+        switch self {
+        case .`boundaryOnly`: return .string("boundary_only")
+        case .unknown(let value): return .string(value)
+        }
+    }
+}
 public struct OwnedBoundaryOdds: JSONRepresentable {
     public let extensions: [String: JSONValue]
     private var _sourceJSON: JSONValue? = nil
@@ -1567,18 +1583,23 @@ public struct OwnedImage: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedImageMedia: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
+public enum OwnedImageMedia: JSONRepresentable {
+    case `imageJpeg`
+    case `imagePng`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedImageMedia {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        throw JSONConversionError("Unknown OwnedImageMedia value")
+        let value = try String.read(json)
+        switch value {
+        case "image/jpeg": return .`imageJpeg`
+        case "image/png": return .`imagePng`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
+        case .`imageJpeg`: return .string("image/jpeg")
+        case .`imagePng`: return .string("image/png")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -1932,7 +1953,23 @@ public indirect enum OwnedObjectRootRequired: JSONRepresentable {
         }
     }
 }
-public typealias OwnedObjectType = String
+public enum OwnedObjectType: JSONRepresentable {
+    case `object`
+    case unknown(String)
+    public static func read(_ json: JSONValue) throws -> OwnedObjectType {
+        let value = try String.read(json)
+        switch value {
+        case "object": return .`object`
+        default: return .unknown(value)
+        }
+    }
+    public var json: JSONValue {
+        switch self {
+        case .`object`: return .string("object")
+        case .unknown(let value): return .string(value)
+        }
+    }
+}
 public indirect enum OwnedObservation: JSONRepresentable {
     case `observationId`(OwnedObservationObservationId)
     case `failureId`(OwnedObservationFailureId)
@@ -1990,27 +2027,32 @@ public struct OwnedObservationObservationId: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedOrigin: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
-    case alternative3(String)
-    case alternative4(String)
+public enum OwnedOrigin: JSONRepresentable {
+    case `live`
+    case `cache`
+    case `replay`
+    case `proxy`
+    case `memory`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedOrigin {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        if let value = try? String.read(json) { return .alternative3(value) }
-        if let value = try? String.read(json) { return .alternative4(value) }
-        throw JSONConversionError("Unknown OwnedOrigin value")
+        let value = try String.read(json)
+        switch value {
+        case "live": return .`live`
+        case "cache": return .`cache`
+        case "replay": return .`replay`
+        case "proxy": return .`proxy`
+        case "memory": return .`memory`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
-        case .alternative3(let value): return value.json
-        case .alternative4(let value): return value.json
+        case .`live`: return .string("live")
+        case .`cache`: return .string("cache")
+        case .`replay`: return .string("replay")
+        case .`proxy`: return .string("proxy")
+        case .`memory`: return .string("memory")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -2952,18 +2994,23 @@ public struct OwnedRecognitionEdgeDocument: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedRecognitionMode: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
+public enum OwnedRecognitionMode: JSONRepresentable {
+    case `whole`
+    case `boundaryOnly`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedRecognitionMode {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        throw JSONConversionError("Unknown OwnedRecognitionMode value")
+        let value = try String.read(json)
+        switch value {
+        case "whole": return .`whole`
+        case "boundary_only": return .`boundaryOnly`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
+        case .`whole`: return .string("whole")
+        case .`boundaryOnly`: return .string("boundary_only")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -3203,18 +3250,23 @@ public struct OwnedRelation: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedRelationDirection: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
+public enum OwnedRelationDirection: JSONRepresentable {
+    case `sourceToTarget`
+    case `either`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedRelationDirection {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        throw JSONConversionError("Unknown OwnedRelationDirection value")
+        let value = try String.read(json)
+        switch value {
+        case "source_to_target": return .`sourceToTarget`
+        case "either": return .`either`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
+        case .`sourceToTarget`: return .string("source_to_target")
+        case .`either`: return .string("either")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -3330,18 +3382,23 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedRelationMethod: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
+public enum OwnedRelationMethod: JSONRepresentable {
+    case `yesNo`
+    case `choice`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedRelationMethod {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        throw JSONConversionError("Unknown OwnedRelationMethod value")
+        let value = try String.read(json)
+        switch value {
+        case "yes_no": return .`yesNo`
+        case "choice": return .`choice`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
+        case .`yesNo`: return .string("yes_no")
+        case .`choice`: return .string("choice")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -3405,42 +3462,47 @@ public indirect enum OwnedRelationLastLine: JSONRepresentable {
         }
     }
 }
-public indirect enum OwnedRequestFunction: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
-    case alternative3(String)
-    case alternative4(String)
-    case alternative5(String)
-    case alternative6(String)
-    case alternative7(String)
-    case alternative8(String)
-    case alternative9(String)
+public enum OwnedRequestFunction: JSONRepresentable {
+    case `decide`
+    case `choose`
+    case `tag`
+    case `score`
+    case `filter`
+    case `rank`
+    case `find`
+    case `annotate`
+    case `recognize`
+    case `relate`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedRequestFunction {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        if let value = try? String.read(json) { return .alternative3(value) }
-        if let value = try? String.read(json) { return .alternative4(value) }
-        if let value = try? String.read(json) { return .alternative5(value) }
-        if let value = try? String.read(json) { return .alternative6(value) }
-        if let value = try? String.read(json) { return .alternative7(value) }
-        if let value = try? String.read(json) { return .alternative8(value) }
-        if let value = try? String.read(json) { return .alternative9(value) }
-        throw JSONConversionError("Unknown OwnedRequestFunction value")
+        let value = try String.read(json)
+        switch value {
+        case "decide": return .`decide`
+        case "choose": return .`choose`
+        case "tag": return .`tag`
+        case "score": return .`score`
+        case "filter": return .`filter`
+        case "rank": return .`rank`
+        case "find": return .`find`
+        case "annotate": return .`annotate`
+        case "recognize": return .`recognize`
+        case "relate": return .`relate`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
-        case .alternative3(let value): return value.json
-        case .alternative4(let value): return value.json
-        case .alternative5(let value): return value.json
-        case .alternative6(let value): return value.json
-        case .alternative7(let value): return value.json
-        case .alternative8(let value): return value.json
-        case .alternative9(let value): return value.json
+        case .`decide`: return .string("decide")
+        case .`choose`: return .string("choose")
+        case .`tag`: return .string("tag")
+        case .`score`: return .string("score")
+        case .`filter`: return .string("filter")
+        case .`rank`: return .string("rank")
+        case .`find`: return .string("find")
+        case .`annotate`: return .string("annotate")
+        case .`recognize`: return .string("recognize")
+        case .`relate`: return .string("relate")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -3526,45 +3588,50 @@ public struct OwnedSendBudgetDenialBeforeRetry: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedStopCause: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
-    case alternative3(String)
-    case alternative4(String)
-    case alternative5(String)
-    case alternative6(String)
-    case alternative7(String)
-    case alternative8(String)
-    case alternative9(String)
-    case alternative10(String)
+public enum OwnedStopCause: JSONRepresentable {
+    case `usage`
+    case `local`
+    case `noKey`
+    case `transport`
+    case `status`
+    case `tooLarge`
+    case `reply`
+    case `backend`
+    case `cancelled`
+    case `deadline`
+    case `defect`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedStopCause {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        if let value = try? String.read(json) { return .alternative3(value) }
-        if let value = try? String.read(json) { return .alternative4(value) }
-        if let value = try? String.read(json) { return .alternative5(value) }
-        if let value = try? String.read(json) { return .alternative6(value) }
-        if let value = try? String.read(json) { return .alternative7(value) }
-        if let value = try? String.read(json) { return .alternative8(value) }
-        if let value = try? String.read(json) { return .alternative9(value) }
-        if let value = try? String.read(json) { return .alternative10(value) }
-        throw JSONConversionError("Unknown OwnedStopCause value")
+        let value = try String.read(json)
+        switch value {
+        case "usage": return .`usage`
+        case "local": return .`local`
+        case "no_key": return .`noKey`
+        case "transport": return .`transport`
+        case "status": return .`status`
+        case "too_large": return .`tooLarge`
+        case "reply": return .`reply`
+        case "backend": return .`backend`
+        case "cancelled": return .`cancelled`
+        case "deadline": return .`deadline`
+        case "defect": return .`defect`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
-        case .alternative3(let value): return value.json
-        case .alternative4(let value): return value.json
-        case .alternative5(let value): return value.json
-        case .alternative6(let value): return value.json
-        case .alternative7(let value): return value.json
-        case .alternative8(let value): return value.json
-        case .alternative9(let value): return value.json
-        case .alternative10(let value): return value.json
+        case .`usage`: return .string("usage")
+        case .`local`: return .string("local")
+        case .`noKey`: return .string("no_key")
+        case .`transport`: return .string("transport")
+        case .`status`: return .string("status")
+        case .`tooLarge`: return .string("too_large")
+        case .`reply`: return .string("reply")
+        case .`backend`: return .string("backend")
+        case .`cancelled`: return .string("cancelled")
+        case .`deadline`: return .string("deadline")
+        case .`defect`: return .string("defect")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -3638,7 +3705,23 @@ public struct OwnedStringRoot: JSONRepresentable {
         return .object(object)
     }
 }
-public typealias OwnedStringType = String
+public enum OwnedStringType: JSONRepresentable {
+    case `string`
+    case unknown(String)
+    public static func read(_ json: JSONValue) throws -> OwnedStringType {
+        let value = try String.read(json)
+        switch value {
+        case "string": return .`string`
+        default: return .unknown(value)
+        }
+    }
+    public var json: JSONValue {
+        switch self {
+        case .`string`: return .string("string")
+        case .unknown(let value): return .string(value)
+        }
+    }
+}
 public struct OwnedUsage: JSONRepresentable {
     public let extensions: [String: JSONValue]
     private var _sourceJSON: JSONValue? = nil
@@ -3661,24 +3744,29 @@ public struct OwnedUsage: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedUsagePersistence: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
-    case alternative3(String)
+public enum OwnedUsagePersistence: JSONRepresentable {
+    case `disabled`
+    case `pending`
+    case `written`
+    case `failed`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedUsagePersistence {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        if let value = try? String.read(json) { return .alternative3(value) }
-        throw JSONConversionError("Unknown OwnedUsagePersistence value")
+        let value = try String.read(json)
+        switch value {
+        case "disabled": return .`disabled`
+        case "pending": return .`pending`
+        case "written": return .`written`
+        case "failed": return .`failed`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
-        case .alternative3(let value): return value.json
+        case .`disabled`: return .string("disabled")
+        case .`pending`: return .string("pending")
+        case .`written`: return .string("written")
+        case .`failed`: return .string("failed")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -3706,8 +3794,40 @@ public indirect enum OwnedUsageOutputTokens: JSONRepresentable {
         }
     }
 }
-public typealias OwnedVerb = String
-public typealias OwnedVersion = String
+public enum OwnedVerb: JSONRepresentable {
+    case `recognize`
+    case unknown(String)
+    public static func read(_ json: JSONValue) throws -> OwnedVerb {
+        let value = try String.read(json)
+        switch value {
+        case "recognize": return .`recognize`
+        default: return .unknown(value)
+        }
+    }
+    public var json: JSONValue {
+        switch self {
+        case .`recognize`: return .string("recognize")
+        case .unknown(let value): return .string(value)
+        }
+    }
+}
+public enum OwnedVersion: JSONRepresentable {
+    case `thinkthenResult_2`
+    case unknown(String)
+    public static func read(_ json: JSONValue) throws -> OwnedVersion {
+        let value = try String.read(json)
+        switch value {
+        case "thinkthen.result/2": return .`thinkthenResult_2`
+        default: return .unknown(value)
+        }
+    }
+    public var json: JSONValue {
+        switch self {
+        case .`thinkthenResult_2`: return .string("thinkthen.result/2")
+        case .unknown(let value): return .string(value)
+        }
+    }
+}
 public typealias OwnedWordingVersion = UInt64
 public indirect enum OwnedAnnotatedField: JSONRepresentable {
     case alternative0(Bool)
@@ -3879,21 +3999,26 @@ public struct OwnedAnswerYesNo: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedAttemptOutcome: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
+public enum OwnedAttemptOutcome: JSONRepresentable {
+    case `ok`
+    case `status`
+    case `transport`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedAttemptOutcome {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        throw JSONConversionError("Unknown OwnedAttemptOutcome value")
+        let value = try String.read(json)
+        switch value {
+        case "ok": return .`ok`
+        case "status": return .`status`
+        case "transport": return .`transport`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
+        case .`ok`: return .string("ok")
+        case .`status`: return .string("status")
+        case .`transport`: return .string("transport")
+        case .unknown(let value): return .string(value)
         }
     }
 }
@@ -4076,57 +4201,67 @@ public struct OwnedFailure: JSONRepresentable {
         return .object(object)
     }
 }
-public indirect enum OwnedFailureCause: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
-    case alternative3(String)
-    case alternative4(String)
-    case alternative5(String)
+public enum OwnedFailureCause: JSONRepresentable {
+    case `missingAnswer`
+    case `wrongKind`
+    case `missingProbability`
+    case `invalidProbability`
+    case `invalidDistribution`
+    case `unexpectedProbability`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedFailureCause {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        if let value = try? String.read(json) { return .alternative3(value) }
-        if let value = try? String.read(json) { return .alternative4(value) }
-        if let value = try? String.read(json) { return .alternative5(value) }
-        throw JSONConversionError("Unknown OwnedFailureCause value")
+        let value = try String.read(json)
+        switch value {
+        case "missing_answer": return .`missingAnswer`
+        case "wrong_kind": return .`wrongKind`
+        case "missing_probability": return .`missingProbability`
+        case "invalid_probability": return .`invalidProbability`
+        case "invalid_distribution": return .`invalidDistribution`
+        case "unexpected_probability": return .`unexpectedProbability`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
-        case .alternative3(let value): return value.json
-        case .alternative4(let value): return value.json
-        case .alternative5(let value): return value.json
+        case .`missingAnswer`: return .string("missing_answer")
+        case .`wrongKind`: return .string("wrong_kind")
+        case .`missingProbability`: return .string("missing_probability")
+        case .`invalidProbability`: return .string("invalid_probability")
+        case .`invalidDistribution`: return .string("invalid_distribution")
+        case .`unexpectedProbability`: return .string("unexpected_probability")
+        case .unknown(let value): return .string(value)
         }
     }
 }
-public indirect enum OwnedFailureKind: JSONRepresentable {
-    case alternative0(String)
-    case alternative1(String)
-    case alternative2(String)
-    case alternative3(String)
-    case alternative4(String)
-    case alternative5(String)
+public enum OwnedFailureKind: JSONRepresentable {
+    case `usage`
+    case `backend`
+    case `local`
+    case `cancelled`
+    case `deadline`
+    case `defect`
+    case unknown(String)
     public static func read(_ json: JSONValue) throws -> OwnedFailureKind {
-        if let value = try? String.read(json) { return .alternative0(value) }
-        if let value = try? String.read(json) { return .alternative1(value) }
-        if let value = try? String.read(json) { return .alternative2(value) }
-        if let value = try? String.read(json) { return .alternative3(value) }
-        if let value = try? String.read(json) { return .alternative4(value) }
-        if let value = try? String.read(json) { return .alternative5(value) }
-        throw JSONConversionError("Unknown OwnedFailureKind value")
+        let value = try String.read(json)
+        switch value {
+        case "usage": return .`usage`
+        case "backend": return .`backend`
+        case "local": return .`local`
+        case "cancelled": return .`cancelled`
+        case "deadline": return .`deadline`
+        case "defect": return .`defect`
+        default: return .unknown(value)
+        }
     }
     public var json: JSONValue {
         switch self {
-        case .alternative0(let value): return value.json
-        case .alternative1(let value): return value.json
-        case .alternative2(let value): return value.json
-        case .alternative3(let value): return value.json
-        case .alternative4(let value): return value.json
-        case .alternative5(let value): return value.json
+        case .`usage`: return .string("usage")
+        case .`backend`: return .string("backend")
+        case .`local`: return .string("local")
+        case .`cancelled`: return .string("cancelled")
+        case .`deadline`: return .string("deadline")
+        case .`defect`: return .string("defect")
+        case .unknown(let value): return .string(value)
         }
     }
 }

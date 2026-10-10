@@ -66,8 +66,8 @@ public struct JSONValue: JSONRepresentable, Equatable {
                 return value.rawValue
             case .array(let values): return "[" + (try values.map(text)).joined(separator: ",") + "]"
             case .object(let values):
-                return "{" + (try values.keys.sorted().map { key in
-                    try text(.string(key)) + ":" + text(values[key]!)
+                return "{" + (try values.map { key, value in
+                    try text(.string(key)) + ":" + text(value)
                 }).joined(separator: ",") + "}"
             case .orderedObject(let values):
                 return "{" + (try values.map { try text(.string($0.key)) + ":" + text($0.value) }).joined(separator: ",") + "}"

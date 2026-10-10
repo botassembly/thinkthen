@@ -348,8 +348,6 @@ def main():
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
     if args.target == 'swift':
-        if args.bridge:
-            parser.error('Swift imports the generated C header')
         sys.path.insert(0, str(Path(__file__).parent / 'templates'))
         import swift
         schema = json.loads((ROOT / 'specification/request.schema.json').read_text()) if args.inputs else json.loads(args.schema.read_text())
@@ -359,6 +357,13 @@ def main():
         if args.inputs:
             result += 'public let ownedRequestVersion = ' + json.dumps(schema['$defs']['RequestVersion']['oneOf'][0]['const']) + '\n'
         output = ROOT / 'libraries/swift/Sources/ThinkThen' / ('InputsGenerated.swift' if args.inputs else 'ResultsGenerated.swift')
+        if args.bridge:
+            path = ROOT / 'sdlc/scripts/check-c-exports.py'
+            spec = importlib.util.spec_from_file_location('swift_abi', path)
+            abi = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(abi)
+            result = swift.bridge(abi.header_abi(ROOT / 'libraries/c/include/thinkthen.h'))
+            output = ROOT / 'libraries/swift/Sources/ThinkThen/ABIGenerated.swift'
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print('generated Swift types differ', file=sys.stderr)

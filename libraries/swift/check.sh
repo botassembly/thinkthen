@@ -38,6 +38,9 @@ fi
 mkdir -p "$here/target/native/lib" "$here/target/scratch/matrix-main" "$here/target/home" "$here/target/cache" "$here/target/logs"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
+python3 -I "$root/sdlc/generators/results/generate.py" --target swift --check
+python3 -I "$root/sdlc/generators/results/generate.py" --target swift --inputs --check
+python3 -I "$root/sdlc/generators/results/generate.py" --target swift --bridge --check
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Swift installed: C archive missing' >&2; exit 1; }
     . "$root/sdlc/scripts/scratch.sh"
@@ -63,7 +66,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     echo 'Swift installed release PASS: three literal portable sends'
     exit 0
 fi
-# SwiftPM runs no copy step for a system library, so the check copies the one C header in.
+# Package staging copies the canonical generated C header.
 mkdir -p "$here/Sources/CThinkThen/include"
 cp "$root/libraries/c/include/thinkthen.h" "$here/Sources/CThinkThen/include/thinkthen.h"
 case ${THINKTHEN_FOCUSED:-} in
@@ -76,6 +79,9 @@ native="$root/libraries/c/target/debug/libthinkthen_c.so"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native"
 cp "$native" "$here/target/native/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/native/lib/libthinkthen.so.0"
+native_triple=$(rustc -vV | sed -n 's/^host: //p')
+mkdir -p "$here/native/$native_triple/lib"
+sh "$root/libraries/c/localize.sh" "$root/libraries/c/target/debug/libthinkthen_c.a" "$here/native/$native_triple/lib/libthinkthen.a"
 export HOME="$here/target/home" XDG_CACHE_HOME="$here/target/cache" SWIFTPM_MODULECACHE_OVERRIDE="$here/target/cache/module-cache"
 export THINKTHEN_SWIFT_BUILD_DIR="$here/target/scratch/swift-build-product"
 "$swift" build --package-path "$here" --scratch-path "$THINKTHEN_SWIFT_BUILD_DIR" --jobs 2 -Xlinker -L -Xlinker "$here/target/native/lib" -Xlinker -rpath -Xlinker "$here/target/native/lib"

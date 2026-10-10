@@ -4,6 +4,38 @@ from backend import Backend
 from process_group import run
 R=pathlib.Path(__file__).resolve().parents[2]
 mode=sys.argv[1];L=pathlib.Path(sys.argv[2]);W=pathlib.Path(tempfile.mkdtemp(prefix='independent consumer '+mode+' ',dir=L))
+if mode == 'owned':
+    # A focused source consumer reuses the caller-selected matching native asset.
+    # This does not claim an installed SwiftPM binary-package check.
+    sys.path.insert(0, str(R.parents[1] / 'conformance/children'))
+    from children import child_env
+    native = pathlib.Path(sys.argv[3]).resolve()
+    (W/'home').mkdir();(W/'barrier').mkdir();(L/'modules').mkdir(exist_ok=True)
+    (W/'module.modulemap').write_text('module CThinkThen { header "' + str(R.parent/'c/include/thinkthen.h') + '" export * }\n')
+    compiler = shutil.which('swiftc')
+    assert compiler, 'Swift compiler unavailable'
+    sources = [str(R/'Sources/ThinkThen'/name) for name in ('OwnedJSON.swift','InputsGenerated.swift','ResultsGenerated.swift','ABIGenerated.swift','OwnedInputs.swift','OwnedSession.swift')]
+    env = child_env(home=W/'home', TMPDIR=str(W), LANG='C.UTF-8', LC_ALL='C.UTF-8')
+    build = run([compiler,'-swift-version','6','-warnings-as-errors','-j','2','-module-cache-path',str(L/'modules'),'-I',str(W),*sources,str(R/'Tests/fixtures/owned_consumer.swift'),'-L',str(native.parent),'-lthinkthen_c','-Xlinker','-rpath','-Xlinker','/native','-Xlinker','-rpath','-Xlinker','/swift/usr/lib/swift/linux','-o',str(W/'consumer')], timeout=180, env=env)
+    (L/'owned-build.log').write_bytes(build.stdout + build.stderr)
+    assert build.exit == 0, (build.exit, (build.stdout + build.stderr)[-3000:])
+    toolchain = str(pathlib.Path(compiler).resolve().parents[2])
+    server = Backend(W/'barrier')
+    settings = json.dumps({'base_url':f'http://127.0.0.1:{server.server_port}/generic/v1','cache':False,'max_retries':0})
+    namespace = ['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--ro-bind','/usr','/usr','--symlink','usr/bin','/bin','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind',toolchain,'/swift','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--dir','/native','--ro-bind',str(native),'/native/libthinkthen.so.0','--bind',str(W),'/work','--chdir','/work','--']
+    env = child_env(home='/work/home', PATH='/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8', LC_ALL='C.UTF-8', THINKTHEN_API_KEY='tt-canary-294')
+    try:
+        result = run(namespace + ['/work/consumer',settings,'/work/barrier'], timeout=30, env=env)
+        (L/'owned-consumer.log').write_bytes(result.stdout + result.stderr)
+        assert result.exit == 0, (result.exit, (result.stdout + result.stderr)[-3000:])
+        assert b'OWNED_SWIFT_PASS' in result.stdout, result.stdout
+        assert server.arrivals == ['hold-owned-swift','owned-swift','status-401'] and server.attempts == server.connections == 3, (server.arrivals,server.attempts,server.connections)
+        print('Swift source consumer PASS: 3 counted loopback requests, held task cancellation and cleanup before release')
+    finally:
+        (W/'barrier/release-hold-owned-swift').touch()
+        server.close()
+        shutil.rmtree(W)
+    sys.exit(0)
 install=W/'installed package with spaces';install.mkdir()
 with zipfile.ZipFile(R/'target/artifacts/thinkthen-swift-0.0.1.zip') as archive:
     for name in archive.namelist():

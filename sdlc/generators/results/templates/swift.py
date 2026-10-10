@@ -14,6 +14,13 @@ def member(key):
     return '`' + re.sub(r'_([a-z])', lambda m: m[1].upper(), key) + '`'
 
 
+def literal_member(value):
+    token = re.sub(r'[^A-Za-z0-9_]', '_', value)
+    if token[:1].isdigit():
+        token = 'value_' + token
+    return member(token)
+
+
 def render(definitions, inputs=False):
     prefix = 'Input' if inputs else 'Owned'
     nodes = dict(definitions)
@@ -60,7 +67,16 @@ def render(definitions, inputs=False):
         key = sorted(nodes.keys() - pending)[0]
         pending.add(key)
         source, cls = nodes[key], named(key)
-        if 'properties' in source:
+        literals = source.get('enum', []) or [alt.get('const') for alt in source.get('oneOf', source.get('anyOf', []))]
+        if literals and all(isinstance(value, str) for value in literals):
+            lines += [f'public enum {cls}: JSONRepresentable {{']
+            lines += [f'    case {literal_member(value)}' for value in literals]
+            lines += ['    case unknown(String)', f'    public static func read(_ json: JSONValue) throws -> {cls} {{', '        let value = try String.read(json)', '        switch value {']
+            lines += [f'        case {json.dumps(value)}: return .{literal_member(value)}' for value in literals]
+            lines += ['        default: return .unknown(value)', '        }', '    }', '    public var json: JSONValue {', '        switch self {']
+            lines += [f'        case .{literal_member(value)}: return .string({json.dumps(value)})' for value in literals]
+            lines += ['        case .unknown(let value): return .string(value)', '        }', '    }', '}']
+        elif 'properties' in source:
             fields = source['properties']
             required = set(source.get('required', []))
             lines += [f'public struct {cls}: JSONRepresentable {{', '    public let extensions: [String: JSONValue]', '    private var _sourceJSON: JSONValue? = nil']
@@ -105,4 +121,14 @@ def render(definitions, inputs=False):
             lines += ['        }', '    }', '}']
         else:
             lines += [f'public typealias {cls} = {typ(source, key + "_Value")}']
+    return '\n'.join(lines) + '\n'
+
+
+def bridge(abi):
+    lines = ['// Generated from the compiler-derived C header. Do not edit.']
+    for cls, prefix, suffix in [('QuestionGrammar', 'THINKTHEN_LOAD_', '_V1'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1')]:
+        lines += [f'public enum {cls}: UInt32, Sendable {{']
+        lines += ['    case ' + literal_member(key.removeprefix(prefix).removesuffix(suffix).lower()) + ' = ' + str(value)
+                  for key, value in abi['constants'].items() if key.startswith(prefix) and key.endswith(suffix)]
+        lines += ['}']
     return '\n'.join(lines) + '\n'
