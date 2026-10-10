@@ -448,7 +448,7 @@ def windows_release_rules(name, jobs):
         if kind == "build":
             for command in ("cargo clippy --locked --offline --workspace --all-targets -- -D warnings",
                             "cargo test --locked --offline --no-fail-fast --workspace --all-targets",
-                            'sdlc/scripts/release-pack "$TARGET" release-files command c python first-run',
+                            'sdlc/scripts/release-pack "$TARGET" release-files command c python typescript first-run',
                             "release-windows-command.py platform release-files"):
                 if command not in text:
                     out.append(f"{name}: build must check and pack the Windows command: {command}")

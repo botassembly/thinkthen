@@ -371,6 +371,12 @@ def main():
     case("wrong inner package member", lambda base, source: mutate_outer(
         base, "csharp", lambda files: files.__setitem__(
             f"Botassembly.ThinkThen.{VERSION}.nupkg", extra_nupkg(files))))
+    inner_rejection("missing NuGet native asset", "nupkg",
+                    lambda data: changed_zip(data, remove="runtimes/linux-x64/native/libthinkthen.so"),
+                    "nupkg inventory differs")
+    inner_rejection("missing JVM native resource", "natives-linux-x64",
+                    lambda data: changed_zip(data, remove=f"META-INF/thinkthen/native/{TARGET}/libthinkthen.so"),
+                    "JVM native asset differs from captured C")
     for required in ("_rels/.rels", "[Content_Types].xml"):
         inner_rejection(f"missing required {required}", "nupkg",
                         lambda data, required=required: changed_zip(data, remove=required),
