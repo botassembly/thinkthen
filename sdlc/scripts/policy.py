@@ -77,6 +77,8 @@ BINDING_SOURCE_EXTENSIONS = {
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 GENERATED_BINDING_SOURCES = {
+    "libraries/ruby/src/ffi/results_generated.rs",
+    "libraries/ruby/lib/thinkthen/results_generated.rb",
     "libraries/jvm/session/thinkthen/Results.java",
     "libraries/jvm/session/thinkthen/RequestVersion.java",
     "libraries/python/src/results_generated.rs",

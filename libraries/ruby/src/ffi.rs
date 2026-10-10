@@ -27,10 +27,13 @@ use crate::call::Ask;
 
 mod complete;
 mod engine;
+mod native_result;
 mod plan;
 mod question_file;
 mod register;
+mod request;
 mod result;
+mod results_generated;
 use crate::{Controls, Crossing, Fault, Handoff, Settings, Taken, class_name, guarded, start};
 use engine::new_engine;
 use result::{

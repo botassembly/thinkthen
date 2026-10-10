@@ -109,3 +109,22 @@ their behavior.
 Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.
 
 Rank set results retain ordered `members`, each with its saved `name` and typed `RankMemberResult`. The child carries its own positive member position, answer ID, authored question, probability, source and metadata; the parent carries the final turns position and winner. Usage dimensions remain independently optional. Parent and member usage overlap; use the final call facts for invocation totals. Ordinary ranks retain absent members.
+
+## Owned typed calls in development
+
+`ThinkThen::Client` provides the ten named calls through the canonical Rust session. This family is additive while `ThinkThen::Engine` retains compatibility. The remaining installed migration parity must pass before compatibility names and readers retire.
+
+```ruby
+ThinkThen::Client.open(cache: false) do |client|
+  result = client.decide("Does the writer ask for a refund?", "Please refund this order.")
+  puts result.value
+  puts result.facts.requests_sent
+  puts result.results.first.answer_id
+end
+```
+
+Replace `ThinkThen::Engine.new(...).decide(...)` with `ThinkThen::Client.open(...) { |client| client.decide(...) }`. Pass an authored Ruby hash for questions with options, labels, levels or named annotation members. Strings supply literal wording. Inputs accept ordinary strings, JSON values, arrays and enumerables. `Client.files(paths, unit: "line")` delegates file reading and physical locations to Rust. `Client.item(value, context: ...)` supplies per-record values without host validation.
+
+Results expose `.results`, `.terminal`, `.facts` and `.value`. Rows, facts and their structured children retain their native data independently of the client. Generated accessors read typed fields; `.key?("field")` distinguishes an absent field from a present `nil`, and `.to_h` retains unknown fields. Ruby treats every object as true: use `.value` when branching on a decision. A false decision remains `false`, an unresolved decision remains `nil`, and a failed call raises its typed exception. Rank returns typed rows so original inputs and their positions remain available; filter returns selected inputs.
+
+Calls poll Rust without blocking Ruby scheduling and yield through `sleep`, which Ruby's fiber scheduler can handle. Other threads continue during a held provider call. `cancel:` takes a `ThinkThen::Cancel`. Interrupts, cancellation and block cleanup drop the session without waiting for sent provider requests. A final native failure retains typed `.complete`, `.results`, `.terminal` and available `.facts`; a prompt cancellation has no invented final facts. `Client#start` also accepts a block for operation cleanup. `Client#close` closes every outstanding operation even if one input producer fails during cleanup.

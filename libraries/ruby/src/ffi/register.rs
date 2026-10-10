@@ -34,5 +34,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     native.define_module_function("set_json", function!(set_json, 1))?;
     native.define_module_function("set_file", function!(set_file, 1))?;
     complete::register(ruby, native, engine)?;
+    super::native_result::register(ruby, native)?;
+    super::request::register(ruby, native, engine)?;
     Ok(())
 }
