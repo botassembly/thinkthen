@@ -3,7 +3,7 @@
 //! Builders project nullable rows from native Request results or pull batches.
 
 use crate::public::{
-    Annotated, Answer, Batch, CompleteAnnotated, Error, ErrorKind, Facts, Judgment, QuestionKind,
+    Annotated, Answer, CompleteAnnotated, Error, ErrorKind, Judgment, QuestionKind,
 };
 use polars::prelude::{
     BooleanChunked, BooleanChunkedBuilder, ChunkedBuilder, DataType, Float64Type, IntoSeries,
@@ -24,37 +24,6 @@ pub(crate) fn text(column: &Series) -> Result<&StringChunked, Error> {
         return Err(refused());
     }
     column.str().map_err(|_| refused())
-}
-
-/// Pull one call's rows in input order and hand each to `push` as it
-/// arrives. A null cell gets `None` without a question. The call's first
-/// failed row ends it with the engine's error.
-pub(crate) fn streamed<T>(
-    mut batch: Batch<'_, T>,
-    cells: &StringChunked,
-    mut push: impl FnMut(Option<T>) -> Result<(), Error>,
-) -> Result<Facts, Error> {
-    for cell in cells.iter() {
-        let row = match cell {
-            None => None,
-            Some(_) => Some(
-                batch
-                    .next()
-                    .ok_or_else(|| Error::defect("a frame answer lost a non-null input row"))??,
-            ),
-        };
-        push(row)?;
-    }
-    if let Some(extra) = batch.next() {
-        extra?;
-        return Err(Error::defect(
-            "a frame call answered more rows than it read",
-        ));
-    }
-    batch
-        .facts()
-        .cloned()
-        .ok_or_else(|| Error::defect("a completed Polars call has no final facts"))
 }
 
 /// The lowercase word for a question kind.

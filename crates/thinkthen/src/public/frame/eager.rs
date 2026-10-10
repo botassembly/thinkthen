@@ -1,5 +1,5 @@
 //! Eager Series and frame calls through the shared native engine.
-use super::column::{Answers, Failures, annotated, decided, kind_word, streamed, text};
+use super::column::{Answers, Failures, annotated, decided, kind_word, text};
 use super::{PolarsCallOptions, PolarsEngine, PolarsExprOptions, complete, inputs, lazy, request};
 use crate::public::{
     Annotated, Call, CallOptions, DecisionQuestion, Details, Edge, Engine, Error, Judgment,
@@ -132,28 +132,50 @@ impl PolarsEngine for Engine {
         let mut probability =
             PrimitiveChunkedBuilder::<Float64Type>::new("probability".into(), rows);
         let mut values = Answers::new("value", kind, rows)?;
-        let batch = self.details_many_with(question, cells.iter().flatten(), options);
-        let facts = streamed(batch, cells, |row| {
-            let Some(row) = row else {
-                probability.append_null();
-                return values.push(None);
+        let named = match kind {
+            QuestionKind::Decide => RequestCall::Decide,
+            QuestionKind::Choose => RequestCall::Choose,
+            _ => return Err(Error::defect("a probability column lost its question kind")),
+        };
+        request::execute(self, question, texts, named, options)?.try_map(|value| {
+            let mut push = |value: Option<Judgment>, probabilities: Option<Probabilities>| {
+                probability.append_option(
+                    value
+                        .as_ref()
+                        .zip(probabilities.as_ref())
+                        .map(|(value, probabilities)| probability_of(value, probabilities))
+                        .transpose()?
+                        .flatten(),
+                );
+                values.push_judgment(value)
             };
-            probability.append_option(selected_probability(row.value())?);
-            let value = match row.value().value() {
-                Judgment::Decision(answer) => Annotated::Decision(*answer),
-                Judgment::Choice(label) => Annotated::Choice(label.clone()),
-                _ => return Err(Error::defect("a probability detail held another value")),
-            };
-            values.push(Some(&value))
-        })?;
-        let columns = vec![
-            values.finish().into(),
-            probability.finish().into_series().into(),
-        ];
-        Call::new(columns, facts).try_map(|columns| {
-            DataFrame::new(rows, columns).map_err(|error| {
-                Error::defect(&format!("the probability frame was refused: {error}"))
-            })
+            match value {
+                RequestValue::Decisions(records) => request::project(texts, &records, |row| {
+                    push(
+                        row.map(|row| Judgment::Decision(row.value())),
+                        row.map(|row| row.probabilities()),
+                    )
+                })?,
+                RequestValue::Choices(records) => request::project(texts, &records, |row| {
+                    push(
+                        row.map(|row| Judgment::Choice(row.value().map(str::to_owned))),
+                        row.map(|row| row.probabilities()),
+                    )
+                })?,
+                _ => {
+                    return Err(Error::defect(
+                        "a probability column received another result kind",
+                    ));
+                }
+            }
+            DataFrame::new(
+                rows,
+                vec![
+                    values.finish().into(),
+                    probability.finish().into_series().into(),
+                ],
+            )
+            .map_err(|error| Error::defect(&format!("the probability frame was refused: {error}")))
         })
     }
 
@@ -319,7 +341,11 @@ impl PolarsEngine for Engine {
 }
 
 pub(super) fn selected_probability(details: &Details) -> Result<Option<f64>, Error> {
-    match (details.value(), details.probabilities()) {
+    probability_of(details.value(), details.probabilities())
+}
+
+fn probability_of(value: &Judgment, probabilities: &Probabilities) -> Result<Option<f64>, Error> {
+    match (value, probabilities) {
         (Judgment::Decision(_), Probabilities::YesNo { yes }) => Ok(Some(*yes)),
         (Judgment::Choice(Some(selected)), Probabilities::Named(options)) => options
             .iter()
