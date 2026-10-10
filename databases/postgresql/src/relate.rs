@@ -168,7 +168,7 @@ fn relate(query: &str, ask: impl FnOnce(bool) -> Result<Relate, Error>) -> Edges
 }
 
 crate::descriptions::describe! {
-"Run the supplied SQL query through SPI and relate its id/name[/kind] rows using inline relation rules. Return relation, both retained ids, probability and direction. NULL query is invalid; NULL rules raises Usage. Reads no evidence file; failures raise SQL errors.";
+["Run the supplied SQL query through SPI and relate its id/name[/kind] rows using inline relation rules. Return relation, both retained ids, probability and direction. ", crate::descriptions::REQUIRED_TABLE, "Reads no evidence file; failures raise SQL errors."].concat();
 [parallel_restricted];
 /// Inline rules, as the command's `--relation` spells them.
 #[allow(
@@ -189,20 +189,23 @@ fn thinkthen_relate(
     ),
 > {
     call::guarded(|| {
+        let (Some(query), Some(rules)) = (query, rules) else {
+            return TableIterator::new(Vec::new());
+        };
         let rules: Vec<String> = rules
             .iter()
-            .flat_map(|held| held.iter().flatten().map(str::to_owned))
+            .flatten().map(str::to_owned)
             .collect();
         if rules.is_empty() {
             call::raise(call::usage("relate needs at least one relation rule"));
         }
-        relate(query.unwrap_or_default(), |kinds| inline(&rules, kinds))
+        relate(query, |kinds| inline(&rules, kinds))
     })
 }
 }
 
 crate::descriptions::describe! {
-"Run the supplied SQL query through SPI and relate its id/name[/kind] rows using authored JSON rules or a privileged/confined @file. Return relation, both retained ids, probability and direction. NULL rules raises Usage; NULL query is invalid. Failures raise SQL errors. Evidence files must be read by the client.";
+["Run the supplied SQL query through SPI and relate its id/name[/kind] rows using authored JSON rules or a privileged/confined @file. Return relation, both retained ids, probability and direction. ", crate::descriptions::REQUIRED_TABLE, "Failures raise SQL errors. Evidence files must be read by the client."].concat();
 [name = "thinkthen_relate", parallel_restricted];
 /// A version-one relate file, as `'@file.json'` or JSON text.
 #[allow(
@@ -223,10 +226,13 @@ fn thinkthen_relate_file(
     ),
 > {
     call::guarded(|| {
-        let ask = crate::given(rules, "relate file")
+        let (Some(query), Some(rules)) = (query, rules) else {
+            return TableIterator::new(Vec::new());
+        };
+        let ask = crate::given(Some(rules), "relate file")
             .parse(Relate::from_json)
             .or_raise();
-        relate(query.unwrap_or_default(), |_| Ok(ask))
+        relate(query, |_| Ok(ask))
     })
 }
 }

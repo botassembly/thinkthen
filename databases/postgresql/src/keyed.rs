@@ -15,9 +15,12 @@ fn answered(
     input: Option<JsonB>,
     settings: Option<RawJson>,
 ) -> Vec<(String, Details)> {
+    let (Some(question), Some(input)) = (question, input) else {
+        return Vec::new();
+    };
     let (settings, call) = forms::controls(settings.as_ref(), Named::default());
-    let question = forms::question(question, None, verb, &settings);
-    let records = forms::keyed(input);
+    let question = forms::question(Some(question), None, verb, &settings);
+    let records = forms::keyed(Some(input));
     call.within(records.len());
     let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
     let answers = call::run(call, move |engine, options| {
@@ -45,7 +48,7 @@ fn probability(detail: &Details) -> Option<f64> {
 }
 
 crate::descriptions::describe! {
-["Judge keyed jsonb text records and return original keys with decisions and yes probabilities. ", crate::descriptions::KEYED_TEXT].concat();
+["Judge keyed jsonb text records and return original keys with decisions and yes probabilities. ", &crate::descriptions::keyed_text()].concat();
 [name = "thinkthen_decide_many", parallel_restricted];
 fn decide_many(
     question: Option<&str>,
@@ -79,7 +82,7 @@ fn decide_many(
 }
 
 crate::descriptions::describe! {
-["Judge keyed jsonb text records and return original keys with choices and selected probabilities. ", crate::descriptions::KEYED_TEXT].concat();
+["Judge keyed jsonb text records and return original keys with choices and selected probabilities. ", &crate::descriptions::keyed_text()].concat();
 [name = "thinkthen_choose_many", parallel_restricted];
 #[allow(
     clippy::type_complexity,
@@ -114,7 +117,7 @@ fn choose_many(
 }
 
 crate::descriptions::describe! {
-["Judge keyed jsonb text records and return original keys with numeric scores. ", crate::descriptions::KEYED_TEXT].concat();
+["Judge keyed jsonb text records and return original keys with numeric scores. ", &crate::descriptions::keyed_text()].concat();
 [name = "thinkthen_score_many", parallel_restricted];
 fn score_many(
     question: Option<&str>,
@@ -138,7 +141,7 @@ fn score_many(
 }
 
 crate::descriptions::describe! {
-["Judge keyed jsonb text records and return original keys with matching label arrays. ", crate::descriptions::KEYED_TEXT].concat();
+["Judge keyed jsonb text records and return original keys with matching label arrays. ", &crate::descriptions::keyed_text()].concat();
 [name = "thinkthen_tag_many", parallel_restricted];
 fn tag_many(
     question: Option<&str>,
@@ -162,7 +165,7 @@ fn tag_many(
 }
 
 crate::descriptions::describe! {
-"Rank keyed jsonb text records by probability of yes; return key, gap-free rank and probability. Input ties use bytewise key order. Question is literal text. NULL question raises Usage; NULL input gives no rows after controls and question validation; NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client.";
+["Rank keyed jsonb text records by probability of yes; return key, gap-free rank and probability. Input ties use bytewise key order. Question is literal text. ", crate::descriptions::REQUIRED_TABLE, "NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client."].concat();
 [name = "thinkthen_rank", parallel_restricted];
 /// Order keyed records by the probability of yes, best first. The question is
 /// literal text and takes only `model` among question fields. Ties come back
@@ -181,20 +184,20 @@ fn rank(
     ),
 > {
     call::guarded(|| {
+        let (Some(question), Some(input)) = (question, input) else {
+            return TableIterator::new(Vec::new());
+        };
         let (settings, call) = forms::controls(settings.as_ref(), Named::default());
         settings
             .check(For::Rank)
             .map_err(|error| call::usage(error.to_string()))
             .or_raise();
-        let text = question
-            .ok_or_else(|| call::usage("the question is empty"))
-            .or_raise();
-        let asked = Question::rank(text).or_raise();
+        let asked = Question::rank(question).or_raise();
         let asked = match settings.model() {
             Some(model) => asked.with_model(model).or_raise(),
             None => asked,
         };
-        let records = forms::keyed(input);
+        let records = forms::keyed(Some(input));
         if records.is_empty() {
             return TableIterator::new(Vec::new());
         }
@@ -237,7 +240,7 @@ fn rank(
 }
 
 crate::descriptions::describe! {
-"Estimate native batching for keyed jsonb text records and return a jsonb plan without sending. NULL question returns NULL; NULL input plans zero records; NULL settings uses defaults. Questions may use privileged/confined @files. Failures raise SQL errors; evidence files must be read by the client.";
+["Estimate native batching for keyed jsonb text records and return a jsonb plan without sending. ", crate::descriptions::REQUIRED_SCALAR, "NULL settings uses defaults. Questions may use privileged/confined @files. Failures raise SQL errors; evidence files must be read by the client."].concat();
 [name = "thinkthen_plan", parallel_restricted];
 fn plan(
     question: Option<&str>,
@@ -245,11 +248,11 @@ fn plan(
     settings: default!(Option<RawJson>, "NULL"),
 ) -> Option<JsonB> {
     call::guarded(|| {
-        let question = question?;
+        let (question, input) = (question?, input?);
         let (settings, call) = forms::controls(settings.as_ref(), Named::default());
         let verb = forms::plan_verb(question, &settings);
         let question = forms::question(Some(question), None, verb, &settings);
-        let records: Vec<_> = forms::keyed(input)
+        let records: Vec<_> = forms::keyed(Some(input))
             .into_iter()
             .map(|(_, value)| value)
             .collect();

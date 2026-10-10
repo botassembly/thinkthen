@@ -73,7 +73,7 @@ fn jsonb(text: &str) -> JsonB {
 }
 
 crate::descriptions::describe! {
-"Apply an authored question set to one text input and return annotations as jsonb. NULL input returns NULL after controls and set validation; NULL set raises Usage; NULL settings uses defaults. Questions may use privileged/confined @files; evidence files must be read by the client. Failures raise SQL errors.";
+["Apply an authored question set to one text input and return annotations as jsonb. ", crate::descriptions::REQUIRED_SCALAR, "NULL settings uses defaults. Questions may use privileged/confined @files; evidence files must be read by the client. Failures raise SQL errors."].concat();
 [parallel_restricted];
 fn thinkthen_annotate(
     set: Option<&str>,
@@ -81,11 +81,12 @@ fn thinkthen_annotate(
     settings: default!(Option<ffi::RawJson>, "NULL"),
 ) -> Option<JsonB> {
     call::guarded(|| {
+        let (set, input) = (set?, input?);
         let call = forms::aggregate_controls(settings.as_ref());
-        let set = given(set, "question set")
+        let set = given(Some(set), "question set")
             .parse(thinkthen::QuestionSet::from_json)
             .or_raise();
-        let input = input?.to_owned();
+        let input = input.to_owned();
         let value = call::run(call, move |engine, options| {
             let result = request::run(
                 engine,
@@ -197,7 +198,7 @@ fn names(body: Option<&str>, ask: Recognize) -> Names {
 }
 
 crate::descriptions::describe! {
-"Recognize names of the supplied kinds in text; return text, character offsets, kind and strength as rows. NULL body gives no rows after kind validation. Failures raise SQL errors.";
+["Recognize names of the supplied kinds in text; return text, character offsets, kind and strength as rows. ", crate::descriptions::REQUIRED_TABLE, "Failures raise SQL errors."].concat();
 [parallel_restricted];
 /// Every name of the given kinds in the text, as rows.
 #[allow(
@@ -219,19 +220,22 @@ fn thinkthen_recognize(
     ),
 > {
     call::guarded(|| {
+        let (Some(body), Some(kinds)) = (body, kinds) else {
+            return TableIterator::new(Vec::new());
+        };
         let mut ask = Recognize::builder();
-        for kind in kinds.iter().flat_map(|held| held.iter().flatten()) {
+        for kind in kinds.iter().flatten() {
             ask = thinkthen::Kind::new(kind, None)
                 .and_then(|kind| ask.kind(kind))
                 .or_raise();
         }
-        TableIterator::new(names(body, ask.build().or_raise()))
+        TableIterator::new(names(Some(body), ask.build().or_raise()))
     })
 }
 }
 
 crate::descriptions::describe! {
-"Recognize names using an authored JSON spec or privileged/confined @file; return names, character offsets, kinds and strengths. NULL body gives no rows after spec validation. Failures raise SQL errors.";
+["Recognize names using an authored JSON spec or privileged/confined @file; return names, character offsets, kinds and strengths. ", crate::descriptions::REQUIRED_TABLE, "Failures raise SQL errors."].concat();
 [name = "thinkthen_recognize", parallel_restricted];
 /// Every name a version-one recognize spec asks for, as rows.
 #[allow(
@@ -253,16 +257,19 @@ fn thinkthen_recognize_spec(
     ),
 > {
     call::guarded(|| {
-        let ask = given(spec, "recognize spec")
+        let (Some(body), Some(spec)) = (body, spec) else {
+            return TableIterator::new(Vec::new());
+        };
+        let ask = given(Some(spec), "recognize spec")
             .parse(Recognize::from_json)
             .or_raise();
-        TableIterator::new(names(body, ask))
+        TableIterator::new(names(Some(body), ask))
     })
 }
 }
 
 crate::descriptions::describe! {
-"Return relations between names recognized in text using an authored JSON spec or privileged/confined @file. NULL body gives no rows after spec validation. Failures raise SQL errors.";
+["Return relations between names recognized in text using an authored JSON spec or privileged/confined @file. ", crate::descriptions::REQUIRED_TABLE, "Failures raise SQL errors."].concat();
 [parallel_restricted];
 /// The spec's relations over one text, as rows.
 #[allow(
@@ -285,10 +292,13 @@ fn thinkthen_relations(
     ),
 > {
     call::guarded(|| {
-        let ask = given(spec, "recognize spec")
+        let (Some(body), Some(spec)) = (body, spec) else {
+            return TableIterator::new(Vec::new());
+        };
+        let ask = given(Some(spec), "recognize spec")
             .parse(Recognize::from_json)
             .or_raise();
-        let Some(found) = recognized(body, ask) else {
+        let Some(found) = recognized(Some(body), ask) else {
             return TableIterator::new(Vec::new());
         };
         let rows: Vec<_> = found

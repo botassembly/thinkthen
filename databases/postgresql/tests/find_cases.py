@@ -115,6 +115,43 @@ def invalid(socket):
         raise AssertionError(f"spent request total: {error}")
 
 
+def required_null(socket):
+    """Required NULL wins over malformed partners, settings and unread files."""
+    bad = "'{\"threshold\":\"bad\"}'::json"
+    unread = quoted('@' + str(pathlib.Path(os.environ['SCRATCH']) / 'unread-null-question.json'))
+    scalars = []
+    for name in ('decide', 'choose', 'score', 'tag', 'details', 'try_details'):
+        members = ',NULL::text[]' if name in ('choose', 'score', 'tag') else ''
+        for question, evidence in [('NULL', "'bad'"), (unread, 'NULL')]:
+            scalars.append(f"thinkthen_{name}({question},{evidence}{members},{bad})")
+    for name in ('annotate', 'plan'):
+        kind = '::jsonb' if name == 'plan' else ''
+        for question, evidence in [('NULL', "'4'" + kind), (unread, 'NULL' + kind)]:
+            scalars.append(f"thinkthen_{name}({question},{evidence},{bad})")
+    tables = []
+    for name in ('decide_many', 'choose_many', 'score_many', 'tag_many', 'rank', 'rank_set'):
+        for question, evidence in [('NULL', "'4'::jsonb"), (unread, 'NULL::jsonb')]:
+            tables.append(f"thinkthen_{name}({question},{evidence},{bad})")
+    tables += ["thinkthen_recognize(NULL,ARRAY[' '])", "thinkthen_recognize('bad',NULL::text[])",
+               "thinkthen_recognize(NULL,'bad'::text)", f"thinkthen_recognize(NULL,{unread})",
+               "thinkthen_recognize('bad',NULL::text)", f"thinkthen_relations(NULL,{unread})",
+               "thinkthen_relations('bad',NULL)", "thinkthen_relate(NULL,ARRAY['bad='])",
+               "thinkthen_relate('bad SQL',NULL::text[])", f"thinkthen_relate(NULL,{unread})",
+               "thinkthen_relate('bad SQL',NULL::text)"]
+    statements = [f'SELECT {call} IS NULL' for call in scalars]
+    statements += [f'SELECT count(*)=0 FROM {call}' for call in tables]
+    out, error = sql(socket, "SELECT requests_sent FROM thinkthen_usage()", *statements,
+                     "SELECT requests_sent FROM thinkthen_usage()")
+    assert not error and out.splitlines() == ['0', *(['t'] * len(statements)), '0'], (out, error)
+    for call in ["thinkthen_decide(' ', 'bad')", "thinkthen_plan('bad','4'::jsonb)",
+                 "thinkthen_rank(' ','{}'::jsonb)"]:
+        _, error = sql(socket, 'SELECT * FROM ' + call)
+        assert 'ERROR:  22023: thinkthen usage:' in error, (call, error)
+    _, error = sql(socket, "SELECT * FROM thinkthen_relate('bad SQL',ARRAY['rule'])")
+    assert 'ERROR:  42601:' in error, error
+    print('postgresql: required NULL skips partners and sends; non-NULL errors remain')
+
+
 if __name__ == "__main__":
     command, *args = sys.argv[1:]
-    {"proxy": proxy, "verify": verify, "invalid": invalid}[command](*args)
+    {"proxy": proxy, "verify": verify, "invalid": invalid, "required-null": required_null}[command](*args)

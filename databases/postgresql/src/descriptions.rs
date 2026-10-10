@@ -3,9 +3,18 @@
 use pgrx::pgrx_sql_entity_graph::{PgrxSql, SqlGraphEntity, ToSql};
 
 pub(crate) const COMPLETE_TEXT: &str = "on explicit native input records encoded as text JSON and return the complete result/2 envelope as PostgreSQL json, including final facts and started failures. NULL question or inputs returns NULL before inspecting partners; NULL settings uses defaults. Questions support native catalog references and privileged/confined @files. Evidence and image files must be read by the client. Admission and backend failures return error envelopes.";
-pub(crate) const SCALAR_TEXT: &str = "Judge text with a literal/JSON question or privileged/confined @file. NULL input returns NULL before checking partners; NULL question raises Usage when input is present; NULL optional settings uses defaults. Evidence files must be read by the client. Failures raise SQL errors.";
+pub(crate) const REQUIRED_SCALAR: &str =
+    "A required NULL operand returns NULL before inspecting partners, reading files or sending. ";
+pub(crate) const REQUIRED_TABLE: &str =
+    "A required NULL operand gives no rows before inspecting partners, reading files or sending. ";
+
+pub(crate) fn scalar_text() -> String {
+    ["Judge text with a literal/JSON question or privileged/confined @file. ", REQUIRED_SCALAR, "NULL optional settings uses defaults. Evidence files must be read by the client. Failures raise SQL errors."].concat()
+}
 pub(crate) const SCALAR_IMAGES: &str = "NULL question or collection returns NULL before inspecting partners; NULL text is absent and NULL settings uses defaults. Invalid collections and backend failures raise SQL errors. Questions may use privileged/confined @files; image files must be read by the client.";
-pub(crate) const KEYED_TEXT: &str = "NULL question raises Usage; NULL input gives no rows after controls and question validation; NULL settings uses defaults. Questions may use privileged/confined @files. Evidence files must be read by the client; failures raise SQL errors.";
+pub(crate) fn keyed_text() -> String {
+    [REQUIRED_TABLE, "NULL settings uses defaults. Questions may use privileged/confined @files. Evidence files must be read by the client; failures raise SQL errors."].concat()
+}
 
 pub(crate) type SqlResult = Result<String, Box<dyn std::error::Error + Send + Sync>>;
 

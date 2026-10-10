@@ -57,8 +57,7 @@ def invalid(socket):
            SET.replace('"second"','"first"'), SET.replace('"version":1','"version":1,"threshold":0.5')]
     statements = [ranked(spec) for spec in bad] + [ranked(settings=setting) for setting in
         ['{"model":"private-model"}', '{"true":"secret"}', '{"threshold":0.5}']]
-    statements += [ranked(records='{"a":"a","bad":" "}'), ranked(records='{"a":4}'),
-                   "SELECT * FROM thinkthen_rank_set(NULL,'{}'::jsonb)"]
+    statements += [ranked(records='{"a":"a","bad":" "}'), ranked(records='{"a":4}')]
     for statement in statements:
         out, error = sql(socket, statement)
         assert '22023' in error and 'thinkthen usage:' in error and not out, (out,error)
