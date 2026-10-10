@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 903b2bf75606086470b2f87ba900564e4d0bfb03, accept
+
 ## Outcome
 
 Binding checks compare the declarations a caller actually uses with the canonical C header. Frozen compatibility declarations retain their checks, and generated native session declarations receive the matching checks. Adding native carriers does not make an unchanged compatibility declaration appear to promise the whole expanded header.
