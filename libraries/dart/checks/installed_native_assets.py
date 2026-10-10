@@ -18,9 +18,9 @@ from children import child_env
 from native_assets import configure, package_members
 
 
-def run(command, cwd, env, expected=None):
+def run(command, cwd, env, expected=None, timeout=180):
     result = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, timeout=180)
+                            stderr=subprocess.STDOUT, timeout=timeout)
     if expected:
         assert result.returncode != 0 and expected in result.stdout, result.stdout
     else:
@@ -37,6 +37,7 @@ def main():
                     CI='true')
     packages = scratch / 'packages'
     packages.mkdir()
+    full = os.environ.get('THINKTHEN_TEST_PROFILE') == 'full'
     supplied = os.environ.get('THINKTHEN_ARTIFACT')
     archives = []
     if supplied:
@@ -154,6 +155,13 @@ def main():
             thread.join()
             server.server_close()
         definition.write_text(json.dumps({**manifest, 'assets': {'linux_x64': {**asset, 'url': None}}}))
+    if full:
+        run([str(dart), 'build', 'cli', '-t', 'bin/parity_consumer.dart', '-o', str(scratch / 'parity-build')], consumer, env)
+        parity_env = dict(env, THINKTHEN_PARITY_PACKAGE=str(packages / 'dart'),
+            THINKTHEN_DART_CONSUMER=str(consumer),
+            THINKTHEN_DART_BINARY=str(scratch / 'parity-build/bundle/bin/parity_consumer'),
+            THINKTHEN_COMPLETE_LIBRARY=str(native), TT_DART=str(dart), TT_FLUTTER=str(flutter))
+        run([sys.executable, str(ROOT / 'libraries/php/fixtures/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
     # Run the compiled bundle after the source packages and build cache move away.
     packages.rename(scratch / 'packages-held')
     consumer.rename(scratch / 'consumer-held')
@@ -175,8 +183,19 @@ def main():
     source = source.replace('Future<void> main(List<String> args) async {', 'Future<void> exercise([List<String> args = const []]) async {')
     source += '\nFuture<void> main() async {\n  try { await exercise(); await exercise(["stream-regressions"]); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
     (app / 'lib/main.dart').write_text(source)
+    if full:
+        (app / 'test').mkdir()
+        shutil.copyfile(ROOT / 'libraries/dart/checks/session_consumer/parity_test.dart', app / 'test/parity_test.dart')
+        parity_source = (consumer / 'bin/parity_consumer.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart')
+        (app / 'lib/parity_consumer.dart').write_text(parity_source)
     (app / 'pubspec.yaml').write_text("name: thinkthen_flutter_example\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  flutter:\n    sdk: flutter\n  thinkthen_flutter:\n    path: ../packages/flutter\ndependency_overrides:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
+    if full:
+        with (app / 'pubspec.yaml').open('a') as output:
+            output.write('dev_dependencies:\n  flutter_test:\n    sdk: flutter\n')
     run([str(flutter), 'pub', 'get', '--offline'], app, env)
+    if full:
+        parity_env.update(THINKTHEN_FLUTTER_CONSUMER=str(app))
+        run([sys.executable, str(ROOT / 'libraries/php/fixtures/complete_parity.py'), 'flutter'], scratch, parity_env, timeout=None)
     run([str(flutter), 'build', 'linux', '--release', '--no-pub'], app, env)
     bundle = app / 'build/linux/x64/release/bundle'
     assert list((bundle / 'lib').glob('*thinkthen*')), 'FLUTTER_BUNDLED_NATIVE_ASSET'

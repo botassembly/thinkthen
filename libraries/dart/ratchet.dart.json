@@ -3,9 +3,9 @@
     "lib",
     "flutter/lib",
     "flutter/example/lib",
-    "checks/session_consumer/bin",
+    "checks/session_consumer",
     "hook"
   ],
   "extension": ".dart",
-  "max": 5994
+  "max": 6195
 }
