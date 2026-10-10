@@ -95,7 +95,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:
             elif verb=='annotate':actual=[row['value'] for row in rows]
             elif verb=='filter':actual=[row['input'] for row in rows if row['value'] is True]
             elif verb=='rank':actual=[{'index':r['index'],'record':r['input'],'probability':r['answer']['probability']} for r in aggregates[-1]]
-            elif verb=='recognize':actual=aggregates[-1][0]['value']
+            elif verb=='recognize':actual=next(row['value'] for chunk in aggregates for row in chunk if row['index']==0)
             elif verb=='relate':actual={'edges':aggregates[-1]['value']}
             else:
                 found=aggregates[-1]
