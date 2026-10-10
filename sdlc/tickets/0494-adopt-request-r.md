@@ -42,3 +42,7 @@ An R caller installs the package, calls the ten functions by name with ordinary 
 ```text
 fn Engine::request_session_with_surface(&self, Request, Surface) -> Result<RequestSession, Error>
 ```
+
+## Progress
+
+- 2026-10-10 landed 7ae1f61d4; next: Typed native R feeds and installed JSONL framing are landed, including once-only cleanup. Finish remaining installed consumer adoption and compatibility retirement after authorized parity; feed completion receipts explicitly refuse.
