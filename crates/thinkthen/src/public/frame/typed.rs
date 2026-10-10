@@ -146,11 +146,7 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteScore>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
-        let call = self.score_records_complete_with(
-            question,
-            records,
-            options.surface(Surface::RustPolars),
-        )?;
+        let call = super::request::score_records(self, question, records, options)?;
         Ok((call, positions))
     }
 

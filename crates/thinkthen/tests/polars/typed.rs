@@ -70,3 +70,99 @@ fn typed_column_refuses_different_counts_or_null_positions_before_sending() {
     }
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn complete_score_keeps_owned_nontext_originals_and_nullable_positions() {
+    struct Original(u32);
+    impl thinkthen::InputEvidence for Original {
+        fn question_input(&self) -> thinkthen::QuestionInput {
+            thinkthen::QuestionInput::Text(format!("item {}", self.0))
+        }
+    }
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"score","probabilities":{"0":0.25,"1":0.75}}},"usage":{"input_tokens":49,"output_tokens":0}}"#)).expect("listener");
+    let engine = common::engine(listener.base());
+    let question = Question::score("How urgent?")
+        .expect("score")
+        .level("low", None)
+        .expect("low")
+        .level("high", None)
+        .expect("high")
+        .build()
+        .expect("question");
+    let column = Series::new("original".into(), [Some(7u32), None, Some(7)]);
+    let records = [Some(7), None, Some(7)]
+        .into_iter()
+        .map(|value| {
+            value.map(|value| RecordInput {
+                original: Original(value),
+                context: None,
+                options: None,
+                seed_spans: None,
+                examples: None,
+            })
+        })
+        .collect();
+    let (call, positions) = engine
+        .score_input_column_complete(&question, &column, records, CallOptions::new())
+        .expect("score");
+    assert_eq!(positions, [0, 2]);
+    assert_eq!(
+        column.dtype(),
+        &thinkthen::polars::prelude::DataType::UInt32
+    );
+    for (at, row) in call.value().iter().enumerate() {
+        assert_eq!(row.ordinal(), at);
+        assert_eq!(row.original().0, 7);
+        assert_eq!(row.result().value(), 0.75);
+        assert!(!row.result().answer_id().as_str().is_empty());
+    }
+    assert_eq!(call.facts().records(), 2);
+    assert_eq!(listener.count(), 1);
+    let texts = Series::new("text".into(), [Some("item 7"), None, Some("item 7")]);
+    let (call, positions) = engine
+        .score_series_complete(&question, &texts, CallOptions::new())
+        .expect("text score");
+    assert_eq!(positions, [0, 2]);
+    assert_eq!(call.value().len(), 2);
+    assert_eq!(call.value()[1].original(), "item 7");
+    assert_eq!(call.value()[1].result().value(), 0.75);
+}
+
+#[test]
+fn complete_score_empty_refused_and_cancelled_columns_send_nothing() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
+    let engine = common::engine(listener.base());
+    let question = Question::score("How urgent?")
+        .expect("score")
+        .level("low", None)
+        .expect("low")
+        .level("high", None)
+        .expect("high")
+        .build()
+        .expect("question");
+    for cells in [vec![], vec![None, None]] {
+        let column = Series::new("text".into(), cells as Vec<Option<&str>>);
+        let (call, positions) = engine
+            .score_series_complete(&question, &column, CallOptions::new())
+            .expect("empty score");
+        assert!(positions.is_empty());
+        assert!(call.value().is_empty());
+        assert_eq!(call.facts().requests_sent(), 0);
+    }
+    let column = Series::new("text".into(), ["one"]);
+    let wrong = Question::decide("Relevant?").expect("decide").cut();
+    assert_eq!(
+        engine
+            .score_series_complete(&wrong, &column, CallOptions::new())
+            .expect_err("wrong kind")
+            .kind(),
+        thinkthen::ErrorKind::Usage
+    );
+    let token = thinkthen::CancelToken::new();
+    token.cancel();
+    let error = engine
+        .score_series_complete(&question, &column, CallOptions::new().cancel(&token))
+        .expect_err("cancelled");
+    assert_eq!(error.kind(), thinkthen::ErrorKind::Cancelled);
+    assert_eq!(listener.count(), 0);
+}
