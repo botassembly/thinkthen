@@ -112,7 +112,7 @@ def _source(verb, value):
             reading['window'] = value.window
         media = getattr(value, 'media', c.ABSENT)
         source = {'paths': list(value.paths), 'reading': reading, 'media': 'text' if media is c.ABSENT else media}
-        if getattr(value, 'jsonl', False): source['jsonl'] = value.jsonl
+        if getattr(value, 'jsonl', False): source['framing'] = 'jsonl'
         return {'kind': 'source', 'source': source}, None, False
     if isinstance(value, Records): value = value.items
     if isinstance(value, Iterator):

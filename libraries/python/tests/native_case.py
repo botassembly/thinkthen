@@ -73,7 +73,7 @@ def main():
                 if result.meta.observations:
                     assert result.meta.origin in ('live','cache','replay','proxy','memory')
                 else:
-                    assert result.meta.origin is None and result.meta.answered_by is None
+                    assert result.meta.origin is None and getattr(result.meta, 'answered_by', None) is None
                 assert result.to_dict()['answer_id']==result.answer_id
                 if verb=='recognize':
                     if 'entities' in result.value:
