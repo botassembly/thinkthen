@@ -21,3 +21,7 @@ Binding checks compare the declarations a caller actually uses with the canonica
 ## Order
 
 Inspect all five failures, distinguish incomplete declarations from stale comparison expectations, repair the shared cause, then test each affected installed package once. This is a binding-family repair and receives one fresh review.
+
+## Progress
+
+- 2026-10-10 landed a537789a4; next: Represented ABI checks and the JDK environment fixture are landed. Finish applicable combined routine closure checks; native platform qualification stays with owning tickets.
