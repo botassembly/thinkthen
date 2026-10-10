@@ -16,4 +16,8 @@ SQLite's moved-file protection refused the pending Linux write after conversion 
 
 ## Remaining
 
-Run the owned writer and reader fixtures on native Windows. Verify prepublication refusal, retry after writer close, recovery when a reader blocks removal, and replay of every acknowledged answer. Keep ticket 0480 open for that platform proof. No paid call or release workflow ran.
+Run the owned writer and reader fixtures on native Windows at the candidate. Verify prepublication refusal, retry after writer close, recovery when a reader blocks removal, and replay of every acknowledged answer. The [closure ruling](../decisions/2026-10-10-drive-0-2-to-done.md) assigns that platform proof to candidate qualification rather than local ticket completion. No paid call or release workflow ran.
+
+## Closure
+
+The reviewed conversion and replay correction has its focused Linux coexistence, cancellation and zero-send evidence above. The later [0474 qualification](0474-recognition-cache-admission.md) includes passing conversion/replay cases, the complete functional gate and lint after the runner isolation correction; that applicable evidence is reused. No old public API belongs to this storage correction, so closure deletes no product source and changes no source ceiling. Native Windows fixtures remain candidate work.
