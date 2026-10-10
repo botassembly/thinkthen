@@ -36,4 +36,4 @@ build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src
                         str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'],
                        env=child_env(), text=True, capture_output=True, timeout=120)
 assert build.returncode == 0, build.stdout + build.stderr
-os.execv(str(binary), [str(binary)])
+os.execve(str(binary), [str(binary)], env=child_env(home=home, THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback', OPENROUTER_API_KEY='sk-conformance-loopback', PERPLEXITY_API_KEY='sk-conformance-loopback'))
