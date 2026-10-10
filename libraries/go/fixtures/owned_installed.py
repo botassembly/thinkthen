@@ -12,6 +12,7 @@ from children import child_env
 
 module = Path(sys.argv[1]).resolve()
 surface_only = len(sys.argv) > 2 and sys.argv[2] == 'surface'
+feed_only = len(sys.argv) > 2 and sys.argv[2] == 'feed'
 with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     home = Path(folder)
     consumer = home / 'consumer'
@@ -33,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     server.RequestHandlerClass = AttributedHandler
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
-        result=subprocess.run([str(home/'consumer-bin'), *(['surface'] if surface_only else [])],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=5 if surface_only else 20)
+        result=subprocess.run([str(home/'consumer-bin'), *(['surface'] if surface_only else ['feed'] if feed_only else [])],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=5 if surface_only else 20)
         assert result.returncode==0, (result.stdout,result.stderr)
         assert user_agents and all(agent == 'thinkthen/0.2.0 (go)' for agent in user_agents), user_agents
         if surface_only:
@@ -41,11 +42,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
             assert server.attempts == len(user_agents) == 2, (server.attempts, user_agents)
             print('GO_SURFACE_INSTALLED_PASS user-agent retained-success-and-failure static-native requests=2')
             sys.exit(0)
-        assert result.stdout.startswith('ten-named-calls-owned-results-pass requests='),result.stdout
-        # Ten named calls plus one false-decision call; invalid/precancel/deadline add none.
+        assert result.stdout.startswith('bounded-feed-results-pass requests=' if feed_only else 'ten-named-calls-owned-results-pass requests='),result.stdout
+        # Successful calls and completed reader prefix account for every send.
         assert server.attempts==int(result.stdout.strip().split("=")[-1]), (server.attempts, result.stdout)
         baseline=server.attempts
-        for iteration,mode in enumerate(('cancel','close')):
+        for iteration,mode in enumerate(('feed-cancel','feed-close','feed-full') if feed_only else ('cancel','close')):
             for marker in ('arrived-hold-go','release-hold-go'):
                 (barrier/marker).unlink(missing_ok=True)
             (home/'cancel').unlink(missing_ok=True)
@@ -56,6 +57,12 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
                 while not (barrier/'arrived-hold-go').exists() and time.monotonic()<deadline:
                     time.sleep(.005)
                 assert (barrier/'arrived-hold-go').exists(),'held request never arrived'
+                if feed_only:
+                    ready = home/'reader-ready'
+                    while not ready.exists() and time.monotonic()<deadline:
+                        time.sleep(.005)
+                    assert ready.exists(), 'producer did not reach bounded intake'
+                    ready.unlink()
                 cancel.touch()
                 stdout,stderr=child.communicate(timeout=3)
                 assert child.returncode==0 and stdout.strip()=='cancelled-before-release',(stdout,stderr)
@@ -65,6 +72,6 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
                 (barrier/'release-hold-go').touch()
                 if child.poll() is None:
                     child.terminate();child.wait(timeout=3)
-        print('GO_OWNED_INSTALLED_PASS ten-functions presence retained-errors cancellation static-native')
+        print('GO_FEED_INSTALLED_PASS bounded-intake typed-reader-failure zero-send cancellation close static-native' if feed_only else 'GO_OWNED_INSTALLED_PASS ten-functions presence retained-errors cancellation static-native')
     finally:
         server.close()

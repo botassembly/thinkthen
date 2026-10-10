@@ -20,7 +20,7 @@ type Client struct {
 	engine   *Engine
 	mu       sync.Mutex
 	closed   bool
-	sessions map[*C.thinkthen_session]struct{}
+	sessions map[*C.thinkthen_session]activeSession
 }
 
 func NewClient(settings map[string]any) (*Client, error) {
@@ -32,16 +32,24 @@ func NewClient(settings map[string]any) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{engine: engine, sessions: make(map[*C.thinkthen_session]struct{})}, nil
+	return &Client{engine: engine, sessions: make(map[*C.thinkthen_session]activeSession)}, nil
 }
 func (c *Client) Close() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.closed = true
-	for session := range c.sessions {
+	var readers []<-chan struct{}
+	for session, active := range c.sessions {
+		active.cancel()
 		C.thinkthen_session_cancel(session)
+		if active.done != nil {
+			readers = append(readers, active.done)
+		}
 	}
+	c.mu.Unlock()
 	c.engine.Close()
+	for _, done := range readers {
+		<-done
+	}
 }
 
 // FileRecords selects the native reader; its parsing and validation stay native.
@@ -106,7 +114,10 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 		kind = "entities"
 	}
 	source := map[string]any{"kind": kind}
-	if files, ok := input.(FileRecords); ok {
+	producer, feeding := input.(Producer)
+	if feeding {
+		source = map[string]any{"kind": "feed", "name": "records"}
+	} else if files, ok := input.(FileRecords); ok {
 		source = map[string]any{"kind": "source", "source": map[string]any{"paths": files.Paths, "reading": files.Reading, "media": "text"}}
 	} else {
 		values := []any{input}
@@ -149,6 +160,8 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 	if err != nil {
 		return result, err
 	}
+	readerCtx, stopReader := context.WithCancel(ctx)
+	defer stopReader()
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
@@ -156,15 +169,34 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 		C.thinkthen_session_free(session)
 		return result, ErrClosed
 	}
-	c.sessions[session] = struct{}{}
-	c.mu.Unlock()
-	defer func() { c.mu.Lock(); delete(c.sessions, session); C.thinkthen_session_free(session); c.mu.Unlock() }()
-	runtime.LockOSThread()
-	err = sessionFailure(C.thinkthen_session_finish(session, nil, 0))
-	runtime.UnlockOSThread()
-	if err != nil {
-		return result, err
+	var feed *producerReader
+	if feeding {
+		feed = startProducer(readerCtx, producer)
 	}
+	active := activeSession{cancel: stopReader}
+	if feed != nil {
+		active.done = feed.done
+	}
+	c.sessions[session] = active
+	c.mu.Unlock()
+	defer func() {
+		stopReader()
+		if feed != nil {
+			<-feed.done
+		}
+		c.mu.Lock()
+		delete(c.sessions, session)
+		C.thinkthen_session_free(session)
+		c.mu.Unlock()
+	}()
+	if feed == nil {
+		err = finishSession(session, nil)
+		if err != nil {
+			return result, err
+		}
+	}
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
 	for {
 		c.mu.Lock()
 		closed := c.closed
@@ -231,9 +263,20 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 			if status == 2 {
 				return result, errors.New("native session ended before terminal facts")
 			}
+			if feed != nil {
+				if err = feed.advance(session, stopReader); err != nil {
+					return result, err
+				}
+			}
+			var next <-chan producerValue
+			if feed != nil && !feed.finished && feed.pending == nil {
+				next = feed.values
+			}
 			select {
 			case <-ctx.Done():
-			case <-time.After(time.Millisecond):
+			case value := <-next:
+				feed.pending = &value
+			case <-ticker.C:
 			}
 		}
 	}
