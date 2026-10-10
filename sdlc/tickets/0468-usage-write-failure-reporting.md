@@ -27,6 +27,8 @@ Reviews: revision 2ed3348b4501b89a35ee8ebf07c71b30126b7258, accept
 
 Reviews: revision ada5e4f3e88b2120a5bf4efc304a89d8c87fb478, accept
 
+Reviews: revision 70c687a3641d7a2daf32b94822c4813bc5f45151, accept
+
 ## Outcome
 
 SDK and SQL callers can discover failed persistence of usage counts without exposing evidence, credentials or private filesystem paths. In-memory call facts remain correct; persistence failure never silently claims durable totals are complete.
