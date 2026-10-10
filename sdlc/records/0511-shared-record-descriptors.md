@@ -11,3 +11,5 @@ Root routine and lint evidence is reused for unchanged behavior; the integration
 ## What the build taught us
 
 Move shared semantics to a normal dependency, then remove the old caller in its owning migration. Converting a dispatcher slated for deletion wastes a pass through every binding. Host representation and file authority are real boundaries; sharing admission must preserve their exact error order and ownership.
+
+Closure integration passes all 1996 routine Rust cases, one doctest, 21 external consumer cases and the remaining routine script and lint checks. Unchanged earlier passing checks are reused.

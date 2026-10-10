@@ -11,3 +11,5 @@ The installed extension in `target/0495-close/installed/thinkthen.duckdb_extensi
 ## What the build taught us
 
 An empty terminal packet settles a stream; it must not replace completed output. Test the installed file function as well as the complete function, because their projections differ. Keeping shared admission does not remove the need to check host result accumulation.
+
+Closure integration passes all 1996 routine Rust cases, one doctest, 21 external consumer cases and the remaining routine script and lint checks. Unchanged earlier passing checks are reused.
