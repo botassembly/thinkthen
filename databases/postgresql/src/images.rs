@@ -2,7 +2,9 @@
 
 use pgrx::datum::Array;
 use pgrx::prelude::*;
-use thinkthen::{ImageInput, ImageMedia, Judgment, RequestImage, RequestItem, RequestOriginal};
+use thinkthen::{
+    ImageAdmission, ImageInput, ImageMedia, Judgment, RequestImage, RequestItem, RequestOriginal,
+};
 
 use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
@@ -14,11 +16,7 @@ extension_sql!(
 );
 
 fn image(bytes: &[u8], mime: &str) -> Result<ImageInput, thinkthen::Error> {
-    if bytes.len() > thinkthen::MAX_IMAGE_BYTES {
-        return Err(call::usage(
-            "image exceeds the 25165824 compressed byte SDK limit",
-        ));
-    }
+    ImageInput::admit_length(bytes.len())?;
     let media = match mime {
         "image/png" => ImageMedia::Png,
         "image/jpeg" => ImageMedia::Jpeg,
@@ -51,24 +49,14 @@ fn input(
     images: Array<'_, pgrx::composite_type!("thinkthen_image_value")>,
     text: Option<&str>,
 ) -> RequestItem {
-    if !(1..=thinkthen::MAX_IMAGES).contains(&images.len()) {
-        call::raise(call::usage("image evidence requires 1 to 8 images"));
-    }
-    let mut total = 0usize;
+    let mut admission = ImageAdmission::new(images.len()).or_raise();
     for tuple in images.iter() {
         let tuple = tuple.unwrap_or_else(|| call::raise(call::usage("image list contains NULL")));
         let bytes = tuple
             .get_by_name::<&[u8]>("data")
             .unwrap_or_else(|_| call::raise(call::usage("invalid image data field")))
             .unwrap_or_else(|| call::raise(call::usage("image data is NULL")));
-        total = total
-            .checked_add(bytes.len())
-            .filter(|&sum| sum <= thinkthen::MAX_IMAGE_BYTES)
-            .unwrap_or_else(|| {
-                call::raise(call::usage(
-                    "image evidence exceeds the 25165824 compressed byte SDK limit",
-                ))
-            });
+        admission.push(bytes.len()).or_raise();
     }
     let images = images
         .iter()

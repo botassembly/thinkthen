@@ -212,3 +212,39 @@ fn release_only_final_image_body_limits_are_exact() {
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 2);
 }
+
+#[test]
+fn borrowed_image_lengths_refuse_before_image_allocation() {
+    use thinkthen::{ImageAdmission, ImageInput, MAX_IMAGE_BYTES, MAX_IMAGES};
+    for count in [0, MAX_IMAGES + 1, usize::MAX] {
+        let error = ImageAdmission::new(count).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            error.detail().message(),
+            "image evidence requires 1 to 8 images"
+        );
+    }
+    for length in [MAX_IMAGE_BYTES + 1, usize::MAX] {
+        let error = ImageInput::admit_length(length).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            error.detail().message(),
+            "image exceeds the 25165824 compressed byte SDK limit"
+        );
+    }
+    ImageInput::admit_length(MAX_IMAGE_BYTES).unwrap();
+    for last in [1, usize::MAX] {
+        let mut admission = ImageAdmission::new(2).unwrap();
+        admission.push(MAX_IMAGE_BYTES).unwrap();
+        let error = admission.push(last).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            error.detail().message(),
+            "image evidence exceeds the 25165824 compressed byte SDK limit"
+        );
+    }
+    let mut admission = ImageAdmission::new(MAX_IMAGES).unwrap();
+    for _ in 0..MAX_IMAGES {
+        admission.push(0).unwrap();
+    }
+}

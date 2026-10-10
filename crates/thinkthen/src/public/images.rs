@@ -41,6 +41,15 @@ impl ImageInput {
         }))
     }
 
+    /// Admit a borrowed compressed-byte length before allocating an owned image.
+    /// This checks only the SDK byte bound, not media, dimensions or pixels.
+    ///
+    /// # Errors
+    /// Returns Usage when the compressed-byte length exceeds the SDK bound.
+    pub fn admit_length(length: usize) -> Result<(), Error> {
+        crate::engine::image::admit_length(length).map_err(Error::refused)
+    }
+
     /// Explicit validated media.
     #[must_use]
     pub const fn media(&self) -> ImageMedia {
@@ -66,6 +75,36 @@ impl ImageInput {
 impl Serialize for ImageInput {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.0.serialize(serializer)
+    }
+}
+
+/// Count and cumulative compressed-byte admission for borrowed host images.
+/// This allocates no image storage and validates no media, dimensions or pixels.
+/// Callers supply the collection's count and each compressed-byte length before
+/// constructing images; normal image and evidence validation remains required.
+#[derive(Debug)]
+pub struct ImageAdmission {
+    total: usize,
+}
+
+impl ImageAdmission {
+    /// Admit the collection count before inspecting or copying its members.
+    ///
+    /// # Errors
+    /// Returns Usage when the SDK attachment-count bound is exceeded or empty.
+    pub fn new(count: usize) -> Result<Self, Error> {
+        crate::engine::image::admit_count(count).map_err(Error::refused)?;
+        Ok(Self { total: 0 })
+    }
+
+    /// Admit the next borrowed compressed-byte length into the collection total.
+    ///
+    /// # Errors
+    /// Returns Usage when the cumulative SDK byte bound is exceeded.
+    pub fn push(&mut self, length: usize) -> Result<(), Error> {
+        self.total =
+            crate::engine::image::add_length(self.total, length).map_err(Error::refused)?;
+        Ok(())
     }
 }
 

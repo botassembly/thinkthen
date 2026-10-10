@@ -3,7 +3,7 @@
 use rusqlite::Connection;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::{Value, ValueRef};
-use thinkthen::{ImageEvidence, ImageInput, ImageMedia, Judgment, QuestionInput};
+use thinkthen::{ImageAdmission, ImageEvidence, ImageInput, ImageMedia, Judgment, QuestionInput};
 
 use crate::{Failure, ffi, guard, question, worker};
 
@@ -64,11 +64,7 @@ fn parts(bytes: &[u8]) -> Result<Parts<'_>, Failure> {
     }
     let file = std::str::from_utf8(take(&mut bytes, count)?)
         .map_err(|_| Failure::usage("invalid stored image file name"))?;
-    if bytes.len() > thinkthen::MAX_IMAGE_BYTES {
-        return Err(Failure::usage(
-            "image exceeds the 25165824 compressed byte SDK limit",
-        ));
-    }
+    ImageInput::admit_length(bytes.len())?;
     Ok((media, bytes, file))
 }
 
@@ -81,15 +77,10 @@ fn decode(bytes: &[u8]) -> Result<(ImageInput, Option<String>), Failure> {
 }
 
 fn bounded(values: &[&[u8]]) -> Result<(), Failure> {
-    let mut total = 0usize;
+    let mut admission = ImageAdmission::new(values.len())?;
     for value in values {
         let (_, bytes, _) = parts(value)?;
-        total = total
-            .checked_add(bytes.len())
-            .filter(|&sum| sum <= thinkthen::MAX_IMAGE_BYTES)
-            .ok_or_else(|| {
-                Failure::usage("image evidence exceeds the 25165824 compressed byte SDK limit")
-            })?;
+        admission.push(bytes.len())?;
     }
     Ok(())
 }
@@ -99,9 +90,7 @@ fn collection(bytes: &[u8], text: Option<String>) -> Result<QuestionInput, Failu
         .strip_prefix(IMAGES)
         .ok_or_else(|| Failure::usage("images require thinkthen_images tagged values"))?;
     let count = length(&mut bytes)?;
-    if !(1..=thinkthen::MAX_IMAGES).contains(&count) {
-        return Err(Failure::usage("image evidence requires 1 to 8 images"));
-    }
+    ImageAdmission::new(count)?;
     let mut values = Vec::with_capacity(count);
     for _ in 0..count {
         let size = length(&mut bytes)?;
@@ -157,18 +146,12 @@ fn constructor(context: &Context<'_>) -> Result<Option<Vec<u8>>, Failure> {
         }
     };
     let bytes = blob(context.get_raw(0))?;
-    if bytes.len() > thinkthen::MAX_IMAGE_BYTES {
-        return Err(Failure::usage(
-            "image exceeds the 25165824 compressed byte SDK limit",
-        ));
-    }
+    ImageInput::admit_length(bytes.len())?;
     encode(&ImageInput::new(media, bytes)?, None).map(Some)
 }
 
 fn pack(context: &Context<'_>) -> Result<Vec<u8>, Failure> {
-    if !(1..=thinkthen::MAX_IMAGES).contains(&context.len()) {
-        return Err(Failure::usage("image evidence requires 1 to 8 images"));
-    }
+    ImageAdmission::new(context.len())?;
     let values = (0..context.len())
         .map(|at| blob(context.get_raw(at)))
         .collect::<Result<Vec<_>, _>>()?;

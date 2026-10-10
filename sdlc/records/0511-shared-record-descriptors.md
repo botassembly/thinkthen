@@ -1,5 +1,19 @@
 # Shared complete-call record descriptors
 
+## Borrowed image bounds
+
+This slice starts from `63b3aa677`. `ImageInput::admit_length` checks borrowed compressed-byte lengths before ownership conversion. `ImageAdmission` checks a declared collection count and accumulates borrowed compressed-byte lengths. It proves no media, dimensions or pixels and remains separate from normal image construction. The three engine predicates serve decode, existing set validation and public admission. Native set validation retains cumulative-byte refusal before count refusal; the host adapters retain their existing count-first order.
+
+SQLite preserves tagged BLOB parsing, stored filename shape and the interleaved member-shape and cumulative-byte checks. PostgreSQL retains composite field and NULL checks before media conversion. DuckDB keeps its counted-pointer checks and existing combined single-image diagnostic. C image cloning retains media-before-byte refusal; C records admit nonempty attachment sets before original conversion and continue to allow absent attachments. No adapter copies compressed bytes before its shared bounds check. No decoder, codec, file authority or transport grammar changes.
+
+The source ceiling proposal adds 81 native lines for the shared predicates, borrowed admission API and one numeric boundary table in the existing image caller suite. The removed semantic copies lower SQLite by 17, PostgreSQL by 12, DuckDB Rust by one and C by four nonblank lines. Fresh review must accept the native increase before landing. Existing source-size warnings remain unchanged.
+
+Focused native image validation passes 25 routine cases with six existing release cases ignored. The new borrowed table checks count, single-byte, cumulative-byte and overflow refusals using lengths alone. Native library and image-test Clippy, SQLite library Clippy and policy pass. Large compressed-byte payloads, full parity, release qualification and paid calls remain outside this slice. Logs use `target/0511-image-*.log`; builds retain warm graphs with locked offline dependencies, two jobs, an 8 GiB memory scope and 1 GiB swap.
+
+### What the build taught us
+
+A shared decoder does not prevent an adapter from allocating before it reaches validation. Share the borrowed length predicates and preserve the host's parsing order around them. Count admission for an attachment set must still allow an optional attachment field to be absent in a text record.
+
 ## Source
 
 This slice starts from `db7917daa0cb19b09e4ad51ffec58a97ee923b1c` and follows the accepted review amendment on ticket 0511. The product change is in rebased source commit `605c34e02`. Integration uses published main `6af931685f82d64668508661b5604d7814903462`, including the reader repairs, host ceilings and Facts schema additions. The rebase preserved those root changes; its only conflict was the source ceiling, resolved through the existing ratchet measurement.
