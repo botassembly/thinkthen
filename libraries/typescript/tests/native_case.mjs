@@ -8,8 +8,9 @@ function line() {
  return text.trimEnd();
 }
 const document=JSON.parse(line());
-const client=new tt.Client(document.settings);
+let client;
 try {
+ client=new tt.Client(document.settings);
  const selector=document.question;
  const question=selector.kind==='file'?tt.Client.questionFile(selector.path):selector.kind==='name'?tt.Client.questionName(selector.name):selector.kind==='reference'?tt.Client.questionReference(selector.reference):selector.value;
  const source=document.input;
@@ -18,9 +19,9 @@ try {
  if(document.cancel)controller.abort();
  if(document.held_cancel)setTimeout(()=>controller.abort(),150);
  if(document.batch_probe){console.log('ready');line();}
- const done=await client.start(document.verb,question,input,{...document.options,signal:controller.signal}).result();
+ const done=await client.start(document.verb,question,document.incremental && Array.isArray(input)?input.values():input,{...document.options,signal:controller.signal}).result();
  console.log(JSON.stringify({native:true,results:done.results,facts:done.facts}));
 } catch(error) {
  if(!(error instanceof tt.ClientError))throw error;
  console.log(JSON.stringify({native:true,error:error.complete?.error??{kind:error.kind,message:error.message,retryable:error.retryable},facts:error.facts,completed:error.results?.length?{native:true,results:error.results,facts:error.facts}:undefined}));
-} finally {client.close();}
+} finally {client?.close();}
