@@ -1,7 +1,6 @@
 {
   "directory": [
     "Sources",
-    "Examples",
     "checks"
   ],
   "extension": ".h",
