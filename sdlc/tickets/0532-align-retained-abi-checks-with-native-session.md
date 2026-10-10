@@ -1,10 +1,12 @@
 # 0532 — Check retained and native binding declarations against the C header
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision 903b2bf75606086470b2f87ba900564e4d0bfb03, accept
+
+Landed: 377e3fe
 
 ## Outcome
 
