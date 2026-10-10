@@ -52,7 +52,10 @@ pub(crate) fn values(ordinal: i64, record: SourceRecord<String>) -> Result<Vec<V
     ])
 }
 
-fn span(context: &rusqlite::functions::Context<'_>) -> Result<String, Failure> {
+fn span(context: &rusqlite::functions::Context<'_>) -> Result<Option<String>, Failure> {
+    if (0..4).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
+        return Ok(None);
+    }
     let record = context
         .get::<String>(0)
         .map_err(|_| Failure::usage("span record must be text"))?;
@@ -79,10 +82,10 @@ fn span(context: &rusqlite::functions::Context<'_>) -> Result<String, Failure> {
     let (first, last) = source.span_lines(offset(2)?, offset(3)?)?;
     let sql_line =
         |line| i64::try_from(line).map_err(|_| Failure::usage("source line exceeds SQL INTEGER"));
-    Ok(
+    Ok(Some(
         serde_json::json!({"first_line": sql_line(first)?, "last_line": sql_line(last)?})
             .to_string(),
-    )
+    ))
 }
 
 pub(crate) fn register_span(connection: &Catalog<'_>) -> rusqlite::Result<()> {
