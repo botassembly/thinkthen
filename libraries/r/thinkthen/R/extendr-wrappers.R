@@ -47,6 +47,10 @@ tt_details_one <- function(question, evidence, deadline, completion) .Call(wrap_
 
 tt_usage_counters <- function() .Call(wrap__tt_usage_counters)
 
+tt_usage_persistence_native <- function() .Call(wrap__tt_usage_persistence_native)
+
+tt_finish_usage_status_native <- function() .Call(wrap__tt_finish_usage_status_native)
+
 tt_interrupt_pending <- function() .Call(wrap__tt_interrupt_pending)
 
 tt_recognize_column <- function(spec, path, texts, positions, deadline, completion) .Call(wrap__tt_recognize_column, spec, path, texts, positions, deadline, completion)

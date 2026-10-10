@@ -482,6 +482,19 @@ impl Engine {
         )
     }
 
+    /// Observe live usage durability without waiting for the writer.
+    fn usage_persistence(&self, py: Python<'_>) -> PyResult<(String, Option<String>)> {
+        guard(py, || operations::usage_status(self.0.usage_persistence()))
+    }
+
+    /// Drain current usage deltas under the native usage-lock deadline.
+    fn finish_usage_status(&self, py: Python<'_>) -> PyResult<(String, Option<String>)> {
+        guard(py, || {
+            let state = py.detach(|| self.0.finish_usage_status());
+            operations::usage_status(state)
+        })
+    }
+
     /// This engine's totals.
     fn usage<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let counts = self.0.usage();

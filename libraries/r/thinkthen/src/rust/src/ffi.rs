@@ -425,6 +425,16 @@ fn tt_usage_counters() -> Crossed<String> {
 }
 
 #[extendr]
+fn tt_usage_persistence_native() -> Crossed<Robj> {
+    engine::status(false)
+}
+
+#[extendr]
+fn tt_finish_usage_status_native() -> Crossed<Robj> {
+    engine::status(true)
+}
+
+#[extendr]
 fn tt_interrupt_pending() -> bool {
     interrupt_pending()
 }
@@ -496,6 +506,8 @@ extendr_module! {
     fn tt_annotate_file;
     fn tt_details_one;
     fn tt_usage_counters;
+    fn tt_usage_persistence_native;
+    fn tt_finish_usage_status_native;
     fn tt_interrupt_pending;
     fn tt_recognize_column;
     fn tt_relate_frame;

@@ -166,3 +166,9 @@ No key is needed. Select replay before any asking call because R keeps one engin
 ## Checking
 
 From `libraries/r`, `./check.sh` runs the complete offline surface check. It exits 77 and reports "not run" if R, a tested R dependency or a cached crate is missing. `tools/setup.sh` prepares pinned R dependencies on a networked machine. From the repository root, `sdlc/scripts/smoke libraries/r` installs into owned scratch, loads the native package and replays a saved answer; its loopback counter proves the consumer adds no requests.
+
+## Live usage durability
+
+`tt_usage_persistence()` observes without waiting; `tt_finish_usage_status()` drains current usage deltas. Both return a `thinkthen_UsageStatus` named list with `state` and optional `advice`. They observe the engine already selected by `tt_engine()` or the process default; they introduce no separate engine owner.
+
+Written covers this engine's current deltas, not later calls or other engines. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Failed reports incomplete durable totals while answers and in-memory counts remain usable. These live observations contain no facts-snapshot timestamp, credentials or filesystem paths, and add no model requests.

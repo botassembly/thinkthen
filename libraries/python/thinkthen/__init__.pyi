@@ -5,7 +5,8 @@ from ._native_results import NativeAtomicDecideValue as _NativeDecide, NativeAto
 """The typed face of ``thinkthen``. It matches ``thinkthen/__init__.py``."""
 
 import os
-from typing import Any, Annotated, Generic, Iterable, Iterator, Literal, Mapping, Optional, Sequence, TypeVar, TypedDict, Union, Unpack, overload
+from ._native_results import NativeUsagePersistence as NativeUsagePersistence
+from typing import NamedTuple, Any, Annotated, Generic, Iterable, Iterator, Literal, Mapping, Optional, Sequence, TypeVar, TypedDict, Union, Unpack, overload
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
@@ -13,7 +14,7 @@ __all__ = [
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
     "annotate", "choose", "decide", "details", "filter",
     "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
-    "usage", "FileSelection", "SourceRecord", "Located", "read_files",
+    "usage", "UsageStatus", "NativeUsagePersistence", "FileSelection", "SourceRecord", "Located", "read_files",
 ]
 
 Path = Union[str, os.PathLike[str]]
@@ -235,9 +236,17 @@ class CallKeywords(JudgeKeywords, total=False):
     deadline_ms: int
     token: CancelToken
 
+class UsageStatus(NamedTuple):
+    """Live native durability state and optional fixed advice; no call facts."""
+    state: NativeUsagePersistence
+    advice: str | None
+
+
 class Engine:
     @property
     def asyncio(self) -> _AsyncCalls: ...
+    def usage_persistence(self) -> UsageStatus: ...
+    def finish_usage_status(self) -> UsageStatus: ...
     def close(self) -> None: ...
     def __enter__(self) -> Engine: ...
     def __exit__(self, *args: Any) -> None: ...

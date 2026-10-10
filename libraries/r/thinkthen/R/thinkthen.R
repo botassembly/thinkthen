@@ -177,6 +177,10 @@ tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completi
 
 tt_usage <- function() jsonlite::parse_json(.tt_call(tt_usage_counters()))
 
+# Live durability for the selected native engine; no facts-snapshot timestamp.
+tt_usage_persistence <- function() .tt_call(tt_usage_persistence_native())
+tt_finish_usage_status <- function() .tt_call(tt_finish_usage_status_native())
+
 
 tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
                       max_requests_total = NULL, max_request_bytes = NULL,

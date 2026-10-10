@@ -212,6 +212,8 @@ module ThinkThen
     def inspect
       "#<ThinkThen::Engine>"
     end
+    def usage_persistence = UsageStatus.new(*@native.usage_persistence)
+    def finish_usage_status = UsageStatus.new(*@native.finish_usage_status)
 
     def decide(question, evidence, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       crossing("decide", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline_ms,

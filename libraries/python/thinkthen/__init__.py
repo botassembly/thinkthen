@@ -11,6 +11,8 @@ import os
 from typing import Annotated as _Annotated, get_origin as _get_origin
 
 from . import _thinkthen
+from typing import NamedTuple
+from ._native_results import NativeUsagePersistence
 from ._labels import normalize as _labels
 from ._thinkthen import (
     BackendError,
@@ -45,7 +47,7 @@ __all__ = [
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
     "annotate", "choose", "decide", "details", "filter",
     "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
-    "usage", "FileSelection", "SourceRecord", "Located", "read_files",
+    "usage", "UsageStatus", "NativeUsagePersistence", "FileSelection", "SourceRecord", "Located", "read_files",
 ]
 
 _VERBS = ("decide", "choose", "score", "tag")
@@ -334,6 +336,12 @@ def _rules(relations, either):
     return [(name, source, target, name in both) for name, source, target in relations or ()]
 
 
+class UsageStatus(NamedTuple):
+    """Live native durability state and optional fixed advice; no call facts."""
+    state: NativeUsagePersistence
+    advice: str | None
+
+
 class Engine:
     """An engine with its own settings, each keyword-only.
 
@@ -382,6 +390,14 @@ class Engine:
     def asyncio(self):
         from ._calls import AsyncCalls
         return AsyncCalls(self)
+
+    def usage_persistence(self) -> UsageStatus:
+        """Observe current durability without waiting for pending writes."""
+        return UsageStatus(*self._engine.usage_persistence())
+
+    def finish_usage_status(self) -> UsageStatus:
+        """Drain current deltas; only native usage-lock acquisition has a deadline."""
+        return UsageStatus(*self._engine.finish_usage_status())
 
     def close(self):
         failure = None

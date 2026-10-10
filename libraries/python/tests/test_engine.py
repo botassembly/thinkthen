@@ -157,3 +157,58 @@ def test_the_environment_seeds_every_unset_setting(backend, tmp_path):
     written = [path for path in scratch.rglob("*") if path.is_file()]
     assert written and all(path.relative_to(scratch).parts[0] == "thinkthen" for path in written)
     assert not any(b"late" in path.read_bytes() for path in written)
+
+
+def test_live_usage_status_keeps_frozen_facts_and_adds_no_calls(backend, tmp_path):
+    """Live finalization does not mutate an answer or its earlier facts."""
+    out = run('''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        done = engine.decide("Is it urgent?", "urgent", details=True)
+        earlier = done.to_dict()
+        observed = engine.usage_persistence()
+        finished = engine.finish_usage_status()
+        assert isinstance(observed, tt.UsageStatus)
+        assert finished == tt.UsageStatus("written", None)
+        assert done.to_dict() == earlier and done.value.value is True
+        assert engine.usage()["requests_sent"] == 1
+        engine.close()
+        assert finished.state == "written" and finished.advice is None
+        print("ok")
+    ''', child_env(backend, tmp_path))
+    assert out == "ok\n"
+    assert backend.count() == 1
+
+
+def test_live_usage_status_reports_held_writer_failure_without_losing_answer(backend, tmp_path):
+    """A held native usage lock is Pending, then latched Failed with safe advice."""
+    import os
+    if os.name != "posix":
+        import pytest
+        pytest.skip("the portable lock case runs through native platform qualification")
+    out = run('''
+        import fcntl, os, pathlib, thinkthen as tt
+        folder = pathlib.Path(os.environ["XDG_STATE_HOME"]) / "thinkthen"
+        folder.mkdir(mode=0o700, parents=True)
+        lock = folder / ".lock"
+        with lock.open("w") as owned:
+            lock.chmod(0o600)
+            fcntl.flock(owned, fcntl.LOCK_EX)
+            engine = tt.Engine(cache=False)
+            done = engine.decide("Is it urgent?", "urgent", details=True)
+            earlier = done.to_dict()
+            pending = engine.usage_persistence()
+            assert pending == tt.UsageStatus("pending", None)
+            failed = engine.finish_usage_status()
+            assert failed.state == "failed"
+            assert failed.advice == "check the usage folder permissions and free space"
+            assert engine.usage_persistence() == failed
+            assert engine.finish_usage_status() == failed
+            assert done.to_dict() == earlier
+            assert engine.usage()["requests_sent"] == 1
+        engine.close()
+        assert failed.advice == "check the usage folder permissions and free space"
+        print("ok")
+    ''', child_env(backend, tmp_path))
+    assert out == "ok\n"
+    assert backend.count() == 1

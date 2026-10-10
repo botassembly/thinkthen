@@ -126,3 +126,16 @@ pub(super) fn order(
         ranked.facts(),
     ))
 }
+
+/// Copy one native observation and its fixed advice into host-owned values.
+pub(super) fn usage_status(
+    state: thinkthen::UsagePersistence,
+) -> PyResult<(String, Option<String>)> {
+    let name = serde_json::to_value(state).map_err(|_| {
+        pyo3::exceptions::PyRuntimeError::new_err("native usage state serialization failed")
+    })?;
+    let name = name.as_str().ok_or_else(|| {
+        pyo3::exceptions::PyRuntimeError::new_err("native usage state is not text")
+    })?;
+    Ok((name.to_owned(), state.advice().map(str::to_owned)))
+}
