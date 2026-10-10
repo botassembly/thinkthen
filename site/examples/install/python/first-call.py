@@ -6,7 +6,7 @@ broken = "Please refund my order. It arrived broken."
 is_refund = tt.decide(question, broken).value
 assert is_refund is True
 
-refund = tt.question(decide=question, threshold=(0.2, 0.8))
+refund = {"decide": question, "threshold": "0.2:0.8"}
 send_back = "I want to send this back."
 is_refund = tt.decide(refund, send_back).value
 assert is_refund is None
@@ -28,7 +28,9 @@ reports = [
         "different blue. No steps, I just noticed it."
     ),
 ]
-triage = tt.annotate("form.json", reports).value
+triage = tt.annotate(
+    tt.QuestionSource(path="form.json"), reports,
+).value
 assert triage == [
     {"steps": True, "area": "export", "impact": 1.99},
     {"steps": True, "area": "login", "impact": 2.0},

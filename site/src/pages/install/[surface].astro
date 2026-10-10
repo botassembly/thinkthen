@@ -38,14 +38,14 @@ const description = named
 if (description.length > 160) throw new Error(`/install/${surface.slug}/: the description runs ${description.length} characters, over 160`);
 const backendSample = ['env', 'builder', 'code'].includes(route) ? installSample(surface.slug, backendsName(surface.slug)) : null;
 const backendConstructor = {
-  python: 'Engine(backend=)', typescript: 'new Engine({backend})', ruby: 'Engine.new(backend:)', r: 'tt_engine(backend =)',
-  c: '"backend" in thinkthen_engine_new_with JSON', cpp: 'create(settings)', 'objective-c': 'createWithSettings',
-  cobol: 'TT-ENGINE-NEW settings JSON', ada: 'Configure settings JSON', java: 'Door(settingsJson)',
-  kotlin: 'Door(settingsJson)', scala: 'Door(settingsJson)', csharp: 'Engine.Open(settingsJson)',
-  go: 'NewWith(settingsJSON)', swift: 'Engine(settingsJSON:)', zig: 'Engine.initWithSettings',
-  php: 'ThinkThen(library, settingsJson)', dart: 'Door.create(settings)',
+  python: 'Engine(backend=)', typescript: 'new Client({backend})', ruby: 'Client.open(backend:)', r: 'tt_engine(backend =)',
+  c: '"backend" in thinkthen_engine_new_with JSON', cpp: 'Client(settings)', 'objective-c': 'initWithSettings:error:',
+  cobol: 'TT-ENGINE-NEW settings JSON', ada: 'Configure settings JSON', java: 'Engine(settings)',
+  kotlin: 'KotlinEngine(settings)', scala: 'ScalaEngine(settings)', csharp: 'Engine.Open(InputEngineSettings)',
+  go: 'NewClient(EngineSettings)', swift: 'Client(settings:)', zig: 'generated engine settings',
+  php: 'Client(settings)', dart: 'Engine.open(settings:)',
 }[surface.slug] ?? 'EngineBuilder::backend';
-const backendAddress = surface.slug === 'typescript' ? 'baseUrl' : 'base_url';
+const backendAddress = 'base_url';
 const backendInputs = backendSample?.folder ? files(`install/${surface.slug}/${backendSample.folder}`) : [];
 const backendBuild = backendSample ? buildLines(surface.slug, backendSample.file) : null;
 const backendBuildText = backendBuild && [...backendBuild.lines, backendBuild.run].map((p) => p.join(' \\\n    ')).join('\n');

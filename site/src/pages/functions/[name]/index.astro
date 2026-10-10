@@ -119,6 +119,7 @@ const jobsScope = name === 'annotate'
 
   {isFn && (
     <>
+      <p><code>meta.usage</code> attributes token shares to logical questions. Pending equal questions may coalesce and repeat their shares across results. Sum settled call facts for observed live usage; each provider response counts once. Estimated cost requires complete reported usage and explicit prices, and does not establish an invoice. Recording stores replace the latest answer for a key, so retained responses are not a historical usage ledger.</p>
       <p>A batched detailed row carries an even share of <code>requests_sent</code>, with the remainder assigned to the earliest rows. One row can therefore show 0 beside a live request. Use <code>--facts</code> for the run total; the <a href="https://github.com/botassembly/thinkthen/blob/main/specification/result.md#the-run-facts-line">result contract</a> defines its counts.</p>
       <h3 id="global-flags">Global flags</h3>
       <p>Every function takes these flags. The <a href="/install/settings/">settings page</a> lists every setting on every surface, with the order in which values win.</p>

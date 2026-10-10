@@ -7,11 +7,12 @@ reviews = [
     "Does this come in blue?",
     "The strap snapped on day two.",
 ]
-tally = tt.Tally()
-is_complaint = tt.decide(question, tally=tally)
-
-complaints = is_complaint(reviews).value
-first_two = is_complaint(reviews[:2]).value
-assert complaints == [False, True, False, True]
-assert first_two == [False, True]
-assert tally.facts["records"] == 6
+with tt.Engine() as engine:
+    complaints = engine.decide(question, reviews)
+    first_two = engine.decide(question, reviews[:2])
+assert complaints.value == [False, True, False, True]
+assert first_two.value == [False, True]
+review_count = (
+    complaints.facts.records + first_two.facts.records
+)
+assert review_count == 6

@@ -11,7 +11,6 @@ import { REPO } from '../../data/repo.mjs';
 const judge = installSample('python', 'functional/judge');
 const stream = installSample('python', 'functional/stream');
 const tally = installSample('python', 'functional/tally');
-const r = installSample('r', 'functional/judge');
 const pipe = { ...run('functions/filter', '1-lines'), see: FUNCTIONAL_PIPE_SEE };
 const readme = (folder) => `${REPO}/blob/main/libraries/${folder}/README.md`;
 ---
@@ -19,34 +18,32 @@ const readme = (folder) => `${REPO}/blob/main/libraries/${folder}/README.md`;
   <h1>Functional patterns</h1>
   <p class="lede">A ThinkThen question works like a function. Bind the question once. Then apply it to text, a list, a column or a stream.</p>
 
-  <h2>A judge is a question with no input</h2>
-  <p>Call <code>tt.decide</code> with a question and no text. It returns a judge. A judge is a plain Python callable. <code>functools.partial</code> and <code>toolz.pipe</code> take it like any function.</p>
-  <p>Hand the judge the whole list. <code>map(judge, xs)</code> calls the judge once per item and sends one request per item. <code>judge(xs)</code> hands over the whole list. ThinkThen packs it into as few requests as <code>THINKTHEN_BATCH</code> and <code>THINKTHEN_MAX_REQUEST_BYTES</code> allow. <code>tt.plan</code> gives a request admission bound before anything is sent. This example allows up to four requests; batching may use fewer. The bound counts each review before cache reuse because input pauses can leave batches partly full.</p>
+  <h2>Reuse one question</h2>
+  <p>Development 0.2 uses named methods on one Python <code>Engine</code>. Keep the question as text or an authored dictionary, then pass it with the input to each call. A whole list allows Rust to pack requests; calling once per item creates separate calls.</p>
+  <p><code>engine.plan</code> previews a complete input without sending. Its request admission bound precedes cache reuse and packing. Iterators cannot be previewed.</p>
   <Code code={judge.code} file={judge.file} label="Copy the judge sample" />
   {judge.output && <Code code={judge.output} lang="output" caption="What Python printed" copy={false} />}
 
   <h2>A stream stops when you stop</h2>
-  <p>Give a judge a generator, and it returns a lazy stream. The stream reads ahead a little and packs what it read. When the reader stops, ThinkThen stops sending. Here the reader takes the first complaint and closes the stream.</p>
+  <p>Pass a generator to <code>engine.iterate</code> to obtain a lazy typed stream. The stream reads ahead a little and packs what it read. When the reader stops, ThinkThen stops sending. Here the reader takes the first complaint and closes the stream.</p>
   <Code code={stream.code} file={stream.file} label="Copy the stream sample" />
   {stream.output && <Code code={stream.output} lang="output" caption="What Python printed" copy={false} />}
-  <p>A slow source can leave a request half full while it waits. Build the judge with <code>batch=1</code> for a live source.</p>
+  <p>A slow source can leave a request half full while it waits. Set <code>batch=1</code> on the engine for a live source.</p>
 
   <h2>Count every call</h2>
-  <p>A judge built with <code>tally=</code> adds the facts of each call it makes to the tally. This judge read four reviews, then two.</p>
+  <p>Each completed call retains its own facts. This engine reads four reviews, then two. Add those settled counts when your caller needs a total.</p>
   <Code code={tally.code} file={tally.file} label="Copy the tally sample" />
   {tally.output && <Code code={tally.output} lang="output" caption="What Python printed" copy={false} />}
 
   <h2>R</h2>
-  <p><code>tt_decide</code> with no input returns a function. Apply it inside <code>mutate</code>. Each group sends one packed call.</p>
-  <Code code={r.code} file={r.file} label="Copy the R sample" />
-  {r.output && <Code code={r.output} lang="output" caption="What R printed" copy={false} />}
+  <p>Development 0.2 uses <code>tt_decide(question, input)</code> with both arguments. Read its generated results and facts. The <a href={readme('r')}>R guide</a> maps removed judge closures and simplified frames.</p>
 
   <h2>The shell</h2>
   <p>The pipe is the same idea. <code>filter</code> reads a stream of lines and keeps the ones whose answer is yes.</p>
   <Terminal run={pipe} caption={pipe.see} />
 
   <h2>More</h2>
-  <p>The <a href={readme('python')}>Python README</a> covers judges over Polars and pandas columns, deadlines and cancel tokens. The <a href={readme('r')}>R README</a> covers dbplyr. The <a href={readme('polars')}>Rust Polars README</a> covers lazy expressions. <a href="/learn/caching/">Caching and replay</a> shows why a second run sends nothing.</p>
+  <p>The <a href={readme('python')}>Python README</a> covers named methods over Polars and pandas columns, deadlines and cancel tokens. The <a href={readme('r')}>R README</a> covers dbplyr. The <a href={readme('polars')}>Rust Polars README</a> covers lazy expressions. <a href="/learn/caching/">Caching and replay</a> shows why a second run sends nothing.</p>
 
   <p class="pagelinks"><a href="/install/python/">Python</a> · <a href="/install/r/">R</a> · <a href="/functions/filter/">filter</a></p>
 </Base>

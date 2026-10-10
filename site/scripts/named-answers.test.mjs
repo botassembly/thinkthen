@@ -20,10 +20,10 @@ const CASES = [
   ['generic', 'typescript', 'pass', 'const owners = tt.tag(question, message);', []],
   ['generic', 'typescript', 'fail', 'const answer = tt.decide(question, message);', [[1, 'generic']]],
 
-  ['direct', 'ruby', 'pass', 'is_spam = ThinkThen.decide(question, message)\nraise unless is_spam', []],
-  ['direct', 'ruby', 'fail', 'raise unless ThinkThen.decide(question, message)', [[1, 'direct']]],
-  ['generic', 'ruby', 'pass', 'urgency = ThinkThen.score(question, message)', []],
-  ['generic', 'ruby', 'fail', 'answer = ThinkThen.decide(question, message)', [[1, 'generic']]],
+  ['direct', 'ruby', 'pass', 'is_spam = client.decide(question, message)\nraise unless is_spam', []],
+  ['direct', 'ruby', 'fail', 'raise unless client.decide(question, message)', [[1, 'direct']]],
+  ['generic', 'ruby', 'pass', 'urgency = client.score(question, message)', []],
+  ['generic', 'ruby', 'fail', 'answer = client.decide(question, message)', [[1, 'generic']]],
 
   ['direct', 'r', 'pass', 'is_spam <- tt_decide(question, message)\nstopifnot(is_spam)', []],
   ['direct', 'r', 'fail', 'stopifnot(tt_decide(question, message))', [[1, 'direct']]],

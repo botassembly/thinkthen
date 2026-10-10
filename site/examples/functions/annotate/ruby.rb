@@ -1,7 +1,11 @@
 require "thinkthen"
 
-report = "Steps: click Log in. Nobody gets in."
-triage = ThinkThen.annotate("form.json", [report]).value
-raise unless triage == [
-  { steps: true, area: "login", impact: 1.98 }
-]
+ThinkThen::Client.open do |client|
+  report = "Steps: click Log in. Nobody gets in."
+  triage = client.annotate(
+    ThinkThen::Client.question_file("form.json"), [report]
+  ).value
+  raise unless triage[0]["steps"] == true
+  raise unless triage[0]["area"] == "login"
+  raise unless triage[0]["impact"] == 1.98
+end

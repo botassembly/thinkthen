@@ -1,8 +1,9 @@
 import pandas as pd
 import thinkthen as tt
+import thinkthen.pandas
 
 question = "Does the customer ask for a refund?"
-refund = tt.question(decide=question, threshold=(0.2, 0.8))
+refund = {"decide": question, "threshold": "0.2:0.8"}
 
 messages = pd.Series(
     [
@@ -11,7 +12,7 @@ messages = pd.Series(
     ],
     name="message",
 )
-is_refund = tt.decide(refund, messages).value
+is_refund = messages.tt.decide(refund).value
 print(is_refund)
 
 for_a_person = messages[is_refund.isna()]
