@@ -1,6 +1,6 @@
 # 0467: Describe the final 0.2 surfaces across the shared documentation
 
-Status: OPEN. SDK module comments and install READMEs still describe complete execution as pending.
+Status: COMPLETE. SDK module comments and install READMEs still describe complete execution as pending.
 
 Milestone: 0.2
 
@@ -48,6 +48,8 @@ Reviews: revision 219008c3d076a8c5f747c096c7b879b3a78c2f48, accept
 Reviews: revision 9c8094b4e4298b13f83aad37ca78b58cc8b524d1, accept
 
 Reviews: revision 80102be8833da180da1570b7c724419d74d2c189, accept
+
+Landed: f766238
 
 ## Outcome
 
