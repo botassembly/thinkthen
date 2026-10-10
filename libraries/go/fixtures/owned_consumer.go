@@ -85,6 +85,40 @@ func main() {
 		panic(err)
 	}
 	defer client.Close()
+	if len(os.Args) > 1 && os.Args[1] == "plan" {
+		planClient, err := tt.NewClient(tt.EngineSettings{BaseUrl: tt.Ptr(os.Getenv("THINKTHEN_BASE_URL")), Model: tt.Ptr("jev-1.13.0"), Cache: tt.Ptr[tt.CacheDocument](tt.DisabledCache(false))})
+		require(err == nil, "plan constructor")
+		defer planClient.Close()
+		input := tt.RequestInputText{Text: "Refund me please."}
+		plan, err := planClient.Plan(tt.Request{Call: tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: input}})
+		require(err == nil, "canonical decide plan")
+		for _, call := range []tt.RequestCall{
+			tt.RequestCallChoose{Question: tt.DefinedQuestion(tt.AuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"})}), Input: input},
+			tt.RequestCallTag{Question: tt.DefinedQuestion(tt.AuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), Input: input},
+			tt.RequestCallScore{Question: tt.DefinedQuestion(tt.AuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), Input: input},
+		} {
+			preview, err := planClient.Plan(tt.Request{Call: call})
+			require(err == nil && preview.FirstBodyUtf8().Present && !preview.FirstBodyUtf8().Null, "atomic preview")
+		}
+		for _, call := range []tt.RequestCall{
+			tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: tt.RequestInputFeed{Name: "dynamic"}},
+			tt.RequestCallAnnotate{Question: tt.TextQuestion("asks for a refund"), Input: input},
+			tt.RequestCallDecide{Question: tt.RequestQuestionFile{Path: "missing-question.json"}, Input: input},
+		} {
+			_, err := planClient.Plan(tt.Request{Call: call})
+			var refused *tt.Error
+			require(errors.As(err, &refused), fmt.Sprintf("plan refusal lost typed error for %T: %v", call, err))
+		}
+		empty, err := planClient.Plan(tt.Request{Call: tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: tt.RequestInputRecords{Items: []tt.RequestItem{}}}})
+		require(err == nil && empty.FirstBodyUtf8().Present && empty.FirstBodyUtf8().Null, "empty plan lost null")
+		planClient.Close()
+		_, err = planClient.Plan(tt.Request{Call: tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: input}})
+		require(errors.Is(err, tt.ErrClosed), "closed preview admitted")
+		records, err := plan.Records().Value.Int64()
+		require(err == nil && records == 1, "owned plan lost after close")
+		require(json.NewEncoder(os.Stdout).Encode(plan) == nil, "plan encoding")
+		return
+	}
 	if len(os.Args) > 1 && (os.Args[1] == "usage-written" || os.Args[1] == "usage-failed") {
 		call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), "surface-attribution", nil)
 		require(err == nil && call.Terminal != nil, "usage call lost answer")

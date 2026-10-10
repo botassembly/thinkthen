@@ -30,12 +30,15 @@ A `Producer` supplies `Next(context.Context) (any, error)` and returns `io.EOF` 
 
 `UsagePersistence` and `FinishUsageStatus` return immutable `UsageStatus` values. Generated states and copied optional advice remain available after close. Failed persistence leaves earlier answers and facts intact. Only native usage-lock acquisition has a deadline; filesystem work can take longer.
 
+`Client.Plan(Request)` previews a generated canonical request and returns a generated `OwnedPlan`. Rust owns question and input admission and returns typed refusals for unsupported requests. Preview reads no key or cache and sends nothing. The request serializer supplies its schema version. Plans retain explicit empty-input null bodies and remain readable after close.
+
 ## Upgrade from the old Go API
 
 | Old call | Current call |
 | --- | --- |
 | `New`, `NewWith` | `NewClient(EngineSettings)` |
 | `Engine.Decide`, `DecideMany`, `*Complete`, `*Batch` | The corresponding `Client` named call with originals, slices or a `Producer` |
+| `Engine.Plan` | `Client.Plan(Request)` |
 | `Engine.Call` | The corresponding `Client` named call with generated question and input values |
 | `Engine.Files`, `SourceFiles`, `FileRecords` | A named call with `RequestSource` |
 | `Item`, `ReadField`, handwritten native views | `RequestItem` and generated packet/result accessors |

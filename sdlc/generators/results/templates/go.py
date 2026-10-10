@@ -2,7 +2,7 @@
 import re
 import json
 from csharp import shape
-ROOTS = ('completesessionPacket',)
+ROOTS = ('completesessionPacket', 'completeplan')
 def name(key):
     return 'Owned' + ''.join(p[:1].upper()+p[1:] for p in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
 def typ(raw):
@@ -45,8 +45,10 @@ def usage(header):
 def inputs():
     """Generate Go input values from the Rust-owned request grammar."""
     from pathlib import Path
-    definitions = json.loads((Path(__file__).resolve().parents[4] / 'specification/request.schema.json').read_text())['$defs']
-    pending = ['EngineSettings', 'RequestOptions', 'RequestQuestion', 'RequestItem', 'RequestSource', 'RequestInput']
+    schema = json.loads((Path(__file__).resolve().parents[4] / 'specification/request.schema.json').read_text())
+    definitions = schema['$defs']
+    definitions['Request'] = {k:v for k,v in schema.items() if k != '$defs'}
+    pending = ['RequestSessionDescriptor', 'Request', 'EngineSettings', 'RequestOptions', 'RequestQuestion', 'RequestItem', 'RequestSource', 'RequestInput']
     generated = {}
     lines = []
     def ident(key):
@@ -102,8 +104,12 @@ def inputs():
             lines += [f'type {n} struct {{']
             constants={}
             for member,field in s['properties'].items():
-                if isinstance(field,dict) and 'const' in field:
-                    constants[member]=field['const']; continue
+                resolved=resolve(field)
+                literals=resolved.get('oneOf',[]) if isinstance(resolved,dict) else []
+                if isinstance(resolved,dict) and 'const' in resolved:
+                    constants[member]=resolved['const']; continue
+                if len(literals)==1 and 'const' in literals[0]:
+                    constants[member]=literals[0]['const']; continue
                 ft=field_type(field,key+ident(member)); required=member in s.get('required',[])
                 # Optional pointers retain explicit false, zero, empty and null values.
                 if not required: ft='*'+ft

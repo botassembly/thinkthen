@@ -55,7 +55,7 @@ func startProducer(ctx context.Context, producer Producer) *producerReader {
 			value, err := producer.Next(ctx)
 			item := producerValue{err: err, failure: "io"}
 			if err == nil {
-				item.data, item.err = json.Marshal(map[string]any{"item": descriptor(value)})
+				item.data, item.err = json.Marshal(RequestSessionDescriptor{Item: descriptor(value)})
 				item.failure = "invalid_input"
 			}
 			select {

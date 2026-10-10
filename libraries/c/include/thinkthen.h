@@ -7779,7 +7779,7 @@ int thinkthen_relate_with_facts_opts(const struct thinkthen_engine *engine,
 
 /*
  Preview canonical Request JSON without reading a key or cache or sending.
- Supports fixed atomic decide, choose, tag and score questions only; other functions and dynamic questions refuse. Sessions support all ten judgments.
+ Preview supported fixed atomic questions under shared Request admission; unsupported functions and dynamic questions refuse.
  Success owns NUL-terminated plan JSON in out and its byte length in out_len;
  free once with thinkthen_free_string. Refusal leaves both outputs unchanged
  and records the safe calling-thread thinkthen_session_error_message.

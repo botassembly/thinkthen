@@ -68,14 +68,14 @@ func sessionFailure(code C.int) error {
 	}
 	return &Error{Code: int(code), Kind: ErrorKind(code), Message: C.GoString(C.thinkthen_session_error_message())}
 }
-func descriptor(value any) any {
+func descriptor(value any) RequestItem {
 	if item, ok := value.(RequestItem); ok {
 		return item
 	}
 	if text, ok := value.(string); ok {
-		return map[string]any{"original": map[string]any{"kind": "text", "text": text}}
+		return TextItem(text)
 	}
-	return map[string]any{"original": map[string]any{"kind": "json", "value": value}}
+	return JSONItem(value)
 }
 func (c *Client) call(ctx context.Context, verb string, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	var result OwnedCall
@@ -85,27 +85,14 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
-	kind := "records"
-	if verb == "find" {
-		kind = "units"
-	}
-	if verb == "relate" {
-		kind = "entities"
-	}
-	source := map[string]any{"kind": kind}
+	var source RequestInput
 	producer, feeding := input.(Producer)
 	if feeding {
-		source = map[string]any{"kind": "feed", "name": "records"}
+		source = RequestInputFeed{Name: "records"}
 	} else if explicit, ok := input.(RequestInput); ok {
-		data, marshalErr := json.Marshal(explicit)
-		if marshalErr != nil {
-			return result, marshalErr
-		}
-		if err := json.Unmarshal(data, &source); err != nil {
-			return result, err
-		}
+		source = explicit
 	} else if files, ok := input.(RequestSource); ok {
-		source = map[string]any{"kind": "source", "source": files}
+		source = RequestInputSource{Source: files}
 	} else {
 		values := []any{input}
 		rv := reflect.ValueOf(input)
@@ -115,16 +102,43 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 				values[i] = rv.Index(i).Interface()
 			}
 		}
-		items := make([]any, len(values))
+		items := make([]RequestItem, len(values))
 		for i, v := range values {
 			items[i] = descriptor(v)
 		}
-		source["items"] = items
+		switch verb {
+		case "find":
+			source = RequestInputUnits{Items: items}
+		case "relate":
+			source = RequestInputEntities{Items: items}
+		default:
+			source = RequestInputRecords{Items: items}
+		}
 	}
-	if options == nil {
-		options = &RequestOptions{}
+	var call RequestCall
+	switch verb {
+	case "decide":
+		call = RequestCallDecide{Input: source, Options: options, Question: question}
+	case "choose":
+		call = RequestCallChoose{Input: source, Options: options, Question: question}
+	case "tag":
+		call = RequestCallTag{Input: source, Options: options, Question: question}
+	case "score":
+		call = RequestCallScore{Input: source, Options: options, Question: question}
+	case "filter":
+		call = RequestCallFilter{Input: source, Options: options, Question: question}
+	case "rank":
+		call = RequestCallRank{Input: source, Options: options, Question: question}
+	case "find":
+		call = RequestCallFind{Input: source, Options: options, Question: question}
+	case "annotate":
+		call = RequestCallAnnotate{Input: source, Options: options, Question: question}
+	case "recognize":
+		call = RequestCallRecognize{Input: source, Options: options, Question: question}
+	case "relate":
+		call = RequestCallRelate{Input: source, Options: options, Question: question}
 	}
-	request := map[string]any{"schema": OwnedRequestVersion, "call": map[string]any{"function": verb, "question": question, "input": source, "options": options}}
+	request := Request{Call: call}
 	data, err := json.Marshal(request)
 	if err != nil {
 		return result, err

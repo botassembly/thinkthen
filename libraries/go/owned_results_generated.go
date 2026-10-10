@@ -1753,6 +1753,32 @@ type OwnedPlace struct{ ownedJSON }
 func (v OwnedPlace) End() Presence[json.Number]   { return ownedMember[json.Number](v.raw, "end") }
 func (v OwnedPlace) Start() Presence[json.Number] { return ownedMember[json.Number](v.raw, "start") }
 
+type OwnedPlan struct{ ownedJSON }
+
+func (v OwnedPlan) EstimatedBytes() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "estimated_bytes")
+}
+func (v OwnedPlan) EstimatedInputTokens() Presence[OwnedTokenBand] {
+	return ownedMember[OwnedTokenBand](v.raw, "estimated_input_tokens")
+}
+func (v OwnedPlan) FirstBodyUtf8() Presence[string] {
+	return ownedMember[string](v.raw, "first_body_utf8")
+}
+func (v OwnedPlan) LargestRequestBytes() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "largest_request_bytes")
+}
+func (v OwnedPlan) LargestRequestEstimatedInputTokens() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "largest_request_estimated_input_tokens")
+}
+func (v OwnedPlan) Records() Presence[json.Number] { return ownedMember[json.Number](v.raw, "records") }
+func (v OwnedPlan) Requests() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "requests")
+}
+func (v OwnedPlan) TokenEstimateMethod() Presence[string] {
+	return ownedMember[string](v.raw, "token_estimate_method")
+}
+func (v OwnedPlan) UpperBound() Presence[bool] { return ownedMember[bool](v.raw, "upper_bound") }
+
 type OwnedProfileWarning struct{ ownedJSON }
 
 func (v OwnedProfileWarning) Running() Presence[string] { return ownedMember[string](v.raw, "running") }
@@ -2584,6 +2610,15 @@ func (v OwnedSourceRelationEndpoint) Ordinal() Presence[json.Number] {
 func (v OwnedSourceRelationEndpoint) Record() Presence[any] { return ownedMember[any](v.raw, "record") }
 
 type OwnedThreshold struct{ ownedJSON }
+type OwnedTokenBand struct{ ownedJSON }
+
+func (v OwnedTokenBand) Lower() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "lower")
+}
+func (v OwnedTokenBand) Upper() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "upper")
+}
+
 type OwnedTokenUsage struct{ ownedJSON }
 
 func (v OwnedTokenUsage) InputTokens() Presence[json.Number] {
@@ -3538,6 +3573,246 @@ func (DisabledCache) isCacheDocument()       {}
 
 type DisabledCache bool
 type CacheDocumentString string
+type Request struct {
+	Call RequestCall `json:"call"`
+}
+
+func (v Request) MarshalJSON() ([]byte, error) {
+	type plain Request
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["schema"] = json.RawMessage("\"thinkthen.request/1\"")
+	return json.Marshal(object)
+}
+
+type RequestCall interface{ isRequestCall() }
+
+func (RequestCallDecide) isRequestCall()    {}
+func (RequestCallChoose) isRequestCall()    {}
+func (RequestCallTag) isRequestCall()       {}
+func (RequestCallScore) isRequestCall()     {}
+func (RequestCallFilter) isRequestCall()    {}
+func (RequestCallRank) isRequestCall()      {}
+func (RequestCallFind) isRequestCall()      {}
+func (RequestCallAnnotate) isRequestCall()  {}
+func (RequestCallRecognize) isRequestCall() {}
+func (RequestCallRelate) isRequestCall()    {}
+
+type RequestCallRelate struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallRelate) MarshalJSON() ([]byte, error) {
+	type plain RequestCallRelate
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"relate\"")
+	return json.Marshal(object)
+}
+
+type RequestCallRecognize struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallRecognize) MarshalJSON() ([]byte, error) {
+	type plain RequestCallRecognize
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"recognize\"")
+	return json.Marshal(object)
+}
+
+type RequestCallAnnotate struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallAnnotate) MarshalJSON() ([]byte, error) {
+	type plain RequestCallAnnotate
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"annotate\"")
+	return json.Marshal(object)
+}
+
+type RequestCallFind struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallFind) MarshalJSON() ([]byte, error) {
+	type plain RequestCallFind
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"find\"")
+	return json.Marshal(object)
+}
+
+type RequestCallRank struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallRank) MarshalJSON() ([]byte, error) {
+	type plain RequestCallRank
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"rank\"")
+	return json.Marshal(object)
+}
+
+type RequestCallFilter struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallFilter) MarshalJSON() ([]byte, error) {
+	type plain RequestCallFilter
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"filter\"")
+	return json.Marshal(object)
+}
+
+type RequestCallScore struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallScore) MarshalJSON() ([]byte, error) {
+	type plain RequestCallScore
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"score\"")
+	return json.Marshal(object)
+}
+
+type RequestCallTag struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallTag) MarshalJSON() ([]byte, error) {
+	type plain RequestCallTag
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"tag\"")
+	return json.Marshal(object)
+}
+
+type RequestCallChoose struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallChoose) MarshalJSON() ([]byte, error) {
+	type plain RequestCallChoose
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"choose\"")
+	return json.Marshal(object)
+}
+
+type RequestCallDecide struct {
+	Input    RequestInput    `json:"input"`
+	Options  *RequestOptions `json:"options,omitempty"`
+	Question RequestQuestion `json:"question"`
+}
+
+func (v RequestCallDecide) MarshalJSON() ([]byte, error) {
+	type plain RequestCallDecide
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["function"] = json.RawMessage("\"decide\"")
+	return json.Marshal(object)
+}
+
+type RequestSessionDescriptor struct {
+	Item     RequestItem            `json:"item"`
+	Location *SessionSourceLocation `json:"location,omitempty"`
+}
+type SessionSourceLocation struct {
+	File      string  `json:"file"`
+	FirstLine *uint64 `json:"first_line,omitempty"`
+	LastLine  *uint64 `json:"last_line,omitempty"`
+}
 
 const OwnedRequestVersion = "thinkthen.request/1"
 

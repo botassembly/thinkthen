@@ -56,6 +56,7 @@ for example in decide smoke; do
     if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ] && [ "$example" = smoke ]; then "$caller/example"; exit; fi
 done
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+python3 fixtures/owned_installed.py "$module" plan
 python3 fixtures/owned_installed.py "$module"
 python3 fixtures/owned_installed.py "$module" feed
 python3 fixtures/owned_installed.py "$module" usage
