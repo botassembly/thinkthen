@@ -50,3 +50,4 @@ Author: project manager.
 ## Progress
 
 - 2026-10-10 landed 474d0116e; next: Committed Dart, Flutter and COBOL archive inventories are landed and fake workflow checks pass. Final installed distribution and platform qualification remain held.
+- 2026-10-10 started
