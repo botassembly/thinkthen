@@ -1,9 +1,7 @@
 //! Named complete SQL doors preserve native evaluation and error ownership.
+use crate::catalog::Catalog;
 use crate::{ffi, guard, question, worker};
-use rusqlite::{
-    Connection,
-    functions::{Context, FunctionFlags},
-};
+use rusqlite::functions::{Context, FunctionFlags};
 use thinkthen::{Error, ErrorKind, Surface};
 mod request;
 mod selector;
@@ -96,7 +94,7 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
         ))
     })
 }
-pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
+pub(crate) fn register(connection: &Catalog<'_>) -> rusqlite::Result<()> {
     for verb in [
         "decide",
         "choose",
@@ -115,6 +113,9 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
                 name.as_str(),
                 arity,
                 FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY,
+                &format!(
+                    "Run {verb} over native inputs and return complete result envelopes as JSON."
+                ),
                 move |context| invoke(context, verb),
             )?;
         }

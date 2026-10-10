@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock, PoisonError, Weak};
 use std::time::{Duration, Instant};
 
-use rusqlite::Connection;
+use crate::catalog::Catalog;
 use rusqlite::functions::{Context, FunctionFlags};
 use thinkthen::ErrorKind;
 
@@ -52,10 +52,10 @@ pub(crate) fn remaining(
 
 /// Register the setting with connection-owned closure state. The caller sets
 /// it in a separate statement before the work it should bound.
-pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
+pub(crate) fn register(connection: &Catalog<'_>) -> rusqlite::Result<()> {
     let owner = Arc::new(Budget::default());
     let flags = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
-    connection.create_scalar_function("thinkthen_budget_ms", 1, flags, move |context: &Context<'_>| {
+    connection.create_scalar_function("thinkthen_budget_ms", 1, flags, "Set the connection deadline budget in milliseconds.", move |context: &Context<'_>| {
         Ok(guard("thinkthen_budget_ms", || {
             let value = match context.get_raw(0) {
                 rusqlite::types::ValueRef::Integer(value) if value >= -1 => value,

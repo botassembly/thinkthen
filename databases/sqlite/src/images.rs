@@ -1,6 +1,6 @@
 //! Explicit persistent binary image values. Every reload is natively validated.
 
-use rusqlite::Connection;
+use crate::catalog::Catalog;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::{Value, ValueRef};
 use thinkthen::{ImageAdmission, ImageEvidence, ImageInput, ImageMedia, Judgment, QuestionInput};
@@ -273,33 +273,55 @@ fn judged(context: &Context<'_>, verb: Option<thinkthen::For>) -> Result<Value, 
     })
 }
 
-pub(crate) fn register(connection: &Connection, flags: FunctionFlags) -> rusqlite::Result<()> {
-    connection.create_scalar_function("thinkthen_image", 2, flags, |ctx| {
-        Ok(guard("image", || constructor(ctx))?)
-    })?;
-    connection.create_scalar_function("thinkthen_images", -1, flags, |ctx| {
-        Ok(guard("images", || pack(ctx))?)
-    })?;
-    connection.create_scalar_function("thinkthen_image_file", 1, flags, |ctx| {
-        Ok(guard("image file", || file(ctx))?)
-    })?;
-    connection.create_scalar_function("thinkthen_image_file_name", 1, flags, |ctx| {
-        Ok(guard("image file name", || {
-            if matches!(ctx.get_raw(0), ValueRef::Null) {
-                return Ok(None);
-            }
-            decode(blob(ctx.get_raw(0))?).map(|(_, file)| file)
-        })?)
-    })?;
+pub(crate) fn register(connection: &Catalog<'_>, flags: FunctionFlags) -> rusqlite::Result<()> {
+    connection.create_scalar_function(
+        "thinkthen_image",
+        2,
+        flags,
+        "Construct one native image BLOB from bytes and media type.",
+        |ctx| Ok(guard("image", || constructor(ctx))?),
+    )?;
+    connection.create_scalar_function(
+        "thinkthen_images",
+        -1,
+        flags,
+        "Combine ordered native image BLOBs into one collection.",
+        |ctx| Ok(guard("images", || pack(ctx))?),
+    )?;
+    connection.create_scalar_function(
+        "thinkthen_image_file",
+        1,
+        flags,
+        "Read an explicitly named image file into a native image BLOB.",
+        |ctx| Ok(guard("image file", || file(ctx))?),
+    )?;
+    connection.create_scalar_function(
+        "thinkthen_image_file_name",
+        1,
+        flags,
+        "Return the source file name retained in a native image BLOB.",
+        |ctx| {
+            Ok(guard("image file name", || {
+                if matches!(ctx.get_raw(0), ValueRef::Null) {
+                    return Ok(None);
+                }
+                decode(blob(ctx.get_raw(0))?).map(|(_, file)| file)
+            })?)
+        },
+    )?;
     for (name, verb) in [
         ("thinkthen_decide_images", Some(thinkthen::For::Decide)),
         ("thinkthen_choose_images", Some(thinkthen::For::Choose)),
         ("thinkthen_score_images", Some(thinkthen::For::Score)),
         ("thinkthen_details_images", None),
     ] {
-        connection.create_scalar_function(name, -1, flags, move |ctx| {
-            Ok(guard(name, || judged(ctx, verb))?)
-        })?;
+        connection.create_scalar_function(
+            name,
+            -1,
+            flags,
+            "Judge an ordered native image collection and return its answer or details.",
+            move |ctx| Ok(guard(name, || judged(ctx, verb))?),
+        )?;
     }
     Ok(())
 }

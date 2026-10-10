@@ -2,6 +2,23 @@
 
 `thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. Default loading registers volatile, direct-only functions. Objects in main and attached schemas cannot call them to spend requests or read files. Caller-created TEMP objects remain callable, even with `trusted_schema=OFF`.
 
+## Discover registered functions
+
+Run this query after loading the extension:
+
+```sql
+SELECT json_extract(value, '$.name') AS name,
+       json_extract(value, '$.kind') AS kind,
+       json_extract(value, '$.arity') AS arity,
+       json_extract(value, '$.min_arity') AS min_arity,
+       json_extract(value, '$.max_arity') AS max_arity,
+       json_extract(value, '$.description') AS description
+FROM json_each(thinkthen_functions())
+ORDER BY name, arity;
+```
+
+`thinkthen_functions()` returns a JSON array collected from the connection's extension registrations, including the discovery call and removed spellings that still report migration errors. Each scalar overload has its own row; `arity = -1` means variable arguments. Table rows report the minimum required and maximum hidden argument counts as `min_arity` and `max_arity`. Descriptions explain each call's purpose. Loading and discovery construct no engine, read no input files and send no requests. Discovery remains direct-only in both loading modes.
+
 ## Use reviewed views and ingestion triggers
 
 On a fresh connection, load once through the explicit trusted entry point:

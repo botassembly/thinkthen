@@ -15,6 +15,7 @@ use rusqlite::ffi::{
 use thinkthen::{ErrorKind, SendBudgetDenial, contained};
 
 mod budget;
+mod catalog;
 mod complete;
 mod complete_native;
 #[allow(

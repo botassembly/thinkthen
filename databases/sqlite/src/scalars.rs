@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use rusqlite::Connection;
+use crate::catalog::Catalog;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use thinkthen::{
@@ -370,7 +370,7 @@ fn usage_status(context: &Context<'_>) -> rusqlite::Result<String> {
 mod find;
 mod plan;
 
-fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlite::Result<()> {
+fn register_removed(connection: &Catalog<'_>, volatile: FunctionFlags) -> rusqlite::Result<()> {
     for name in [
         "thinkthen_decide",
         "thinkthen_choose",
@@ -390,6 +390,7 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
             name,
             4,
             volatile,
+            "Refuse a removed call form and explain the supported replacement.",
             move |_| -> rusqlite::Result<String> { Err(Failure::plain_usage(sentence).into()) },
         )?;
     }
@@ -407,6 +408,7 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
             name,
             -1,
             volatile,
+            "Refuse a removed call form and explain the supported replacement.",
             move |_| -> rusqlite::Result<String> { Err(Failure::plain_usage(sentence).into()) },
         )?;
     }
@@ -430,6 +432,7 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
             full.as_str(),
             -1,
             volatile,
+            "Refuse a removed setting function and direct callers to thinkthen_configure.",
             move |_| -> rusqlite::Result<String> {
                 Err(Failure::plain_usage(sentence.clone()).into())
             },
@@ -438,8 +441,70 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
     Ok(())
 }
 
+fn register_judgments(connection: &Catalog<'_>, judgment: FunctionFlags) -> rusqlite::Result<()> {
+    for arity in [2, 3] {
+        connection.create_scalar_function(
+            "thinkthen_decide",
+            arity,
+            judgment,
+            "Answer a yes or no question about the evidence.",
+            decide,
+        )?;
+        connection.create_scalar_function(
+            "thinkthen_choose",
+            arity,
+            judgment,
+            "Choose the option that best fits the evidence.",
+            choose,
+        )?;
+        connection.create_scalar_function(
+            "thinkthen_score",
+            arity,
+            judgment,
+            "Score the evidence on named levels.",
+            score,
+        )?;
+        connection.create_scalar_function(
+            "thinkthen_tag",
+            arity,
+            judgment,
+            "Return every label that applies to the evidence as JSON.",
+            tag,
+        )?;
+        connection.create_scalar_function(
+            "thinkthen_annotate",
+            arity,
+            judgment,
+            "Apply a saved question set to records and return annotations as JSON.",
+            annotate,
+        )?;
+        connection.create_scalar_function(
+            "thinkthen_details",
+            arity,
+            judgment,
+            "Return a complete judgment envelope as JSON.",
+            details,
+        )?;
+        connection.create_scalar_function(
+            "thinkthen_try_details",
+            arity,
+            judgment,
+            "Return a judgment envelope or a recoverable failure envelope as JSON.",
+            try_details,
+        )?;
+        connection.create_scalar_function(
+            "thinkthen_find",
+            arity,
+            judgment,
+            "Return the unit of text that best answers the question.",
+            find::find,
+        )?;
+    }
+    Ok(())
+}
+
 /// Register judgments under the initial connection policy, without harmless flags.
-pub(crate) fn register(connection: &Connection, mode: Registration) -> rusqlite::Result<()> {
+pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite::Result<()> {
     crate::complete::register(connection)?;
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     let judgment = match mode {
@@ -450,12 +515,14 @@ pub(crate) fn register(connection: &Connection, mode: Registration) -> rusqlite:
         "thinkthen_relations",
         2,
         judgment,
+        "Recognize entities and relations in one document as JSON.",
         recognize_document::recognize_document,
     )?;
     connection.create_scalar_function(
         "thinkthen_recognize_document",
         -1,
         volatile,
+        "Refuse the removed name and explain its replacement by thinkthen_relations.",
         |_| -> rusqlite::Result<String> {
             Err(Failure::plain_usage(
                 "thinkthen_recognize_document was renamed thinkthen_relations",
@@ -463,22 +530,37 @@ pub(crate) fn register(connection: &Connection, mode: Registration) -> rusqlite:
             .into())
         },
     )?;
+    register_judgments(connection, judgment)?;
+    connection.create_scalar_function(
+        "thinkthen_usage",
+        -1,
+        volatile,
+        "Read or configure count-only usage reporting.",
+        usage,
+    )?;
+    connection.create_scalar_function(
+        "thinkthen_usage_status",
+        -1,
+        volatile,
+        "Return count-only usage reporting status as JSON.",
+        usage_status,
+    )?;
     for arity in [2, 3] {
-        connection.create_scalar_function("thinkthen_decide", arity, judgment, decide)?;
-        connection.create_scalar_function("thinkthen_choose", arity, judgment, choose)?;
-        connection.create_scalar_function("thinkthen_score", arity, judgment, score)?;
-        connection.create_scalar_function("thinkthen_tag", arity, judgment, tag)?;
-        connection.create_scalar_function("thinkthen_annotate", arity, judgment, annotate)?;
-        connection.create_scalar_function("thinkthen_details", arity, judgment, details)?;
-        connection.create_scalar_function("thinkthen_try_details", arity, judgment, try_details)?;
-        connection.create_scalar_function("thinkthen_find", arity, judgment, find::find)?;
+        connection.create_scalar_function(
+            "thinkthen_plan",
+            arity,
+            judgment,
+            "Prepare a judgment plan as JSON without sending requests.",
+            plan::plan,
+        )?;
     }
-    connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
-    connection.create_scalar_function("thinkthen_usage_status", -1, volatile, usage_status)?;
-    for arity in [2, 3] {
-        connection.create_scalar_function("thinkthen_plan", arity, judgment, plan::plan)?;
-    }
-    connection.create_scalar_function("thinkthen_configure", 1, volatile, settings::configure)?;
+    connection.create_scalar_function(
+        "thinkthen_configure",
+        1,
+        volatile,
+        "Configure process settings from a JSON object.",
+        settings::configure,
+    )?;
     crate::images::register(connection, volatile)?;
     register_removed(connection, volatile)?;
     Ok(())
