@@ -2594,6 +2594,950 @@ func (v OwnedTokenUsage) OutputTokens() Presence[json.Number] {
 }
 
 type OwnedValue struct{ ownedJSON }
+type RequestInput interface{ isRequestInput() }
+
+func (RequestInputText) isRequestInput()     {}
+func (RequestInputJson) isRequestInput()     {}
+func (RequestInputRecords) isRequestInput()  {}
+func (RequestInputUnits) isRequestInput()    {}
+func (RequestInputEntities) isRequestInput() {}
+func (RequestInputSource) isRequestInput()   {}
+func (RequestInputFeed) isRequestInput()     {}
+
+type RequestInputFeed struct {
+	Framing *RequestFraming `json:"framing,omitempty"`
+	Images  *[]RequestImage `json:"images,omitempty"`
+	Name    string          `json:"name"`
+	Reading *RequestReader  `json:"reading,omitempty"`
+}
+
+func (v RequestInputFeed) MarshalJSON() ([]byte, error) {
+	type plain RequestInputFeed
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"feed\"")
+	return json.Marshal(object)
+}
+
+type RequestReader struct {
+	Unit   *RequestSourceUnit `json:"unit,omitempty"`
+	Window *uint64            `json:"window,omitempty"`
+}
+type RequestSourceUnit string
+
+const (
+	RequestSourceUnitLine   RequestSourceUnit = "line"
+	RequestSourceUnitWindow RequestSourceUnit = "window"
+	RequestSourceUnitFile   RequestSourceUnit = "file"
+)
+
+type RequestImage interface{ isRequestImage() }
+
+func (RequestImageFile) isRequestImage()  {}
+func (RequestImageBytes) isRequestImage() {}
+
+type RequestImageBytes struct {
+	Bytes string     `json:"bytes"`
+	Media ImageMedia `json:"media"`
+}
+
+func (v RequestImageBytes) MarshalJSON() ([]byte, error) {
+	type plain RequestImageBytes
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"bytes\"")
+	return json.Marshal(object)
+}
+
+type ImageMedia string
+
+const (
+	ImageMediaImageJpeg ImageMedia = "image/jpeg"
+	ImageMediaImagePng  ImageMedia = "image/png"
+)
+
+type RequestImageFile struct {
+	Media *ImageMedia `json:"media,omitempty"`
+	Path  string      `json:"path"`
+}
+
+func (v RequestImageFile) MarshalJSON() ([]byte, error) {
+	type plain RequestImageFile
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"file\"")
+	return json.Marshal(object)
+}
+
+type RequestFraming string
+
+const (
+	RequestFramingDocument RequestFraming = "document"
+	RequestFramingLines    RequestFraming = "lines"
+	RequestFramingJsonl    RequestFraming = "jsonl"
+	RequestFramingCsv      RequestFraming = "csv"
+	RequestFramingTsv      RequestFraming = "tsv"
+)
+
+type RequestInputSource struct {
+	Source RequestSource `json:"source"`
+}
+
+func (v RequestInputSource) MarshalJSON() ([]byte, error) {
+	type plain RequestInputSource
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"source\"")
+	return json.Marshal(object)
+}
+
+type RequestSource struct {
+	Framing *RequestFraming `json:"framing,omitempty"`
+	Media   *ReaderMedia    `json:"media,omitempty"`
+	Paths   []string        `json:"paths"`
+	Reading *RequestReader  `json:"reading,omitempty"`
+}
+type ReaderMedia string
+
+const (
+	ReaderMediaText  ReaderMedia = "text"
+	ReaderMediaImage ReaderMedia = "image"
+)
+
+type RequestInputEntities struct {
+	Items []RequestItem `json:"items"`
+}
+
+func (v RequestInputEntities) MarshalJSON() ([]byte, error) {
+	type plain RequestInputEntities
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"entities\"")
+	return json.Marshal(object)
+}
+
+type RequestItem struct {
+	Context   *ContextSchema         `json:"context,omitempty"`
+	Examples  *[]RecognitionExample  `json:"examples,omitempty"`
+	Images    *[]RequestImage        `json:"images,omitempty"`
+	Options   *[]OptionSchema        `json:"options,omitempty"`
+	Original  *RequestOriginal       `json:"original,omitempty"`
+	SeedSpans *[]RecognitionSeedSpan `json:"seed_spans,omitempty"`
+}
+type RecognitionSeedSpan struct {
+	End   uint64  `json:"end"`
+	Kind  *string `json:"kind,omitempty"`
+	Start uint64  `json:"start"`
+}
+type RequestOriginal interface{ isRequestOriginal() }
+
+func (RequestOriginalText) isRequestOriginal() {}
+func (RequestOriginalJson) isRequestOriginal() {}
+
+type RequestOriginalJson struct {
+	Value any `json:"value"`
+}
+
+func (v RequestOriginalJson) MarshalJSON() ([]byte, error) {
+	type plain RequestOriginalJson
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"json\"")
+	return json.Marshal(object)
+}
+
+type RequestOriginalText struct {
+	Text string `json:"text"`
+}
+
+func (v RequestOriginalText) MarshalJSON() ([]byte, error) {
+	type plain RequestOriginalText
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"text\"")
+	return json.Marshal(object)
+}
+
+type OptionSchema struct {
+	Description *any   `json:"description,omitempty"`
+	Name        string `json:"name"`
+}
+type RecognitionExample interface{ isRecognitionExample() }
+
+func (RecognitionExampleString) isRecognitionExample() {}
+func (RecognitionExampleText) isRecognitionExample()   {}
+
+type RecognitionExampleText struct {
+	Entities []RecognitionExampleEntity `json:"entities"`
+	Kinds    *[]string                  `json:"kinds,omitempty"`
+	Text     string                     `json:"text"`
+}
+type RecognitionExampleEntity struct {
+	End   uint64 `json:"end"`
+	Kind  string `json:"kind"`
+	Start uint64 `json:"start"`
+}
+type RecognitionExampleString string
+type ContextSchema interface{ isContextSchema() }
+
+func (ContextSchemaString) isContextSchema() {}
+func (ContextSchemaObject) isContextSchema() {}
+
+type ContextSchemaObject map[string]any
+type ContextSchemaString string
+type RequestInputUnits struct {
+	Items []RequestItem `json:"items"`
+}
+
+func (v RequestInputUnits) MarshalJSON() ([]byte, error) {
+	type plain RequestInputUnits
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"units\"")
+	return json.Marshal(object)
+}
+
+type RequestInputRecords struct {
+	Items []RequestItem `json:"items"`
+}
+
+func (v RequestInputRecords) MarshalJSON() ([]byte, error) {
+	type plain RequestInputRecords
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"records\"")
+	return json.Marshal(object)
+}
+
+type RequestInputJson struct {
+	Images *[]RequestImage `json:"images,omitempty"`
+	Value  any             `json:"value"`
+}
+
+func (v RequestInputJson) MarshalJSON() ([]byte, error) {
+	type plain RequestInputJson
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"json\"")
+	return json.Marshal(object)
+}
+
+type RequestInputText struct {
+	Images *[]RequestImage `json:"images,omitempty"`
+	Text   string          `json:"text"`
+}
+
+func (v RequestInputText) MarshalJSON() ([]byte, error) {
+	type plain RequestInputText
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"text\"")
+	return json.Marshal(object)
+}
+
+type RequestQuestion interface{ isRequestQuestion() }
+
+func (RequestQuestionText) isRequestQuestion()       {}
+func (RequestQuestionDefinition) isRequestQuestion() {}
+func (RequestQuestionFile) isRequestQuestion()       {}
+func (RequestQuestionName) isRequestQuestion()       {}
+func (RequestQuestionReference) isRequestQuestion()  {}
+
+type RequestQuestionReference struct {
+	Reference string `json:"reference"`
+}
+
+func (v RequestQuestionReference) MarshalJSON() ([]byte, error) {
+	type plain RequestQuestionReference
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"reference\"")
+	return json.Marshal(object)
+}
+
+type RequestQuestionName struct {
+	Name string `json:"name"`
+}
+
+func (v RequestQuestionName) MarshalJSON() ([]byte, error) {
+	type plain RequestQuestionName
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"name\"")
+	return json.Marshal(object)
+}
+
+type RequestQuestionFile struct {
+	Path string `json:"path"`
+}
+
+func (v RequestQuestionFile) MarshalJSON() ([]byte, error) {
+	type plain RequestQuestionFile
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"file\"")
+	return json.Marshal(object)
+}
+
+type RequestQuestionDefinition struct {
+	Value RequestDefinition `json:"value"`
+}
+
+func (v RequestQuestionDefinition) MarshalJSON() ([]byte, error) {
+	type plain RequestQuestionDefinition
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"definition\"")
+	return json.Marshal(object)
+}
+
+type RequestDefinition interface{ isRequestDefinition() }
+
+func (AuthoredDecide) isRequestDefinition()             {}
+func (AuthoredChoose) isRequestDefinition()             {}
+func (AuthoredTag) isRequestDefinition()                {}
+func (AuthoredScore) isRequestDefinition()              {}
+func (AuthoredRelate) isRequestDefinition()             {}
+func (AuthoredFind) isRequestDefinition()               {}
+func (RequestDefinitionRecognize) isRequestDefinition() {}
+func (RequestDefinitionQuestions) isRequestDefinition() {}
+
+type RequestDefinitionQuestions struct {
+	Batch     *any                                                `json:"batch,omitempty"`
+	Profile   *AuthoredProfile                                    `json:"profile,omitempty"`
+	Questions map[string]RequestDefinitionQuestionsQuestionsValue `json:"questions"`
+	Threshold *AuthoredThreshold                                  `json:"threshold,omitempty"`
+}
+
+func (v RequestDefinitionQuestions) MarshalJSON() ([]byte, error) {
+	type plain RequestDefinitionQuestions
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["version"] = json.RawMessage("1")
+	return json.Marshal(object)
+}
+
+type AuthoredThreshold interface{ isAuthoredThreshold() }
+
+func (AuthoredThresholdNumber) isAuthoredThreshold() {}
+func (AuthoredThresholdString) isAuthoredThreshold() {}
+
+type AuthoredThresholdString string
+type AuthoredThresholdNumber float64
+type RequestDefinitionQuestionsQuestionsValue interface{ isRequestDefinitionQuestionsQuestionsValue() }
+
+func (RequestDefinitionQuestionsQuestionsValueDecide) isRequestDefinitionQuestionsQuestionsValue() {}
+func (RequestDefinitionQuestionsQuestionsValueChoose) isRequestDefinitionQuestionsQuestionsValue() {}
+func (RequestDefinitionQuestionsQuestionsValueTag) isRequestDefinitionQuestionsQuestionsValue()    {}
+func (RequestDefinitionQuestionsQuestionsValueScore) isRequestDefinitionQuestionsQuestionsValue()  {}
+
+type RequestDefinitionQuestionsQuestionsValueScore struct {
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Levels         *AuthoredLevels           `json:"levels,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Score          AuthoredQuestionText      `json:"score"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredQuestionText interface{ isAuthoredQuestionText() }
+
+func (AuthoredQuestionTextString) isAuthoredQuestionText() {}
+func (AuthoredQuestionTextObject) isAuthoredQuestionText() {}
+func (AuthoredQuestionTextArray) isAuthoredQuestionText()  {}
+
+type AuthoredQuestionTextArray []any
+type AuthoredQuestionTextObject map[string]any
+type AuthoredQuestionTextString string
+type AuthoredPointers interface{ isAuthoredPointers() }
+
+func (AuthoredPointersString) isAuthoredPointers() {}
+func (AuthoredPointersArray) isAuthoredPointers()  {}
+
+type AuthoredPointersArray []string
+type AuthoredPointersString string
+type AuthoredLevels interface{ isAuthoredLevels() }
+
+func (AuthoredLevelsArray) isAuthoredLevels()  {}
+func (AuthoredLevelsObject) isAuthoredLevels() {}
+
+type AuthoredLevelsObject map[string]AuthoredCriterion
+type AuthoredCriterion interface{ isAuthoredCriterion() }
+
+func (AuthoredCriterionString) isAuthoredCriterion() {}
+func (AuthoredCriterionObject) isAuthoredCriterion() {}
+func (AuthoredCriterionArray) isAuthoredCriterion()  {}
+func (AuthoredCriterionNull) isAuthoredCriterion()   {}
+
+type AuthoredCriterionNull struct{}
+
+func (AuthoredCriterionNull) MarshalJSON() ([]byte, error) { return []byte("null"), nil }
+
+type AuthoredCriterionArray []any
+type AuthoredCriterionObject map[string]any
+type AuthoredCriterionString string
+type AuthoredLevelsArray []AuthoredName
+type AuthoredName string
+type AuthoredInputDeclaration interface{ isAuthoredInputDeclaration() }
+
+func (AuthoredInputDeclarationString) isAuthoredInputDeclaration() {}
+func (AuthoredInputDeclarationObject) isAuthoredInputDeclaration() {}
+
+type AuthoredInputDeclarationObject struct {
+	Properties map[string]AuthoredInputProperty `json:"properties"`
+	Required   *[]string                        `json:"required,omitempty"`
+}
+
+func (v AuthoredInputDeclarationObject) MarshalJSON() ([]byte, error) {
+	type plain AuthoredInputDeclarationObject
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["type"] = json.RawMessage("\"object\"")
+	return json.Marshal(object)
+}
+
+type AuthoredInputProperty interface{ isAuthoredInputProperty() }
+
+func (AuthoredInputPropertyString) isAuthoredInputProperty()  {}
+func (AuthoredInputPropertyNumber) isAuthoredInputProperty()  {}
+func (AuthoredInputPropertyBoolean) isAuthoredInputProperty() {}
+func (AuthoredInputPropertyArray) isAuthoredInputProperty()   {}
+
+type AuthoredInputPropertyArray struct {
+	Items AuthoredInputPropertyArrayItems `json:"items"`
+}
+
+func (v AuthoredInputPropertyArray) MarshalJSON() ([]byte, error) {
+	type plain AuthoredInputPropertyArray
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["type"] = json.RawMessage("\"array\"")
+	return json.Marshal(object)
+}
+
+type AuthoredInputPropertyArrayItems struct {
+}
+
+func (v AuthoredInputPropertyArrayItems) MarshalJSON() ([]byte, error) {
+	type plain AuthoredInputPropertyArrayItems
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["type"] = json.RawMessage("\"string\"")
+	return json.Marshal(object)
+}
+
+type AuthoredInputPropertyBoolean struct {
+}
+
+func (v AuthoredInputPropertyBoolean) MarshalJSON() ([]byte, error) {
+	type plain AuthoredInputPropertyBoolean
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["type"] = json.RawMessage("\"boolean\"")
+	return json.Marshal(object)
+}
+
+type AuthoredInputPropertyNumber struct {
+}
+
+func (v AuthoredInputPropertyNumber) MarshalJSON() ([]byte, error) {
+	type plain AuthoredInputPropertyNumber
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["type"] = json.RawMessage("\"number\"")
+	return json.Marshal(object)
+}
+
+type AuthoredInputPropertyString struct {
+}
+
+func (v AuthoredInputPropertyString) MarshalJSON() ([]byte, error) {
+	type plain AuthoredInputPropertyString
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["type"] = json.RawMessage("\"string\"")
+	return json.Marshal(object)
+}
+
+type AuthoredInputDeclarationString struct {
+}
+
+func (v AuthoredInputDeclarationString) MarshalJSON() ([]byte, error) {
+	type plain AuthoredInputDeclarationString
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["type"] = json.RawMessage("\"string\"")
+	return json.Marshal(object)
+}
+
+type RequestDefinitionQuestionsQuestionsValueTag struct {
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Labels         *AuthoredLabels           `json:"labels,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Tag            AuthoredQuestionText      `json:"tag"`
+	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredCut interface{ isAuthoredCut() }
+
+func (AuthoredCutNumber) isAuthoredCut() {}
+func (AuthoredCutString) isAuthoredCut() {}
+
+type AuthoredCutString string
+type AuthoredCutNumber float64
+type AuthoredLabels interface{ isAuthoredLabels() }
+
+func (AuthoredLabelsArray) isAuthoredLabels()  {}
+func (AuthoredLabelsObject) isAuthoredLabels() {}
+
+type AuthoredLabelsObject map[string]AuthoredDescription
+type AuthoredDescription interface{ isAuthoredDescription() }
+
+func (AuthoredDescriptionString) isAuthoredDescription() {}
+func (AuthoredDescriptionObject) isAuthoredDescription() {}
+func (AuthoredDescriptionArray) isAuthoredDescription()  {}
+func (AuthoredDescriptionNull) isAuthoredDescription()   {}
+
+type AuthoredDescriptionNull struct{}
+
+func (AuthoredDescriptionNull) MarshalJSON() ([]byte, error) { return []byte("null"), nil }
+
+type AuthoredDescriptionArray []any
+type AuthoredDescriptionObject map[string]any
+type AuthoredDescriptionString string
+type AuthoredLabelsArray []AuthoredName
+type RequestDefinitionQuestionsQuestionsValueChoose struct {
+	Choose         AuthoredQuestionText      `json:"choose"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Options        *AuthoredOptions          `json:"options,omitempty"`
+	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredOptions interface{ isAuthoredOptions() }
+
+func (AuthoredOptionsArray) isAuthoredOptions()  {}
+func (AuthoredOptionsObject) isAuthoredOptions() {}
+
+type AuthoredOptionsObject map[string]AuthoredDescription
+type AuthoredOptionsArray []AuthoredName
+type RequestDefinitionQuestionsQuestionsValueDecide struct {
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	Decide         AuthoredQuestionText      `json:"decide"`
+	False          *AuthoredCriterion        `json:"false,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Threshold      *AuthoredThreshold        `json:"threshold,omitempty"`
+	True           *AuthoredCriterion        `json:"true,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredProfile string
+type RequestDefinitionRecognize struct {
+	ContextSchema     *AuthoredInputDeclaration           `json:"context_schema,omitempty"`
+	ItemSchema        *AuthoredInputDeclaration           `json:"item_schema,omitempty"`
+	Model             *AuthoredName                       `json:"model,omitempty"`
+	Name              *string                             `json:"name,omitempty"`
+	On                *AuthoredPointers                   `json:"on,omitempty"`
+	Profile           *AuthoredProfile                    `json:"profile,omitempty"`
+	Recognize         RequestDefinitionRecognizeRecognize `json:"recognize"`
+	RelationThreshold *AuthoredCut                        `json:"relation_threshold,omitempty"`
+	Threshold         *AuthoredCut                        `json:"threshold,omitempty"`
+	WordingVersion    *int64                              `json:"wording_version,omitempty"`
+}
+
+func (v RequestDefinitionRecognize) MarshalJSON() ([]byte, error) {
+	type plain RequestDefinitionRecognize
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["version"] = json.RawMessage("1")
+	return json.Marshal(object)
+}
+
+type RequestDefinitionRecognizeRecognize struct {
+	EntityDefinition *AuthoredQuestionText           `json:"entity_definition,omitempty"`
+	Instructions     *AuthoredQuestionText           `json:"instructions,omitempty"`
+	Kinds            *map[string]AuthoredDescription `json:"kinds,omitempty"`
+	Mode             *RecognitionMode                `json:"mode,omitempty"`
+	Relations        *[]AuthoredRelation             `json:"relations,omitempty"`
+	SnippetPieces    *uint64                         `json:"snippet_pieces,omitempty"`
+	StageContext     *RecognitionStageContext        `json:"stage_context,omitempty"`
+}
+type RecognitionStageContext struct {
+	Boundary *string `json:"boundary,omitempty"`
+	KindEdge *string `json:"kind_edge,omitempty"`
+	Relation *string `json:"relation,omitempty"`
+}
+type AuthoredRelation struct {
+	Either *bool         `json:"either,omitempty"`
+	Name   AuthoredName  `json:"name"`
+	Reads  *AuthoredName `json:"reads,omitempty"`
+	Single *bool         `json:"single,omitempty"`
+	Source *AuthoredName `json:"source,omitempty"`
+	Target *AuthoredName `json:"target,omitempty"`
+}
+type RecognitionMode string
+
+const (
+	RecognitionModeWhole        RecognitionMode = "whole"
+	RecognitionModeBoundaryOnly RecognitionMode = "boundary_only"
+)
+
+type AuthoredFind struct {
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	Find           AuthoredQuestionText      `json:"find"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredRelate struct {
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Relate         AuthoredRelateRelate      `json:"relate"`
+	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+
+func (v AuthoredRelate) MarshalJSON() ([]byte, error) {
+	type plain AuthoredRelate
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["version"] = json.RawMessage("1")
+	return json.Marshal(object)
+}
+
+type AuthoredRelateRelate struct {
+	Fields    *AuthoredRelateRelateFields `json:"fields,omitempty"`
+	Relations []AuthoredRelation          `json:"relations"`
+}
+type AuthoredRelateRelateFields struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+}
+type AuthoredScore struct {
+	Batch          *AuthoredScoreBatch       `json:"batch,omitempty"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Levels         *AuthoredLevels           `json:"levels,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Score          AuthoredQuestionText      `json:"score"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredScoreBatch interface{ isAuthoredScoreBatch() }
+
+func (AuthoredScoreBatchValue) isAuthoredScoreBatch()   {}
+func (AuthoredScoreBatchInteger) isAuthoredScoreBatch() {}
+
+type AuthoredScoreBatchInteger int64
+type AuthoredScoreBatchValue string
+type AuthoredTag struct {
+	Batch          *AuthoredTagBatch         `json:"batch,omitempty"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Labels         *AuthoredLabels           `json:"labels,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Tag            AuthoredQuestionText      `json:"tag"`
+	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredTagBatch interface{ isAuthoredTagBatch() }
+
+func (AuthoredTagBatchValue) isAuthoredTagBatch()   {}
+func (AuthoredTagBatchInteger) isAuthoredTagBatch() {}
+
+type AuthoredTagBatchInteger int64
+type AuthoredTagBatchValue string
+type AuthoredChoose struct {
+	Batch          *AuthoredChooseBatch      `json:"batch,omitempty"`
+	Choose         AuthoredQuestionText      `json:"choose"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Options        *AuthoredOptions          `json:"options,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredChooseBatch interface{ isAuthoredChooseBatch() }
+
+func (AuthoredChooseBatchValue) isAuthoredChooseBatch()   {}
+func (AuthoredChooseBatchInteger) isAuthoredChooseBatch() {}
+
+type AuthoredChooseBatchInteger int64
+type AuthoredChooseBatchValue string
+type AuthoredDecide struct {
+	Batch          *AuthoredDecideBatch      `json:"batch,omitempty"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	Decide         AuthoredQuestionText      `json:"decide"`
+	False          *AuthoredCriterion        `json:"false,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Threshold      *AuthoredThreshold        `json:"threshold,omitempty"`
+	True           *AuthoredCriterion        `json:"true,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
+}
+type AuthoredDecideBatch interface{ isAuthoredDecideBatch() }
+
+func (AuthoredDecideBatchValue) isAuthoredDecideBatch()   {}
+func (AuthoredDecideBatchInteger) isAuthoredDecideBatch() {}
+
+type AuthoredDecideBatchInteger int64
+type AuthoredDecideBatchValue string
+type RequestQuestionText struct {
+	Text string `json:"text"`
+}
+
+func (v RequestQuestionText) MarshalJSON() ([]byte, error) {
+	type plain RequestQuestionText
+	data, err := json.Marshal(plain(v))
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]json.RawMessage
+	if err = json.Unmarshal(data, &object); err != nil {
+		return nil, err
+	}
+	object["kind"] = json.RawMessage("\"text\"")
+	return json.Marshal(object)
+}
+
+type RequestOptions struct {
+	Attempts          *bool                    `json:"attempts,omitempty"`
+	Batch             *RequestBatch            `json:"batch,omitempty"`
+	Context           *string                  `json:"context,omitempty"`
+	ContextField      *string                  `json:"context_field,omitempty"`
+	DeadlineMs        *int64                   `json:"deadline_ms,omitempty"`
+	Details           *bool                    `json:"details,omitempty"`
+	Examples          *[]RecognitionExample    `json:"examples,omitempty"`
+	ExamplesField     *string                  `json:"examples_field,omitempty"`
+	Field             *[]string                `json:"field,omitempty"`
+	FilesOnly         *bool                    `json:"files_only,omitempty"`
+	MaxRequestsTotal  *uint64                  `json:"max_requests_total,omitempty"`
+	Mode              *RecognitionMode         `json:"mode,omitempty"`
+	Model             *string                  `json:"model,omitempty"`
+	None              *bool                    `json:"none,omitempty"`
+	OptionsField      *string                  `json:"options_field,omitempty"`
+	RelationThreshold *RequestThreshold        `json:"relation_threshold,omitempty"`
+	SeedSpans         *[]RecognitionSeedSpan   `json:"seed_spans,omitempty"`
+	SeedSpansField    *string                  `json:"seed_spans_field,omitempty"`
+	SnippetPieces     *uint64                  `json:"snippet_pieces,omitempty"`
+	StageContext      *RecognitionStageContext `json:"stage_context,omitempty"`
+	Threshold         *RequestThreshold        `json:"threshold,omitempty"`
+	Top               *uint64                  `json:"top,omitempty"`
+}
+type RequestThreshold interface{ isRequestThreshold() }
+
+func (RequestThresholdNumber) isRequestThreshold() {}
+func (RequestThresholdString) isRequestThreshold() {}
+
+type RequestThresholdString string
+type RequestThresholdNumber float64
+type RequestBatch interface{ isRequestBatch() }
+
+func (RequestBatchInteger) isRequestBatch() {}
+func (RequestBatchString) isRequestBatch()  {}
+
+type RequestBatchString string
+type RequestBatchInteger uint64
+type EngineSettings struct {
+	Backend                      *string        `json:"backend,omitempty"`
+	BaseUrl                      *string        `json:"base_url,omitempty"`
+	Batch                        *RequestBatch  `json:"batch,omitempty"`
+	Cache                        *CacheDocument `json:"cache,omitempty"`
+	MaxEstimatedInputTokensTotal *uint64        `json:"max_estimated_input_tokens_total,omitempty"`
+	MaxRequestBytes              *uint64        `json:"max_request_bytes,omitempty"`
+	MaxRequests                  *uint64        `json:"max_requests,omitempty"`
+	MaxRequestsTotal             *uint64        `json:"max_requests_total,omitempty"`
+	MaxRetries                   *uint64        `json:"max_retries,omitempty"`
+	Model                        *string        `json:"model,omitempty"`
+	Profile                      *string        `json:"profile,omitempty"`
+	Proxy                        *any           `json:"proxy,omitempty"`
+	Record                       *string        `json:"record,omitempty"`
+	RefreshCache                 *bool          `json:"refresh_cache,omitempty"`
+	Replay                       *string        `json:"replay,omitempty"`
+	Throttle                     *uint64        `json:"throttle,omitempty"`
+	Timeout                      *uint64        `json:"timeout,omitempty"`
+	UsdPerMillionInput           *string        `json:"usd_per_million_input,omitempty"`
+	UsdPerMillionOutput          *string        `json:"usd_per_million_output,omitempty"`
+}
+type CacheDocument interface{ isCacheDocument() }
+
+func (CacheDocumentString) isCacheDocument() {}
+func (DisabledCache) isCacheDocument()       {}
+
+type DisabledCache bool
+type CacheDocumentString string
 
 const OwnedRequestVersion = "thinkthen.request/1"
 

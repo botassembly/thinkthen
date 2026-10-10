@@ -15,20 +15,20 @@ import (
 	"time"
 )
 
-// Client is the canonical named-call API; Engine retains compatibility calls.
+// Client owns one native engine and the ten named judgment calls.
 type Client struct {
-	engine   *Engine
+	engine   *nativeEngine
 	mu       sync.Mutex
 	closed   bool
 	sessions map[*C.thinkthen_session]activeSession
 }
 
-func NewClient(settings map[string]any) (*Client, error) {
+func NewClient(settings EngineSettings) (*Client, error) {
 	data, err := json.Marshal(settings)
 	if err != nil {
 		return nil, err
 	}
-	engine, err := NewWith(string(data))
+	engine, err := newNativeWith(string(data))
 	if err != nil {
 		return nil, err
 	}
@@ -52,17 +52,6 @@ func (c *Client) Close() {
 	}
 }
 
-// FileRecords selects the native reader; its parsing and validation stay native.
-type FileRecords struct {
-	Paths   []string
-	Reading map[string]any
-}
-
-// Item supplies per-record context/options separately from its original value.
-type Item struct {
-	Original any
-	Fields   map[string]any
-}
 type OwnedCall struct {
 	Packets  []OwnedSessionPacket
 	Terminal *OwnedSessionPacketTerminal
@@ -79,32 +68,22 @@ func sessionFailure(code C.int) error {
 	}
 	return &Error{Code: int(code), Kind: ErrorKind(code), Message: C.GoString(C.thinkthen_session_error_message())}
 }
-func descriptor(value any) map[string]any {
-	fields := map[string]any{}
-	if item, ok := value.(Item); ok {
-		value = item.Original
-		for k, v := range item.Fields {
-			fields[k] = v
-		}
+func descriptor(value any) any {
+	if item, ok := value.(RequestItem); ok {
+		return item
 	}
-	original := map[string]any{"kind": "json", "value": value}
 	if text, ok := value.(string); ok {
-		original = map[string]any{"kind": "text", "text": text}
+		return map[string]any{"original": map[string]any{"kind": "text", "text": text}}
 	}
-	fields["original"] = original
-	return fields
+	return map[string]any{"original": map[string]any{"kind": "json", "value": value}}
 }
-func (c *Client) call(ctx context.Context, verb string, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) call(ctx context.Context, verb string, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	var result OwnedCall
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if err := ctx.Err(); err != nil {
 		return result, err
-	}
-	asked := map[string]any{"kind": "definition", "value": question}
-	if text, ok := question.(string); ok {
-		asked = map[string]any{"kind": "text", "text": text}
 	}
 	kind := "records"
 	if verb == "find" {
@@ -117,8 +96,16 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 	producer, feeding := input.(Producer)
 	if feeding {
 		source = map[string]any{"kind": "feed", "name": "records"}
-	} else if files, ok := input.(FileRecords); ok {
-		source = map[string]any{"kind": "source", "source": map[string]any{"paths": files.Paths, "reading": files.Reading, "media": "text"}}
+	} else if explicit, ok := input.(RequestInput); ok {
+		data, marshalErr := json.Marshal(explicit)
+		if marshalErr != nil {
+			return result, marshalErr
+		}
+		if err := json.Unmarshal(data, &source); err != nil {
+			return result, err
+		}
+	} else if files, ok := input.(RequestSource); ok {
+		source = map[string]any{"kind": "source", "source": files}
 	} else {
 		values := []any{input}
 		rv := reflect.ValueOf(input)
@@ -128,16 +115,16 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 				values[i] = rv.Index(i).Interface()
 			}
 		}
-		items := make([]map[string]any, len(values))
+		items := make([]any, len(values))
 		for i, v := range values {
 			items[i] = descriptor(v)
 		}
 		source["items"] = items
 	}
 	if options == nil {
-		options = map[string]any{}
+		options = &RequestOptions{}
 	}
-	request := map[string]any{"schema": OwnedRequestVersion, "call": map[string]any{"function": verb, "question": asked, "input": source, "options": options}}
+	request := map[string]any{"schema": OwnedRequestVersion, "call": map[string]any{"function": verb, "question": question, "input": source, "options": options}}
 	data, err := json.Marshal(request)
 	if err != nil {
 		return result, err
@@ -281,50 +268,50 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 		}
 	}
 }
-func (c *Client) Decide(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Decide(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "decide", question, input, options)
 }
-func (c *Client) Choose(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Choose(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "choose", question, input, options)
 }
-func (c *Client) Tag(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Tag(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "tag", question, input, options)
 }
-func (c *Client) Score(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Score(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "score", question, input, options)
 }
-func (c *Client) Filter(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Filter(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "filter", question, input, options)
 }
-func (c *Client) Rank(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Rank(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "rank", question, input, options)
 }
-func (c *Client) Find(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Find(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "find", question, input, options)
 }
-func (c *Client) Annotate(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Annotate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "annotate", question, input, options)
 }
-func (c *Client) Recognize(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Recognize(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "recognize", question, input, options)
 }
-func (c *Client) Relate(ctx context.Context, question, input any, options map[string]any) (OwnedCall, error) {
+func (c *Client) Relate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "relate", question, input, options)
 }
 
 // UsageStatus owns one native observation and remains valid after Close.
 type UsageStatus struct {
 	state  UsagePersistenceState
-	advice Optional[string]
+	advice Presence[string]
 }
 
-func (s UsageStatus) State() UsagePersistenceState        { return s.state }
-func (s UsageStatus) Advice() Optional[string]            { return s.advice }
-func (c *Client) UsagePersistence() (UsageStatus, error)  { return c.engine.UsagePersistence() }
-func (c *Client) FinishUsageStatus() (UsageStatus, error) { return c.engine.FinishUsageStatus() }
-func (e *Engine) UsagePersistence() (UsageStatus, error)  { return e.usageStatus(false) }
-func (e *Engine) FinishUsageStatus() (UsageStatus, error) { return e.usageStatus(true) }
-func (e *Engine) usageStatus(finish bool) (UsageStatus, error) {
+func (s UsageStatus) State() UsagePersistenceState              { return s.state }
+func (s UsageStatus) Advice() Presence[string]                  { return s.advice }
+func (c *Client) UsagePersistence() (UsageStatus, error)        { return c.engine.UsagePersistence() }
+func (c *Client) FinishUsageStatus() (UsageStatus, error)       { return c.engine.FinishUsageStatus() }
+func (e *nativeEngine) UsagePersistence() (UsageStatus, error)  { return e.usageStatus(false) }
+func (e *nativeEngine) FinishUsageStatus() (UsageStatus, error) { return e.usageStatus(true) }
+func (e *nativeEngine) usageStatus(finish bool) (UsageStatus, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	if e.raw == nil {
@@ -349,7 +336,7 @@ func (e *Engine) usageStatus(finish bool) (UsageStatus, error) {
 		if err != nil {
 			return UsageStatus{}, err
 		}
-		out.advice = Optional[string]{Present: true, Value: text}
+		out.advice = Presence[string]{Present: true, Value: text}
 	}
 	return out, nil
 }

@@ -29,9 +29,9 @@ func feedChecks(client *tt.Client) {
 			return nil, io.EOF
 		}
 		index++
-		return tt.Item{Original: fmt.Sprintf("record-%d", index)}, nil
+		return tt.TextItem(fmt.Sprintf("record-%d", index)), nil
 	})
-	call, err := client.Decide(context.Background(), "Is it?", producer, map[string]any{"batch": 1})
+	call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), producer, &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
 	require(err == nil && index == 3 && call.Terminal != nil, "bounded feed did not finish")
 	rows := 0
 	for _, packet := range call.Packets {
@@ -44,11 +44,11 @@ func feedChecks(client *tt.Client) {
 	require(rows == 3, "bounded feed lost ordered rows")
 	started := 0
 	invalid := producerFunc(func(context.Context) (any, error) { started++; return nil, io.EOF })
-	_, err = client.Decide(context.Background(), "Is it?", invalid, map[string]any{"field": []string{"bad pointer"}})
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), invalid, &tt.RequestOptions{Field: tt.Ptr([]string{"bad pointer"})})
 	require(err != nil && started == 0, "invalid request started intake")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err = client.Decide(ctx, "Is it?", invalid, nil)
+	_, err = client.Decide(ctx, tt.TextQuestion("Is it?"), invalid, nil)
 	require(errors.Is(err, context.Canceled) && started == 0, "precancelled feed started intake")
 	read := 0
 	broken := producerFunc(func(context.Context) (any, error) {
@@ -58,7 +58,7 @@ func feedChecks(client *tt.Client) {
 		}
 		return nil, errors.New("private reader diagnostic")
 	})
-	_, err = client.Decide(context.Background(), "Is it?", broken, map[string]any{"batch": 1})
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), broken, &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
 	var failure *tt.SessionError
 	require(errors.As(err, &failure) && failure.Call.Terminal != nil, "reader failure lost typed terminal")
 	prefix := 0
@@ -80,13 +80,13 @@ func feedChecks(client *tt.Client) {
 }
 
 func main() {
-	client, err := tt.NewClient(map[string]any{"base_url": os.Getenv("THINKTHEN_BASE_URL"), "cache": false})
+	client, err := tt.NewClient(tt.EngineSettings{BaseUrl: tt.Ptr(os.Getenv("THINKTHEN_BASE_URL")), Cache: tt.Ptr[tt.CacheDocument](tt.DisabledCache(false))})
 	if err != nil {
 		panic(err)
 	}
 	defer client.Close()
 	if len(os.Args) > 1 && (os.Args[1] == "usage-written" || os.Args[1] == "usage-failed") {
-		call, err := client.Decide(context.Background(), "Is it?", "surface-attribution", nil)
+		call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), "surface-attribution", nil)
 		require(err == nil && call.Terminal != nil, "usage call lost answer")
 		earlier, err := json.Marshal(call.Terminal.Facts().Value)
 		require(err == nil, "facts encoding")
@@ -137,9 +137,9 @@ func main() {
 		return
 	}
 	if len(os.Args) > 1 && os.Args[1] == "surface" {
-		call, err := client.Decide(context.Background(), "Is it?", "text", nil)
+		call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), "text", nil)
 		require(err == nil && call.Terminal != nil, "surface decision failed")
-		_, err = client.Decide(context.Background(), "Is it?", "status-401", nil)
+		_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), "status-401", nil)
 		var failure *tt.SessionError
 		require(errors.As(err, &failure), "surface failure lost typed error")
 		client.Close()
@@ -191,10 +191,10 @@ func main() {
 		var pulled atomic.Int64
 		readerStopped := make(chan struct{})
 		var input any = "hold-go"
-		var options map[string]any
+		var options *tt.RequestOptions
 		feeding := os.Args[1] == "feed-cancel" || os.Args[1] == "feed-close" || os.Args[1] == "feed-full"
 		if feeding {
-			options = map[string]any{"batch": 1}
+			options = &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))}
 			input = producerFunc(func(readerCtx context.Context) (any, error) {
 				n := pulled.Add(1)
 				if n == 1 {
@@ -212,7 +212,7 @@ func main() {
 				return nil, readerCtx.Err()
 			})
 		}
-		result, callErr := client.Decide(ctx, "Is it?", input, options)
+		result, callErr := client.Decide(ctx, tt.TextQuestion("Is it?"), input, options)
 		err = callErr
 		if feeding {
 			require(result.Terminal == nil, "cancellation fabricated terminal facts")
@@ -238,20 +238,23 @@ func main() {
 		return
 	}
 	type ask struct {
-		verb     string
-		q, input any
+		verb  string
+		q     tt.RequestQuestion
+		input any
 	}
 	asks := []ask{
-		{"decide", "Is it?", "text"}, {"choose", map[string]any{"choose": "Which?", "options": []string{"a", "b"}}, "text"},
-		{"tag", map[string]any{"tag": "Which?", "labels": []string{"a", "b"}}, "text"},
-		{"score", map[string]any{"score": "How?", "levels": []string{"low", "high"}}, "text"},
-		{"filter", "Is it?", []string{"alpha", "beta"}}, {"rank", "Is it?", []string{"alpha", "beta"}},
-		{"find", "Which?", []string{"alpha", "beta"}},
-		{"annotate", map[string]any{"version": 1, "questions": map[string]any{"ok": map[string]any{"decide": "Is it?"}}}, []string{"text"}},
-		{"recognize", map[string]any{"version": 1, "recognize": map[string]any{"kinds": map[string]any{"person": nil}}}, "Ana Lima"},
-		{"relate", map[string]any{"version": 1, "relate": map[string]any{"relations": []any{map[string]any{"name": "knows", "source": "person", "target": "person", "either": false}}}}, []any{map[string]any{"name": "Ana", "kind": "person"}, map[string]any{"name": "Bob", "kind": "person"}}},
+		{"decide", tt.TextQuestion("Is it?"), "text"},
+		{"choose", tt.DefinedQuestion(tt.AuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsObject{"a": tt.AuthoredDescriptionObject{"what": "Charges and refunds.", "examples": []string{"refund"}}, "b": tt.AuthoredDescriptionArray{"other", "shipping"}})}), "text"},
+		{"tag", tt.DefinedQuestion(tt.AuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), "text"},
+		{"score", tt.DefinedQuestion(tt.AuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), "text"},
+		{"filter", tt.TextQuestion("Is it?"), []string{"alpha", "beta"}},
+		{"rank", tt.TextQuestion("Is it?"), []string{"alpha", "beta"}},
+		{"find", tt.TextQuestion("Which?"), []string{"alpha", "beta"}},
+		{"annotate", tt.DefinedQuestion(tt.RequestDefinitionQuestions{Questions: map[string]tt.RequestDefinitionQuestionsQuestionsValue{"ok": tt.RequestDefinitionQuestionsQuestionsValueDecide{Decide: tt.AuthoredQuestionTextString("Is it?")}}}), []string{"text"}},
+		{"recognize", tt.DefinedQuestion(tt.RequestDefinitionRecognize{Recognize: tt.RequestDefinitionRecognizeRecognize{Kinds: tt.Ptr(map[string]tt.AuthoredDescription{"person": tt.AuthoredDescriptionNull{}})}}), "Ana Lima"},
+		{"relate", tt.DefinedQuestion(tt.AuthoredRelate{Relate: tt.AuthoredRelateRelate{Relations: []tt.AuthoredRelation{{Name: "knows", Source: tt.Ptr(tt.AuthoredName("person")), Target: tt.Ptr(tt.AuthoredName("person")), Either: tt.Ptr(false)}}}}), []any{map[string]any{"name": "Ana", "kind": "person"}, map[string]any{"name": "Bob", "kind": "person"}}},
 	}
-	calls := map[string]func(context.Context, any, any, map[string]any) (tt.OwnedCall, error){"decide": client.Decide, "choose": client.Choose, "tag": client.Tag, "score": client.Score, "filter": client.Filter, "rank": client.Rank, "find": client.Find, "annotate": client.Annotate, "recognize": client.Recognize, "relate": client.Relate}
+	calls := map[string]func(context.Context, tt.RequestQuestion, any, *tt.RequestOptions) (tt.OwnedCall, error){"decide": client.Decide, "choose": client.Choose, "tag": client.Tag, "score": client.Score, "filter": client.Filter, "rank": client.Rank, "find": client.Find, "annotate": client.Annotate, "recognize": client.Recognize, "relate": client.Relate}
 	retained := []tt.OwnedCall{}
 	expectedRequests := int64(0)
 	for _, a := range asks {
@@ -267,7 +270,7 @@ func main() {
 		expectedRequests += n
 	}
 	// A false value must remain false, not absent or null.
-	falsity, err := client.Decide(context.Background(), map[string]any{"decide": "Is it?", "threshold": .95}, "text", nil)
+	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.AuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), "text", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -290,7 +293,7 @@ func main() {
 	require(falseErr == nil, "nonboolean decision")
 	require(value.Present && !value.Null && falseValue == false, "false changed")
 	// Authored null is different from a missing field, and file positions survive.
-	nullCall, err := client.Decide(context.Background(), map[string]any{"decide": "Is it?", "true": nil}, "text", nil)
+	nullCall, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.AuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionNull{})}), "text", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -310,7 +313,7 @@ func main() {
 	require(nullFound, "null row missing")
 	path := os.Getenv("HOME") + "/records.txt"
 	require(os.WriteFile(path, []byte("alpha\n\nbeta\n"), 0600) == nil, "fixture file")
-	files, err := client.Decide(context.Background(), "Is it?", tt.FileRecords{Paths: []string{path}, Reading: map[string]any{"unit": "line"}}, nil)
+	files, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RequestSource{Paths: []string{path}, Reading: tt.Ptr(tt.RequestReader{Unit: tt.Ptr(tt.RequestSourceUnitLine)})}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -332,15 +335,15 @@ func main() {
 	require(len(lines) == 2 && lines[0] == 1 && lines[1] == 3, "physical positions changed")
 	meta := row.Value().Value.Meta()
 	require(meta.Present && meta.Value.Model().Present && meta.Value.AnsweredBy().Present, "native provenance missing")
-	_, err = client.Decide(context.Background(), "Is it?", "text", map[string]any{"deadline_ms": 0})
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), "text", &tt.RequestOptions{DeadlineMs: tt.Ptr[int64](0)})
 	var failure *tt.SessionError
 	require(errors.As(err, &failure), "untyped failure")
 	require(failure.Call.Terminal.Failure().Present, "lost native failure facts")
-	_, err = client.Decide(context.Background(), "Is it?", "text", map[string]any{"field": []string{"bad pointer"}})
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), "text", &tt.RequestOptions{Field: tt.Ptr([]string{"bad pointer"})})
 	require(err != nil, "invalid input accepted")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err = client.Decide(ctx, "Is it?", "text", nil)
+	_, err = client.Decide(ctx, tt.TextQuestion("Is it?"), "text", nil)
 	require(errors.Is(err, context.Canceled), "precancel ignored")
 	var packet tt.OwnedSessionPacket
 	require(json.Unmarshal([]byte(`{"kind":"terminal","extra":{"future":false},"failure":null}`), &packet) == nil, "owned decode")
