@@ -76,6 +76,13 @@ jobs:
       - name: Install and check the pinned host tools
         env: {TARGET: "${{ matrix.target }}"}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
+      - name: Read the JVM runtime floor
+        id: jvm-contract
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: echo "jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        with: {distribution: temurin, java-version: "${{ steps.jvm-contract.outputs.jdk }}"}
       - name: Select managed language tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
@@ -254,6 +261,13 @@ jobs:
         with: {node-version: '22.22.3'}
       - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1'}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
+      - name: Read the JVM runtime floor
+        id: jvm-contract
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: echo "jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        with: {distribution: temurin, java-version: "${{ steps.jvm-contract.outputs.jdk }}"}
       - name: Select installed language tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
