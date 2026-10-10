@@ -96,7 +96,10 @@ def main():
     run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
     has_flutter = (packages / 'flutter').is_dir()
     if has_flutter:
-        configure(packages / 'dart', native, [packages / 'flutter'])
+        projects = [packages / 'flutter']
+        if (packages / 'flutter/example/pubspec.yaml').is_file():
+            projects.append(packages / 'flutter/example')
+        configure(packages / 'dart', native, projects)
         run([str(flutter), 'pub', 'get', '--offline'], packages / 'flutter', env)
     cached.rename(cached.with_suffix('.held'))
     run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'cache miss in offline build')
