@@ -59,6 +59,7 @@ pub(super) fn execute_records(
         call,
         controls,
         RequestFeed::from_records("column", rows),
+        false,
     )
 }
 
@@ -68,8 +69,9 @@ fn execute_feed(
     call: fn(RequestArguments) -> RequestCall,
     controls: CallOptions<'_>,
     feed: RequestFeed<'_>,
+    complete: bool,
 ) -> Result<Call<RequestValue>, Error> {
-    let request = Request::new(call(RequestArguments {
+    let call = call(RequestArguments {
         question: RequestQuestion::Definition { value: definition },
         input: RequestInput::Feed {
             name: "column".into(),
@@ -78,8 +80,14 @@ fn execute_feed(
             images: vec![],
         },
         options: RequestOptions::default(),
-    }))
-    .admit()?;
+    });
+    // Typed complete filters retain every observation, including rejected rows.
+    let feed = if complete && call.function() == crate::RequestFunction::Filter {
+        feed.with_all_filter_results()
+    } else {
+        feed
+    };
+    let request = Request::new(call).admit()?;
     match engine.execute_request(
         &request,
         RequestEnvironment {
@@ -178,6 +186,7 @@ pub(super) fn complete_occurrences<T: InputEvidence, R>(
         function,
         controls,
         RequestFeed::from_records("column", rows).eager(),
+        true,
     )?;
     call.try_map(|value| {
         let rows = unpack(value)?;
