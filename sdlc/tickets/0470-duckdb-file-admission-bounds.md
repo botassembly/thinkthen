@@ -33,3 +33,7 @@ DuckDB complete-file calls feed descriptors to native admission through 0503's b
   - Claim the DuckDB calling-thread producer in `databases/duckdb/cpp/src/complete_files.cpp`, its native bridge under `databases/duckdb/bridge/src/ffi/complete_files/`, and the existing file and cancellation tests. Name the exact test files before coding.
 - Proof: A fresh design review and code review, with a High review for unsafe ownership changes. The existing reader, complete and cancellation fixtures pass. One deterministic bounded-admission case fails on the accumulator path and passes on the session path. No memory-exhaustion campaign, paid calls or hosted workflow.
 - Defers: DuckDB feature redesign, provider limit tuning and release management. Process exhaustion stays labeled as inferred. Changes to generic rank or total result-memory contracts need their own reviewed design. 0495 follows this feed for the DuckDB Request migration.
+
+## Progress
+
+- 2026-10-10 started
