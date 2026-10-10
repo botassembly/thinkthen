@@ -347,7 +347,8 @@ def main():
         if args.inputs:
             result += "const requestVersion = " + json.dumps(schema["$defs"]["RequestVersion"]["oneOf"][0]["const"]) + ";\n"
         output = ROOT / "libraries/dart/lib/src/session" / ("abi_generated.dart" if args.bridge else "inputs_generated.dart" if args.inputs else "results_generated.dart")
-        result = subprocess.run([os.environ.get("TT_DART", "dart"), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True).stdout
+        result = subprocess.run([os.environ.get("TT_DART", "dart"), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
+                                env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print("generated Dart types differ", file=sys.stderr)
