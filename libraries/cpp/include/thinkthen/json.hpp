@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <charconv>
-#include <cstdlib>
+#include <locale>
 #include <iomanip>
 #include <istream>
 #include <sstream>
@@ -122,9 +122,11 @@ private:
                 else { uint64_t n; auto r=std::from_chars(part.data(),part.data()+part.size(),n); if(r.ec==std::errc{}) return Json(n); }
                 invalid();
             }
-            char* end=nullptr;
-            double d=std::strtod(part.c_str(), &end);
-            if (end!=part.c_str()+part.size() || !std::isfinite(d)) invalid();
+            std::istringstream number(part);
+            number.imbue(std::locale::classic());
+            double d;
+            number >> d;
+            if (number.fail() || !number.eof() || !std::isfinite(d)) invalid();
             return Json(d);
         }
         Json value() {
@@ -208,7 +210,7 @@ public:
         if (auto p=std::get_if<bool>(&value_)) return *p ? "true":"false";
         if (auto p=std::get_if<int64_t>(&value_)) return std::to_string(*p);
         if (auto p=std::get_if<uint64_t>(&value_)) return std::to_string(*p);
-        if (auto p=std::get_if<double>(&value_)) {std::ostringstream s; s << std::setprecision(17) << *p; return s.str();}
+        if (auto p=std::get_if<double>(&value_)) {std::ostringstream s; s.imbue(std::locale::classic()); s << std::setprecision(17) << *p; return s.str();}
         if (auto p=std::get_if<std::string>(&value_)) return quote(*p);
         if (auto p=std::get_if<Array>(&value_)) {std::string s="["; for (const auto& v:*p) {if (s.size()>1) s+=','; s+=v.dump();} return s+']';}
         std::string s="{"; for (const auto& [k,v]:std::get<Object>(value_)) {if (s.size()>1) s+=','; s+=quote(k)+":"+v.dump();} return s+'}';

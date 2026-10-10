@@ -72,6 +72,13 @@ try:
     assert packets[-1]['kind']=='terminal' and 'failure' not in packets[-1] and packets[-1]['facts']['requests_sent']==1, packets[-1]
     assert len(server.requests)==12, len(server.requests)
     print('CPP_INSTALLED_NULL_ANNOTATION_PASS present_null retained_document terminal_facts')
+    before = len(server.requests)
+    result = subprocess.run([binary,'locale',scratch,scratch],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode == 0, (result.returncode,result.stdout,result.stderr)
+    packets = [json.loads(line) for line in result.stdout.splitlines()]
+    assert packets[-1]['kind']=='terminal' and 'failure' not in packets[-1] and packets[-1]['facts']['requests_sent']==1, packets[-1]
+    assert len(server.requests)==before+1, server.requests
+    print('CPP_INSTALLED_LOCALE_PASS nested_input probabilities retained_packets')
     baseline = len(server.requests)
     for mode in ('values','invalid','image','failure'):
         qpath = scratch / ('tag-question.json' if mode == 'image' else 'decide-question.json')
