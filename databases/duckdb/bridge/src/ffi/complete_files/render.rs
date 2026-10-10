@@ -26,7 +26,7 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
     Ok(value)
 }
 
-pub(super) fn finish(packets: &str) -> Result<Value, Error> {
+pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
     let packets: Vec<Value> = serde_json::from_str(packets).map_err(|_| defect())?;
     let mut rows = Vec::new();
     let mut observations = Vec::new();
@@ -63,10 +63,12 @@ pub(super) fn finish(packets: &str) -> Result<Value, Error> {
     } else {
         json!({"value":results,"facts":terminal.get("facts").ok_or_else(defect)?})
     };
-    if selection.is_some() {
-        crate::complete_native::put(&mut native, "selection", selection.unwrap_or(Value::Null))?;
-    } else {
-        crate::complete_native::put(&mut native, "ordinals", Value::Array(ordinals))?;
+    if native.get("value").is_some() || native.get("completed").is_some() {
+        if let Some(selection) = selection {
+            crate::complete_native::put(&mut native, "selection", selection)?;
+        } else if !matches!(verb, "find" | "relate") {
+            crate::complete_native::put(&mut native, "ordinals", Value::Array(ordinals))?;
+        }
     }
     Ok(crate::complete_native::carrier(
         native,

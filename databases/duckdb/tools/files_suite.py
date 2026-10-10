@@ -275,6 +275,8 @@ def complete_file_admission_stops_before_an_unread_suffix():
         if wrap:
             calls=trace.read_text()
             expect('"'+str(sentinel)+'"' in calls,False,'sentinel content was never opened')
+            opened=sum('"'+path+'"' in calls for path in prefix)
+            assert 1 <= opened <= 4,('native excess row, queued input and one producer retry',opened)
 
 
 @case
@@ -287,6 +289,9 @@ def complete_file_preflight_and_eager_invalid_input_send_nothing():
         wrap=['strace','-f','-e','trace=openat','-o',str(trace)] if sys.platform=='linux' else None
         invalid=[('choose',{'choose':'Which?','options':['only']}),('decide',{'decide':'Refund?'})]
         statements=["SELECT thinkthen_"+verb+"_complete("+literal(json.dumps(question))+","+literal(json.dumps({**files,'reading':{'unknown':'PRIVATE_INPUT_MARKER'}}))+')' for verb,question in invalid]
+        statements.append("SELECT thinkthen_decide_complete('{\"decide\":\"Refund?\",\"profile\":42}',"+literal(json.dumps(files))+')')
+        image_files={'files':{'paths':[str(good)],'options':{'reading':{'unit':'file'},'media':'image'}}}
+        statements.append("SELECT thinkthen_tag_complete('{\"tag\":\"Topics?\",\"labels\":[\"refund\"]}',"+literal(json.dumps(image_files))+')')
         got=run(statements,backend.base(),wrap=wrap,timeout=5)
         for result in got:
             value=json.loads(rows(result)[0][0]);expect(value['native']['error']['kind'],'usage','static refusal')
@@ -298,6 +303,15 @@ def complete_file_preflight_and_eager_invalid_input_send_nothing():
         expect(eager['native']['error']['kind'],'usage','exact native UTF-8 kind')
         assert 'facts' not in eager['native'],eager
         expect(backend.count(),0,'eager late-invalid input sends nothing')
+        incremental={**files,'incremental':True,'attempts':True}
+        prefix=json.loads(rows(run(["SELECT thinkthen_decide_complete('Refund?',"+literal(json.dumps(incremental))+",'{\"batch\":1}')"],backend.base())[-1])[0][0])
+        expect(prefix['native']['error']['kind'],'usage','native reader error retains kind')
+        expect(prefix['native']['error']['message'],eager['native']['error']['message'],'native reader diagnostic survives finish')
+        expect(prefix['native']['facts']['requests_sent'],1,'completed prefix has actual send facts')
+        expect(len(prefix['completed']),1,'reader failure retains accepted completed prefix')
+        expect(prefix['ordinals'],[0],'reader failure preserves prefix ordinal')
+        expect(len(prefix['observations']),2,'actual question and row observations precede failure')
+        expect(backend.count(),1,'only the incremental completed prefix sends')
 
 
 if __name__=='__main__':

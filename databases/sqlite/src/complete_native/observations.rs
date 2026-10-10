@@ -85,6 +85,10 @@ fn decision(answer: thinkthen::Answer) -> Value {
 }
 
 /// Borrow an owned native snapshot through the existing SQL event serializer.
+#[allow(
+    dead_code,
+    reason = "DuckDB owns native session snapshots; SQLite retains borrowed observation callbacks"
+)]
 pub(crate) fn owned_event(
     event: &thinkthen::OwnedRecordObservation,
 ) -> Result<Value, thinkthen::Error> {

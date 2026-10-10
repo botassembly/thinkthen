@@ -18,7 +18,7 @@ ThinkThenReply thinkthen_cpp_complete_feed_push(void *,ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete_feed_read(void *);
 ThinkThenReply thinkthen_cpp_complete_feed_finish(void *,void *,int32_t);
 void thinkthen_cpp_complete_feed_free(void *);
-ThinkThenReply thinkthen_cpp_complete_feed_render(ThinkThenText);
+ThinkThenReply thinkthen_cpp_complete_feed_render(ThinkThenText,ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete_failure_envelope(ThinkThenText);
 }
 namespace duckdb {
@@ -140,7 +140,7 @@ bool CompleteFileCall(ClientContext &context,const string &verb,const string &qu
     }
     while (!ended) { drain(); if (!ended) { pause(); } }
     packets+="]";
-    RustReply rendered(thinkthen_cpp_complete_feed_render(View(packets))); Checked(rendered.value);
+    RustReply rendered(thinkthen_cpp_complete_feed_render(View(packets),View(verb))); Checked(rendered.value);
     result=ReplyText(rendered.value); return true;
 }
 }

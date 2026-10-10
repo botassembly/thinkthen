@@ -314,10 +314,16 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_free(
 /// # Safety
 /// Counted output packet bytes remain readable through return.
 #[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_render(packets: BridgeText) -> Reply {
+pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_render(
+    packets: BridgeText,
+    verb: BridgeText,
+) -> Reply {
     reply_boundary(|| {
-        render::finish(text(packets.bytes, packets.len)?)
-            .map(|v| v.to_string().into_bytes())
-            .map_err(|e| crate::complete_native::failure(&e).to_string())
+        render::finish(
+            text(packets.bytes, packets.len)?,
+            text(verb.bytes, verb.len)?,
+        )
+        .map(|v| v.to_string().into_bytes())
+        .map_err(|e| crate::complete_native::failure(&e).to_string())
     })
 }
