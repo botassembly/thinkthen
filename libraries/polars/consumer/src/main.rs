@@ -330,8 +330,10 @@ fn run(f: Fixture) -> Result<String, Error> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
-    let fixture = serde_json::from_str(&input)?;
-    match run(fixture) {
+    let result = serde_json::from_str(&input)
+        .map_err(|_| fixture::usage("invalid canonical request"))
+        .and_then(run);
+    match result {
         Ok(packet) => println!("{packet}"),
         Err(error) => {
             let snapshot = fixture::failure(&error)?;

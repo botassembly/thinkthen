@@ -201,7 +201,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
     selected=os.environ.get('THINKTHEN_CONFORMANCE_IDS')
     if selected:
-        ids=Path(selected).read_text().splitlines() if Path(selected).is_file() else selected.split(',')
+        ids=selected.split(',') if ',' in selected else Path(selected).read_text().splitlines() if Path(selected).is_file() else [selected]
         rows=[r for r in rows if r['id'] in ids]
     # The static consumers compile their actual public accessors before executing cells.
     source=Path(command[-1])

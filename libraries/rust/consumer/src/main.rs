@@ -167,7 +167,10 @@ fn check(value: &RequestValue) {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
-    match run(serde_json::from_str(&input)?) {
+    let result = serde_json::from_str(&input)
+        .map_err(|_| fixture::usage("invalid canonical request"))
+        .and_then(run);
+    match result {
         Ok(packet) => println!("{packet}"),
         Err(error) => println!(
             "{{\"error\":{},\"facts\":{}}}",
