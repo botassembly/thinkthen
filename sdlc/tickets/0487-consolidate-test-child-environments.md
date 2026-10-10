@@ -18,6 +18,8 @@ Reviews: revision 18c72234b644b6c8a87ba40be101c578a5ea43a6, accept
 
 Reviews: revision 334204898a22e395abbd909292ea48332c586d1a, accept
 
+Reviews: revision 6ee0992101afb3ddbe111baee7b0d12a0464119a, accept
+
 ## Outcome
 
 Tests use one child-environment entry point per language, preserving intentional environment cases while preventing accidental inherited configuration.
