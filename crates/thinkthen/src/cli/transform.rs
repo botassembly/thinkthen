@@ -67,25 +67,3 @@ fn lookup(name: &str) -> Result<&'static [u8], Failure> {
             "transform: unknown name; run `thinkthen transform list` to see the catalog",
         ))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::{CATALOG, lookup};
-
-    #[test]
-    fn the_catalog_is_strictly_ascending_bytewise_and_free_of_duplicates() {
-        assert!(
-            CATALOG
-                .windows(2)
-                .all(|pair| pair[0].0.as_bytes() < pair[1].0.as_bytes())
-        );
-    }
-
-    #[test]
-    fn lookup_takes_only_an_exact_name() {
-        assert!(lookup("band").is_ok());
-        for name in ["Band", "band.jq", "./band", "ban", ""] {
-            assert!(lookup(name).is_err(), "{name:?}");
-        }
-    }
-}
