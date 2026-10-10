@@ -47,3 +47,4 @@ After the 0508 final review, one reviewed commit passes a hosted release candida
 - 2026-10-10 next: Prepare the current reviewed candidate, run final local package and release qualification, then nonpublishing GitHub platform checks under the 2026-10-10 ruling; publishing remains on Ian’s go.
 - 2026-10-10 landed 194218207; next: Current candidate docs landed; repair NuGet native-asset assembly and add the Windows SDK consumers before final qualification.
 - 2026-10-10 landed 700532b98f9544f53397c7a31de94fa8436065fb; next: Current docs replays and installed dataframe checks pass after reviewed repairs; finish installed-package qualification, then run the nonpublishing candidate on GitHub.
+- 2026-10-10 next: Await the 0530 fixture repair and complete installed qualification; Windows, Apple and fresh release QA remain unverified. No candidate or hosted workflow starts during Ian’s requested wrap-up; publication requires his go.
