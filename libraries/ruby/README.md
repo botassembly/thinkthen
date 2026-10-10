@@ -1,6 +1,6 @@
 # ThinkThen for Ruby
 
-Install the native gem with `gem install thinkthen`. The gem supports Ruby 3.4 on Linux and macOS. An unsupported platform selects a diagnostic fallback that refuses to load; candidate checks qualify platform packages.
+These calls require the development 0.2 gem; the public release remains 0.1.2. Install a supplied development gem with `gem install --local path/to/thinkthen-0.2.0-platform.gem`. The gem supports Ruby 3.4 on Linux and macOS. An unsupported platform selects a diagnostic fallback that refuses to load; candidate checks qualify platform packages.
 
 ```ruby
 require "thinkthen"
