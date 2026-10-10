@@ -24,7 +24,10 @@ static thinkthen_session *open_session(thinkthen_engine *engine, const char *jso
     if (!buffer) exit(1);
     memcpy(buffer, json, len);
     thinkthen_session *session = NULL;
-    check(thinkthen_session_new(engine, buffer, len, &session) == THINKTHEN_OK, "owned constructor");
+    const char *surface = getenv("SESSION_SURFACE");
+    int code = surface ? thinkthen_session_new_with_surface(engine, buffer, len, surface, strlen(surface), &session)
+                       : thinkthen_session_new(engine, buffer, len, &session);
+    check(code == THINKTHEN_OK, "owned constructor");
     memset(buffer, 0xff, len);
     free(buffer);
     return session;
@@ -196,6 +199,16 @@ int main(void) {
     check(bytes == (const char *)(uintptr_t)7 && byte_len == 99, "JSON refusal preserves both outputs");
     const char invalid[] = {(char)0xff};
     thinkthen_session *sentinel = (thinkthen_session *)(uintptr_t)7;
+    const char *bad_surfaces[] = {"", "Go", " go", "php\n", "secret-surface"};
+    for (size_t i = 0; i < sizeof bad_surfaces / sizeof bad_surfaces[0]; ++i) {
+        check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), bad_surfaces[i], strlen(bad_surfaces[i]), &sentinel) == THINKTHEN_EUSAGE, "unsupported surface refuses");
+        check(sentinel == (thinkthen_session *)(uintptr_t)7, "surface refusal preserves output");
+        check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "surface diagnostic withholds spelling");
+    }
+    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "surface UTF-8 refuses");
+    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), "go", SIZE_MAX, &sentinel) == THINKTHEN_EUSAGE, "surface extent refuses");
+    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), NULL, 1, &sentinel) == THINKTHEN_EUSAGE, "surface NULL extent refuses");
+    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), NULL, 0, &sentinel) == THINKTHEN_EUSAGE, "surface token required");
     check(thinkthen_session_new(engine, invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "UTF-8 refusal");
     check(thinkthen_session_new(engine, feed, SIZE_MAX, &sentinel) == THINKTHEN_EUSAGE, "extent refusal");
     check(thinkthen_session_new(NULL, feed, strlen(feed), &sentinel) == THINKTHEN_EUSAGE, "NULL engine refusal");

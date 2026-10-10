@@ -53,57 +53,70 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
 
 #[test]
 fn session_owns_inputs_engine_and_transferred_packets() {
-    let backend = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok(
+    for surface in ["c", "go", "php"] {
+        let backend = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok(
         r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":0}}"#
     )).expect("owned loopback");
-    let output = run_with(
-        &compile(&crate_dir().join("tests/c/session.c")),
-        backend.base(),
-        b"",
-        &[("SESSION_PARTIAL", Path::new("1"))],
-    );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
-    let packets: Vec<serde_json::Value> = text(&output.stdout)
-        .lines()
-        .map(|line| serde_json::from_str(line).expect("canonical packet JSON"))
-        .collect();
-    assert_eq!(
-        packets.first().expect("reader terminal")["kind"],
-        "terminal"
-    );
-    assert_eq!(
-        packets.first().expect("reader terminal")["failure"]["error"]["kind"],
-        "local"
-    );
-    assert_eq!(
-        packets.last().expect("settled terminal")["kind"],
-        "terminal"
-    );
-    let row = packets
-        .iter()
-        .find(|packet| packet["kind"] == "row")
-        .expect("complete row");
-    assert_eq!(row["function"], "decide");
-    let observation = packets
-        .iter()
-        .find(|packet| packet["kind"] == "observation")
-        .expect("native observation");
-    assert_eq!(observation["function"], "decide");
-    let documents = text(&output.stdout);
-    for field in [
-        "owned.txt",
-        "Evidence.",
-        "question_sha256",
-        "answer_id",
-        "observations",
-        "question_sources",
-    ] {
-        assert!(documents.contains(field), "complete packet omitted {field}");
+        let output = run_with(
+            &compile(&crate_dir().join("tests/c/session.c")),
+            backend.base(),
+            b"",
+            &if surface == "c" {
+                vec![("SESSION_PARTIAL", Path::new("1"))]
+            } else {
+                vec![
+                    ("SESSION_PARTIAL", Path::new("1")),
+                    ("SESSION_SURFACE", Path::new(surface)),
+                ]
+            },
+        );
+        assert_eq!(
+            (output.status.code(), text(&output.stderr)),
+            (Some(0), String::new())
+        );
+        let packets: Vec<serde_json::Value> = text(&output.stdout)
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("canonical packet JSON"))
+            .collect();
+        assert_eq!(
+            packets.first().expect("reader terminal")["kind"],
+            "terminal"
+        );
+        assert_eq!(
+            packets.first().expect("reader terminal")["failure"]["error"]["kind"],
+            "local"
+        );
+        assert_eq!(
+            packets.last().expect("settled terminal")["kind"],
+            "terminal"
+        );
+        let row = packets
+            .iter()
+            .find(|packet| packet["kind"] == "row")
+            .expect("complete row");
+        assert_eq!(row["function"], "decide");
+        let observation = packets
+            .iter()
+            .find(|packet| packet["kind"] == "observation")
+            .expect("native observation");
+        assert_eq!(observation["function"], "decide");
+        let documents = text(&output.stdout);
+        for field in [
+            "owned.txt",
+            "Evidence.",
+            "question_sha256",
+            "answer_id",
+            "observations",
+            "question_sources",
+        ] {
+            assert!(documents.contains(field), "complete packet omitted {field}");
+        }
+        assert_eq!(backend.count(), 1, "only accepted owned input sends");
+        assert_eq!(
+            backend.requests()[0].header("user-agent"),
+            Some(format!("thinkthen/{} ({surface})", env!("CARGO_PKG_VERSION")).as_str())
+        );
     }
-    assert_eq!(backend.count(), 1, "only accepted owned input sends");
 }
 
 #[test]
