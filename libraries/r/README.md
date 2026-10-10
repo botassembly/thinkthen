@@ -77,7 +77,7 @@ feed <- tt_feed(function() {
   line <<- line + 1L
   tt_record(raw, list(file = "rows.jsonl", first_line = line, last_line = line))
 }, close = function() close(reader), framing = "jsonl")
-result <- tt_choose(list(choose = "Which team owns this?"), feed,
+ownership <- tt_choose(list(choose = "Which team owns this?"), feed,
                     options = list(field = list("/body"), context_field = "/policy", options_field = "/teams"))
 ```
 
