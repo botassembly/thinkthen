@@ -118,8 +118,10 @@ fi
 source_members() {
 	prefix=$1
 	shift
-	git ls-tree -r -t --format='%(objecttype) %(path)' HEAD -- "$@" >"$work/source-tree" || fail 'cannot list committed source'
-	awk -v prefix="$prefix" 'index($2, prefix) == 1 { print "./" substr($2, length(prefix) + 1) ($1 == "tree" ? "/" : "") }' "$work/source-tree"
+	for source do
+		git ls-tree -r -t --format='%(objecttype) %(path)' HEAD -- "$source" >"$work/source-tree" || fail 'cannot list committed source'
+		awk -v prefix="$prefix" -v source="$source" '$2 == source || index($2, source "/") == 1 { print "./" substr($2, length(prefix) + 1) ($1 == "tree" ? "/" : "") }' "$work/source-tree"
+	done
 }
 check_dart_archive() {
 	name=$1
@@ -163,7 +165,8 @@ if [ "$mode" = dart-flutter ]; then
 	check_dart_archive "$first"
 	tar -tzf "$dir/$second" | LC_ALL=C sort >"$work/members" || fail "cannot list $second"
 	source_members libraries/dart/ libraries/dart/flutter/lib libraries/dart/flutter/linux >"$work/flutter-source"
-	{		printf '%s\n' ./ ./THINKTHEN-PACKAGE-INPUTS ./flutter/ \
+	{
+		printf '%s\n' ./ ./THINKTHEN-PACKAGE-INPUTS ./flutter/ \
 			./flutter/README.md ./flutter/pubspec.yaml \
 			./flutter/example/ ./flutter/example/.metadata ./flutter/example/README.md \
 			./flutter/example/pubspec.yaml ./flutter/example/pubspec.lock \
@@ -241,17 +244,17 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 		"$third")
 			source_members libraries/cobol/ libraries/cobol/copybooks >"$work/cobol-source"
 			{
-			printf '%s\n' ./ ./LICENSE ./README.md \
-				./source-package.json ./copybooks/ \
-				./src/ ./src/TTJSON.c ./src/TTJSON.h \
-				./src/tt_call.cob ./src/tt_complete.c ./src/tt_native.h ./src/tt_counted.c \
-				./src/tt_decide.cob ./src/tt_engine.cob ./src/tt_error.cob \
-				./src/tt_files.cob ./src/tt_inputs.c ./src/tt_plan.cob \
-				./src/tt_shape.c ./src/tt_validate.cob ./src/tt_session.h ./src/tt_session.c \
-				./src/tt_requests_generated.h ./src/tt_requests_generated.c ./examples/ \
-				./examples/direct.cob ./examples/settings.cob ./examples/types.cob \
-				./examples/native.cob ./examples/session.cob ./THINKTHEN-PACKAGE-INPUTS
-			sed -n '\|^\./copybooks/[^/]*\.cpy$|p' "$work/cobol-source"
+				printf '%s\n' ./ ./LICENSE ./README.md \
+					./source-package.json ./copybooks/ \
+					./src/ ./src/TTJSON.c ./src/TTJSON.h \
+					./src/tt_call.cob ./src/tt_complete.c ./src/tt_native.h ./src/tt_counted.c \
+					./src/tt_decide.cob ./src/tt_engine.cob ./src/tt_error.cob \
+					./src/tt_files.cob ./src/tt_inputs.c ./src/tt_plan.cob \
+					./src/tt_shape.c ./src/tt_validate.cob ./src/tt_session.h ./src/tt_session.c \
+					./src/tt_requests_generated.h ./src/tt_requests_generated.c ./examples/ \
+					./examples/direct.cob ./examples/settings.cob ./examples/types.cob \
+					./examples/native.cob ./examples/session.cob ./THINKTHEN-PACKAGE-INPUTS
+				sed -n '\|^\./copybooks/[^/]*\.cpy$|p' "$work/cobol-source"
 			} | LC_ALL=C sort >"$work/expected-members" ;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
