@@ -122,3 +122,4 @@ Author: project manager.
 - 2026-10-10 landed 995d4791f; next: The reviewed authored-question fixture passes Rust, R, JavaScript and TypeScript focused checks; resume the remaining installed package table with unchanged artifacts and retain the passing CLI result.
 - 2026-10-10 landed fe259d30a; next: Both authored-input fixture repairs are reviewed and landed; combine the passing affected Rust cases with unchanged results and finish the remaining installed package consumers.
 - 2026-10-10 landed 724f912d2; next: JVM now honors the full parity profile; installed C passes all 255 cases, Rust ordering repairs are being completed, and independent package families run in lanes 0 and 2.
+- 2026-10-10 landed 6db7b7497; next: CLI, Rust, C, Go and C# required cases pass with retained and repaired evidence; finish the Python settings repair and remaining installed families before candidate qualification.
