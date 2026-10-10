@@ -159,6 +159,15 @@ static NSData *TTEncode(id object, NSError **error) {
     dispatch_async(_queue, ^{ [self settle:[NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ECANCELLED userInfo:@{NSLocalizedDescriptionKey:@"Cancelled"}] call:nil]; });
 }
 @end
+@interface TTUsagePersistenceStatus ()
+- (instancetype)initWithState:(TTUsagePersistenceState)state advice:(nullable NSString *)advice;
+@end
+@implementation TTUsagePersistenceStatus
+- (instancetype)initWithState:(TTUsagePersistenceState)state advice:(NSString *)advice {
+    if ((self = [super init])) { _state = state; _advice = [advice copy]; }
+    return self;
+}
+@end
 @interface TTFoundationClient () { struct thinkthen_engine *_native; }
 @end
 @implementation TTFoundationClient
@@ -176,6 +185,17 @@ static NSData *TTEncode(id object, NSError **error) {
     return self;
 }
 - (void)dealloc { thinkthen_engine_free(_native); }
+- (TTUsagePersistenceStatus *)usageStatus:(BOOL)finish error:(NSError **)error {
+    struct thinkthen_complete_usage_persistence_v1 state;
+    struct thinkthen_complete_utf8_v1 advice;
+    int code = finish ? thinkthen_engine_finish_usage_status_v1(_native, &state, &advice)
+                      : thinkthen_engine_usage_persistence_v1(_native, &state, &advice);
+    if (!TTCheck(code, error)) return nil;
+    NSString *copy = advice.data ? [[NSString alloc] initWithBytes:advice.data length:advice.len encoding:NSUTF8StringEncoding] : nil;
+    return [[TTUsagePersistenceStatus alloc] initWithState:(TTUsagePersistenceState)state.kind advice:copy];
+}
+- (TTUsagePersistenceStatus *)usagePersistence:(NSError **)error { return [self usageStatus:NO error:error]; }
+- (TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error { return [self usageStatus:YES error:error]; }
 - (TTSession *)startRequest:(NSDictionary *)request error:(NSError **)error {
     NSData *data = TTEncode(request, error); if (!data) return nil;
     struct thinkthen_session *session = NULL;

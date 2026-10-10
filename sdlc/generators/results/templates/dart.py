@@ -175,6 +175,9 @@ def render(definitions, inputs=False):
 
 def bridge(abi):
     def types(value):
+        carriers = {'thinkthen_complete_usage_persistence_v1 *': 'NativeUsageState', 'thinkthen_complete_utf8_v1 *': 'NativeUsageAdvice'}
+        if value in carriers:
+            return (f'Pointer<{carriers[value]}>',) * 2
         if value.endswith('**'):
             return ('Pointer<Pointer<Void>>',) * 2
         if value.endswith('*'):
@@ -191,8 +194,17 @@ def bridge(abi):
                'thinkthen_session_new_with_surface', 'thinkthen_session_try_push',
                'thinkthen_session_try_read', 'thinkthen_session_finish', 'thinkthen_session_cancel',
                'thinkthen_session_free', 'thinkthen_session_result_free', 'thinkthen_session_result_json',
-               'thinkthen_session_error_message')
+               'thinkthen_session_error_message', 'thinkthen_engine_usage_persistence_v1',
+               'thinkthen_engine_finish_usage_status_v1')
     lines = ['// Generated from the canonical C header ABI. Do not edit.', "import 'dart:ffi';"]
+    for carrier, host in [('thinkthen_complete_usage_persistence_v1', 'NativeUsageState'), ('thinkthen_complete_utf8_v1', 'NativeUsageAdvice')]:
+        lines += [f'final class {host} extends Struct {{']
+        for name, field in abi['records'][carrier]['fields'].items():
+            annotation, typ = {'uint32_t': ('@Uint32()', 'int'), 'size_t': ('@Size()', 'int'), 'const char *': ('', 'Pointer<Uint8>')}[field['type']]
+            lines += ([f'  {annotation}'] if annotation else []) + [f'  external {typ} {name};']
+        lines += ['}']
+    states = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')]
+    lines += ['enum UsagePersistenceState { ' + ', '.join(key.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').removesuffix('_V1').lower() + '(' + str(value) + ')' for key, value in states) + '; final int code; const UsagePersistenceState(this.code); }']
     members = []
     for symbol in symbols:
         fn = abi['functions'][symbol]
