@@ -14,19 +14,19 @@ public final class OwnedSession implements AutoCloseable {
         if (!pointer.equals(MemorySegment.NULL)) NativeSession.free("thinkthen_session_cancel", pointer);
     }
     /** 0 admits, 1 requests retry of the same descriptor, 2 stops intake. */
-    public synchronized int tryPush(Object descriptor) {
+    public synchronized int tryPush(Inputs.RequestSessionDescriptor descriptor) {
         live();
         try (Arena arguments = Arena.ofConfined()) {
-            var bytes = NativeSession.bytes(arguments, descriptor);
+            var bytes = NativeSession.bytes(arguments, descriptor.json());
             NativeSession.check((int)NativeSession.call("thinkthen_session_try_push", ValueLayout.JAVA_INT,
                 new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), status));
             return status.get(ValueLayout.JAVA_INT, 0);
         }
     }
-    public synchronized void finish(Object readerFailure) {
+    public synchronized void finish(Inputs.RequestReaderFailure readerFailure) {
         live();
         try (Arena arguments = Arena.ofConfined()) {
-            var bytes = readerFailure == null ? MemorySegment.NULL : NativeSession.bytes(arguments, readerFailure);
+            var bytes = readerFailure == null ? MemorySegment.NULL : NativeSession.bytes(arguments, readerFailure.json());
             NativeSession.check((int)NativeSession.call("thinkthen_session_finish", ValueLayout.JAVA_INT,
                 new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE}, pointer, bytes, bytes.byteSize()));
         }

@@ -48,9 +48,10 @@ def main():
     for name in ('home','barrier','app'): (work / name).mkdir(exist_ok=True)
     source = ROOT / 'libraries/jvm/tests/SessionConsumer.java'
     shutil.copyfile(source,work / source.name)
+    shutil.copyfile(ROOT / "libraries/jvm/tests/JsonTest.java", work / "JsonTest.java")
     jdk = Path(os.environ['THINKTHEN_JDK_HOME'])
     env = child_env(keep=('LANG','LC_ALL'),home=work / 'home', JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'))
-    subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-door.jar'),'-d',str(work / 'app'),str(work / source.name)],check=True,env=env)
+    subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-door.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java")],check=True,env=env)
     kotlin = Path(os.environ['THINKTHEN_KOTLIN_HOME'])
     scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
     for filename in ('SessionKotlin.kt','SessionScala.scala'):
@@ -65,6 +66,9 @@ def main():
     env = child_env(home='/work/home',LANG='C.UTF-8',LC_ALL='C.UTF-8',THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',THINKTHEN_API_KEY='tt-canary-290')
     command = ['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind',str(jdk),'/jdk','--bind',str(work),'/work','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--chdir','/work','--','/jdk/bin/java','--enable-native-access=ALL-UNNAMED','-XX:ActiveProcessorCount=2','-Xmx1g','-cp','/work/feed/*:/work/app','SessionConsumer']
     try:
+        parser_result = subprocess.run(command[:-1] + ["JsonTest"], env=env, capture_output=True, timeout=5)
+        assert parser_result.returncode == 0 and b"JSON_READER_PASS" in parser_result.stdout, (parser_result.stdout, parser_result.stderr)
+        print("Installed JSON interchange regressions PASS")
         result = subprocess.run(command,env=env,capture_output=True,timeout=50)
         (logs / 'java-consumer.log').write_bytes(result.stdout + result.stderr)
         print(result.stdout.decode(),end='')

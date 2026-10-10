@@ -1,9 +1,8 @@
 {
   "directory": [
-    "scala",
     "session",
     "tests"
   ],
   "extension": ".scala",
-  "max": 1868
+  "max": 1672
 }
