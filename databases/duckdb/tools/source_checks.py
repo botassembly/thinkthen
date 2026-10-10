@@ -42,8 +42,8 @@ def body(text: str, name: str) -> str:
 
 
 def handler() -> None:
-    signal_ffi = (ROOT / "src" / "signal" / "ffi.rs").read_text()
-    signal_rs = (ROOT / "src" / "signal.rs").read_text()
+    signal_ffi = (ROOT / "bridge" / "src" / "signal" / "ffi.rs").read_text()
+    signal_rs = (ROOT / "bridge" / "src" / "signal.rs").read_text()
     code = body(signal_ffi, "on_interrupt") + body(signal_rs, "on_signal") + body(signal_ffi, "wake_bridge")
     for banned in ("lock", "Box", "Vec", "String", "format!", "to_owned", "thinkthen::", "Mutex", "alloc", "println", "eprintln"):
         if banned in code:
