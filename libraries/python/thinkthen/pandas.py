@@ -1,7 +1,7 @@
 """Opt-in pandas Series accessors: ``import thinkthen.pandas``.
 
 Every route delegates to the selected public Engine (or the module engine)
-and returns its Call with facts and details intact. Importing thinkthen alone
+and returns its owned Result with native facts and rows intact. Importing thinkthen alone
 does not import pandas or register this accessor.
 """
 import pandas as pd
