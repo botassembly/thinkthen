@@ -23,6 +23,8 @@ Reviews: revision 7661f70ecb90d25615df0d2d685cf884d1be8e09, accept
 
 Reviews: revision 7d3f5529e3dc218e568bc1a66b1195a7779d2a4e, accept
 
+Reviews: revision d46e894f3546713a6daf22f6f6899cefc99477b7, accept
+
 ## Outcome
 
 An R caller installs the package, calls the ten functions by name with ordinary R values, and gets typed R results that print, index and compare the way R users expect. Rust admits every request through 0511 and owns every rule and result fact. The R package keeps only naming, value conversion, conditions, interruption and cleanup.
