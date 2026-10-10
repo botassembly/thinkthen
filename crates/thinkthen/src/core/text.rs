@@ -70,10 +70,16 @@ impl Evidence {
     /// space.
     pub(crate) fn new(text: impl Into<String>) -> Result<Self, BlankTextError> {
         let text = text.into();
+        Self::validate_text(&text)?;
+        Ok(Self(Shape::Text(text)))
+    }
+
+    /// Check text before a caller copies borrowed evidence.
+    pub(crate) fn validate_text(text: &str) -> Result<(), BlankTextError> {
         if text.trim().is_empty() {
             return Err(BlankTextError::Evidence);
         }
-        Ok(Self(Shape::Text(text)))
+        Ok(())
     }
 
     /// Take the object or list a pointer selection made as the evidence.

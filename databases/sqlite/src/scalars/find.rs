@@ -7,30 +7,40 @@ use thinkthen::{For, Question, Settings};
 use crate::question::{call_settings, text};
 use crate::{Failure, ffi, guard, worker};
 
-const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
+type Units = Option<(Question, Vec<String>)>;
 
-fn units(argument: &str) -> Result<Vec<String>, Failure> {
+fn units(argument: &str, question: &str, none: bool) -> Result<Units, Failure> {
     let source: serde_json::Value = serde_json::from_str(argument)
         .map_err(|_| Failure::usage("find units are a JSON array of text"))?;
     let array = source
         .as_array()
         .ok_or_else(|| Failure::usage("find units are a JSON array of text"))?;
-    let mut bytes = 0_usize;
-    array
-        .iter()
-        .map(|value| {
-            let text = value.as_str().ok_or_else(|| {
-                Failure::usage("each find unit is text, not NULL or another type")
-            })?;
-            bytes = bytes
-                .checked_add(text.len())
-                .ok_or_else(|| Failure::usage("find units exceed 16 MiB of text"))?;
-            if bytes > MAX_TEXT_BYTES {
-                return Err(Failure::usage("find units exceed 16 MiB of text"));
-            }
-            Ok(text.to_owned())
-        })
-        .collect()
+    // Host type conversion precedes question construction and never copies text.
+    for value in array {
+        if !value.is_string() {
+            return Err(Failure::usage(
+                "each find unit is text, not NULL or another type",
+            ));
+        }
+    }
+    if array.is_empty() {
+        return Ok(None);
+    }
+    let question = Question::find(question)?;
+    let question = if none {
+        question.offering_none()?
+    } else {
+        question
+    };
+    question.admit_find_units(array.iter().filter_map(serde_json::Value::as_str).map(Ok))?;
+    Ok(Some((
+        question,
+        array
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .map(str::to_owned)
+            .collect(),
+    )))
 }
 
 /// `thinkthen_find(question, units_json[, settings])`.
@@ -58,19 +68,12 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             .map_err(|error| Failure::usage(error.to_string()))?;
         let none = settings.none().unwrap_or(false);
         let shared = settings.context().map(str::to_owned);
-        let units = units(&source)?;
-        if units.is_empty() {
+        let Some((question, units)) = units(&source, &argument, none)? else {
             return Ok(None);
-        }
-        let question = Question::find(&argument)?;
+        };
         let question = match settings.model() {
             Some(model) => question.with_model(model)?,
             None => question,
-        };
-        let question = if none {
-            question.offering_none()?
-        } else {
-            question
         };
         let answer =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
