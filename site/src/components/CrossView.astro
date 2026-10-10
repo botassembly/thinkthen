@@ -4,13 +4,13 @@
 // the same tabs in the same order. Bash shows the function page's first
 // example with its output and exit code. Every other surface shows its
 // library sample, with what it printed when it prints. A surface with no
-// sample shows the function's `cannot` sentence. A surface with neither
-// has no tab, and a group with no tab is left out.
+// sample links the package-owned current API and installation guide.
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
 import InstallLine from './InstallLine.astro';
 import { SURFACES, FUNCTIONS, TAB_GROUPS } from '../data/catalog.mjs';
 import { captioned, sample } from '../data/samples.mjs';
+import { packageGuide } from '../data/repo.mjs';
 import { beatlesPageFor } from '../data/beatles.mjs';
 
 // `install` puts each surface's install line under its sample, as the home
@@ -40,10 +40,9 @@ const tabOf = (s) => ({
   code: s.slug === 'shell' ? null : sample(fn, s.slug),
   cannot: entry.cannot?.[s.slug] ?? null,
 });
-const shown = (t) => t.slug === 'shell' || t.code || t.cannot;
 const groups = TAB_GROUPS.map((g) => ({
   name: g.name,
-  tabs: g.slugs.map((slug) => tabOf(SURFACES.find((s) => s.slug === slug))).filter(shown),
+  tabs: g.slugs.map((slug) => tabOf(SURFACES.find((s) => s.slug === slug))),
 })).filter((g) => g.tabs.length);
 const tabs = groups.flatMap((g) => g.tabs);
 ---
@@ -71,7 +70,7 @@ const tabs = groups.flatMap((g) => g.tabs);
       {t.code && <Code code={t.code.code} file={t.code.file} label={`Copy the ${t.surface.name} sample`} />}
       {t.code && t.surface.fragment && <p class="note">{parts(t.surface.fragment).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>}
       {t.code?.output && <Code code={t.code.output} lang="output" caption={`What ${t.surface.name} printed`} copy={false} />}
-      {t.slug !== 'shell' && !t.code && <p class="note">{t.cannot}</p>}
+      {t.slug !== 'shell' && !t.code && <p class="note">Use the named <code>{fn}</code> call in the <a href={packageGuide(t.slug)}>{t.surface.name} package guide</a>. That guide owns current examples, installation prerequisites and observed platform limits. <a href={`/install/${t.slug}/`}>Install {t.surface.name}</a>.</p>}
       {install && t.slug === 'shell' && <InstallLine line={t.surface.install[0][0]} caption="Install the command" />}
       {install && t.slug === 'shell' && <InstallLine line={t.surface.install[1][0]} caption="Or with Homebrew, an option on a Mac" />}
       {install && t.slug !== 'shell' && <InstallLine line={t.surface.install[0][0]} caption={`Install it for ${t.surface.name}`} />}

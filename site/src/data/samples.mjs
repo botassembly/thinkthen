@@ -105,15 +105,16 @@ export const backendsName = (surface) => BACKENDS[surface] ?? 'backends';
 export function firstCall(surface) {
   const file = `${FIRST[surface] ?? 'first-call'}.${EXT[surface]}`;
   const code = text(`install/${surface}/${file}`);
-  if (code === undefined) throw new Error(`samples: examples/install/${surface}/${file} is missing`);
+  if (code === undefined) return null;
   return { file, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/${file}.out`)?.replace(/\n+$/, '') ?? null };
 }
 
 // Another install sample on a surface's page, such as R's data frames,
 // with what it printed.
-export function installSample(surface, name) {
+export function installSample(surface, name, optional = false) {
   const ext = EXT[surface];
   const code = text(`install/${surface}/${name}.${ext}`);
+  if (code === undefined && optional) return null;
   if (code === undefined) throw new Error(`samples: examples/install/${surface}/${name}.${ext} is missing`);
   const cut = name.lastIndexOf('/');
   const output = text(`install/${surface}/${name}.${ext}.out`)?.replace(/\n+$/, '') ?? null;

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build the command and site, then replay every language and SQL sample.
+// Build the command and site, then replay every retained language and SQL sample.
 // Strip shell settings and secrets; missing toolchains fail the release check.
 
 import path from 'node:path';

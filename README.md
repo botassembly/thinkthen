@@ -149,7 +149,7 @@ MCP accepts newline-delimited JSON-RPC frames. Its incoming frame limit also bou
 
 ## Languages
 
-Every language uses the same Rust engine. Each page below gives the published install line and a first call. The [0.2 upgrade guide](libraries/UPGRADING-0.2.md) maps changed calls and links the package documentation for development APIs. The [binding guide](libraries/BINDING-AUTHOR.md) defines the one typed function family per language; it links the generated request and result contracts.
+Every language uses the same Rust engine. Each page below gives the published install route and links current API examples. The [0.2 upgrade guide](libraries/UPGRADING-0.2.md) maps changed calls and links the package documentation for development APIs. The [binding guide](libraries/BINDING-AUTHOR.md) defines the one typed function family per language; it links the generated request and result contracts.
 
 The development JVM session uses stable JDK 22 or later without preview features. Its packaged native loader needs no manual library path. The released JVM API still uses JDK 21 preview features and a separate C archive. The development Objective-C API uses Apple Foundation, ARC and generated results. GNU support has ended. Matching installed Apple Foundation execution remains unrun; see the [Foundation guide](libraries/objective-c/README.md). The [package design](sdlc/decisions/2026-10-09-native-package-design.md) defines the intended targets and runtime floors. Installed and platform qualification remain separate requirements.
 

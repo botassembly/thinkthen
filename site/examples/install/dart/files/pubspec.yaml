@@ -1,6 +1,0 @@
-name: first_call
-environment:
-  sdk: ^3.3.0
-dependencies:
-  thinkthen_dart:
-    path: thinkthen-dart

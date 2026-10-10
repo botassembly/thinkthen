@@ -1,5 +1,0 @@
-# A tibble: 2 × 2
-  body                                       is_refund
-  <chr>                                      <lgl>    
-1 Please refund my order. It arrived broken. TRUE     
-2 I want to send this back.                  NA       
