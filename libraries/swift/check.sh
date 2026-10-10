@@ -27,10 +27,11 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     native_install "$root" "$smoke/native"
     mkdir -p "$smoke/CThinkThen/include" "$smoke/main"
     cp "$here/Sources/CThinkThen/module.modulemap" "$smoke/CThinkThen/"
+    cp "$here/Sources/CThinkThen/include/loader.h" "$smoke/CThinkThen/include/"
     cp "$smoke/native/include/thinkthen.h" "$smoke/CThinkThen/include/"
     cp "$here/Tests/fixtures/smoke.swift" "$smoke/main/main.swift"
     HOME="$smoke" SWIFTPM_MODULECACHE_OVERRIDE="$smoke/module-cache" "$swiftc" -j 2 -module-cache-path "$smoke/module-cache" \
-        -I "$smoke/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$smoke/main/main.swift" -L "$smoke/native/lib" \
+        -I "$smoke/CThinkThen" "$here/Sources/ThinkThen/NativePackage.swift" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$smoke/main/main.swift" -L "$smoke/native/lib" \
         -lthinkthen -Xlinker -rpath -Xlinker "$smoke/native/lib" -o "$smoke/smoke"
     "$smoke/smoke"
     exit
@@ -38,6 +39,9 @@ fi
 mkdir -p "$here/target/native/lib" "$here/target/scratch/matrix-main" "$here/target/home" "$here/target/cache" "$here/target/logs"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
+python3 -I "$root/sdlc/generators/results/generate.py" --target swift --check
+python3 -I "$root/sdlc/generators/results/generate.py" --target swift --inputs --check
+python3 -I "$root/sdlc/generators/results/generate.py" --target swift --bridge --check
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Swift installed: C archive missing' >&2; exit 1; }
     . "$root/sdlc/scripts/scratch.sh"
@@ -54,7 +58,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     tar -xOzf "$THINKTHEN_C_ARTIFACT" ./lib/libthinkthen.a | cmp - "$native/lib/libthinkthen.a"
     export HOME="$here/target/home" XDG_CACHE_HOME="$here/target/cache" SWIFTPM_MODULECACHE_OVERRIDE="$here/target/cache/module-cache"
     "$swift" build --package-path "$wrapper" --scratch-path "$here/target/scratch/swift-build-release" \
-        --jobs 2 -Xlinker -L -Xlinker "$native/lib" -Xlinker -rpath -Xlinker "$native/lib"
+        --jobs 2
     RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$root/Cargo.toml" --package conformance-backend -j2
     THINKTHEN_PORTABLE_SWIFT_SOURCE="$wrapper" THINKTHEN_NATIVE_ROOT="$native" \
         python3 "$here/Tests/fixtures/portable_batch.py"
@@ -63,7 +67,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     echo 'Swift installed release PASS: three literal portable sends'
     exit 0
 fi
-# SwiftPM runs no copy step for a system library, so the check copies the one C header in.
+# Package staging copies the canonical generated C header.
 mkdir -p "$here/Sources/CThinkThen/include"
 cp "$root/libraries/c/include/thinkthen.h" "$here/Sources/CThinkThen/include/thinkthen.h"
 case ${THINKTHEN_FOCUSED:-} in
@@ -76,13 +80,16 @@ native="$root/libraries/c/target/debug/libthinkthen_c.so"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native"
 cp "$native" "$here/target/native/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/native/lib/libthinkthen.so.0"
+native_triple=$(rustc -vV | sed -n 's/^host: //p')
+mkdir -p "$here/Sources/ThinkThen/Native/$native_triple"
+cp "$native" "$here/Sources/ThinkThen/Native/$native_triple/libthinkthen.so"
 export HOME="$here/target/home" XDG_CACHE_HOME="$here/target/cache" SWIFTPM_MODULECACHE_OVERRIDE="$here/target/cache/module-cache"
 export THINKTHEN_SWIFT_BUILD_DIR="$here/target/scratch/swift-build-product"
-"$swift" build --package-path "$here" --scratch-path "$THINKTHEN_SWIFT_BUILD_DIR" --jobs 2 -Xlinker -L -Xlinker "$here/target/native/lib" -Xlinker -rpath -Xlinker "$here/target/native/lib"
+"$swift" build --package-path "$here" --scratch-path "$THINKTHEN_SWIFT_BUILD_DIR" --jobs 2
 cp "$here/Tests/fixtures/matrix.swift" "$here/target/scratch/matrix-main/main.swift"
-"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-matrix"
+"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/NativePackage.swift" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-matrix"
 cp "$here/Tests/fixtures/settings.swift" "$here/target/scratch/matrix-main/main.swift"
-"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-settings"
+"$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/NativePackage.swift" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/Sources/ThinkThen/Complete.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-settings"
 "$swiftc" -j 2 "$here/Sources/ThinkThen/Complete.swift" "$here/Tests/Carriers/main.swift" -o "$here/target/scratch/carriers"
 "$here/target/scratch/carriers"
 python3 "$here/Tests/fixtures/public_types.py"

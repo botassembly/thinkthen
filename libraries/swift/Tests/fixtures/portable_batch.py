@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix="swift-portable-", dir=PACKAGE / "target
     exe = scratch / "portable-batch"
     swiftc = os.environ.get("THINKTHEN_SWIFTC", "swiftc")
     subprocess.run([swiftc, "-j", "2", "-I", str(SOURCE / "Sources/CThinkThen"),
-                    str(SOURCE / "Sources/ThinkThen/ThinkThen.swift"), str(SOURCE / "Sources/ThinkThen/Complete.swift"),
+                    str(SOURCE / "Sources/ThinkThen/NativePackage.swift"), str(SOURCE / "Sources/ThinkThen/ThinkThen.swift"), str(SOURCE / "Sources/ThinkThen/Complete.swift"),
                     str(PACKAGE / "Tests/fixtures/portable_batch.swift"),
                     "-L", str(NATIVE / "lib"), "-lthinkthen", "-Xlinker", "-rpath",
                     "-Xlinker", str(NATIVE / "lib"), "-o", str(exe)],
