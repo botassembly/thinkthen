@@ -1,8 +1,11 @@
-## 0.2.0 (unreleased)
+## Unreleased: 0.2.0
 
-- Correct legacy native C counts and count pointers to `Size`. High-level Dart `int` calls stay compatible. Callers using the exported low-level `Door` native getters should allocate counts with `calloc<Size>()` instead of `calloc<IntPtr>()`.
+- Replace `Door`, `CompleteApi`, older judgments and handwritten native layouts with one asynchronous `Engine` API. The ten named methods return generated, owned results through the native session route. The main package import replaces the former session import.
+- Preserve absent values, explicit null, unknown fields and exact `BigInt` counters in generated declarations. Typed failures retain completed rows and native terminal facts.
+- Add explicit cancellation, bounded feed intake, owned session packets and native cleanup. Ordinary completion awaits stream cleanup and reports its failure. Usage persistence methods return owned status without changing successful answers.
+- Bundle the native library through the Dart build hook. Dart 3.10 or later is required. The hook verifies pinned bytes; it compiles no Rust and downloads nothing at runtime. The Flutter integration supports Linux.
 
-Version 0.2 is in progress on main.
+Version 0.2 is implemented on main and remains unreleased. Public installation remains 0.1.2. Routine installed Linux Dart and Flutter checks cover the current API. Final release asset assembly, full parity and platform qualification remain candidate checks. Public-package installation checks follow publication. The [package guide](README.md) gives replacement calls and the current development asset limits.
 
 ## 0.1.2
 
