@@ -59,6 +59,14 @@ def native_types(package):
             if (owner, symbol) in signatures:
                 raise ValueError('duplicate Dart native declaration: ' + symbol)
             signatures[(owner, symbol)] = (getter, returned.strip(), split_types(arguments))
+    text = (package / 'lib/src/session/abi_generated.dart').read_text()
+    for signature, symbol in re.findall(r"@Native<(.*?)>\(\s*symbol: ['\"](thinkthen_\w+)['\"]", text, re.S):
+        returned, arguments = re.fullmatch(r'(.*?)\s+Function\((.*)\)', signature, re.S).groups()
+        signatures[('session', symbol)] = (symbol, returned.strip(), split_types(arguments))
+    consumers = '\n'.join(p.read_text() for p in (package / 'lib/src/session').glob('*.dart') if p.name != 'abi_generated.dart')
+    required = {n.removesuffix('Pointer') for n in re.findall(r'\b_?abi\.(thinkthen_\w+)', consumers)}
+    if required - {n for owner, n in signatures if owner == 'session'}:
+        raise ValueError('C ABI mismatch: Dart session missing import')
     return signatures
 
 
@@ -112,12 +120,23 @@ List<int> writeField(Pointer<Uint8> p, int size, void Function() write) {
 
 
 def probe(package, records, functions, scratch, library, dart):
+    # @Native requires the installed package's configured native asset, not a VM fallback.
+    spec = importlib.util.spec_from_file_location('native_assets', ROOT / 'libraries/dart/checks/native_assets.py')
+    assets = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(assets)
+    staged = assets.development(ROOT / 'libraries/dart', library, scratch / 'development')
+    shutil.rmtree(staged / 'lib')
+    shutil.copytree(package / 'lib', staged / 'lib')
+    package = staged
+    (scratch / 'pubspec.yaml').write_text('name: abi_probe\npublish_to: none\nenvironment:\n  sdk: ">=3.3.0 <4.0.0"\ndependencies:\n  thinkthen_dart:\n    path: ' + str(staged) + '\n')
+    assets.configure(staged, library, [scratch])
     folder = package / 'lib/src/native'
     lines = ["import 'dart:ffi';", "import 'dart:convert';"]
     lines += ["import '" + (folder / f).resolve().as_uri() + "';" for f in ('abi.dart', 'functions.dart', 'question.dart', 'input.dart')]
+    lines += ["import '" + (package / 'lib/src/session/abi_generated.dart').resolve().as_uri() + "' as session_abi;"]
     lines += ["import '" + (package / 'lib/src/door.dart').resolve().as_uri() + "';", "import '" + (package / 'lib/src/typed.dart').resolve().as_uri() + "';", MEASUREMENT]
     lines += [f'final class Alignment{name} extends Struct {{ @Uint8() external int prefix; external {name} value; }}' for name in records]
-    lines += ['void main(List<String> args) {', 'final api = NativeApi(args.single);', 'final door = Door(args.single);', 'final result = <String, dynamic>{};', 'final layouts = <String, dynamic>{};']
+    lines += ['void main(List<String> args) {', 'final api = NativeApi(args.single);', 'final door = Door(args.single);', 'final session = session_abi.NativeAbi();', 'final result = <String, dynamic>{};', 'final layouts = <String, dynamic>{};']
     for name, (_, members) in records.items():
         lines += ['{', f'final p = calloc(1, sizeOf<{name}>()).cast<{name}>();', f'final zero = calloc(1, sizeOf<{name}>()).cast<{name}>();',
                   f'final holder = calloc(1, sizeOf<Alignment{name}>()).cast<Alignment{name}>();', 'try {',
@@ -138,6 +157,10 @@ def probe(package, records, functions, scratch, library, dart):
         while type_.startswith('Pointer<'):
             type_ = type_[8:-1]
             types.add(type_)
+    session_constants = re.findall(r'const (THINKTHEN_\w+) = ', (package / 'lib/src/session/abi_generated.dart').read_text())
+    lines += ['result["session_constants"] = <String, int>{']
+    lines += [json.dumps(name) + ': session_abi.' + name + ',' for name in session_constants]
+    lines += ['};', 'result["session_errors"] = <String, int>{for (final e in session_abi.NativeErrorKind.values) "THINKTHEN_E${e.name.toUpperCase()}": e.code};']
     lines += ['result["records"] = layouts;', 'result["widths"] = <String, int>{']
     lines += [json.dumps(t) + ': ' + ('0' if t == 'Void' else f'sizeOf<{t}>()') + ',' for t in sorted(types)]
     lines += ['};']
@@ -156,12 +179,14 @@ def probe(package, records, functions, scratch, library, dart):
     unit = scratch / 'probe.dart'
     unit.write_text('\n'.join(lines) + '\n')
     env = child_env(keep=('HOME', 'PUB_CACHE', 'LANG', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME'))
-    command = [dart, '--packages=' + str(package / '.dart_tool/package_config.json'), str(unit), str(library)]
+    subprocess.run([dart, 'pub', 'get', '--offline', '--directory', str(scratch)], env=env, check=True, stdout=sys.stderr)
+    command = [dart, 'run', '--verbosity=error', str(unit), str(library)]
     return json.loads(subprocess.check_output(command, text=True, cwd=scratch, env=env))
 
 
 def check(header, library, package, dart):
-    native = abi.header_abi(header)
+    complete = abi.header_abi(header)
+    native = abi.retained_abi(complete)
     records, functions = declarations(package), native_types(package)
     with tempfile.TemporaryDirectory(prefix='thinkthen-dart-abi-') as folder:
         measured = probe(package.resolve(), records, functions, pathlib.Path(folder), library, dart)
@@ -186,11 +211,11 @@ def check(header, library, package, dart):
         record = {'size': measured_record['size'], 'alignment': measured_record['alignment'], 'fields': fields(name)}
         abi.compare_abi({'records': {cname(name, native): expected['records'][cname(name, native)]}}, {'records': {cname(name, native): record}})
         actual['records'][cname(name, native)] = record
-    expected_functions = abi.represented_abi(native, [], native['functions'], [])['functions']
-    for (_, name), (_, returned, arguments) in functions.items():
+    expected_functions = abi.represented_abi(complete, [], complete['functions'], [])['functions']
+    for (owner, name), (_, returned, arguments) in functions.items():
         for i, type_ in enumerate(arguments):
-            typed_pointer(type_, native['functions'][name]['arguments'][i], native, widths)
-        typed_pointer(returned, native['functions'][name]['return'], native, widths)
+            typed_pointer(type_, complete['functions'][name]['arguments'][i], native, widths)
+        typed_pointer(returned, complete['functions'][name]['return'], native, widths)
         actual['functions'][name] = {'return': type_kind(returned, widths[returned], native), 'return_width': widths[returned],
             'arguments': [type_kind(t, widths[t], native) for t in arguments], 'argument_widths': [widths[t] for t in arguments], 'calling_convention': 'C'}
         abi.compare_abi({'functions': {name: expected_functions[name]}}, {'functions': {name: actual['functions'][name]}})
@@ -203,6 +228,12 @@ def check(header, library, package, dart):
     constants |= {'THINKTHEN_NO', 'THINKTHEN_YES', 'THINKTHEN_UNSURE', 'THINKTHEN_EUSAGE', 'THINKTHEN_EBACKEND',
                   'THINKTHEN_EDEADLINE', 'THINKTHEN_ELOCAL', 'THINKTHEN_ECANCELLED', 'THINKTHEN_EDEFECT'}
     expected = abi.represented_abi(native, native['records'], set(native['functions']) - omitted, constants)
+    for owner, name in functions:
+        if owner == 'session':
+            expected['functions'][name] = expected_functions[name]
+    required_constants = {n: v for n, v in complete['constants'].items() if n.startswith('THINKTHEN_SESSION_') or n.startswith('THINKTHEN_E') and not n.endswith('_V1')}
+    abi.compare_abi({'constants': required_constants}, {'constants': measured['session_constants']})
+    abi.compare_abi({'constants': {n: v for n, v in required_constants.items() if not n.startswith('THINKTHEN_SESSION_')}}, {'constants': measured['session_errors']})
     abi.compare_abi(expected, actual)
     print(f'Dart C ABI: {len(actual["records"])} setter-measured layouts, {len(actual["constants"])} evaluated constants, {len(actual["functions"])} compiled native imports match')
 

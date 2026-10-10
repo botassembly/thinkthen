@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -27,7 +28,7 @@ def ffi_layouts(copy, library, records, scratch):
     script.write_text('''<?php
 $f = FFI::cdef(file_get_contents($argv[1]), $argv[2]);
 $out = [];
-foreach (json_decode($argv[3], true) as $name => $record) {
+foreach (json_decode(file_get_contents($argv[3]), true) as $name => $record) {
     $type = $f->type($name);
     $fields = [];
     foreach ($record['fields'] as $path => $unused) {
@@ -42,9 +43,33 @@ foreach (json_decode($argv[3], true) as $name => $record) {
 }
 echo json_encode($out, JSON_THROW_ON_ERROR);
 ''')
+    inventory = scratch / 'records.json'
+    inventory.write_text(json.dumps(records))
     command = [os.environ.get('THINKTHEN_PHP_BIN', '/usr/bin/php8.3'), '-n', '-d', 'extension=ffi',
-               '-d', 'ffi.enable=1', str(script), str(copy), str(library), json.dumps(records)]
+               '-d', 'ffi.enable=1', str(script), str(copy), str(library), str(inventory)]
     return json.loads(subprocess.check_output(command, text=True, env=child_env()))
+
+
+def check_session(header, copy, library):
+    """The generated PHP session cdef promises every header declaration."""
+    native = abi.header_abi(header)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-php-session-abi-') as folder:
+        scratch = Path(folder)
+        copied = copied_abi(copy, scratch)
+        macros = set(re.findall(r'^#define (THINKTHEN_\w+)', header.read_text(), re.M))
+        expected = {**native, 'constants': {n: v for n, v in native['constants'].items() if n not in macros}}
+        abi.compare_abi(expected, copied)
+        measured = ffi_layouts(copy, library, copied['records'], scratch)
+        layouts = {n: {'size': r['size'], 'alignment': r['alignment'],
+                      'fields': {f: {'offset': v['offset'], 'width': v['width']} for f, v in r['fields'].items()}}
+                   for n, r in native['records'].items()}
+        if layouts != measured:
+            raise ValueError('C ABI mismatch: PHP session FFI layouts')
+        source = copy.parent / 'constants_generated.php'
+        constants = dict((n, int(v)) for n, v in re.findall(r'const (THINKTHEN_\w+) = (\d+);', source.read_text()))
+        required = {n: v for n, v in native['constants'].items() if n.startswith('THINKTHEN_SESSION_') or n.startswith('THINKTHEN_E') and not n.endswith('_V1')}
+        abi.compare_abi({'constants': required}, {'constants': constants})
+    print(f'PHP session C ABI: {len(copied["records"])} FFI layouts and {len(copied["functions"])} exact imports match')
 
 
 def check(header, copy, library):
@@ -52,8 +77,8 @@ def check(header, copy, library):
     with tempfile.TemporaryDirectory(prefix='thinkthen-php-abi-') as folder:
         scratch = Path(folder)
         copied = copied_abi(copy, scratch)
-        # PHP represents every public carrier/import, and the enums retained in its cdef.
-        expected = {**native, 'constants': {n: v for n, v in native['constants'].items() if n.startswith(('THINKTHEN_DECLARATION_', 'THINKTHEN_PROPERTY_', 'THINKTHEN_LOAD_'))}}
+        # The frozen declaration inventory precedes the owned session graph.
+        expected = {**abi.retained_abi(native), 'constants': {n: v for n, v in native['constants'].items() if n.startswith(('THINKTHEN_DECLARATION_', 'THINKTHEN_PROPERTY_', 'THINKTHEN_LOAD_'))}}
         abi.compare_abi(expected, copied)
         actual = ffi_layouts(copy, library, copied['records'], scratch)
         layouts = {n: {'size': r['size'], 'alignment': r['alignment'],
@@ -62,6 +87,8 @@ def check(header, copy, library):
         if layouts != actual:
             raise ValueError('PHP FFI carrier layout differs from the target C compiler')
     abi.check_exports(header, library)
+    session = copy.parents[1] / "session/ffi_generated.h"
+    check_session(header, session, library)
     plants = [('field order', 'const char *data; size_t len;', 'size_t len; const char *data;'),
               ('constant', 'THINKTHEN_DECLARATION_STRING_V1=1', 'THINKTHEN_DECLARATION_STRING_V1=99'),
               ('return', 'int thinkthen_result_row(', 'uint64_t thinkthen_result_row('),

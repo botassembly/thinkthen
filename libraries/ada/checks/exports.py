@@ -135,7 +135,7 @@ def evaluated_declarations(source, scratch, imports):
 
 
 def check(header, source):
-    native = abi.header_abi(header)
+    native = abi.retained_abi(abi.header_abi(header))
     with tempfile.TemporaryDirectory(prefix='thinkthen-ada-abi-') as folder:
         scratch = pathlib.Path(folder)
         compiled = compiled_units(source.resolve(), scratch)

@@ -1,0 +1,31 @@
+# Check represented binding declarations against the C header
+
+The change starts at `5b5d71062`. Ticket review accepted `fc10e77079afc5b9b9c6e96ef8e5ea1dbcd9706b`. The coordinator's routine run in `target/0512-routine-all/shell-remainder.log` supplies the five original ABI failures. Each unchanged compatibility inventory was compared with new complete carriers, session constants or session imports that its package declaration did not represent.
+
+`sdlc/scripts/check-c-exports.py` defines the retained header scope once. It excludes the additive complete graph and owned session boundary from the independent compatibility expectation. It keeps every previous carrier, field, constant and function expectation, including named union aliases measured through their parents. The PHP, Dart, JVM, Ada and COBOL checks use that scope. Removing a represented compatibility declaration still fails its comparison. The canonical header and native implementation do not change.
+
+PHP separately checks its actual generated session `ffi_generated.h` against the full header and measures every copied carrier through PHP FFI. It checks the adjacent generated session constants against the header. The layout probe reads its inventory from a scratch file so the complete graph cannot exceed the operating system's argument limit. PHP's existing field, enum, return, argument, pointer-depth, omission and by-value plants remain.
+
+Dart reads the actual package's generated `@Native` signatures. Its consumer references supply an independent missing-import check. The existing target Dart probe compiles those declarations, measures their native types, checks typed pointees and evaluates the generated constants and error enum. The existing native-assets helper creates a scratch package and consumer with the matching native library. The probe never relies on process-symbol fallback. The smoke invocation requests compilation error output so build-hook progress cannot obscure the final answer.
+
+JVM reads descriptor expressions from actual session call sites and the actual shared free and size declarations. It compiles those expressions and links their symbols, then compares their measured signatures with the full C header. It keeps the installed compatibility JAR's layout, enum and descriptor comparison. The session probe needs JDK 22 while the compatibility JAR uses JDK 21 preview. `THINKTHEN_SESSION_JDK_HOME` selects only that build tool; the existing allow-list preserves it. Verification reuses the existing read-only compiler under the other lane's ticket-owned output. This variable does not configure the product or enter the clean child environment.
+
+The current Ada and COBOL sources contain retained declarations only. Their compiler layout, enum, typed-reference and bridge comparisons remain. This record makes no claim about the unlanded Ada owned-session package or a future generated declaration inventory. That migration must include its own actual compiler/header checks when its declarations arrive.
+
+## Evidence
+
+The repaired installed single-replay smokes pass for PHP, Ada and COBOL in `target/0532/final-smoke.log`, JVM in `target/0532/jvm-smoke.log`, and Dart in `target/0532/dart-final-smoke.log`. Each loads the installed native layout, returns the expected answer and counts the seed's one request. Earlier attempts exposed the Dart progress-output issue and the separate JVM compiler requirement; the final logs use their repairs.
+
+`target/0532/negative-cases.log` records refusal of all existing Ada, COBOL, JVM and Dart ABI plants. PHP's existing plants run inside its successful smoke ABI check. Layout sizes, alignment, offsets, field widths, enum values, calling conventions, pointer depth and by-value signatures retain their owning comparisons.
+
+Offline policy passes in `target/0532/policy.log` with pre-existing source-size warnings outside the changed files. PHP, Dart and JVM generator freshness checks pass in the corresponding `target/0532/*-generator.log` files. No generator or generated product declaration changes. Whitespace checks pass. The affected PHP, JVM, Ada, COBOL and Dart source ceilings match their measured totals.
+
+PHP's Python fixture ceiling grows from 1256 to 1281 because the full generated session cdef requires an independent header comparison and real FFI measurements. JVM's Python ceiling grows from 1199 to 1255 because its actual session descriptor expressions require discovery, compilation and symbol linkage. Fresh source review must accept these increases before landing. Ada remains 856, COBOL remains 1052 and Dart remains 17387 under their existing owning counters. The changed files remain below individual source-size warnings. Rust source and its ceiling do not change.
+
+The checks run under an eight-gigabyte memory limit and a one-gigabyte swap limit, with two Cargo jobs and offline Cargo. The lane remains below forty gigabytes including libraries. These local installed fixtures establish the tested ABI and replay behavior. Warm debug native artifacts do not establish release package privacy or publication readiness. Full Rust tests, parity, load, large inputs, paid calls, other machines and release qualification do not run for this repair.
+
+## What the build taught us
+
+A compatibility declaration inventory must retain an independent expectation when the canonical header gains another interface. Deriving that expectation from the declaration under test would hide omissions. Restricting the old expectation alone would also miss native session drift. The repair keeps the independent compatibility contract and checks each actually represented native declaration against the full header. Native assets and compiler versions belong to those package boundaries, so their probes must use the package's real loading and type rules.
+
+Fresh read-only review accepts `48332bd375b3d500dc780f2e25dc8922220f663d`, explicitly including PHP Python 1281 and JVM Python 1255. The reviewer checked independent retained expectations, fifteen Dart consumer imports and seventeen JVM call-site imports, and reproduced the PHP comparison of 700 session layouts and 105 imports. The five installed smoke results and existing negative cases agree with the repair. No header or product declaration changes enter this landing.
