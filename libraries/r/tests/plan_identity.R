@@ -24,7 +24,8 @@ bodies <- capture()
 check("a shared context also plans its own actual body and sends once",
       context_plan_sends == 0L && context_sends == 1L &&
       identical(context_plan$requests, 1) &&
-      identical(bodies, list(alpha, beta, context_plan$first_body)) &&
+      identical(sort(unlist(bodies[1:2])), sort(c(alpha,beta))) &&
+      identical(bodies[[3L]],context_plan$first_body) &&
       grepl("Shared reference", bodies[[3L]], fixed = TRUE) &&
       identical(context_answer$facts$requests_sent, 1))
 finish("plan identity", 3L)

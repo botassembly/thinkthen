@@ -15,11 +15,13 @@ again <- tt_recognize(question,sentence)
 check("mutating a returned value does not alter cached answers", again$facts$requests_sent==0 &&
   identical(again$results[[1]]$value,row$value))
 check("all missing recognition produces native no-work facts", tt_recognize(question,c(NA_character_,NA_character_))$facts$requests_sent==0)
-entities <- data.frame(name=c("a1","b1","a1","a1"),kind=c("x","x","x","y"))
+entities <- data.frame(name=c("a1","b1","a1"),kind=c("x","x","y"))
 relation <- list(version=1L,relate=list(relations=list(list(name="caused_by",source="*",target="*"))))
 edges <- tt_relate(relation,entities)$results[[1]]$value
-check("relation keeps typed edges and deduplicates name-kind pairs", length(edges)==6L &&
-  all(vapply(edges,inherits,TRUE,"thinkthen_Edge")))
+check("relation keeps typed edges for unique name-kind pairs", length(edges)==6L &&
+  all(vapply(edges,inherits,TRUE,"thinkthen_RelatedEntityEdge")))
 check("relation refuses missing names before sending", sent_by(check("missing name",kind_of(
   tt_relate(relation,data.frame(name=c("a",NA),kind="x")))=="usage"))==0L)
-finish("recognition ownership",8L)
+check("duplicate relation identities refuse before sending", sent_by(check("duplicate identity",kind_of(
+  tt_relate(relation,rbind(entities,entities[1,,drop=FALSE])))=="usage"))==0L)
+finish("recognition ownership",3L)

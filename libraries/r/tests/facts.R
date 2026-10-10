@@ -54,4 +54,4 @@ capped_sends <- sent_by(capped <- child(c(
   'cat(failure$kind)'
 ), env="THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10"))
 check("token spending cap crosses from the environment without a send", capped$status==0L && capped_sends==0L && capped$text=="usage")
-finish("facts and completion",8L)
+finish("facts and completion",7L)

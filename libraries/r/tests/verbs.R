@@ -132,10 +132,10 @@ check("a failed recording read is a non-retryable local error before any send",
 named <- list(choose = "Which team?", options = c("billing", "shipping"), model = "other-model")
 check("a named-model choose answers every row", identical(tt_choose(named, c("n1", "n2"), options = list(batch = 1L))$value, c("billing", "billing")))
 
-# The counters count sends, as doubles.
+# The usage counter reader retains ordinary R integer counts.
 before <- tt_usage()
 invisible(tt_decide("Q?", c("u1-new", "u2-new"))$value)
-check("two judgments are two sends", identical(tt_usage()$requests_sent - before$requests_sent, 2))
+check("two judgments are two sends", identical(tt_usage()$requests_sent - before$requests_sent, 2L))
 check("the counters name five counts", identical(names(before), c("requests_sent", "retries", "input_tokens", "output_tokens", "cache_answers")))
 
-finish("verbs", 25L)
+finish("verbs", 27L)
