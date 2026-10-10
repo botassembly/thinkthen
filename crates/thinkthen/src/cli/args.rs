@@ -173,6 +173,7 @@ pub(crate) struct Common {
     /// the old entry stays. Use --cache DIR to reuse held answers, or record
     /// into a new empty folder for a deliberate fresh run. An explicit
     /// recording folder suppresses the platform default cache.
+    /// Use thinkthen cache convert DIR for old exchange recordings, including site recordings.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
 
