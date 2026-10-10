@@ -7,7 +7,16 @@ use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
 #[test]
-fn top_edges_keep_literal_order_across_widths_and_batch_one() -> io::Result<()> {
+fn top_edges_keep_literal_order_with_one_job_and_batch_one() -> io::Result<()> {
+    top_edges_keep_literal_order("1")
+}
+
+#[test]
+fn top_edges_keep_literal_order_with_four_jobs_and_batch_one() -> io::Result<()> {
+    top_edges_keep_literal_order("4")
+}
+
+fn top_edges_keep_literal_order(jobs: &str) -> io::Result<()> {
     let expected = [
         (
             "1",
@@ -30,54 +39,52 @@ fn top_edges_keep_literal_order_across_widths_and_batch_one() -> io::Result<()> 
             ),
         ),
     ];
-    for jobs in ["1", "4"] {
-        for (top, lines) in expected {
-            let listener = super::by_body(&[
-                ("payout", "0.4"),
-                ("quick fix", "0.9"),
-                ("checkout", "0.4"),
-                ("refund never", "0.9"),
-            ])?;
-            let output = over(
+    for (top, lines) in expected {
+        let listener = super::by_body(&[
+            ("payout", "0.4"),
+            ("quick fix", "0.9"),
+            ("checkout", "0.4"),
+            ("refund never", "0.9"),
+        ])?;
+        let output = over(
+            "rank",
+            listener.base(),
+            &[
+                "--jsonl", "--field", "/body", "--batch", "1", "--jobs", jobs, "--top", top,
+            ],
+            RECORDS,
+        )?;
+        assert_eq!(code(&output), 0, "{jobs}/{top}: {}", said(&output));
+        assert_eq!(printed(&output), lines, "{jobs}/{top}");
+        assert_eq!(listener.requests().len(), 4, "every record was judged");
+        let tied = if top == "1" {
+            expected[0].1
+        } else {
+            expected[1].1
+        };
+        for (cut, eligible) in [("0.9", tied), ("1", "")] {
+            let cut_output = over(
                 "rank",
                 listener.base(),
                 &[
-                    "--jsonl", "--field", "/body", "--batch", "1", "--jobs", jobs, "--top", top,
+                    "--jsonl",
+                    "--field",
+                    "/body",
+                    "--batch",
+                    "1",
+                    "--jobs",
+                    jobs,
+                    "--top",
+                    top,
+                    "--threshold",
+                    cut,
                 ],
                 RECORDS,
             )?;
-            assert_eq!(code(&output), 0, "{jobs}/{top}: {}", said(&output));
-            assert_eq!(printed(&output), lines, "{jobs}/{top}");
-            assert_eq!(listener.requests().len(), 4, "every record was judged");
-            let tied = if top == "1" {
-                expected[0].1
-            } else {
-                expected[1].1
-            };
-            for (cut, eligible) in [("0.9", tied), ("1", "")] {
-                let cut_output = over(
-                    "rank",
-                    listener.base(),
-                    &[
-                        "--jsonl",
-                        "--field",
-                        "/body",
-                        "--batch",
-                        "1",
-                        "--jobs",
-                        jobs,
-                        "--top",
-                        top,
-                        "--threshold",
-                        cut,
-                    ],
-                    RECORDS,
-                )?;
-                assert_eq!(code(&cut_output), 0, "{}", said(&cut_output));
-                assert_eq!(printed(&cut_output), eligible);
-            }
-            assert_eq!(listener.count(), 12, "cuts still judge every record");
+            assert_eq!(code(&cut_output), 0, "{}", said(&cut_output));
+            assert_eq!(printed(&cut_output), eligible);
         }
+        assert_eq!(listener.count(), 12, "cuts still judge every record");
     }
     Ok(())
 }
