@@ -27,10 +27,11 @@ final class Operation
             $source = ['kind' => match ($function) { 'find' => 'units', 'relate' => 'entities', default => 'records' },
                 'items' => array_map(Client::descriptor(...), $records)];
         }
-        $request = Client::json(['schema' => \ThinkThen\Session\REQUEST_VERSION,
-            'call' => ['function' => $function,
-                'question' => $question instanceof QuestionInput ? $question->descriptor : (is_string($question) ? ['kind' => 'text', 'text' => $question] : ['kind' => 'definition', 'value' => $question]),
-                'input' => $source, 'options' => (object)$options]]);
+        $questionJson = $question instanceof QuestionInput && $question->definitionJson !== null
+            ? '{"kind":"definition","value":'.$question->definitionJson.'}'
+            : Client::json($question instanceof QuestionInput ? $question->descriptor : (is_string($question) ? ['kind' => 'text', 'text' => $question] : ['kind' => 'definition', 'value' => $question]));
+        $request = '{"schema":'.Client::json(\ThinkThen\Session\REQUEST_VERSION).',"call":{"function":'.Client::json($function).
+            ',"question":'.$questionJson.',"input":'.Client::json($source).',"options":'.Client::json((object)$options).'}}';
         $owner = $ffi->new('struct thinkthen_session *');
         $this->check($ffi->thinkthen_session_new_with_surface($engine, $request, strlen($request), 'php', 3, \FFI::addr($owner)));
         $this->session = $owner;

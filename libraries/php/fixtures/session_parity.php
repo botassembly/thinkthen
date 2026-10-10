@@ -7,7 +7,7 @@ function consume(stdClass $fixture, Client $client): array
 {
     $verb = $fixture->verb;
     $root = getenv('TT_REPO');
-    $question = (object)[...get_object_vars($fixture->question), ...get_object_vars($fixture->metadata ?? new stdClass())];
+    $question = $fixture->question;
     if (isset($fixture->loader)) $question = match ($fixture->loader) {
         'file', 'load' => Client::questionFile($fixture->reference),
         'named', 'load_named' => Client::questionNamed($fixture->reference),
@@ -15,8 +15,7 @@ function consume(stdClass $fixture, Client $client): array
     };
     elseif (($fixture->question_form ?? null) === 'file') $question = Client::questionFile('fixture-question.json');
     elseif (isset($fixture->raw)) {
-        file_put_contents('raw-question.json', $fixture->raw);
-        $question = Client::questionFile('raw-question.json');
+        $question = Client::questionJson($fixture->raw);
     }
     $none = $verb === 'find' && ($question->none ?? false);
     if ($verb === 'find' && $question instanceof stdClass) unset($question->none);
@@ -28,7 +27,7 @@ function consume(stdClass $fixture, Client $client): array
         $input = Client::files(array_map(fn($p) => ($fixture->owned_jsonl ?? false) ? $p : $root.'/'.$p,
             $fixture->paths ?? ['target/missing-input']), $reading,
             ($fixture->owned_jsonl ?? false) || ($fixture->source_unit ?? 0) === 5 ? 'jsonl' : null,
-            ($fixture->image_reader ?? false) ? 'image' : null);
+            ($fixture->image_reader ?? false) || ($fixture->source_unit ?? 0) === 4 ? 'image' : null);
     } else {
         $images = array_map(fn($p) => ['kind' => 'file', 'path' => $root.'/'.$p, 'media' => $fixture->media ?? 'image/png'], $fixture->image_paths ?? []);
         $input = [];
@@ -41,6 +40,10 @@ function consume(stdClass $fixture, Client $client): array
             if ($fixture->caption_files ?? false) $value = file_get_contents('caption-'.$i.'.txt');
             $input[] = ($fixture->image_only ?? false) ? Client::images($images) : Client::item($value, $fields);
         }
+    }
+    if (($fixture->incremental ?? false) && !isset($fixture->paths)) {
+        $records = $input;
+        $input = (function () use ($records) { yield from $records; })();
     }
     $options = ['attempts' => true];
     if ($none) $options['none'] = true;

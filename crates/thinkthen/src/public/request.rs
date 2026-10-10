@@ -101,7 +101,20 @@ impl Request {
     /// # Errors
     /// Refuses malformed, unknown, duplicate or null request controls.
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        serde_json::from_str(text).map_err(|_| Error::usage("invalid canonical request"))
+        serde_json::from_str(text).map_err(|error| {
+            if let Err(authored) = definition::validate_wire_definition(text) {
+                return authored;
+            }
+            let message = if error
+                .to_string()
+                .starts_with("per-item context is text or an object")
+            {
+                "the per-item context does not match context_schema"
+            } else {
+                "invalid canonical request"
+            };
+            Error::usage(message)
+        })
     }
     /// Validate the complete header without reading files or creating an engine.
     /// # Errors

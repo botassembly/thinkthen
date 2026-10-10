@@ -18,6 +18,10 @@ def project_session(payload, fixture):
         for result in values:
             result = dict(result)
             result.update(result.get('source', {}))
+            if fixture['verb'] == 'relate' and 'input_sources' in result:
+                sources = {source['index']: source['source'] for source in result['input_sources']}
+                result['input'] = [{'record': original, **sources.get(index, {})}
+                                   for index, original in enumerate(result['input'])]
             rows.append(project_row(result, projection_fixture, len(rows)))
     failure = terminal.get('failure')
     if failure:

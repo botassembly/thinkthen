@@ -14,7 +14,7 @@ try {
 
 Run PHP with `php -d ffi.enable=1 app.php`. The client loads `native/libthinkthen.so` from its package. Its optional second constructor argument selects an explicit native library. It does not download libraries or search system paths.
 
-`Client` provides `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each accepts literal question text or a PHP question-definition array/object, input values and optional native call settings. `questionFile`, `questionNamed` and `questionReference` select native question loaders explicitly. No text is inferred to be a path.
+`Client` provides `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each accepts literal question text or a PHP question-definition array/object, input values and optional native call settings. `questionJson` retains authored JSON bytes, including duplicate members and numeric forms, for native validation. `questionFile`, `questionNamed` and `questionReference` select native question loaders explicitly. No text is inferred to be a path.
 
 A PHP list supplies several records. `Client::item($value, $fields)` wraps one JSON item and carries per-item context, replacement options or images. `Client::images($attachments)` supplies image-only evidence. Attachments use the shared native descriptors. `Client::files($paths, $reading, $framing, $media)` selects native file reading, including JSONL framing and whole-file image media. A fresh `Traversable` supplies a bounded feed. Native code owns admission, file reading, cache, replay and route selection.
 

@@ -66,6 +66,31 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
         assert_eq!(text(&output.stdout), format!("{error}\n"));
         assert!(!text(&output.stdout).contains("private-"));
     }
+    let canonical = |question: &str, item: &str| format!(
+        "{{\"schema\":\"thinkthen.request/1\",\"call\":{{\"function\":\"decide\",\"question\":{{\"kind\":\"definition\",\"value\":{question}}},\"input\":{{\"kind\":\"records\",\"items\":[{item}]}}}}}}"
+    );
+    for (question, item, message) in [
+        (r#"{"decide":"private-wording","item_schema":"string"}"#, r#"{"original":{"kind":"text","text":"private-evidence"}}"#, "the question declaration uses an unsupported feature"),
+        (r#"{"decide":"private-wording","wording_version":2e0}"#, r#"{"original":{"kind":"text","text":"private-evidence"}}"#, "the question declaration uses an unsupported feature"),
+        (r#"{"decide":"private-wording","context_schema":{"type":"string"}}"#, r#"{"original":{"kind":"text","text":"private-evidence"},"context":null}"#, "the per-item context does not match context_schema"),
+        (r#"{"decide":"private-wording","private-canary":true}"#, r#"{"original":{"kind":"text","text":"private-evidence"}}"#, "invalid canonical request"),
+    ] {
+        let json = canonical(question, item);
+        let error = thinkthen::Request::from_json(&json).expect_err("invalid definition or context");
+        assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
+        if !message.contains("private-canary") { assert_eq!(error.to_string(), message); }
+        let output = run_with(
+            &compile(&crate_dir().join("tests/c/session.c")),
+            &format!("{}/generic/v1", backend.origin()), b"",
+            &[("SESSION_ADMISSION", Path::new(&json))],
+        );
+        assert_eq!((output.status.code(), text(&output.stderr)), (Some(0), String::new()));
+        let reported = if message == "invalid canonical request" { "invalid session arguments or input" } else { message };
+        assert_eq!(text(&output.stdout), format!("{reported}\n"));
+        assert!(!text(&output.stdout).contains("private-canary"));
+        assert!(!text(&output.stdout).contains("private-wording"));
+        assert!(!text(&output.stdout).contains("private-evidence"));
+    }
     assert_eq!(backend.count(), 0, "malformed controls send nothing");
 }
 

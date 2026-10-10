@@ -300,3 +300,37 @@ fn dynamic_json(q: &RecordChooseQuestion) -> Result<crate::core::Json, Error> {
     }
     Ok(Json::Object(fields))
 }
+
+// Inspect original authored bytes before serde converts custom errors to wire errors.
+pub(super) fn validate_wire_definition(text: &str) -> Result<(), Error> {
+    type Fields<'a> = std::collections::BTreeMap<&'a str, &'a serde_json::value::RawValue>;
+    fn fields(text: &str) -> Option<Fields<'_>> {
+        serde_json::from_str(text).ok()
+    }
+    let Some(root) = fields(text) else {
+        return Ok(());
+    };
+    let Some(call) = root.get("call").and_then(|raw| fields(raw.get())) else {
+        return Ok(());
+    };
+    let Some(question) = call.get("question").and_then(|raw| fields(raw.get())) else {
+        return Ok(());
+    };
+    if question
+        .get("kind")
+        .is_some_and(|raw| raw.get() == "\"definition\"")
+    {
+        if let Some(value) = question.get("value") {
+            RequestDefinition::from_authored_json(value.get()).map_err(|error| {
+                let message = error.to_string();
+                // Unknown authored keys may be private caller data.
+                if message.contains("takes no key") {
+                    Error::usage("invalid canonical request")
+                } else {
+                    error
+                }
+            })?;
+        }
+    }
+    Ok(())
+}
