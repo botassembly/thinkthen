@@ -36,3 +36,4 @@ A Rust caller uses one named API with typed Rust values and Rust-owned complete 
 ## Progress
 
 - 2026-10-10 landed 0399d25ec; next: All ten basic named Polars paths use native Requests. Typed score complete conversion is in review; remaining typed complete groups, bounded pull methods and installed consumers stay open.
+- 2026-10-10 landed eb0124b21; next: Typed complete score calls are landed through native Requests. Complete choose/tag groups are in progress; other typed groups, bounded pull methods and installed consumers stay open.
