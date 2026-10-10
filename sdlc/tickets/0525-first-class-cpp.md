@@ -28,3 +28,7 @@ C++ callers find one CMake package that carries the native library, call the ten
   One public API is one coherent family of named typed calls. Claim `libraries/cpp/**` narrowed and named per slice.
 - Proof: Shared conformance runs through an installed CMake consumer, covering absent, null, failures, unknown output fields, files, images and cancellation. If the API offers async calls, one installed held-provider case shows other work progressing, and cancel and cleanup returning before the provider is released. Pending final facts stay pending. Record handwritten code removed and added, counting templates, in the landing record.
 - Defers: Dead `complete.hpp` removal goes in 0515. Final distribution assembly belongs to 0530. Native qualification beyond this machine follows Ian's release hold.
+
+## Progress
+
+- 2026-10-10 landed a7ff49569; next: C++ number parsing and serialization preserve JSON semantics under comma locales; PHP polling advances bounded generators and preserves terminal facts. Focused old/new and public consumer checks pass with accepted source review. Installed distributions, platform qualification and compatibility retirement remain open.
