@@ -20,9 +20,10 @@ const root = process.argv[2];
     "ruby": '''require 'json'
 require 'thinkthen'
 root = ARGV.fetch(0)
-call = ThinkThen::Engine.new(replay: File.join(root, 'recording'), cache: false).decide(
-  File.read(File.join(root, 'question.txt')), File.read(File.join(root, 'report.txt')))
-puts JSON.generate(value: call.value, requests_sent: call.facts.fetch(:requests_sent))
+ThinkThen::Client.open(replay: File.join(root, 'recording'), cache: false) do |client|
+  call = client.decide(File.read(File.join(root, 'question.txt')), File.read(File.join(root, 'report.txt')))
+  puts JSON.generate(value: call.value, requests_sent: call.facts.requests_sent)
+end
 ''',
     "rust": '''use std::{env, fs};
 use thinkthen::{Answer, EngineBuilder, Question};
