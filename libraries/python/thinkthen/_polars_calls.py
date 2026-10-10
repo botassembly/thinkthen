@@ -22,8 +22,7 @@ class PolarsResult(PandasResult):
 
     def _column(self, rows, positions=None):
         import polars as pl
-        return pl.Series(self.source.name, list(rows),
-                         dtype=pl.Float64 if self.function == 'score' and not self.detailed else pl.Object)
+        return pl.Series(self.source.name, list(rows), dtype=pl.Float64 if self.function == 'score' and not self.detailed else pl.Object)
 
     def _selected(self):
         return self.source.gather(list(self.positions))
