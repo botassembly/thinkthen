@@ -126,7 +126,10 @@ extension Engine {
     public func finishUsageStatus() throws -> UsageStatus { try usageStatus(thinkthen_engine_finish_usage_status_v1) }
     private func usageStatus(_ operation: (OpaquePointer?, UnsafeMutablePointer<thinkthen_complete_usage_persistence_v1>?, UnsafeMutablePointer<thinkthen_complete_utf8_v1>?) -> Int32) throws -> UsageStatus {
         let h = try open(); var state = thinkthen_complete_usage_persistence_v1(); var advice = thinkthen_complete_utf8_v1()
-        try nativeChecked(h,operation(h,&state,&advice))
+        let code = operation(h,&state,&advice)
+        if code != 0 {
+            throw DoorFailure(code:code,retryable:false,message:String(cString:thinkthen_session_error_message()))
+        }
         let copied = try nativeCopy(thinkthen_string_v1(data:advice.data,len:advice.len))
         return UsageStatus(state:try UsagePersistence(state.kind),advice:advice.data == nil ? nil : copied)
     }
