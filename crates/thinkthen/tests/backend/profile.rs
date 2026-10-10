@@ -257,6 +257,8 @@ fn grouped_annotate_checks_every_group_before_starting_one() {
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(listener.connections(), 0);
     assert!(output.stdout.is_empty());
+    let limit = "profile tiny-groups allows at most 1 evidence bytes";
+    assert!(String::from_utf8_lossy(&output.stderr).contains(limit));
 
     let dry = spawn(
         &[
@@ -272,7 +274,7 @@ fn grouped_annotate_checks_every_group_before_starting_one() {
     .expect("dry command");
     assert_eq!(dry.status.code(), Some(2));
     assert!(dry.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&dry.stderr).contains("evidence bytes"));
+    assert!(String::from_utf8_lossy(&dry.stderr).contains(limit));
 }
 
 #[test]

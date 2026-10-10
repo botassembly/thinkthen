@@ -92,10 +92,7 @@ fn native_annotation_keeps_member_null_failure_order_and_actual_batch_sources() 
             .all(|source| source.batch_size() == Some(3))
     );
     let request: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
-    assert_eq!(
-        request["state"],
-        json!({"context":"Separate.","evidence":"Each question quotes the text it asks about."})
-    );
+    assert_eq!(request["state"], "Separate.");
     assert_eq!(
         request["questions"]["q1"]["instructions"],
         "The text is \"Original.\". Good?"

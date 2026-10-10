@@ -114,9 +114,10 @@ impl Annotating {
                 self.profile.as_ref(),
             )
             .map_err(|error| match error {
-                core::BatchError::Profile(_) | core::BatchError::StructuredQuestionWithContext => {
-                    Error::refused(error)
+                core::BatchError::Profile(limit) => {
+                    Error::from(crate::engine::error::Error::ProfileLimit(limit))
                 }
+                core::BatchError::StructuredQuestionWithContext => Error::refused(error),
                 _ => Error::defect("an annotate group asks nothing"),
             })?;
             let grouped = pack::asks_for(self.backend.api_type(), self.backend.url(), &plan)
