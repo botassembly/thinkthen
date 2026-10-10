@@ -5,7 +5,7 @@ import java.lang.invoke.MethodHandle;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Stable JDK FFM calls; no native structure or result field copies. */
+/** Stable JDK FFM calls with compiler-derived carriers and owned results. */
 final class NativeSession {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup SYMBOLS = NativeLoader.load();

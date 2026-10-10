@@ -32,6 +32,7 @@ export THINKTHEN_JDK_HOME THINKTHEN_KOTLIN_HOME THINKTHEN_SCALA_HOME
 jars=$package/jars
 [ -d "$jars" ] || jars=$package
 python3 "$here/tests/session_installed.py" --jars "$jars" --out "$consumer"
+python3 "$here/tests/usage_installed.py" --jars "$jars" --out "$consumer/usage"
 if [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then
     python3 "$here/tests/public_types.py" --jars "$jars" --out "$consumer/shared"
 fi
