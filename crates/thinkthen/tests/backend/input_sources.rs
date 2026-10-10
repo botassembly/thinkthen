@@ -76,21 +76,18 @@ fn seven_commands_read_files_in_order_and_restart_positions() -> io::Result<()> 
             "tag" => &["a"],
             _ => &[],
         };
+        let framing: &[&str] = if verb == "annotate" {
+            &["--unit", "line"]
+        } else {
+            &["--lines"]
+        };
         let output = call(
             &listener,
             &[
                 &[verb, question][..],
                 labels,
-                &[
-                    "--lines",
-                    "--details",
-                    "--batch",
-                    "1",
-                    "--input",
-                    one,
-                    "--input",
-                    two,
-                ],
+                framing,
+                &["--details", "--batch", "1", "--input", one, "--input", two],
             ]
             .concat(),
         )?;
@@ -114,6 +111,15 @@ fn seven_commands_read_files_in_order_and_restart_positions() -> io::Result<()> 
                 json!({"file":file,"first":line,"last":line}),
                 "{verb}"
             );
+            if verb == "annotate" {
+                assert_eq!(
+                    row["source"],
+                    json!({"file":file,"first_line":line,"last_line":line})
+                );
+                assert_eq!(row["file"], file);
+                assert_eq!(row["first_line"], line);
+                assert_eq!(row["last_line"], line);
+            }
         }
     }
     Ok(())
@@ -457,5 +463,61 @@ fn batches_and_splits_preserve_global_labels_and_file_positions() -> io::Result<
         assert_eq!(rows[2]["position"], json!({"file":two,"first":1,"last":1}));
         assert_eq!(listener.requests().len(), if split { 4 } else { 1 });
     }
+    Ok(())
+}
+
+#[test]
+fn a_waiting_input_pipe_keeps_the_later_record_after_the_first_answer() -> io::Result<()> {
+    use std::io::{BufRead, BufReader, Write};
+    use std::process::Stdio;
+    let listener = Listener::answering(answer)?;
+    let mut child = crate::harness::command(
+        &[
+            "decide",
+            "Good?",
+            "--lines",
+            "--batch",
+            "1",
+            "--no-cache",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "pipe-private")],
+    )
+    .stdin(Stdio::piped())
+    .spawn()?;
+    let mut input = child
+        .stdin
+        .take()
+        .ok_or_else(|| io::Error::other("no input"))?;
+    input.write_all(b"first\n")?;
+    let mut output = BufReader::new(
+        child
+            .stdout
+            .take()
+            .ok_or_else(|| io::Error::other("no output"))?,
+    );
+    let mut first = String::new();
+    output.read_line(&mut first)?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&first)?,
+        json!({"input":"first","value":true})
+    );
+    input.write_all(b"later\n")?;
+    drop(input);
+    let mut later = String::new();
+    output.read_line(&mut later)?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&later)?,
+        json!({"input":"later","value":true})
+    );
+    assert!(
+        crate::harness::finish(child, "waiting input pipe")?
+            .status
+            .success()
+    );
+    assert_eq!(listener.count(), 2);
     Ok(())
 }

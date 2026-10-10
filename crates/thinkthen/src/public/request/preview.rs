@@ -63,10 +63,8 @@ impl Engine {
         apply(&mut definition, options)?;
         controls.admission()?;
         let (engine, setting) = configuration(self, &definition, &controls)?;
-        if controls.cli_reader.is_some()
-            && let Some(context) = controls.context_text()
-        {
-            crate::public::complete::records::cli_context(&engine, context)?;
+        if let Some(context) = controls.context_text().filter(|text| !text.is_empty()) {
+            crate::public::complete::records::shared_context(&engine, context)?;
         }
         let image_refusal = image_route(self, &definition)
             .err()

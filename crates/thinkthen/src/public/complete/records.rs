@@ -456,7 +456,10 @@ pub(in crate::public) fn context_failure(
     }
     error
 }
-pub(in crate::public) fn cli_context(engine: &facade::Engine, context: &str) -> Result<(), Error> {
+pub(in crate::public) fn shared_context(
+    engine: &facade::Engine,
+    context: &str,
+) -> Result<(), Error> {
     let evidence = crate::public::engine::evidence(context)?;
     let state = core::pack::state(&evidence)
         .map_err(|_| super::wrong())?

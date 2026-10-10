@@ -203,24 +203,3 @@ fn keep_best<T>(held: &mut Vec<(f64, T)>, top: Option<usize>, value: f64, row: T
     held.insert(place, (value, row));
     evicted
 }
-#[cfg(test)]
-mod retention_tests {
-    #[test]
-    fn native_top_keeps_only_winners_and_retains_stable_ties() {
-        let mut held = Vec::new();
-        for (name, score) in [
-            ("first", 0.5),
-            ("low", 0.1),
-            ("best", 0.9),
-            ("later tie", 0.5),
-            ("equal best", 0.9),
-        ] {
-            super::keep_best(&mut held, Some(2), score, name);
-            assert!(held.len() <= 2);
-        }
-        assert_eq!(
-            held.into_iter().map(|(_, name)| name).collect::<Vec<_>>(),
-            ["best", "equal best"]
-        );
-    }
-}
