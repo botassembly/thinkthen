@@ -74,11 +74,13 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
         (r#"{"decide":"private-wording","wording_version":2e0}"#, r#"{"original":{"kind":"text","text":"private-evidence"}}"#, "the question declaration uses an unsupported feature"),
         (r#"{"decide":"private-wording","context_schema":{"type":"string"}}"#, r#"{"original":{"kind":"text","text":"private-evidence"},"context":null}"#, "the per-item context does not match context_schema"),
         (r#"{"decide":"private-wording","private-canary":true}"#, r#"{"original":{"kind":"text","text":"private-evidence"}}"#, "invalid canonical request"),
+        (r#"{"version":1,"questions":{"ok":{"decide":"private-wording"}},"private-canary":true}"#, r#"{"original":{"kind":"text","text":"private-evidence"}}"#, "invalid canonical request"),
+        (r#"{"version":1,"questions":{"private-canary":{"decide":12}}}"#, r#"{"original":{"kind":"text","text":"private-evidence"}}"#, "invalid canonical request"),
     ] {
         let json = canonical(question, item);
         let error = thinkthen::Request::from_json(&json).expect_err("invalid definition or context");
         assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
-        if !message.contains("private-canary") { assert_eq!(error.to_string(), message); }
+        assert_eq!(error.to_string(), message);
         let output = run_with(
             &compile(&crate_dir().join("tests/c/session.c")),
             &format!("{}/generic/v1", backend.origin()), b"",

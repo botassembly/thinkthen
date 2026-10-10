@@ -322,12 +322,9 @@ pub(super) fn validate_wire_definition(text: &str) -> Result<(), Error> {
     {
         if let Some(value) = question.get("value") {
             RequestDefinition::from_authored_json(value.get()).map_err(|error| {
-                let message = error.to_string();
-                // Unknown authored keys may be private caller data.
-                if message.contains("takes no key") {
-                    Error::usage("invalid canonical request")
-                } else {
-                    error
+                match error.to_string().as_str() {
+                    "the question declaration uses an unsupported feature" => error,
+                    _ => Error::usage("invalid canonical request"),
                 }
             })?;
         }
