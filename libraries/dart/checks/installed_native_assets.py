@@ -69,8 +69,9 @@ def main():
             with tarfile.open(archive, 'w:gz') as output:
                 for member in sorted(package_members(staged)):
                     output.add(staged / member, arcname=member)
-        target = packages / name
-        target.mkdir()
+        # The shipping Flutter archive already owns its flutter/ package root.
+        target = packages if supplied and name == 'flutter' else packages / name
+        target.mkdir(exist_ok=target == packages)
         with tarfile.open(archive) as content:
             content.extractall(target, filter='data')
         archives.append(archive)
@@ -95,7 +96,10 @@ def main():
     run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
     has_flutter = (packages / 'flutter').is_dir()
     if has_flutter:
-        configure(packages / 'dart', native, [packages / 'flutter'])
+        projects = [packages / 'flutter']
+        if (packages / 'flutter/example/pubspec.yaml').is_file():
+            projects.append(packages / 'flutter/example')
+        configure(packages / 'dart', native, projects)
         run([str(flutter), 'pub', 'get', '--offline'], packages / 'flutter', env)
     cached.rename(cached.with_suffix('.held'))
     run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'cache miss in offline build')
