@@ -1,14 +1,19 @@
 import assert from "node:assert/strict";
-import * as tt from "thinkthen";
+import {Client} from "thinkthen";
 
-const question = "Is this urgent?";
-const inbox = [
-  "Newsletter: our autumn catalog is here. " +
-    "No reply needed.",
-  "Our checkout page is down and customers cannot pay",
-  "Reminder: your invoice is due in 30 days",
-  "Please send the signed quote by 5 pm today",
-];
-const byUrgency = (await tt.rank(question, inbox)).value;
-const order = byUrgency.map((one) => one.index);
-assert.deepEqual(order, [1, 3, 2, 0]);
+const tt = new Client();
+try {
+  const question = "Is this urgent?";
+  const inbox = [
+    "Newsletter: our autumn catalog is here. " +
+      "No reply needed.",
+    "Our checkout page is down and customers cannot pay",
+    "Reminder: your invoice is due in 30 days",
+    "Please send the signed quote by 5 pm today",
+  ];
+  const byUrgency = (await tt.rank(
+    question, inbox,
+  )).results;
+  const order = byUrgency.map((one) => one.index);
+  assert.deepEqual(order, [1, 3, 2, 0]);
+} finally { tt.close(); }

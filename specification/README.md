@@ -6,23 +6,23 @@ Version one is ten commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank
 
 The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions. The [glossary](../CONTRIBUTING.md#calls-requests-and-decisions) defines call, request and decision.
 
-The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommended typed family for each language and links its generated contracts. The [0.2 upgrade guide](../libraries/UPGRADING-0.2.md) maps changed calls. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines runtime floors and intended platform support, including stable JDK 22 and Apple-only Objective-C. Package documentation distinguishes implemented development APIs from approved replacements and published 0.1.2 installation.
+The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommended typed family for each language and links its generated contracts. The [0.2 upgrade guide](../libraries/UPGRADING-0.2.md) maps changed calls. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines runtime floors and intended platform support, including stable JDK 22 and Apple-only Objective-C. Package documentation distinguishes the final development APIs from published 0.1.2 installation and candidate platform qualification.
 
 `spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of `sdlc/planning/plan.md` closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
 
 | Document | What it fixes | Status |
 | --- | --- | --- |
-| [mcp.md](mcp.md) | Local ten-tool stdio SDK, native inputs and complete results | Settled for 0.2; adoption pending |
+| [mcp.md](mcp.md) | Local ten-tool stdio SDK, native inputs and complete results | Settled for 0.2 |
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--plan`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; native/CLI implemented, host adoption pending |
+| [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; generated host results implemented |
 | [files.md](files.md) | Explicit text/image readers, located carriers and spans; ordered native/CLI image inputs | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |
-| [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; native timing implemented, host adoption pending |
-| [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; native implemented, host adoption pending |
+| [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; native and host timing implemented |
+| [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; native and host adoption implemented |
 | [decide.md](decide.md) | `decide` | Settled |
 | [choose.md](choose.md) | `choose` | Settled |
 | [tag.md](tag.md) | `tag` | Settled |

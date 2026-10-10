@@ -1,5 +1,6 @@
 import pandas as pd
 import thinkthen as tt
+import thinkthen.pandas
 
 question = "Which team owns this?"
 teams = {
@@ -7,11 +8,9 @@ teams = {
     "shipping": "Parcels and delivery.",
     "account": "Logins and passwords.",
 }
-team_question = tt.question(
-    choose=question,
-    options=teams,
-    threshold=0.9,
-)
+team_question = {
+    "choose": question, "options": teams, "threshold": 0.9,
+}
 tickets = pd.DataFrame({
     "body": [
         "Please refund the extra fee on my invoice.",
@@ -23,6 +22,6 @@ tickets = pd.DataFrame({
         ),
     ],
 })
-owners = tt.choose(team_question, tickets["body"]).value
+owners = tickets["body"].tt.choose(team_question).value
 tickets["owner"] = owners
 print(tickets["owner"])

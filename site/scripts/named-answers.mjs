@@ -54,7 +54,7 @@ const CALL = {
   python: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
   typescript: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
   rust: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
-  ruby: new RegExp(`\\bThinkThen\\.(${FNS})\\(`),
+  ruby: new RegExp(`\\bclient\\.(${FNS})\\(`),
   r: new RegExp(`\\btt_(${FNS})\\(`),
   c: new RegExp(`\\bthinkthen_(call|${FNS})\\(`),
   cpp: new RegExp(`\\btt::(call|${FNS})\\(`),

@@ -7,9 +7,10 @@ reviews = [
     "Does this come in blue?",
     "The strap snapped on day two.",
 ]
-keep_complaints = tt.filter(question)
-
-lines = (review for review in reviews)
-with keep_complaints(lines) as complaints:
-    first_complaint = next(complaints)
-assert first_complaint == reviews[1]
+with tt.Engine() as engine:
+    lines = (review for review in reviews)
+    with engine.iterate(
+        "filter", question, lines,
+    ) as complaints:
+        first_complaint = next(complaints)
+assert first_complaint.input == reviews[1]

@@ -60,7 +60,7 @@ class Engine:
     ``base_url`` receives that key and retains its setup path and limits. The throttle is one per loaded copy of this
     package: a second, different throttle raises ``UsageError``.
 
-    Each verb takes a ``tt.question()`` or its text. Beside a text,
+    Each verb takes an authored question dictionary, an explicit question selector or its text. Beside a text,
     ``choose`` takes ``options``, ``score`` takes ``levels``, and ``tag``
     takes ``labels``.
     """
