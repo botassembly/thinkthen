@@ -52,3 +52,4 @@ A C# developer installs the NuGet package and calls named functions with native 
 - 2026-10-09 landed e95220d2963c21762926c42bd3e1e8d4f6359b2f; next: Generated settings, reader failures and NuGet inventory are landed. Finish generated Plan, actual shared cases through new Async methods, and obsolete API removal.
 - 2026-10-10 landed ccf724c3a; next: Generated Plan and all ten typed Async shared-case routes are implemented; generator freshness passes and the installed fixture uses the extracted NuGet assembly. Final installed/platform qualification and compatibility retirement remain, subject to the release hold.
 - 2026-10-10 landed ee9300d5e; next: C# directly exposes owned native usage observations and finalization with generated ABI state and safe advice. Focused installed NuGet lifecycle checks and fresh review pass. Full installed parity, Windows and distribution qualification remain held.
+- 2026-10-10 started
