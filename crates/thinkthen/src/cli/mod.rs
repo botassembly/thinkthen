@@ -28,7 +28,6 @@ pub(crate) mod relate;
 mod request;
 pub(crate) mod schedule;
 pub(crate) mod status;
-pub(crate) mod table;
 mod transform;
 
 #[cfg(test)]

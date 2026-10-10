@@ -479,10 +479,10 @@ def feature_failures(manifest: dict) -> list[str]:
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "signal-hook", "polars", "polars-core"}:
+    if optional != {"clap", "signal-hook", "polars", "polars-core"}:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
-        "default": ["cli", "bundled-sqlite"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
+        "default": ["cli", "bundled-sqlite"], "cli": ["dep:clap", "dep:signal-hook"],
         "polars": ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"],
         "bundled-sqlite": ["rusqlite/bundled"], "host-sqlite": [],
     }:
@@ -2400,7 +2400,7 @@ def check_dependencies() -> None:
 # Ticket 0078: the library alone installs no signal handler, and on Unix it
 # masks host signals on its workers through nix. The graph covers every target
 # and build edges. Dev edges stay out, because the tests use `signal-hook`.
-COMMAND_ONLY = {"clap", "csv-core", "signal-hook"}
+COMMAND_ONLY = {"clap", "signal-hook"}
 GRAPH_PLANTS = (
     ('[target."cfg(windows)".dependencies]', 'clap = "4.6.7"'),
     ('[build-dependencies]', 'clap = "4.6.7"'),

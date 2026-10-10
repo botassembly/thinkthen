@@ -54,6 +54,13 @@ fn RequestItem::compose_record(&self, &RecordReading) -> Result<RecordInput<Ques
 fn RequestItem::with_options_descriptor(self, &str) -> Result<RequestItem, Error>
 fn EngineBuilder::from_settings_json(&str) -> Result<EngineBuilder, Error>
 fn Engine::plan_request<'a>(&self, &'a AdmittedRequest, RequestEnvironment<'a>) -> Result<PlanEstimate, Error>
+enum TableFormat
+TableFormat::Csv
+TableFormat::Tsv
+struct TableReader<R>
+fn TableReader::new(impl Into<String>, R, TableFormat) -> Result<TableReader<R>, Error>
+impl Iterator for TableReader
+type TableReader::Item = Result<SourceRecord<RawRecord>, Error>
 ```
 
 ## Progress

@@ -22,6 +22,8 @@ pub use input_files::{
     read_inputs,
 };
 mod files;
+mod table;
+pub use table::{TableFormat, TableReader};
 mod find_question;
 pub use files::{
     FileReader, ReaderOptions, SourceRecord, SourceRecords, SourceUnit, enumerate_files, read_files,

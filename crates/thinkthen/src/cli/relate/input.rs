@@ -40,5 +40,7 @@ fn stream(source: Box<dyn BufRead + Send>, framing: Framing) -> Result<Vec<Recor
 }
 
 fn table(source: Box<dyn BufRead + Send>, kind: TableKind) -> Result<Vec<Record>, Failure> {
-    TableRows::new(source, kind)?.collect()
+    TableRows::new(source, kind)?
+        .map(|row| row.map_err(Failure::from))
+        .collect()
 }
