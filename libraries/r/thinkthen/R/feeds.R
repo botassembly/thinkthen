@@ -1,6 +1,10 @@
 # Producers run only on R's thread. Native sessions own admission and framing.
-tt_feed <- function(next_item = NULL, name = "records", close = function() invisible(NULL)) {
+tt_feed <- function(next_item = NULL, name = "records", close = function() invisible(NULL),
+                    framing = NULL, reading = NULL, images = NULL) {
   header <- list(kind = "feed", name = name)
+  if (!is.null(framing)) header$framing <- framing
+  if (!is.null(reading)) header$reading <- reading
+  if (!is.null(images)) header$images <- images
   structure(list(header = header, next_item = next_item, close = close), class = "thinkthen_feed")
 }
 tt_record <- function(original, location = NULL, ...) {

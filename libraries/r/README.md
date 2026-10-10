@@ -64,7 +64,22 @@ feed <- tt_feed(function() {
 call <- tt_decide("Does this ask for a refund?", feed)
 ```
 
-Manual producers use `tt_batch(..., input = tt_feed())`, `$push(record)` and `$finish(failure = NULL)`. Push returns `"accepted"`, `"full"` or `"closed"`; retry the same record after polling when full, and stop advancing input when closed. `$poll()` remains nonblocking and `$next_result()` waits while checking R interrupts. `$cancel()` stops intake promptly; final facts arrive after already-sent native work settles. A named call joins native result packets into its normal `thinkthen_Call` result. Its `deadline_ms` maps to the native request option. Completion receipts are unavailable for feed calls and refuse before producer access. Feed descriptors currently carry composed records; native JSONL framing requires the shared session framing repair.
+Manual producers use `tt_batch(..., input = tt_feed())`, `$push(record)` and `$finish(failure = NULL)`. Push returns `"accepted"`, `"full"` or `"closed"`; retry the same record after polling when full, and stop advancing input when closed. `$poll()` remains nonblocking and `$next_result()` waits while checking R interrupts. `$cancel()` stops intake promptly; final facts arrive after already-sent native work settles. A named call joins native result packets into its normal `thinkthen_Call` result. Its `deadline_ms` maps to the native request option. Completion receipts are unavailable for feed calls and refuse before producer access. Append `framing`, `reading` and `images` to `tt_feed` when the native feed needs them; the existing `next_item`, `name` and `close` positional arguments keep their order. Omitted fields use native defaults. With `framing = "jsonl"`, the producer supplies one raw JSON line per item. With `framing = "lines"`, it supplies one text line. Rust decodes and skips blank records, retains caller locations, and refuses unsupported framing or projection combinations before producer access. Use the named call's `options` for `field`, `context_field` and `options_field`; `tt_record` continues to supply already composed values. Table framing remains unsupported by native sessions.
+
+```r
+reader <- file("rows.jsonl", open = "r")
+line <- 0L
+feed <- tt_feed(function() {
+  raw <- readLines(reader, n = 1L)
+  if (!length(raw)) return(NULL)
+  line <<- line + 1L
+  tt_record(raw, list(file = "rows.jsonl", first_line = line, last_line = line))
+}, close = function() close(reader), framing = "jsonl")
+result <- tt_choose(list(choose = "Which team owns this?"), feed,
+                    options = list(field = list("/body"), context_field = "/policy", options_field = "/teams"))
+```
+
+Each record supplies `body`, `policy` and a `teams` list. The result retains that whole original record and its physical location. A later malformed line raises a native condition with the completed results and final facts.
 
 ## Install on Linux
 

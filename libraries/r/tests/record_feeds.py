@@ -1,6 +1,7 @@
 """Installed R producers preserve native bounds, locations and failed prefixes."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import json
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "conformance/children"))
 from children import child_env
 
+fixture = next(case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]
+               if case["id"] == "06-choose-billing")
 sends = []
 held = threading.Event()
 released = threading.Event()
@@ -19,7 +22,9 @@ class Handler(BaseHTTPRequestHandler):
         if b"Held?" in sends[-1]:
             held.set()
             assert released.wait(15)
-        body = b'{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}'
+        body = (json.dumps(fixture["exchanges"][0]["response"]).encode()
+                if b"Which team owns this?" in sends[-1] else
+                b'{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}')
         self.send_response(200)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
@@ -33,13 +38,15 @@ worker = threading.Thread(target=server.serve_forever)
 worker.start()
 try:
     with tempfile.TemporaryDirectory(prefix="thinkthen-r-feeds-") as home:
+        fixture_path = Path(home) / "choose.json"
+        fixture_path.write_text(json.dumps(fixture))
         code = '''library(thinkthen)
 tt_engine(cache=FALSE, max_retries=0L, model="fixed", batch=1L)
 at <- 0L
 reader <- textConnection(c("row1", "row2"))
 released_reader <- 0L
 feed <- tt_feed(function() { at <<- at + 1L; row <- readLines(reader,n=1L); if(length(row)) tt_record(row, list(file="records",first_line=at*2L,last_line=at*2L)) else NULL },
-                close=function() {released_reader <<- released_reader+1L; close(reader)})
+                "records", function() {released_reader <<- released_reader+1L; close(reader)})
 result <- tt_decide("Feed?", feed)
 stopifnot(length(result$results) == 2L, result$facts$requests_sent == 2,
           inherits(result, "thinkthen_Call"), at == 3L, released_reader == 1L,
@@ -79,17 +86,63 @@ fault <- tryCatch(batch$close(),error=identity)
 stopifnot(conditionMessage(fault)=="reader cleanup failed")
 batch$close()
 rm(batch); gc(); stopifnot(cleanup_attempts==1L)
+fixture <- jsonlite::fromJSON(Sys.getenv("TT_FEED_FIXTURE"), simplifyVector=FALSE)
+original <- list(body=fixture$exchanges[[1]]$evidence, policy="local policy", teams=fixture$question$options)
+raw <- paste0(jsonlite::toJSON(original,auto_unbox=TRUE),"\\r\\n")
+at <- 0L
+framed <- tt_feed(function() {
+  at <<- at+1L
+  if(at==1L) return(tt_record(" \\t\\r\\n",list(file="rows.jsonl",first_line=1L,last_line=1L)))
+  if(at==2L) return(tt_record(raw,list(file="rows.jsonl",first_line=2L,last_line=2L)))
+  NULL
+}, framing="jsonl", reading=list(unit="line"), images=list())
+result <- tt_choose(list(choose=fixture$question$choose),framed,
+                    options=list(field=list("/body"),context_field="/policy",options_field="/teams"))
+row <- result$results[[1]]
+stopifnot(length(result$results)==1L, result$facts$requests_sent==1,
+          identical(row$input,original),row$value==fixture$expect$success$answers[[1]]$bare,
+          row$source$first_line==2,row$source$last_line==2)
+batch <- tt_batch("choose",list(choose=fixture$question$choose),tt_feed(framing="jsonl"),
+                  list(field=list("/body"),context_field="/policy",options_field="/teams"))
+stopifnot(batch$push(tt_record(raw))=="accepted")
+prefix <- batch$next_result()
+stopifnot(prefix$value=="billing",batch$push("private malformed JSON")=="accepted")
+batch$finish()
+fault <- tryCatch(batch$next_result(),thinkthen_error=identity)
+stopifnot(inherits(fault,"thinkthen_usage"),batch$facts()$requests_sent==1,
+          !grepl("private malformed",conditionMessage(fault),fixed=TRUE))
+batch$close()
 cat("r: bounded record feeds passed\\n")
 '''
         env = child_env(("R_LIBS", "LANG", "LC_ALL"), home=home,
                         THINKTHEN_BASE_URL=f"http://127.0.0.1:{server.server_port}/v1",
-                        THINKTHEN_API_KEY="fake-r-feeds")
+                        THINKTHEN_API_KEY="fake-r-feeds", TT_FEED_FIXTURE=str(fixture_path))
         result = subprocess.run(["Rscript", "--vanilla", "-e", code], env=env,
                                 text=True, capture_output=True, timeout=20)
         print(result.stdout, end="")
         print(result.stderr, end="", file=sys.stderr)
         assert result.returncode == 0, result.returncode
-        assert len(sends) == 4, len(sends)
+        assert len(sends) == 6, len(sends)
+        for body in sends[4:]:
+            assert b"Route this note." in body and b"local policy" in body
+            question = json.loads(body)["questions"]["q1"]
+            assert list(question["criteria"]) == fixture["question"]["options"]
+            assert b"rows.jsonl" not in body
+            assert b"private malformed" not in body
+        header_code = '''library(thinkthen)
+tt_engine(cache=FALSE,max_retries=0L,model="fixed",batch=1L)
+at <- 0L
+for(framing in c("csv","tsv","lines")) {
+  fault <- tryCatch(tt_decide("Header?",tt_feed(function() {at <<- at+1L; "never"},framing=framing),
+                             options=list(field=list("/body"))),thinkthen_error=identity)
+  stopifnot(inherits(fault,"thinkthen_usage"),at==0L)
+}
+'''
+        result = subprocess.run(["Rscript", "--vanilla", "-e", header_code], env=env,
+                                text=True, capture_output=True, timeout=10)
+        assert result.returncode == 0, (result.stdout, result.stderr)
+        assert len(sends) == 6, len(sends)
+        print("r: table/line projection headers refuse before reads with zero listener sends")
         held_code = '''library(thinkthen)
 tt_engine(cache=FALSE,max_retries=0L,model="fixed",batch=1L)
 at <- 0L
@@ -124,7 +177,7 @@ batch$close()
             child.stdin = None
             output, error = child.communicate(timeout=10)
             assert child.returncode == 0, (output, error)
-            assert len(sends) == 5, len(sends)
+            assert len(sends) == 7, len(sends)
             print("r: Full/Closed and cancellation before provider release passed")
         finally:
             released.set()
