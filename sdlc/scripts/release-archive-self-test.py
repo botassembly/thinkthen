@@ -364,6 +364,10 @@ def main():
             raise AssertionError(("own build folders", built, list(own_tmp.iterdir()), result.stderr))
         gate = str(REPO / "sdlc/scripts/release-workflow")
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, commit), "", success=True)
+        with tarfile.open(base / "paired" / f"thinkthen-go-{version}-{host}.tar.gz") as go_package, \
+                tarfile.open(base / "paired" / f"thinkthen-c-{version}-{host}.tar.gz") as c_package:
+            for member in ("include/thinkthen.h", "lib/libthinkthen.a"):
+                assert go_package.extractfile(f"./native/{host}/{member}").read() == c_package.extractfile(f"./{member}").read(), "Go bundled native input differs from C package"
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
                               b"tt-canary-273", b"/build/home/home/private",
