@@ -15,6 +15,8 @@ Reviews: revision 4d59e7c6a, accept
 
 Reviews: revision a087f6dc3, accept
 
+Reviews: revision 696103c3c43fcd7025df3690223e2ba5cc528902, accept
+
 ## Outcome
 
 A Ruby caller installs the gem, calls the ten functions by name with ordinary Ruby values, and gets typed Ruby results and typed exceptions. Work honors the gem's declared scheduler and cancellation, and blocks clean up resources. Rust owns every rule and observation; Ruby keeps only naming, conversion, errors, scheduling and cleanup.
@@ -35,3 +37,7 @@ A Ruby caller installs the gem, calls the ten functions by name with ordinary Ru
   One public API is one coherent family of named typed calls. Claim `libraries/ruby/**` and its installed typed consumer cases, narrowed per slice before coding.
 - Proof: The full shared cases run through the installed gem's typed interface, including files and images, context and options, original positions, facts, failures, invalid input with zero sends and the two retained recognition cases. One installed held-provider case shows the declared scheduler progressing, cancellation stopping further reads and submissions, and cleanup returning before the provider is released. Raw JSON pass-through does not count. Record handwritten code removed and added, counting generator templates, in the landing record.
 - Defers: The proxy and platform ruling changes need no 0.2 ticket.
+
+## Progress
+
+- 2026-10-10 landed d943d6103; next: Ordinary Ruby recognition and file callers use native Client, aggregate values are corrected, and focused installed cases pass. Finish current full installed parity, image qualification and compatibility retirement when authorized.

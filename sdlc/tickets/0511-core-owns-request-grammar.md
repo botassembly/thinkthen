@@ -44,6 +44,8 @@ Reviews: revision f147a00f8ee6a789ec761f4e5356f9d95eebf38a, accept
 
 Reviews: revision 0ac0e2e51ee88baee4c939a863c7d5c775413c55, accept
 
+Reviews: revision 011355dcf90f4602663bf0f5e2d11e7bdf34dee1, accept
+
 ## Outcome
 
 One public Request edge admits every request through shared Rust grammar, limits, defaults and validation. Every surface calls it, and core refusals reach the caller. No binding, extension or host package restates an engine rule.
@@ -64,6 +66,7 @@ The first slice adds these public Request-edge methods for the separate SQL crat
 
 ```text
 struct ImageAdmission
+fn Relate::admit_record_count(usize) -> Result<(), Error>
 fn ImageAdmission::new(usize) -> Result<ImageAdmission, Error>
 fn ImageAdmission::push(&mut self, usize) -> Result<(), Error>
 fn ImageInput::admit_length(usize) -> Result<(), Error>
@@ -109,3 +112,4 @@ fn RequestSource::read_framed<'a>(&self, CallOptions<'a>) -> Result<Box<(dyn Ite
 - 2026-10-10 landed cf55fa095; next: Native source planning preserves original-byte bounds and unread-tail behavior; C and Python imports and the unused R helper are removed. Finish SQL adoption, shared borrowed pull and remaining admission copies before final qualification.
 - 2026-10-10 landed 6b89b6252; next: Shared borrowed find admission now validates SQL collections before copying text. Path framing, source planning and borrowed row execution are also landed. Finish remaining consumer admission copies and policy enforcement; final installed qualification remains held.
 - 2026-10-10 landed 848daa393; next: SQL and C image bounds now delegate to native borrowed admission, preserving host guards and error order. Shared find, source framing, source planning and borrowed row execution are landed. Finish remaining reachable semantic copies and consumer adoption; qualification remains held.
+- 2026-10-10 landed e102ea646; next: Core and C share relation record-count admission; canonical C relation intake is lazy and bounded with preserved cancellation and owned results. Finish aggregate byte-bound sharing, remaining eager C find intake and consumer adoption; release qualification remains held.

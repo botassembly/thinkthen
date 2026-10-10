@@ -87,9 +87,6 @@ pub(crate) enum RelateConfigError {
     SingleEither,
 }
 
-/// The most entities one complete set holds.
-const MAX_ENTITIES: usize = 255;
-
 /// Why a complete entity set is refused before any request.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub(crate) enum EntitySetError {
@@ -240,14 +237,22 @@ impl RelateSpec {
         Ok(())
     }
 
+    /// The most entities one complete set holds.
+    pub(crate) const MAX_ENTITIES: usize = 255;
+
+    pub(crate) fn admit_count(count: usize) -> Result<(), EntitySetError> {
+        if count > Self::MAX_ENTITIES {
+            return Err(EntitySetError::TooMany);
+        }
+        Ok(())
+    }
+
     /// Admit one complete entity set in input order, or refuse all of it.
     pub(crate) fn admit(
         &self,
         pairs: &[(String, String)],
     ) -> Result<Vec<RelationEntity>, EntitySetError> {
-        if pairs.len() > MAX_ENTITIES {
-            return Err(EntitySetError::TooMany);
-        }
+        Self::admit_count(pairs.len())?;
         let mut entities: Vec<RelationEntity> = Vec::new();
         for (name, kind) in pairs {
             let entity = RelationEntity::new(name, kind).map_err(|_| EntitySetError::Blank)?;

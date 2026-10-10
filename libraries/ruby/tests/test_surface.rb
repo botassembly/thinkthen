@@ -38,8 +38,15 @@ class TestSurface < Minitest::Test
                     ["fixture-recognize-model"] * 3, ["fixture-relate-model"],
                     "6a7c109d0897d85c579046930f83ec063b51b526e1155b42c092b627a12e6fda"], observed
       bodies = backend.capture
-      assert_equal %w[500ade25b0ef5826b8823bca242b4540dd1d8d0a061efc37457011e3f33aae4b
-                      3745ebe527887293996e6cc7d1bc12e94b7fec31f2ed42ef6d4e3141da445f28
+      # ADR 0124: a described kind selects neutral caller-defined entities.
+      bodies.first(2).each do |body|
+        JSON.parse(body).fetch("questions").each_value do |question|
+          assert_includes question.fetch("instructions"), "Entity definition: A literal span that satisfies the caller's instructions and listed kinds."
+          assert_includes question.fetch("instructions"), 'person: "A person"'
+        end
+      end
+      assert_equal %w[425fff7e742e4445aa8c5b18a8c968df8039e2263dc6e3088b3fb4e6d4b6c9ee
+                      e2216bcc8cd3b76e9c9bf548b2d65debec535e7a13a1e80b0a05607ab4f9db99
                       526b75c58f1c5921c7b313c2c059c6622d8926ce167c129d9ee9b36fc259480e],
                    bodies.first(3).map { |body| Digest::SHA256.hexdigest(body) }
       assert_equal %w[fixture-recognize-model fixture-recognize-model fixture-relate-model],

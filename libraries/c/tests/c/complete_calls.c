@@ -190,9 +190,30 @@ int main(void) {
     if(getenv("TYPED_ROW_INDEX")) { indexes(e); return 0; }
     thinkthen_source *source=NULL;
     const char *path=getenv("TYPED_SOURCE");
-    if(path) { thinkthen_string_v1 p={path,strlen(path)}; thinkthen_source_spec_v1 spec={{&p,1},THINKTHEN_SOURCE_FILE_V1,0}; assert(thinkthen_source_files(e,&spec,&source)==0); }
+    if(path) { thinkthen_string_v1 p={path,strlen(path)}; thinkthen_source_spec_v1 spec={{&p,1},getenv("TYPED_RELATE_BOUND")?THINKTHEN_SOURCE_LINE_V1:THINKTHEN_SOURCE_FILE_V1,0}; assert(thinkthen_source_files(e,&spec,&source)==0); }
     else { thinkthen_record_v1 records[2]={0}; records[0].original=(thinkthen_optional_content_v1){1,TEXT("Maria Chen joined Northwind Freight.")}; records[1].original=(thinkthen_optional_content_v1){1,TEXT("A different document.")}; assert(thinkthen_source_records(e,records,2,&source)==0); }
     thinkthen_controls_v1 controls={0}; controls.deadline_ms=-1; controls.attempts=1;
+    if(getenv("TYPED_RELATE_BOUND")) {
+        size_t count=(size_t)strtoul(getenv("TYPED_RELATE_BOUND"),NULL,10);
+        thinkthen_question *q=make(e,10); thinkthen_result *result=NULL;
+        thinkthen_cancel_token *cancel=NULL;
+        if(count==0) { cancel=thinkthen_cancel_token_new(); assert(cancel); thinkthen_cancel(cancel); controls.cancel=cancel; }
+        int code=thinkthen_relate_complete(e,q,source,&controls,&result);
+        if(count==0) {
+            assert(code==THINKTHEN_ECANCELLED && result==NULL);
+        } else if(count==255) {
+            assert(code==0 && result);
+            thinkthen_relate_view_v1 view={0}; assert(thinkthen_result_relate(result,0,&view)==0);
+            thinkthen_details_v1 details={0}; assert(thinkthen_result_details(result,0,&details)==0);
+            assert(details.inputs.len==255 && view.value.len==0);
+            thinkthen_result_free(result);
+        } else {
+            assert(code==THINKTHEN_EUSAGE && result==NULL);
+            assert(strcmp(thinkthen_error_message(e),"source relate takes at most 255 source records")==0);
+        }
+        thinkthen_question_free(q); thinkthen_source_free(source); thinkthen_cancel_token_free(cancel); thinkthen_engine_free(e);
+        return 0;
+    }
     thinkthen_result *results[10]={0};
     for(unsigned kind=1;kind<=10;++kind) {
         if(getenv("TYPED_FIND_NONE") && kind!=7) continue;

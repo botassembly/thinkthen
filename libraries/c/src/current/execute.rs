@@ -309,9 +309,8 @@ fn entities(
             for input in records {
                 let input = input?;
                 engine.check_record_limit(inputs.len())?;
-                if inputs.len() == 255 {
-                    return Err(Failure::usage("relate takes at most 255 records"));
-                }
+                thinkthen::Relate::admit_record_count(inputs.len() + 1)
+                    .map_err(|_| Failure::usage("relate takes at most 255 records"))?;
                 let entity = match input.original {
                     Some(super::Content::Json(ref raw)) => {
                         thinkthen::Entity::from_record(raw.get())?
