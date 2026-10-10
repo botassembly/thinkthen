@@ -6,6 +6,7 @@ using namespace tt::inputs;
 static std::string text(const Json& value) { return value.get<std::string>(); }
 static RequestQuestion question(const Json& v) {
     auto kind=text(v.at("kind"));
+    if(kind=="definition") return RequestQuestionDefinition().set_value(RequestDefinition::from_document(v.at("value")));
     if(kind=="name") return RequestQuestionName().set_name(text(v.at("name")));
     if(kind=="reference") return RequestQuestionReference().set_reference(text(v.at("reference")));
     return RequestQuestionFile().set_path(text(v.at("path")));
@@ -60,6 +61,7 @@ int main(int argc,char** argv) {
         auto q=question(v.at("question"));auto in=input(v.at("input"));
         auto opts=v.at("options");RequestOptions options;options.set_attempts(true);
         if(opts.contains("deadline_ms")) options.set_deadline_ms(opts.at("deadline_ms").get<int64_t>());
+        if(opts.contains("none")) options.set_none(opts.at("none").get<bool>());
         if(opts.contains("context")) options.set_context(text(opts.at("context")));
         auto verb=text(v.at("verb"));
         auto start=[&]() -> Call {

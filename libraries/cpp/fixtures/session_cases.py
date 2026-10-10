@@ -23,15 +23,14 @@ def descriptor(v,home):
     elif v.get('question_form')=='file':question={'kind':'file','path':'fixture-question.json'}
     elif v.get('raw') is not None:
         (home/'raw-question.json').write_text(v['raw']);question={'kind':'file','path':'raw-question.json'}
-    else:
-        (home/'owned-question.json').write_text(shared.compact(definition));question={'kind':'file','path':'owned-question.json'}
+    else:question={'kind':'definition','value':definition}
     injection=(v.get('operation') or {}).get('injection')
-    if v.get('paths') or injection=='recording_read_failure':
-        source={'paths':[path if v.get('owned_jsonl') else str(ROOT/path) for path in v.get('paths',['target/missing-input'])],
+    if v.get('paths') or injection=='recording_read_failure' or v.get('question_form')=='file':
+        source={'paths':[path if v.get('owned_jsonl') else str(ROOT/path) for path in (v.get('paths') or ['target/missing-input'])],
                 'reading':{'unit':{1:'line',2:'window',5:'line'}.get(v.get('source_unit',3),'file')}}
         if v.get('window'):source['reading']['window']=v['window']
         if v.get('owned_jsonl') or v.get('source_unit')==5:source['framing']='jsonl'
-        if v.get('image_reader'):source['media']='image'
+        if v.get('image_reader') or v.get('source_unit')==4:source['media']='image'
         input={'kind':'source','source':source}
     else:
         images=[{'kind':'file','path':str(ROOT/path),'media':v.get('media','image/png')} for path in v.get('image_paths',[])]
@@ -49,18 +48,22 @@ def descriptor(v,home):
             items.append(item)
         input={'kind':{'find':'units','relate':'entities'}.get(v['verb'],'records'),'items':items}
     options={'attempts':True}
+    if v['verb']=='find':
+        options['none']=definition.pop('none',False)
     if injection=='expired_deadline':options['deadline_ms']=0
     if v.get('shared_context') is not None:options['context']=v['shared_context']
     return {'verb':v['verb'],'question':question,'input':input,'options':options,'cancel':injection=='cancel_token','held_cancel':v.get('held_cancel',False)}
 
 def native_cases(binary):
     inventory=parity.inventory(); rows=list(parity.required_cases(inventory,CONSUMER).values())
-    if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') != 'full':
-        selected = set((ROOT/'conformance/routine-ids.txt').read_text().splitlines())
-        selected.update(('complete-decide','complete-image-decide','complete-record-context','complete-cache-hit','complete-replay-miss'))
-        rows = [row for row in rows if row['id'] in selected]
     if os.environ.get('THINKTHEN_CPP_CASES'):
-        selected=set(os.environ['THINKTHEN_CPP_CASES'].split(',')); rows=[row for row in rows if row['id'] in selected]
+        selected=set(os.environ['THINKTHEN_CPP_CASES'].split(','))
+        assert selected <= {row['id'] for row in rows}, 'unknown requested C++ case'
+        rows=[row for row in rows if row['id'] in selected]
+    elif os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') != 'full':
+        selected = set((ROOT/'conformance/routine-ids.txt').read_text().splitlines())
+        selected.update(('complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
+        rows = [row for row in rows if row['id'] in selected]
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
     required = {row['id'] for row in rows}
@@ -127,11 +130,11 @@ def native_cases(binary):
                             assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
                         shared.assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                         if row['id']=='native-filter-first-excluded':
-                            assert [r['index'] for r in got['rows']]==[0,1,2] and [r['value'] for r in got['rows']]==[False,True,True],got
+                            assert [r['index'] for r in got['rows']]==[1,2] and [r['value'] for r in got['rows']]==[True,True],got
                             assert int(backend.read('count'))==3,got
                         if row['id']=='native-duplicate-row-indices':
                             assert [r['index'] for r in got['rows']]==[0,1] and got['rows'][0]['input']==got['rows'][1]['input'],got
-                            assert got['records']==2 and int(backend.read('count'))==1,got
+                            assert got['records']==2 and int(backend.read('count'))==2,got
                         if row['kind'] in ('images','image-location'):
                             before=int(backend.read('count'));replay={k:v for k,v in settings.items() if k!='record'};replay['replay']=str(home/'recorded')
                             repeated=subprocess.run([str(binary),str(input_file),shared.compact(replay)],env=child,cwd=home,capture_output=True,text=True,timeout=60)
