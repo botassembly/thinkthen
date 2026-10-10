@@ -28,57 +28,57 @@ check("tag answers every label that held", identical(tt_tag(list(tag = "What is 
                                                      list(c("refund", "billing"), character())))
 check("R6-10: one label stays an array", identical(tt_tag(list(tag = "Tags?", labels = I("refund")), "refund me")$value, list("refund")))
 
-# filter, rank, and find keep the ruled shapes.
-check("filter keeps the records that held", identical(tt_filter("Is this a complaint?", c("x1", "x2"))$value, c("x1", "x2")))
-check("filter refuses a band", identical(kind_of(tt_filter("Q?", "x", threshold = c(0.2, 0.8))$value), "usage"))
-ranked <- tt_rank("Is this urgent?", c("r1", "r2", "r3"))$value
-check("rank is place, record, probability", identical(names(ranked), c("place", "record", "probability")) &&
-      identical(ranked$place, 1:3) && identical(ranked$record, c("r1", "r2", "r3")))
-check("rank top", identical(nrow(tt_rank("Is this urgent?", c("r1", "r2"), top = 1)$value), 1L))
-found <- tt_find("Which line asks for money?", c("u1", "u2"))$value
-check("find is place, unit, probability", identical(found, list(place = 1L, unit = "u1", probability = 0.9)))
-check("find needs two units", identical(kind_of(tt_find("Q?", "one")$value), "usage"))
+# Filter, rank and find retain typed values, originals and native indexes.
+check("filter keeps the records that held", identical(vapply(tt_filter("Is this a complaint?", c("x1", "x2"))$results, `[[`, "", "input"), c("x1", "x2")))
+check("filter refuses a band", identical(kind_of(tt_filter("Q?", "x", options = list(threshold = "0.2:0.8"))), "usage"))
+ranked <- tt_rank("Is this urgent?", c("r1", "r2", "r3"))$results
+check("rank returns typed places and original records", all(vapply(ranked, inherits, TRUE, "thinkthen_RankResult")) &&
+      identical(vapply(ranked, `[[`, 0, "value"), c(1, 2, 3)) && identical(vapply(ranked, `[[`, "", "input"), c("r1", "r2", "r3")))
+check("rank top", length(tt_rank("Is this urgent?", c("r1", "r2"), options = list(top = 1L))$results) == 1L)
+found <- tt_find(list(find = "Which line asks for money?"), c("u1", "u2"))$results[[1L]]
+check("find retains selected index, original and probability", found$index == 0 && identical(found$value, "u1") && found$answer$probabilities$u001 == 0.9)
+check("find needs two units", identical(kind_of(tt_find(list(find = "Q?"), "one")), "usage"))
 check("a none other than TRUE or FALSE is refused before any request", sent_by(check("the none sentence",
-  identical(message_of(tt_find("Q?", c("u1", "u2"), none = NA)$value), "none is TRUE or FALSE"))) == 0)
+  identical(message_of(tt_find(list(find = "Q?"), c("u1", "u2"), options = list(none = NA))), "invalid canonical request"))) == 0)
 
 # Duplicate texts retain distinct original positions even when their answers tie.
 check("tied duplicates keep original places", identical(
-  tt_rank("Duplicate order?", c("same", "other", "same"))$value$place, 1:3))
-check("empty rank has typed empty columns and sends nothing", sent_by(check("empty rank shape",
-  identical(tt_rank("Empty order?", character())$value,
-    data.frame(place = integer(), record = character(), probability = numeric())))) == 0L)
+  vapply(tt_rank("Duplicate order?", c("same", "other", "same"))$results, `[[`, 0, "index"), c(0, 1, 2)))
+check("empty rank has no native rows and sends nothing", sent_by(check("empty rank shape",
+  identical(tt_rank("Empty order?", character())$results,
+    list()))) == 0L)
 check("empty find is usage and sends nothing", sent_by(check("empty find kind",
-  identical(kind_of(tt_find("Empty selection?", character())), "usage"))) == 0L)
+  identical(kind_of(tt_find(list(find = "Empty selection?"), character())), "usage"))) == 0L)
 
 # details: the command's --details document.
 details <- tt_details(tt_question(score = "How urgent?", levels = levels3), "urgent now")$value
 check("details on a score question carries the level", identical(details$answer$level, "Routine."))
 check("details on a decide question carries no level", is.null(tt_details("Q?", "refund me")$value$answer$level))
 
-# annotate: a column a question, typed by its kind (R1-5).
+# Annotation retains original rows and separately typed question values.
 set_file <- tempfile(fileext = ".json")
 writeLines('{"version":1,"questions":{"refund":{"decide":"Refund?","threshold":"0.2:0.95"},
   "team":{"choose":"Which team?","options":["billing","other"]},
   "urgency":{"score":"How urgent?","levels":["low","soon","high"]},
   "labels":{"tag":"Which labels?","labels":["billing","urgent"],"threshold":0.95}}}', set_file)
 frame <- data.frame(body = c("n1", "n2"), stringsAsFactors = FALSE)
-annotated <- tt_annotate(set_file, frame, on = "body")$value
-check("annotate adds its columns in set order", identical(names(annotated), c("body", "refund", "team", "urgency", "labels")))
-check("R1-5: a banded decide column stays logical", identical(annotated$refund, c(NA, NA)))
-check("choose and score columns keep their types", identical(annotated$team, c("billing", "billing")) &&
-      isTRUE(all.equal(annotated$urgency, c(0.15, 0.15))))
-check("R1-5: an empty tag column stays a list of character vectors",
-      identical(annotated$labels, list(character(0), character(0))))
-check("R3-15: a question named like an input column is refused before any request", sent_by(check("the clash is usage",
-  identical(message_of(tt_annotate(set_file, data.frame(body = "x", team = "y"), on = "body")$value),
-            "annotate cannot add a question named 'team': the input already has a column by that name; rename one"))) == 0L)
-check("a set file that cannot be read is local", identical(kind_of(tt_annotate("/no/such.json", frame, on = "body")$value), "local"))
+annotated <- tt_annotate(tt_question(file = set_file), frame, options = list(field = list("/body")))$results
+check("annotate keeps originals separately from named values", identical(annotated[[1L]]$input, list(body = "n1")) && identical(names(annotated[[1L]]$value), c("labels", "refund", "team", "urgency")))
+check("R1-5: banded decide annotations remain null", all(vapply(annotated, function(row) is.null(row$value$refund), TRUE)))
+check("choose and score columns keep their types", identical(vapply(annotated, function(row) row$value$team, ""), c("billing", "billing")) &&
+      isTRUE(all.equal(vapply(annotated, function(row) row$value$urgency, 0), c(0.15, 0.15))))
+check("R1-5: empty tag annotations remain empty lists",
+      all(vapply(annotated, function(row) identical(row$value$labels, list()), TRUE)))
+clash <- tt_annotate(tt_question(file = set_file), data.frame(body = "x", team = "y"), options = list(field = list("/body")))$results[[1L]]
+check("an input name and annotation remain separately accessible", identical(clash$input$team, "y") && identical(clash$value$team, "billing"))
+check("a set file that cannot be read is local", identical(kind_of(tt_annotate(tt_question(file = "/no/such.json"), frame, options = list(field = list("/body")))), "local"))
 
 # R3-3: main's set parser refuses a NUL in a member name first, and the
 # message crosses with the NUL escaped. The Rust unit test pins the escape.
 nul <- tempfile(fileext = ".json")
 writeLines('{"version":1,"questions":{"a\\u0000b":{"decide":"Q?"}}}', nul)
-check("R3-3: a NUL name is refused and the process lives", identical(message_of(tt_annotate(nul, frame, on = "body")$value),
+nul_sends <- sent_by(nul_error <- tryCatch(tt_annotate(tt_question(file = nul), frame, options = list(field = list("/body"))), thinkthen_error = identity))
+check("R3-3: a NUL name is refused and the process lives", nul_sends == 0L && inherits(nul_error, "thinkthen_local") && inherits(nul_error$complete, "thinkthen_CallError") && identical(conditionMessage(nul_error),
   "`questions.a\\u0000b` uses lowercase letters, digits, and underscores, and is not empty"))
 
 # R2-5 and R5-11: a percent and the separator reach the engine's refusal
