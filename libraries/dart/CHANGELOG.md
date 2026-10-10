@@ -1,4 +1,4 @@
-## Unreleased: 0.2.0
+## 0.2.0 (unreleased)
 
 - Replace `Door`, `CompleteApi`, older judgments and handwritten native layouts with one asynchronous `Engine` API. The ten named methods return generated, owned results through the native session route. The main package import replaces the former session import.
 - Preserve absent values, explicit null, unknown fields and exact `BigInt` counters in generated declarations. Typed failures retain completed rows and native terminal facts.
