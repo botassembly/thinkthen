@@ -298,3 +298,110 @@ fn eager_invalid_later_evidence_refuses_the_whole_native_source_before_sending()
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 0);
 }
+
+fn seed_records(seeds: &[thinkthen::RecognitionSeedSpan]) -> [RecordInput<&'static str>; 2] {
+    [None, Some(seeds.to_vec())].map(|seed_spans| RecordInput {
+        original: "First.",
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans,
+    })
+}
+
+fn assert_seed_refusal(error: thinkthen::Error, listener: &Listener, door: &str, message: &str) {
+    assert_eq!(error.kind(), ErrorKind::Usage, "{door}");
+    assert_eq!(error.detail().message(), message, "{door}");
+    assert_eq!(error.stopped().at(), Some(2), "{door}");
+    assert_eq!(listener.count(), 0, "{door}");
+}
+
+#[test]
+fn eager_nonrecognize_records_refuse_later_seed_controls_before_sending() {
+    let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
+    let engine = engine(&listener);
+    let decide = Question::decide("Fits?").unwrap().cut();
+    let choose = Question::from_json(r#"{"choose":"Which?","options":["a","b"]}"#).unwrap();
+    let tag = Question::from_json(r#"{"tag":"Which?","labels":["a","b"]}"#).unwrap();
+    let thinkthen::LoadedQuestion::Question(score) =
+        Question::from_json(r#"{"score":"How?","levels":["low","high"]}"#).unwrap()
+    else {
+        panic!("score")
+    };
+    let rank = Question::rank("Best?").unwrap();
+    let find = Question::find("Where?").unwrap();
+    let definition = r#"{"version":1,"questions":{"a":{"decide":"Fits?"}}}"#;
+    let annotate = thinkthen::QuestionSet::from_json(definition).unwrap();
+    let rank_set = thinkthen::RankSet::from_json(definition).unwrap();
+    let relate = thinkthen::Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap();
+    for seeds in [
+        vec![],
+        vec![thinkthen::RecognitionSeedSpan {
+            start: 0,
+            end: 6,
+            kind: None,
+        }],
+    ] {
+        let records = || seed_records(&seeds);
+        macro_rules! probe {
+            ($method:ident, $question:expr, $message:expr, $records:expr) => {
+                let error = engine
+                    .$method($question, $records, CallOptions::new())
+                    .unwrap_err();
+                assert_seed_refusal(error, &listener, stringify!($method), $message);
+            };
+        }
+        let seeds_only = "record seed spans are admitted only for recognize";
+        probe!(decide_records_complete_with, &decide, seeds_only, records());
+        probe!(choose_records_complete_with, &choose, seeds_only, records());
+        probe!(tag_records_complete_with, &tag, seeds_only, records());
+        probe!(score_records_complete_with, &score, seeds_only, records());
+        probe!(filter_records_complete_with, &decide, seeds_only, records());
+        probe!(rank_records_complete_with, &rank, seeds_only, records());
+        probe!(
+            annotate_records_complete_with,
+            &annotate,
+            seeds_only,
+            records()
+        );
+        probe!(
+            rank_set_records_complete_with,
+            &rank_set,
+            seeds_only,
+            records()
+        );
+        probe!(
+            try_rank_records_complete_with,
+            &rank,
+            seeds_only,
+            records().into_iter().map(Ok)
+        );
+        probe!(
+            try_rank_set_records_complete_with,
+            &rank_set,
+            seeds_only,
+            records().into_iter().map(Ok)
+        );
+        let find_only = "find takes one whole-set call context and no per-record controls";
+        probe!(find_records_complete_with, &find, find_only, records());
+        probe!(
+            try_find_records_complete_with,
+            &find,
+            find_only,
+            records().into_iter().map(Ok)
+        );
+        let relate_only = "relate takes one whole-set call context and no per-record controls";
+        probe!(
+            relate_records_complete_with,
+            &relate,
+            relate_only,
+            records()
+        );
+        probe!(
+            try_relate_records_complete_with,
+            &relate,
+            relate_only,
+            records().into_iter().map(Ok)
+        );
+    }
+}

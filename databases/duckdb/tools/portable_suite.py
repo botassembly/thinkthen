@@ -12,6 +12,86 @@ from harness import EXTENSION, Backend, case, child_env, expect, main, rows, run
 
 
 @case
+def required_null_skips_partners_session_settings_files_and_sends():
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        missing = folder + "/unread-question.json"
+        scalars = []
+        for verb in ("decide", "choose", "score", "tag", "details", "try_details", "annotate"):
+            scalars += [f"thinkthen_{verb}(NULL, 'private-input', 'bad')",
+                        f"thinkthen_{verb}('@{missing}', NULL, 'bad')"]
+        scalars += ["thinkthen_native_many(NULL, 'bad', 'bad', 0)",
+                    f"thinkthen_native_many('@{missing}', NULL, 'bad', 0)"]
+        scalars += ["thinkthen_recognize(NULL, ['person','person'], 'bad')",
+                    f"thinkthen_recognize('private-input', NULL::VARCHAR[], 'bad')",
+                    "thinkthen_relations(NULL, 'bad', 'bad')",
+                    f"thinkthen_relations(NULL, '@{missing}', 'bad')",
+                    f"thinkthen_relations('private-input', NULL::VARCHAR, 'bad')",
+                    "thinkthen_find(NULL, ['unit',NULL], 'bad')",
+                    "thinkthen_find('question', NULL::VARCHAR[], 'bad')",
+                    "thinkthen_plan(NULL, 'bad', 'bad')",
+                    f"thinkthen_plan('@{missing}', NULL, 'bad')"]
+        scalars += ["(SELECT thinkthen_recognize(evidence, ['person','person'], 'bad') FROM (VALUES (NULL::VARCHAR)) t(evidence))",
+                    f"(SELECT thinkthen_relations(evidence, '@{missing}', 'bad') FROM (VALUES (NULL::VARCHAR)) t(evidence))"]
+        bad_images = "[{media:'bad',data:'bad'::BLOB,file:NULL}]"
+        for verb in ("decide", "choose", "score", "details"):
+            scalars += [f"thinkthen_{verb}_images(NULL, {bad_images}, NULL, 'bad')",
+                        f"thinkthen_{verb}_images('@{missing}', NULL::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[], NULL, 'bad')"]
+        tables = ["thinkthen_rank(NULL, 'bad', 'bad')", "thinkthen_rank('question', NULL, 'bad')",
+                  "thinkthen_rank_set(NULL, 'bad', 'bad')", "thinkthen_rank_set('bad', NULL, 'bad')",
+                  f"thinkthen_relate(NULL, '@{missing}', 'bad')",
+                  "thinkthen_relate('not SQL', NULL, 'bad')",
+                  "thinkthen_read_files(NULL::VARCHAR, 'bad')",
+                  "thinkthen_read_files(NULL::VARCHAR[], 'bad')"]
+        for verb in ("decide", "choose", "score", "tag"):
+            tables += [f"thinkthen_{verb}_many(NULL, 'bad', 'bad')",
+                       f"thinkthen_{verb}_many('@{missing}', NULL, 'bad')"]
+        statements = [f"SELECT {call} IS NULL" for call in scalars]
+        statements += [f"SELECT count(*) FROM {call}" for call in tables]
+        bad_session = run(["SET thinkthen_refresh_cache=2", *statements,
+                           "SELECT thinkthen_decide('question','evidence')"], backend.base())
+        expect([rows(r) for r in bad_session[1:-1]],
+               [[[True]]] * len(scalars) + [[[0]]] * len(tables), "required NULL skips malformed session and partners")
+        expect('thinkthen_refresh_cache is 0 or 1' in bad_session[-1].get('error', ''), True,
+               "a live row still validates session settings")
+        trace = Path(folder) / "null.trace"
+        wrap = ['strace','-f','-e','trace=openat,newfstatat,statx,access,readlink','-o',str(trace)] if sys.platform == 'linux' else None
+        probe = folder + '/record/.probe'
+        got = run(["SELECT thinkthen_decide(NULL, 'bad', 'bad')",
+                   "SET thinkthen_query_budget_ms=-2",
+                   f"SET thinkthen_record='{folder}/record'", *statements,
+                   f"SELECT thinkthen_decide('@{missing}', 'evidence')"], backend.base(), wrap=wrap)
+        expect([rows(r) for r in got[3:-1]], [[[True]]] * len(scalars) + [[[0]]] * len(tables),
+               "required NULL produces ordinary NULL or empty rows")
+        expect('thinkthen usage: the query budget is outside the supported range' in got[-1].get('error', ''),
+               True, "a live row validates the query budget before reading its question")
+        if wrap:
+            events = trace.read_text().splitlines()
+            expect(sum(f'"{missing}"' in line or f'"{probe}"' in line for line in events), 0,
+                   "required NULL reads neither question files nor recording probes")
+        expect(backend.count(), 0, "required NULL sends nothing")
+        delayed = subprocess.run([sys.executable, "-c", """
+import duckdb, time, sys
+con = duckdb.connect(config={"allow_unsigned_extensions":"true"})
+con.execute("LOAD '" + sys.argv[1] + "'")
+con.execute("SELECT thinkthen_decide(NULL, 'bad', 'bad')")
+con.execute("SET thinkthen_query_budget_ms=50")
+def slow(value):
+    time.sleep(.1)
+    return value
+con.create_function('slow', slow, ['VARCHAR'], 'VARCHAR', side_effects=True)
+try:
+    con.execute("SELECT thinkthen_decide(slow('question'), 'evidence')")
+except Exception as error:
+    assert 'thinkthen deadline: the query has spent its time budget' in str(error), str(error)
+else:
+    raise AssertionError('the first live call restarted the query clock')
+""", str(EXTENSION)], env=child_env(backend.base(), Path(folder)),
+                                 capture_output=True, text=True, timeout=10, check=False)
+        expect(delayed.returncode, 0, f"query time before first live call counts: {delayed.stderr[-800:]}")
+        expect(backend.count(), 0, "elapsed query budget refuses before sending")
+
+
+@case
 def discovery_describes_every_registered_function_without_sending():
     query = ("SELECT function_name, function_type, parameter_types, return_type, description "
              "FROM duckdb_functions() WHERE starts_with(function_name, 'thinkthen_') "

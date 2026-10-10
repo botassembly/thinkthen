@@ -56,6 +56,7 @@ impl Engine {
                 Box::new(units)
             };
         let stop = Stop::begin(options)?.with_prices(self.prices);
+        let requested_attempts = stop.facts().attempts().is_some();
         stop.run_call(0, |cancel| {
             let cancel = cancel.with_storage_scope();
             let originals = RefCell::new(BTreeMap::new());
@@ -95,7 +96,7 @@ impl Engine {
                         (
                             answered.ordinal,
                             answered.prepared.context.as_deref(),
-                            Some(answered.attempts),
+                            requested_attempts.then_some(answered.attempts),
                         ),
                     )?;
                     result.canonical.source =

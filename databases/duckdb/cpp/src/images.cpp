@@ -110,9 +110,11 @@ void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 	const auto name = expr.function.name;
 	const int32_t kind = name == "thinkthen_native_decide_images" ? 0 : name == "thinkthen_native_choose_images" ? 4 : name == "thinkthen_native_score_images" ? 5 : 2;
 	vector<std::optional<Input>> inputs(args.size());
+	bool live = false;
 	for (idx_t row = 0; row < args.size(); ++row) {
 		auto question = args.data[0].GetValue(row), images = args.data[1].GetValue(row);
 		if (question.IsNull() || images.IsNull()) { continue; }
+		live = true;
 		Input input;
 		input.question = owner->Resolve(*context, question.GetValue<string>());
 		auto setting = args.data[3].GetValue(row), text = args.data[2].GetValue(row);
@@ -124,12 +126,13 @@ void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 		Checked(checked.value);
 		inputs[row] = std::move(input);
 	}
-	const auto session = Settings(*context);
+	std::optional<SessionSettings> session;
+	if (live) { session.emplace(Settings(*context)); }
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!inputs[row]) { result.SetValue(row, Value(result.GetType())); continue; }
 		auto &input = *inputs[row];
 		auto views = input.Views();
-		RustReply reply(thinkthen_cpp_images(View(input.question.text), input.question.from_file, views.data(), views.size(), input.Text(), View(input.settings), kind, owner->Remaining(*context), session.Bridge(), StopFor(*context)));
+		RustReply reply(thinkthen_cpp_images(View(input.question.text), input.question.from_file, views.data(), views.size(), input.Text(), View(input.settings), kind, owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		result.SetValue(row, Answer(reply.value, kind));
 	}

@@ -123,7 +123,7 @@ pub(super) fn run(
         None => Box::new(std::iter::from_fn(|| {
             reader
                 .as_ref()
-                .and_then(|reader| reader.next())
+                .and_then(|reader| reader.next(running.environment.cancel()))
                 .map(|frame| {
                     let (ordinal, frame) =
                         frame.map_err(|placed| input_error(placed.cause, placed.at))?;

@@ -511,3 +511,51 @@ fn missing_first_and_last_positions_keep_the_middle_answer() -> io::Result<()> {
     assert_eq!(requests[0].body, FIRST_REQUEST.as_bytes());
     Ok(())
 }
+
+#[test]
+fn annotation_admits_the_same_invalid_record_through_cli_and_library_before_sending()
+-> io::Result<()> {
+    const DECLARED: &str =
+        r#"{"version":1,"questions":{"good":{"decide":"Good?","item_schema":{"type":"string"}}}}"#;
+    let file = set("shared-annotation-admission", DECLARED);
+    let listener = Listener::serving(vec![])?;
+    let output = spawn(
+        &[
+            "annotate",
+            &file.to_string_lossy(),
+            "--jsonl",
+            "--no-cache",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "admission-private")],
+        b"{\"body\":false}\n",
+    )?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("item_schema"));
+    let engine = thinkthen::Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .model("local-1")
+        .unwrap()
+        .api_key("admission-private")
+        .unwrap()
+        .no_cache()
+        .build()
+        .unwrap();
+    let questions = thinkthen::QuestionSet::from_json(DECLARED).unwrap();
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
+    let record = reading
+        .compose(thinkthen::RawRecord::json(r#"{"body":false}"#).unwrap())
+        .unwrap();
+    let error = engine
+        .try_annotate_records_complete_with(&questions, [Ok(record)], thinkthen::CallOptions::new())
+        .into_call()
+        .unwrap_err();
+    assert!(error.to_string().contains("item_schema"));
+    assert_eq!(listener.count(), 0);
+    Ok(())
+}

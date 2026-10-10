@@ -26,7 +26,6 @@ struct Held<T> {
 }
 struct Annotations {
     recover_missing: bool,
-    cli_groups: bool,
     engine: Arc<facade::Engine>,
     set: core::QuestionSet,
 }
@@ -53,7 +52,7 @@ impl Asker for Annotations {
         self.recover_missing && error.missed_pointer().is_some()
     }
     fn refuses_batch(&self, error: &Error) -> bool {
-        !self.cli_groups || error.missed_pointer().is_none()
+        !self.recover_missing || error.missed_pointer().is_none()
     }
     fn validates_batches(&self) -> bool {
         self.set.questions().iter().any(|member| {
@@ -73,7 +72,7 @@ impl Asker for Annotations {
         answers: Vec<pipeline::Answered>,
     ) -> Result<facade::Annotation, Error> {
         Annotating::new(&self.engine, self.set.clone())
-            .require_usable_groups(self.cli_groups)
+            .require_usable_groups(true)
             .row(input.text, answers)
     }
 }
@@ -106,7 +105,6 @@ impl Engine {
         let engine = Arc::clone(&self.inner);
         let asker = Annotations {
             recover_missing: false,
-            cli_groups: false,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -280,9 +278,13 @@ fn prepare_record<T: InputEvidence>(
     fallback: Option<&str>,
     at: usize,
 ) -> Result<(Held<T>, Prepared), Error> {
-    if record.examples.is_some() {
-        return Err(Error::usage("record examples are admitted only for recognize").at_record(at));
-    }
+    record
+        .admit_recognition_controls(
+            crate::public::request::RequestFunction::from_input(InputFunction::Annotate),
+            "record examples are admitted only for recognize",
+            "record seed spans are admitted only for recognize",
+        )
+        .map_err(|error| error.at_record(at))?;
     if record.options.is_some() {
         return Err(Error::usage("record options are admitted only for choose"));
     }
@@ -344,7 +346,6 @@ pub(super) fn preview_asks(
         engine: Arc::clone(engine),
         set: set.0.clone(),
         recover_missing: false,
-        cli_groups: false,
     }
     .asks(&input)?;
     Ok((asks, dropped))
@@ -363,7 +364,6 @@ pub(in crate::public) fn preview_grouped_asks(
         engine: Arc::clone(engine),
         set: set.0.clone(),
         recover_missing: false,
-        cli_groups: false,
     }
     .asks_with_groups(&input, |group, count| {
         groups.extend(std::iter::repeat_n(group, count))

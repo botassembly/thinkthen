@@ -48,11 +48,7 @@ pub(super) fn dry_run(
         .retain_cli_definition(crate::QuestionSet(judging.set.clone()).into())
         .map_err(Failure::from)?
         .with_composed_feed("cli-annotate-plan");
-    let ready = || true;
-    let readiness = crate::public::cli_reader::CliReader::new(&ready, None);
-    let mut controls = crate::CallOptions::new()
-        .surface(crate::Surface::Cli)
-        .cli_reader(&readiness);
+    let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
     if let Some(context) = judging.context.as_deref() {
         controls = controls.context(context);
     }

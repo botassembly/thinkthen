@@ -313,9 +313,13 @@ pub(super) fn prepare_record<T: InputEvidence>(
     fallback: Option<&str>,
     at: usize,
 ) -> Result<(Held<T>, Prepared), Error> {
-    if record.examples.is_some() {
-        return Err(Error::usage("record examples are admitted only for recognize").at_record(at));
-    }
+    record
+        .admit_recognition_controls(
+            crate::public::request::RequestFunction::from_input(function),
+            "record examples are admitted only for recognize",
+            "record seed spans are admitted only for recognize",
+        )
+        .map_err(|error| error.at_record(at))?;
     let question = record.options.as_ref().map_or_else(
         || Ok(question.clone()),
         |options| options.replacing(question),
@@ -456,7 +460,10 @@ pub(in crate::public) fn context_failure(
     }
     error
 }
-pub(in crate::public) fn cli_context(engine: &facade::Engine, context: &str) -> Result<(), Error> {
+pub(in crate::public) fn shared_context(
+    engine: &facade::Engine,
+    context: &str,
+) -> Result<(), Error> {
     let evidence = crate::public::engine::evidence(context)?;
     let state = core::pack::state(&evidence)
         .map_err(|_| super::wrong())?

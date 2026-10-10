@@ -1,6 +1,6 @@
 # 0512: Run the CLI and MCP through the public request path
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -27,6 +27,10 @@ Reviews: revision 818a30847983af80682c76c7002644c0172075c8, accept
 Reviews: revision 028a384c021a382cd505139c030d8545eb9d2ba3, accept
 
 Reviews: revision 749847ab53294ce8efcf7ec338e5d6f4cd0c74a4, accept
+
+Reviews: revision 3a9ada87b5e9c3e9d2ea625c817852588b950827, accept
+
+Landed: fd10bea
 
 ## Outcome
 

@@ -123,12 +123,14 @@ void Find(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<std::optional<Request>> requests(args.size());
+	bool live = false;
 	for (idx_t row = 0; row < args.size(); ++row) {
 		bool absent = false;
 		for (idx_t column = 0; column < 2; ++column) {
 			absent |= args.data[column].GetValue(row).IsNull();
 		}
 		if (absent) { continue; }
+		live = true;
 		auto request = Read(args, row);
 		if (request.units.empty()) { continue; }
 		auto views = Views(request.units);
@@ -138,7 +140,8 @@ void Find(DataChunk &args, ExpressionState &state, Vector &result) {
 		Checked(checked.value);
 		requests[row] = std::move(request);
 	}
-	const auto settings = Settings(*context);
+	std::optional<SessionSettings> settings;
+	if (live) { settings.emplace(Settings(*context)); }
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!requests[row]) {
 			result.SetValue(row, Value(FindType()));
@@ -150,7 +153,7 @@ void Find(DataChunk &args, ExpressionState &state, Vector &result) {
 		RustReply reply(thinkthen_cpp_portable_find(reinterpret_cast<const uint8_t *>(request.question.data()),
 		                                request.question.size(), views.data(), views.size(),
 		                                reinterpret_cast<const uint8_t *>(request.settings.data()), request.settings.size(),
-		                                budget, settings.Bridge(), StopFor(*context)));
+		                                budget, settings->Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		result.SetValue(row, Decode(reply.value, request.units));
 	}

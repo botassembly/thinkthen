@@ -70,11 +70,12 @@ struct RelateBind : FunctionData {
 	uint64_t seconds = 60;
 	uint64_t holding = 1000000;
 	bool wildcard = false;
+	bool absent = false;
 
 	unique_ptr<FunctionData> Copy() const override { return make_uniq<RelateBind>(*this); }
 	bool Equals(const FunctionData &other) const override {
 		auto &value = other.Cast<RelateBind>();
-		return context.lock() == value.context.lock() && query == value.query && rules.text == value.rules.text &&
+		return absent == value.absent && context.lock() == value.context.lock() && query == value.query && rules.text == value.rules.text &&
 		       rules.members == value.rules.members && call_settings == value.call_settings &&
 		       seconds == value.seconds && holding == value.holding;
 	}
@@ -87,9 +88,10 @@ unique_ptr<FunctionData> BindRelate(ClientContext &context, TableFunctionBindInp
 	auto bound = make_uniq<RelateBind>();
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	bound->context = context.shared_from_this();
-	if ((input.inputs.size() != 2 && input.inputs.size() != 3) || input.inputs[0].IsNull()) {
+	if (input.inputs.size() != 2 && input.inputs.size() != 3) {
 		throw OrdinaryError("thinkthen usage: the relate query is NULL or blank");
 	}
+	if (input.inputs[0].IsNull() || input.inputs[1].IsNull()) { bound->absent = true; return bound; }
 	bound->query = input.inputs[0].GetValue<string>();
 	if (bound->query.find_first_not_of(" \t\r\n") == string::npos) {
 		throw OrdinaryError("thinkthen usage: the relate query is NULL or blank");
@@ -216,6 +218,7 @@ vector<RelateRow> Answer(const RelateBind &bound, ClientContext &context, Relate
 void ScanRelate(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
 	auto &bound = input.bind_data->Cast<RelateBind>();
 	auto &state = input.global_state->Cast<RelateState>();
+	if (bound.absent) { return; }
 	if (!state.ready) {
 		state.ready = true;
 		// Prepared plans retain bind data when the caller changes file access.

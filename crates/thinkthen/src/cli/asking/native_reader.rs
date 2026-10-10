@@ -51,8 +51,24 @@ impl<T: Send + 'static> Reader<T> {
         }
         false
     }
-    pub(crate) fn next(&self) -> Option<Result<T, Placed>> {
+    pub(crate) fn next(&self, cancel: &crate::engine::Cancel<'_>) -> Option<Result<T, Placed>> {
         let mut state = self.0.state.lock().ok()?;
+        while state.item.is_none() && !state.stopped {
+            if let Err(error) = cancel.remaining_without_check() {
+                return Some(Err(error.into()));
+            }
+            if !state.busy {
+                state.demand = true;
+                state.busy = true;
+                self.0.changed.notify_one();
+            }
+            state = self
+                .0
+                .changed
+                .wait_timeout(state, std::time::Duration::from_millis(50))
+                .ok()?
+                .0;
+        }
         let item = state.item.take()?;
         state.busy = false;
         item
@@ -94,6 +110,8 @@ fn feed<T>(mut records: impl Iterator<Item = Result<T, Placed>>, worker: Arc<Sha
             return;
         }
         state.item = Some(item);
+        state.stopped = last;
+        worker.changed.notify_all();
         let wake = state.wake.clone();
         drop(state);
         if let Some(wake) = wake {

@@ -360,9 +360,13 @@ fn prepare_one<T: InputEvidence>(
     at: usize,
 ) -> Result<(Held<T>, Input), Error> {
     options.admission()?;
-    if record.examples.is_some() {
-        return Err(Error::usage("record examples are admitted only for recognize").at_record(at));
-    }
+    record
+        .admit_recognition_controls(
+            crate::public::request::RequestFunction::from_input(InputFunction::Rank),
+            "record examples are admitted only for recognize",
+            "record seed spans are admitted only for recognize",
+        )
+        .map_err(|error| error.at_record(at))?;
     if record.options.is_some() {
         return Err(Error::usage("rank accepts no per-item options").at_record(at));
     }

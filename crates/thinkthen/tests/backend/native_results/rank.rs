@@ -192,3 +192,27 @@ fn set_rank_top_preserves_all_member_observations_and_positions_outside_member_t
             .collect::<Vec<_>>(),
     );
 }
+
+#[test]
+fn rank_details_keep_original_json_occurrences_after_top_eviction() {
+    let listener = Listener::answering(|body| {
+        let probability = if String::from_utf8_lossy(body).contains("winner") {
+            0.9
+        } else {
+            0.1
+        };
+        Canned::ok(
+            &json!({"model":"fixed","answers":{"q1":{"type":"noul","noul":probability}}})
+                .to_string(),
+        )
+    })
+    .unwrap();
+    let output = spawn(&["rank", "Good?", "--jsonl", "--field", "/body", "--details", "--top", "1", "--batch", "1", "--jobs", "1", "--no-cache", "--url", listener.base(), "--model", "fixed"], &[("THINKTHEN_API_KEY", "rank-private")], b"{\"id\":0,\"body\":\"loser\"}\n{\"id\":1,\"body\":\"winner\"}\n{\"id\":2,\"body\":\"loser again\"}\n").unwrap();
+    let rows = rows(&output);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["input"], json!({"id":1,"body":"winner"}));
+    assert_eq!(rows[0]["index"], 1);
+    assert_eq!(rows[0]["value"], 1);
+    assert_eq!(listener.count(), 3);
+    withheld(&output, "rank-private");
+}

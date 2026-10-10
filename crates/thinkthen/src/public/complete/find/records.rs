@@ -135,7 +135,12 @@ fn prepare<T: InputEvidence>(
     unit: RecordInput<T>,
     bytes: &mut crate::public::SourceBudget,
 ) -> Result<Unit<T>, Error> {
-    if unit.context.is_some() || unit.options.is_some() || unit.examples.is_some() {
+    unit.admit_recognition_controls(
+        crate::public::request::RequestFunction::from_input(InputFunction::Find),
+        "find takes one whole-set call context and no per-record controls",
+        "find takes one whole-set call context and no per-record controls",
+    )?;
+    if unit.context.is_some() || unit.options.is_some() {
         return Err(Error::usage(
             "find takes one whole-set call context and no per-record controls",
         ));

@@ -1,6 +1,6 @@
 # 0508: Run the single final after-sprint review of the 0.2 migrations
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -39,6 +39,10 @@ Reviews: revision a087f6dc3, accept
 Reviews: revision 2b4e0fa245a8f67d40946ba9b125e3a9333922b9, reject
 
 Reviews: revision 1bb6b60bbf2456c755f588864256752be6caab46, accept
+
+Reviews: revision ae711b41405f8ca96eb68ba0e3195f8ecb7d5dfe, accept
+
+Landed: 38fa0cd
 
 ## Outcome
 
