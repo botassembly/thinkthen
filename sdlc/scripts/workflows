@@ -166,13 +166,13 @@ def release(name, doc):
     out += windows_release_rules(name, jobs)
     out += runpy.run_path(str(REPO / 'sdlc/scripts/release-windows-c-workflow.py'))['rules'](name, jobs)
     out += publish_dispatch(name, doc)
-    required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "windows-sdks", "draft",
+    required = {"resolve", "build", "apple-packages", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "windows-sdks", "draft",
                 "crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub", "publish"}
     if set(jobs) != required:
         out.append(f"{name}: release job graph differs from the accepted jobs")
-    dependencies = {"build": {"resolve"}, "wheels": {"resolve", "build"},
+    dependencies = {"apple-packages": {"resolve", "build"}, "build": {"resolve"}, "wheels": {"resolve", "build"},
                     "npm-pack": {"resolve", "build"}, "gems": {"resolve", "build"},
-                    "crate": {"resolve"}, "smoke": {"resolve", "build", "wheels", "npm-pack", "gems", "crate"},
+                    "crate": {"resolve"}, "smoke": {"resolve", "build", "apple-packages", "wheels", "npm-pack", "gems", "crate"},
                     "registries": {"resolve", "build"}, "windows-sdks": {"resolve", "npm-pack", "registries"},
                     "draft": {"resolve", "smoke", "registries", "windows-sdks"},
                     "publish": {"resolve", "draft", *OUTWARD_REGISTRIES}}
@@ -673,7 +673,8 @@ jobs:
           sdlc/scripts/release-workflow pub-dry-run registry/pub/thinkthen_dart
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: {name: registry-packages, path: registry/}
-  smoke: {needs: [resolve, build, wheels, npm-pack, gems, crate]}
+  apple-packages: {needs: [resolve, build]}
+  smoke: {needs: [resolve, build, apple-packages, wheels, npm-pack, gems, crate]}
   windows-sdks: {needs: [resolve, npm-pack, registries]}
   draft:
     needs: [resolve, smoke, registries, windows-sdks]

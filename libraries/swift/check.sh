@@ -4,7 +4,24 @@ here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 swift=${THINKTHEN_SWIFT:-$(command -v swift || true)}
 [ -x "$swift" ] || exit 77
-case $(uname -s) in Linux) ;; *) echo 'Swift local checks require the Linux installed fixture; Apple qualification runs at the candidate' >&2; exit 77 ;; esac
+case $(uname -s) in
+Darwin)
+    [ -f "${THINKTHEN_ARTIFACT:-}" ] || { echo 'Swift Apple checks require the final installed package; no native build is started' >&2; exit 1; }
+    . "$root/sdlc/scripts/installed.sh"
+    . "$root/sdlc/scripts/scratch.sh"
+    installed_unpack
+    [ -f "$scratch/CThinkThen.xcframework/Info.plist" ] || { echo 'Swift Apple package is missing its XCFramework' >&2; exit 1; }
+    scratch_dir apple_consumer
+    python3 "$here/Tests/fixtures/installed.py" --package "$scratch" --out "$apple_consumer"
+    if [ "${THINKTHEN_TEST_PROFILE:-}" = full ]; then
+        python3 "$here/Tests/fixtures/complete_parity.py" --binary "$apple_consumer/installed/Parity"
+    else
+        python3 "$here/Tests/fixtures/complete_parity.py" --binary "$apple_consumer/installed/Parity" --routine
+    fi
+    exit 0 ;;
+Linux) ;;
+*) echo 'Swift installed checks require Linux or macOS' >&2; exit 77 ;;
+esac
 lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-swift.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     export THINKTHEN_HEAVY_LOCK_HELD=$lock

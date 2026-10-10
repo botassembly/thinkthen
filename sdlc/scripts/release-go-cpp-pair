@@ -24,7 +24,7 @@ dart-flutter) first=thinkthen-dart-$version-$target.tar.gz second=thinkthen-flut
 ada-objective-c-cobol) first=thinkthen-ada-$version-$target.tar.gz second=thinkthen-cobol-$version-$target.tar.gz ;;
 foundation)
 	case $target in *-apple-darwin) ;; *) echo 'release-go-cpp-pair: Foundation requires an Apple host' >&2; exit 1 ;; esac
-	first=thinkthen-objective-c-$version-$target.tar.gz second= ;;
+	first=thinkthen-objective-c-$version-$target.tar.gz second=thinkthen-swift-$version-$target.tar.gz ;;
 esac
 fail() { echo "release-go-cpp-pair: $*" >&2; exit 1; }
 sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
@@ -50,7 +50,8 @@ for file in "$dir"/*; do
 	dart-flutter:thinkthen-dart-*.tar.gz.sha256 | dart-flutter:thinkthen-flutter-*.tar.gz.sha256 | \
 	ada-objective-c-cobol:thinkthen-ada-*.tar.gz | ada-objective-c-cobol:thinkthen-cobol-*.tar.gz | \
 	ada-objective-c-cobol:thinkthen-ada-*.tar.gz.sha256 | ada-objective-c-cobol:thinkthen-cobol-*.tar.gz.sha256 | \
-	foundation:thinkthen-objective-c-*.tar.gz | foundation:thinkthen-objective-c-*.tar.gz.sha256) selected=1 ;;
+	foundation:thinkthen-objective-c-*.tar.gz | foundation:thinkthen-objective-c-*.tar.gz.sha256 | \
+	foundation:thinkthen-swift-*.tar.gz | foundation:thinkthen-swift-*.tar.gz.sha256) selected=1 ;;
 	esac
 	[ -n "$selected" ] || continue
 	case $name in "$c" | "$first" | "$second" | "${third:-}" | "$c.sha256" | "$first.sha256" | "$second.sha256" | "${third:-}.sha256") ;; *) fail "extra family entry $name" ;; esac
@@ -290,6 +291,20 @@ with tarfile.open(sys.argv[1]) as archive:
             assert data == subprocess.check_output(['git','show','HEAD:libraries/objective-c/'+relative]), relative
     package = json.load(archive.extractfile('./source-package.json'))
     assert package == {'name':'thinkthen-objective-c','version':sys.argv[2],'source_only':False,'native_dependency':'thinkthen-c','bundles_native':True}
+PYTHON
+	python3 - "$dir/$second" <<'PYTHON' || fail 'Swift archive differs from its source or native input'
+import pathlib, subprocess, sys, tarfile
+with tarfile.open(sys.argv[1]) as archive:
+    for member in archive:
+        assert member.isfile() or member.isdir(), member.name
+        if not member.isfile(): continue
+        relative = member.name.removeprefix('./')
+        data = archive.extractfile(member).read()
+        if relative.startswith('CThinkThen.xcframework/'):
+            assert data == pathlib.Path('libraries/swift', relative).read_bytes(), relative
+        elif relative != 'THINKTHEN-PACKAGE-INPUTS':
+            source = 'libraries/c/include/thinkthen.h' if relative == 'Sources/CThinkThen/include/thinkthen.h' else 'libraries/swift/' + relative
+            assert data == subprocess.check_output(['git', 'show', 'HEAD:' + source]), relative
 PYTHON
 fi
 

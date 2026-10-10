@@ -308,7 +308,78 @@ def jvm_contract_cases():
                     assert result.returncode == 0 and output.read_text() == f'jdk={definition["jdk"]}\n', result
 
 
+def apple_package_cases():
+    """Assemble source archives without invoking Cargo or claiming Apple execution."""
+    jobs = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())['jobs']
+    assert jobs['apple-packages']['needs'] == ['resolve', 'build']
+    assert 'apple-packages' in jobs['smoke']['needs']
+    assert {row['target'] for row in jobs['apple-packages']['strategy']['matrix']['include']} == {
+        'aarch64-apple-darwin', 'x86_64-apple-darwin'}
+    smoke_steps = jobs['smoke']['steps']
+    assert any(step.get('env', {}).get('THINKTHEN_TEST_PROFILE') == 'full' for step in smoke_steps)
+    assert {step.get('with', {}).get('name') for step in jobs['draft']['steps']} >= {
+        'apple-packages-aarch64-apple-darwin', 'apple-packages-x86_64-apple-darwin'}
+    with tempfile.TemporaryDirectory(prefix='apple-package-') as temporary:
+        root = pathlib.Path(temporary)
+        for relative in ('libraries/swift', 'libraries/objective-c'):
+            names = subprocess.check_output(['git', 'ls-files', relative], cwd=REPO, text=True).splitlines()
+            for name in names:
+                destination = root / name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(REPO / name, destination)
+        for name in ('crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
+                     'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh'):
+            destination = root / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, destination)
+        (root / '.gitignore').write_text('target/\nlibraries/swift/CThinkThen.xcframework/\n')
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', 'add', '.'], cwd=root, check=True)
+        subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'Capture wrapper inputs'], cwd=root, check=True)
+        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+        tools = root / 'target/tools'; tools.mkdir(parents=True)
+        for name, body in {'uname': 'echo Darwin', 'rustc': 'echo "host: aarch64-apple-darwin"',
+                           'cargo': 'echo unexpected-native-build >&2; exit 99'}.items():
+            tool = tools / name
+            tool.write_text('#!/bin/sh\n' + body + '\n'); tool.chmod(0o755)
+        framework = root / 'libraries/swift/CThinkThen.xcframework'; framework.mkdir()
+        (framework / 'Info.plist').write_text('opaque framework assembly fixture; no Apple execution')
+        output = root / 'target/packages'; output.mkdir()
+        target = 'aarch64-apple-darwin'
+        name = f'thinkthen-c-{version()}-{target}.tar.gz'
+        native = root / 'target/native'; (native / 'include').mkdir(parents=True)
+        shutil.copyfile(root / 'libraries/c/include/thinkthen.h', native / 'include/thinkthen.h')
+        with tarfile.open(output / name, 'w:gz') as package:
+            package.add(native / 'include', arcname='./include')
+        digest = hashlib.sha256((output / name).read_bytes()).hexdigest()
+        sidecar = output / (name + '.sha256'); sidecar.write_text(f'{digest}  {name}\n')
+        env = os.environ | {'PATH': str(tools) + os.pathsep + os.defpath,
+                            'THINKTHEN_RELEASE_EXPECTED_SHA': commit}
+        apple_env = env | {'THINKTHEN_SWIFT': '/usr/bin/true', 'THINKTHEN_ARTIFACT': ''}
+        refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
+        assert refused.returncode == 1 and 'no native build is started' in refused.stderr, refused
+        apple_env['THINKTHEN_ARTIFACT'] = str(output / name)
+        refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
+        assert refused.returncode == 1 and 'missing its XCFramework' in refused.stderr, refused
+        command = ['sh', 'sdlc/scripts/release-pack', '--apple-wrappers', target,
+                   str(output), 'swift', 'objective-c']
+        for corrupted in (True, False):
+            sidecar.write_text(f'{"0" * 64 if corrupted else digest}  {name}\n')
+            result = subprocess.run(command, cwd=root, env=env, text=True, capture_output=True)
+            assert result.returncode == (1 if corrupted else 0), result
+            if corrupted:
+                assert 'Apple C checksum differs' in result.stderr and len(list(output.iterdir())) == 2
+        for family in ('swift', 'objective-c'):
+            with tarfile.open(output / f'thinkthen-{family}-{version()}-{target}.tar.gz') as package:
+                assert package.extractfile('./CThinkThen.xcframework/Info.plist').read() == (framework / 'Info.plist').read_bytes()
+                assert package.extractfile('./THINKTHEN-PACKAGE-INPUTS').read().decode() == (
+                    f'source_commit={commit}\ntarget={target}\nversion={version()}\nc_archive={name}\nc_sha256={digest}\n')
+    print('Apple wrapper assembly: paired input identity, missing build route and collection dependencies pass; native execution not run')
+
+
 def main():
+    apple_package_cases()
     jvm_contract_cases()
     v = version()
     bad = 0

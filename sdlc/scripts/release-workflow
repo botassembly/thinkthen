@@ -38,6 +38,9 @@ swift_zig_names() {
 			"thinkthen-zig-$version-$target.tar.gz" | "thinkthen-zig-$version-$target.tar.gz.sha256") ;;
 			*) fail "unexpected Swift/Zig family entry $name" ;;
 			esac
+		elif [ "$target" = aarch64-apple-darwin ] || [ "$target" = x86_64-apple-darwin ]; then
+			case $name in "thinkthen-swift-$version-$target.tar.gz" | "thinkthen-swift-$version-$target.tar.gz.sha256") ;;
+			*) fail "unsupported target has $name" ;; esac
 		else
 			fail "unsupported target has $name"
 		fi
@@ -454,9 +457,15 @@ swift-zig-gate)
 				grep -Fxq "source_commit=$selected" || fail "$family source differs from resolved SHA"
 		done
 		;;
-	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin)
+	aarch64-apple-darwin | x86_64-apple-darwin)
 		swift_zig_names "$dir" "$target"
+		archive=thinkthen-swift-$version-$target.tar.gz
+		(cd "$dir" && sha256 -c "$archive.sha256")
+		tar -xOzf "$dir/$archive" ./THINKTHEN-PACKAGE-INPUTS |
+			grep -Fxq "source_commit=$selected" || fail 'Swift source differs from resolved SHA'
 		;;
+	aarch64-unknown-linux-gnu) swift_zig_names "$dir" "$target" ;;
+
 	*) fail "no Swift/Zig release route for $target" ;;
 	esac
 	;;
@@ -502,7 +511,12 @@ ada-objc-cobol-gate)
 		;;
 	aarch64-apple-darwin | x86_64-apple-darwin)
 		ada_objc_cobol_names "$dir" "$target"
-		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir" foundation
+		# Execute the native pair check on Apple; collection runs on Linux.
+		if [ "$(uname -s)" = Darwin ]; then
+			sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir" foundation
+		else
+			(cd "$dir" && sha256 -c "thinkthen-objective-c-$version-$target.tar.gz.sha256")
+		fi
 		tar -xOzf "$dir/thinkthen-objective-c-$version-$target.tar.gz" ./THINKTHEN-PACKAGE-INPUTS |
 			grep -Fxq "source_commit=$selected" || fail 'Foundation source differs from resolved SHA'
 		;;

@@ -12,6 +12,8 @@
 # each part builds in a scratch folder that goes once the part is packed (ticket 0366). Every
 # cargo call is locked; fetch first where the network is off.
 set -eu
+apple_wrappers=
+[ "${1:-}" != --apple-wrappers ] || { apple_wrappers=1; shift; }
 reuse=
 [ "${1:-}" != --reuse ] || { reuse=1; shift; }
 [ $# -ge 2 ] || { echo 'usage: release-pack [--reuse] TARGET OUT [PART...]' >&2; exit 2; }
@@ -29,6 +31,7 @@ host=$(rustc -vV | sed -n 's/^host: //p')
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 c_built=
 dart_built=
+if [ -z "$apple_wrappers" ]; then
 case " $* " in
 *' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' flutter '* | *' ada '* | *' objective-c '* | *' cobol '*)
 	if git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -70,6 +73,7 @@ case " $* " in
 	}
 	;;
 esac
+fi
 case " $* " in
 *' flutter '*)
 	dart_count=0 flutter_count=0
@@ -608,6 +612,23 @@ with open(out, "wb") as file:
 EOF
 	(cd -- "$OUT" && sha256 thinkthen-first-run.tar.gz >thinkthen-first-run.tar.gz.sha256)
 }
+
+if [ -n "$apple_wrappers" ]; then
+	[ "$(uname -s)" = Darwin ] || { echo 'release-pack: Apple wrapper assembly requires macOS' >&2; exit 2; }
+	[ "$TARGET" = aarch64-apple-darwin ] || [ "$TARGET" = x86_64-apple-darwin ] || exit 2
+	[ "$#" -eq 2 ] && [ "$1" = swift ] && [ "$2" = objective-c ] || { echo 'release-pack: Apple assembly requires swift objective-c' >&2; exit 2; }
+	[ -z "$(git status --porcelain)" ] || { echo 'release-pack: Apple wrappers need a clean committed tree' >&2; exit 1; }
+	source_commit=$(git rev-parse HEAD)
+	[ "$source_commit" = "${THINKTHEN_RELEASE_EXPECTED_SHA:-}" ] || { echo 'release-pack: Apple source differs from selected commit' >&2; exit 1; }
+	c_name=thinkthen-c-$V-$TARGET.tar.gz
+	[ -f "$OUT/$c_name" ] && [ ! -L "$OUT/$c_name" ] && [ -f "$OUT/$c_name.sha256" ] && [ ! -L "$OUT/$c_name.sha256" ] || exit 1
+	[ "$(cat "$OUT/$c_name.sha256")" = "$(cd "$OUT" && sha256 "$c_name")" ] || { echo 'release-pack: Apple C checksum differs' >&2; exit 1; }
+	tar -xOzf "$OUT/$c_name" ./include/thinkthen.h | cmp - libraries/c/include/thinkthen.h
+	c_built=1
+	part_source_wrapper swift
+	part_source_wrapper objective-c
+	exit 0
+fi
 
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 	[ $# -gt 0 ] || set -- command c python typescript first-run
