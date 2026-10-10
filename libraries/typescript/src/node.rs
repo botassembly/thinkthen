@@ -4,7 +4,7 @@
 use napi::Result;
 use napi_derive::napi;
 use thinkthen::Engine;
-/// One engine with its own settings, built by `new tt.Engine(options)`.
+/// One engine with its own settings, built by `new Client(settings)`.
 #[napi]
 #[derive(Debug)]
 pub struct NativeEngine {

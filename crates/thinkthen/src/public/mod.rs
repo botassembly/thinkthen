@@ -2,8 +2,6 @@
 //!
 //! Callers own an explicit [`Engine`] and its typed native results.
 
-use std::sync::OnceLock;
-
 mod images;
 mod request;
 pub use images::{
@@ -134,35 +132,6 @@ pub use settings::EngineBuilder;
 /// The Polars crate the door takes, so a caller names the exact version.
 #[cfg(feature = "polars")]
 pub use ::polars;
-
-/// Temporary support for language adapters awaiting their owned-engine migration.
-/// New Rust callers build and retain their own [`Engine`].
-///
-/// # Errors
-///
-/// As [`Engine::from_env`].
-#[doc(hidden)]
-pub fn default_engine() -> Result<&'static Engine, Error> {
-    static ENGINE: OnceLock<Engine> = OnceLock::new();
-    if let Some(engine) = ENGINE.get() {
-        return Ok(engine);
-    }
-    // Two threads that both find the cell empty each build; one engine is
-    // dropped unused. `from_env` registers no throttle, so the race costs one
-    // extra build and nothing else.
-    let built = Engine::from_env()?;
-    Ok(ENGINE.get_or_init(|| built))
-}
-
-/// The [`default_engine`]'s totals.
-///
-/// # Errors
-///
-/// As [`default_engine`].
-#[doc(hidden)]
-pub fn usage() -> Result<Counters, Error> {
-    Ok(default_engine()?.usage())
-}
 
 pub use results::{
     FindReading, QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold,
