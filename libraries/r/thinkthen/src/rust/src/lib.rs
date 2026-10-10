@@ -15,11 +15,8 @@
 pub mod ffi;
 
 mod calls;
-use thinkthen_host::complete;
-mod files;
 mod native_results;
 mod plan;
-mod relate;
 mod request;
 mod results_generated;
 
@@ -44,7 +41,7 @@ fn packed(kind: &str, retryable: bool, message: &str) -> String {
 /// The one error-kind table: the engine's own words (ADR 0047 item 7).
 fn carry(error: &Error) -> String {
     let base = packed(error.kind().name(), error.retryable(), &error.to_string());
-    complete::stream::failure(error).map_or(base.clone(), |snapshot| {
+    serde_json::to_string(&error.complete()).map_or(base.clone(), |snapshot| {
         format!("{base}{SEP}{}", snapshot.replace('%', "%%"))
     })
 }
@@ -208,9 +205,14 @@ fn engine() -> Result<Engine, String> {
     if let Some((_, engine)) = chosen().as_ref() {
         return Ok(engine.clone());
     }
-    thinkthen::default_engine()
+    static DEFAULT: Mutex<Option<Engine>> = Mutex::new(None);
+    let mut slot = DEFAULT.lock().unwrap_or_else(PoisonError::into_inner);
+    if slot.is_none() {
+        *slot = Some(Settings::default().build().map_err(|error| carry(&error))?);
+    }
+    slot.as_ref()
         .cloned()
-        .map_err(|error| carry(&error))
+        .ok_or_else(|| defect("default engine was not retained"))
 }
 
 #[cfg(test)]

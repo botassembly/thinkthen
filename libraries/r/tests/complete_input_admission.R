@@ -1,48 +1,28 @@
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
-question <- list(role = "atomic", body = list(decide = "Q?"))
-record <- list(content = list(kind = "text", value = "kept"))
-reader <- list(reading = list(unit = "file"), media = "text")
 missing <- tempfile("unread-")
-
-for (extra in list(list(paths = list()), list(paths = NULL), list(options = NULL),
-                   list(jsonl = FALSE), list(jsonl = NULL))) {
-  input <- c(list(kind = "records", records = list(record)), extra)
-  before <- backend_count()
-  error <- tryCatch(tt_decide_complete(question, input), error = identity)
-  check("record input refuses a file field", inherits(error, "thinkthen_error") &&
-        error$kind == "usage" && grepl("records cannot include file source fields", conditionMessage(error), fixed = TRUE))
-  check("record conflict sends nothing", backend_count() == before)
-}
-
-for (records in list(list(), NULL)) {
-  input <- list(kind = "files", paths = list(missing), options = reader)
-  input["records"] <- list(records)
-  before <- backend_count()
-  error <- tryCatch(tt_decide_complete(question, input), error = identity)
-  check("file input refuses an explicit record field before reading", inherits(error, "thinkthen_error") &&
-        error$kind == "usage" && grepl("files cannot include records", conditionMessage(error), fixed = TRUE))
-  check("file conflict leaves the missing path unread and sends nothing", !file.exists(missing) && backend_count() == before)
-}
-
+record <- list(original = list(kind = "text", text = "kept"))
 for (input in list(
-  list(kind = "records", records = NULL),
-  list(kind = "files", paths = NULL, options = reader),
-  list(kind = "files", paths = list(missing), options = reader, jsonl = NULL)
+  tt_input("records", items = list(record), paths = list()),
+  tt_input("records", items = list(record), source = NULL),
+  tt_input("source", source = list(paths = list(missing), reading = list(unit = "file"), media = "text"), items = list()),
+  tt_input("records", items = NULL),
+  tt_input("source", source = NULL)
 )) {
   before <- backend_count()
-  error <- tryCatch(tt_decide_complete(question, input), error = identity)
-  check("a selected source field cannot be null", inherits(error, "thinkthen_error") && error$kind == "usage")
-  check("null source refusal reads no missing file and sends nothing", !file.exists(missing) && backend_count() == before)
+  error <- tryCatch(tt_decide("Q?", input), error = identity)
+  check("canonical source conflict refuses before reading or sending", inherits(error, "thinkthen_usage") &&
+    !file.exists(missing) && backend_count() == before)
 }
-
-records <- tt_decide_complete(question, list(kind = "records", records = list(record)))
-check("valid records retain the original", identical(records$inputs[[1L]]$original, "kept"))
+records <- tt_decide("Q?", tt_input("records", items = list(record)))
+check("valid record retains the original", identical(records$results[[1L]]$input, "kept"))
 file <- tempfile("input-")
 writeLines("from file", file)
-files <- tt_decide_complete(question, list(kind = "files", paths = list(file), options = reader, jsonl = FALSE))
-check("valid files retain their source", identical(files$inputs[[1L]]$original, "from file\n"))
-batch <- tt_decide_batch(question, list(kind = "records", records = list(list(content = list(kind = "text", value = "batch record")))))
-row <- batch$next_row()
-check("valid batches retain their original", identical(row$input$original, "batch record"))
-check("batch completes", is.null(batch$next_row()))
-finish("complete_input_admission", 3L)
+files <- tt_decide("Q?", tt_files(file, unit = "file"))
+check("valid source retains its text", identical(files$results[[1L]]$input, "from file\n"))
+unlink(file)
+batch <- tt_batch("decide", "Q?", "batch record")
+row <- batch$next_result()
+check("valid session retains its original", identical(row$input, "batch record"))
+check("session completes", is.null(batch$next_result()))
+batch$close()
+finish("source admission", 3L)

@@ -1,35 +1,9 @@
 //! Pure full-input preview for the R judge surface.
 
+use crate::calls::Crossed;
+use crate::defect;
 use extendr_api::prelude::*;
-use thinkthen::{BatchSetting, CallOptions, LoadedQuestion, PlanEstimate};
-
-use crate::calls::{Crossed, question};
-use crate::{carry, defect, engine};
-
-pub(crate) fn preview(
-    json: &str,
-    texts: Vec<String>,
-    batch: Option<BatchSetting>,
-    context: Option<String>,
-) -> Crossed<List> {
-    let asked = question(json)?;
-    let options = CallOptions::new();
-    let options = batch.map_or(options, |value| options.batch(value));
-    let options = context
-        .as_deref()
-        .map_or(options, |value| options.context(value));
-    let engine = engine()?;
-    let planned = match &asked {
-        LoadedQuestion::Question(held) => {
-            engine.plan_with(held, texts.iter().map(String::as_str), options)
-        }
-        LoadedQuestion::Banded(held) => {
-            engine.plan_with(held, texts.iter().map(String::as_str), options)
-        }
-    }
-    .map_err(|error| carry(&error))?;
-    render(planned)
-}
+use thinkthen::PlanEstimate;
 
 pub(crate) fn render(plan: PlanEstimate) -> Crossed<List> {
     let (lower, upper) = plan.estimated_input_tokens();

@@ -81,11 +81,10 @@ configure_file <- function(in_file, out_file, values) {
   ""
 )
 
-# The repository shape builds in a named CARGO_TARGET_DIR and keeps it, so a
-# second install reuses the build. The shipped shapes build in the package and
-# remove that folder after the install.
+# An explicit CARGO_TARGET_DIR belongs to the installer and may be reused.
+# Without one, build inside the package and remove that output after install.
 .target_dir <- Sys.getenv("CARGO_TARGET_DIR")
-.keep_target <- !.tarball_shape && !.published_shape && nzchar(.target_dir)
+.keep_target <- nzchar(.target_dir)
 
 configure_file(
   "src/Makevars.in",

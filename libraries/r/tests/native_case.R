@@ -33,7 +33,8 @@ tryCatch({
     repeat {
       row<-stream$next_result()
       if(is.null(row)) break
-      prefix[[length(prefix)+1L]]<-row
+      if (inherits(row,"thinkthen_complete")) prefix[[length(prefix)+1L]]<-row
+      else prefix <- c(prefix,row)
     }
     done<-list(results=prefix,facts=stream$facts())
   } else done <- method(question, input, options)

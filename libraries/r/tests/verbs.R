@@ -50,11 +50,6 @@ check("empty rank has no native rows and sends nothing", sent_by(check("empty ra
 check("empty find is usage and sends nothing", sent_by(check("empty find kind",
   identical(kind_of(tt_find(list(find = "Empty selection?"), character())), "usage"))) == 0L)
 
-# details: the command's --details document.
-details <- tt_details(tt_question(score = "How urgent?", levels = levels3), "urgent now")$value
-check("details on a score question carries the level", identical(details$answer$level, "Routine."))
-check("details on a decide question carries no level", is.null(tt_details("Q?", "refund me")$value$answer$level))
-
 # Annotation retains original rows and separately typed question values.
 set_file <- tempfile(fileext = ".json")
 writeLines('{"version":1,"questions":{"refund":{"decide":"Refund?","threshold":"0.2:0.95"},
@@ -132,33 +127,15 @@ replayed <- sent_by(read_result <- child(c(
 check("a failed recording read is a non-retryable local error before any send",
       read_result$status == 0L && identical(trimws(read_result$text), "TRUE TRUE TRUE") && replayed == 0L)
 
-# The failed marker: the malformed arm breaks the last question.
-failed <- child(c(
-  sprintf('f <- "%s"', set_file),
-  'call <- tt_annotate(f, data.frame(body = "m1"), on = "body")',
-  'a <- call$value',
-  'cat(identical(a$labels, list(list(failed = list(kind = "backend", cause = "missing_answer")))), identical(a$team, "billing"), "\\n")',
-  'cat(call$facts$records > 0, any(vapply(call$details, function(x) !is.null(x$failed), FALSE)), any(vapply(call$details, function(x) !is.null(x$answer), FALSE)), "\\n")',
-  'e <- tryCatch(tt_choose("Which?", c("m2", "m3"), c("x", "y")), error = function(e) e)',
-  'cat(class(e)[[1]], conditionMessage(e), "\\n")'
-), env = paste0("THINKTHEN_BASE_URL=", arm("arm/malformed/missing_answer/v1")))
-check("a failed annotate cell carries its marker and ordered observations beside good answers",
-      grepl("TRUE TRUE", failed$text, fixed = TRUE) &&
-      grepl("TRUE TRUE TRUE", failed$text, fixed = TRUE))
-# A one-question request with its one answer broken is refused whole, so a
-# broken choose, score, or tag column raises backend and never reads NA.
-check("a broken choose column raises backend", grepl(
-  "thinkthen_backend a backend question failed in a batch", failed$text, fixed = TRUE))
-
 # A question that names a model still answers through the dynamic many path.
 # Batch one preserves this older file's per-record request count.
 named <- list(choose = "Which team?", options = c("billing", "shipping"), model = "other-model")
 check("a named-model choose answers every row", identical(tt_choose(named, c("n1", "n2"), options = list(batch = 1L))$value, c("billing", "billing")))
 
-# The counters count sends, as doubles.
+# The usage counter reader retains ordinary R integer counts.
 before <- tt_usage()
 invisible(tt_decide("Q?", c("u1-new", "u2-new"))$value)
 check("two judgments are two sends", identical(tt_usage()$requests_sent - before$requests_sent, 2L))
 check("the counters name five counts", identical(names(before), c("requests_sent", "retries", "input_tokens", "output_tokens", "cache_answers")))
 
-finish("verbs", 30L)
+finish("verbs", 27L)

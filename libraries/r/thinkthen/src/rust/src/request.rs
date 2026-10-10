@@ -44,6 +44,22 @@ impl ColumnMap {
         Some(Self { positions, length })
     }
 
+    pub(crate) fn observation_positions(&self) -> Vec<usize> {
+        // Native column conversion created these nonnegative indexes from R's length.
+        self.positions
+            .iter()
+            .map(|position| {
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    reason = "positions originate from native R column indexes"
+                )]
+                let index = *position as usize;
+                index
+            })
+            .collect()
+    }
+
     pub(crate) fn attach(&self, value: Robj) -> Crossed<Robj> {
         let list = List::try_from(value)
             .map_err(|_| crate::defect("native presentation is not an R list"))?;

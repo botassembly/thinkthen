@@ -43,7 +43,10 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
         deadline_of(&deadline)?,
         &interrupt_pending,
         completion_of(&completion)?,
-        None,
+        request
+            .column
+            .as_ref()
+            .map(crate::request::ColumnMap::observation_positions),
         move |engine, controls, account| {
             let started = account.start();
             let outcome = engine.execute_request(

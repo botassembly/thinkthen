@@ -36,12 +36,8 @@ if grep -q "workspace = true" "$PKG/src/rust/vendor/thinkthen/Cargo.toml"; then
   exit 1
 fi
 
-(cd "$ROOT/crates" && tar --exclude='thinkthen-host/target' -cf - thinkthen-host) |
-  tar -xf - -C "$PKG/src/rust/vendor"
-
 # perl -pi, because GNU and BSD sed spell in-place editing differently (R3-32).
 perl -pi -e 's|path = "../../../../../crates/thinkthen"|path = "vendor/thinkthen"|;' \
-  -e 's|path = "../../../../../crates/thinkthen-host"|path = "vendor/thinkthen-host"|;' \
   -e '$_ .= "exclude = [\"vendor\"]\n" if /^\[workspace\]$/' "$PKG/src/rust/Cargo.toml"
 grep -q 'path = "vendor/thinkthen"' "$PKG/src/rust/Cargo.toml"
 
