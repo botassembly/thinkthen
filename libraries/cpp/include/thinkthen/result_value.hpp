@@ -51,7 +51,8 @@ template<class T> struct Decoder {
         else return T(value);
     }
     static bool matches(const Json& value) {
-        if constexpr(std::is_same_v<T,bool>) return value.is_boolean();
+        if constexpr(std::is_same_v<T,std::nullptr_t>) return value.is_null();
+        else if constexpr(std::is_same_v<T,bool>) return value.is_boolean();
         else if constexpr(std::is_arithmetic_v<T>) return value.is_number();
         else if constexpr(std::is_same_v<T,std::string>) return value.is_string();
         else return value.is_object();

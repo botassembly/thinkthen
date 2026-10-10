@@ -3,9 +3,21 @@ import json
 import re
 from csharp import shape as common_shape, enum_values
 
-def shape(raw):
+def shape(raw, presence=False):
     if isinstance(raw, dict) and "const" in raw and "type" not in raw:
         raw = {**raw, "type": "string" if isinstance(raw["const"],str) else "boolean" if isinstance(raw["const"],bool) else "integer"}
+    if not presence and isinstance(raw, dict) and not enum_values(raw):
+        alternatives = raw.get("anyOf", raw.get("oneOf", []))
+        kinds = raw.get("type")
+        if isinstance(kinds, list):
+            alternatives = [{**raw, "type": kind} for kind in kinds]
+        if alternatives and any(child is True or child == {} for child in alternatives):
+            return {}
+        # Null inside a collection or union is a value, not member presence.
+        if alternatives and any(child.get("type") == "null" or
+                                isinstance(child.get("type"), list) and "null" in child["type"]
+                                for child in alternatives if isinstance(child, dict)):
+            return {"cpp_alternatives": alternatives}
     try:
         result = common_shape(raw)
         if isinstance(result,dict) and enum_values(result): return {**result,"type":"string"}
@@ -25,8 +37,8 @@ def integer_type(s):
         return "uint8_t" if s.get("maximum")==255 else "uint32_t" if s.get("maximum")==4294967295 else "uint64_t"
     return "int64_t"
 
-def typ(raw):
-    s=shape(raw)
+def typ(raw, presence=False):
+    s=shape(raw, presence)
     if 'cpp_alternatives' in s: return 'std::variant<'+', '.join(dict.fromkeys(typ(child) for child in s['cpp_alternatives']))+'>'
     if '$ref' in s: return name(s['$ref'].removeprefix('#/$defs/'))
     kind=s.get('type')
@@ -34,7 +46,7 @@ def typ(raw):
     if kind=='object' and isinstance(s.get('additionalProperties'),dict): return 'std::vector<std::pair<std::string, '+typ(s['additionalProperties'])+'>>'
     if 'primitive_variants' in s:
         schemas=s.get('primitive_schemas',{})
-        return 'std::variant<'+', '.join(dict.fromkeys(typ(schemas.get(k,{'type':k})) for k in s['primitive_variants'] if k!='null'))+'>'
+        return 'std::variant<'+', '.join(dict.fromkeys(typ(schemas.get(k,{'type':k})) for k in s['primitive_variants'] if not presence or k != 'null'))+'>'
     return {'string':'std::string','boolean':'bool','integer':integer_type(s),'number':'double','null':'std::nullptr_t'}.get(kind,'Json') if isinstance(kind,str) else 'Json'
 
 def condition(tag):
@@ -53,7 +65,7 @@ def render(definitions,version):
         lines += [f'class {n} : public Node {{ public: using Node::Node;']
         if 'properties' in s:
             for member,field in s['properties'].items():
-                t=typ(field); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member
+                t=typ(field, presence=True); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member
                 lines += [f'    Presence<{t}> {method}() const;']
                 bodies += [f'inline Presence<{t}> {n}::{method}() const {{ return member_value<{t}>(value_, {json.dumps(member)}); }}']
         for child,tag in s.get('variants',[]):

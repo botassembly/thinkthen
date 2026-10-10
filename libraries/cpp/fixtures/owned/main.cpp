@@ -69,7 +69,7 @@ int main(int argc,char** argv) {
         }
         auto question=RequestQuestionFile().set_path(argv[2]);
         auto input=verb=="files" ? RequestInput(RequestInputSource().set_source(RequestSource().set_paths({argv[3]}).set_reading(RequestReader().set_unit(SourceUnit("line"))))) : evidence(verb,read(argv[3]));
-        auto call=named(client,verb=="files" ? "decide":verb,question,input);
+        auto call=named(client,verb=="files" ? "decide":verb=="annotate-null" ? "annotate":verb,question,input);
         client.close(); call.finish();
         auto packets=call.collect(); call.close();
         bool terminal=false, answer=false;
@@ -84,6 +84,16 @@ int main(int argc,char** argv) {
             ANSWER(FilterRow) ANSWER(RankAggregate) ANSWER(FindAggregate)
             ANSWER(AnnotateRow) ANSWER(RecognizeAggregate) ANSWER(RelateAggregate)
 #undef ANSWER
+            if(verb=="annotate-null") {
+                if(auto row=packet.as_SessionPacketAnnotateRow()) {
+                    auto annotation=row->value();
+                    if(annotation.state!=results::PresenceState::value || annotation.value->value().state!=results::PresenceState::value) return 23;
+                    auto fields=annotation.value->value().value->value();
+                    if(fields.size()!=1 || fields[0].first!="refund" || !fields[0].second.document().is_null()) return 24;
+                    if(!std::visit([](const auto& value){ return std::is_same_v<std::decay_t<decltype(value)>,std::nullptr_t>; },fields[0].second.value())) return 25;
+                }
+                if(Json::parse(packet.document().dump())!=packet.document()) return 26;
+            }
             std::cout<<packet.document().dump()<<'\n';
         }
         return terminal && answer ? 0 : 5;

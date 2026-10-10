@@ -857,7 +857,7 @@ class WordingVersion : public Node { public: using Node::Node;
     uint32_t value() const;
 };
 class AnnotatedField : public Node { public: using Node::Node;
-    std::variant<bool, std::string, std::vector<std::string>, double, Failed> value() const;
+    std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double, Failed> value() const;
 };
 class AnnotatedRow : public Node { public: using Node::Node;
     std::vector<std::pair<std::string, AnnotatedField>> value() const;
@@ -1274,7 +1274,7 @@ class TokenUsage : public Node { public: using Node::Node;
     Presence<uint64_t> output_tokens() const;
 };
 class Value : public Node { public: using Node::Node;
-    std::variant<bool, std::string, std::vector<std::string>, double> value() const;
+    std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double> value() const;
 };
 inline Presence<AnswerId> Annotation::answer_id() const { return member_value<AnswerId>(value_, "answer_id"); }
 inline Presence<std::vector<std::pair<std::string, AnnotationMember>>> Annotation::answers() const { return member_value<std::vector<std::pair<std::string, AnnotationMember>>>(value_, "answers"); }
@@ -1753,7 +1753,7 @@ inline std::string UsagePersistence::value() const { return decode<std::string>(
 inline std::string Verb::value() const { return decode<std::string>(value_); }
 inline std::string Version::value() const { return decode<std::string>(value_); }
 inline uint32_t WordingVersion::value() const { return decode<uint32_t>(value_); }
-inline std::variant<bool, std::string, std::vector<std::string>, double, Failed> AnnotatedField::value() const { return decode<std::variant<bool, std::string, std::vector<std::string>, double, Failed>>(value_); }
+inline std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double, Failed> AnnotatedField::value() const { return decode<std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double, Failed>>(value_); }
 inline std::vector<std::pair<std::string, AnnotatedField>> AnnotatedRow::value() const { return decode<std::vector<std::pair<std::string, AnnotatedField>>>(value_); }
 inline std::optional<AnswerYesNo> Answer::as_AnswerYesNo() const { if (literal(value_, "kind", "yes_no")) return AnswerYesNo(value_); return std::nullopt; }
 inline std::optional<AnswerChoice> Answer::as_AnswerChoice() const { if (literal(value_, "kind", "choice")) return AnswerChoice(value_); return std::nullopt; }
@@ -2014,5 +2014,5 @@ inline Presence<Json> SourceRelationEndpoint::record() const { return member_val
 inline std::variant<double, std::string> Threshold::value() const { return decode<std::variant<double, std::string>>(value_); }
 inline Presence<uint64_t> TokenUsage::input_tokens() const { return member_value<uint64_t>(value_, "input_tokens"); }
 inline Presence<uint64_t> TokenUsage::output_tokens() const { return member_value<uint64_t>(value_, "output_tokens"); }
-inline std::variant<bool, std::string, std::vector<std::string>, double> Value::value() const { return decode<std::variant<bool, std::string, std::vector<std::string>, double>>(value_); }
+inline std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double> Value::value() const { return decode<std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double>>(value_); }
 }

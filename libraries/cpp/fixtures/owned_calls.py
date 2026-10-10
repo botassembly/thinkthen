@@ -43,6 +43,19 @@ try:
         assert terminal['facts']['requests_sent'] >= 1, terminal
         print('CPP_INSTALLED_NAMED_PASS', verb, 'packets=' + str(len(packets)))
     assert len(server.requests) == 11, len(server.requests)
+    question = {"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?", "threshold": "0.2:0.8"}}}
+    qpath = scratch / 'annotate-null-question.json'
+    ipath = scratch / 'annotate-null-input.json'
+    qpath.write_text(json.dumps(question))
+    ipath.write_text(json.dumps('unsure'))
+    result = subprocess.run([binary,'annotate-null',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode == 0, (result.returncode,result.stdout,result.stderr)
+    packets = [json.loads(line) for line in result.stdout.splitlines()]
+    rows = [packet['value'] for packet in packets if packet['kind']=='row']
+    assert len(rows)==1 and rows[0]['value']=={'refund': None}, rows
+    assert packets[-1]['kind']=='terminal' and 'failure' not in packets[-1] and packets[-1]['facts']['requests_sent']==1, packets[-1]
+    assert len(server.requests)==12, len(server.requests)
+    print('CPP_INSTALLED_NULL_ANNOTATION_PASS present_null retained_document terminal_facts')
     baseline = len(server.requests)
     for mode in ('values','invalid','image','failure'):
         qpath = scratch / ('tag-question.json' if mode == 'image' else 'decide-question.json')
