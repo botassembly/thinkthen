@@ -25,6 +25,14 @@ class PandasResult(Result):
         return {**super().to_dict(), 'present': list(self.present),
                 'index': self.source.index.tolist(), 'name': self.source.name}
 
+    def _column(self, rows, positions=None):
+        import pandas as pd
+        index = self.source.index if positions is None else self.source.index.take(positions)
+        return pd.Series(rows, index=index, name=self.source.name, dtype=object)
+
+    def _selected(self):
+        return self.source.iloc[list(self.positions)].copy()
+
     @property
     def positions(self):
         return tuple(None if getattr(row, 'index', None) is None else self.present[row.index]
@@ -32,12 +40,10 @@ class PandasResult(Result):
 
     @property
     def value(self):
-        import pandas as pd
         if self.function == 'filter':
             if self.detailed:
-                return pd.Series(self.results, index=self.source.index.take(self.positions),
-                                 name=self.source.name, dtype=object)
-            return self.source.iloc[list(self.positions)].copy()
+                return self._column(self.results, self.positions)
+            return self._selected()
         value = super().value
         if self.function == 'rank' and not self.detailed:
             return [dict(row, index=self.present[row['index']]) for row in value]
@@ -50,15 +56,14 @@ class PandasResult(Result):
         rows = [None] * len(self.source)
         for at, item in zip(self.positions, value, strict=True):
             rows[at] = item
-        return pd.Series(rows, index=self.source.index, name=self.source.name, dtype=object)
+        return self._column(rows)
 
     @property
     def probability(self):
-        import pandas as pd
         values = super().probability
         if self.function in ('find', 'rank', 'relate'):
             return values
         rows = [None] * len(self.source)
         for at, value in zip(self.positions, values, strict=True):
             rows[at] = value
-        return pd.Series(rows, index=self.source.index, name=self.source.name, dtype=object)
+        return self._column(rows)

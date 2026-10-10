@@ -84,3 +84,9 @@ from thinkthen.pandas import ThinkThenAccessor
 from thinkthen._pandas_calls import PandasResult
 pandas_result: PandasResult = ThinkThenAccessor(None).decide("Late?")
 pandas_positions: tuple[int | None, ...] = pandas_result.positions
+
+from thinkthen.polars import ThinkThenNamespace
+from thinkthen._polars_calls import PolarsResult
+import polars as pl
+polars_result: PolarsResult = ThinkThenNamespace(pl.Series("body", ["note"])).decide("Late?")
+polars_positions: tuple[int | None, ...] = polars_result.positions

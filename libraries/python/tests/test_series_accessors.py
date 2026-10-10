@@ -8,52 +8,57 @@ from test_named_backends import configuration, isolated
 CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/cases.json"
 
 
-def test_pandas_named_and_async_calls_keep_owned_rows_and_original_positions(backend, tmp_path):
+@pytest.mark.parametrize("shape", ["pandas", "polars"])
+def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(backend, tmp_path, shape):
     printed = run('''
-        import asyncio, pickle, pandas as pd, thinkthen as tt, thinkthen.pandas
+        import asyncio, pickle, pandas as pd, polars as pl, thinkthen as tt, thinkthen.pandas, thinkthen.polars
+        shape = SHAPE
+        def series(values, name="body"):
+            return pd.Series(values, name=name, index=[9] * len(values), dtype=object) if shape == "pandas" else pl.Series(name, values, dtype=pl.Object)
+        def cell(value, at): return value.iloc[at] if shape == "pandas" else value[at]
         from thinkthen import complete as c
-        source = pd.Series(['first', pd.NA, 'second'], index=[9, 9, 2], name='body', dtype=object)
+        source = series(['first', None, 'second'])
         with tt.Engine(cache=False, batch=1) as engine:
             done = source.tt.decide('Late?', engine=engine)
             assert isinstance(done, tt.Result)
             assert done.positions == (0, 2)
             assert [row.index for row in done.results] == [0, 1]
-            assert done.value.index.tolist() == [9, 9, 2]
-            assert done.value.tolist() == [True, None, True]
-            assert done.probability.tolist() == [.9, None, .9]
+            if shape == "pandas": assert done.value.index.tolist() == [9, 9, 9]
+            assert done.value.to_list() == [True, None, True]
+            assert done.probability.to_list() == [.9, None, .9]
             assert done.facts.requests_sent == 2
-            assert pickle.loads(pickle.dumps(done)).value.equals(done.value)
+            assert pickle.loads(pickle.dumps(done)).value.to_list() == done.value.to_list()
             detailed = engine.decide('Late?', source, details=True)
-            assert detailed.value.iloc[0] is detailed.results[0]
-            assert detailed.value.iloc[1] is None
+            assert cell(detailed.value, 0) is detailed.results[0]
+            assert cell(detailed.value, 1) is None
             async_done = asyncio.run(engine.asyncio.decide('Late?', source))
-            assert async_done.value.equals(done.value)
+            assert async_done.value.to_list() == done.value.to_list()
             ranked = engine.rank('Late?', source)
             assert [row['index'] for row in ranked.value] == [0, 2]
             assert ranked.facts.requests_sent == 2
             kept = source.tt.filter('Late?', engine=engine)
-            assert kept.value.index.tolist() == [9, 2]
+            assert kept.value.to_list() == ["first", "second"]
             assert kept.positions == (0, 2)
-            explicit = pd.Series([c.Item(value=None), None], dtype=object)
+            explicit = series([c.Item(value=None), None])
             null = engine.decide('Late?', explicit)
             assert null.positions == (0,) and null.results[0].input is None
-            entities = pd.Series([('Ada', 'person'), None, ('Bo', 'person')], dtype=object)
+            entities = series([tt.Entity('Ada', 'person'), None, tt.Entity('Bo', 'person')])
             related = entities.tt.relate(engine=engine, relations={'knows': ('person', 'person')})
             assert related.facts.requests_sent == 1
             assert [(edge.source.name, edge.target.name) for edge in related.value] == [('Ada', 'Bo'), ('Bo', 'Ada')]
             failed_engine = tt.Engine(cache=False, max_retries=0, base_url=__import__('os').environ['THINKTHEN_BASE_URL'].replace('/generic/', '/arm/malformed/missing_answer/'))
-            failed = failed_engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, pd.Series(['note', None], dtype=object))
-            embedded = failed.value.iloc[0]['bad']
-            assert failed.value.iloc[1] is None and embedded.failed.kind == 'backend'
+            failed = failed_engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, series(['note', None]))
+            embedded = cell(failed.value, 0)['bad']
+            assert cell(failed.value, 1) is None and embedded.failed.kind == 'backend'
             assert embedded.failed.cause == 'missing_answer' and failed.facts.requests_sent == 1
             try: bool(embedded)
             except TypeError: pass
             else: raise AssertionError('pandas coerced an embedded failure')
             assert pickle.loads(pickle.dumps(embedded)) == embedded
         assert done.results[0].schema == 'thinkthen.result/2'
-        print('owned pandas rows')
-    ''', child_env(backend, tmp_path))
-    assert printed.strip() == 'owned pandas rows'
+        print('owned series rows')
+    '''.replace('SHAPE', repr(shape)), child_env(backend, tmp_path))
+    assert printed.strip() == 'owned series rows'
     assert backend.count() == 13
 
 
@@ -76,7 +81,7 @@ def test_priced_recognition_collection_uses_native_checked_cost(backend, tmp_pat
 def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(backend, tmp_path, shape):
     printed = run(f"""
         import json, pandas as pd, polars as pl, thinkthen as tt
-        import thinkthen.pandas
+        import thinkthen.pandas, thinkthen.polars
         shape = {shape!r}
         engine = tt.Engine(batch=1, cache=False)
         def series(values):
@@ -84,9 +89,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
                     if shape == "pandas" else pl.Series("body", values, strict=False))
         texts = series(["one note", None, "one note"])
         def call(verb, *args, **kw):
-            if shape == "pandas":
-                return getattr(texts.tt, verb)(*args, engine=engine, **kw)
-            return getattr(engine, verb)(*args, texts, **kw)
+            return getattr(texts.tt, verb)(*args, engine=engine, **kw)
         for verb, question, kw in [
                 ("decide", "Late?", {{}}),
                 ("choose", "Which?", {{"options": ["billing", "shipping"]}}),
@@ -99,7 +102,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
             assert result.value.name == "body"
             if shape == "pandas": assert result.value.index.to_list() == [9, 9, 2]
             assert result.facts["records"] == 2
-            assert (list(result.positions) if shape == "pandas" else [row["index"] for row in result.details]) == [0, 2]
+            assert list(result.positions) == [0, 2]
             print(verb, json.dumps(values))
         kept = call("filter", "Late?")
         print("filter", kept.value.to_list(), kept.value.name)
@@ -107,10 +110,10 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         ranked = call("rank", "Relevant?")
         print("rank", [(row["index"], row["record"], row["probability"]) for row in ranked.value])
         found = call("find", "Which?")
-        print("find", dict(found.value), [list(row.answer.probabilities.items()) if shape == "pandas" else list(row["probabilities"]) for row in found.details])
+        print("find", dict(found.value), [list(row.answer.probabilities.items()) for row in found.details])
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
         annotated = call("annotate", form)
-        print("annotate", (list(annotated.value.iloc[0]) if shape == "pandas" else list(annotated.value.columns)), annotated.facts["records"])
+        print("annotate", list(annotated.value.to_list()[0]), annotated.facts["records"])
         if shape == "pandas": assert annotated.value.index.to_list() == [9, 9, 2]
         recognized = (texts.tt.recognize(engine=engine, kinds=["note"]) if shape == "pandas"
                       else engine.recognize(texts, kinds=["note"]))
@@ -132,11 +135,11 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         "filter ['one note', 'one note'] body",
         "rank [(0, 'one note', 0.9), (2, 'one note', 0.9)]",
         "find {'index': 0, 'unit': 'one note', 'probability': 0.9} [[('u001', 0.9), ('u002', 0.1)]]",
-        ("annotate ['late'] 2" if shape == "pandas" else "annotate ['body', 'late', 'failed'] 2"),
+        "annotate ['late'] 2",
         "recognize [[('one note', 0, 8, 'note')], None, [('one note', 0, 8, 'note')]]",
         "relate [('knows', 'Ada', 'Bo'), ('knows', 'Bo', 'Ada')]",
     ]
-    assert backend.count() == (19 if shape == "pandas" else 20)
+    assert backend.count() == 19
 
 
 def test_series_filter_replay_retains_original_rows_and_sends_nothing(backend, tmp_path):
@@ -213,11 +216,15 @@ def test_series_recognition_keeps_saved_spans_and_relation_endpoints(backend, tm
     assert backend.count() == 6
 
 
-def test_empty_invalid_expired_and_cancelled_series_calls_send_nothing(backend, tmp_path):
+@pytest.mark.parametrize("shape", ["pandas", "polars"])
+def test_empty_invalid_expired_and_cancelled_series_calls_send_nothing(backend, tmp_path, shape):
     printed = run("""
-        import pandas as pd, thinkthen as tt, thinkthen.pandas
+        import pandas as pd, polars as pl, thinkthen as tt, thinkthen.pandas, thinkthen.polars
+        shape = SHAPE
+        def series(values):
+            return pd.Series(values, name="body", dtype=object) if shape == "pandas" else pl.Series("body", values, dtype=pl.Object)
         engine = tt.Engine(cache=False)
-        empty = pd.Series([None, None], name='body', index=[9,9], dtype=object)
+        empty = series([None, None])
         for verb in ('decide', 'choose', 'score', 'tag', 'filter', 'rank', 'annotate', 'recognize'):
             kw = {'engine': engine}
             args = ['Late?']
@@ -228,16 +235,16 @@ def test_empty_invalid_expired_and_cancelled_series_calls_send_nothing(backend, 
             if verb == 'recognize': args = []
             call = getattr(empty.tt, verb)(*args, **kw)
             assert call.facts['records'] == call.facts['requests_sent'] == 0
-        source = pd.Series(['a', 'b'], name='body')
+        source = series(['a', 'b'])
         token = tt.CancelToken(); token.cancel()
         for verb, kw in [('filter', {'deadline_ms':0}), ('rank', {'token':token}),
                          ('find', {'deadline_ms':0})]:
             try: getattr(source.tt, verb)('Which?', engine=engine, **kw)
             except (tt.DeadlineError, tt.Cancelled) as error: print(verb, error.kind)
             else: raise AssertionError('control was ignored')
-        try: pd.Series(['a', 1], dtype=object).tt.rank('Which?', engine=engine)
+        try: series(['a', 1]).tt.rank('Which?', engine=engine)
         except tt.UsageError as error: print(error.kind)
         else: raise AssertionError('bad evidence was accepted')
-    """, child_env(backend, tmp_path))
+    """.replace("SHAPE", repr(shape)), child_env(backend, tmp_path))
     assert printed.splitlines() == ['filter deadline', 'rank cancelled', 'find deadline', 'usage']
     assert backend.count() == 0

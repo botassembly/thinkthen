@@ -198,11 +198,15 @@ def _cancelled():
 class Operation:
     """A bounded producer and one nonblocking native session."""
     def __init__(self, engine, verb, question, value, controls):
-        from . import _pandas
-        from ._pandas_calls import records
-        self.frame = value.copy() if _pandas(value) == 'Series' else None
+        from . import _pandas, _frames
+        self.surface = 'pandas' if _pandas(value) == 'Series' else 'python-polars' if _frames.is_series(value) else None
+        self.frame = (value.copy() if self.surface == 'pandas' else value.clone()) if self.surface else None
         self.present = ()
         if self.frame is not None:
+            if self.surface == 'pandas':
+                from ._pandas_calls import records
+            else:
+                from ._polars_calls import records
             value, self.present = records(self.frame, verb)
         fields = dict(controls)
         self.details = fields.pop('details', False)
@@ -217,7 +221,7 @@ class Operation:
             self._close_producer()
             raise _cancelled()
         try:
-            self.session = engine._engine._request_session(_dump(request), 'pandas' if self.frame is not None else None)
+            self.session = engine._engine._request_session(_dump(request), self.surface)
         except native.ThinkThenError as error:
             self._close_producer()
             if hasattr(error, 'native_complete'):
@@ -299,8 +303,11 @@ class Operation:
 
     def result(self):
         if self.frame is not None:
-            from ._pandas_calls import PandasResult
-            return PandasResult(tuple(self.results), self.terminal, self.verb, self.scalar,
+            if self.surface == 'pandas':
+                from ._pandas_calls import PandasResult as ColumnResult
+            else:
+                from ._polars_calls import PolarsResult as ColumnResult
+            return ColumnResult(tuple(self.results), self.terminal, self.verb, self.scalar,
                                 self.details, self.frame, self.present)
         return Result(tuple(self.results), self.terminal, self.verb, self.scalar, self.details)
 
