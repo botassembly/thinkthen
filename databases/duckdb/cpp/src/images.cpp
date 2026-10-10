@@ -1,4 +1,5 @@
 #include "images.hpp"
+#include "json_result.hpp"
 #include "bridge.hpp"
 #include "files_manifest.hpp"
 #include "portable.hpp"
@@ -90,7 +91,7 @@ struct Json {
 	~Json() { duckdb_yyjson::yyjson_doc_free(doc); }
 };
 Value Answer(const ThinkThenReply &reply, int32_t kind) {
-	if (kind == 2) { return Value(ReplyText(reply)); }
+	if (kind == 2) { return ThinkThenJSON(ReplyText(reply)); }
 	Json json(reply);
 	auto value = duckdb_yyjson::yyjson_obj_get(duckdb_yyjson::yyjson_doc_get_root(json.doc), "value");
 	if (!value) { throw OrdinaryError("thinkthen defect: image details omitted value"); }
@@ -170,7 +171,7 @@ void RegisterImages(ExtensionLoader &loader) {
 	for (auto verb : {"decide", "choose", "score", "details"}) {
 		const string name = string("thinkthen_native_") + verb + "_images";
 		Register(loader, name, {LogicalType::VARCHAR, LogicalType::LIST(ImageType()), LogicalType::VARCHAR, LogicalType::VARCHAR},
-		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : LogicalType::VARCHAR, Judge, true);
+		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : string(verb) == "details" ? LogicalType::JSON() : LogicalType::VARCHAR, Judge, true);
 		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL) AS " + name + "(question, images, text, settings)");
 	}
 }

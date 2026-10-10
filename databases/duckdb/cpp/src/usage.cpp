@@ -1,4 +1,5 @@
 #include "usage.hpp"
+#include "json_result.hpp"
 #include "bridge.hpp"
 #include "duckdb/function/table_function.hpp"
 
@@ -16,7 +17,7 @@ void UsageStatus(DataChunk &input, ExpressionState &, Vector &output) {
 	for (idx_t row = 0; row < input.size(); ++row) {
 		RustReply reply(thinkthen_cpp_usage_status());
 		Checked(reply.value);
-		output.SetValue(row, Value(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
+		output.SetValue(row, ThinkThenJSON(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
 	}
 }
 
@@ -57,7 +58,7 @@ void ScanUsage(ClientContext &, TableFunctionInput &input, DataChunk &output) {
 void RegisterUsage(ExtensionLoader &loader) {
 	TableFunction function("thinkthen_usage", {}, ScanUsage, BindUsage, InitUsage);
 	loader.RegisterFunction(function);
-	ScalarFunction status("thinkthen_usage_status", {}, LogicalType::VARCHAR, UsageStatus);
+	ScalarFunction status("thinkthen_usage_status", {}, LogicalType::JSON(), UsageStatus);
 	status.SetStability(FunctionStability::VOLATILE);
 	loader.RegisterFunction(status);
 }

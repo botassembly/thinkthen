@@ -14,13 +14,14 @@ P1 = "thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}', '{}')
 def p1_native_struct_is_keyless_and_sends_nothing():
     expect(len(BODY.encode()), 182, "independent P1 byte count")
     with Backend() as backend:
-        got = run([f"SELECT {P1}", f"SELECT typeof({P1})"], backend.base(), keyless=True)
+        got = run([f"SELECT {P1}", f"SELECT typeof({P1}), typeof(({P1}).first_body), json_type(({P1}).first_body)"], backend.base(), keyless=True)
         expect(rows(got[0]), [[{
             "records": 1, "requests": 1, "estimated_bytes": 182,
             "estimated_input_tokens": {"lower": 93, "upper": 166},
             "upper_bound": False, "first_body": BODY,
         }]], "P1 native value and independent request literal")
         expect("STRUCT" in rows(got[1])[0][0], True, "native SQL type")
+        expect(rows(got[1])[0][1:], ["JSON", "OBJECT"], "native plan body JSON operations")
         expect(backend.count(), 0, "keyless plan accepts no request")
 
 

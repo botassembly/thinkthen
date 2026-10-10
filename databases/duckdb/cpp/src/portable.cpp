@@ -1,4 +1,5 @@
 #include "portable.hpp"
+#include "json_result.hpp"
 #include "bridge.hpp"
 #include "listed_result.hpp"
 #include "scalar_owner.hpp"
@@ -162,7 +163,7 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!calls[row]) {
-			result.SetValue(row, Value(LogicalType::VARCHAR));
+			result.SetValue(row, Value(LogicalType::JSON()));
 			continue;
 		}
 		auto &call = *calls[row];
@@ -173,7 +174,7 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 		    reinterpret_cast<const uint8_t *>(call.settings.data()), call.settings.size(), call.kind,
 		    owner->Remaining(*context), session.Bridge(), StopFor(*context)));
 		Checked(reply.value);
-		result.SetValue(row, Value(ReplyText(reply.value)));
+		result.SetValue(row, ThinkThenJSON(ReplyText(reply.value)));
 	}
 }
 
@@ -345,7 +346,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 			std::memcpy(&length, reply.value.bytes + at, sizeof(length));
 			at += sizeof(length);
 			if (reply.value.len - at < length) { throw OrdinaryError("thinkthen defect: truncated details"); }
-			values.push_back(Value(string(reinterpret_cast<const char *>(reply.value.bytes + at), length)));
+			values.push_back(ThinkThenJSON(string(reinterpret_cast<const char *>(reply.value.bytes + at), length)));
 			at += length;
 		}
 		if (at != reply.value.len) { throw OrdinaryError("thinkthen defect: extra scalar bytes"); }
@@ -356,7 +357,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 			auto [group, text] = *slots[row];
 			result.SetValue(row, answers.at(group).at(text));
 		} else {
-			result.SetValue(row, Value(LogicalType::VARCHAR));
+			result.SetValue(row, Value(LogicalType::JSON()));
 		}
 	}
 }
@@ -391,7 +392,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	                      "CAST(threshold AS VARCHAR), typeof(settings))");
 	ScalarFunction many("thinkthen_native_many",
 	                    {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::INTEGER},
-	                    LogicalType::VARCHAR, Many, Bind);
+	                    LogicalType::JSON(), Many, Bind);
 	many.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	many.SetStability(FunctionStability::VOLATILE);
 	loader.RegisterFunction(many);
@@ -437,14 +438,14 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability, "
 	                      "json_extract_string(item.value, '$.question_name') AS question_name, "
-	                      "CAST(json_extract(item.value, '$.facts') AS VARCHAR) AS facts "
+	                      "json_extract(item.value, '$.facts') AS facts "
 	                      "FROM json_each(thinkthen_native_many(questions, keyed_json, settings, 9)) item ORDER BY rank");
 	for (auto kind : {2, 3, 7}) {
 		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
 		ScalarFunction native("thinkthen_native_" + name,
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::INTEGER, LogicalType::VARCHAR},
-		                      LogicalType::VARCHAR, Scalar, Bind);
+		                      LogicalType::JSON(), Scalar, Bind);
 		native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 		native.SetStability(FunctionStability::VOLATILE);
 		loader.RegisterFunction(native);

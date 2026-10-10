@@ -1,4 +1,5 @@
 #include "portable.hpp"
+#include "json_result.hpp"
 #include "bridge.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
@@ -19,7 +20,7 @@ LogicalType PlanType() {
 	                            {"estimated_bytes", LogicalType::BIGINT},
 	                            {"estimated_input_tokens", LogicalType::STRUCT({{"lower", LogicalType::BIGINT},
 	                                                                             {"upper", LogicalType::BIGINT}})},
-	                            {"upper_bound", LogicalType::BOOLEAN}, {"first_body", LogicalType::VARCHAR}});
+	                            {"upper_bound", LogicalType::BOOLEAN}, {"first_body", LogicalType::JSON()}});
 }
 
 struct PlanBind : FunctionData {
@@ -65,8 +66,8 @@ Value Decode(const ThinkThenReply &reply) {
 	    size_t(counts[5]) != reply.len - header) {
 		throw OrdinaryError("thinkthen defect: the bridge returned an invalid plan shape");
 	}
-	const auto body = present ? Value(string(reinterpret_cast<const char *>(reply.bytes + header), size_t(counts[5])))
-	                          : Value(LogicalType::VARCHAR);
+	const auto body = present ? ThinkThenJSON(string(reinterpret_cast<const char *>(reply.bytes + header), size_t(counts[5])))
+	                          : Value(LogicalType::JSON());
 	return Value::STRUCT({{"records", Value::BIGINT(counts[0])}, {"requests", Value::BIGINT(counts[1])},
 	                      {"estimated_bytes", Value::BIGINT(counts[2])},
 	                      {"estimated_input_tokens", Value::STRUCT({{"lower", Value::BIGINT(counts[3])},

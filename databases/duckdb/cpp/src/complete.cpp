@@ -1,4 +1,5 @@
 #include "bridge.hpp"
+#include "json_result.hpp"
 #include "images.hpp"
 #include "complete_files.hpp"
 #include "files_manifest.hpp"
@@ -53,9 +54,9 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
     std::optional<SessionSettings> session;
     for (idx_t row = 0; row < args.size(); ++row) {
         auto question = args.data[0].GetValue(row);
-        if (question.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
+        if (question.IsNull()) { result.SetValue(row, Value(LogicalType::JSON())); continue; }
         auto inputs = args.data[1].GetValue(row);
-        if (inputs.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
+        if (inputs.IsNull()) { result.SetValue(row, Value(LogicalType::JSON())); continue; }
         if (!session) { session.emplace(Settings(*context)); }
         auto settings = args.data[2].GetValue(row);
         const bool binary = inputs.type().id() == LogicalTypeId::LIST;
@@ -65,14 +66,14 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
         string content = source;
         if (!source.empty() && source[0]=='@') {
             RustReply resolved(thinkthen_cpp_complete_question_resolve(View(source), &selection.value));
-            if (resolved.value.status!=0) { result.SetValue(row, Value(FailureEnvelope(ReplyText(resolved.value)))); continue; }
+            if (resolved.value.status!=0) { result.SetValue(row, ThinkThenJSON(FailureEnvelope(ReplyText(resolved.value)))); continue; }
             const auto path = ReplyText(resolved.value);
             AuthorizeLocalSource(FileSystem::GetFileSystem(*context), path);
             content = ReadQuestion(*context, path, "question", true);
         }
         string file_result;
         if (!binary && CompleteFileCall(*context,verb,content,input,controls,selection.value,owner->Remaining(*context),session->Bridge(),file_result)) {
-            result.SetValue(row,Value(file_result)); continue;
+            result.SetValue(row,ThinkThenJSON(file_result)); continue;
         }
         auto images = binary ? ImageMembers(inputs) : vector<std::pair<string, string>>();
         auto views = ImageViews(images);
@@ -80,10 +81,10 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
             ? thinkthen_cpp_complete_images(View(content), views.data(), views.size(), View(controls), selection.value, owner->Remaining(*context), session->Bridge(), StopFor(*context))
             : thinkthen_cpp_complete(View(verb), View(content), View(input), View(controls), selection.value, owner->Remaining(*context), session->Bridge(), StopFor(*context)));
         Checked(reply.value);
-        result.SetValue(row, Value(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
+        result.SetValue(row, ThinkThenJSON(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
         } catch (const Exception &error) {
             if (ErrorData(error).Type()==ExceptionType::INTERRUPT || QueryInterrupted(*context)) { throw; }
-            result.SetValue(row,Value(FailureEnvelope(CompleteAdmissionError(error))));
+            result.SetValue(row,ThinkThenJSON(FailureEnvelope(CompleteAdmissionError(error))));
         }
     }
 }
@@ -91,7 +92,7 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
 void RegisterComplete(ExtensionLoader &loader) {
     for (auto verb : {"decide","choose","tag","score","filter","rank","find","annotate","recognize","relate"}) {
         const auto name = string("thinkthen_native_") + verb + "_complete";
-        ScalarFunction function(name,{LogicalType::VARCHAR,LogicalType::VARCHAR,LogicalType::VARCHAR},LogicalType::VARCHAR,Complete,BindComplete);
+        ScalarFunction function(name,{LogicalType::VARCHAR,LogicalType::VARCHAR,LogicalType::VARCHAR},LogicalType::JSON(),Complete,BindComplete);
         function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
         function.SetStability(FunctionStability::VOLATILE);
         loader.RegisterFunction(function);
