@@ -1,6 +1,6 @@
 # 0513: Generate each language's typed results from the Rust result types
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -43,6 +43,8 @@ Reviews: revision 3fc130cfe891200d18c3a29608bda5c74667ba92, accept
 Reviews: revision e585a5b3a042afc4aca3637938dbe5c885630a57, accept
 
 Reviews: revision 837ce39227a0c1781153acf0d05db7991f190044, accept
+
+Landed: e6f63c6
 
 ## Outcome
 
