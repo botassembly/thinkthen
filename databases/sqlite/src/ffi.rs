@@ -165,6 +165,7 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
     if let Some(check) = unsafe { table.as_ref() }.and_then(|table| table.is_interrupted) {
         IS_INTERRUPTED.store(check as *mut (), Ordering::Release);
     }
+    let connection = crate::catalog::Catalog::new(&connection);
     scalars::register(&connection, mode)?;
     files::register(&connection)?;
     budget::register(&connection)?;
@@ -172,26 +173,63 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         store: Arc::new(Mutex::new(Store::default())),
         mode,
     });
-    connection.create_module(c"thinkthen_recognize", &RECOGNIZE, Some(Arc::clone(&store)))?;
-    connection.create_module(c"thinkthen_relate", &RELATE, Some(Arc::clone(&store)))?;
+    connection.create_module(
+        c"thinkthen_recognize",
+        &RECOGNIZE,
+        Some(Arc::clone(&store)),
+        Recognizer::ARGUMENTS,
+        "Find named entities in text and return their kinds and locations.",
+    )?;
+    connection.create_module(
+        c"thinkthen_relate",
+        &RELATE,
+        Some(Arc::clone(&store)),
+        Relater::ARGUMENTS,
+        "Find relations between the supplied entities and return relation rows.",
+    )?;
     connection.create_module(
         c"thinkthen_decide_many",
         &DECIDE_MANY,
         Some(Arc::clone(&store)),
+        DecideMany::ARGUMENTS,
+        "Judge keyed records with a yes or no question.",
     )?;
     connection.create_module(
         c"thinkthen_choose_many",
         &CHOOSE_MANY,
         Some(Arc::clone(&store)),
+        ChooseMany::ARGUMENTS,
+        "Choose an option for each keyed record.",
     )?;
     connection.create_module(
         c"thinkthen_score_many",
         &SCORE_MANY,
         Some(Arc::clone(&store)),
+        ScoreMany::ARGUMENTS,
+        "Score each keyed record on named levels.",
     )?;
-    connection.create_module(c"thinkthen_tag_many", &TAG_MANY, Some(Arc::clone(&store)))?;
-    connection.create_module(c"thinkthen_rank", &RANK, Some(Arc::clone(&store)))?;
-    connection.create_module(c"thinkthen_rank_set", &RANK_SET, Some(store))?;
+    connection.create_module(
+        c"thinkthen_tag_many",
+        &TAG_MANY,
+        Some(Arc::clone(&store)),
+        TagMany::ARGUMENTS,
+        "Return applicable labels for each keyed record.",
+    )?;
+    connection.create_module(
+        c"thinkthen_rank",
+        &RANK,
+        Some(Arc::clone(&store)),
+        Rank::ARGUMENTS,
+        "Rank keyed records by their judgments.",
+    )?;
+    connection.create_module(
+        c"thinkthen_rank_set",
+        &RANK_SET,
+        Some(store),
+        RankSetTable::ARGUMENTS,
+        "Rank keyed records across an ordered question set.",
+    )?;
+    connection.finish()?;
     pin();
     Ok(false)
 }

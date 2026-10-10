@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::ffi::{CStr, c_int};
 
-use rusqlite::Connection;
+use crate::catalog::Catalog;
 use rusqlite::ffi;
 use rusqlite::types::Value;
 use rusqlite::vtab::{
@@ -14,9 +14,15 @@ use thinkthen::SourceRecords;
 
 use crate::{Failure, files, guard};
 
-pub(super) fn register(connection: &Connection) -> rusqlite::Result<()> {
+pub(super) fn register(connection: &Catalog<'_>) -> rusqlite::Result<()> {
     const MODULE: Module<'static, ReaderTable> = Module::eponymous_only_module();
-    connection.create_module(c"thinkthen_read_files", &MODULE, None::<()>)?;
+    connection.create_module(
+        c"thinkthen_read_files",
+        &MODULE,
+        None::<()>,
+        (1, 2),
+        "Read explicitly named files as located records with optional reader settings.",
+    )?;
     files::register_span(connection)
 }
 

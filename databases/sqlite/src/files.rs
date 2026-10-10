@@ -1,6 +1,6 @@
 //! Explicit caller-filesystem selection and native physical span mapping.
 
-use rusqlite::Connection;
+use crate::catalog::Catalog;
 use rusqlite::functions::FunctionFlags;
 use rusqlite::types::{Value, ValueRef};
 use thinkthen::{ReaderOptions, SourceRecord, SourceRecords, read_files};
@@ -85,11 +85,12 @@ fn span(context: &rusqlite::functions::Context<'_>) -> Result<String, Failure> {
     )
 }
 
-pub(crate) fn register_span(connection: &Connection) -> rusqlite::Result<()> {
+pub(crate) fn register_span(connection: &Catalog<'_>) -> rusqlite::Result<()> {
     connection.create_scalar_function(
         "thinkthen_span_lines",
         4,
         FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY,
+        "Return the lines covered by a located text span.",
         |context| Ok(guard("thinkthen_span_lines", || span(context))?),
     )
 }

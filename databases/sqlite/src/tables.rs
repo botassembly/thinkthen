@@ -35,6 +35,8 @@ pub(crate) trait Table {
     const COLUMNS: usize;
     /// How many leading arguments must be bound.
     const REQUIRED: usize;
+    /// The admitted argument range, derived from the required and hidden columns.
+    const ARGUMENTS: (usize, usize) = (Self::REQUIRED, Self::COLUMNS - Self::FIRST_HIDDEN);
     /// The answer rows, one value per visible column.
     fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure>;
     /// The default scan copies only the few scalar hidden arguments.

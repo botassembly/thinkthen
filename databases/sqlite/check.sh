@@ -81,7 +81,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	export THINKTHEN_SQLITE_EXTENSION
 	# Ticket 0374: the shipped library keeps its own panic hook.
 	own_panic_hook "$THINKTHEN_SQLITE_EXTENSION"
-	for test in tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py; do
+	for test in tests/test_functions.py tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py; do
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
