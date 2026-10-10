@@ -52,6 +52,61 @@ class TestOwnedSession < Minitest::Test
     end
   end
 
+  def test_saved_question_selectors_keep_native_lookup_and_literal_strings
+    TestBackend.with(<<~RUBY) do |backend, child|
+      require "fileutils"
+      directory = File.join(ENV.fetch("XDG_CONFIG_HOME"), "thinkthen", "questions")
+      FileUtils.mkdir_p(directory)
+      File.write(File.join(directory, "refund.json"), JSON.generate(name: "refund", decide: "Saved wording?"))
+      Dir.chdir(ENV.fetch("HOME")) do
+        path = "@literal.json"
+        File.write(path, JSON.generate(decide: "File wording?"))
+        File.write("refund", JSON.generate(decide: "Local wording?"))
+        selectors = [T::Client.question_file(path), T::Client.question_name("refund"), T::Client.question_reference("@refund")]
+        say selectors.map { |selector| JSON.parse(T::Client.dump(selector.selector)) }
+        raise "selector leak" unless selectors.all? { |selector| selector.inspect == "<ThinkThen::Client::Question: content withheld>" }
+        T::Client.open(cache: false) do |client|
+          results = selectors.map { |selector| client.decide(selector, "text") }
+          File.unlink("refund")
+          results << client.decide(T::Client.question_reference("@refund"), "text")
+          results << client.decide("@refund", "text")
+          say results.map { |result| result.results.first.question.text }
+          say results.map { |result| result.facts.requests_sent }
+        end
+      end
+    RUBY
+      assert_equal [{"kind" => "file", "path" => "@literal.json"}, {"kind" => "name", "name" => "refund"}, {"kind" => "reference", "reference" => "@refund"}], child.hear
+      assert_equal ["File wording?", "Saved wording?", "Local wording?", "Saved wording?", "@refund"], child.hear
+      assert_equal [1, 1, 1, 1, 1], child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 5, backend.count
+    end
+  end
+
+  def test_saved_question_refusals_send_nothing
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        errors = [T::Client.question_name("../invalid"), T::Client.question_reference("refund"), T::Client.question_name("missing"), T::Client.question_reference("@missing")].map do |selector|
+          begin
+            client.decide(selector, "text")
+            raise "selector accepted"
+          rescue T::Error => error
+            [error.kind, error.facts]
+          end
+        end
+        say errors
+        say client.usage[:requests_sent]
+      end
+    RUBY
+      assert_equal [["usage", nil], ["usage", nil], ["local", nil], ["local", nil]], child.hear
+      assert_equal 0, child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 0, backend.count
+    end
+  end
+
   def test_false_null_and_physical_positions_survive_native_ownership
     TestBackend.with(<<~RUBY) do |backend, child|
       retained = T::Client.open(cache: false) do |client|
