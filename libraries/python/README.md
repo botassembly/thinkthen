@@ -6,9 +6,9 @@ Python uses one `Engine` with ten named functions. Rust owns admission, reading,
 import thinkthen as tt
 
 with tt.Engine(cache=False) as engine:
-    answer = engine.decide("Does this ask for a refund?", "Please refund the charge.")
-    print(answer.value, answer.probability)
-    print(answer.results[0].answer_id, answer.facts.requests_sent)
+    refund = engine.decide("Does this ask for a refund?", "Please refund the charge.")
+    print(refund.value, refund.probability)
+    print(refund.results[0].answer_id, refund.facts.requests_sent)
 ```
 
 `decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find` and `annotate` take a question followed by their input. `recognize` and `relate` take their input first and an optional authored question second. Pass `options`, `levels` or `labels` beside question text, or pass an authored question dictionary, a path object or `QuestionSource(name="name")`. Plain strings remain question text for atomic calls. Enum, Literal and the optional Pydantic authoring forms convert to the same native declaration.
@@ -34,7 +34,7 @@ Pandas and Python Polars Series namespaces are opt-in:
 ```python
 import thinkthen.pandas
 # Equivalent Polars registration: import thinkthen.polars
-answer = series.tt.decide("Does this ask for a refund?", engine=engine)
+refund = series.tt.decide("Does this ask for a refund?", engine=engine)
 ```
 
 All ten namespace methods retain original row positions and null masks. Filter returns selected original rows. Rank, find and relate issue one whole-set call. `on=` selects DataFrame input columns for the ordinary engine methods; annotation adds named typed columns and failures, while recognition preserves its documented dataframe presentation. Async calls share this conversion. The package imports neither dataframe library by default. Pydantic support is available through `thinkthen[pydantic]`.
