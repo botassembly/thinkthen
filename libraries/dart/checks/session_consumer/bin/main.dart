@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:thinkthen_dart/thinkthen_session.dart';
+import 'stream_cases.dart';
 
 void check(bool value, String message) {
   if (!value) throw StateError(message);
@@ -11,6 +12,7 @@ Future<void> main(List<String> args) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   var sends = 0;
   final arrived = Completer<void>(), release = Completer<void>();
+  final prefixAnswered = Completer<void>();
   final serving = server.listen((request) async {
     sends++;
     check(request.headers.value('user-agent') == 'thinkthen/0.2.0 (dart)',
@@ -49,6 +51,7 @@ Future<void> main(List<String> args) async {
       'usage': {'input_tokens': 1, 'output_tokens': 1}
     }));
     await request.response.close();
+    if (jsonEncode(body).contains('reader-prefix')) prefixAnswered.complete();
   });
   final engine = Engine.open(
       settings: InputEngineSettings(
@@ -62,6 +65,12 @@ Future<void> main(List<String> args) async {
   final text = InputRequestInputText(text: 'owned');
   final question = InputRequestQuestionText(text: 'Is it?');
   try {
+    if (args.contains('stream-regressions') ||
+        args.contains('cancel-regression')) {
+      await streamCases(engine, arrived.future, release, prefixAnswered.future,
+          cancelOnly: args.contains('cancel-regression'));
+      return;
+    }
     if (args.contains('usage-disabled')) {
       final status = engine.finishUsageStatus();
       check(

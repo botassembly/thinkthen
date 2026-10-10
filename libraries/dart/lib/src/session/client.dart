@@ -64,8 +64,23 @@ final class OwnedSession implements Finalizable {
     _owner.close();
   }
 
-  void finish() => checkSession(
-      _abi, _abi.thinkthen_session_finish(_owner.live, nullptr, 0));
+  void finish({InputRequestReaderFailure? failure}) {
+    if (failure == null) {
+      checkSession(
+        _abi,
+        _abi.thinkthen_session_finish(_owner.live, nullptr, 0),
+      );
+    } else {
+      withBytes(
+        failure,
+        (bytes, length) => checkSession(
+          _abi,
+          _abi.thinkthen_session_finish(_owner.live, bytes, length),
+        ),
+      );
+    }
+  }
+
   Future<bool> push(InputRequestSessionDescriptor descriptor) async {
     if (_pushing) throw StateError('A session allows one producer');
     _pushing = true;
@@ -175,6 +190,7 @@ final class Engine implements Finalizable {
     return Engine._(abi, pointer);
   }
   void close() => _owner.close();
+
   /// Observe without waiting for the usage writer.
   UsagePersistenceStatus usagePersistence() => _usageStatus(false);
 
@@ -232,20 +248,44 @@ final class Engine implements Finalizable {
   }
 
   Future<OwnedCall> _call(
-      String function,
-      InputRequestQuestion question,
-      InputRequestInput input,
-      InputRequestOptions? options,
-      Cancellation? cancellation,
-      Stream<InputRequestSessionDescriptor>? feed) async {
+    String function,
+    InputRequestQuestion question,
+    InputRequestInput input,
+    InputRequestOptions? options,
+    Cancellation? cancellation,
+    Stream<InputRequestSessionDescriptor>? feed,
+  ) async {
     cancellation?._check();
     final session = startSession(question, input, function, options: options);
     StreamSubscription<InputRequestSessionDescriptor>? subscription;
     Object? readerFailure;
-    var failed = false;
+    var failed = false, readerFinished = false;
     void stop() {
       session.cancel();
       session.close();
+    }
+
+    void failReader(Object error) {
+      if (readerFinished || cancellation?.cancelled == true) return;
+      readerFinished = true;
+      final failure = error is InputRequestReaderFailure
+          ? error
+          : error is IOException
+              ? InputRequestReaderFailureIo()
+              : error is FormatException
+                  ? InputRequestReaderFailureInvalidInput()
+                  : null;
+      if (failure != null) {
+        try {
+          session.finish(failure: failure);
+        } catch (error) {
+          readerFailure = error;
+          session.close();
+        }
+      } else {
+        readerFailure = error;
+        session.close();
+      }
     }
 
     cancellation?._callbacks.add(stop);
@@ -253,23 +293,35 @@ final class Engine implements Finalizable {
       if (feed == null) {
         session.finish();
       } else {
-        subscription = feed.listen((descriptor) async {
-          subscription!.pause();
-          try {
-            if (!await session.push(descriptor))
-              await subscription?.cancel();
-            else
-              subscription?.resume();
-          } catch (error) {
-            readerFailure = error;
-            session.close();
-          }
-        }, onDone: () {
-          if (session._owner.pointer != nullptr) session.finish();
-        }, onError: (Object error) {
-          readerFailure = error;
-          session.close();
-        });
+        subscription = feed.listen(
+          (descriptor) async {
+            if (readerFinished || cancellation?.cancelled == true ||
+                session._owner.pointer == nullptr) return;
+            subscription!.pause();
+            try {
+              if (!await session.push(descriptor))
+                await subscription?.cancel();
+              else if (!readerFinished && cancellation?.cancelled != true &&
+                  session._owner.pointer != nullptr)
+                subscription?.resume();
+            } catch (error) {
+              failReader(error);
+            }
+          },
+          onDone: () {
+            if (!readerFinished && session._owner.pointer != nullptr) {
+              try {
+                session.finish();
+                readerFinished = true;
+              } catch (error) {
+                failReader(error);
+              }
+            }
+          },
+          onError: (Object error) {
+            failReader(error);
+          },
+        );
       }
       final packets = <SessionPacket>[];
       SessionPacketTerminal? terminal;
@@ -282,8 +334,10 @@ final class Engine implements Finalizable {
       }
       if (readerFailure != null) throw readerFailure!;
       cancellation?._check();
-      final call = OwnedCall(packets,
-          terminal ?? (throw StateError('Native End has no terminal')));
+      final call = OwnedCall(
+        packets,
+        terminal ?? (throw StateError('Native End has no terminal')),
+      );
       if (call.terminal.failure.value case final CallError error)
         throw SessionFailure(error, call);
       return call;
@@ -294,12 +348,19 @@ final class Engine implements Finalizable {
       rethrow;
     } finally {
       cancellation?._callbacks.remove(stop);
-      try {
-        await subscription?.cancel();
-      } catch (error) {
-        if (!failed) throw StreamCleanupFailure(error);
-      } finally {
-        session.close();
+      session.close();
+      if (cancellation?.cancelled == true) {
+        // Host cleanup cannot delay cancellation or retain native ownership.
+        try {
+          final cleanup = subscription?.cancel();
+          if (cleanup != null) unawaited(cleanup.catchError((Object _) {}));
+        } catch (_) {}
+      } else {
+        try {
+          await subscription?.cancel();
+        } catch (error) {
+          if (!failed) throw StreamCleanupFailure(error);
+        }
       }
     }
   }

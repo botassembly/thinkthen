@@ -4,7 +4,7 @@ import re
 
 ROOTS = ('completesessionPacket',)
 PREFIX = ''
-INPUT_ROOTS = ('RequestQuestion', 'RequestInput', 'RequestOptions', 'RequestSessionDescriptor', 'EngineSettings')
+INPUT_ROOTS = ('RequestQuestion', 'RequestInput', 'RequestOptions', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')
 
 
 def name(key):
