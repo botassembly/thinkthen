@@ -10,15 +10,12 @@ use crate::forms::{self, Named};
 
 const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
 
-fn indexed(array: Array<'_, &str>, none: bool) -> Result<Vec<String>, Error> {
+fn indexed(array: Array<'_, &str>) -> Result<Vec<String>, Error> {
     let mut bytes = 0_usize;
-    let units = array
+    array
         .iter()
         .map(|member| {
             let text = member.ok_or_else(|| call::usage("a find unit is text, not NULL"))?;
-            if text.trim().is_empty() {
-                return Err(call::usage("a find unit is text, not white space"));
-            }
             bytes = bytes
                 .checked_add(text.len())
                 .ok_or_else(|| call::usage("find units exceed 16 MiB of text"))?;
@@ -27,19 +24,7 @@ fn indexed(array: Array<'_, &str>, none: bool) -> Result<Vec<String>, Error> {
             }
             Ok(text.to_owned())
         })
-        .collect::<Result<Vec<_>, _>>()?;
-    if units.is_empty() {
-        return Ok(units);
-    }
-    let most = if none { 254 } else { 255 };
-    if !(2..=most).contains(&units.len()) {
-        return Err(call::usage(if none {
-            "a find question offering none takes 2 to 254 units"
-        } else {
-            "find takes 2 to 255 units"
-        }));
-    }
-    Ok(units)
+        .collect()
 }
 
 fn found(
@@ -65,7 +50,7 @@ fn found(
             call = call.with_model(model);
         }
     }
-    let units = indexed(units, none).or_raise();
+    let units = indexed(units).or_raise();
     if units.is_empty() {
         return None;
     }

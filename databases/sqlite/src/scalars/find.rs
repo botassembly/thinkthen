@@ -22,9 +22,6 @@ fn units(argument: &str) -> Result<Vec<String>, Failure> {
             let text = value.as_str().ok_or_else(|| {
                 Failure::usage("each find unit is text, not NULL or another type")
             })?;
-            if text.trim().is_empty() {
-                return Err(Failure::usage("a find unit is text, not white space"));
-            }
             bytes = bytes
                 .checked_add(text.len())
                 .ok_or_else(|| Failure::usage("find units exceed 16 MiB of text"))?;
@@ -64,14 +61,6 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         let units = units(&source)?;
         if units.is_empty() {
             return Ok(None);
-        }
-        let most = if none { 254 } else { 255 };
-        if !(2..=most).contains(&units.len()) {
-            return Err(Failure::usage(if none {
-                "a find question offering none takes 2 to 254 units"
-            } else {
-                "find takes 2 to 255 units"
-            }));
         }
         let question = Question::find(&argument)?;
         let question = match settings.model() {

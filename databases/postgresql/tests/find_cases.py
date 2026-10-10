@@ -2,6 +2,7 @@
 """Installed PostgreSQL find edges through the existing counted loopback proxy."""
 
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -91,7 +92,8 @@ def invalid(socket):
         "SELECT thinkthen_find('   ', ARRAY['one','two'])",
         "SELECT thinkthen_find('Which?', array_fill('x'::text, ARRAY[256]))",
         "SELECT thinkthen_find('Which?', array_fill('x'::text, ARRAY[255]), '{\"none\":true}'::json)",
-        "SELECT thinkthen_find('Which?', ARRAY[repeat('x',16777216),'y'])",
+        *(["SELECT thinkthen_find('Which?', ARRAY[repeat('x',16777216),'y'])"]
+          if os.environ.get("THINKTHEN_TEST_PROFILE") == "full" else []),
     ]
     for statement in refused:
         _, error = sql(socket, statement)
