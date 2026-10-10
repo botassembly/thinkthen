@@ -1,17 +1,23 @@
-"""Prepare disposable source and matching native archives from this checkout."""
+"""Package Zig sources with an unchanged selected prebuilt native C archive."""
+import os
+import re
 from pathlib import Path
 import tarfile
 
 package = Path(__file__).resolve().parent.parent
-artifacts = package / "target/artifacts"
+artifacts = package / 'target/artifacts'
 artifacts.mkdir(parents=True, exist_ok=True)
-members = ["LICENSE", "README.md", "build.zig", "build.zig.zon", "examples/decide.zig", "src/thinkthen.zig", "src/complete.zig", "src/native.zig", "src/session.zig", "src/authored.zig", "src/request_generated.zig", "src/plan_generated.zig"]
-with tarfile.open(artifacts / "thinkthen-zig-0.0.1-src.tar.gz", "w:gz") as archive:
+selected = Path(os.environ['THINKTHEN_C_ARTIFACT']).resolve(strict=True)
+version = re.search(r'\.version = "([^"]+)"', (package / 'build.zig.zon').read_text())[1]
+members = ['LICENSE', 'README.md', 'build.zig', 'build.zig.zon', 'examples/decide.zig',
+           'src/thinkthen.zig', 'src/session.zig', 'src/authored.zig', 'src/request_generated.zig', 'src/plan_generated.zig']
+with tarfile.open(artifacts / f'thinkthen-zig-{version}-x86_64-unknown-linux-gnu.tar.gz', 'w:gz', compresslevel=1) as archive:
     for name in members:
-        assert (package / name).is_file(), name
-        archive.add(package / name, name)
-with tarfile.open(artifacts / "thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz", "w:gz") as archive:
-    archive.add(package / "target/native/include/thinkthen.h", "include/thinkthen.h")
-    for name in ("libthinkthen.so", "libthinkthen.so.0", "libthinkthen.a"):
-        archive.add(package / "target/native/lib" / name, "lib/" + name)
-print("Zig local source/native archives prepared")
+        archive.add(package / name, './' + name)
+    with tarfile.open(selected) as native:
+        for name in ('./include/thinkthen.h', './lib/libthinkthen.a'):
+            info = native.getmember(name)
+            content = native.extractfile(info)
+            info.name = './native/x86_64-unknown-linux-gnu/' + name.removeprefix('./')
+            archive.addfile(info, content)
+print('Zig local archive prepared from selected prebuilt native engine')

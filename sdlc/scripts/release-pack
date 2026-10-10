@@ -295,7 +295,7 @@ zig)
 		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
 			libraries/zig/build.zig.zon "$folder/"
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/thinkthen.zig libraries/zig/src/complete.zig libraries/zig/src/native.zig libraries/zig/src/session.zig libraries/zig/src/authored.zig \
+		cp libraries/zig/src/thinkthen.zig libraries/zig/src/session.zig libraries/zig/src/authored.zig \
 			libraries/zig/src/request_generated.zig libraries/zig/src/plan_generated.zig "$folder/src/"
 		mkdir -p "$folder/native/$TARGET"
 		tar -xzf "$OUT/$c_name" -C "$folder/native/$TARGET" ./include/thinkthen.h ./lib/libthinkthen.a
