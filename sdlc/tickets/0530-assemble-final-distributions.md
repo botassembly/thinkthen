@@ -83,3 +83,4 @@ Author: project manager.
 - 2026-10-10 landed 8aadd204de37aa071373cfc341a5745e8bc324e7; next: The required Windows SDK candidate job is reviewed and landed; build fresh local packages and run the complete installed release checkpoint.
 - 2026-10-10 landed d83c883d3; next: All local parts are built; rebuild the Python wheel with the reviewed Polars repair, resume package smoke and run the complete installed release suite.
 - 2026-10-10 landed e7ba3aadf0cdec9e5aea744c7faf4084c6a23894; next: Rebuild final packages with the reviewed native admission repair, then finish installed qualification without repeating unchanged checks.
+- 2026-10-10 landed 76d0d24952ca2305940d8f587dd0e56c4096195d; next: Final release packages are assembled; reviewed Go and Flutter check repairs pass, PHP setup is retrying, and full installed parity follows.
