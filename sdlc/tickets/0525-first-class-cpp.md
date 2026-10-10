@@ -11,6 +11,8 @@ Reviews: revision a087f6dc3, accept
 
 Reviews: revision 7e68e2e90a0bc885944c11e0164cc8c6844727ce, accept
 
+Reviews: revision 9bf4643b0d8b8159bb67901c539349dd4925559e, accept
+
 ## Outcome
 
 C++ callers find one CMake package that carries the native library, call the ten functions with standard library values, and read generated C++ result types with explicit presence. Failures are typed exceptions with retained facts. RAII releases every native resource, and cancellation does not block the caller. Hand-copied layouts, readers and old public names are gone.
