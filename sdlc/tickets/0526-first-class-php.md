@@ -26,3 +26,7 @@ PHP callers install one Composer package that carries the native library, call t
   One public API is one coherent family of named typed calls. Claim `libraries/php/**` narrowed and named per slice.
 - Proof: Shared conformance runs through an installed Composer consumer, covering absent, null, failures, unknown output fields, files, images and cancellation. One installed case destroys an engine with an open batch and shows no leaked native handle. Record handwritten code removed and added, counting templates, in the landing record.
 - Defers: Dead `libraries/php/src/complete/` removal goes in 0515. Final distribution assembly belongs to 0530.
+
+## Progress
+
+- 2026-10-10 landed a7ff49569; next: PHP polling now pumps bounded producer input through the same feed method as blocking result; poll-only and held-generator cleanup callers pass with exact request counts. Installed Composer distribution, full parity and compatibility retirement remain open.
