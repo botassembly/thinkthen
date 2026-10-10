@@ -48,3 +48,4 @@ fn Engine::request_session_with_surface(&self, Request, Surface) -> Result<Reque
 ## Progress
 
 - 2026-10-10 landed 7ae1f61d4; next: Typed native R feeds and installed JSONL framing are landed, including once-only cleanup. Finish remaining installed consumer adoption and compatibility retirement after authorized parity; feed completion receipts explicitly refuse.
+- 2026-10-10 landed af99382f6; next: Installed native R CSV and TSV feeds pass with controls, provenance, failure prefixes and once-only cleanup. Finish remaining consumer adoption and final installed qualification; compatibility retirement remains held.
