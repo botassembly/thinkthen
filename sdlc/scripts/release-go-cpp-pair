@@ -143,13 +143,10 @@ if [ "$mode" = php-dart ]; then
 		tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
 		case $name in
 		"$first")
-			printf '%s\n' ./ ./LICENSE ./README.md ./composer.json ./autoload.php \
-				./src/ ./src/ThinkThen.php ./examples/ ./examples/direct.php \
-				./src/complete/ ./src/complete/models.php ./src/native/ \
-				./src/native/abi.h ./src/native/batch.php ./src/native/engine.php \
-				./src/native/input.php ./src/native/question.php ./src/native/question_adapter.php \
-				./src/native/result.php ./src/native/views.php \
-				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
+			{
+				printf '%s\n' ./ ./LICENSE ./README.md ./composer.json ./autoload.php ./THINKTHEN-PACKAGE-INPUTS
+				source_members libraries/php/ libraries/php/src libraries/php/examples
+			} | LC_ALL=C sort >"$work/expected-members"
 			tar -xOzf "$dir/$name" ./composer.json >"$work/package-metadata"
 			python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"} and p["autoload"]=={"files":["autoload.php"]}' "$work/package-metadata" || fail 'PHP Composer identity differs'
 			;;

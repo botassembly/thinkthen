@@ -16,6 +16,8 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT / 'conformance/children'))
 from children import child_env
+sys.path.insert(0, str(ROOT / 'libraries/jvm/tests'))
+from toolchains import JDK_FLOOR
 
 
 def main():
@@ -48,13 +50,13 @@ def main():
     shutil.copyfile(source,work / source.name)
     jdk = Path(os.environ['THINKTHEN_JDK_HOME'])
     env = child_env(keep=('LANG','LC_ALL'),home=work / 'home', JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'))
-    subprocess.run([str(jdk / 'bin/javac'),'--release','22','-cp',str(feed / 'thinkthen-door.jar'),'-d',str(work / 'app'),str(work / source.name)],check=True,env=env)
+    subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-door.jar'),'-d',str(work / 'app'),str(work / source.name)],check=True,env=env)
     kotlin = Path(os.environ['THINKTHEN_KOTLIN_HOME'])
     scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
     for filename in ('SessionKotlin.kt','SessionScala.scala'):
         shutil.copyfile(ROOT / 'libraries/jvm/tests' / filename,work / filename)
     kotlin_cp = os.pathsep.join(map(str,(feed / 'thinkthen-door.jar',feed / 'thinkthen-kotlin.jar',kotlin / 'lib/kotlinx-coroutines-core-jvm.jar')))
-    subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target','22','-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),'-d',str(work / 'app')],check=True,env=env)
+    subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target',str(JDK_FLOOR),'-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),'-d',str(work / 'app')],check=True,env=env)
     subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-door.jar') + os.pathsep + str(feed / 'thinkthen-scala.jar'),'-d',str(work / 'app'),str(work / 'SessionScala.scala')],check=True,env=env)
     backend_source = ROOT / 'libraries/csharp/tests/backend.py'
     spec = importlib.util.spec_from_file_location('shared_package_backend',backend_source)

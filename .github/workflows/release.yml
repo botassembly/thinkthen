@@ -90,7 +90,7 @@ jobs:
             cargo test --locked --offline --no-fail-fast --workspace --all-targets
             cargo clippy --locked --offline --manifest-path libraries/c/Cargo.toml --all-targets -- -D warnings
             cargo test --locked --offline --manifest-path libraries/c/Cargo.toml --no-fail-fast
-            CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$TARGET" release-files command c python first-run
+            CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$TARGET" release-files command c python typescript first-run
             python3 sdlc/scripts/release-windows-command.py platform release-files "$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)"
           elif [ "$(uname -s)" = Linux ]; then
             # Ticket 0366: log free space and our big folders at each stage.

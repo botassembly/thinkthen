@@ -62,7 +62,7 @@ def jvm_definition(pom=None):
     return {entry.tag.rsplit('}', 1)[-1]: entry.text.strip() for entry in props}
 
 
-def jvm_inventory(out=None, pom=None):
+def jvm_inventory(out=None, pom=None, target=None):
     props = jvm_definition(pom)
     assert props['thinkthen.native.targets'] == 'release'
     jars = {kind: f'thinkthen-{kind}.jar' for kind in props['thinkthen.packages'].split()}
@@ -71,8 +71,15 @@ def jvm_inventory(out=None, pom=None):
         maven = dict(entry, platform={'darwin': 'osx', 'win32': 'win'}.get(entry['platform'], entry['platform']))
         classifier = props['thinkthen.native.classifier'].format(**maven)
         prefix = props['thinkthen.native.resource'].format(**entry)
-        native[classifier] = dict(target=entry['target'], files=[prefix + name for name in entry['libraries']])
-    result = dict(jars=jars, files=sorted(props['thinkthen.package.files'].split() + list(jars.values())), native=native)
+        native[classifier] = dict(target=entry['target'], jar=f'thinkthen-{classifier}.jar', files=[prefix + name for name in entry['libraries']])
+    project = ET.fromstring(pom or (REPO / 'libraries/jvm/pom.xml').read_bytes())
+    classifiers = [node.text for node in project.findall('{*}dependencies/{*}dependency/{*}classifier')]
+    if set(classifiers) != set(native) or len(classifiers) != len(native):
+        raise ValueError('Maven native dependencies disagree with the product inventory')
+    selected = {kind: asset for kind, asset in native.items() if target is None or asset['target'] == target}
+    if not selected:
+        raise ValueError('unsupported JVM target: ' + str(target))
+    result = dict(jdk=int(props['thinkthen.session.jdk']), jars=jars, files=sorted(props['thinkthen.package.files'].split() + list(jars.values()) + [asset['jar'] for asset in selected.values()]), native=native)
     if out:
         result['members'] = {kind: sorted(path.relative_to(Path(out) / 'classes' / kind).as_posix()
                                          for path in (Path(out) / 'classes' / kind).rglob('*') if path.is_file() and not any(fnmatch.fnmatch(path.name, pattern) for pattern in props['thinkthen.package.exclude'].split()))
@@ -172,7 +179,7 @@ def main():
         if args.check:
             check_npm(args.check, args.target)
     elif args.package == 'jvm':
-        inventory = jvm_inventory(args.out)
+        inventory = jvm_inventory(args.out, target=args.target)
     else:
         inventory = csharp_inventory(args.out, args.target)
         if args.check:

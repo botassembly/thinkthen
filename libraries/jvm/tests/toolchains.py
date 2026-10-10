@@ -4,6 +4,9 @@ from pathlib import Path
 import shutil
 import subprocess
 import re
+import xml.etree.ElementTree as ET
+
+JDK_FLOOR = int(ET.parse(Path(__file__).resolve().parents[1] / "pom.xml").getroot().find("{*}properties/{*}thinkthen.session.jdk").text)
 
 
 def home(variable, executable, runtime=None):
@@ -33,8 +36,8 @@ def stable():
     for executable in ('javac', 'java'):
         version = subprocess.check_output([str(JDK / 'bin' / executable), '-version'], stderr=subprocess.STDOUT, text=True)
         match = re.search(r'(?:javac |version ")([0-9]+)', version)
-        if match is None or int(match[1]) < 22:
-            raise RuntimeError('JVM stable package requires JDK 22 or later; preview JDKs are unsupported')
+        if match is None or int(match[1]) < JDK_FLOOR:
+            raise RuntimeError(f'JVM stable package requires JDK {JDK_FLOOR} or later; preview JDKs are unsupported')
 
 
 if __name__ == "__main__":

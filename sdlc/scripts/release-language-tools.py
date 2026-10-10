@@ -20,6 +20,7 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
+import xml.etree.ElementTree as ET
 
 SNAPSHOT = "20260923T150000Z"
 RELEASES = {
@@ -28,9 +29,6 @@ RELEASES = {
     "noble-security": "b8b375a06aeada33b0ff9a445647bf790e17ea296b3ce709ca8d9f839bb356d1",
 }
 PACKAGES = {
-    "openjdk-21-jdk": "21.0.12.1+1-1~24.04.4",
-    "openjdk-21-jdk-headless": "21.0.12.1+1-1~24.04.4",
-    "openjdk-21-jre-headless": "21.0.12.1+1-1~24.04.4",
     "bubblewrap": "0.9.0-1ubuntu0.3",
     "gprbuild": "2024.1.20231009-5~24.04",
     "gnat-13": "13.3.0-6ubuntu2~24.04.1",
@@ -52,8 +50,7 @@ PACKAGES = {
     "libncursesw6": "6.4+20240113-1ubuntu2.2",
     "libtinfo6": "6.4+20240113-1ubuntu2.2",
 }
-MANAGED = {name: PACKAGES[name] for name in
-           ("openjdk-21-jdk", "openjdk-21-jdk-headless", "openjdk-21-jre-headless")}
+MANAGED = {}
 SMOKE = PACKAGES
 ASSETS = {
     "dotnet": ("https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.131/dotnet-sdk-8.0.131-linux-x64.tar.gz",
@@ -226,7 +223,7 @@ def ensure_packages(mode, job, acquire, run=command, get=fetch):
             "plan": "apt-plan.txt"}
 
 
-APT_JDK = Path("/usr/lib/jvm/java-21-openjdk-amd64")
+JDK_FLOOR = int(ET.parse(Path(__file__).resolve().parents[2] / "libraries/jvm/pom.xml").getroot().find("{*}properties/{*}thinkthen.session.jdk").text)
 
 
 def selected_executable(path):
@@ -259,21 +256,17 @@ def managed_env(jdk):
 
 
 def check_jdk(run=command):
-    # The runner's PATH javac belongs to the image's own JDK. Only the pinned package's
-    # tree passes the owner check below. This check never searches PATH.
-    home = sdk_home("THINKTHEN_JDK_HOME", "javac") if os.environ.get("THINKTHEN_JDK_HOME") else APT_JDK
-    for tool in ("java", "javac", "jar"):
-        if selected_executable(home / "bin" / tool) is None:
-            fail(f"selected JDK lacks {tool}")
+    home = sdk_home("THINKTHEN_JDK_HOME", "javac")
+    if home is None:
+        fail("stable JDK is absent; select THINKTHEN_JDK_HOME")
     env = managed_env(home)
     for tool, flag in (("java", "-version"), ("javac", "-version"), ("jar", "--version")):
-        if not re.search(r"(?<![0-9])21\.0\.12(?:\.1)?(?![0-9.])",
-                         run([str(home / "bin" / tool), flag], env=env)):
-            fail(f"selected JDK {tool} differs from 21.0.12.1 package pin")
-        owner = run(["dpkg-query", "-S", str(home / "bin" / tool)]).split(":", 1)[0]
-        required = "openjdk-21-jre-headless" if tool == "java" else "openjdk-21-jdk-headless"
-        if owner != required:
-            fail(f"selected JDK {tool} package owner differs from pin")
+        if selected_executable(home / "bin" / tool) is None:
+            fail(f"selected JDK lacks {tool}")
+        shown = run([str(home / "bin" / tool), flag], env=env)
+        version = re.search(r"(?<![0-9])([0-9]+)\.[0-9]", shown)
+        if version is None or int(version[1]) < JDK_FLOOR or "-ea" in shown:
+            fail(f"selected JDK {tool} differs from stable JDK {JDK_FLOOR} or later")
     return home
 
 

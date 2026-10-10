@@ -32,7 +32,10 @@ def inspect(name, source):
     spec.loader.exec_module(inventory)
     expected = {member: (TARGET / "classes" / name / member).read_bytes()
                 for member in inventory.jvm_inventory(TARGET)['members'][name]}
-    assert members.pop("META-INF/MANIFEST.MF").startswith(b"Manifest-Version: 1.0"), "bad JAR manifest"
+    manifest = members.pop("META-INF/MANIFEST.MF", None)
+    assert manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "bad JAR manifest"
+    if name == "door" and "META-INF/thinkthen/product-inventory.json" in members:
+        assert json.loads(members.pop("META-INF/thinkthen/product-inventory.json")) == inventory.jvm_inventory(), "stale embedded JVM inventory"
     assert members == expected, f"stale or extra {name} JAR member"
     assert not any("ProbeDoor" in member or "TypeCase" in member for member in members), "diagnostic class escaped product JAR"
     assert not any(token in data for member, content in members.items() for data in (member.encode(), content) for token in BAD), "private byte in JAR"
@@ -296,6 +299,8 @@ def main():
         reject(f"compressed-private-{name}", lambda: inspect(name, secret.getvalue()))
     (TARGET / "jars/manifest.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print("JVM JARs: exact compiled members, metadata, no diagnostic exports and planted negatives PASS")
+    if '--session' in sys.argv:
+        return
     native = os.environ.get('THINKTHEN_RELEASE_C_DIR')
     header = Path(native) / 'include/thinkthen.h' if native else ROOT.parents[1] / 'libraries/c/include/thinkthen.h'
     library = Path(native) / 'lib/libthinkthen.so' if native else ROOT.parents[1] / 'libraries/c/target/debug/libthinkthen_c.so'

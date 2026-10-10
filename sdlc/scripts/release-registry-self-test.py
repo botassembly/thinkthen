@@ -8,6 +8,7 @@ checks the exit code and the refusal sentence. Signing cases need gpg.
 import base64
 import contextlib
 import hashlib
+import importlib.util
 import json
 import io
 import os
@@ -24,9 +25,9 @@ TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
 TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "crates/thinkthen/Cargo.toml", "composer.json", "libraries/php/composer.json", "libraries/go/go.mod",
-        "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/door/thinkthen/Door.java",
-        "libraries/jvm/door/thinkthen/Json.java", "libraries/jvm/kotlin/KotlinCaller.kt",
-        "libraries/jvm/scala/ScalaCaller.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
+        "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/session/thinkthen/Engine.java",
+        "libraries/jvm/door/thinkthen/Json.java", "libraries/jvm/session/kotlin/KotlinEngine.kt",
+        "libraries/jvm/session/scala/ScalaEngine.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
         "libraries/dart/lib/thinkthen_dart.dart")
 
 
@@ -35,8 +36,8 @@ def version():
                 if line.startswith('version = "'))
 
 
-def archive(folder, family, files):
-    name = f"thinkthen-{family}-{version()}-{TARGET}.tar.gz"
+def archive(folder, family, files, target=TARGET):
+    name = f"thinkthen-{family}-{version()}-{target}.tar.gz"
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
         for member, data in {"THINKTHEN-PACKAGE-INPUTS": b"source_commit=0\n", **files}.items():
@@ -83,6 +84,25 @@ def tree(root, plant):
         "dart": {"pubspec.yaml": (root / "libraries/dart/pubspec.yaml").read_bytes(), "pubspec.lock": b"lock",
                  "README.md": b"readme", "lib/thinkthen_dart.dart": b"library;"},
     }
+    spec = importlib.util.spec_from_file_location('inventory', REPO / 'sdlc/scripts/package-inventory.py')
+    inventory = importlib.util.module_from_spec(spec); spec.loader.exec_module(inventory)
+    definition = inventory.jvm_inventory()
+    for classifier, asset in definition['native'].items():
+        library = asset['files'][0].rsplit('/', 1)[-1]
+        native = ('native-' + asset['target']).encode()
+        if asset['target'] == TARGET:
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w') as package:
+                for name in asset['files']: package.writestr(name, native)
+            files['jvm'][asset['jar']] = buffer.getvalue()
+        if '-windows-' in asset['target']:
+            name = f"thinkthen-c-{v}-{asset['target']}.zip"
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w') as package: package.writestr('bin/' + library, native)
+            (platform / name).write_bytes(buffer.getvalue())
+            (platform / (name + '.sha256')).write_text(hashlib.sha256(buffer.getvalue()).hexdigest() + '  ' + name + '\n')
+        else:
+            archive(platform, 'c', {'lib/' + library: native}, asset['target'])
     plant(root, files)
     for family, members in files.items():
         archive(platform, family, members)
@@ -252,6 +272,8 @@ def main():
     stem = f"thinkthen-jvm-{v}"
     pack_cases = [
         ("pack", keep, None),
+        ("missing-native-jar", lambda r, f: f['jvm'].pop('thinkthen-natives-linux-x64.jar'), 'JVM archive lacks thinkthen-natives-linux-x64.jar'),
+        ("missing-native-target", lambda r, f: (r / 'platform' / f'thinkthen-c-{v}-x86_64-pc-windows-msvc.zip').unlink(), f'thinkthen-c-{v}-x86_64-pc-windows-msvc.zip is missing or linked'),
         ("nupkg-id", lambda r, f: f["csharp"].update({f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Other.ThinkThen", v)}),
          "nupkg identity differs"),
         ("nupkg-version", lambda r, f: f["csharp"].update({f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Botassembly.ThinkThen", "9.9.9")}),
@@ -285,15 +307,14 @@ def main():
         root = pathlib.Path(tmp) / "pack"
         base = root / "out/maven/io/github/botassembly/thinkthen-jvm" / v
         layout = sorted(p.name for p in base.iterdir())
-        artifacts = [f"{stem}{suffix}" for suffix in ("-javadoc.jar", "-kotlin.jar", "-scala.jar", "-sources.jar", ".jar", ".pom")]
+        artifacts = [f"{stem}{suffix}" for suffix in ("-javadoc.jar", "-kotlin.jar", "-scala.jar", "-sources.jar", ".jar", ".pom", *("-" + name + ".jar" for name in json.loads(subprocess.check_output([sys.executable, str(REPO / "sdlc/scripts/package-inventory.py"), "jvm"]))["native"]))]
         pub = sorted(p.relative_to(root / "out/pub").as_posix() for p in (root / "out/pub").rglob("*") if p.is_file())
         expected_pub = ["thinkthen_dart/README.md", "thinkthen_dart/lib/thinkthen_dart.dart", "thinkthen_dart/pubspec.yaml"]
         with zipfile.ZipFile(base / f"{stem}-sources.jar") as sources:
             source_names = sorted(sources.namelist())
         checks = [
             ("maven-layout", layout, sorted(f"{a}{s}" for a in artifacts for s in ("", ".md5", ".sha1"))),
-            ("maven-sources", source_names, ["door/thinkthen/Door.java", "door/thinkthen/Json.java",
-                                             "kotlin/KotlinCaller.kt", "scala/ScalaCaller.scala"]),
+            ("maven-sources", source_names, sorted(["door/thinkthen/Json.java", "session/thinkthen/Engine.java", "session/kotlin/KotlinEngine.kt", "session/scala/ScalaEngine.scala"])),
             ("nuget-file", [p.name for p in (root / "out/nuget").iterdir()], [f"Botassembly.ThinkThen.{v}.nupkg"]),
             ("pub-files", pub, expected_pub),
         ]
@@ -320,7 +341,7 @@ def main():
         if shutil.which("gpg"):
             signed = run(root, "maven-sign", "out/maven", "rehearse")
             checks.append(("rehearse-sign", (signed.returncode, signed.stdout.strip(), sorted(p.name for p in base.iterdir())),
-                           (0, "release-registry: rehearsal signed and verified 6 Maven files with a throwaway key", layout)))
+                           (0, "release-registry: rehearsal signed and verified 11 Maven files with a throwaway key", layout)))
             (base / f"{stem}.jar.sha1").write_text("0" * 40)
             stale = run(root, "maven-sign", "out/maven", "rehearse")
             checks.append(("rehearse-stale-checksum", (stale.returncode, stale.stderr.strip()),
