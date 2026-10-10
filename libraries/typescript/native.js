@@ -10,16 +10,17 @@ const sourceTag=Symbol('source'), itemTag=Symbol('item'), questionTag=Symbol('qu
 function dump(value) {
   const seen=new Set();
   function check(v) {
-    if(v===null || typeof v==='boolean' || v instanceof Results.NativeNumber) return;
-    if(typeof v==='string' && v.isWellFormed()) return;
-    if(typeof v==='number' && Number.isFinite(v)) return;
+    if(v===null || typeof v==='boolean' || v instanceof Results.NativeNumber) return v;
+    if(v instanceof Uint8Array) return Buffer.from(v).toString('base64');
+    if(typeof v==='string' && v.isWellFormed()) return v;
+    if(typeof v==='number' && Number.isFinite(v)) return v;
     if(typeof v!=='object' || seen.has(v) || (!Array.isArray(v) && ![Object.prototype,null].includes(Object.getPrototypeOf(v)))) throw new ClientError('usage','input cannot be converted to native JSON');
     seen.add(v);
     if(Reflect.ownKeys(v).some(k=>typeof k==='symbol')) throw new ClientError('usage','input cannot be converted to native JSON');
-    for(const child of Array.isArray(v)?v:Object.values(v)) check(child);
-    seen.delete(v);
+    const encoded=Array.isArray(v)?Array.from(v,check):Object.fromEntries(Object.entries(v).map(([key,child])=>[key,check(child)]));
+    seen.delete(v);return encoded;
   }
-  check(value);return JSON.stringify(value);
+  return JSON.stringify(check(value));
 }
 function crossing(call) {
   try {return call();} catch(error) {

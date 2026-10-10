@@ -20,3 +20,6 @@ async function named(client:Client) {
 }
 function failure(error:unknown){if(error instanceof ClientError) {const facts:Results.NativeFacts|undefined=error.facts;console.log(error.complete?.error.kind,facts?.call_id,error.results?.length);}}
 void [named,failure,usage];
+
+const image=Client.item(undefined,{images:[{kind:"bytes",bytes:new Uint8Array([137,80,78,71]),media:"image/png"}]});
+void image;

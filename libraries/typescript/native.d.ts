@@ -9,6 +9,8 @@ export interface QuestionFile { readonly _questionFile?: never; }
 export interface Source { readonly _source?: never; }
 export interface Item { readonly _item?: never; }
 export type Input = R.JsonValue | Source | Item | readonly (R.JsonValue | Item)[] | Iterable<R.JsonValue | Item> | AsyncIterable<R.JsonValue | Item>;
+export interface ImageBytes { readonly kind: "bytes"; readonly bytes: Uint8Array | string; readonly media?: string; }
+export interface ItemFields { readonly images?: readonly ImageBytes[]; readonly context?: R.JsonValue; readonly options?: readonly {readonly name:string; readonly description?:R.JsonValue}[]; }
 export interface Controls { readonly signal?: AbortSignal; readonly [key:string]: unknown; }
 export class Completed<T = R.NativeDecideResult | R.NativeChooseResult | R.NativeTagResult | R.NativeScoreResult | R.NativeFilterResult | R.NativeRankResult | R.NativeFindResult | R.NativeAnnotateResult | R.NativeRecognizeResult | R.NativeRelateResult> {
  readonly results: readonly T[];
@@ -29,7 +31,7 @@ export class Client {
  usagePersistence():UsageStatus;
  finishUsageStatus():UsageStatus;
  static files(paths:readonly string[],reading?:Readonly<Record<string,R.JsonValue>>,media?:string,framing?:string):Source;
- static item(value:R.JsonValue|undefined,fields?:Readonly<Record<string,R.JsonValue>>):Item;
+ static item(value:R.JsonValue|undefined,fields?:ItemFields):Item;
  static questionFile(path:string):QuestionFile;
  static questionName(name:string):QuestionFile;
  static questionReference(reference:string):QuestionFile;
@@ -48,6 +50,7 @@ export class Client {
 }
 
 export class ClientError extends Error {
+ constructor(kind:ClientError["kind"],message:string,retryable?:boolean);
  readonly kind:'usage'|'backend'|'local'|'cancelled'|'deadline'|'defect';
  readonly retryable:boolean;
  readonly complete?:R.NativeCallError;

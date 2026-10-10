@@ -9,6 +9,10 @@ profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
+if [ "$profile" = routine ]; then
+    THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$repo/conformance/routine-ids.txt}
+    export THINKTHEN_CONFORMANCE_IDS
+fi
 python3 "$repo/sdlc/generators/results/generate.py" --target typescript --check
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.

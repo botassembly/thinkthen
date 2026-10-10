@@ -20,5 +20,5 @@ try {
  console.log(JSON.stringify({native:true,results:done.results,facts:done.facts}));
 } catch(error) {
  if(!(error instanceof tt.ClientError))throw error;
- console.log(JSON.stringify({native:true,error:error.complete??{kind:error.kind,message:error.message,retryable:error.retryable},facts:error.facts,completed:error.results?.length?{native:true,results:error.results,facts:error.facts}:undefined}));
+ console.log(JSON.stringify({native:true,error:error.complete?.error??{kind:error.kind,message:error.message,retryable:error.retryable},facts:error.facts,completed:error.results?.length?{native:true,results:error.results,facts:error.facts}:undefined}));
 } finally {client.close();}
