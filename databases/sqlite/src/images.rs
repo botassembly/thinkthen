@@ -118,6 +118,29 @@ fn collection(bytes: &[u8], text: Option<String>) -> Result<QuestionInput, Failu
     Ok(QuestionInput::Images(ImageEvidence::new(text, images)?))
 }
 
+/// Reuse persistent image decoding for the native complete request carrier.
+pub(crate) fn complete_record(
+    bytes: &[u8],
+    text: Option<String>,
+) -> Result<thinkthen::RequestItem, Failure> {
+    let QuestionInput::Images(input) = collection(bytes, text)? else {
+        return Err(Failure::defect("image input held no images"));
+    };
+    let mut item = crate::request::text(String::new());
+    item.original = input.text().map(|text| thinkthen::RequestOriginal::Text {
+        text: text.to_owned(),
+    });
+    item.images = input
+        .images()
+        .iter()
+        .map(|image| thinkthen::RequestImage::Bytes {
+            media: image.media(),
+            bytes: image.bytes().to_vec(),
+        })
+        .collect();
+    Ok(item)
+}
+
 fn constructor(context: &Context<'_>) -> Result<Option<Vec<u8>>, Failure> {
     if matches!(context.get_raw(0), ValueRef::Null) || matches!(context.get_raw(1), ValueRef::Null)
     {
@@ -240,23 +263,8 @@ fn judged(context: &Context<'_>, verb: Option<thinkthen::For>) -> Result<Value, 
     if held.kind() != wanted {
         return Err(Failure::usage("image function and question kind differ"));
     }
-    let input = collection(blob(context.get_raw(1))?, text)?;
+    let item = complete_record(blob(context.get_raw(1))?, text)?;
     let shared = settings.context().map(str::to_owned);
-    let QuestionInput::Images(input) = input else {
-        return Err(Failure::defect("image input held no images"));
-    };
-    let mut item = crate::request::text(String::new());
-    item.original = input.text().map(|text| thinkthen::RequestOriginal::Text {
-        text: text.to_owned(),
-    });
-    item.images = input
-        .images()
-        .iter()
-        .map(|image| thinkthen::RequestImage::Bytes {
-            media: image.media(),
-            bytes: image.bytes().to_vec(),
-        })
-        .collect();
     let details =
         worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
             let records = shared.is_some();

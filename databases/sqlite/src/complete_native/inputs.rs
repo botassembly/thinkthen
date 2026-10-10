@@ -12,6 +12,7 @@ pub(super) type Records<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
 pub(crate) struct Inputs {
     raw: Fields,
+    native_record: Option<thinkthen::RequestItem>,
     native_request: bool,
     pub(crate) jsonl: bool,
     pub(crate) incremental: bool,
@@ -19,12 +20,28 @@ pub(crate) struct Inputs {
     pub(crate) cancelled: bool,
 }
 impl Inputs {
+    /// Carry one native host record without a JSON descriptor or byte array.
+    #[allow(dead_code, reason = "native BLOB complete inputs enter through SQLite")]
+    pub(crate) fn from_record(record: thinkthen::RequestItem) -> Self {
+        Self {
+            raw: Fields::new(),
+            native_record: Some(record),
+            native_request: true,
+            jsonl: false,
+            incremental: false,
+            attempts: false,
+            cancelled: false,
+        }
+    }
     /// Inspect descriptors only; native route admission precedes file/image readers.
     #[allow(
         dead_code,
         reason = "only SQLite uses shared Request image-route admission before ticket 0500"
     )]
     pub(crate) fn image_inputs(&self) -> Result<bool, Error> {
+        if let Some(record) = &self.native_record {
+            return Ok(!record.images.is_empty());
+        }
         if let Some(files) = self.raw.get("files") {
             let files = fields(files.get())?;
             let options = files
@@ -125,6 +142,7 @@ impl Inputs {
         let cancelled = flag("cancelled")?.unwrap_or(false);
         Ok(Self {
             raw,
+            native_record: None,
             native_request: false,
             jsonl,
             incremental,
@@ -133,6 +151,12 @@ impl Inputs {
         })
     }
     pub(crate) fn records(&self, reading: Option<&RecordReading>) -> Result<Records<'_>, Error> {
+        if let Some(record) = &self.native_record {
+            let default = RecordReading::new(&[], None, None)?;
+            return Ok(Box::new(std::iter::once(
+                record.compose_record(reading.unwrap_or(&default)),
+            )));
+        }
         let reading = if let Some(value) = self.raw.get("reading") {
             let given: Value =
                 serde_json::from_str(value.get()).map_err(|_| usage("reading is one object"))?;

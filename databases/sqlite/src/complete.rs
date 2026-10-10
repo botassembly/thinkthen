@@ -35,8 +35,19 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
         let Some(question) = question::text(context.get_raw(0), "the question")? else {
             return Ok(None);
         };
-        let Some(inputs) = question::text(context.get_raw(1), "complete inputs")? else {
-            return Ok(None);
+        let inputs = match context.get_raw(1) {
+            rusqlite::types::ValueRef::Blob(bytes) if verb == "decide" => {
+                crate::complete_native::Inputs::from_record(crate::images::complete_record(
+                    bytes, None,
+                )?)
+            }
+            value => {
+                let Some(source) = question::text(value, "complete inputs")? else {
+                    return Ok(None);
+                };
+                crate::complete_native::Inputs::parse_request(&source)
+                    .map_err(crate::Failure::from)?
+            }
         };
         let settings = if context.len() > 2 {
             question::call_settings(context.get_raw(2))?
@@ -44,7 +55,6 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
             thinkthen::Settings::default()
         };
         let result = (|| {
-            let inputs = crate::complete_native::Inputs::parse_request(&inputs)?;
             let selector = selector::admit(verb, &question)?;
             let prepared = prepare(verb, &question, &settings)?;
             let request = match selector {
