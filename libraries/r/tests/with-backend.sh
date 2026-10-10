@@ -2,9 +2,9 @@
 # Run one R test file against its own 0092 loopback backend (ticket 0108,
 # decisions 17 and 18). Usage: with-backend.sh BACKEND FILE.R [BASE_URL]
 #
-# The child gets a fresh THINKTHEN_CACHE folder, a scratch HOME,
-# XDG_CACHE_HOME, and XDG_CONFIG_HOME, the exported absolute R_LIBS, and
-# no R_LIBS_USER. The fake key rides only beside the loopback address, and
+# The child gets the shared helper's owned home, configuration, cache and
+# state folders, the exported absolute R_LIBS, and no ambient settings or
+# startup files. The fake key rides only beside the loopback address, and
 # the script refuses any other host before an R process starts. The child
 # drives the backend through the TT_BACKEND_IN fifo and reads its lines
 # from TT_BACKEND_OUT. The final count must equal the child's
@@ -28,14 +28,31 @@ case $host in
 127.0.0.1 | localhost | "[::1]") ;;
 *) echo "with-backend: refused $host, which is not a loopback address" >&2; exit 2 ;;
 esac
-mkdir -p "$dir/cache" "$dir/home" "$dir/xdg-cache" "$dir/xdg-config"
+mkdir -p "$dir/cache" "$dir/home"
 set +e
-env -u R_LIBS_USER -u THINKTHEN_API_KEY \
-    HOME="$dir/home" XDG_CACHE_HOME="$dir/xdg-cache" XDG_CONFIG_HOME="$dir/xdg-config" \
-    THINKTHEN_CACHE="$dir/cache" THINKTHEN_BASE_URL="$base" THINKTHEN_API_KEY=tt-test-not-a-key \
-    TT_BACKEND_ORIGIN="http://127.0.0.1:$port" TT_BACKEND_IN="$dir/in" TT_BACKEND_OUT="$dir/out" \
-    TT_TESTS="$(cd "$(dirname "$0")" && pwd)" \
-    sh "$(cd "$(dirname "$0")/../../.." && pwd)/sdlc/scripts/time-limit" 600 Rscript "$file" >"$dir/log" 2>&1 3>&-
+python3 - "$(cd "$(dirname "$0")/../../.." && pwd)" "$dir" "$base" "$port" "$file" >"$dir/log" 2>&1 3>&- <<'PY'
+import os
+from pathlib import Path
+import sys
+
+root, directory, base, port, file = sys.argv[1:]
+sys.path.insert(0, str(Path(root) / 'conformance/children'))
+from children import child_env
+
+env = child_env(('R_LIBS', 'LANG', 'LC_ALL', 'TMPDIR', 'TT_NAMED_BACKEND'),
+                home=Path(directory) / 'home',
+                THINKTHEN_CACHE=str(Path(directory) / 'cache'),
+                THINKTHEN_BASE_URL=base, THINKTHEN_API_KEY='tt-test-not-a-key',
+                TT_BACKEND_ORIGIN=f'http://127.0.0.1:{port}',
+                TT_BACKEND_IN=str(Path(directory) / 'in'),
+                TT_BACKEND_OUT=str(Path(directory) / 'out'),
+                TT_TESTS=str(Path(root) / 'libraries/r/tests'))
+for name in ('THINKTHEN_TEST_PROFILE', 'THINKTHEN_CONFORMANCE_IDS'):
+    if name in os.environ:
+        env[name] = os.environ[name]
+os.execvpe('sh', ['sh', str(Path(root) / 'sdlc/scripts/time-limit'),
+                 '600', 'Rscript', '--vanilla', file], env)
+PY
 code=$?
 set -e
 cat -- "$dir/log"
