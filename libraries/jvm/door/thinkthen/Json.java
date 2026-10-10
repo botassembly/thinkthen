@@ -1,6 +1,7 @@
 package thinkthen;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -181,7 +182,7 @@ public final class Json {
     public static String write(Object value) {
         if (value == null) return "null";
         if (value instanceof String text) return quote(text);
-        if (value instanceof Boolean || value instanceof BigDecimal || value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long) return value.toString();
+        if (value instanceof Boolean || value instanceof BigDecimal || value instanceof BigInteger || value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long) return value.toString();
         if (value instanceof Double n && Double.isFinite(n)) return n.toString();
         if (value instanceof Float n && Float.isFinite(n)) return n.toString();
         if (value instanceof Map<?,?> map) {
