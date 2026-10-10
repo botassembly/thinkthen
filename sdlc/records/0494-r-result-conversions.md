@@ -116,3 +116,20 @@ Fresh review accepted `a40098d62caac3bfb475435c405ad3ffabb7c911`, reproduced the
 ## What the build taught us
 
 Expose the shared feed contract through value conversion and test the installed native artifact. The shared decoder already owns framing; an R JSON parser would create a second admission source. Counting the separate refusal child's listener traffic establishes zero sends without relying on native facts alone.
+
+
+## Adopt native table feeds
+
+This bounded consumer slice starts from `86da78bb38a6ad1ea18faae70d2a2ddc7123dbc8` and consumes the native CSV and TSV session decoder landed in `19ba6aecc`. The existing R adapter already forwards framing through `tt_feed`; it needs no new parser, copied grammar, schema or public contract. The README replaces its obsolete table refusal claim with the complete encoded header and row producer contract.
+
+The existing installed record-feed consumer now calls `tt_choose` with CSV and TSV producers. Each sends one complete encoded header, a blank descriptor and one complete quoted multiline row. Native projection retains decoded originals, context, explicit row options, physical lines and generated result, facts and identity classes. Its manual batches retain a completed answer before a later malformed-width row and hide the malformed content. Duplicate table headers send nothing and release their reader once. Invalid reader units refuse before producer access, and pre-cancelled table feeds retain cancellation with zero sends. Existing reader failure, once-only non-idempotent cleanup, Full/Closed and held-provider cancellation checks remain active. The focused run counts eleven requests at the owned loopback listener; its separate refusal child leaves that count unchanged.
+
+The first warm installation failed because the owning R lock omitted the core's existing `csv-core` dependency. The minimal lock repair adds only `csv-core` 0.1.13 and its core edge; prior dependency versions stay unchanged. Strict affected Clippy found an existing denied index in singleton missing-number conversion. The adapter now reads that value with `first()` while preserving the singleton check. The installed refusal child also checks that ordinary NaN and numeric NA values remain absent columns with no sends.
+
+The offline debug installation reuses only the lane's existing `target/r` graph with two Cargo jobs, MemoryMax 8G, MemorySwapMax 1G and mold. `R CMD INSTALL --no-configure` installs the native artifact whose SHA-256 is `0c8f338a503d70080d4e13703c66a5c35e4f052acbe26a6f76c6ddf04c5a9e71`. Existing proof logs hold the output at `target/0494-table-{install,green,clippy,policy}.log`. The initially retained installed package predates `tt_feed`, so its failed consumer attempt supplies no table regression claim. No receipt or alternate build graph is introduced.
+
+The focused installed consumer, strict R all-target Clippy, Rust formatting, Python compilation, generated R freshness, source policy and whitespace pass. Both owning source ratchets remain exactly R 3156 and binding Rust 5978. Source policy emits existing size warnings in unchanged files. The lane measures 42,392,399,403 bytes, below 40 GiB, and retains its warm graph. This slice adds no generated or template source and does not increase a source ceiling. Full routine, full parity, large-input boundaries, load, release, paid calls and older API removal stay outside this consumer change.
+
+## What the build taught us
+
+An installed consumer can drift after a shared decoder gains support even when its host adapter already forwards the contract correctly. Adopt the shared behavior through encoded fixtures at the public call boundary and count actual listener traffic. An owning lockfile must include new unconditional core dependencies before a locked offline installation can consume them.

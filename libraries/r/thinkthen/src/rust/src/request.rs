@@ -68,9 +68,9 @@ pub(crate) fn column(values: Robj, function: &str) -> Crossed<Robj> {
     let mut positions = Vec::new();
     for (at, (_, value)) in values.iter().enumerate() {
         let missing = value.is_na()
-            || value
-                .as_real_slice()
-                .is_some_and(|numbers| numbers.len() == 1 && numbers[0].is_nan());
+            || value.as_real_slice().is_some_and(|numbers| {
+                numbers.len() == 1 && numbers.first().is_some_and(|n| n.is_nan())
+            });
         if missing {
             if !matches!(
                 function,
