@@ -83,7 +83,6 @@ PLACES = [
     *[("libraries/go/thinkthen.go", rf"(?m)^#if {pattern}", PART[i]) for i, pattern in enumerate([
         r"THINKTHEN_VERSION_MAJOR != (\d+) \|\|", r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != (\d+) \|\|",
         r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != \d+ \|\| THINKTHEN_VERSION_PATCH != (\d+)$"])],
-    ("libraries/go/thinkthen_test.go", r'm\["tool"\] != "thinkthen (\d+\.\d+\.\d+)"', WHOLE),
     *[(p, r'<PackageReference Include="Botassembly\.ThinkThen" Version="([^"]+)"', WHOLE) for p in
       ("libraries/csharp/tests/Installed.csproj", "libraries/csharp/tests/Smoke.csproj")],
     *[(p, rf'(?m)^  {name}:\n(?:    .*\n)*?    version: "([^"]+)"$', WHOLE) for p, name in (
