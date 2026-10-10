@@ -1,6 +1,6 @@
 # 0468: Report failed persistent usage writes to SDK callers
 
-Status: OPEN. The sweep found that the deferred writer-failure issue still has a deterministic silent-failure path.
+Status: COMPLETE. The sweep found that the deferred writer-failure issue still has a deterministic silent-failure path.
 
 Milestone: 0.2
 
@@ -30,6 +30,8 @@ Reviews: revision ada5e4f3e88b2120a5bf4efc304a89d8c87fb478, accept
 Reviews: revision 70c687a3641d7a2daf32b94822c4813bc5f45151, accept
 
 Reviews: revision 7b972e7c7c150caa85c9f6346149e7b7ff56cc1f, accept
+
+Landed: 142a02c
 
 ## Outcome
 
