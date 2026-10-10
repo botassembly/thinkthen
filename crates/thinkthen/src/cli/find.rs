@@ -71,7 +71,7 @@ pub(crate) fn run(
     if units.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
-    if !(2..=most).contains(&units.len()) {
+    if crate::core::Find::validate_count(units.len(), arguments.none).is_err() {
         return Err(Failure::FindCount {
             none: arguments.none,
         });

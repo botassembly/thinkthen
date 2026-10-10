@@ -71,17 +71,17 @@ fn pre_cancelled_find_never_pulls_units_in_complete_or_released_calls() {
     assert_eq!(listener.count(), 0);
 }
 #[test]
-fn composed_find_admission_stops_at_one_excess_candidate_without_dropping_the_count_error() {
+fn composed_find_refuses_one_unit_without_none_and_stops_at_one_excess_candidate() {
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let engine = engine(&listener);
-    for none in [false, true] {
+    for (count, none) in [(1, false), (1_000, false), (1_000, true)] {
         let question = if none {
             Question::find("Which?").unwrap().offering_none().unwrap()
         } else {
             Question::find("Which?").unwrap()
         };
         let pulls = AtomicUsize::new(0);
-        let units = (0..1_000).map(|_| {
+        let units = (0..count).map(|_| {
             pulls.fetch_add(1, Ordering::Relaxed);
             Ok(RecordInput {
                 examples: None,
@@ -98,12 +98,15 @@ fn composed_find_admission_stops_at_one_excess_candidate_without_dropping_the_co
         assert_eq!(
             error.detail().message(),
             if none {
-                "a find question offering none takes 2 to 254 units"
+                "a find question offering none takes 1 to 254 units"
             } else {
                 "find takes 2 to 255 units"
             }
         );
-        assert_eq!(pulls.load(Ordering::Relaxed), if none { 255 } else { 256 });
+        assert_eq!(
+            pulls.load(Ordering::Relaxed),
+            count.min(if none { 255 } else { 256 })
+        );
         assert!(error.facts().is_none());
     }
     assert_eq!(listener.count(), 0);

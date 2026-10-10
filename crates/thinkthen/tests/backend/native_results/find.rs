@@ -65,3 +65,83 @@ fn find_none_replays_the_actual_raw_pick_and_partial_usage_without_a_second_send
     assert_eq!(listener.count(), 1);
     validate(&[("completeFind".into(), live), ("completeFind".into(), held)]);
 }
+
+#[test]
+fn single_unit_with_none_replays_the_original_source_or_none() {
+    for (probabilities, selected) in [
+        (r#"{"u001":0.9,"none":0.1}"#, true),
+        (r#"{"u001":0.1,"none":0.9}"#, false),
+    ] {
+        let root = crate::input_sources::folder("single-find-none").unwrap();
+        let source = root.join("unit.jsonl");
+        let original = r#"{"body":"Original.","private":1}"#;
+        std::fs::write(&source, format!("{original}\n")).unwrap();
+        let recording = root.join("recording");
+        let response = format!(
+            r#"{{"model":"fixed","answers":{{"q1":{{"type":"choice","probabilities":{probabilities}}}}}}}"#
+        );
+        let listener = Listener::answering(move |_| Canned::ok(&response)).unwrap();
+        let base = [
+            "find",
+            "Which?",
+            "--none",
+            "--jsonl",
+            "--field",
+            "/body",
+            "--details",
+            "--no-cache",
+            "--input",
+            source.to_str().unwrap(),
+            "--url",
+            listener.base(),
+            "--model",
+            "fixed",
+            "--max-retries",
+            "0",
+        ];
+        let plan = spawn(&[&base[..], &["--plan"]].concat(), &[], b"").unwrap();
+        assert_eq!(plan.status.code(), Some(0));
+        assert_eq!(listener.count(), 0);
+        let live = spawn(
+            &[&base[..], &["--record", recording.to_str().unwrap()]].concat(),
+            &[("THINKTHEN_API_KEY", "find-private")],
+            b"",
+        )
+        .unwrap();
+        assert_eq!(live.status.code(), Some(if selected { 0 } else { 3 }));
+        withheld(&live, "find-private");
+        let live: Value = serde_json::from_slice(&live.stdout).unwrap();
+        assert_eq!(
+            live["value"],
+            if selected {
+                serde_json::from_str::<Value>(original).unwrap()
+            } else {
+                Value::Null
+            }
+        );
+        assert_eq!(
+            live["answer"]["probabilities"],
+            serde_json::from_str::<Value>(probabilities).unwrap()
+        );
+        if selected {
+            assert_eq!(
+                live["position"],
+                json!({"file":source.to_str().unwrap(),"first":1,"last":1})
+            );
+        } else {
+            assert!(live.get("position").is_none());
+        }
+        let held = spawn(
+            &[&base[..], &["--replay", recording.to_str().unwrap()]].concat(),
+            &[],
+            b"",
+        )
+        .unwrap();
+        assert_eq!(held.status.code(), Some(if selected { 0 } else { 3 }));
+        let held: Value = serde_json::from_slice(&held.stdout).unwrap();
+        assert_eq!(held["answer_id"], live["answer_id"]);
+        assert_eq!(held["answer"], live["answer"]);
+        assert_eq!(held["meta"]["origin"], "replay");
+        assert_eq!(listener.count(), 1);
+    }
+}

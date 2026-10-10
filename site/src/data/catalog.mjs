@@ -226,7 +226,7 @@ export const FUNCTIONS = [
     goal: 'find reads all the lines together and returns the one that answers the question, or none.',
     primitive: 'Pick one line of the evidence',
     line: 'Pick the one line that best answers a question.',
-    takes: 'a question and 2 to 255 lines or records, or 2 to 254 with --none',
+    takes: 'a question and 2 to 255 lines or records, or 1 to 254 with --none',
     gives: 'the one line that fits best',
     requests: 'It sends one request for the whole document.',
     args: 'QUESTION',
