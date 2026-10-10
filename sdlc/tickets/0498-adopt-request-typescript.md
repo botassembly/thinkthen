@@ -37,3 +37,7 @@ A TypeScript or JavaScript caller installs the npm package, imports it as Common
   One public API is one coherent family of named typed calls. Claim `libraries/typescript/**` and its installed typed consumer cases, narrowed per slice before coding.
 - Proof: The full shared cases run through the installed package in both module forms, including files and images, context and options, original positions, facts, failures and invalid input with zero sends. One installed held-provider case keeps the event loop responsive and shows cancellation or close stopping further reads and submissions before the provider is released. Pending final facts stay pending. Declarations or a Promise return type alone do not count, and neither does raw JSON pass-through. Record handwritten code removed and added, counting generator templates, in the landing record.
 - Defers: Native Windows qualification goes to 0383 at the first authorized candidate. Final assembly goes to 0530. The proxy and platform ruling changes need no 0.2 ticket.
+
+## Progress
+
+- 2026-10-10 landed 84de81b66; next: The recorded refusal bug is already fixed by 61c9154e2 and 84de81b66. Seventeen existing refusal, routing, profile and secrecy cases pass against current JavaScript and the warm addon; no new code was needed. Final current installed parity and Windows qualification remain held.
