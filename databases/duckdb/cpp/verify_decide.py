@@ -115,7 +115,7 @@ def main() -> None:
         rows = detail_rows[0]["rows"]
         assert len(rows) == 2 and rows[0] == rows[1]
         assert isinstance(json.loads(rows[0][0]), dict)
-        assert detail_rows[1] == {"rows": [["VARCHAR"]]}
+        assert detail_rows[1] == {"rows": [["JSON"]]}
         assert backend.count() == 8, "details should deduplicate its repeated text"
         prepared_try = run(
             ["PREPARE try_bad AS SELECT thinkthen_try_details('', 'x'), "
@@ -247,9 +247,9 @@ def main() -> None:
         assert backend.count() == 18, "bad bind and later bad set sent no extra request"
         signatures = [
             ("thinkthen_decide('Is it a refund?', NULL)", "BOOLEAN"),
-            ("thinkthen_try_details('Is it a refund?', NULL)", "VARCHAR"),
-            (f"thinkthen_annotate('{set_json}', NULL)", "VARCHAR"),
-            (f"thinkthen_annotate('{set_json}', NULL, -1)", "VARCHAR"),
+            ("thinkthen_try_details('Is it a refund?', NULL)", "JSON"),
+            (f"thinkthen_annotate('{set_json}', NULL)", "JSON"),
+            (f"thinkthen_annotate('{set_json}', NULL, -1)", "JSON"),
             ("thinkthen_choose('Which team?', NULL, ['billing', 'shipping'])", "VARCHAR"),
             ("thinkthen_score('How strong?', NULL, ['weak', 'strong'], -1)", "DOUBLE"),
             ("thinkthen_tag('Which topics?', NULL, ['billing', 'shipping'])", "VARCHAR[]"),

@@ -116,9 +116,9 @@ def set_backend_error_returns_no_rows_and_withholds_evidence():
 def set_ties_keep_keyed_member_order_and_public_types():
     with Backend() as backend:
         query = ranked(records='{"z":"one","a":"two","m":"three"}', settings='{"batch":"max"}')
-        got = run([query, 'SELECT typeof(key),typeof(rank),typeof(probability),typeof(question_name),typeof(facts) FROM (' + query + ') LIMIT 1'], backend.base())
+        got = run([query, 'SELECT typeof(key),typeof(rank),typeof(probability),typeof(question_name),typeof(facts), json_type(facts) FROM (' + query + ') LIMIT 1'], backend.base())
         expect([row[:4] for row in rows(got[0])], [['z',1,.9,'first'],['a',2,.9,'first'],['m',3,.9,'first']], 'stable set ties')
-        expect(rows(got[1]), [['VARCHAR','BIGINT','DOUBLE','VARCHAR','VARCHAR']], 'public SQL types')
+        expect(rows(got[1]), [['VARCHAR','BIGINT','DOUBLE','VARCHAR','JSON','OBJECT']], 'public SQL types')
         expect(backend.count(), 1, 'one shared packed call')
 
 

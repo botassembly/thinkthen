@@ -37,9 +37,10 @@ def stored_images_keep_order_duplicates_native_answers_and_zero_send_replay():
                      f"SET thinkthen_record = {literal(folder + '/record')}", *[
             f"SELECT thinkthen_{verb}_images({literal(question)}, {LIST}, 'Compare originals.')"
             for verb, question in ASK.items()],
-            f"SELECT thinkthen_details_images({literal(ASK['choose'])}, {LIST}, 'Compare originals.')"], backend.base,
+            f"SELECT d, typeof(d), json_type(d) FROM (SELECT thinkthen_details_images({literal(ASK['choose'])}, {LIST}, 'Compare originals.') AS d)"], backend.base,
             extra={'THINKTHEN_CACHE': folder + '/cache', 'LIQUIDAI_API_KEY':'fake-sql-image-key', 'THINKTHEN_BACKEND':'liquid'})
         expect([rows(result) for result in first[-4:-1]], [[[True]], [['red']], [[0.8]]], 'three image scalar values')
+        expect(rows(first[-1])[0][1:], ['JSON','OBJECT'], 'native image details JSON operations')
         detail = json.loads(rows(first[-1])[0][0])
         expect(detail['answer']['probabilities'], {'red': 0.8, 'blue': 0.2}, 'native complete probabilities')
         expect(backend.bodies, [expected_body(verb) for verb in (*ASK, 'choose')], 'independent native image request bodies')
@@ -56,9 +57,10 @@ def stored_images_keep_order_duplicates_native_answers_and_zero_send_replay():
 def complete_images_keep_native_blobs_facts_replay_and_local_refusals():
     with ImageBackend() as backend, tempfile.TemporaryDirectory() as folder:
         extra = {'THINKTHEN_BACKEND':'liquid', 'LIQUIDAI_API_KEY':'fake-sql-image-key'}
-        call = f"SELECT thinkthen_decide_complete('Is red visible?', {LIST})"
+        call = f"SELECT d, typeof(d), d->>'$.native.value[0].value' FROM (SELECT thinkthen_decide_complete('Is red visible?', {LIST}) AS d)"
         got = run([*stored(folder, True), "SET thinkthen_model='d1'",
                    f"SET thinkthen_record={literal(folder + '/record')}", call], backend.base, extra=extra)
+        expect(rows(got[-1])[0][1:], ['JSON','true'], 'native image complete JSON operations')
         value = json.loads(rows(got[-1])[0][0])
         expect(value['ordinals'], [0], 'one native image record')
         expect(value['native']['value'][0]['value'], True, 'complete native decision')
