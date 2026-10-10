@@ -18,6 +18,8 @@ Reviews: revision 9c8f5660b5e23ff0cbd92ccac0a814d4f92b9e30, accept
 
 Reviews: revision cd33a4bf1e25eab03e082654ba36d637c7aa35f8, reject
 
+Reviews: revision f4e6590ad291b2525deb3633fc28862c74b9d0d0, accept
+
 ## Outcome
 
 DuckDB, SQLite and PostgreSQL treat NULL one way, accept images as native binary values in the complete-result calls, return the database's native JSON type where a result is JSON, and describe every public function inside the database.
