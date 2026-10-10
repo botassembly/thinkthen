@@ -63,10 +63,11 @@ def descriptor(v,home):
         options.update(field=['/item'],context_field='/context')
     return {'verb':v['verb'],'question':question,'input':input,'options':options,'cancel':injection=='cancel_token','held_cancel':v.get('held_cancel',False)}
 
-def native_cases(binary):
+def native_cases(binary, *, consumer=CONSUMER, invoke=None):
+    CONSUMER = consumer
     inventory=parity.inventory(); rows=list(parity.required_cases(inventory,CONSUMER).values())
-    if os.environ.get('THINKTHEN_CPP_CASES'):
-        selected=set(os.environ['THINKTHEN_CPP_CASES'].split(','))
+    if os.environ.get('THINKTHEN_' + CONSUMER.upper() + '_CASES'):
+        selected=set(os.environ['THINKTHEN_' + CONSUMER.upper() + '_CASES'].split(','))
         assert selected <= {row['id'] for row in rows}, 'unknown requested C++ case'
         rows=[row for row in rows if row['id'] in selected]
     elif os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') != 'full':
@@ -111,7 +112,9 @@ def native_cases(binary):
                         if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
                         input_file=home/'consumer-input.json';input_file.write_text(shared.compact(descriptor(step,home)))
                         before=int(backend.read('count'));args=[str(binary),str(input_file),shared.compact(settings)]
-                        if step.get('held_cancel'):
+                        if invoke is not None:
+                            output=invoke(step,settings,child,home,backend)
+                        elif step.get('held_cancel'):
                             process=subprocess.Popen(args,env=child,cwd=home,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                             try:
                                 assert backend.read('wait 1')=='wait 1';process.stdin.write('!');process.stdin.flush();assert process.stdout.readline()=='cancel-fired\n'
@@ -146,7 +149,7 @@ def native_cases(binary):
                             assert got['records']==2 and int(backend.read('count'))==2,got
                         if row['kind'] in ('images','image-location'):
                             before=int(backend.read('count'));replay={k:v for k,v in settings.items() if k!='record'};replay['replay']=str(home/'recorded')
-                            repeated=subprocess.run([str(binary),str(input_file),shared.compact(replay)],env=child,cwd=home,capture_output=True,text=True,timeout=60)
+                            repeated=invoke(step,replay,child,home,backend) if invoke is not None else subprocess.run([str(binary),str(input_file),shared.compact(replay)],env=child,cwd=home,capture_output=True,text=True,timeout=60)
                             assert repeated.returncode==0 and not repeated.stderr,repeated.stderr
                             saved=project_session(json.loads(repeated.stdout),step);shared.assertions(row,step,saved,int(backend.read('count')))
                             assert saved['requests_sent']==0 and int(backend.read('count'))==before and saved['rows'][0]['answer_id']==got['rows'][0]['answer_id'],saved
