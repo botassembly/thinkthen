@@ -329,9 +329,60 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     args = parser.parse_args()
+    if args.target == "php":
+        if args.inputs or args.bridge:
+            parser.error("PHP target generates owned results only")
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import php
+        definitions = prepare(graph(json.loads(args.schema.read_text()), php.ROOTS))
+        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
+        outputs = php.outputs(definitions, version, (ROOT / "libraries/c/include/thinkthen.h").read_text())
+        for filename, result in outputs.items():
+            output = ROOT / "libraries/php/src/session" / filename
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print("generated PHP results differ", file=sys.stderr)
+                    return 1
+            else:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(result)
+        return 0
+    if args.target == "go":
+        if args.inputs or args.bridge:
+            parser.error("Go target generates owned results only")
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import go
+        definitions = prepare(graph(json.loads(args.schema.read_text()), go.ROOTS))
+        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
+        result = subprocess.run(["gofmt"], input=go.render(definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n", text=True, capture_output=True, check=True).stdout
+        output = ROOT / "libraries/go/owned_results_generated.go"
+        if args.check:
+            if not output.exists() or output.read_text() != result:
+                print("generated Go results differ", file=sys.stderr)
+                return 1
+        else:
+            output.write_text(result)
+        return 0
+    if args.target == "typescript":
+        if args.inputs or args.bridge:
+            parser.error("TypeScript target generates owned results only")
+        sys.path.insert(0, str(Path(__file__).parent / "templates"))
+        import typescript
+        definitions = prepare(graph(json.loads(args.schema.read_text()), typescript.ROOTS))
+        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
+        outputs = {ROOT / "libraries/typescript/results_generated.js": typescript.runtime(definitions, version),
+                   ROOT / "libraries/typescript/results_generated.d.ts": typescript.declarations(definitions)}
+        for output, result in outputs.items():
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print("generated TypeScript results differ", file=sys.stderr)
+                    return 1
+            else:
+                output.write_text(result)
+        return 0
     if args.target == "ruby":
         if args.inputs or args.bridge:
             parser.error("Ruby target generates owned results only")
