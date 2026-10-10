@@ -100,7 +100,7 @@ where
     let mut inputs = Vec::new();
     let mut originals = Vec::new();
     let mut lines = None;
-    let mut bytes = 0usize;
+    let mut bytes = crate::public::SourceBudget::relate();
     let records = records.into_iter();
     let (lower, upper) = records.size_hint();
     // Eager feeds expose their finite extent; lazy feeds still stop at the refusal boundary.
@@ -169,7 +169,7 @@ type Prepared<T> = (T, Arc<QuestionInput>, (String, String));
 fn prepare<T: InputEvidence>(
     ask: &Relate,
     record: RecordInput<T>,
-    (lines, bytes): (&mut Option<bool>, &mut usize),
+    (lines, bytes): (&mut Option<bool>, &mut crate::public::SourceBudget),
 ) -> Result<Prepared<T>, Error> {
     if record.context.is_some() || record.options.is_some() || record.examples.is_some() {
         return Err(Error::usage(
@@ -197,10 +197,7 @@ fn prepare<T: InputEvidence>(
             "relate takes one input mode for its whole entity set",
         ));
     }
-    *bytes = bytes
-        .checked_add(size)
-        .filter(|size| *size <= 16 * 1024 * 1024)
-        .ok_or_else(|| Error::usage("relate input exceeds 16 MiB"))?;
+    bytes.charge(size)?;
     *lines = Some(literal);
     Ok((record.original, input, pair))
 }
