@@ -6,7 +6,6 @@
     missing_debug_implementations,
     reason = "private compatibility transports retain their existing withheld diagnostics"
 )]
-pub mod complete;
 pub mod complete_native;
 pub mod source;
 pub mod sql_request;
