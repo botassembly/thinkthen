@@ -19,6 +19,10 @@ public final class SessionConsumer {
         check(call.terminal().failure().state() != Presence.State.VALUE,"unexpected native failure");
         return call;
     }
+    static void refuse(CompletableFuture<Engine.OwnedCall> call) {
+        try { call.join(); throw new AssertionError("invalid typed input admitted"); }
+        catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure"); }
+    }
     static void arrived(String name) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
         while (!Files.exists(Path.of("barrier/arrived-" + name))) {
@@ -31,7 +35,10 @@ public final class SessionConsumer {
         Engine.SessionFailure retainedFailure;
         try (var engine = new Engine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0).batch(new Inputs.RequestBatch(1)))) {
             var question = question("Is it?");
-            var decide = done(engine.decide(question,records("session-decide"),options()));
+            Files.writeString(Path.of("evidence.txt"), "session-decide");
+            Files.writeString(Path.of("saved.json"), "{\"decide\":\"Is it?\"}");
+            var source = new Inputs.RequestInputSource().source(new Inputs.RequestSource().paths(List.of("evidence.txt")).reading(new Inputs.RequestReader().unit(Inputs.SourceUnit.FILE)));
+            var decide = done(engine.decide(new Inputs.RequestQuestionFile().path("saved.json"),source,options()));
             var row = (Results.SessionPacketDecideRow)decide.packets().stream().filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
             check(Boolean.TRUE.equals(row.value().value().value()),"typed decide reading");
             var choose = done(engine.choose(authored(new Inputs.RequestDefinitionFieldsChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second")))),records("session-choose"),options()));
@@ -49,6 +56,25 @@ public final class SessionConsumer {
             check(done(engine.relate(authored(new Inputs.RequestDefinitionFieldsRelateVersion().relate(new Inputs.RequestDefinitionFieldsRelateVersionPropertiesRelate().relations(List.of(new Inputs.AuthoredRelation().name("caused_by").source("alert").target("alert"))))),entities,options())).packets().stream().anyMatch(Results.SessionPacketRelateAggregate.class::isInstance),"relate aggregate");
             var request = new Inputs.Request().call(new Inputs.RequestCallDecide().question(question).input(records("preview")));
             check(engine.plan(request).requests().intValueExact() == 1,"typed no-send plan");
+            Files.createDirectories(Path.of("home/config/thinkthen/questions"));
+            Files.writeString(Path.of("home/config/thinkthen/questions/saved.json"), "{\"decide\":\"Is it?\",\"name\":\"saved\"}");
+            for (var selector : List.of(new Inputs.RequestQuestionName().name("saved"), new Inputs.RequestQuestionReference().reference("@saved"))) {
+                check(engine.plan(new Inputs.Request().call(new Inputs.RequestCallDecide().question(selector).input(source))).requests().intValueExact() == 1,"typed question lookup");
+            }
+            var item = new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("context-preview")).context(new Inputs.ContextSchema(""));
+            check(engine.plan(new Inputs.Request().call(new Inputs.RequestCallDecide().question(question).input(new Inputs.RequestInputRecords().items(List.of(item))).options(new Inputs.RequestOptions().context("shared")))).requests().intValueExact() == 1,"typed record context");
+            var shortlist = new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("shortlist-preview")).options(List.of(new Inputs.OptionSchema().name("first"),new Inputs.OptionSchema().name("second")));
+            check(engine.plan(new Inputs.Request().call(new Inputs.RequestCallChoose().question(authored(new Inputs.RequestDefinitionFieldsChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second"))))).input(new Inputs.RequestInputRecords().items(List.of(shortlist))))).requests().intValueExact() == 1,"typed replacement shortlist");
+            var states = new Inputs.RequestOptions().contextNull();
+            check(Values.object(states.json()).containsKey("context") && Values.object(states.json()).get("context") == null,"input null collapsed");
+            refuse(engine.decide(question,records("null-refusal"),states));
+            states.omitContext();
+            check(!Values.object(states.json()).containsKey("context"),"input omission collapsed");
+            var badDefinition = new Inputs.RequestDefinitionFieldsDecide().decide(wording("Is it?")).extension("unknown_authored_member",false);
+            refuse(engine.decide(authored(badDefinition),records("unknown-refusal"),options()));
+            refuse(engine.decide(question,new Inputs.RequestInputText().text("image-refusal").images(List.of(new Inputs.RequestImageBytes().media(Inputs.ImageMedia.IMAGEPNG).bytes("iVBORw0KGgo="))),options()));
+            refuse(engine.decide(question,new Inputs.RequestInputText().images(List.of(new Inputs.RequestImageFile().path("absent-image.png"))),options()));
+
             try { engine.decide(question(""),records("malformed"),options()).join(); throw new AssertionError("malformed admitted"); }
             catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure"); }
             try { engine.decide(question,records("\ud800"),options()).join(); throw new AssertionError("invalid Unicode admitted"); }

@@ -130,6 +130,9 @@ def inputs(definitions):
     def target(source):
         if source is True or source == {}:
             return 'Object'
+        if 'const' in source:
+            value = source['const']
+            return 'String' if isinstance(value, str) else 'Boolean' if isinstance(value, bool) else 'Number' if isinstance(value, (int, float)) else 'Object'
         if '$ref' in source:
             key = source['$ref'].removeprefix('#/$defs/')
             source = definitions[key]
@@ -145,7 +148,7 @@ def inputs(definitions):
             if len(kinds) == 1:
                 return target({**source, 'type': kinds[0]})
         if 'anyOf' in source or 'oneOf' in source or isinstance(source.get('type'), list) or 'primitive_variants' in source:
-            return 'Object'  # Arbitrary authored JSON readings and scalar unions.
+            raise ValueError(f'JVM input union needs a named schema shape: {source}')
         return {'string':'String', 'integer':'Number', 'number':'Number', 'boolean':'Boolean', 'null':'Object'}.get(source.get('type'), 'Object')
     lines = ['// Generated from the shared Rust Request schema. Do not edit.',
              'package thinkthen;', 'import java.util.*;',

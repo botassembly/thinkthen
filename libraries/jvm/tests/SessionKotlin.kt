@@ -12,6 +12,8 @@ fun main() = runBlocking {
     KotlinEngine(Inputs.EngineSettings().cache(Inputs.CacheDocument(false)).maxRetries(0)).use { engine ->
         val question = Inputs.RequestQuestionText().text("Is it?")
         fun input(text: String) = Inputs.RequestInputText().text(text)
+        try { engine.decide(question, input("kotlin-invalid"), Inputs.RequestOptions().contextNull()); error("null context admitted") }
+        catch (_: thinkthen.NativeFailure) { }
         val held = launch { engine.decide(question, input("hold-jvm-kotlin")) }
         withTimeout(10000) { while (!Files.exists(Path.of("barrier/arrived-hold-jvm-kotlin"))) delay(5) }
         val independent = withTimeout(10000) { engine.decide(question, input("session-kotlin-independent")) }

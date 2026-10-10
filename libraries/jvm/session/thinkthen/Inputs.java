@@ -623,7 +623,7 @@ public RequestDefinitionFieldsChoose omitWordingVersion() { return omit("wording
 }
 public static final class RequestDefinitionFieldsChoosePropertiesBatch implements Values.Value {
 private final Object value;
-public RequestDefinitionFieldsChoosePropertiesBatch(Object value) { this.value = Values.freeze(value); }
+public RequestDefinitionFieldsChoosePropertiesBatch(String value) { this.value = Values.freeze(value); }
 public RequestDefinitionFieldsChoosePropertiesBatch(Number value) { this.value = Values.freeze(value); }
 public Object json() { return value; }
 }
@@ -670,7 +670,7 @@ public RequestDefinitionFieldsDecide omitWordingVersion() { return omit("wording
 }
 public static final class RequestDefinitionFieldsDecidePropertiesBatch implements Values.Value {
 private final Object value;
-public RequestDefinitionFieldsDecidePropertiesBatch(Object value) { this.value = Values.freeze(value); }
+public RequestDefinitionFieldsDecidePropertiesBatch(String value) { this.value = Values.freeze(value); }
 public RequestDefinitionFieldsDecidePropertiesBatch(Number value) { this.value = Values.freeze(value); }
 public Object json() { return value; }
 }
@@ -872,7 +872,7 @@ public RequestDefinitionFieldsScore omitWordingVersion() { return omit("wording_
 }
 public static final class RequestDefinitionFieldsScorePropertiesBatch implements Values.Value {
 private final Object value;
-public RequestDefinitionFieldsScorePropertiesBatch(Object value) { this.value = Values.freeze(value); }
+public RequestDefinitionFieldsScorePropertiesBatch(String value) { this.value = Values.freeze(value); }
 public RequestDefinitionFieldsScorePropertiesBatch(Number value) { this.value = Values.freeze(value); }
 public Object json() { return value; }
 }
@@ -916,7 +916,7 @@ public RequestDefinitionFieldsTag omitWordingVersion() { return omit("wording_ve
 }
 public static final class RequestDefinitionFieldsTagPropertiesBatch implements Values.Value {
 private final Object value;
-public RequestDefinitionFieldsTagPropertiesBatch(Object value) { this.value = Values.freeze(value); }
+public RequestDefinitionFieldsTagPropertiesBatch(String value) { this.value = Values.freeze(value); }
 public RequestDefinitionFieldsTagPropertiesBatch(Number value) { this.value = Values.freeze(value); }
 public Object json() { return value; }
 }
