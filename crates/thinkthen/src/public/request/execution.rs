@@ -253,10 +253,8 @@ pub(super) fn prepare<'a>(
             &crate::core::ModelName::new(model).map_err(Error::refused)?,
         ))?;
     }
-    if controls.cli_reader.is_some()
-        && let Some(context) = context.as_deref()
-    {
-        crate::public::complete::records::cli_context(&engine.inner, context)?;
+    if let Some(context) = context.as_deref().filter(|text| !text.is_empty()) {
+        crate::public::complete::records::shared_context(&engine.inner, context)?;
     }
     let image_refusal = image_route(&engine, &definition)
         .err()
@@ -578,20 +576,6 @@ fn dispatch<'a>(
             super::pull::Rows::Annotations(batch) => stream(batch, RequestValue::Annotations, sink),
         });
     }
-    if controls.cli_reader.is_some() {
-        let recognition = match definition {
-            RequestDefinition::Recognize(file) => Some(file.question()),
-            RequestDefinition::Recognition(ask) => Some(ask),
-            _ => None,
-        };
-        if let Some(ask) = recognition {
-            return Ok(complete(
-                engine
-                    .request_recognize_stream(ask, rows, controls, eager, sink)?
-                    .map(RequestValue::Recognized),
-            ));
-        }
-    }
     let outcome = match definition {
         RequestDefinition::Atomic(q) => atomic(engine, function, q, rows, controls),
         RequestDefinition::Rank(q) => Ok(complete(
@@ -628,16 +612,10 @@ fn dispatch<'a>(
                 )?
                 .map(RequestValue::Annotations),
         )),
-        RequestDefinition::Recognize(file) => Ok(complete(
-            engine
-                .try_recognize_records_complete_with(file.question(), rows, controls)?
-                .map(RequestValue::Recognized),
-        )),
-        RequestDefinition::Recognition(ask) => Ok(complete(
-            engine
-                .try_recognize_records_complete_with(ask, rows, controls)?
-                .map(RequestValue::Recognized),
-        )),
+        RequestDefinition::Recognize(file) => {
+            recognize(engine, file.question(), rows, controls, eager, sink)
+        }
+        RequestDefinition::Recognition(ask) => recognize(engine, ask, rows, controls, eager, sink),
         RequestDefinition::Relate(ask) => Ok(complete(
             engine
                 .try_relate_records_complete_with(ask, rows, controls)?
@@ -684,4 +662,20 @@ pub(super) fn image_route(engine: &Engine, definition: &RequestDefinition) -> Re
         .image_route()
         .admit_header(backend.asked().0.as_str(), configured.profile())
         .map_err(Error::refused)
+}
+
+fn recognize<'a>(
+    engine: &'a Engine,
+    ask: &'a crate::Recognize,
+    rows: super::composition::Inputs<'a>,
+    controls: CallOptions<'a>,
+    eager: bool,
+    sink: Option<&dyn Fn(RequestValue)>,
+) -> Result<RequestOutcome, Error> {
+    let call = if sink.is_some() {
+        engine.request_recognize_stream(ask, rows, controls, eager, sink)?
+    } else {
+        engine.try_recognize_records_complete_with(ask, rows, controls)?
+    };
+    Ok(complete(call.map(RequestValue::Recognized)))
 }

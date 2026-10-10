@@ -63,11 +63,7 @@ pub(super) fn packed(
     let native = crate::Engine::from_cli(inner, configuration.environment.config().prices());
     let admitted = admitted.clone().with_composed_feed("cli-plan");
     let shared = context.as_ref().map(|value| value.as_text()).transpose()?;
-    let ready = || true;
-    let readiness = crate::public::cli_reader::CliReader::new(&ready, None);
-    let mut controls = crate::CallOptions::new()
-        .surface(crate::Surface::Cli)
-        .cli_reader(&readiness);
+    let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
     if let Some(shared) = &shared {
         controls = controls.context(shared);
     }

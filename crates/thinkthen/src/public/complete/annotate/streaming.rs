@@ -62,7 +62,6 @@ impl Engine {
         packing.detailed = stop.facts().attempts().is_some();
         let preparing = Annotations {
             recover_missing: false,
-            cli_groups: false,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -71,17 +70,16 @@ impl Engine {
             let (held, prepared) = record
                 .and_then(|record| prepare_record(&preparing_set, record, context.as_deref(), at))
                 .map_err(|error| error.at_record(at))?;
-            if options.cli_reader.is_none() {
-                preparing
-                    .asks(&prepared)
-                    .map_err(|error| error.at_record(at))?;
+            if let Err(error) = preparing.asks(&prepared)
+                && error.missed_pointer().is_none()
+            {
+                return Err(error.at_record(at));
             }
             Ok(Original { held, prepared })
         });
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
             recover_missing: recover.is_some(),
-            cli_groups: options.cli_reader.is_some(),
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
