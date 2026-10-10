@@ -47,6 +47,14 @@ impl Find {
     pub(crate) const fn maximum(none: bool) -> usize {
         if none { 254 } else { 255 }
     }
+    /// Admit the complete unit count under the existing option bound.
+    pub(crate) fn validate_count(count: usize, none: bool) -> Result<(), FindError> {
+        if !(2..=Self::maximum(none)).contains(&count) {
+            return Err(FindError::Count);
+        }
+        Ok(())
+    }
+
     /// Build one aggregate request from ordered evidence.
     pub(crate) fn new(
         text: QuestionText,
@@ -54,10 +62,7 @@ impl Find {
         model: ModelName,
         none: bool,
     ) -> Result<Self, FindError> {
-        let most = Self::maximum(none);
-        if !(2..=most).contains(&evidence.len()) {
-            return Err(FindError::Count);
-        }
+        Self::validate_count(evidence.len(), none)?;
         let units: Vec<Unit> = evidence
             .iter()
             .enumerate()

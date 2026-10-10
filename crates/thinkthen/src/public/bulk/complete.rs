@@ -232,10 +232,8 @@ impl Question {
         units: impl IntoIterator<Item = Result<&'a str, Error>>,
     ) -> Result<(), Error> {
         let units = admit_find(self, units, &CallOptions::new(), |_| Ok(()))?;
-        if units.len() < 2 {
-            return Err(Error::usage(count_message(self.kind == Kind::FindNone)));
-        }
-        Ok(())
+        let none = self.kind == Kind::FindNone;
+        Find::validate_count(units.len(), none).map_err(|_| Error::usage(count_message(none)))
     }
 }
 
