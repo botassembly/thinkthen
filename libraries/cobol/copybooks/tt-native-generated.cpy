@@ -1,4 +1,6 @@
       *> Generated from measured canonical C declarations; do not edit.
+01 tt-n-complete-usage-persistence-v1 based.
+ 02 v-kind usage binary-long unsigned.
 01 tt-n-complete-utf8-v1 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -3978,8 +3980,6 @@
  02 v-value.
  03 v-value-data usage pointer.
  03 v-value-len usage binary-double unsigned.
-01 tt-n-complete-usage-persistence-v1 based.
- 02 v-kind usage binary-long unsigned.
 01 tt-n-complete-persistence-observation-v1 based.
  02 v-advice.
  03 v-advice-presence usage binary-long unsigned.

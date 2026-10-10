@@ -97,6 +97,7 @@ gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/carrier_bounds.adb" -D "$TARGET" 
 LD_LIBRARY_PATH="$TARGET" "$TARGET/carrier_bounds"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
+THINKTHEN_C_LIBRARY="$NATIVE" python3 "$ROOT/checks/usage_installed.py" --family ada
 python3 "$ROOT/checks/session_abi.py"
 python3 "$ROOT/checks/native_session.py"
 python3 "$ROOT/checks/failure.py"
