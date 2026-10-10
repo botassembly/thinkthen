@@ -40,3 +40,4 @@ Java, Kotlin and Scala callers declare one Maven dependency, call the ten functi
 ## Progress
 
 - 2026-10-10 started
+- 2026-10-10 landed 08babf732; next: JVM local Maven artifacts and inventory-derived native dependencies are landed; focused Java, Kotlin and Scala consumers pass. Finish generated typed inputs, native language results and stable default build routing; final qualification remains held.
