@@ -14,12 +14,18 @@ These APIs exist alongside compatibility calls. Apply the owning README's migrat
 
 | Existing call family | Development replacement and owning guide |
 | --- | --- |
+| TypeScript `engine.complete.decide` | `Client.decide` and the other named methods with generated results. [TypeScript guide](typescript/README.md) |
+| C++ `tt::create`, `tt::call`, `tt::many` and `tt::native` | `tt::Client` named methods with generated inputs; `Call` owns cancellation and cleanup. [C++ guide](cpp/README.md) |
+| PHP `ThinkThen` and `ThinkThen\Native\Engine` | `Client` named methods returning `Completed` results and terminal facts. [PHP guide](php/README.md) |
+| Objective-C `TTClient` and JSON/files calls | `TTFoundationClient` named methods with generated results, `TTTask` cancellation and ARC. [Foundation guide](objective-c/README.md) |
 | Go `Engine.Decide`, generic `Call`, and `Files` | `Client.Decide`, the other named methods, and named methods with `FileRecords`; construct with `NewClient(settings)`. [Go guide](go/README.md) |
 | Ruby `ThinkThen::Engine` | Ten named calls on `ThinkThen::Client`, with owned native results. [Ruby guide](ruby/README.md) |
 | JVM `Door.decideComplete` and other complete calls | Named `thinkthen.Engine` methods returning session packets; Kotlin uses `KotlinEngine`, Scala uses `ScalaEngine`. [JVM guide](jvm/README.md) |
 | Dart `Door.decide` and other judgments | Corresponding named `Engine` methods over the native asset/session route. [Dart guide](dart/README.md) |
 
-The JVM session uses stable JDK 22 or later and packaged native resources. Its ordinary one-dependency Maven installation and public API switch require the owning migration. The approved Objective-C replacement is Apple-only with Foundation, generated objects, ARC and `NSError`; the current GNU Objective-C package is not that replacement. Use the [package design](../sdlc/decisions/2026-10-09-native-package-design.md) for intended targets and runtime floors. Retain explicit restrictions from package documentation.
+The [Python mapping](python/README.md) moves complete and details callers to ordinary named `Engine` calls with generated results and `details=True`. Direct iterator calls collect their result; curried `Judge` streams and the documented complete compatibility forms retain their own behavior. The Python guide also maps Series annotation to an indexed Series of typed values.
+
+The ordinary JVM builder now assembles the stable JDK 22 session package with packaged native resources. A local build supplies only its selected native target; ordinary Maven resolution still requires final distribution assembly. Its old preview API remains behind explicit compatibility scripts. The development Objective-C implementation is Apple-only with Foundation, generated objects, ARC and `NSError`. Apple SDK compile evidence exists; matching installed package execution remains required. Legacy GNU sources stay protected until that installed consumer passes. Use the [package design](../sdlc/decisions/2026-10-09-native-package-design.md) for intended targets and runtime floors. Retain explicit restrictions from package documentation.
 
 ## Files and MCP
 

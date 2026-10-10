@@ -119,6 +119,7 @@ const jobsScope = name === 'annotate'
 
   {isFn && (
     <>
+      <p>A batched detailed row carries an even share of <code>requests_sent</code>, with the remainder assigned to the earliest rows. One row can therefore show 0 beside a live request. Use <code>--facts</code> for the run total; the <a href="https://github.com/botassembly/thinkthen/blob/main/specification/result.md#the-run-facts-line">result contract</a> defines its counts.</p>
       <h3 id="global-flags">Global flags</h3>
       <p>Every function takes these flags. The <a href="/install/settings/">settings page</a> lists every setting on every surface, with the order in which values win.</p>
       <table class="flags">
@@ -134,6 +135,7 @@ const jobsScope = name === 'annotate'
     <>
       <h3 id="thresholds">Thresholds</h3>
       <p set:html={inlineHtml(cut.rule)} />
+      {fn.name === 'filter' && <p>Pick <code>--threshold</code> from a few records you have labeled as keep or drop. Save their detailed answers, compare the mistakes at several cuts, and choose a cut that fits the cost of keeping a wrong record or dropping a useful one. Check a separate labeled sample before relying on it, and repeat when the question or model changes. The <a href="/trust/">trust guide</a> shows how to grade saved answers.</p>}
       <p>{cut.dflt === 'none' ? 'There is no default cut. ' : cut.dflt !== 'per question' && <>The default is <code>{cut.dflt}</code>. </>}<code>{thr} T</code> takes a number above {CUT.above} and at most {CUT.atMost}. A value at or above T passes, and a value under T fails.</p>
       {cut.band && (
         <>
