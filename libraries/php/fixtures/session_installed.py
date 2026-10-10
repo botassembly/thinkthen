@@ -25,7 +25,7 @@ def main():
         work = Path(folder)
         app = work / 'app'; app.mkdir()
         with tarfile.open(args.archive) as archive:
-            metadata = json.load(archive.extractfile('composer.json'))
+            metadata = json.load(archive.extractfile(next(member for member in archive if Path(member.name) == Path('composer.json'))))
         metadata.update(version='0.2.0', dist={'type': 'tar', 'url': args.archive.resolve().as_uri()})
         (app / 'composer.json').write_text(json.dumps({'repositories': [{'type': 'package', 'package': metadata}],
             'require': {'botassembly/thinkthen': '0.2.0'}}))

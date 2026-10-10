@@ -14,6 +14,12 @@ for tool in "$php_bin" "$python_bin" "$composer"; do
  [ -f "$tool" ] || { echo 'php: not run: tool unavailable'; exit 77; }
 done
 "$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' || exit 77
+lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-heavy.lock}
+if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
+ export THINKTHEN_HEAVY_LOCK_HELD="$lock"
+ exec flock -w 180 -o "$lock" sh "$repo/libraries/php/check.sh" "$@"
+fi
+CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --target-dir "$repo/target" --package conformance-backend -j2
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 scratch_dir output
@@ -26,11 +32,6 @@ else
  for file in autoload.php src/session/*.php examples/*.php fixtures/*.php; do "$php_bin" -n -l "$file" >/dev/null; done
  library=${THINKTHEN_COMPLETE_LIBRARY:-$repo/libraries/c/target/debug/libthinkthen_c.so}
  if [ -z "${THINKTHEN_COMPLETE_LIBRARY:-}" ]; then
-  lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-heavy.lock}
-  if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-   export THINKTHEN_HEAVY_LOCK_HELD="$lock"
-   exec flock -w 180 -o "$lock" sh "$repo/libraries/php/check.sh" "$@"
-  fi
   CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
  fi
  "$python_bin" fixtures/package.py --library "$library" --out "$output/package"

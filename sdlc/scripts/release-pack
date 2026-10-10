@@ -409,7 +409,13 @@ cobol)
 	if [ "$1" = flutter ]; then
 		printf 'dart_archive=%s\ndart_sha256=%s\n' "$dart_name" "$dart_digest" >>"$folder/THINKTHEN-PACKAGE-INPUTS"
 	fi
-	pack "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
+	if [ "$1" = php ]; then
+		# Composer's Phar extractor refuses a root directory member named '.'.
+		(cd -- "$folder" && tar -czf "$OUT/thinkthen-$1-$V-$TARGET.tar.gz" ./*)
+		(cd -- "$OUT" && sha256 "thinkthen-$1-$V-$TARGET.tar.gz" >"thinkthen-$1-$V-$TARGET.tar.gz.sha256")
+	else
+		pack "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
+	fi
 }
 part_go() { part_source_wrapper go; }
 part_cpp() { part_source_wrapper cpp; }
