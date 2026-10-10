@@ -101,3 +101,4 @@ Author: project manager.
 - 2026-10-10 landed e7ba3aadf0cdec9e5aea744c7faf4084c6a23894; next: Rebuild final packages with the reviewed native admission repair, then finish installed qualification without repeating unchanged checks.
 - 2026-10-10 landed 76d0d24952ca2305940d8f587dd0e56c4096195d; next: Final release packages are assembled; reviewed Go and Flutter check repairs pass, PHP setup is retrying, and full installed parity follows.
 - 2026-10-10 landed 2c60fd31b3f06d71eacd7b70fd86adfc65fd93f0; next: Routine and release boundaries pass; reviewed fixture and Apple assembly repairs are landed, and final installed parity resumes using unchanged release payloads.
+- 2026-10-10 landed b5203e9b1801c74940ddd7058f75aa7d58ee226b; next: The reviewed signal repair passes held-call and internal-error checks; rebuild affected release packages and finish installed parity.
