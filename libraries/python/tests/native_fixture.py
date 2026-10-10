@@ -46,7 +46,7 @@ def native_request(document):
     selector=next(({'kind':kind,key:q[key]} for key,kind in
         [('path','file'),('name','name'),('reference','reference')] if key in q),None)
     if selector is None:
-        selector={'kind':'definition','value':json.loads(q['raw']) if 'raw' in q else q['body']}
+        selector={'kind':'definition',**({'raw':q['raw']} if 'raw' in q else {'value':q['body']})}
     source=document['input']
     if source['kind']=='files':
         # JSONL framing belongs to the native explicit source reader.
@@ -290,9 +290,17 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             if isinstance(v,str) and v in ('$FOLDER','$REFRESH','$PROFILE'):settings[key]=str(home/{'$FOLDER':'saved','$REFRESH':'refreshed','$PROFILE':'profile.json'}[v])
                         if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
                         before=int(backend.read('count'))
+                        raw_file=consumer in ('r','javascript','typescript') and step.get('raw') is not None
+                        if raw_file and step['expect'].get('error')=='usage':
+                            # question-file.md: malformed local definitions report Local, not inline Usage.
+                            step={**step,'expect':{**step['expect'],'error':'local'}}
                         def invoke(given):
                             invocation_count=int(backend.read('count'))
                             framed=request(step,root,home,given)
+                            if raw_file:
+                                # Object-only hosts admit original authored bytes through their public file selector.
+                                path=home/'authored-question.json';path.write_text(framed['question']['raw'])
+                                framed['question']={'path':str(path)}
                             if consumer in ('r','rust','rust-polars','javascript','typescript'):framed=native_request(framed)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
                             if framed['batch_probe'] or (consumer=='r' and framed['held_cancel']):

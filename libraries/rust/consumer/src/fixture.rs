@@ -3,8 +3,8 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use thinkthen::{
     AdmittedRequest, Call, Engine, EngineBuilder, Error, ErrorKind, Facts, InputEvidence,
-    InputReaderOptions, QuestionInput, Request, RequestArguments, RequestCall, RequestInput,
-    RequestOptions, RequestQuestion, SourceItem,
+    InputReaderOptions, QuestionInput, Request, RequestCall, RequestInput, RequestOptions,
+    RequestQuestion, SourceItem,
 };
 
 pub(super) type Original = QuestionInput;
@@ -15,7 +15,7 @@ pub(super) type Original = QuestionInput;
 #[derive(Deserialize)]
 pub(super) struct Fixture {
     pub verb: String,
-    pub question: RequestQuestion,
+    pub question: Value,
     pub input: RequestInput,
     pub settings: Map<String, Value>,
     #[serde(default)]
@@ -36,25 +36,21 @@ impl Fixture {
         self.request_input(self.input.clone())
     }
     pub(super) fn request_input(&self, input: RequestInput) -> Result<Request, Error> {
-        let args = RequestArguments {
-            question: self.question.clone(),
-            input,
-            options: self.options.clone(),
+        // Keep authored bytes intact and let the public parser own refusal messages.
+        let question = if let Some(raw) = self.question.get("raw").and_then(Value::as_str) {
+            format!(r#"{{"kind":"definition","value":{raw}}}"#)
+        } else {
+            serde_json::to_string(&self.question).map_err(|_| usage("invalid fixture question"))?
         };
-        let call = match self.verb.as_str() {
-            "decide" => RequestCall::Decide(args),
-            "choose" => RequestCall::Choose(args),
-            "tag" => RequestCall::Tag(args),
-            "score" => RequestCall::Score(args),
-            "filter" => RequestCall::Filter(args),
-            "rank" => RequestCall::Rank(args),
-            "find" => RequestCall::Find(args),
-            "annotate" => RequestCall::Annotate(args),
-            "recognize" => RequestCall::Recognize(args),
-            "relate" => RequestCall::Relate(args),
-            _ => return Err(usage("unknown fixture function")),
-        };
-        Ok(Request::new(call))
+        let verb =
+            serde_json::to_string(&self.verb).map_err(|_| usage("invalid fixture function"))?;
+        let input = serde_json::to_string(&input).map_err(|_| usage("invalid fixture input"))?;
+        let options =
+            serde_json::to_string(&self.options).map_err(|_| usage("invalid fixture options"))?;
+        let text = format!(
+            r#"{{"schema":"thinkthen.request/1","call":{{"function":{verb},"question":{question},"input":{input},"options":{options}}}}}"#
+        );
+        Request::from_json(&text).map(|request| Request::new(request.call))
     }
 }
 pub(super) fn usage(message: &str) -> Error {
