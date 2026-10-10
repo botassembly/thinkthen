@@ -307,7 +307,8 @@ def main():
         native.mkdir(parents=True)
         (native / "libthinkthen_c.so").write_bytes(b"fixture shared")
         # release-pack localizes the static library, so the fixture is a real one-function archive.
-        (base / "fixture.c").write_text("int thinkthen_fixture(void) { return 0; }\n")
+        (base / "fixture.c").write_text(
+            'const char *thinkthen_fixture(void) { return "/build/home/.rustup/library/std/src/lib.rs"; }\n')
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
         env = os.environ.copy()
@@ -354,23 +355,26 @@ def main():
         gate = str(REPO / "sdlc/scripts/release-workflow")
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
-        private_zig = base / "private-zig"
-        shutil.copytree(base / "paired", private_zig)
-        archive_path = next(private_zig.glob("thinkthen-zig-*.tar.gz"))
-        replacement = private_zig / "private.tmp"
-        with tarfile.open(archive_path, "r:gz") as archive, tarfile.open(replacement, "w:gz") as output:
-            for member in archive:
-                payload = archive.extractfile(member).read() if member.isfile() else None
-                if member.name.endswith("/lib/libthinkthen.a"):
-                    payload += b"/home/synthetic-private-location"
-                    member.size = len(payload)
-                output.addfile(member, io.BytesIO(payload) if payload is not None else None)
-        replacement.replace(archive_path)
-        digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
-        archive_path.with_name(archive_path.name + ".sha256").write_text(f"{digest}  {archive_path.name}\n")
-        private_result = run("sh", gate, "swift-zig-gate", str(private_zig), host, commit)
-        if private_result.returncode != 1 or "Zig archive contains private bytes" not in private_result.stderr:
-            raise AssertionError(("Zig private native bytes", private_result.returncode, private_result.stderr))
+        for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
+                              b"tt-canary-273", b"/build/home/home/private",
+                              b"/build/home/Users/private", b"/build/home/tt-canary-273"):
+            private_zig = base / "private-zig"
+            shutil.copytree(base / "paired", private_zig, dirs_exist_ok=True)
+            archive_path = next(private_zig.glob("thinkthen-zig-*.tar.gz"))
+            replacement = private_zig / "private.tmp"
+            with tarfile.open(archive_path, "r:gz") as archive, tarfile.open(replacement, "w:gz") as output:
+                for member in archive:
+                    payload = archive.extractfile(member).read() if member.isfile() else None
+                    if member.name.endswith("/lib/libthinkthen.a"):
+                        payload += private_bytes
+                        member.size = len(payload)
+                    output.addfile(member, io.BytesIO(payload) if payload is not None else None)
+            replacement.replace(archive_path)
+            digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+            archive_path.with_name(archive_path.name + ".sha256").write_text(f"{digest}  {archive_path.name}\n")
+            private_result = run("sh", gate, "swift-zig-gate", str(private_zig), host, commit)
+            if private_result.returncode != 1 or "Zig archive contains private bytes" not in private_result.stderr:
+                raise AssertionError(("Zig private native bytes", private_result.returncode, private_result.stderr))
         expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "ada-objc-cobol-gate", str(base / "paired"), host, commit), "", success=True)
         # Exercise the shared Dart/Flutter route with the real builder and fake native outputs.
