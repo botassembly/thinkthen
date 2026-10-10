@@ -77,10 +77,49 @@ fn probability_frame_keeps_value_and_probability_in_one_call_and_refuses_other_k
             .get(0),
         Some(0.9)
     );
+    nullable_choose_probability(&engine, &choose);
     assert_eq!(
         listener.count(),
         2,
         "each value and probability used one reply"
+    );
+}
+
+fn nullable_choose_probability(engine: &thinkthen::Engine, choose: &Question) {
+    let nullable = Series::new(
+        "body".into(),
+        [Some("Refund me."), None, Some("Refund me.")],
+    );
+    let duplicated = engine
+        .probability_frame(choose, &nullable, CallOptions::new())
+        .expect("nullable choose");
+    assert_eq!(
+        duplicated
+            .value()
+            .column("value")
+            .expect("value")
+            .str()
+            .expect("String")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some("billing"), None, Some("billing")]
+    );
+    assert_eq!(
+        duplicated
+            .value()
+            .column("probability")
+            .expect("probability")
+            .f64()
+            .expect("Float64")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(0.9), None, Some(0.9)]
+    );
+    assert_eq!(duplicated.facts().records(), 2);
+    assert_eq!(
+        duplicated.facts().requests_sent(),
+        0,
+        "the shared cache retains the duplicate answer"
     );
 }
 

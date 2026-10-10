@@ -2,8 +2,8 @@
 use super::column::text;
 use super::request;
 use crate::public::{
-    Call, CallOptions, Edge, Engine, Entity, Error, FindSelection, Question, Recognize, Recognized,
-    RecordInput, Relate, RequestCall, RequestValue,
+    Call, CallOptions, Edge, Engine, Error, FindSelection, InputEvidence, Question, RawRecord,
+    Recognize, Recognized, RecordReading, Relate, RequestCall, RequestValue,
 };
 use polars::prelude::{DataFrame, NamedFrom, Series};
 
@@ -131,30 +131,24 @@ pub(super) fn recognize(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<Vec<Option<Recognized>>>, Error> {
-    let cells = text(texts)?;
-    let records = cells.iter().flatten().map(|text| RecordInput {
-        examples: None,
-        seed_spans: None,
-        original: text.to_owned(),
-        context: None,
-        options: None,
-    });
-    engine
-        .recognize_records_complete_with(ask, records, options)?
-        .try_map(|rows| {
-            let mut rows = rows.into_iter();
-            cells
-                .iter()
-                .map(|cell| {
-                    if cell.is_none() {
-                        return Ok(None);
-                    }
-                    rows.next()
-                        .map(|row| Some(row.result().value().clone()))
-                        .ok_or_else(|| Error::defect("recognition lost a present cell"))
-                })
-                .collect()
-        })
+    request::execute_definition(
+        engine,
+        ask.clone().into(),
+        texts,
+        RequestCall::Recognize,
+        options,
+    )?
+    .try_map(|value| {
+        let RequestValue::Recognized(rows) = value else {
+            return Err(Error::defect("recognition returned another result kind"));
+        };
+        let mut recognized = Vec::with_capacity(texts.len());
+        request::project(texts, &rows, |row| {
+            recognized.push(row.map(|row| row.value().clone()));
+            Ok(())
+        })?;
+        Ok(recognized)
+    })
 }
 
 pub(super) fn relate(
@@ -173,14 +167,40 @@ pub(super) fn relate(
     };
     let names = text(column(name)?)?;
     let kinds = text(column(kind)?)?;
-    let entities = names
+    let reading = RecordReading::new(&[], None, None)?;
+    let records = names
         .iter()
         .zip(kinds.iter())
         .filter_map(|(name, kind)| match (name, kind) {
             (None, None) => None,
-            (Some(name), Some(kind)) => Some(Entity::new(name, kind)),
+            (Some(name), Some(kind)) => {
+                let original = RawRecord(std::sync::Arc::new(crate::core::Record::from_json(
+                    crate::core::Json::Object(vec![
+                        (
+                            "name".to_owned(),
+                            crate::core::Json::String(name.to_owned()),
+                        ),
+                        (
+                            "kind".to_owned(),
+                            crate::core::Json::String(kind.to_owned()),
+                        ),
+                    ]),
+                )));
+                Some(
+                    reading
+                        .compose(original)
+                        .map(|record| record.map_original(|original| original.question_input())),
+                )
+            }
             _ => Some(Err(Error::usage("an entity has only one null field"))),
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    engine.relate_with(ask, entities, options)
+        });
+    let ask = ask.clone().record_fields("/name", "/kind")?;
+    request::execute_records(engine, ask.into(), RequestCall::Relate, options, records)?.try_map(
+        |value| {
+            let RequestValue::Related(row) = value else {
+                return Err(Error::defect("relate returned another result kind"));
+            };
+            Ok(row.result().value().to_vec())
+        },
+    )
 }

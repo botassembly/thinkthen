@@ -34,6 +34,25 @@ pub(super) fn execute_definition(
     controls: CallOptions<'_>,
 ) -> Result<Call<RequestValue>, Error> {
     let cells = text(column)?;
+    let rows = cells.iter().flatten().map(|cell| {
+        Ok(RecordInput {
+            original: QuestionInput::Text(cell.to_owned()),
+            context: None,
+            options: None,
+            seed_spans: None,
+            examples: None,
+        })
+    });
+    execute_records(engine, definition, call, controls, rows)
+}
+
+pub(super) fn execute_records(
+    engine: &Engine,
+    definition: RequestDefinition,
+    call: fn(RequestArguments) -> RequestCall,
+    controls: CallOptions<'_>,
+    rows: impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>>,
+) -> Result<Call<RequestValue>, Error> {
     let request = Request::new(call(RequestArguments {
         question: RequestQuestion::Definition { value: definition },
         input: RequestInput::Feed {
@@ -45,15 +64,6 @@ pub(super) fn execute_definition(
         options: RequestOptions::default(),
     }))
     .admit()?;
-    let rows = cells.iter().flatten().map(|cell| {
-        Ok(RecordInput {
-            original: QuestionInput::Text(cell.to_owned()),
-            context: None,
-            options: None,
-            seed_spans: None,
-            examples: None,
-        })
-    });
     match engine.execute_request(
         &request,
         RequestEnvironment {

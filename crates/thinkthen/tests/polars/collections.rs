@@ -318,7 +318,69 @@ fn empty_invalid_and_cancelled_collections_do_not_send() {
     ] {
         assert_eq!(error.kind(), ErrorKind::Cancelled);
     }
+    remaining_zero_send_cases(&engine, &text, &numbers, &decide, &token);
     assert_eq!(backend.count(), 0);
+}
+
+#[expect(
+    clippy::expect_used,
+    reason = "a failed loopback fixture stops the consumer"
+)]
+fn remaining_zero_send_cases(
+    engine: &thinkthen::Engine,
+    text: &Series,
+    numbers: &Series,
+    decide: &Question,
+    token: &thinkthen::CancelToken,
+) {
+    let recognize =
+        Recognize::from_json(r#"{"version":1,"recognize":{"kinds":{"person":"A person name."}}}"#)
+            .expect("recognition");
+    let relate = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
+    let entities = |kinds| {
+        DataFrame::new(
+            2,
+            vec![
+                Series::new("name".into(), [Some("Ada"), Some("Bo")]).into(),
+                Series::new("kind".into(), kinds).into(),
+            ],
+        )
+        .expect("frame")
+    };
+    let valid = entities([Some("person"), Some("person")]);
+    let invalid = entities([Some("person"), None]);
+    for error in [
+        engine
+            .recognize_series(&recognize, numbers, CallOptions::new())
+            .expect_err("non-text recognition"),
+        engine
+            .relate_frame(&relate, &invalid, "name", "kind", CallOptions::new())
+            .expect_err("late unmatched null"),
+        engine
+            .probability_frame(decide, numbers, CallOptions::new())
+            .expect_err("non-text probability"),
+    ] {
+        assert_eq!(error.kind(), ErrorKind::Usage);
+    }
+    for error in [
+        engine
+            .recognize_series(&recognize, text, CallOptions::new().cancel(token))
+            .expect_err("cancel recognition"),
+        engine
+            .relate_frame(
+                &relate,
+                &valid,
+                "name",
+                "kind",
+                CallOptions::new().cancel(token),
+            )
+            .expect_err("cancel relate"),
+        engine
+            .probability_frame(decide, text, CallOptions::new().cancel(token))
+            .expect_err("cancel probability"),
+    ] {
+        assert_eq!(error.kind(), ErrorKind::Cancelled);
+    }
 }
 
 #[expect(
