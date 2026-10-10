@@ -32,9 +32,10 @@ impl Engine {
     {
         Batch::of(self.complete_stream(
             InputFunction::Decide,
-            question.question(),
+            question.question().clone(),
             records,
             options,
+            options.context_text().map(str::to_owned),
             super::decision,
         ))
     }
@@ -55,9 +56,10 @@ impl Engine {
     {
         Batch::of(self.complete_stream(
             InputFunction::Choose,
-            question.question(),
+            question.question().clone(),
             records,
             options,
+            options.context_text().map(str::to_owned),
             super::choice,
         ))
     }
@@ -78,9 +80,10 @@ impl Engine {
     {
         Batch::of(self.complete_stream(
             InputFunction::Tag,
-            question.question(),
+            question.question().clone(),
             records,
             options,
+            options.context_text().map(str::to_owned),
             super::tags,
         ))
     }
@@ -100,9 +103,10 @@ impl Engine {
     {
         Batch::of(self.complete_stream(
             InputFunction::Score,
-            question,
+            question.clone(),
             records,
             options,
+            options.context_text().map(str::to_owned),
             super::score,
         ))
     }
@@ -122,28 +126,30 @@ impl Engine {
     {
         Batch::of(self.complete_stream(
             InputFunction::Filter,
-            question,
+            question.clone(),
             records,
             options,
+            options.context_text().map(str::to_owned),
             super::records::filter,
         ))
     }
 
-    pub(super) fn complete_stream<'a, I, T, R: 'a>(
-        &'a self,
+    pub(crate) fn complete_stream<'a, I, T, R: 'a>(
+        &self,
         function: InputFunction,
-        question: &'a Question,
+        question: Question,
         records: I,
         options: CallOptions<'a>,
+        context: Option<String>,
         convert: impl Fn(core::CompleteAtomic) -> Result<R, Error> + 'a,
     ) -> Result<Batch<'a, CompleteRecord<T, R>>, Error>
     where
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        super::admitted(function, question)?;
-        let setting = crate::public::bulk::selected_batch(question, &options, self.batch)?;
-        let engine = self.asking(question)?;
+        super::admitted(function, &question)?;
+        let setting = crate::public::bulk::selected_batch(&question, &options, self.batch)?;
+        let engine = self.asking(&question)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let attempts = stop.facts().attempts().is_some();
         let mut packing = pull::packing(setting, false, false);
@@ -151,10 +157,19 @@ impl Engine {
         let validates =
             question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some();
         let preparing = Records(Arc::clone(&engine), validates);
+        let profile = self.profile.clone();
+        let most = self.most;
+        let preparing_question = question.clone();
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
                 .and_then(|record| {
-                    prepare_record(function, question, record, options.context_text(), at)
+                    prepare_record(
+                        function,
+                        &preparing_question,
+                        record,
+                        context.as_deref(),
+                        at,
+                    )
                 })
                 .map_err(|error| error.at_record(at))?;
             preparing
@@ -169,7 +184,7 @@ impl Engine {
             engine: Arc::clone(&engine),
             stop,
             packing,
-            most: self.most,
+            most,
         };
         Ok(pull::try_start_prepared(
             call,
@@ -179,7 +194,7 @@ impl Engine {
             Box::new(move |stop, at, original, row| {
                 let effective = original
                     .as_ref()
-                    .map_or(question, |original| &original.held.question);
+                    .map_or(&question, |original| &original.held.question);
                 let keys = row
                     .as_ref()
                     .map_or_else(|_| Vec::new(), |row| row.keys.clone());
@@ -188,8 +203,7 @@ impl Engine {
                         .map_err(|error| error.at_record(at))?;
                 let Original { held, .. } = original
                     .ok_or_else(|| Error::defect("a complete pulled row lost its original"))?;
-                let mut run =
-                    super::batch_run(&engine, &held.question, self.profile.as_ref(), setting);
+                let mut run = super::batch_run(&engine, &held.question, profile.as_ref(), setting);
                 run.context_sha256 = held.context_sha256;
                 let events = attempts.then(|| judged.answered.attempts.clone());
                 let mut canonical = super::atomic(

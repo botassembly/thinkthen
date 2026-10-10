@@ -42,14 +42,20 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        Batch::of(self.dynamic_choose_stream(question, records, options))
+        Batch::of(self.dynamic_choose_stream(
+            question.clone(),
+            records,
+            options,
+            options.context_text().map(str::to_owned),
+        ))
     }
 
-    fn dynamic_choose_stream<'a, I, T>(
-        &'a self,
-        question: &'a RecordChooseQuestion,
+    pub(crate) fn dynamic_choose_stream<'a, I, T>(
+        &self,
+        question: RecordChooseQuestion,
         records: I,
         options: CallOptions<'a>,
+        context: Option<String>,
     ) -> Result<Batch<'a, CompleteRecord<T, CompleteChoice>>, Error>
     where
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
@@ -64,9 +70,10 @@ impl Engine {
         let validates =
             question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some();
         let preparing = Records(Arc::clone(&engine), validates);
+        let profile = self.profile.clone();
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let original = record
-                .and_then(|record| prepare(question, record, options.context_text(), at))
+                .and_then(|record| prepare(&question, record, context.as_deref(), at))
                 .map_err(|error| error.at_record(at))?;
             preparing
                 .asks(&original.prepared)
@@ -105,8 +112,7 @@ impl Engine {
                     .map_or_else(|_| Vec::new(), |row| row.keys.clone());
                 let judged = bulk::judged(stop, &held.question, engine.backend(), at, row)
                     .map_err(|error| error.at_record(at))?;
-                let mut run =
-                    super::batch_run(&engine, &held.question, self.profile.as_ref(), setting);
+                let mut run = super::batch_run(&engine, &held.question, profile.as_ref(), setting);
                 run.context_sha256 = held.context_sha256;
                 let events = attempts.then(|| judged.answered.attempts.clone());
                 let mut canonical = super::atomic(

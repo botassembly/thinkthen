@@ -23,8 +23,14 @@ impl Engine {
         T: InputEvidence + 'a,
     {
         if let Some(release) = release {
-            let mut batch =
-                self.complete_stream(InputFunction::Rank, question, records, options, Ok)?;
+            let mut batch = self.complete_stream(
+                InputFunction::Rank,
+                question.clone(),
+                records,
+                options,
+                options.context_text().map(str::to_owned),
+                Ok,
+            )?;
             let mut held = Vec::new();
             for row in batch.by_ref() {
                 retain_row(&mut held, top, question, row?, release)?;
