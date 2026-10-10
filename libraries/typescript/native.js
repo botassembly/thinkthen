@@ -35,6 +35,14 @@ class Completed {
 class Client {
   #engine; #operations=new Set(); #closed=false;
   constructor(settings={}) {this.#engine=crossing(()=>addon.requestEngine(dump(settings)));}
+  usagePersistence() {
+    if(this.#closed) throw new ClientError('usage','client is closed');
+    return Object.freeze(crossing(()=>this.#engine.usagePersistence()));
+  }
+  finishUsageStatus() {
+    if(this.#closed) throw new ClientError('usage','client is closed');
+    return Object.freeze(crossing(()=>this.#engine.finishUsageStatus()));
+  }
   static files(paths,reading={unit:'line'},media='text'){return Object.freeze({[sourceTag]:{paths,reading,media}});}
   static item(value,fields={}) {return Object.freeze({[itemTag]:{original:original(value),...fields}});}
   static questionFile(path){return Object.freeze({[questionTag]:{kind:'file',path}});}

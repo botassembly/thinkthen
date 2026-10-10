@@ -484,6 +484,14 @@ class Engine {
     return opened(native.usage(this.#native));
   }
 
+  usagePersistence() {
+    return Object.freeze(this.#native.usagePersistence());
+  }
+
+  finishUsageStatus() {
+    return Object.freeze(this.#native.finishUsageStatus());
+  }
+
   get complete() {
     return new (require('./complete.js').Functions)((request, controls) => invoke(this.#native, 'complete', null, request, controls), (request, controls) => completeBatch(this.#native, request, controls), opened);
   }

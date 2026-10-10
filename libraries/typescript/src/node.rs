@@ -28,6 +28,39 @@ pub struct NativeEngine {
     pub(crate) engine: Engine,
 }
 
+/// An owned live persistence observation, with native fixed advice on failure.
+#[napi(object)]
+#[derive(Debug)]
+pub struct NativeUsageStatus {
+    pub state: String,
+    pub advice: Option<String>,
+}
+
+impl NativeUsageStatus {
+    fn of(status: thinkthen::UsagePersistence) -> Result<Self> {
+        let state = serde_json::to_value(status)
+            .and_then(serde_json::from_value)
+            .map_err(|_| napi::Error::from_reason("native usage state could not be converted"))?;
+        Ok(Self {
+            state,
+            advice: status.advice().map(str::to_owned),
+        })
+    }
+}
+
+#[napi]
+impl NativeEngine {
+    #[napi]
+    pub fn usage_persistence(&self) -> Result<NativeUsageStatus> {
+        NativeUsageStatus::of(self.engine.usage_persistence())
+    }
+
+    #[napi]
+    pub fn finish_usage_status(&self) -> Result<NativeUsageStatus> {
+        NativeUsageStatus::of(self.engine.finish_usage_status())
+    }
+}
+
 /// Build an engine. A refused setting throws its envelope as the message.
 #[napi]
 pub fn engine(options: String) -> Result<NativeEngine> {

@@ -396,6 +396,8 @@ export interface Verbs {
 
 /** An engine with its own settings, built on the environment. */
 export class Engine implements Verbs {
+  usagePersistence(): import('./native.js').UsageStatus;
+  finishUsageStatus(): import('./native.js').UsageStatus;
   readonly complete: CompleteFunctions;
   files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: ManyCallOptions): Promise<Call<JsonValue>>;
   constructor(options?: EngineOptions);
@@ -449,4 +451,5 @@ export interface LocatedRow extends SourceRecord { value: JsonValue; }
 export function files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: ManyCallOptions): Promise<Call<JsonValue>>;
 
 export { Client, ClientError } from "./native.js";
+export type { UsageStatus } from "./native.js";
 export * as Results from "./results_generated.js";
