@@ -6,11 +6,12 @@ import subprocess
 import sys
 import tempfile
 import time
-from backend import Backend
+from backend import Backend, Handler
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
 from children import child_env
 
 module = Path(sys.argv[1]).resolve()
+surface_only = len(sys.argv) > 2 and sys.argv[2] == 'surface'
 with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     home = Path(folder)
     consumer = home / 'consumer'
@@ -24,10 +25,22 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     barrier = home/'barrier'
     barrier.mkdir()
     server = Backend(barrier)
+    user_agents = []
+    class AttributedHandler(Handler):
+        def do_POST(self):
+            user_agents.append(self.headers.get('User-Agent'))
+            super().do_POST()
+    server.RequestHandlerClass = AttributedHandler
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
-        result=subprocess.run([str(home/'consumer-bin')],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=20)
+        result=subprocess.run([str(home/'consumer-bin'), *(['surface'] if surface_only else [])],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=5 if surface_only else 20)
         assert result.returncode==0, (result.stdout,result.stderr)
+        assert user_agents and all(agent == 'thinkthen/0.2.0 (go)' for agent in user_agents), user_agents
+        if surface_only:
+            assert result.stdout.strip() == 'surface-owned-results-pass requests=2', result.stdout
+            assert server.attempts == len(user_agents) == 2, (server.attempts, user_agents)
+            print('GO_SURFACE_INSTALLED_PASS user-agent retained-success-and-failure static-native requests=2')
+            sys.exit(0)
         assert result.stdout.startswith('ten-named-calls-owned-results-pass requests='),result.stdout
         # Ten named calls plus one false-decision call; invalid/precancel/deadline add none.
         assert server.attempts==int(result.stdout.strip().split("=")[-1]), (server.attempts, result.stdout)

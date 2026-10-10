@@ -133,6 +133,9 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 	}
 	bytes := C.CBytes(data)
 	defer C.free(bytes)
+	const surfaceToken = "go"
+	surface := C.CBytes([]byte(surfaceToken))
+	defer C.free(surface)
 	c.engine.mu.RLock()
 	if c.engine.raw == nil {
 		c.engine.mu.RUnlock()
@@ -140,7 +143,7 @@ func (c *Client) call(ctx context.Context, verb string, question, input any, opt
 	}
 	runtime.LockOSThread()
 	var session *C.thinkthen_session
-	err = sessionFailure(C.thinkthen_session_new(c.engine.raw, (*C.char)(bytes), C.size_t(len(data)), &session))
+	err = sessionFailure(C.thinkthen_session_new_with_surface(c.engine.raw, (*C.char)(bytes), C.size_t(len(data)), (*C.char)(surface), C.size_t(len(surfaceToken)), &session))
 	runtime.UnlockOSThread()
 	c.engine.mu.RUnlock()
 	if err != nil {

@@ -22,6 +22,24 @@ func main() {
 		panic(err)
 	}
 	defer client.Close()
+	if len(os.Args) > 1 && os.Args[1] == "surface" {
+		call, err := client.Decide(context.Background(), "Is it?", "text", nil)
+		require(err == nil && call.Terminal != nil, "surface decision failed")
+		_, err = client.Decide(context.Background(), "Is it?", "status-401", nil)
+		var failure *tt.SessionError
+		require(errors.As(err, &failure), "surface failure lost typed error")
+		client.Close()
+		for _, retained := range []tt.OwnedCall{call, failure.Call} {
+			facts := retained.Terminal.Facts()
+			require(facts.Present && facts.Value.CallId().Present, "surface facts lost after close")
+			sent := facts.Value.RequestsSent()
+			n, e := sent.Value.Int64()
+			require(sent.Present && e == nil && n == 1, "surface request facts changed")
+		}
+		require(failure.Call.Terminal.Failure().Present, "surface failure lost after close")
+		fmt.Println("surface-owned-results-pass requests=2")
+		return
+	}
 	if len(os.Args) > 1 && (os.Args[1] == "cancel" || os.Args[1] == "close") {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
