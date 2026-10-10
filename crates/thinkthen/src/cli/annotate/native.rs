@@ -280,7 +280,7 @@ fn receive(
             .identity
             .question_sources()
             .iter()
-            .all(|source| source.origin() == crate::core::Origin::Replay);
+            .all(|source| source.origin() != crate::core::Origin::Live);
         let values = canonical.legacy.value().clone().into_values();
         let mut printed = Some(if judging.details() {
             json_line(canonical)?

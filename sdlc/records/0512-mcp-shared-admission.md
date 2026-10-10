@@ -109,3 +109,11 @@ Both previews now carry the typed setting through to native call controls, prese
 The six existing ordinary and annotation batch-tier cases and three adjacent saved-question warning and preview-limit cases pass. An isolated local check covers environment `max`, explicit `1` and explicit `max` against saved `batch: 1` for all seven record functions; all 21 previews have the expected question count and the loopback listener receives no requests. No model calls, full routine, parity, load, large-input or release checks run.
 
 The repair removes 12 nonblank production Rust lines. The root ceiling falls to the measured 182830 lines, with no spare allowance. Existing policy size warnings concern unchanged larger files; these four modified files remain below the warning boundary. Formatting, offline policy, the source ratchet, diff checks and strict offline locked library Clippy pass. Cargo uses two jobs under scope limits of 8 GiB memory and 1 GiB swap.
+
+## Stored-answer stop counts
+
+This repair starts from `b52ada0d5`. The unchanged `stored_answers_leave_only_the_misses_to_halve` regression prints three cached rows before a refused missing batch, but its stop line reports zero rows from a recording. Native atomic and annotation rendering treated only explicit replay as stored. The existing receipt contract counts rows whose constituent answers are all stored, including working-cache hits; recognition already uses that distinction.
+
+Both renderers now count rows with no live constituent answer as stored. Mixed stored and live rows still count as live. The canonical result retains each actual cache or replay origin, reported model, usage and attempts. Fully stored atomic rows also retain the pre-migration exclusion from live model consistency checks. Rank still withholds a partial order. The lesson is to preserve the reporting meaning of a legacy counter when replacing its boolean with a richer source enum.
+
+The repair changes two comparisons and adds no Rust lines or tests. The source ceiling remains the measured 182830 lines. The atomic renderer retains its existing 568-line size warning; these edits add no new presentation responsibility or mechanical split.

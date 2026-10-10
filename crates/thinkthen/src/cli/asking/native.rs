@@ -420,7 +420,7 @@ impl Renderer {
             .identity
             .question_sources()
             .iter()
-            .all(|s| s.origin() == crate::core::Origin::Replay);
+            .all(|s| s.origin() != crate::core::Origin::Live);
         let model = (!replayed)
             .then(|| {
                 canonical
