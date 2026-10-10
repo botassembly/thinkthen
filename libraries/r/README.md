@@ -52,6 +52,20 @@ A native failure raises a `thinkthen_error` condition with `$kind`, `$retryable`
 
 The previous simplified frames, judge closures, `_complete` functions, and named `_batch` functions are no longer public. Old native compatibility modules remain private while other hosts still consume them. `tt_engine()` selects the session engine, and `tt_usage()` reports its running usage totals.
 
+For bounded records, `tt_feed(next_item, name = "records")` supplies an R producer. The producer returns `tt_record(original, location = NULL, ...)`, ordinary evidence, or `NULL` at end of input. Use `tt_record(NULL)` for a present JSON null. Record fields such as context, options and images pass to native admission. An explicit `tt_reader_failure("io")`, `"utf8"` or `"invalid_input"` finishes input with a native failure. Rust preserves the completed prefix and final facts. Producers run only on R's thread; polling retains one pending record while the native input cell is full. A producer's `close` callback releases its reader at input end, failure, cancellation or garbage collection.
+
+```r
+at <- 0L
+feed <- tt_feed(function() {
+  at <<- at + 1L
+  if (at > length(messages)) return(NULL)
+  tt_record(messages[[at]])
+})
+call <- tt_decide("Does this ask for a refund?", feed)
+```
+
+Manual producers use `tt_batch(..., input = tt_feed())`, `$push(record)` and `$finish(failure = NULL)`. Push returns `"accepted"`, `"full"` or `"closed"`; retry the same record after polling when full, and stop advancing input when closed. `$poll()` remains nonblocking and `$next_result()` waits while checking R interrupts. `$cancel()` stops intake promptly; final facts arrive after already-sent native work settles. A named call joins native result packets into its normal `thinkthen_Call` result. Its `deadline_ms` maps to the native request option. Completion receipts are unavailable for feed calls and refuse before producer access. Feed descriptors currently carry composed records; native JSONL framing requires the shared session framing repair.
+
 ## Install on Linux
 
 Public installation remains **0.1.2** until 0.2 is published. The current source checkout is a **0.2.0 development build**. Installing the command or the C library alone does not install the R package.

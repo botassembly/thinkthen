@@ -11,6 +11,14 @@ tryCatch({
     name = tt_question(name = selector$name), reference = tt_question(reference = selector$reference),
     tt_question(selector$value))
   input <- do.call(tt_input, document$input)
+  if (!is.null(document$producer_items)) {
+    at <- 0L
+    input <- tt_feed(function() {
+      at <<- at + 1L
+      if (at > length(document$producer_items)) return(NULL)
+      structure(list(item = document$producer_items[[at]]), class = "thinkthen_record")
+    })
+  }
   options <- document$options
   if (isTRUE(document$incremental) || isTRUE(document$held_cancel) || isTRUE(document$cancel)) {
     stream <- tt_batch(document$verb, question, input, options)

@@ -33,6 +33,7 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
     column <- .tt_call(tt_request_column(unname(as.list(input)), function_name))
     if (length(column$values) != length(input)) input <- column$values
   }
+  if (inherits(input, "thinkthen_feed")) input <- structure(input$header, class = "thinkthen_input")
   if (inherits(input, "thinkthen_input")) input <- unclass(input)
   else if (is.null(input) || (!is.null(column) && (column$length != 1 || !length(column$values))) || is.data.frame(input) || function_name %in% c("filter", "rank", "find", "annotate", "relate") ||
            (is.character(input) && length(input) != 1L)) {
@@ -60,6 +61,10 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
 }
 .tt_named_call <- function(function_name, question, input, options, deadline_ms, completion) {
   .tt_asking(completion, {
+    if (inherits(input, "thinkthen_feed")) {
+      if (!is.null(completion)) .tt_usage("completion receipts are unavailable for record feeds")
+      return(.tt_feed_call(function_name, question, input, options, deadline_ms))
+    }
     request <- .tt_call(tt_request_admit(.tt_request(function_name, question, input, options)))
     result <- .tt_call(tt_request_native(request, deadline_ms, completion))
     if (!is.null(result$failure)) .tt_request_failure(result$failure, result$results, result$positions, result$length)
@@ -87,28 +92,68 @@ tt_batch <- function(function_name, question, input, options = list()) {
   state <- new.env(parent = emptyenv())
   state$facts <- NULL
   state$ended <- FALSE
+  state$stopped <- FALSE
+  state$pending <- NULL
+  producer <- if (inherits(input, "thinkthen_feed")) input else NULL
+  release <- function() { if (!is.null(producer)) producer$close(); invisible(NULL) }
+  reg.finalizer(state, function(e) release(), onexit = TRUE)
+  finish <- function(failure = NULL) {
+    .tt_call(tt_request_batch_finish(native, if (is.null(failure)) NULL else .tt_json(unclass(failure))))
+    state$stopped <- TRUE
+    state$pending <- NULL
+    release()
+  }
+  push <- function(record) {
+    descriptor <- if (inherits(record, "thinkthen_record")) unclass(record)
+      else list(item = list(original = .tt_selector(record, "thinkthen_input")))
+    .tt_call(tt_request_batch_push(native, .tt_json(descriptor)))
+  }
+  advance <- function() {
+    if (is.null(producer) || is.null(producer$next_item) || state$stopped) return(invisible(NULL))
+    if (is.null(state$pending)) {
+      state$pending <- tryCatch(producer$next_item(), error = function(e) tt_reader_failure("io"))
+      if (is.null(state$pending)) { finish(); return(invisible(NULL)) }
+      if (inherits(state$pending, "thinkthen_reader_failure")) { finish(state$pending); return(invisible(NULL)) }
+    }
+    status <- tryCatch(push(state$pending), thinkthen_error = function(e) {
+      finish(tt_reader_failure("invalid_input")); "closed"
+    })
+    if (status != "full") state$pending <- NULL
+    if (status == "closed") { state$stopped <- TRUE; release() }
+  }
   poll <- function() {
     if (state$ended) return(NULL)
     event <- .tt_call(tt_request_batch_poll(native))
+    if (!is.null(event) && event$kind %in% c("terminal", "end")) {
+      state$ended <- TRUE
+      state$stopped <- TRUE
+      state$facts <- event$facts
+      release()
+      if (!is.null(event$failure)) .tt_request_failure(event$failure, positions = attr(native, "positions"), length = attr(native, "length"))
+      return(NULL)
+    }
+    advance()
     if (is.null(event) || identical(event$kind, "observation")) return(NULL)
-    if (event$kind %in% c("row", "aggregate")) return(event$value)
-    state$ended <- TRUE
-    state$facts <- event$facts
-    if (!is.null(event$failure)) .tt_request_failure(event$failure, positions = attr(native, "positions"), length = attr(native, "length"))
-    NULL
+    event$value
+  }
+  cancel <- function() {
+    .tt_call(tt_request_batch_cancel(native))
+    state$stopped <- TRUE
+    state$pending <- NULL
+    release()
+    invisible(NULL)
   }
   pull <- function() {
-    repeat {
+    tryCatch(repeat {
       value <- poll()
       if (!is.null(value) || state$ended) return(value)
       Sys.sleep(0.001)
-    }
+    }, interrupt = function(e) { cancel(); stop(e) })
   }
-  cancel <- function() { .tt_call(tt_request_batch_cancel(native)); invisible(NULL) }
   close <- function() { cancel(); state$ended <- TRUE; invisible(NULL) }
-  structure(list(next_result = pull, poll = poll, cancel = cancel, close = close,
-                 facts = function() state$facts, positions = attr(native, "positions"),
-                 length = attr(native, "length")), class = "thinkthen_batch")
+  structure(list(next_result = pull, poll = poll, push = push, finish = finish,
+                 cancel = cancel, close = close, facts = function() state$facts,
+                 positions = attr(native, "positions"), length = attr(native, "length")), class = "thinkthen_batch")
 }
 print.thinkthen_question <- function(x, ...) { cat("<question: content withheld>\n"); invisible(x) }
 print.thinkthen_input <- function(x, ...) { cat("<input: content withheld>\n"); invisible(x) }

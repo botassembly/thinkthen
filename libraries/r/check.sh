@@ -156,6 +156,8 @@ for file in tests/*.R examples/examples.R examples/slide_check.R; do
 done
 
 python3 tests/request_surface.py
+python3 tests/record_feeds.py
+python3 tests/feed_cases.py
 
 echo "== r: the tarball from $(git -C "$root" rev-parse --short HEAD), installed with an empty cargo home"
 mkdir -p "$scratch/tree" "$scratch/lib" "$scratch/cargo" "$scratch/out"

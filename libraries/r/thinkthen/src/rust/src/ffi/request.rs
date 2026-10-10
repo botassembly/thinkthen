@@ -148,6 +148,44 @@ fn tt_request_batch_poll(batch: Robj) -> Crossed<Robj> {
 }
 
 #[extendr]
+fn tt_request_batch_push(batch: Robj, descriptor: Robj) -> Crossed<Robj> {
+    let session = ExternalPtr::<NativeSession>::try_from(batch)
+        .map_err(|_| crate::usage("a native request session is required"))?;
+    if interrupt_pending() {
+        session.session.cancel();
+        return Err(crate::interrupted());
+    }
+    let status = session
+        .session
+        .try_push_json(&text_of(&descriptor, "descriptor")?)
+        .map_err(|error| crate::carry(&error))?;
+    Ok(match status {
+        thinkthen::RequestSessionPushStatus::Accepted => "accepted",
+        thinkthen::RequestSessionPushStatus::Full => "full",
+        thinkthen::RequestSessionPushStatus::Closed => "closed",
+    }
+    .into())
+}
+
+#[extendr]
+fn tt_request_batch_finish(batch: Robj, failure: Robj) -> Crossed<()> {
+    let session = ExternalPtr::<NativeSession>::try_from(batch)
+        .map_err(|_| crate::usage("a native request session is required"))?;
+    let failure = if failure.is_null() {
+        None
+    } else {
+        Some(
+            thinkthen::RequestReaderFailure::from_json(&text_of(&failure, "reader failure")?)
+                .map_err(|error| crate::carry(&error))?,
+        )
+    };
+    session
+        .session
+        .finish(failure)
+        .map_err(|error| crate::carry(&error))
+}
+
+#[extendr]
 fn tt_request_batch_cancel(batch: Robj) -> Crossed<()> {
     let session = ExternalPtr::<NativeSession>::try_from(batch)
         .map_err(|_| crate::usage("a native request session is required"))?;
@@ -164,4 +202,6 @@ extendr_module! {
     fn tt_request_batch_start;
     fn tt_request_batch_poll;
     fn tt_request_batch_cancel;
+    fn tt_request_batch_push;
+    fn tt_request_batch_finish;
 }
