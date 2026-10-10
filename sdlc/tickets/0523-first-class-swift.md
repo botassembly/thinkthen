@@ -26,3 +26,7 @@ Swift callers add one SwiftPM dependency that carries the native library, call t
   One public API is one coherent family of named typed calls. Claim `libraries/swift/**` narrowed and named per slice.
 - Proof: Shared conformance runs through an installed Swift consumer, covering absent, null, failures, unknown output fields, files, images and cancellation. One installed held-provider case shows another task progressing, and cancel and cleanup returning before the provider is released. Pending final facts stay pending. Apple platform proof runs on an Apple machine; Linux checks do not replace it. Record handwritten code removed and added, counting templates, in the landing record.
 - Defers: Dead `Complete.swift` removal goes in 0515. Final distribution assembly belongs to 0530. Native qualification follows Ian's release hold.
+
+## Progress
+
+- 2026-10-10 landed 00ad0813e; next: Swift exposes owned native usage observation and finalization in the shared reviewed 0505 batch. Its corrected thread diagnostic and focused installed status checks pass. The canonical batch record is 0505; final installed Apple and distribution qualification remain held.
