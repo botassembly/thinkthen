@@ -95,6 +95,8 @@ GENERATED_BINDING_SOURCES = {
     "libraries/ruby/lib/thinkthen/results_generated.rb",
     "libraries/jvm/session/thinkthen/Results.java",
     "libraries/jvm/session/thinkthen/Inputs.java",
+    "libraries/jvm/session/kotlin/Results.kt",
+    "libraries/jvm/session/scala/Results.scala",
     "libraries/jvm/session/thinkthen/RequestVersion.java",
     "libraries/python/src/results_generated.rs",
     "libraries/python/thinkthen/_native_results.py",

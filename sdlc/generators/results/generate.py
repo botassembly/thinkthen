@@ -474,6 +474,7 @@ def main():
             parser.error("JVM uses the shared stable native session ABI")
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import jvm
+        import jvm_languages
         request_schema = json.loads((ROOT / "specification/request.schema.json").read_text())
         request_schema["$defs"]["Request"] = {key: value for key, value in request_schema.items() if key != "$defs"}
         input_definitions = prepare(graph(request_schema, jvm.INPUT_ROOTS))
@@ -492,7 +493,17 @@ def main():
             return 1
         if not args.check:
             input_output.write_text(input_source)
-        result = jvm.render(prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS)))
+        definitions = prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS))
+        result = jvm.render(definitions)
+        for language, extension in (('kotlin', 'kt'), ('scala', 'scala')):
+            source = jvm_languages.render(definitions, language)
+            output = ROOT / 'libraries/jvm/session' / language / ('Results.' + extension)
+            if args.check and (not output.exists() or output.read_text() != source):
+                print('generated ' + language + ' results differ', file=sys.stderr)
+                return 1
+            if not args.check:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(source)
         if args.output == OUTPUT:
             args.output = ROOT / "libraries/jvm/session/thinkthen/Results.java"
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]

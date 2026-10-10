@@ -62,9 +62,9 @@ def main():
             sources.append(ROOT / 'libraries/jvm/door/thinkthen/Json.java')
             command = [str(jdk / 'bin/javac'), '-J-Xmx1g', '--release', '22', '-d', str(classes), *map(str,sources)]
         elif kind == 'kotlin':
-            command = [str(kotlin / 'bin/kotlinc'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-jvm-target', '22', '-classpath', str(jars / inventory['jars']['door']) + os.pathsep + str(kotlin / 'lib/kotlinx-coroutines-core-jvm.jar'), str(ROOT / 'libraries/jvm/session/kotlin/KotlinEngine.kt'), '-d', str(classes)]
+            command = [str(kotlin / 'bin/kotlinc'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-jvm-target', '22', '-classpath', str(jars / inventory['jars']['door']) + os.pathsep + str(kotlin / 'lib/kotlinx-coroutines-core-jvm.jar'), *map(str, sorted((ROOT / 'libraries/jvm/session/kotlin').glob('*.kt'))), '-d', str(classes)]
         else:
-            command = [str(scala / 'bin/scalac'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-classpath', str(jars / inventory['jars']['door']), '-d', str(classes), str(ROOT / 'libraries/jvm/session/scala/ScalaEngine.scala')]
+            command = [str(scala / 'bin/scalac'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-classpath', str(jars / inventory['jars']['door']), '-d', str(classes), *map(str, sorted((ROOT / 'libraries/jvm/session/scala').glob('*.scala')))]
         subprocess.run(command, check=True, env=env)
         with zipfile.ZipFile(jars / filename, 'w', zipfile.ZIP_DEFLATED) as jar:
             for file in sorted(classes.rglob('*')):
