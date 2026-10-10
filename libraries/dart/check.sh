@@ -15,5 +15,16 @@ fi
 . "$ROOT/../../sdlc/scripts/installed.sh"
 usage_home
 scratch_dir installed
-native_install "$(cd "$ROOT/../.." && pwd)" "$installed/native"
-exec python3 "$ROOT/checks/installed_native_assets.py" "$TT_DART" "$TT_FLUTTER" "$installed/native/lib/libthinkthen.so" "$installed/consumer" "${PUB_CACHE:-$HOME/.pub-cache}"
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+  [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Dart installed: package or C archive missing' >&2; exit 1; }
+  case ${THINKTHEN_ARTIFACT##*/} in
+    thinkthen-dart-*) ;;
+    thinkthen-flutter-*) [ -f "${THINKTHEN_DART_ARTIFACT:-}" ] || { echo 'Flutter installed: Dart archive missing' >&2; exit 1; } ;;
+    *) echo 'Dart installed: unrecognized package archive' >&2; exit 1 ;;
+  esac
+  native="$THINKTHEN_C_ARTIFACT"
+else
+  native_install "$(cd "$ROOT/../.." && pwd)" "$installed/native"
+  native="$installed/native/lib/libthinkthen.so"
+fi
+python3 "$ROOT/checks/installed_native_assets.py" "$TT_DART" "$TT_FLUTTER" "$native" "$installed/consumer" "${PUB_CACHE:-$HOME/.pub-cache}"

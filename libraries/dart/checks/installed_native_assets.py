@@ -37,23 +37,42 @@ def main():
                     CI='true')
     packages = scratch / 'packages'
     packages.mkdir()
-    for name, source in [('dart', ROOT / 'libraries/dart'), ('flutter', ROOT / 'libraries/dart/flutter')]:
-        staged = scratch / 'source' / name
-        for member in package_members(source):
-            target = staged / member
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source / member, target)
-        if name == 'dart':
-            configure(staged, native, [])
-        source = staged
-        archive = scratch / f'thinkthen-{name}.tar.gz'
-        with tarfile.open(archive, 'w:gz') as output:
-            for member in sorted(package_members(source)):
-                output.add(source / member, arcname=member)
+    supplied = os.environ.get('THINKTHEN_ARTIFACT')
+    archives = []
+    if supplied:
+        supplied = Path(supplied).resolve()
+        flutter_archive = supplied if supplied.name.startswith('thinkthen-flutter-') else None
+        dart_archive = Path(os.environ['THINKTHEN_DART_ARTIFACT']).resolve() if flutter_archive else supplied
+        assert dart_archive.name.startswith('thinkthen-dart-'), 'expected Dart package archive'
+        native_archive = native
+        with tarfile.open(native_archive) as content:
+            content.extractall(scratch / 'native', filter='data')
+        native = scratch / 'native/lib/libthinkthen.so'
+        run([sys.executable, str(ROOT / 'sdlc/scripts/check-c-exports.py'),
+             str(scratch / 'native/include/thinkthen.h'), str(native)], scratch, env)
+        sources = [('dart', dart_archive)] + ([('flutter', flutter_archive)] if flutter_archive else [])
+    else:
+        sources = [('dart', ROOT / 'libraries/dart'), ('flutter', ROOT / 'libraries/dart/flutter')]
+    for name, source in sources:
+        if supplied:
+            archive = source
+        else:
+            staged = scratch / 'source' / name
+            for member in package_members(source):
+                target = staged / member
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source / member, target)
+            if name == 'dart':
+                configure(staged, native, [])
+            archive = scratch / f'thinkthen-{name}.tar.gz'
+            with tarfile.open(archive, 'w:gz') as output:
+                for member in sorted(package_members(staged)):
+                    output.add(staged / member, arcname=member)
         target = packages / name
         target.mkdir()
         with tarfile.open(archive) as content:
             content.extractall(target, filter='data')
+        archives.append(archive)
         print(name, hashlib.sha256(archive.read_bytes()).hexdigest())
     cache = configure(packages / 'dart', native, [])
     definition = packages / 'dart/native-assets.json'
@@ -70,8 +89,10 @@ def main():
     (consumer / 'pubspec.yaml').write_text(spec)
     run([str(dart), 'pub', 'get', '--offline'], consumer, env)
     run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
-    configure(packages / 'dart', native, [packages / 'flutter'])
-    run([str(flutter), 'pub', 'get', '--offline'], packages / 'flutter', env)
+    has_flutter = (packages / 'flutter').is_dir()
+    if has_flutter:
+        configure(packages / 'dart', native, [packages / 'flutter'])
+        run([str(flutter), 'pub', 'get', '--offline'], packages / 'flutter', env)
     cached.rename(cached.with_suffix('.held'))
     run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'cache miss in offline build')
     cached.write_bytes(b'corrupted native library')
@@ -97,45 +118,52 @@ def main():
         finally:
             if lock:
                 lock.close()
-    # A separate installed project obtains the same pinned bytes during its build.
-    download_consumer = scratch / 'download-consumer'
-    shutil.copytree(consumer / 'bin', download_consumer / 'bin')
-    consumer = download_consumer
-    download_spec = spec.replace('offline: true', 'offline: false').replace('      asset_cache: ../packages/dart/checks/scratch/native-assets/\n', '')
-    (consumer / 'pubspec.yaml').write_text(download_spec)
-    run([str(dart), 'pub', 'get', '--offline'], consumer, env)
-    run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'no approved download URL')
-    requests = []
-    class Handler(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):
-            requests.append(self.path)
-            self.send_response(200)
-            self.send_header('Content-Length', str(len(payload)))
-            self.send_header("Connection", "close")
-            self.end_headers()
-            self.wfile.write(payload)
-        def log_message(self, *_):
-            pass
-    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-    thread = threading.Thread(target=server.serve_forever)
-    thread.start()
-    try:
-        asset['url'] = f'http://127.0.0.1:{server.server_port}/native-library'
-        definition.write_text(json.dumps(manifest))
-        # Invalidate prior hook output through the changed registered definition.
+    if supplied:
         run([str(dart), 'build', 'cli', '-t', 'bin/main.dart', '-o', str(scratch / 'dart-build')], consumer, env)
-        assert requests == ['/native-library'], requests
-    finally:
-        server.shutdown()
-        thread.join()
-        server.server_close()
-    definition.write_text(json.dumps({**manifest, 'assets': {'linux_x64': {**asset, 'url': None}}}))
+    else:
+        # A separate installed project obtains the same pinned bytes during its build.
+        download_consumer = scratch / 'download-consumer'
+        shutil.copytree(consumer / 'bin', download_consumer / 'bin')
+        consumer = download_consumer
+        download_spec = spec.replace('offline: true', 'offline: false').replace('      asset_cache: ../packages/dart/checks/scratch/native-assets/\n', '')
+        (consumer / 'pubspec.yaml').write_text(download_spec)
+        run([str(dart), 'pub', 'get', '--offline'], consumer, env)
+        run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'no approved download URL')
+        requests = []
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                requests.append(self.path)
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(payload)))
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.wfile.write(payload)
+            def log_message(self, *_):
+                pass
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever)
+        thread.start()
+        try:
+            asset['url'] = f'http://127.0.0.1:{server.server_port}/native-library'
+            definition.write_text(json.dumps(manifest))
+            # Invalidate prior hook output through the changed registered definition.
+            run([str(dart), 'build', 'cli', '-t', 'bin/main.dart', '-o', str(scratch / 'dart-build')], consumer, env)
+            assert requests == ['/native-library'], requests
+        finally:
+            server.shutdown()
+            thread.join()
+            server.server_close()
+        definition.write_text(json.dumps({**manifest, 'assets': {'linux_x64': {**asset, 'url': None}}}))
     # Run the compiled bundle after the source packages and build cache move away.
     packages.rename(scratch / 'packages-held')
     consumer.rename(scratch / 'consumer-held')
     run([str(scratch / 'dart-build/bundle/bin/main')], scratch / 'dart-build/bundle', env)
     (scratch / 'packages-held').rename(packages)
     (scratch / 'consumer-held').rename(consumer)
+    if not has_flutter:
+        run([sys.executable, str(ROOT / 'libraries/zig/Tests/guard.py'), str(native), *map(str, archives)], scratch, env)
+        print('PASS: supplied Dart and native archives, standalone typed bundle; no source build')
+        return
     app = scratch / 'flutter-app'
     shutil.copytree(ROOT / 'libraries/dart/flutter/example/linux', app / 'linux')
     (app / 'lib').mkdir()
@@ -158,8 +186,8 @@ def main():
     packages.rename(scratch / 'packages-held')
     run(['/usr/bin/xvfb-run', '-a', str(standalone / 'thinkthen_flutter_example')], standalone, env)
     (scratch / 'packages-held').rename(packages)
-    run([sys.executable, str(ROOT / 'libraries/zig/Tests/guard.py'), str(native), str(scratch / 'thinkthen-dart.tar.gz'), str(scratch / 'thinkthen-flutter.tar.gz')], scratch, env)
-    print('PASS: installed Dart bundle and Linux Flutter FFI app, cache miss, corrupt cache, loopback build fetch; no caller library path')
+    run([sys.executable, str(ROOT / 'libraries/zig/Tests/guard.py'), str(native), *map(str, archives)], scratch, env)
+    print('PASS: installed Dart bundle and Linux Flutter FFI app; supplied archives' if supplied else 'PASS: installed Dart bundle and Linux Flutter FFI app, cache miss, corrupt cache, loopback build fetch; no caller library path')
 
 
 if __name__ == '__main__':
