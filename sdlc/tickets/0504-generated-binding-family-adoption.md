@@ -1,6 +1,6 @@
 # 0504: Make Java, Kotlin and Scala thin and first-class
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -30,6 +30,8 @@ Reviews: revision 8a81dfe8a85de2ee9dce4e5942f0a6dbb90da197, reject
 Reviews: revision 76108b469241bd4b9664ef32b6ab8789e3ea4287, accept
 
 Reviews: revision c1adfd30d41ec5c2add2f3ba2b4980b6efdda328, accept
+
+Landed: 0ca7f72
 
 ## Outcome
 
