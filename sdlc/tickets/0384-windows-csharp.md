@@ -1,6 +1,6 @@
 # 0384: Load the bundled Windows library from the C# package
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
