@@ -1,12 +1,14 @@
 # 0480: Preserve cache conversion and concurrent replay
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision b9027d08b, accept
 
 Reviews: revision 8c770b941fa7054c99fdbbb4de994760cfa13382, accept
+
+Landed: a25de97
 
 ## Outcome
 

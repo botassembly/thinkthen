@@ -1,5 +1,6 @@
 """Check local C# and native package bytes and plant stale, tampered and secret variants."""
 import hashlib
+import os
 import importlib.util
 import subprocess
 import sys
@@ -17,7 +18,7 @@ sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
 MAJOR, MINOR, PATCH = VERSION.split(".")
 HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
-NATIVE = ROOT.parents[1] / "libraries/c/target/debug/libthinkthen_c.so"
+NATIVE = Path(os.environ.get("THINKTHEN_NATIVE_ASSET", ROOT.parents[1] / "libraries/c/target/debug/libthinkthen_c.so"))
 NUPKG = ROOT / f"target/scratch/managed/Botassembly.ThinkThen.{VERSION}.nupkg"
 ARCHIVE = ROOT / f"target/artifacts/thinkthen-c-{VERSION}-x86_64-linux-gnu.tar.gz"
 BAD = (b"tt-canary-290", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")

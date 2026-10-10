@@ -34,7 +34,7 @@ Final checks pass:
 - `public_types.py` passes 44 selected shared cases per installed consumer, 132 cells in total. The selectors take the public IDs from `conformance/routine-ids.txt`, the ten `files-*` cases and `images-decide`, `images-choose` and `images-score`. The private defect injection is excluded. Kotlin and Scala run without the base Java SDK JAR.
 - JVM generation, all four source ratchets, the JVM child-environment guard, offline policy, binding registry lint and `git diff --check` pass. Policy reports existing TypeScript and Zig source-size warnings.
 
-The coordinator reuses the routine Rust evidence at `c46692e1110b6f7fb423746e197ad64ae8cd924e`: 1,992 distinct workspace cases, documentation tests, the external consumer and supporting script checks pass. Relevant Rust and native-backend inputs remain unchanged. Full root lint is pending the coordinator's combined fixture guard repairs; this record claims no root lint pass. Fresh code review and landing belong to the coordinator.
+The coordinator reuses the routine Rust evidence at `c46692e1110b6f7fb423746e197ad64ae8cd924e`: 1,992 distinct workspace cases, documentation tests, the external consumer and supporting script checks pass. Relevant Rust and native-backend inputs remain unchanged. Intact root lint passes at `6caecd028`, including workspace Clippy, documentation and inventory. Fresh code review accepted `c1adfd30d41ec5c2add2f3ba2b4980b6efdda328`. Integration keeps the reviewed Python ceiling of 664 and the shared isolated toolchain helper; it changes no reviewed product code.
 
 ## Proof limits
 

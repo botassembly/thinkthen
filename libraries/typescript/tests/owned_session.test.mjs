@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {startBackend,ask as backendAsk,child as backendChild,within,sleep,until,INDEX} from './backend.mjs';
 
 const face=process.env.THINKTHEN_OWNED_MODULE || 'esm';
+const CHILD_ENV=new URL('../../../conformance/children/children.mjs',import.meta.url).href;
 const framed=body=>`const api = ${face==='cjs'?`(await import('node:module')).createRequire(${JSON.stringify(INDEX)})('thinkthen')`:"tt"};\n${body.replace(/\btt\./g,'api.')}`;
 const ask=async(backend,body,options)=>{
   const reply=await backendAsk(backend,framed(body),options);
@@ -39,7 +40,8 @@ test('Engine and Client latch held usage writer failure with safe owned advice',
   for(const owner of ['Engine','Client']) {
     const {value}=await ask(backend,`
       const {spawn}=await import('node:child_process');
-      const lock=spawn('python3',['-c','import fcntl,os,pathlib,sys; p=pathlib.Path(os.environ["XDG_STATE_HOME"])/"thinkthen"; p.mkdir(parents=True,mode=0o700); f=(p/".lock").open("w"); os.chmod(p/".lock",0o600); fcntl.flock(f,fcntl.LOCK_EX); print("held",flush=True); sys.stdin.read()'],{env:process.env,stdio:['pipe','pipe','inherit']});
+      const {childEnv}=await import(${JSON.stringify(CHILD_ENV)});
+      const lock=spawn('python3',['-c','import fcntl,os,pathlib,sys; p=pathlib.Path(os.environ["XDG_STATE_HOME"])/"thinkthen"; p.mkdir(parents=True,mode=0o700); f=(p/".lock").open("w"); os.chmod(p/".lock",0o600); fcntl.flock(f,fcntl.LOCK_EX); print("held",flush=True); sys.stdin.read()'],{env:childEnv({home:process.env.HOME}),stdio:['pipe','pipe','inherit']});
       const exited=new Promise(resolve=>lock.once('exit',resolve));
       await new Promise((resolve,reject)=>{lock.stdout.once('data',resolve);lock.once('error',reject);lock.once('exit',()=>reject(Error('lock holder exited')));});
       try {

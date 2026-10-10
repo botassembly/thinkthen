@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/childr
 from children import child_env
 
 module = Path(sys.argv[1]).resolve()
+plan_only = len(sys.argv) > 2 and sys.argv[2] == 'plan'
 surface_only = len(sys.argv) > 2 and sys.argv[2] == 'surface'
 usage_only = len(sys.argv) > 2 and sys.argv[2] == 'usage'
 feed_only = len(sys.argv) > 2 and sys.argv[2] == 'feed'
@@ -36,6 +37,16 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     server.RequestHandlerClass = AttributedHandler
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
+        if plan_only:
+            result=subprocess.run([str(home/'consumer-bin'),'plan'],env=env|{'THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'},cwd=consumer,text=True,capture_output=True,timeout=5)
+            assert result.returncode==0,(result.stdout,result.stderr)
+            import json
+            corpus=json.loads((Path(__file__).resolve().parents[3]/'specification/fixtures/types/corpus.json').read_text())['cases']
+            expected=next(c['response'] for c in corpus if c['name']=='plan-p1')
+            assert json.loads(result.stdout)==expected,(result.stdout,expected)
+            assert server.attempts==0 and not user_agents,server.attempts
+            print('GO_PLAN_INSTALLED_PASS four-functions shared-plan absent-key retained-presence refusals zero-send')
+            sys.exit(0)
         if usage_only:
             for mode in ('usage-written', 'usage-failed'):
                 state = home / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
@@ -43,7 +54,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
                 with (state / '.lock').open('w') as lock:
                     (state / '.lock').chmod(0o600)
                     if mode == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
-                    result = subprocess.run([str(home/'consumer-bin'), mode], env=run_env | {'XDG_STATE_HOME': str(state.parent)}, cwd=consumer, text=True, capture_output=True, timeout=5)
+                    result = subprocess.run([str(home/'consumer-bin'), mode], env=child_env(home=str(home / mode), THINKTHEN_API_KEY='tt-canary-274', THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1'), cwd=consumer, text=True, capture_output=True, timeout=5)
                     assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.stdout, result.stderr)
                 assert server.attempts == before + 1, server.attempts
                 print('GO_USAGE_INSTALLED_PASS', mode, 'requests=1')

@@ -1,6 +1,6 @@
 # 0516: Prove the thin first-class pattern in C#
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -28,6 +28,10 @@ Reviews: revision 5df36c0f8e2d5e2d606d0883b70e5ee142f889c9, reject
 
 Reviews: revision 2a0356e04907ec98bb08738f327b92ece1ea2ea4, accept
 
+Reviews: revision 77255bc35804d088cb9bb6458b4aeab105a54007, accept
+
+Landed: d616bb9
+
 ## Outcome
 
 A C# developer installs the NuGet package and calls named functions with native typed inputs. They get generated typed results and typed exceptions, cancel with a `CancellationToken`, and release resources with `SafeHandle` and disposal. No library path, hand-built JSON or result decoding is needed. The pilot sets the wait, cancellation, cleanup and packaging pattern that every other C-interface language follows.
@@ -52,3 +56,4 @@ A C# developer installs the NuGet package and calls named functions with native 
 - 2026-10-09 landed e95220d2963c21762926c42bd3e1e8d4f6359b2f; next: Generated settings, reader failures and NuGet inventory are landed. Finish generated Plan, actual shared cases through new Async methods, and obsolete API removal.
 - 2026-10-10 landed ccf724c3a; next: Generated Plan and all ten typed Async shared-case routes are implemented; generator freshness passes and the installed fixture uses the extracted NuGet assembly. Final installed/platform qualification and compatibility retirement remain, subject to the release hold.
 - 2026-10-10 landed ee9300d5e; next: C# directly exposes owned native usage observations and finalization with generated ABI state and safe advice. Focused installed NuGet lifecycle checks and fresh review pass. Full installed parity, Windows and distribution qualification remain held.
+- 2026-10-10 started

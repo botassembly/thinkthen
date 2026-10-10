@@ -23,7 +23,6 @@ static class Program
   if(many)for(int i=1;i<=6;i++)Release("hold-bulk-"+i);else Release(state);
   await call.WaitAsync(TimeSpan.FromSeconds(60));Check(expected!=3||returnedHeld,"deadline while held");
  }
- static async Task Direct(){using var e=Engine.Open(new InputEngineSettings());Answer(await Decide(e,"direct"),true,.9);using var spent=new CancellationTokenSource();spent.Cancel();await Fails(async()=>{await Decide(e,"no-arrival-spent-token",cancellation:spent.Token);},5);Console.WriteLine("TYPED_DIRECT_PASS");}
  static async Task Matrix(){
   using var e=Engine.Open(new InputEngineSettings());
   foreach(var sample in new[]{("yes",(bool?)true,.9),("no",(bool?)false,.1),("unsure",(bool?)null,.5),("café",(bool?)true,.9),("a\0b",(bool?)true,.9)}) {
@@ -59,5 +58,5 @@ static class Program
   string copiedError=saved.Message;e.Dispose();Check(saved.Message==copiedError&&Message(backend)==copied&&owned.All(c=>Facts(c).Model.Value=="jev-1.13.0"),"owned facts/errors after close");try{await Decide(e,"closed");throw new Exception("closed admitted");}catch(ObjectDisposedException){}
   Console.WriteLine("MATRIX_PASS");
  }
- public static async Task<int> Main(string[] args){try{if(args[0]=="direct")await Direct();else if(args[0]=="matrix")await Matrix();else if(args[0]=="named"){using var e=Engine.Open(new InputEngineSettings{Backend="local",Cache=new InputCacheDocumentAlternative1{Value=new InputDisabledCache()}});var call=await Decide(e,"named-csharp");Answer(call,true,.9);Check(Facts(call).RequestsSent==1,"named count");Console.WriteLine("CSHARP_NAMED_BACKEND_PASS");}else throw new ArgumentException("mode");return 0;}catch(Exception e){Console.Error.WriteLine(e);return 1;}}
+ public static async Task<int> Main(string[] args){try{if(args[0]=="matrix")await Matrix();else if(args[0]=="named"){using var e=Engine.Open(new InputEngineSettings{Backend="local",Cache=new InputCacheDocumentAlternative1{Value=new InputDisabledCache()}});var call=await Decide(e,"named-csharp");Answer(call,true,.9);Check(Facts(call).RequestsSent==1,"named count");Console.WriteLine("CSHARP_NAMED_BACKEND_PASS");}else throw new ArgumentException("mode");return 0;}catch(Exception e){Console.Error.WriteLine(e);return 1;}}
 }

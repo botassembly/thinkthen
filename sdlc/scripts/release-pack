@@ -241,8 +241,9 @@ cpp)
 		cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
 		;;
 csharp)
-		mkdir -p "$folder/feed" "$folder/c"
-		tar -xzf "$OUT/$c_name" -C "$folder/c"
+		mkdir -p "$folder/feed"
+		scratch_dir csharp_native
+		tar -xzf "$OUT/$c_name" -C "$csharp_native"
 		native_properties=$(python3 sdlc/scripts/package-inventory.py csharp --target "$TARGET")
 		native_rid=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["rid"])' "$TARGET")
 		native_name=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["file"].split("/")[-1])' "$TARGET")
@@ -250,9 +251,9 @@ csharp)
 		DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
 		${THINKTHEN_DOTNET:-dotnet} pack libraries/csharp/ThinkThen.csproj -c Release \
 			--source "$folder/feed" -o "$folder" -v quiet \
-			-p:ThinkThenNativeAsset="$folder/c/lib/$native_name" -p:ThinkThenNativeRid="$native_rid" -p:ThinkThenNativeName="$native_name"
+			-p:ThinkThenNativeAsset="$csharp_native/lib/$native_name" -p:ThinkThenNativeRid="$native_rid" -p:ThinkThenNativeName="$native_name"
 		[ -f "$folder/Botassembly.ThinkThen.$V.nupkg" ] || { echo 'release-pack: C# nupkg missing' >&2; exit 1; }
-		rm -r "$folder/c"
+		scratch_remove "$csharp_native"
 		rmdir "$folder/feed"
 		# The release workflow's managed pair packs the same four files (ticket 0375).
 		cp libraries/csharp/LICENSE libraries/csharp/README.md "$folder/"
@@ -380,6 +381,16 @@ cobol)
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
+			if [ "$1" = swift ] && [ "$relative" = "Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ]; then
+				native_input=$(mktemp "$stage/swift-native.XXXXXX")
+				tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$native_input" || {
+					echo 'release-pack: Swift native input extraction failed' >&2; exit 1;
+				}
+				cmp -s "$native_input" "$copied" || {
+					echo 'release-pack: Swift native library differs from C archive' >&2; exit 1;
+				}
+				continue
+			fi
 			# The wrapper's C header is copied from the one C header.
 			case $relative in native/*) continue ;; Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
 			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$member" | cmp -s - "$copied" || {
