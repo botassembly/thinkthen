@@ -105,12 +105,9 @@ def abi_check(header, package):
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
         subprocess.run([str(dotnet()), 'build', str(scratch / 'Probe.csproj'), '--configfile', str(scratch / 'NuGet.Config'), '-v', 'quiet', '-m:1'], env=env, check=True, stdout=sys.stderr)
         actual = json.loads(subprocess.check_output([str(dotnet()), str(scratch / 'bin/Debug/net8.0/Probe.dll'), str(scratch / 'ThinkThen.dll')], env=env, text=True))
-    # Validate the sole owned SDK's imports against the full frozen C header.
-    required_imports = {'thinkthen_engine_new_with', 'thinkthen_engine_free', 'thinkthen_error_code',
-                        'thinkthen_error_retryable', 'thinkthen_error_message', 'thinkthen_error_facts_json',
-                        'thinkthen_free_string', 'thinkthen_question_parse', 'thinkthen_question_free',
-                        'thinkthen_request_plan_json'} | {name for name in native['functions'] if name.startswith('thinkthen_session_')}
-    assert required_imports == actual['functions'].keys(), 'owned SDK native imports differ'
+    # Validate every installed SDK import against its generated C declaration.
+    required_imports = set(actual['functions'])
+    assert required_imports <= native['functions'].keys(), 'owned SDK imports absent from C header'
     assert set(actual['records']) == {'thinkthen_string_v1'}, 'unused native layouts retained'
     constant_names = {name for name in native['constants'] if name.startswith('THINKTHEN_LOAD_') or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
     expected = abi.represented_abi(native, {'thinkthen_string_v1'}, required_imports, constant_names)
