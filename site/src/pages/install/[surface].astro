@@ -64,6 +64,8 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
   <h1>{headline}</h1>
   <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
 
+  <p>Public installation remains 0.1.2. For development 0.2 calls and their package prerequisites, use the <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/UPGRADING-0.2.md">upgrade guide</a> and the owning package README.</p>
+
   <h2>Install</h2>
   <table class="install">
     <tr><th>Channel</th>{notes && <th>Note</th>}</tr>

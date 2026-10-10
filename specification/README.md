@@ -6,6 +6,8 @@ Version one is ten commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank
 
 The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions. The [glossary](../CONTRIBUTING.md#calls-requests-and-decisions) defines call, request and decision.
 
+The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommended typed family for each language and links its generated contracts. The [0.2 upgrade guide](../libraries/UPGRADING-0.2.md) maps changed calls. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines runtime floors and intended platform support, including stable JDK 22 and Apple-only Objective-C. Package documentation distinguishes implemented development APIs from approved replacements and published 0.1.2 installation.
+
 `spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of `sdlc/planning/plan.md` closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
 
 | Document | What it fixes | Status |
