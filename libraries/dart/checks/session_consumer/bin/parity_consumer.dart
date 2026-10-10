@@ -44,6 +44,9 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
   final verb = fixture['verb'] as String;
   final root = Platform.environment['TT_REPO']!;
   final loader = fixture['loader'];
+  final definition = Map<String, Object?>.from(fixture['question']);
+  if (fixture['metadata'] != null)
+    definition.addAll(Map<String, Object?>.from(fixture['metadata']));
   final question = loader != null
       ? switch (loader) {
           'file' ||
@@ -65,7 +68,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
                         ..writeAsStringSync(fixture['raw']))
                       .path)
               : InputRequestQuestionDefinition(
-                  value: InputRequestDefinition.read(fixture['question']));
+                  value: InputRequestDefinition.read(definition));
   final injection = fixture['operation']?['injection'];
   InputRequestInput input;
   if (fixture['paths'] != null || injection == 'recording_read_failure') {
@@ -81,9 +84,10 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
           for (final path in fixture['paths'] ?? ['target/missing-input'])
             fixture['owned_jsonl'] == true ? path : '$root/$path'
         ],
-            framing: fixture['owned_jsonl'] == true
-                ? const Presence.present('jsonl')
-                : const Presence.absent(),
+            framing:
+                fixture['owned_jsonl'] == true || fixture['source_unit'] == 5
+                    ? const Presence.present('jsonl')
+                    : const Presence.absent(),
             media: fixture['image_reader'] == true
                 ? const Presence.present('image')
                 : const Presence.absent(),
