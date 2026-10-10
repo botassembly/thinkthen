@@ -140,7 +140,13 @@ def test_shared_settings_corpus() -> None:
                                f"{setup_rows}say(value=run(db, {sql!r}))\n",
                                environment(backend, shared["arm"].removesuffix("/v1")))["value"]
                 label = shared["id"]
-                if "error" in step:
+                # A keyed SQL object is an eager set; the shared streaming case
+                # reaches its cap after sends. Request admits this set first
+                # (specification/settings.md, Request limit).
+                eager_cap = step.get("verb") == "decide_many" and "max_requests" in configured
+                if eager_cap:
+                    expect(result, f"thinkthen usage: this engine answers at most {configured['max_requests']} records in one call (retryable: no)", label)
+                elif "error" in step:
                     expect(isinstance(result, str) and result.startswith(f"thinkthen {step['error']}"), True, label)
                 elif "model" in step:
                     expect(result, [[step["model"]]], label)
@@ -148,7 +154,7 @@ def test_shared_settings_corpus() -> None:
                     expect(result, [[step["edges"]]], label)
                 else:
                     expect(result, [[1]], label)
-                expect(backend.count(), step["count"], f"{label} listener count")
+                expect(backend.count(), 0 if eager_cap else step["count"], f"{label} listener count")
             if "entries" in shared:
                 expect(recording_entries(folder), shared["entries"], f"{shared['id']} saved entries")
         backend.close()

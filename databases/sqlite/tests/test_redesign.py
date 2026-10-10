@@ -2,6 +2,7 @@
 """Selected installed-host witnesses for the accepted SQLite call shape."""
 
 import json
+import os
 import pathlib
 import tempfile
 
@@ -260,4 +261,7 @@ say(plan=run(db, 'EXPLAIN QUERY PLAN ' + sql), rows=run(db, sql))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(globals()))
+    release = {"test_correlated_and_exists_probe_a_thousand_rows_without_rejudging",
+               "test_aggregate_once_join_is_bounded_at_one_hundred_thousand"}
+    raise SystemExit(main({name: value for name, value in globals().items()
+                           if name not in release or os.environ.get("THINKTHEN_TEST_PROFILE") == "full"}))
