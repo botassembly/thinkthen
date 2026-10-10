@@ -8,13 +8,21 @@ use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
 use crate::forms::{self, Named};
 
+const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
+
 fn indexed(array: Array<'_, &str>) -> Result<Vec<String>, Error> {
+    let mut bytes = 0_usize;
     array
         .iter()
         .map(|member| {
-            member
-                .map(str::to_owned)
-                .ok_or_else(|| call::usage("a find unit is text, not NULL"))
+            let text = member.ok_or_else(|| call::usage("a find unit is text, not NULL"))?;
+            bytes = bytes
+                .checked_add(text.len())
+                .ok_or_else(|| call::usage("find units exceed 16 MiB of text"))?;
+            if bytes > MAX_TEXT_BYTES {
+                return Err(call::usage("find units exceed 16 MiB of text"));
+            }
+            Ok(text.to_owned())
         })
         .collect()
 }
