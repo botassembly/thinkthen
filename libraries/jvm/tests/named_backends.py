@@ -33,7 +33,7 @@ with tempfile.TemporaryDirectory(prefix="jvm-named-") as scratch:
         try:
             port = int(server.stdout.readline())
             row = next(row for row in ROWS if row["name"] == "typesafe")
-            env = child_env(HOME=scratch, XDG_CONFIG_HOME=str(Path(scratch) / "config"), XDG_CACHE_HOME=str(Path(scratch) / "cache"), XDG_STATE_HOME=str(Path(scratch) / "state"),
+            env = child_env(home=scratch,
                             THINKTHEN_API_KEY="tt-unnamed-loopback", TYPESAFE_API_KEY="tt-named-loopback",
                             THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1", TT_NAMED_BACKEND="1")
             configuration(env, {"local":alias(row, f"http://127.0.0.1:{port}/arm/full/capture/v1")})

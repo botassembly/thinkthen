@@ -19,7 +19,7 @@ subprocess.run([sys.executable,str(Path(__file__).with_name("guard.py")),prefix]
 server = Backend(scratch)
 cases = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
 try:
-    env = child_env(HOME=str(scratch), XDG_CONFIG_HOME=str(scratch),
+    env = child_env(home=str(scratch), XDG_CONFIG_HOME=str(scratch),
                     XDG_CACHE_HOME=str(scratch / 'cache'), XDG_STATE_HOME=str(scratch / 'state'),
                     THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
                     THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))

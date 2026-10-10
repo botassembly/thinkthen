@@ -5,6 +5,9 @@
     clippy::indexing_slicing,
     reason = "invalid fixtures, replies or fixed sample counts stop this opt-in measurement"
 )]
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+use child::ChildEnvironment as _;
 use conformance_backend::Backend;
 use serde_json::{Value, json};
 use std::{
@@ -24,10 +27,10 @@ impl Session {
     fn launch(base: &str, home: &std::path::Path) -> Self {
         let mut process = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .args(["mcp", "--url", base, "--no-cache", "--max-retries", "0"])
-            .env_clear()
+            .clear_environment()
             .env("PATH", "/usr/bin:/bin")
             .env("LANG", "C.UTF-8")
-            .env("HOME", home)
+            .home(home)
             .env("XDG_CONFIG_HOME", home)
             .env("XDG_CACHE_HOME", home)
             .env("XDG_STATE_HOME", home)

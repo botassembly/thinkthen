@@ -1,9 +1,12 @@
 """Owning native SQL call costs, missing usage, overflow, cache and replay."""
+import pathlib
 import json,os,sys,tempfile,threading
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from parity import execute
 from c_parity import ERRORS
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "conformance/children"))
+from children import child_env
 
 class Listener(ThreadingHTTPServer):
     count=0
@@ -24,7 +27,11 @@ def main():
     consumer=sys.argv[1]
     with tempfile.TemporaryDirectory(prefix='thinkthen-sql-facts-') as tmp:
         home=Path(tmp)
-        env={'PATH':os.environ['PATH'],'HOME':tmp,'XDG_CONFIG_HOME':tmp+'/config','XDG_CACHE_HOME':tmp+'/cache','XDG_STATE_HOME':tmp+'/state','LANG':'C.UTF-8','LD_LIBRARY_PATH':os.environ.get('LD_LIBRARY_PATH',''),'THINKTHEN_API_KEY':'sk-conformance-loopback'}
+        env=child_env(home=tmp,
+                      PATH=os.environ['PATH'],
+                      LANG='C.UTF-8',
+                      LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''),
+                      THINKTHEN_API_KEY='sk-conformance-loopback')
         server=Listener(('127.0.0.1',0),Reply)
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         base=f'http://127.0.0.1:{server.server_port}/v1'

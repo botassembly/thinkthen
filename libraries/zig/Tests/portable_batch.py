@@ -35,14 +35,12 @@ for named in (False, True):
         port = int(backend.stdout.readline())
         corpus = json.loads(CORPUS.read_text())
         with tempfile.TemporaryDirectory(prefix="zig-portable-", dir=PACKAGE / "target/scratch") as scratch:
-            env = child_env()
-            env.update(HOME=scratch, XDG_CACHE_HOME=scratch, XDG_CONFIG_HOME=scratch,
+            env = child_env(home=scratch, XDG_CACHE_HOME=scratch, XDG_CONFIG_HOME=scratch,
                        LD_LIBRARY_PATH=str(NATIVE / "lib"), THINKTHEN_CACHE=str(Path(scratch) / "cache"),
                        THINKTHEN_API_KEY="tt-portable-loopback",
                        THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/arm/full/capture/v1")
             if named:
                 row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
                 base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
                 configuration(env, {"local": alias(row, base)})
                 env[row["key"]] = "tt-named-loopback"

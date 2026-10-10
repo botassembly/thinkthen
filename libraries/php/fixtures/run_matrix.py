@@ -1,4 +1,5 @@
 """Bounded, independently counted PHP FFI/engine-C tests on numeric loopback."""
+import pathlib
 import collections
 import datetime
 import json
@@ -10,6 +11,8 @@ import sys
 import threading
 import time
 from backend import Backend, unquoted_single
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 ROOT = Path(__file__).resolve().parent.parent
 REPO = ROOT.parent.parent
@@ -21,12 +24,17 @@ RUN.mkdir(parents=True)
 (RUN / 'home').mkdir()
 (RUN / 'cache').mkdir()
 server = Backend(RUN / 'barrier')
-ENV = {'PATH': '/usr/bin:/bin', 'HOME': str(RUN / 'home'), 'XDG_CONFIG_HOME': str(RUN / 'home'),
-       'XDG_CACHE_HOME': str(RUN / 'home'), 'THINKTHEN_CACHE': str(RUN / 'cache'),
-       'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1',
-       'THINKTHEN_API_KEY': 'tt-canary-291', 'TT_BARRIER_DIR': str(RUN / 'barrier'),
-       'TT_LIBRARY': str(REPO / 'libraries/c/target/debug/libthinkthen_c.so'),
-       'LD_LIBRARY_PATH': str(REPO / 'libraries/c/target/debug'), 'TT_AUTOLOAD': str(ROOT / 'autoload.php')}
+ENV = child_env(home=str(RUN / 'home'),
+                PATH='/usr/bin:/bin',
+                XDG_CONFIG_HOME=str(RUN / 'home'),
+                XDG_CACHE_HOME=str(RUN / 'home'),
+                THINKTHEN_CACHE=str(RUN / 'cache'),
+                THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
+                THINKTHEN_API_KEY='tt-canary-291',
+                TT_BARRIER_DIR=str(RUN / 'barrier'),
+                TT_LIBRARY=str(REPO / 'libraries/c/target/debug/libthinkthen_c.so'),
+                LD_LIBRARY_PATH=str(REPO / 'libraries/c/target/debug'),
+                TT_AUTOLOAD=str(ROOT / 'autoload.php'))
 receipts = []
 active = None
 

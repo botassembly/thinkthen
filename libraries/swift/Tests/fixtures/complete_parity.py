@@ -139,7 +139,10 @@ def native_cases(binary):
                 value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
             if row['id']=='native-duplicate-row-indices':value['items'] *= 2
             with tempfile.TemporaryDirectory(prefix='thinkthen-'+CONSUMER+'-complete-') as folder:
-                home=Path(folder); child={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':folder,'XDG_CONFIG_HOME':str(home/'config'),'XDG_CACHE_HOME':str(home/'cache'),'XDG_STATE_HOME':str(home/'state'),'ASAN_OPTIONS':'detect_leaks=1','UBSAN_OPTIONS':'halt_on_error=1'}
+                home=Path(folder); child=child_env(home=folder,
+                          PATH=os.environ.get('PATH','/usr/bin:/bin'),
+                          ASAN_OPTIONS='detect_leaks=1',
+                          UBSAN_OPTIONS='halt_on_error=1')
                 backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
                 try:
                     child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s'%(backend.port,value['arm']),THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback')

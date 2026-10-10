@@ -1,6 +1,9 @@
 """Shared cases execute named SQL functions against counted owned loopback."""
+import pathlib
 import json,os,sys,subprocess,tempfile,sqlite3
 from pathlib import Path
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "conformance/children"))
+from children import child_env
 ROOT=Path(__file__).resolve().parents[4]
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity as inventory
@@ -96,7 +99,10 @@ def main():
             value=document(row,cases,named)
             with tempfile.TemporaryDirectory(prefix='thinkthen-sql-complete-') as tmp:
                 home=Path(tmp)
-                env={'PATH':os.environ['PATH'],'HOME':tmp,'XDG_CONFIG_HOME':tmp+'/config','XDG_CACHE_HOME':tmp+'/cache','XDG_STATE_HOME':tmp+'/state','LANG':'C.UTF-8','LD_LIBRARY_PATH':os.environ.get('LD_LIBRARY_PATH','')}
+                env=child_env(home=tmp,
+                              PATH=os.environ['PATH'],
+                              LANG='C.UTF-8',
+                              LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''))
                 if consumer=='postgresql':env['THINKTHEN_POSTGRESQL_SOCKET']=os.environ['THINKTHEN_POSTGRESQL_SOCKET']
                 backend=Backend(ROOT/'target/debug/conformance-backend',env)
                 try:

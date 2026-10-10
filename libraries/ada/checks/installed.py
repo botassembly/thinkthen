@@ -33,7 +33,7 @@ for name in ("alpha", "bravo"):
         barrier.mkdir()
         server = Backend(barrier)
         try:
-            env = child_env(HOME=str(work), XDG_CACHE_HOME=str(work / "xdg-cache"))
+            env = child_env(home=str(work), XDG_CACHE_HOME=str(work / "xdg-cache"))
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{server.server_port}/generic/v1",
                        THINKTHEN_API_KEY="tt-canary-293", THINKTHEN_CACHE=str(work / "cache"),
                        TT_CONSUMER_EVIDENCE="consumer-ada", LD_LIBRARY_PATH=str(native))

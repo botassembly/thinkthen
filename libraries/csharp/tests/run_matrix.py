@@ -10,6 +10,8 @@ import sys
 import time
 from backend import Backend
 from toolchains import dotnet as resolve_dotnet
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 root = pathlib.Path(__file__).resolve().parent.parent
 dotnet = str(resolve_dotnet())
@@ -23,17 +25,20 @@ home = logs / 'home'
 for name in ('dotnet-home', 'nuget', 'dotnet-cache'):
     (root / 'target/scratch' / name).mkdir(parents=True, exist_ok=True)
 server = Backend(barrier)
-env = {
-    'PATH': '/usr/bin:/bin', 'HOME': str(home), 'XDG_CONFIG_HOME': str(home),
-    'XDG_CACHE_HOME': str(root / 'target/scratch/dotnet-cache'),
-    'DOTNET_CLI_HOME': str(root / 'target/scratch/dotnet-home'),
-    'NUGET_PACKAGES': str(root / 'target/scratch/nuget'),
-    'DOTNET_CLI_TELEMETRY_OPTOUT': '1', 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE': '1',
-    'DOTNET_NOLOGO': '1', 'DOTNET_MULTILEVEL_LOOKUP': '0',
-    'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1',
-    'THINKTHEN_API_KEY': 'tt-canary-290', 'THINKTHEN_CACHE': str(home / 'cache'),
-    'TT_BARRIER_DIR': str(barrier),
-}
+env = child_env(home=str(home),
+                PATH='/usr/bin:/bin',
+                XDG_CONFIG_HOME=str(home),
+                XDG_CACHE_HOME=str(root / 'target/scratch/dotnet-cache'),
+                DOTNET_CLI_HOME=str(root / 'target/scratch/dotnet-home'),
+                NUGET_PACKAGES=str(root / 'target/scratch/nuget'),
+                DOTNET_CLI_TELEMETRY_OPTOUT='1',
+                DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
+                DOTNET_NOLOGO='1',
+                DOTNET_MULTILEVEL_LOOKUP='0',
+                THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
+                THINKTHEN_API_KEY='tt-canary-290',
+                THINKTHEN_CACHE=str(home / 'cache'),
+                TT_BARRIER_DIR=str(barrier))
 receipts = []
 active = None
 

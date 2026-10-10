@@ -13,6 +13,7 @@ Usage: children [ROOT]. ROOT defaults to the repository. With --self-test, it
 runs each rule against a file built to break it and pins the whole output.
 """
 
+import ast
 import pathlib
 import re
 import subprocess
@@ -52,6 +53,54 @@ TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
 # default-path and secrecy fixtures outside this family deliberately set folders;
 # toolchain/container runners also retain their own installation environments.
 OWNED_HOME_CALLERS = {
+    "crates/thinkthen/tests/mcp_timing.rs",
+    "databases/sqlite/tests/test_usage.py",
+    "sdlc/scripts/install_check.py",
+    "databases/sqlite/tests/complete/facts.py",
+    "databases/sqlite/tests/complete/parity.py",
+    "libraries/ada/checks/installed.py",
+    "libraries/ada/checks/portable_batch.py",
+    "libraries/ada/checks/public_types.py",
+    "libraries/ada/checks/run_matrix.py",
+    "libraries/cobol/checks/installed.py",
+    "libraries/cobol/checks/portable_batch.py",
+    "libraries/cobol/checks/public_types.py",
+    "libraries/cobol/checks/run_matrix.py",
+    "libraries/cpp/fixtures/installed_release.py",
+    "libraries/cpp/fixtures/owned_calls.py",
+    "libraries/cpp/fixtures/portable_batch.py",
+    "libraries/cpp/fixtures/run.py",
+    "libraries/csharp/tests/named_backends.py",
+    "libraries/csharp/tests/public_types.py",
+    "libraries/csharp/tests/run_matrix.py",
+    "libraries/dart/checks/portable_batch.py",
+    "libraries/dart/checks/run.py",
+    "libraries/dart/flutter/embedder.py",
+    "libraries/dart/flutter/run.py",
+    "libraries/go/fixtures/owned_installed.py",
+    "libraries/go/fixtures/portable_batch.py",
+    "libraries/go/fixtures/type_cases.py",
+    "libraries/jvm/tests/named_backends.py",
+    "libraries/jvm/tests/public_types.py",
+    "libraries/objective-c/checks/complete_parity.py",
+    "libraries/objective-c/checks/failure.py",
+    "libraries/objective-c/checks/installed.py",
+    "libraries/objective-c/checks/negative.py",
+    "libraries/objective-c/checks/portable_batch.py",
+    "libraries/objective-c/checks/public_types.py",
+    "libraries/objective-c/checks/run_matrix.py",
+    "libraries/php/fixtures/complete_parity.py",
+    "libraries/php/fixtures/portable_batch.py",
+    "libraries/php/fixtures/run_matrix.py",
+    "libraries/php/fixtures/type_cases.py",
+    "libraries/swift/Tests/fixtures/complete_parity.py",
+    "libraries/swift/Tests/fixtures/portable_batch.py",
+    "libraries/swift/Tests/fixtures/public_types.py",
+    "libraries/swift/Tests/fixtures/run_matrix.py",
+    "libraries/zig/Tests/complete_parity.py",
+    "libraries/zig/Tests/portable_batch.py",
+    "libraries/zig/Tests/public_types.py",
+    "libraries/zig/Tests/run_matrix.py",
     "conformance/c_parity.py", "conformance/cli_parity.py", "libraries/python/tests/native_fixture.py",
     "libraries/mcp/conformance.py", "libraries/mcp/installed.py", "libraries/mcp/test_installed.py",
     "crates/thinkthen/tests/native_named_questions.rs", "crates/thinkthen/tests/native_cache_policy.rs",
@@ -178,7 +227,32 @@ def findings(path, text):
     line = lambda at: text.count("\n", 0, at) + 1
     out = []
     if path in OWNED_HOME_CALLERS:
-        out.extend((line(hit.start()), "folders") for hit in DIRECT_FOLDER.finditer(text))
+        helper_keywords = set()
+        if language == "Python":
+            # Owned helper calls preserve deliberate runtime folder overrides.
+            # Maps and later writes still fail; only the helper owns these inputs.
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                tree = ast.Module(body=[], type_ignores=[])
+            for call in ast.walk(tree):
+                if (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+                        and call.func.id == "child_env"
+                        and any(key.arg == "home" for key in call.keywords)):
+                    helper_keywords.update((key.lineno, key.col_offset) for key in call.keywords
+                                           if key.arg and key.arg.startswith(("XDG_", "APPDATA", "LOCALAPPDATA")))
+        helper_chains = []
+        if language == "Rust":
+            for spawn in SPAWNS["Rust"].finditer(text):
+                window = rust_window(text, spawn.start())
+                if ".home(" in window or ".isolated_home(" in window:
+                    helper_chains.append((spawn.start(), spawn.start() + len(window)))
+        for hit in DIRECT_FOLDER.finditer(text):
+            if any(start <= hit.start() < end for start, end in helper_chains):
+                continue
+            position = (line(hit.start()), hit.start() - text.rfind("\n", 0, hit.start()) - 1)
+            if position not in helper_keywords:
+                out.append((position[0], "folders"))
     if language != "TypeScript" or "child_process" in text:
         for hit in SPAWNS[language].finditer(text):
             if language == "Rust":
@@ -223,8 +297,8 @@ def check(root, tables):
         lines = [line.strip() for line in text.split("\n")]
         prefix = next((prefix for prefix in tables.get("excluded", {}) if path.startswith(prefix)), None)
         if prefix is not None:
-            used.update([prefix] if found else [])
-            continue
+            used.update([prefix] if any(rule != "folders" for _, rule in found) else [])
+            found = [(number, rule) for number, rule in found if rule == "folders"]
         for number, rule in found:
             pinned = (path, rule, lines[number - 1], lines.count(lines[number - 1]))
             if any(pinned in tables.get(kind, {}) for kind in ("exempt", "pending")):
@@ -246,6 +320,16 @@ def rust_msg(path, number):
 
 
 CASES = [
+    ("crates/thinkthen/tests/mcp_timing.rs", 'Command::new("fixture").clear_environment().home(folder).env("XDG_CONFIG_HOME", folder).spawn();\n', []),
+    ("crates/thinkthen/tests/mcp_timing.rs", 'Command::new("fixture").env_clear().env("XDG_CONFIG_HOME", folder).spawn();\n',
+     [f"children: crates/thinkthen/tests/mcp_timing.rs:1: {FOLDERS}"]),
+    ("libraries/csharp/tests/named_backends.py", 'env = child_env(home=folder, XDG_CACHE_HOME=str(folder / "custom"))\n', []),
+    ("libraries/csharp/tests/named_backends.py", 'env = child_env(XDG_CACHE_HOME=folder)\n',
+     [f"children: libraries/csharp/tests/named_backends.py:1: {FOLDERS}"]),
+    ("libraries/ada/checks/run_matrix.py", 'env = {"HOME": folder, "XDG_CONFIG_HOME": folder}\n',
+     [f"children: libraries/ada/checks/run_matrix.py:1: {FOLDERS}"]),
+    ("libraries/ada/checks/run_matrix.py", 'env = child_env(home=folder); env["XDG_CONFIG_HOME"] = folder\n',
+     [f"children: libraries/ada/checks/run_matrix.py:1: {FOLDERS}"]),
     ("libraries/typescript/tests/backend.mjs", 'const env = { XDG_CONFIG_HOME: folder };\n',
      [f"children: libraries/typescript/tests/backend.mjs:1: {FOLDERS}"]),
     ("libraries/typescript/tests/named_backends.test.mjs", 'const env = childEnv({ home: folder });\n', []),

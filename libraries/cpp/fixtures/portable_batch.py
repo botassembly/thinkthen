@@ -45,16 +45,15 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cpp-portable-") as scratch:
         try:
             port = int(server.stdout.readline())
             base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
-            env = child_env()
+            env = child_env(home=scratch, XDG_CONFIG_HOME=scratch if named else str(Path(scratch) / "config"))
             env.update(THINKTHEN_API_KEY="sk-loopback-cpp-portable", THINKTHEN_BASE_URL=base,
                        TT_PORTABLE_SETTINGS=json.dumps({"base_url": base, "model": corpus["model"],
                                                         "batch": "max", "cache": False, "max_retries": 0,
                                                         "throttle": 1}),
-                       TT_PORTABLE_CORPUS=str(CORPUS), HOME=scratch, THINKTHEN_CACHE=str(folder / "cache"),
+                       TT_PORTABLE_CORPUS=str(CORPUS), THINKTHEN_CACHE=str(folder / "cache"),
                        LD_LIBRARY_PATH=str(NATIVE / "lib"))
             if named:
                 row = next(row for row in ROWS if row["name"] == "typesafe")
-                env["XDG_CONFIG_HOME"] = env["HOME"]
                 base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
                 configuration(env, {"local": alias(row, base)})
                 env[row["key"]] = "tt-named-loopback"
@@ -215,7 +214,10 @@ def native_cases(binary):
                 value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
             if row['id']=='native-duplicate-row-indices':value['items'] *= 2
             with tempfile.TemporaryDirectory(prefix='thinkthen-'+CONSUMER+'-complete-') as folder:
-                home=Path(folder); child={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':folder,'XDG_CONFIG_HOME':str(home/'config'),'XDG_CACHE_HOME':str(home/'cache'),'XDG_STATE_HOME':str(home/'state'),'ASAN_OPTIONS':'detect_leaks=1','UBSAN_OPTIONS':'halt_on_error=1'}
+                home=Path(folder); child=child_env(home=folder,
+                          PATH=os.environ.get('PATH','/usr/bin:/bin'),
+                          ASAN_OPTIONS='detect_leaks=1',
+                          UBSAN_OPTIONS='halt_on_error=1')
                 backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
                 try:
                     child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s'%(backend.port,value['arm']),THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback')

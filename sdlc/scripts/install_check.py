@@ -1,4 +1,5 @@
 """Public install checks. Gates exercise local fixtures; installs run only by dispatch."""
+import pathlib
 import hashlib
 import json
 import os
@@ -9,6 +10,8 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "conformance/children"))
+from children import child_env
 
 REPO = Path(__file__).resolve().parents[2]
 QUESTION = "Does this report say what the person did before the problem appeared?"
@@ -55,17 +58,27 @@ def check_index(channel, version, listed, binary=True):
 
 
 def clean_environment(home):
-    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home), "LANG": "en_US.UTF-8",
-           "LC_ALL": "en_US.UTF-8", "XDG_CONFIG_HOME": str(home / "config"),
-           "XDG_CACHE_HOME": str(home / "cache"), "XDG_STATE_HOME": str(home / "state"),
-           "CARGO_HOME": str(home / "cargo"), "RUSTUP_HOME": os.environ.get("RUSTUP_HOME", str(Path.home() / ".rustup")),
-           "UV_CACHE_DIR": str(home / "uv"), "PUB_CACHE": str(home / "pub-cache"),
-           "GEM_HOME": str(home / "gems"), "GEM_PATH": str(home / "gems"),
-           "NUGET_PACKAGES": str(home / "nuget"), "DOTNET_CLI_HOME": str(home / "dotnet"),
-           "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "GOTOOLCHAIN": "local",
-           "HOMEBREW_NO_AUTO_UPDATE": "1", "HOMEBREW_NO_ANALYTICS": "1", "GIT_CONFIG_NOSYSTEM": "1",
-           "HOMEBREW_NO_INSTALL_CLEANUP": "1", "HOMEBREW_CACHE": str(home / "brew-cache"),
-           "npm_config_cache": str(home / "npm-cache"), "R_LIBS_USER": str(home / "r-library")}
+    env = child_env(home=str(home),
+                    PATH=os.environ.get("PATH", "/usr/bin:/bin"),
+                    LANG="en_US.UTF-8",
+                    LC_ALL="en_US.UTF-8",
+                    CARGO_HOME=str(home / "cargo"),
+                    RUSTUP_HOME=os.environ.get("RUSTUP_HOME", str(Path.home() / ".rustup")),
+                    UV_CACHE_DIR=str(home / "uv"),
+                    PUB_CACHE=str(home / "pub-cache"),
+                    GEM_HOME=str(home / "gems"),
+                    GEM_PATH=str(home / "gems"),
+                    NUGET_PACKAGES=str(home / "nuget"),
+                    DOTNET_CLI_HOME=str(home / "dotnet"),
+                    DOTNET_CLI_TELEMETRY_OPTOUT="1",
+                    GOTOOLCHAIN="local",
+                    HOMEBREW_NO_AUTO_UPDATE="1",
+                    HOMEBREW_NO_ANALYTICS="1",
+                    GIT_CONFIG_NOSYSTEM="1",
+                    HOMEBREW_NO_INSTALL_CLEANUP="1",
+                    HOMEBREW_CACHE=str(home / "brew-cache"),
+                    npm_config_cache=str(home / "npm-cache"),
+                    R_LIBS_USER=str(home / "r-library"))
     return env
 
 

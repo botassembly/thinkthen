@@ -13,7 +13,7 @@ from children import child_env
 from backend_cases import ROWS, alias, configuration, paths
 
 with tempfile.TemporaryDirectory(prefix="csharp-named-") as scratch:
-    env = child_env(HOME=scratch, XDG_CONFIG_HOME=str(Path(scratch) / "config"), XDG_CACHE_HOME=str(Path(scratch) / "cache"), XDG_STATE_HOME=str(Path(scratch) / "state"),
+    env = child_env(home=scratch,
                     DOTNET_CLI_HOME=scratch, DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_NOLOGO="1",
                     NUGET_PACKAGES=str(PACKAGE / "target/scratch/nuget"))
     subprocess.run([str(dotnet()), "build", str(PACKAGE / "tests/Consumer.csproj"), "--configuration", "Release",

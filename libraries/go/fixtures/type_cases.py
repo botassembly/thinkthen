@@ -1,4 +1,5 @@
 """Run the shared J1 corpus through the public Go binding and saved backend."""
+import pathlib
 
 import importlib.util
 import json
@@ -7,6 +8,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 ROOT = Path(__file__).resolve().parents[3]
 if os.environ.get("THINKTHEN_ARTIFACT"):
@@ -50,10 +53,11 @@ def native_parity():
             value = c_parity.document(row, cases, named)
             with tempfile.TemporaryDirectory(prefix=f"thinkthen-{consumer}-parity-") as folder:
                 home = Path(folder)
-                env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": folder,
-                       "XDG_CONFIG_HOME": str(home / "config"), "XDG_CACHE_HOME": str(home / "cache"),
-                       "XDG_STATE_HOME": str(home / "state"), "LC_ALL": "C.UTF-8",
-                       "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "LD_LIBRARY_PATH": os.environ.get("THINKTHEN_GO_NATIVE_LIB", str(ROOT / "target/go/native/lib"))}
+                env = child_env(home=folder,
+                                PATH=os.environ.get("PATH", "/usr/bin:/bin"),
+                                LC_ALL="C.UTF-8",
+                                DOTNET_CLI_TELEMETRY_OPTOUT="1",
+                                LD_LIBRARY_PATH=os.environ.get("THINKTHEN_GO_NATIVE_LIB", str(ROOT / "target/go/native/lib")))
                 backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")

@@ -40,14 +40,15 @@ home = logs / ('embedder-home-' + stamp)
 barrier = logs / ('embedder-barrier-' + stamp)
 barrier.mkdir()
 server = Backend(barrier)
-env = {
-    'PATH': os.environ['PATH'],
-    'HOME': str(home), 'XDG_CONFIG_HOME': str(home), 'XDG_CACHE_HOME': str(home / 'cache'),
-    'PUB_CACHE': os.environ['PUB_CACHE'], 'FLUTTER_SUPPRESS_ANALYTICS': 'true',
-    'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1',
-    'THINKTHEN_API_KEY': 'tt-canary-300', 'THINKTHEN_CACHE': str(home / 'cache'),
-    'TT_NATIVE_LIBRARY': str(native),
-}
+env = child_env(home=str(home),
+                PATH=os.environ['PATH'],
+                XDG_CONFIG_HOME=str(home),
+                PUB_CACHE=os.environ['PUB_CACHE'],
+                FLUTTER_SUPPRESS_ANALYTICS='true',
+                THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
+                THINKTHEN_API_KEY='tt-canary-300',
+                THINKTHEN_CACHE=str(home / 'cache'),
+                TT_NATIVE_LIBRARY=str(native))
 receipt = {'status': 'FAIL', 'build': {}, 'run': {}, 'arrivals': [], 'required': {'flutter-embedder': 2}}
 def run_bounded(command, cwd, output_path, timeout):
     with output_path.open('wb') as output:

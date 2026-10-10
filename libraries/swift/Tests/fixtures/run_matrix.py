@@ -2,13 +2,21 @@
 import collections,datetime,json,os,pathlib,signal,subprocess,sys,time
 from backend import Backend, one_record
 from process_group import run
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "conformance/children"))
+from children import child_env
 R=pathlib.Path(__file__).resolve().parents[2]
 L=R/'target/logs'/('run-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
 L.mkdir(parents=True);(L/'barrier').mkdir();(L/'home').mkdir();(L/'cache').mkdir()
 server=Backend(L/'barrier');receipts=[];status='FAILED'
-env={'PATH':'/usr/bin:/bin','HOME':str(L/'home'),'XDG_CONFIG_HOME':str(L/'home'),'XDG_CACHE_HOME':str(L/'home'),
- 'LD_LIBRARY_PATH':str(R/'target/native/lib'),'THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1',
- 'THINKTHEN_API_KEY':'tt-canary-294','THINKTHEN_CACHE':str(L/'cache'),'TT_BARRIER_DIR':str(L/'barrier')}
+env=child_env(home=str(L/'home'),
+              PATH='/usr/bin:/bin',
+              XDG_CONFIG_HOME=str(L/'home'),
+              XDG_CACHE_HOME=str(L/'home'),
+              LD_LIBRARY_PATH=str(R/'target/native/lib'),
+              THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
+              THINKTHEN_API_KEY='tt-canary-294',
+              THINKTHEN_CACHE=str(L/'cache'),
+              TT_BARRIER_DIR=str(L/'barrier'))
 try:
     if len(sys.argv)==2 and sys.argv[1]=='facts':
         result=run([str(R/'target/scratch/swift-matrix'),'facts'],cwd=R,env=env,timeout=60)
