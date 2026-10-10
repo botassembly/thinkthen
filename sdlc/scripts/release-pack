@@ -17,6 +17,12 @@ reuse=
 [ $# -ge 2 ] || { echo 'usage: release-pack [--reuse] TARGET OUT [PART...]' >&2; exit 2; }
 TARGET=$1 OUT=$2
 shift 2
+# Foundation has no GNU/Linux wrapper; fail before building any native part.
+case " $* " in
+*' objective-c '*)
+    case $TARGET in *-apple-darwin) ;; *) echo 'release-pack: Objective-C Foundation requires an Apple target' >&2; exit 2 ;; esac
+    ;;
+esac
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 host=$(rustc -vV | sed -n 's/^host: //p')
 [ "$TARGET" = "$host" ] || { echo "release-pack: $TARGET is not this host's target, $host" >&2; exit 2; }
@@ -351,15 +357,12 @@ ada)
 			libraries/ada/examples/session_demo.adb "$folder/examples/"
 		;;
 objective-c)
-		mkdir -p "$folder/Sources" "$folder/Examples"
+		mkdir -p "$folder/Sources/Foundation"
 		cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
-			libraries/objective-c/source-package.json "$folder/"
-		cp libraries/objective-c/Sources/ThinkThen.h libraries/objective-c/Sources/ThinkThen.m \
-			libraries/objective-c/Sources/TTJSON.h libraries/objective-c/Sources/TTJSON.c \
-			libraries/objective-c/Sources/TTComplete.h libraries/objective-c/Sources/TTComplete.c \
-			libraries/objective-c/Sources/TTNative.h libraries/objective-c/Sources/TTNativeAPI.h \
-			libraries/objective-c/Sources/TTNativeAPI.m libraries/objective-c/Sources/TTNativeViews.c "$folder/Sources/"
-		cp libraries/objective-c/Examples/consumer.m "$folder/Examples/"
+			libraries/objective-c/source-package.json libraries/objective-c/Package.swift "$folder/"
+		cp libraries/objective-c/Sources/Foundation/* "$folder/Sources/Foundation/"
+		[ -d libraries/swift/CThinkThen.xcframework ] || { echo 'release-pack: Foundation needs the matching assembled universal CThinkThen.xcframework' >&2; exit 1; }
+		cp -R libraries/swift/CThinkThen.xcframework "$folder/"
 		;;
 cobol)
 		mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples"

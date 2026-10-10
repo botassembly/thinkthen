@@ -1,7 +1,7 @@
 {
   "name": "thinkthen-objective-c",
   "version": "0.2.0",
-  "source_only": true,
+  "source_only": false,
   "native_dependency": "thinkthen-c",
-  "bundles_native": false
+  "bundles_native": true
 }
