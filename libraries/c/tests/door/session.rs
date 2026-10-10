@@ -32,6 +32,12 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
             (Some(0), String::new())
         );
     }
+    assert_schema_admission_refusals(&backend);
+    assert_definition_admission_refusals(&backend);
+    assert_eq!(backend.count(), 0, "malformed controls send nothing");
+}
+
+fn assert_schema_admission_refusals(backend: &Backend) {
     for (schema, item) in [
         (
             "context_schema",
@@ -66,6 +72,9 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
         assert_eq!(text(&output.stdout), format!("{error}\n"));
         assert!(!text(&output.stdout).contains("private-"));
     }
+}
+
+fn assert_definition_admission_refusals(backend: &Backend) {
     let canonical = |question: &str, item: &str| {
         format!(
             "{{\"schema\":\"thinkthen.request/1\",\"call\":{{\"function\":\"decide\",\"question\":{{\"kind\":\"definition\",\"value\":{question}}},\"input\":{{\"kind\":\"records\",\"items\":[{item}]}}}}}}"
@@ -128,7 +137,6 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
         assert!(!text(&output.stdout).contains("private-wording"));
         assert!(!text(&output.stdout).contains("private-evidence"));
     }
-    assert_eq!(backend.count(), 0, "malformed controls send nothing");
 }
 
 #[test]
