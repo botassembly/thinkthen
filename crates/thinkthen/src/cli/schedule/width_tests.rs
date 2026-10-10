@@ -307,8 +307,8 @@ fn held(busy_once: &'static str) -> Held {
     }
 }
 
-/// Let every held answer go after a quiet spell, and fail if more than `cap`
-/// are ever held.
+/// Hold the first wave until `cap` arrive, then drain after each quiet spell.
+/// Fail if more than `cap` are ever held.
 /// Return the most held at once and every request body that was held.
 fn drain(held: &Held, cap: usize, finished: &AtomicUsize, runs: usize) -> (usize, Vec<String>) {
     let give_up = Instant::now() + Duration::from_secs(120);
@@ -325,7 +325,7 @@ fn drain(held: &Held, cap: usize, finished: &AtomicUsize, runs: usize) -> (usize
                 );
                 seen.push(body);
             }
-            Err(RecvTimeoutError::Timeout) if holding > 0 => {
+            Err(RecvTimeoutError::Timeout) if holding > 0 && most == cap => {
                 for _ in 0..holding {
                     held.release.send(()).expect("release");
                 }
