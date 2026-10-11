@@ -24,7 +24,10 @@ native.thinkthen_session_error_message.restype = ct.c_char_p
 bridge.TT_SESSION_NEXT.argtypes = [ct.c_void_p,ct.POINTER(ct.c_uint32),ct.POINTER(ct.c_void_p)]
 engine = native.thinkthen_engine_new_with(sys.argv[2].encode())
 if not engine:
-    raise RuntimeError('fixture engine constructor refused')
+    native.thinkthen_error_message.restype = ct.c_char_p
+    print(json.dumps({'admission': {'code': native.thinkthen_error_code(None),
+        'message': native.thinkthen_error_message(None).decode()}}))
+    raise SystemExit(0)
 value = json.loads(Path(sys.argv[1]).read_text())
 records = Records(Path(os.environ['TT_SESSION_PACKAGE']))
 verb = value['verb']

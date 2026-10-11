@@ -67,6 +67,10 @@ end program COBOL_PUSH.
                    env=child_env(LC_ALL='C.UTF-8'),check=True,timeout=60)
     def invoke(step, settings, env, home, backend):
         fixture = shared.descriptor(step,home)
+        for item in fixture['input'].get('items', []):
+            if item.get('images'):
+                item['images'] = [{'kind':'file', 'path':str(ROOT / path),
+                    'media':step.get('media', 'image/png')} for path in step['image_paths']]
         if step.get('incremental') and fixture['input']['kind'] != 'source':
             fixture['feed_items'] = fixture['input']['items']
             fixture['input'] = {'kind':'feed','name':'records'}
