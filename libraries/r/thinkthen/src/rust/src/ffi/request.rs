@@ -6,9 +6,14 @@ use thinkthen::{AdmittedRequest, RequestEnvironment, RequestOutcome, RequestSess
 mod inputs;
 
 #[extendr]
-fn tt_request_build(function: Robj, question: Robj, input: Robj, options: Robj) -> Crossed<Robj> {
+fn tt_request_build(
+    function_name: Robj,
+    question: Robj,
+    input: Robj,
+    options: Robj,
+) -> Crossed<Robj> {
     let request = inputs::request(
-        &text_of(&function, "function")?,
+        &text_of(&function_name, "function")?,
         &question,
         &input,
         &options,
