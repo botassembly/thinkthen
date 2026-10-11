@@ -37,9 +37,10 @@ else
  "$python_bin" fixtures/package.py --library "$library" --out "$output/package"
  archive=$output/package.tar.gz
 fi
-"$python_bin" fixtures/session_installed.py --archive "$archive" --composer "$composer"
 if [ "$profile" = full ]; then
  # The shared suite consumes the installed package and its bundled native library.
  THINKTHEN_TEST_PROFILE=full "$python_bin" fixtures/session_installed.py --archive "$archive" --composer "$composer" --parity
+else
+ "$python_bin" fixtures/session_installed.py --archive "$archive" --composer "$composer"
 fi
 echo 'php: pass'
