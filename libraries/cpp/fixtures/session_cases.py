@@ -126,7 +126,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
                         request=descriptor(step,home)
                         fixture=dict(request)
-                        if CONSUMER in ('cpp','zig') and step.get('incremental') and request['input']['kind']!='source':
+                        if CONSUMER in ('cpp','zig','objective-c') and step.get('incremental') and request['input']['kind']!='source':
                             fixture={**request,'input':{'kind':'feed','name':'records'},'feed_items':request['input']['items']}
                         input_file=home/'consumer-input.json';input_file.write_text(shared.compact(fixture))
                         before=int(backend.read('count'));args=[str(binary),str(input_file),shared.compact(settings)]

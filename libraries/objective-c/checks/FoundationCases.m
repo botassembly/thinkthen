@@ -75,7 +75,17 @@ int main(int argc, const char *argv[]) {
                 explicitPackets = [packets copy];
             }
         } else {
-#define NAMED(name) if ([verb isEqual:@#name]) task = [client name:fixture[@"question"] input:fixture[@"input"] options:fixture[@"options"] feed:nil completion:completion error:&error];
+            TTFeed feed = nil;
+            NSArray *items = fixture[@"feed_items"];
+            if (items) {
+                __block NSUInteger index = 0;
+                feed = ^NSDictionary *(NSDictionary **readerFailure) {
+                    *readerFailure = nil;
+                    if (index == items.count) return nil;
+                    return @{@"item":items[index++]};
+                };
+            }
+#define NAMED(name) if ([verb isEqual:@#name]) task = [client name:fixture[@"question"] input:fixture[@"input"] options:fixture[@"options"] feed:feed completion:completion error:&error];
         NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
         NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
 #undef NAMED
