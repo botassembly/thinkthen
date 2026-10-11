@@ -29,6 +29,8 @@ preparation helpers and native located serializers are adopted. Root owns fresh 
 final real Windows execution and local timing remain pending. No complete parity,
 main landing or publication is claimed.
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 An installed ThinkThen command starts a local MCP server. Agents call the same ten functions with ordinary question files, explicit file or folder inputs, complete typed results and the existing settings and cache. MCP appears in the executed parity table.
