@@ -135,6 +135,8 @@ Author: project manager.
 3. The 0524 full Go matrix, load and large-input cases belong to the release suite in 0543. They do not hold this ticket.
 4. The record states what was built and the lessons. 0541 trims the status lines from it.
 
+COBOL ruling, 2026-10-11. COBOL keeps its documented 8192-byte limit per scalar, under 0529's rule on representation limits. Six required image cases need captions larger than that limit to reach the native body and packing limits. For COBOL, those six cases pass when the call returns `tt-n-cobol-overflow-constant` before creating a session, and the loopback backend counts zero sends. The COBOL README states that a COBOL caller cannot reach the native body and packing limits with a larger scalar. The other consumers already prove those native limits, so no ticket owns this gap. Expanding the COBOL input contract and generated carriers is out of 0.2.
+
 Do not rerun consumers that already pass. A fixture bug that blocks several languages gets one shared fix in `conformance/children/` in this ticket. 0541 moves the remaining copies.
 
 ## Progress
