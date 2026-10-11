@@ -37,6 +37,18 @@ static Call named(Client& client,const std::string& verb,const RequestQuestion& 
 }
 int main(int argc,char** argv) {
     try {
+        if(argc==2 && std::string(argv[1])=="smoke") {
+            Client client;
+            auto call=client.decide(RequestQuestionText().set_text(std::getenv("THINKTHEN_TEST_SMOKE_QUESTION")),
+                RequestInputText().set_text(std::getenv("THINKTHEN_TEST_SMOKE_TEXT")));
+            call.finish();
+            bool answered=false;
+            for(const auto& packet:call.collect()) if(auto row=packet.as_SessionPacketDecideRow()) {
+                std::cout<<"smoke: "<<std::boolalpha<<row->value().value->value().value->value().get<bool>()<<'\n';
+                answered=true;
+            }
+            return answered ? 0:3;
+        }
         if(argc!=4) return 2;
         if(std::string(argv[1])=="usage-written" || std::string(argv[1])=="usage-failed") {
             Client client(Json::Object{{"cache",false}}); auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));

@@ -31,6 +31,16 @@ public final class SessionConsumer {
         }
     }
     public static void main(String[] ignored) throws Exception {
+        if (ignored.length == 1 && ignored[0].equals("smoke")) {
+            try (var engine = new Engine()) {
+                var call = done(engine.decide(question(System.getenv("THINKTHEN_TEST_SMOKE_QUESTION")),
+                    new Inputs.RequestInputText().text(System.getenv("THINKTHEN_TEST_SMOKE_TEXT")), new Inputs.RequestOptions()));
+                var row = (Results.SessionPacketDecideRow)call.packets().stream()
+                    .filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
+                System.out.println("smoke: " + row.value().value().value());
+            }
+            return;
+        }
         Engine.OwnedCall retained;
         Engine.SessionFailure retainedFailure;
         try (var engine = new Engine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0).batch(new Inputs.RequestBatch(1)))) {
