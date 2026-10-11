@@ -47,18 +47,18 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 Ian's 2026-10-08 architecture ruling requires the shared Request contract, generated header and host types, bounded binding experiment and all language migrations in 0.2. [The SDK rollout](0-2-sdk-rollout.md) defines their order, dependencies and work sizes. The request contract and binding experiment run alongside the final per-record context checks. The PM cleared tagged examples in 0490: render only answered step-1 questions, before the recognition controls and language migrations. Stage context 0478, boundary-only 0479, MCP protocol 0488 and Windows Node/C#/JVM packaging 0383–0385 are also 0.2. These rulings supersede earlier SDK deferrals; 0.3 is the proxy. All languages stay, and release management remains held.
 
-Ian held release work on 2026-10-08. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM’s later addendum promotes 0461 into 0.2; its help/shared-case correction precedes landing. No new candidate tags or GitHub workflow runs without Ian's permission. [0462’s findings](../records/0462-after-sprint-review.md) have fix owners 0463–0472; these remain 0.2 work. 0473 fixes the reported old configuration upgrade refusal.
+Ian lifted the 2026-10-08 release hold on 2026-10-10 except for publication. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM’s later addendum promotes 0461 into 0.2; its help/shared-case correction precedes landing. [0462’s findings](../records/0462-after-sprint-review.md) have fix owners 0463–0472; these remain 0.2 work. 0473 fixes the reported old configuration upgrade refusal.
 
 Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score, the local MCP surface and additive named question/input declarations. The SDK uses one configured route; business policy belongs to the proxy. [Preserved scope and order](../decisions/2026-10-08-preserve-planning-rulings.md#retained-02-scope-and-order) carries the lasting 0.2 plan rulings; read work status and dispatch order through pm. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. The preserved scope retains the seventeen asks, accepted 0456 intake and dependencies. Read acceptance from the owning tickets through pm.
 
 Exit criteria, under [the done ruling](../decisions/2026-10-10-drive-0-2-to-done.md):
 
 1. Every 0.2 language migration and SQL ticket is closed: its new API passes routine installed checks, and its old public names are deleted.
-2. The shared core tickets 0503, 0511, 0512, 0515 and 0516 are closed.
-3. At the candidate, the release suite passes: `test-full-cases --run`, `package`, `test-stress --run`, and one Windows run on GitHub. Windows failures become new bug tickets.
-4. 0530 assembles every final artifact, and each installs and runs cleanly.
-5. 0467's documentation pass and 0508's final review are closed.
-6. Ian gives the go to publish.
+2. The gaps in [the 2026-10-11 closure review](../records/2026-10-11-0-2-closure-review.md) are closed through 0530 and 0534 to 0543.
+3. 0530 assembles every final artifact, and each installs and runs cleanly.
+4. 0542's final code review accepts, and lint and test each pass once on the final commit.
+5. 0543's candidate passes the release suite and the hosted rehearsal on Linux, macOS and Windows. This ends the build side of 0.2.
+6. 0425's release QA passes and Ian gives the go to publish.
 
 Retain version and release safety, backends and provider setups, the default of eight requests, rank search, audit and recipe contracts, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, the agent skill, native files and local runtimes. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
 
@@ -130,7 +130,7 @@ Support work: [0453: Extend authorized live token admission](../tickets/0453-ext
 
 Read ticket and check status through pm. Existing installed-package campaigns and candidate lessons remain in their owning records; they do not qualify later contract and binding changes. The after-sprint review assigns confirmed fixes to their tickets.
 
-The 0456 amendment defines implementation scope. [0425 completion criteria](../tickets/0425-sdk-consistency-0-2-plan.md) require final installed parity including MCP, image inputs, 0.1 file/cache compatibility and complete public documentation. Run every local check before requesting a candidate. Windows checks run once through GitHub CI in the first candidate that Ian authorizes, covering 0383–0385 and the native cache checks for 0474/0480. Keep those tickets open until the candidate passes. Hosted macOS checks, rehearsal, QA and publication retain their approvals; no release action follows from implementation work. M5 may run experiments and Mac-specific checks; Yellow remains excluded. Main targets 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. Vision belongs to 0.2; unsupported routes refuse explicitly. Each engine keeps one endpoint, key and API type. Proxy execution belongs to 0.3 under an admitted protocol. PostgreSQL file inputs retain the reviewed client-reader workaround in 0434.
+The 0456 amendment defines implementation scope. [0425 completion criteria](../tickets/0425-sdk-consistency-0-2-plan.md) require final installed parity including MCP, image inputs, 0.1 file/cache compatibility and complete public documentation. Run every local check before requesting a candidate. Windows and hosted macOS checks run once, at the 0543 candidate. Publication needs Ian's go. M5 may run experiments and Mac-specific checks; Yellow remains excluded. Main targets 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. Vision belongs to 0.2; unsupported routes refuse explicitly. Each engine keeps one endpoint, key and API type. Proxy execution belongs to 0.3 under an admitted protocol. PostgreSQL file inputs retain the reviewed client-reader workaround in 0434.
 
 [0460](../tickets/0460-conservative-repeated-input-request-plan.md) requires conservative initial-send plans while retaining runtime coalescing, caches and the C header. Byte/token previews describe uninterrupted packing. Final installed parity must cover the settled request contract and all binding migrations.
 

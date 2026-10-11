@@ -1,10 +1,10 @@
-# 0425: Qualify the 0.2 release candidate and publish on Ian's go
+# 0425: Pass 0.2 release QA and publish on Ian's go
 
-Status: OPEN. Ian's 2026-10-08 release hold governs this ticket. Cut no candidate tag, run no GitHub workflow, advance no release branch and publish nothing without his permission.
+Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0508
+Depends on: 0543
 
 Depends on: 0461
 
@@ -26,7 +26,7 @@ Reviews: revision 5d9860455, accept
 
 ## Outcome
 
-After the 0508 final review, one reviewed commit passes a hosted release candidate on Linux, macOS and Windows, plus release QA by a fresh agent with only the public docs. On Ian's explicit go, that same commit is released as 0.2.0. Every published package then installs and runs from its public channel on a clean machine. This ticket is the single owner of candidate qualification, publication and the after-publication checks.
+The commit that passed the 0543 candidate also passes release QA by a fresh agent with only the public docs. On Ian's explicit go, that same commit is released as 0.2.0. Every published package then installs and runs from its public channel on a clean machine. This ticket owns release preparation, release QA, publication and the after-publication checks. 0543 owns the candidate.
 
 ## Evidence
 
@@ -36,13 +36,13 @@ After the 0508 final review, one reviewed commit passes a hosted release candida
   - 0398 keeps the exact-commit rehearsal guard and the after-publication install-check workflow.
   - The M5 runs bounded Mac checks only and never stands in for hosted macOS. Yellow stays excluded. No paid diagnostic runs.
   - A candidate or archive check never stands in for a published-package check.
-- Changes: five stages, in order.
-  - Before the first candidate. Every other open 0.2 ticket has landed, except 0383, 0384, 0385, 0455, 0474 and 0480, which the candidate finishes. Every fix ticket that 0508 names has landed. The executed parity table passes, including MCP 0455. Full Linux install, lint, test and spec gates pass. The checkpoint sweep runs `npm run test-docs` and names the result. The release workflow runs `site/scripts/check-binding-proofs.mjs` in strict mode and fails when `site/examples/bindings-proof.json` does not match the tagged commit. The release workflow builds the R source tarball from the published-crate shape before the GitHub release goes public. The 0425 record notes when the Maven Central token, its signing key and `TAP_DEPLOY_KEY` expire and when each was last rotated. Ian confirms or rotates each one before the candidate. No rehearsal reads a secret; 0398 keeps that rule. `install-check.yml` gains `windows-2025` rows for `install.ps1`, npm, NuGet, Maven Central and every other channel that ships Windows. Report each account prerequisite to Ian: the Maven namespace and token, pub.dev trusted publishing, and any unconfirmed trusted-publisher registration. Claim `.github/workflows/**`, `sdlc/planning/release-process.md`, `sdlc/scripts/surfaces*`, `sdlc/scripts/release-workflow`, `CHANGELOG.md`, `site/scripts/check-binding-proofs.mjs` and `sdlc/records/0425*`.
-  - Candidate, with Ian's permission. Tag the commit `rc/0.2.0-rc.N`. Dispatch `.github/workflows/release.yml` in rehearse mode and `.github/workflows/windows.yml` on that tag. Cover Linux x86 and ARM, the `macos-15` and `macos-15-intel` runners, and Windows. The Windows run carries the remaining proofs of 0383, 0384, 0385, 0455, 0474 and 0480. Fix failures, review the fixes, batch Windows fixes, and cut the next candidate.
+- Changes: five stages.
+  - Release preparation, in any free lane. The checkpoint sweep runs `npm run test-docs` and names the result. The release workflow runs `site/scripts/check-binding-proofs.mjs` in strict mode and fails when `site/examples/bindings-proof.json` does not match the tagged commit. The release workflow builds the R source tarball from the published-crate shape before the GitHub release goes public. The 0425 record notes when the Maven Central token, its signing key and `TAP_DEPLOY_KEY` expire and when each was last rotated. No rehearsal reads a secret; 0398 keeps that rule. `install-check.yml` gains `windows-2025` rows for `install.ps1`, npm, NuGet, Maven Central and every other channel that ships Windows. Report each account prerequisite to Ian: the Maven namespace and token, pub.dev trusted publishing, and any unconfirmed trusted-publisher registration. Claim `.github/workflows/**`, `sdlc/planning/release-process.md`, `sdlc/scripts/surfaces*`, `sdlc/scripts/release-workflow`, `CHANGELOG.md`, `site/scripts/check-binding-proofs.mjs` and `sdlc/records/0425*`.
+  - Land the workflow changes above before 0543 tags its final candidate, so the candidate runs them. Ian confirms or rotates the secrets before publication.
   - Release QA. A fresh docs-only agent installs the candidate artifacts, then asks questions including an admitted image question and a real MCP tool call. 0.1 question files load unchanged. 0.1 caches read through the compatibility path or refuse with one clear message before sending. Record docs failures with their owning tickets. `CHANGELOG.md`, the release notes and a written known-gaps list describe the final behavior, including images, MCP, the additive question format and 0.1 compatibility.
   - Publication, on Ian's explicit go. Tag the same commit `v0.2.0` and dispatch release mode. Move the public install text to 0.2.0 once and re-prove the site pages. With Ian's authorization, replace the RubyGems `ruby` platform 0.0.1 placeholder with the diagnostic gem.
   - After publication. Run 0398's install check on every channel, including R-universe once it syncs. Each channel installs 0.2.0 and replays the first-run sample. On Ruby 3.3 and on macOS's Python 3.9, install fails with the diagnostic message and never installs a 0.0.1 placeholder. The experiments team runs its selective 0035 follow-up against public 0.2 for the affected steps.
-- Proof: The 0425 record names each candidate run, the QA result, the publication run and the install-check run.
+- Proof: The 0425 record cites 0543's candidate and names the QA result, the publication run and the install-check run.
 - Defers: An approval notice, reuse of the rehearsal's built files, version-only proof hashing, install-text automation, a switch to silence the spend warning, Maven trusted publishing and an app token for the tap. They are ideas for after 0.2. The transcript-search recipe stays with the later issue `2026-10-05-recipe-search-transcripts.md`.
 
 ## Progress

@@ -117,12 +117,23 @@ The release scripts assemble every final registry-format artifact from 0501's in
 - Keeps: The existing installed artifact checks and Ian's publication approval.
 - Changes: Registry assembly, workflow validation and artifact collection read the native inventory from 0501. Objective-C routing follows the Apple-only ruling in 0518. The `npm-assemble` operation in `sdlc/scripts/release-workflow` packs every inventoried addon, including `win32-x64`. Each host migration adds its own package to the inventory, as 0501 set out. Assembly refuses when a shipped package is missing from the inventory. The npm and JVM package definitions gain their native file names, as [the native package design](../decisions/2026-10-09-native-package-design.md) sets them, and `sdlc/scripts/package-inventory.py` reads the names there and keeps no list of its own. Claim `sdlc/scripts/package-inventory.py`, `libraries/typescript/package.json`, `libraries/jvm/pom.xml`, `sdlc/scripts/release-registry.py`, `sdlc/scripts/release-workflow`, their existing self-tests and artifact collection in `.github/workflows/release.yml`. Name each affected installed-consumer route before editing.
 - Remaining installed consumer: `sdlc/scripts/install_check_consumers.py:72` still imports the retired JVM `thinkthen.Door`, and `install_check_channels.py:173–174` compiles and runs it with Java 21 preview flags. Move that Maven consumer to the stable typed client and the supported JDK before candidate install checks. The 0504 closure review confirmed this pre-existing distribution-check gap; it does not hold the local JVM migration open.
-- Remaining full-parity consumer: `libraries/go/check.sh` accepts the `full` profile but invokes the same `fixtures/shared_installed.py` routine selector, which filters out error cases and uses the small type corpus. Restore a typed installed Go route through every required shared conformance case before the candidate; keep the small routine selector for migration checks and run full parity only at the candidate.
+- Remaining full-parity consumer: `libraries/go/check.sh` accepts the `full` profile but invokes the same `fixtures/shared_installed.py` routine selector, which filters out error cases and uses the small type corpus. Restore a typed installed Go route through every required shared conformance case before the candidate; keep the small routine selector for migration checks and run full parity only at the candidate. See the 2026-10-11 amendment; 0543 runs it.
 - Remaining Apple execution: run 0518's Foundation shared-case route against the assembled Apple package, including all ten named calls, typed result access, ARC ownership, failures and held-provider cancellation. Linux generation or SDK compilation does not establish Apple runtime parity. The previous Foundation fixture covered generated carriers and two execution calls; the old GNU runner cannot count as Foundation evidence.
 - Proof: Install each final registry-format artifact with its declared dependencies in a clean environment and run a real call with no library path. A missing or wrong native asset and an unsupported target fail in the existing installed checks. A passing development archive does not count.
-- Defers: Native platform qualification goes to 0383–0385 at the candidate. The [2026-10-10 closure ruling](../decisions/2026-10-10-drive-0-2-to-done.md) authorizes candidate tags and testing workflows when the preceding work is ready; registry publication still requires Ian's go.
+- Defers: Native platform qualification goes to 0543 at the candidate. The [2026-10-10 closure ruling](../decisions/2026-10-10-drive-0-2-to-done.md) authorizes candidate tags and testing workflows when the preceding work is ready; registry publication still requires Ian's go.
 
 Author: project manager.
+
+## PM amendment, 2026-10-11
+
+0530 closes when four things are true:
+
+1. Dart, Flutter, Ada and COBOL each pass one full installed run.
+2. The installed Foundation consumer from 0518 compiles and runs all ten named calls on the M5. If the M5 cannot run it, the 0543 macOS candidate run carries it, and 0530 closes without waiting.
+3. The 0524 full Go matrix, load and large-input cases belong to the release suite in 0543. They do not hold this ticket.
+4. The record states what was built and the lessons. 0541 trims the status lines from it.
+
+Do not rerun consumers that already pass. A fixture bug that blocks several languages gets one shared fix in `conformance/children/` in this ticket. 0541 moves the remaining copies.
 
 ## Progress
 

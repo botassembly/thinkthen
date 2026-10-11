@@ -1,6 +1,6 @@
 # 0455: Expose the ten functions through a local MCP server
 
-Status: in progress. Reviewed complete MCP adoption is landed. The ordered rank-member reader and packet buffer pass all 251 required cases through the installed command. Final full tests, lint and specification checks run on this candidate before landing. Bounded timing and final Windows qualification remain.
+Status: in progress.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review.
 Milestone: 0.2
 Owner: builder, lane0 `ticket/0455-rank-members-completion`.
@@ -67,3 +67,8 @@ The same 0455 owner may make the bounded shared serialization prerequisite becau
 Keep incoming messages bounded at 16 MiB. Explicit file-backed captions cover admitted decoded inputs whose escaped JSON would exceed that frame. The outgoing frame and bundled client cap become 192 MiB, including the newline, so required large two-record image results can retain both current equivalent representations. Native and vendor admission limits stay in force. Document increased peak memory and that an oversized output terminates without a partial JSON line; do not claim zero sends for output failure.
 
 Risk: High for public result correctness, memory bounds and cancellation. One fresh whole-change review covers these shared prerequisites and MCP adoption. Existing required cases prove declared media mismatch, candidate order, separate contexts, physical locations, original ordinals, completed prefixes and image limits. No scheduler, parser, host cache, HTTP fetching, additional tool or verification framework is added. Ian can overturn this additive API choice. Astra's design assessment ran no builds or tests and does not establish parity.
+
+## PM amendment, 2026-10-11
+
+0455 closes on its Linux checks, under the rule that no ticket waits on Windows. MCP passes 258 of 258 installed cases. 0543 carries the Windows execution of the pipe cancellation code and the bounded MCP timing. Land this ticket now.
+
