@@ -406,10 +406,9 @@ def an_annotate_set_packs_compatible_texts():
 
 
 @case
-def an_annotate_row_missing_its_part_fails_alone():
-    """ADR 0111 slice 3: a first record missing its `on` part fails alone.
-    At one record a request, each neighbour still sends into the named
-    cache, so the statement that leaves the bad row out sends nothing."""
+def an_annotate_row_missing_its_part_stops_before_any_send():
+    """Shared Request admission preserves the bad-row error before any send.
+    Valid neighbours are asked only when the next statement omits that row."""
     with Backend() as backend:
         parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
         records = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(2, 7)])
@@ -418,10 +417,10 @@ def an_annotate_row_missing_its_part_fails_alone():
         got = run([f"SELECT {ask} FROM {table} ORDER BY i", "SELECT metric, value FROM thinkthen_usage()",
                    f"SELECT i, {ask} FROM {table} WHERE i > 1 ORDER BY i"], backend.base())
         expect(said(got[0]), MISSING_PART, "the record missing /body")
-        expect(dict(rows(got[1]))["requests_sent"], 5, "one request for each neighbour")
+        expect(dict(rows(got[1]))["requests_sent"], 0, "invalid annotation sends no neighbours")
         expect([[at, json.loads(value)] for at, value in rows(got[2])],
                [[at, {"refund": True}] for at in range(2, 7)], "the neighbours' answers")
-        expect(backend.count(), 5, "one request for each neighbour, and none for the rerun")
+        expect(backend.count(), 5, "only the valid rerun sends one request for each neighbour")
 
 
 @case
