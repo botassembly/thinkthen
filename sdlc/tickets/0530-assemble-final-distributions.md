@@ -152,3 +152,4 @@ Author: project manager.
 - 2026-10-10 landed 866c70ddd; next: C++ cases are reconciled and native feed fixtures are reviewed; finish Zig, Ada and COBOL, repair R and Swift fixtures, and complete PHP, Dart, Flutter and Rust Polars.
 - 2026-10-10 landed 8b5a20c03; next: R is reconciled after its accepted feed-fixture correction; finish native full checks, Swift repairs and the remaining installed packages.
 - 2026-10-10 landed b2f134faa; next: Swift cases are reconciled and Foundation feed fixtures are reviewed; finish PHP, Dart, Flutter, Rust Polars, Zig, Ada and COBOL before closing the installed table.
+- 2026-10-10 landed bc17ec211; next: Ian requested wrap-up: active repairs are reviewed and pushed; complete installed runs remain for Dart, Flutter, Ada and COBOL, with Objective-C awaiting Apple execution.
