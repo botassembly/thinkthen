@@ -26,7 +26,7 @@ Ordinary details may add one small native accessor that returns the existing Det
 
 Migrate every other route as the Changes line says. The ticket closes when those routes use the shared request and the routine installed DuckDB checks pass on both versions.
 
-### Planned public declarations
+### Added public declarations
 
 ```text
 fn CompleteDecision::to_scalar_json(&self) -> Result<String, Error>
