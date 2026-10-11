@@ -10,6 +10,16 @@ for (call in list(
   function() tt_decide("Q?", tt_input("records", items = list(), paths = list("missing"))),
   function() tt_decide(list(decide = "Q?", item_schema = list(type = "string")), list(n = 1))
 )) check("canonical admission refuses invalid values", identical(kind_of(call()), "usage"))
+refused <- tryCatch(tt_decide("Q?", "x", list(field = list("bad pointer"))), thinkthen_error = identity)
+check("invalid field retains exact Rust admission", inherits(refused, "thinkthen_usage") && identical(conditionMessage(refused), "invalid field pointer"))
+for (case in list(list(list(choose = "Q?", options = c("same", "same")), "invalid canonical request"), list(list(decide = "Q?", item_schema = list(type = "string", minLength = 1)), "the question declaration uses an unsupported feature"))) {
+  refused <- tryCatch(tt_decide(case[[1]], "x"), thinkthen_error = identity)
+  check("authored admission retains exact native errors and carrier", inherits(refused, "thinkthen_usage") && identical(conditionMessage(refused), case[[2]]) && inherits(refused$complete, "thinkthen_CallError"))
+}
+question <- tt_question(list(decide = "Q?"))
+question$unexpected <- TRUE
+refused <- tryCatch(tt_decide(question, "x"), thinkthen_error = identity)
+check("authored selectors refuse unknown fields without sends", inherits(refused, "thinkthen_usage") && identical(conditionMessage(refused), "invalid canonical request") && backend_count() == arrivals)
 check("invalid request sends nothing", backend_count() == arrivals)
 empty <- tt_decide("No records?", NULL)
 check("ordinary NULL supplies no records and sends nothing", length(empty$results) == 0L &&

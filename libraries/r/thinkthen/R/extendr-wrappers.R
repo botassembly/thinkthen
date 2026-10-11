@@ -39,7 +39,7 @@ tt_completion_settle_early <- function(value, kind) .Call(wrap__tt_completion_se
 
 tt_request_column <- function(values, function_name) .Call(wrap__tt_request_column, values, function_name)
 
-tt_request_admit <- function(request) .Call(wrap__tt_request_admit, request)
+tt_request_build <- function(function_name, question, input, options) .Call(wrap__tt_request_build, function_name, question, input, options)
 
 tt_request_native <- function(request, deadline, completion) .Call(wrap__tt_request_native, request, deadline, completion)
 

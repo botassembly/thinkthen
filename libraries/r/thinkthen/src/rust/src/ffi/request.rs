@@ -2,7 +2,28 @@
 use super::{Crossed, completion_of, deadline_of, interrupt_pending, text_of};
 use crate::calls;
 use extendr_api::prelude::*;
-use thinkthen::{AdmittedRequest, Request, RequestEnvironment, RequestOutcome, RequestSession};
+use thinkthen::{AdmittedRequest, RequestEnvironment, RequestOutcome, RequestSession};
+mod inputs;
+
+#[extendr]
+fn tt_request_build(
+    function_name: Robj,
+    question: Robj,
+    input: Robj,
+    options: Robj,
+) -> Crossed<Robj> {
+    let request = inputs::request(
+        &text_of(&function_name, "function")?,
+        &question,
+        &input,
+        &options,
+    )?;
+    Ok(ExternalPtr::new(NativeRequest {
+        admitted: request.admit().map_err(|e| crate::carry(&e))?,
+        column: crate::request::ColumnMap::from_request(&input),
+    })
+    .into())
+}
 
 #[derive(Debug)]
 struct NativeRequest {
@@ -18,19 +39,6 @@ struct NativeSession {
 #[extendr]
 fn tt_request_column(values: Robj, function_name: Robj) -> Crossed<Robj> {
     crate::request::column(values, &text_of(&function_name, "function")?)
-}
-
-#[extendr]
-fn tt_request_admit(request: Robj) -> Crossed<Robj> {
-    let column = crate::request::ColumnMap::from_request(&request);
-    let request = Request::from_json(&text_of(&request, "request")?)
-        .and_then(Request::admit)
-        .map_err(|error| crate::carry(&error))?;
-    Ok(ExternalPtr::new(NativeRequest {
-        admitted: request,
-        column,
-    })
-    .into())
 }
 
 #[extendr]
@@ -109,14 +117,10 @@ fn tt_request_plan(request: Robj) -> Crossed<Robj> {
 
 #[extendr]
 fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
-    let column = crate::request::ColumnMap::from_request(&request);
-    let request =
-        Request::from_json(&text_of(&request, "request")?).map_err(|error| crate::carry(&error))?;
-    // Header admission precedes engine selection. The session retains its own request.
-    request
-        .clone()
-        .admit()
-        .map_err(|error| crate::carry(&error))?;
+    let built = ExternalPtr::<NativeRequest>::try_from(request)
+        .map_err(|_| crate::usage("a native request is required"))?;
+    let column = built.column.clone();
+    let request = built.admitted.request().clone();
     let session = crate::engine()?
         .request_session_with_surface(request, thinkthen::Surface::R)
         .map_err(|error| crate::carry(&error))?;
@@ -199,7 +203,7 @@ fn tt_request_batch_cancel(batch: Robj) -> Crossed<()> {
 extendr_module! {
     mod request;
     fn tt_request_column;
-    fn tt_request_admit;
+    fn tt_request_build;
     fn tt_request_native;
     fn tt_request_plan;
     fn tt_request_batch_start;

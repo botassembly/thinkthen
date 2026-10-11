@@ -138,13 +138,13 @@ test('Client reports native deadline settlement and invalid admission sends noth
   const {value}=await ask(backend,`
     const client=new tt.Client({cache:false});const seen=[];
     try{await client.decide('Question?','text',{deadline_ms:0});}catch(error){if(!(error instanceof tt.ClientError))throw Error('untyped error');seen.push([error.kind,error.complete.constructor.name,error.complete.has('value'),error.terminal.kind,error.results,error.facts.requests_sent]);}
-    for(const [controls,input] of [[{field:['bad pointer']},'text'],[{context:null},'text'],[{},(function*(){yield tt.Client.item('text',{context:null});})()],[{signal:AbortSignal.abort()},'text']]) {
-      try{await client.decide('Question?',input,controls);}catch(error){seen.push([error.kind,error.message,error.facts??null]);}
+    for(const [question,controls,input] of [['Question?',{field:['bad pointer']},'text'],['Question?',{context:null},'text'],['Question?',{},(function*(){yield tt.Client.item('text',{context:null});})()],['Question?',{signal:AbortSignal.abort()},'text'],[{choose:'Question?',options:['same','same']},{},'text'],[{decide:'Question?',item_schema:{type:'string',minLength:1}},{},'text']]) {
+      try{await client.decide(question,input,controls);}catch(error){seen.push([error.kind,error.message,error.facts??null]);}
     }
     client.close();return seen;
   `);
   assert.equal(value[0][0],'deadline');assert.equal(value[0][1],'NativeCallError');assert.deepEqual(value[0].slice(2),[false,'terminal',[],0]);
-  assert.deepEqual(value.slice(1),[['usage','invalid field pointer',null],['usage','invalid canonical request',null],['usage','invalid session descriptor',null],['cancelled','the call was cancelled',null]]);assert.equal(await backend.count(),0);
+  assert.deepEqual(value.slice(1),[['usage','invalid field pointer',null],['usage','invalid canonical request',null],['usage','invalid session descriptor',null],['cancelled','the call was cancelled',null],['usage','invalid canonical request',null],['usage','the question declaration uses an unsupported feature',null]]);assert.equal(await backend.count(),0);
 });
 
 test('Client cancellation closes its feed and settles while provider replies remain held',async t=>{

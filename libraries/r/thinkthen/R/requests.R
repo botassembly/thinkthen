@@ -1,10 +1,6 @@
 # R names and value conversion only. Native admission owns every request rule.
 .tt_selector <- function(value, family) {
   if (inherits(value, family)) return(unclass(value))
-  if (identical(family, "thinkthen_question")) {
-    if (is.character(value) && length(value) == 1L) return(list(kind = "text", text = value))
-    return(list(kind = "definition", value = value))
-  }
   if (is.character(value) && length(value) == 1L) list(kind = "text", text = value)
   else list(kind = "json", value = value)
 }
@@ -16,7 +12,9 @@ tt_question <- function(value = NULL, file, name, reference) {
   selected <- if (!missing(file)) list(kind = "file", path = path.expand(file))
     else if (!missing(name)) list(kind = "name", name = name)
     else if (!missing(reference)) list(kind = "reference", reference = reference)
-    else .tt_selector(value, "thinkthen_question")
+    else if (inherits(value, "thinkthen_question")) unclass(value)
+    else if (is.character(value) && length(value) == 1L) list(kind = "text", text = value)
+    else list(kind = "definition", value = value)
   structure(selected, class = "thinkthen_question")
 }
 tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
@@ -27,29 +25,28 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
 }
 
 .tt_request <- function(function_name, question, input, options) {
-  question <- .tt_selector(question, "thinkthen_question")
+  question <- structure(.tt_json(if (inherits(question, "thinkthen_question")) unclass(question) else question),
+                        selector = inherits(question, "thinkthen_question"), literal = is.character(question) && length(question) == 1L)
   column <- NULL
   if (is.null(input) || (is.atomic(input) && !is.object(input) && !is.raw(input))) {
     column <- .tt_call(tt_request_column(unname(as.list(input)), function_name))
     if (length(column$values) != length(input)) input <- column$values
   }
   if (inherits(input, "thinkthen_feed")) input <- structure(input$header, class = "thinkthen_input")
-  if (inherits(input, "thinkthen_input")) input <- unclass(input)
+  if (inherits(input, "thinkthen_input")) input <- .tt_json(unclass(input))
   else if (is.null(input) || (!is.null(column) && (column$length != 1 || !length(column$values))) || is.data.frame(input) || function_name %in% c("filter", "rank", "find", "annotate", "relate") ||
            (is.character(input) && length(input) != 1L)) {
     # Native column conversion retains original slots separately from canonical items.
     if (is.data.frame(input)) input <- lapply(seq_len(nrow(input)), function(at) lapply(input, `[[`, at))
-    items <- unname(lapply(input, function(value) list(original = .tt_selector(value, "thinkthen_input"))))
-    input <- list(kind = "records", items = items)
-  } else input <- .tt_selector(input, "thinkthen_input")
-  call <- list(`function` = function_name, question = question, input = input)
-  if (!is.list(options) || length(options)) call["options"] <- list(options)
-  request <- .tt_json(list(schema = "thinkthen.request/1", call = call))
+    input <- structure(unname(lapply(input, function(value) structure(.tt_json(if (inherits(value, "thinkthen_input")) unclass(value) else value),
+                       text = is.character(value) && length(value) == 1L, selector = inherits(value, "thinkthen_input")))), collection = TRUE)
+  } else input <- structure(list(structure(.tt_json(input), text = is.character(input) && length(input) == 1L)), collection = FALSE)
+  if (is.list(options) && !length(options)) options <- NULL else options <- .tt_json(options)
   if (!is.null(column)) {
-    attr(request, "positions") <- column$positions
-    attr(request, "length") <- column$length
+    attr(input, "positions") <- column$positions
+    attr(input, "length") <- column$length
   }
-  request
+  .tt_call(tt_request_build(function_name, question, input, options))
 }
 
 .tt_request_failure <- function(failure, completed = NULL, positions = NULL, length = NULL) {
@@ -65,7 +62,7 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
       if (!is.null(completion)) .tt_usage("completion receipts are unavailable for record feeds")
       return(.tt_feed_call(function_name, question, input, options, deadline_ms))
     }
-    request <- .tt_call(tt_request_admit(.tt_request(function_name, question, input, options)))
+    request <- .tt_request(function_name, question, input, options)
     result <- .tt_call(tt_request_native(request, deadline_ms, completion))
     if (!is.null(result$failure)) .tt_request_failure(result$failure, result$results, result$positions, result$length)
     .tt_column_view(result, function_name)
@@ -83,7 +80,7 @@ tt_recognize <- function(question, input, options = list(), deadline_ms = NULL, 
 tt_relate <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("relate", question, input, options, deadline_ms, completion)
 
 tt_plan <- function(question, input, function_name = "decide", options = list()) {
-  request <- .tt_call(tt_request_admit(.tt_request(function_name, question, input, options)))
+  request <- .tt_request(function_name, question, input, options)
   .tt_call(tt_request_plan(request))
 }
 

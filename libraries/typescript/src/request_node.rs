@@ -66,7 +66,7 @@ pub fn request_session(
         }
     } else {
         RequestQuestion::Definition {
-            value: thinkthen::RequestDefinition::from_authored_json(&values.question)
+            value: thinkthen::RequestDefinition::from_request_json(&values.question)
                 .map_err(failure)?,
         }
     };

@@ -19,7 +19,7 @@ Status: **Settled** by ADR 0082. This page maps the existing question and result
 
 Every surface that accepts a description string also accepts its structured form unchanged. An ordered label set keeps caller order. For an enum-derived set, member metadata supplies defaults; an explicit map replaces the named label's description, and an unknown mapped label is a usage error. The language forms are fixed in [ADR 0082](../sdlc/planning/adr/0082-one-type-contract-for-every-surface.md); tickets J3 through J6 add forms missing today.
 
-Rust adapters construct `Request` from native arguments. `RequestDefinition::from_authored_json(text: &str) -> Result<Self, Error>` decodes authored definitions through the shared question-file grammar and retains their original ordering and admission errors. Adapters use this method when callers supply authored JSON bytes; they do not wrap those bytes in a serialized request.
+Rust adapters construct `Request` from native arguments. `RequestDefinition::from_authored_json(text: &str) -> Result<Self, Error>` decodes authored definitions through the shared question-file grammar and retains their original ordering and admission errors. `RequestDefinition::from_request_json(text: &str) -> Result<Self, Error>` retains the same authored bytes with canonical request diagnostics: invalid definitions report “invalid canonical request”, while unsupported features retain their native message. Adapters use this method for authored definitions in native requests; file selectors retain the detailed authored decoder. They do not wrap those bytes in a serialized request.
 
 ## Answers and failures
 
