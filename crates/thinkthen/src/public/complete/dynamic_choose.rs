@@ -50,11 +50,8 @@ impl Engine {
                 options,
                 crate::RequestCall::Choose,
             )
-            .and_then(|rows| match rows {
-                crate::public::request::pull::Rows::Choices(batch) => Ok(batch),
-                _ => Err(Error::defect(
-                    "a native dynamic choose batch returned another result kind",
-                )),
+            .and_then(|rows| {
+                rows.choices("a native dynamic choose batch returned another result kind")
             }),
         )
     }

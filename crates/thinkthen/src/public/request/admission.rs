@@ -477,7 +477,7 @@ fn admit_input(
             }
         }
         RequestInput::Source { source } => {
-            super::source::validate(source.framing, source.reading, source.media)?;
+            source.validate_reading()?;
             if source.paths.is_empty() {
                 return Err(Error::usage("source requires at least one path"));
             }

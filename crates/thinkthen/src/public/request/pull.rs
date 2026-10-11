@@ -15,6 +15,28 @@ pub(crate) enum Rows<'a, T> {
     Annotations(Batch<'a, CompleteRecord<T, CompleteAnnotated>>),
 }
 
+macro_rules! accessor {
+    ($method:ident, $variant:ident, $value:ty) => {
+        pub(crate) fn $method(
+            self,
+            message: &'static str,
+        ) -> Result<Batch<'a, CompleteRecord<T, $value>>, Error> {
+            match self {
+                Self::$variant(value) => Ok(value),
+                _ => Err(Error::defect(message)),
+            }
+        }
+    };
+}
+impl<'a, T> Rows<'a, T> {
+    accessor!(decisions, Decisions, CompleteDecision);
+    accessor!(choices, Choices, CompleteChoice);
+    accessor!(tags, Tags, CompleteTags);
+    accessor!(scores, Scores, CompleteScore);
+    accessor!(filtered, Filtered, CompleteFilter);
+    accessor!(annotations, Annotations, CompleteAnnotated);
+}
+
 struct Original<T> {
     original: T,
     input: QuestionInput,
@@ -104,6 +126,11 @@ where
     I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
     T: InputEvidence + 'a,
 {
+    if !function.streams() {
+        return Err(Error::usage(
+            "this request does not return independent pulled rows",
+        ));
+    }
     macro_rules! atomic {
         ($kind:ident, $input:ident, $convert:ident, $q:expr) => {
             Ok(Rows::$kind(engine.complete_stream(

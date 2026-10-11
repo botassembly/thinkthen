@@ -34,6 +34,42 @@ pub enum RequestValue {
     /// Complete relations retaining all entity originals.
     Related(CompleteRecord<Vec<QuestionInput>, CompleteRelated>),
 }
+#[cfg(feature = "polars")]
+macro_rules! accessor {
+    ($method:ident, $variant:ident, $row:ty) => {
+        pub(crate) fn $method(self, message: &'static str) -> Result<$row, Error> {
+            match self {
+                Self::$variant(value) => Ok(value),
+                _ => Err(Error::defect(message)),
+            }
+        }
+    };
+    ($method:ident, $variant:ident, records $result:ty) => {
+        accessor!(
+            $method,
+            $variant,
+            Vec<CompleteRecord<QuestionInput, $result>>
+        );
+    };
+}
+#[cfg(feature = "polars")]
+impl RequestValue {
+    accessor!(decisions, Decisions, records CompleteDecision);
+    accessor!(choices, Choices, records CompleteChoice);
+    accessor!(tags, Tags, records CompleteTags);
+    accessor!(scores, Scores, records CompleteScore);
+    accessor!(filtered, Filtered, records CompleteFilter);
+    accessor!(ranked, Ranked, records CompleteRank);
+    accessor!(setranked, SetRanked, records CompleteSetRank);
+    accessor!(annotations, Annotations, records CompleteAnnotated);
+    accessor!(recognized, Recognized, records CompleteRecognized);
+    accessor!(found, Found, CompleteFound<QuestionInput>);
+    accessor!(
+        related,
+        Related,
+        CompleteRecord<Vec<QuestionInput>, CompleteRelated>
+    );
+}
 /// Joined execution preserves an actual typed completed prefix on streamed failure.
 #[derive(Debug)]
 pub enum RequestOutcome {

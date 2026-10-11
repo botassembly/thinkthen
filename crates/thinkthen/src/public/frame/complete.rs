@@ -3,7 +3,7 @@ use super::column::text;
 use super::request;
 use crate::public::{
     Call, CallOptions, Edge, Engine, Error, FindSelection, InputEvidence, Question, RawRecord,
-    Recognize, Recognized, RecordReading, Relate, RequestCall, RequestValue,
+    Recognize, Recognized, RecordReading, Relate, RequestCall,
 };
 use polars::prelude::{DataFrame, NamedFrom, Series};
 
@@ -21,9 +21,7 @@ pub(super) fn filter(
     options: CallOptions<'_>,
 ) -> Result<Call<Series>, Error> {
     request::execute(engine, question, texts, RequestCall::Filter, options)?.try_map(|value| {
-        let RequestValue::Filtered(rows) = value else {
-            return Err(Error::defect("filter returned another result kind"));
-        };
+        let rows = value.filtered("filter returned another result kind")?;
         let originals = rows
             .iter()
             .map(|row| request::original(row.original()))
@@ -40,9 +38,7 @@ pub(super) fn rank(
     let positions = request::positions(texts)?;
     crate::public::engine::only(question, &[crate::public::question::Kind::Rank], "rank")?;
     request::execute(engine, question, texts, RequestCall::Rank, options)?.try_map(|value| {
-        let RequestValue::Ranked(rows) = value else {
-            return Err(Error::defect("rank returned another result kind"));
-        };
+        let rows = value.ranked("rank returned another result kind")?;
         let indices = rows
             .iter()
             .map(|row| {
@@ -82,9 +78,7 @@ pub(super) fn find(
 ) -> Result<Call<DataFrame>, Error> {
     let positions = request::positions(texts)?;
     request::execute(engine, question, texts, RequestCall::Find, options)?.try_map(|value| {
-        let RequestValue::Found(found) = value else {
-            return Err(Error::defect("find returned another result kind"));
-        };
+        let found = value.found("find returned another result kind")?;
         let rows = found.candidates();
         let indices = rows
             .iter()
@@ -139,9 +133,7 @@ pub(super) fn recognize(
         options,
     )?
     .try_map(|value| {
-        let RequestValue::Recognized(rows) = value else {
-            return Err(Error::defect("recognition returned another result kind"));
-        };
+        let rows = value.recognized("recognition returned another result kind")?;
         let mut recognized = Vec::with_capacity(texts.len());
         request::project(texts, &rows, |row| {
             recognized.push(row.map(|row| row.value().clone()));
@@ -197,9 +189,7 @@ pub(super) fn relate(
     let ask = ask.clone().record_fields("/name", "/kind")?;
     request::execute_records(engine, ask.into(), RequestCall::Relate, options, records)?.try_map(
         |value| {
-            let RequestValue::Related(row) = value else {
-                return Err(Error::defect("relate returned another result kind"));
-            };
+            let row = value.related("relate returned another result kind")?;
             Ok(row.result().value().to_vec())
         },
     )

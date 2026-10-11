@@ -40,7 +40,7 @@ impl RawRecord {
     pub fn json(text: &str) -> Result<Self, Error> {
         Self::read(text, core::Framing::Jsonl)
     }
-    fn read(text: &str, framing: core::Framing) -> Result<Self, Error> {
+    pub(crate) fn read(text: &str, framing: core::Framing) -> Result<Self, Error> {
         let reading = core::Reading::new(framing, Vec::new()).map_err(Error::refused)?;
         Ok(Self(Arc::new(
             reading.record(text.as_bytes()).map_err(Error::refused)?,

@@ -11,26 +11,42 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
     let engine = crate::public::Engine::for_check(inner);
     let decide = decision().map_err(invalid)?;
     let definitions = [
-        ("decide", Call::Decide as fn(_) -> _, decide.clone().into()),
-        ("choose", Call::Choose, choice().map_err(invalid)?.0.into()),
-        ("tag", Call::Tag, tags().map_err(invalid)?.0.into()),
-        ("score", Call::Score, score().map_err(invalid)?.into()),
-        ("filter", Call::Filter, decide.clone().into()),
+        (
+            "decide",
+            Call::Decide as fn(_) -> _,
+            decide.clone().into(),
+            false,
+        ),
+        (
+            "choose",
+            Call::Choose,
+            choice().map_err(invalid)?.0.into(),
+            false,
+        ),
+        ("tag", Call::Tag, tags().map_err(invalid)?.0.into(), false),
+        (
+            "score",
+            Call::Score,
+            score().map_err(invalid)?.into(),
+            false,
+        ),
+        ("filter", Call::Filter, decide.clone().into(), false),
         (
             "rank",
             Call::Rank,
             crate::Question::rank("Did the parcel arrive undamaged?")
                 .map_err(invalid)?
                 .into(),
+            true,
         ),
     ];
     let mut summaries = Vec::new();
-    for (name, call, definition) in definitions {
+    for (name, call, definition, native_error) in definitions {
         let request = admitted(call, definition, text(TEXT))?;
         let (summary, _) = engine
             .plan_request_summary(&request, Environment::default())
             .map_err(|error| {
-                if name == "rank" {
+                if native_error {
                     Failure::from(error)
                 } else {
                     Failure::Usage("a backend setup cannot fit a minimal function check")

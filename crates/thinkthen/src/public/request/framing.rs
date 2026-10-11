@@ -4,19 +4,66 @@ use super::{
 };
 use crate::{Error, RawRecord};
 
-pub(super) fn admit(request: &AdmittedRequest) -> Result<(), Error> {
-    if let RequestInput::Feed {
-        framing: RequestFraming::Csv | RequestFraming::Tsv,
-        reading,
-        ..
-    } = request.request.call.arguments().input
-        && (reading.unit != crate::SourceUnit::Line || reading.window.is_some())
+pub(super) fn validate(
+    framing: Option<RequestFraming>,
+    reading: crate::ReaderOptions,
+    media: crate::ReaderMedia,
+    source: bool,
+) -> Result<(), Error> {
+    if source {
+        reading.validate()?;
+    }
+    let Some(framing) = framing else {
+        return Ok(());
+    };
+    let table = matches!(framing, RequestFraming::Csv | RequestFraming::Tsv);
+    let unit = if matches!(framing, RequestFraming::Document) {
+        crate::SourceUnit::File
+    } else {
+        crate::SourceUnit::Line
+    };
+    if (source || table)
+        && (media != crate::ReaderMedia::Text || reading.unit != unit || reading.window.is_some())
     {
-        return Err(Error::usage(
-            "table session framing requires complete rows without file or window units",
-        ));
+        return Err(Error::usage(if source {
+            "explicit source framing requires text and matching file or line units without a window"
+        } else {
+            "table session framing requires complete rows without file or window units"
+        }));
     }
     Ok(())
+}
+
+pub(super) fn admit(request: &AdmittedRequest) -> Result<(), Error> {
+    if let RequestInput::Feed {
+        framing, reading, ..
+    } = request.request.call.arguments().input
+    {
+        validate(Some(framing), reading, crate::ReaderMedia::Text, false)?;
+    }
+    Ok(())
+}
+
+pub(super) fn text(
+    text: &str,
+    framing: RequestFraming,
+    retain_empty: bool,
+) -> Result<Option<RawRecord>, Error> {
+    if matches!(framing, RequestFraming::Document) {
+        return RawRecord::text(text).map(Some);
+    }
+    let original = RawRecord::read(text, crate::core::Framing::Lines)?;
+    let text = original
+        .literal()
+        .ok_or_else(|| Error::defect("line framing lost its text"))?;
+    if text.trim().is_empty() && !retain_empty {
+        return Ok(None);
+    }
+    match framing {
+        RequestFraming::Jsonl => RawRecord::json(text).map(Some),
+        RequestFraming::Lines => Ok(Some(original)),
+        _ => Err(Error::usage("table framing bypassed its decoder")),
+    }
 }
 
 pub(super) fn reading(
@@ -60,25 +107,17 @@ fn item(mut item: RequestItem, framing: RequestFraming) -> Result<Option<Request
         return Err(Error::usage("line framing requires a text original"));
     }
     if let Some(RequestOriginal::Text { text }) = &item.original {
-        let reading = crate::core::Reading::new(crate::core::Framing::Lines, Vec::new())
-            .map_err(Error::refused)?;
-        let original = reading.record(text.as_bytes()).map_err(Error::refused)?;
-        let text = original
-            .text()
-            .ok_or_else(|| Error::defect("line framing lost its text"))?;
-        if text.trim().is_empty() && item.images.is_empty() {
+        let Some(original) = self::text(text, framing, !item.images.is_empty())? else {
             return Ok(None);
-        }
+        };
         item.original = Some(match framing {
-            RequestFraming::Jsonl => RequestOriginal::Json {
-                value: RawRecord::json(text)?,
+            RequestFraming::Jsonl => RequestOriginal::Json { value: original },
+            _ => RequestOriginal::Text {
+                text: original
+                    .literal()
+                    .ok_or_else(|| Error::defect("line framing lost its text"))?
+                    .to_owned(),
             },
-            RequestFraming::Lines => RequestOriginal::Text {
-                text: text.to_owned(),
-            },
-            _ => {
-                return Err(Error::usage("table framing bypassed its decoder"));
-            }
         });
     }
     Ok(Some(item))
