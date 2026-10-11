@@ -8,6 +8,8 @@ Depends on: 0534
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
+Reviews: revision 52ec7a54c991a88a1b5fd92354b1a7d3fd4daa4e, reject
+
 ## Outcome
 
 R, Ruby and JavaScript calls hand native Rust request values to the engine. None of the three writes the request grammar in host code.
