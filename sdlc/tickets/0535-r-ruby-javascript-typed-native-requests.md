@@ -19,3 +19,7 @@ R, Ruby and JavaScript calls hand native Rust request values to the engine. None
 - Changes: one slice per language, in this order: Ruby, JavaScript, R. Each slice converts host values into the public Rust Request types in its native extension, deletes the host request assembly, and lowers its ceiling. Reuse the conversion 0534 adds where the Rust side is shared.
 - Proof: each language's routine installed checks pass. One installed case per language shows that an invalid input raises the typed error with the message Rust admission gives.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
