@@ -107,7 +107,7 @@ Owned-session callers use `thinkthen_engine_usage_persistence_v1` for a nonblock
 
 Both outputs must be nonnull, aligned, writable and nonoverlapping. A null engine, a null output or exactly equal output addresses refuses before observation or finalization. Every nonzero return preserves both outputs and updates the calling-thread session diagnostic; success preserves it. Keep the engine live during calls and wait for concurrent callers before destruction. Partial overlaps, invalid extents and forged pointers remain caller obligations.
 
-`{"usage_status":true}` observes persistence without waiting. `{"finish_usage_status":true}` drains current deltas and reports persistence. Each accepts only true and no other member. Both return `{"state":STATE}` with the shared persistence state; failed persistence adds the shared fixed `advice`. Written covers only this engine's current deltas. Only usage-lock acquisition has the existing deadline; other filesystem work can take longer. These utilities send no model requests.
+Use `thinkthen_engine_usage_persistence_v1` in place of the removed JSON `usage_status` request, and `thinkthen_engine_finish_usage_status_v1` in place of `finish_usage_status`.
 
 ## Throttle is per loaded copy
 

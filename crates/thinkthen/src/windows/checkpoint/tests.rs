@@ -255,5 +255,5 @@ fn usage_child() {
         // the parent inspects its native descriptor. Keep the host alive.
         process::wait(&root.join("release"));
     }
-    engine.finish_usage();
+    let _status = engine.finish_usage_status();
 }

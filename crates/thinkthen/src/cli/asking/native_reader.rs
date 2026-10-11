@@ -39,7 +39,7 @@ impl<T: Send + 'static> Reader<T> {
     }
     pub(crate) fn ready(&self) -> bool {
         let Ok(mut state) = self.0.state.lock() else {
-            return false;
+            return true;
         };
         if state.item.is_some() {
             return true;
@@ -52,7 +52,9 @@ impl<T: Send + 'static> Reader<T> {
         false
     }
     pub(crate) fn next(&self, cancel: &crate::engine::Cancel<'_>) -> Option<Result<T, Placed>> {
-        let mut state = self.0.state.lock().ok()?;
+        let Ok(mut state) = self.0.state.lock() else {
+            return Some(Err(lock_error()));
+        };
         while state.item.is_none() && !state.stopped {
             if let Err(error) = cancel.remaining_without_check() {
                 return Some(Err(error.into()));
@@ -62,12 +64,14 @@ impl<T: Send + 'static> Reader<T> {
                 state.busy = true;
                 self.0.changed.notify_one();
             }
-            state = self
+            let Ok((next, _)) = self
                 .0
                 .changed
                 .wait_timeout(state, std::time::Duration::from_millis(50))
-                .ok()?
-                .0;
+            else {
+                return Some(Err(lock_error()));
+            };
+            state = next;
         }
         let item = state.item.take()?;
         state.busy = false;
@@ -80,9 +84,13 @@ impl<T> Drop for Reader<T> {
             state.stopped = true;
             state.item = None;
             state.wake = None;
-            self.0.changed.notify_one();
         }
+        self.0.changed.notify_one();
     }
+}
+
+fn lock_error() -> Placed {
+    crate::failure::Failure::Defect("the input reader lock failed").into()
 }
 
 fn feed<T>(mut records: impl Iterator<Item = Result<T, Placed>>, worker: Arc<Shared<T>>) {
@@ -120,5 +128,39 @@ fn feed<T>(mut records: impl Iterator<Item = Result<T, Placed>>, worker: Arc<Sha
         if last {
             return;
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "poison a real reader lock and require its observable failure"
+)]
+mod tests {
+    #[test]
+    fn a_poisoned_reader_reports_failure_instead_of_end_of_input() {
+        let reader = super::Reader::<()>::new(std::iter::empty());
+        let shared = reader.0.clone();
+        assert!(
+            std::thread::spawn(move || {
+                let _state = shared.state.lock().expect("input state");
+                panic!("poison input state");
+            })
+            .join()
+            .is_err()
+        );
+        assert!(
+            reader.ready(),
+            "readiness must let the caller observe the failure"
+        );
+        let error = reader
+            .next(&crate::engine::Cancel::default())
+            .expect("an item")
+            .expect_err("a failure");
+        assert!(matches!(
+            error.cause,
+            crate::failure::Failure::Defect("the input reader lock failed")
+        ));
     }
 }

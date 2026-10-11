@@ -161,7 +161,7 @@ pub(crate) fn finish_usage() {
         _ => return,
     };
     for engine in kept {
-        engine.finish_usage();
+        let _status = engine.finish_usage();
     }
 }
 
