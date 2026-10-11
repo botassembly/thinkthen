@@ -36,12 +36,8 @@ The nonblank Rust line count that `sdlc/scripts/ratchet.mjs` measures falls to 1
     - one copy each of `folder()`, `printed`, `said`, `text` and `code`.
   - Delete the tests in `decide_edge.rs` and `choose_and_score_edge.rs` that repeat rows in `refusals.rs` and `secrecy.rs`. First add the four rows the tables lack: `--raw --quiet`, `--threshold 90`, the reversed band `0.9:0.1` and empty evidence. Keep the plan output, model flag, removed environment variable, estimated-input, plan shape and range tests in those files.
   - In the other integration tests, add helpers for the repeated `Engine::builder()` chains, `RecordInput` literals and session result reads, about 950 lines. A builder helper takes the key as an argument, because some tests check that their own key never leaks.
-  - Delete these unit tests in `src`, which outside tests already cover. Each deletion names its covering test in the commit message.
-    - `src/core/question_file/tests.rs`, covered by `tests/backend/question_file/grammar.rs`.
-    - The unsafe-sentence and held-lock tests in `src/engine/usage/tests.rs`, covered by `tests/backend/status.rs`.
-    - The tests in `src/core/records/tests.rs` that `tests/backend/json_syntax.rs`, `refusals.rs` or `streaming.rs` cover. Keep the rest of that file.
-    - `a_new_store_is_private_and_a_read_only_replay_writes_nothing` in `src/engine/store/tests.rs`, covered by `tests/backend/recordings.rs` and `tests/native_store/history.rs`.
-    - Keep a unit test when its covering test runs only with the `cli` feature or only on Unix and the unit test is the only check of that behavior in a library-only or Windows build.
+  - Delete `a_new_store_is_private_and_a_read_only_replay_writes_nothing` in `src/engine/store/tests.rs`. `tests/native_store/history.rs` covers it without the `cli` feature. The commit message names that covering test.
+  - Keep `src/core/question_file/tests.rs`, the usage tests in `src/engine/usage/tests.rs` and `src/core/records/tests.rs`. Their outside covers in `tests/backend` build only with the `cli` feature (`tests/backend/main.rs:8`), and the code they check builds without it. Idea 0545 handles them after 0.2.
   - If these changes leave the count above 187,000, take the remaining cut from the test-helper families the survey rated medium confidence: stderr string compares, closed output pipes, profile runs, retry tables, cache races and hand-built launchers in `tests/backend`.
 - Proof:
   - The ratchet passes at 187,000 or fewer, and `sdlc/ratchet.json` equals the measured total.
