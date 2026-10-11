@@ -8,6 +8,8 @@ Depends on: 0549
 
 Reviews: revision 597ef8ae60b452689aa5f3813d6aea3967a5fe7b, accept
 
+Reviews: revision fc4cef10409abb9f872636d506cd987d126ed49c, accept
+
 ## Outcome
 
 The cli, rust and c consumers run every case their contract requires today. Each other consumer runs the cases that cross its own binding code, plus a few representatives of each core limit and refusal group. `parity.py` checks that each binding's subset agrees with the reference consumers.
