@@ -40,6 +40,17 @@ PM amendment, 2026-10-11. The proof bans duplicated named-request construction. 
 - The SQLite and PostgreSQL mappings that select settings or check a question's kind, such as `databases/postgresql/src/forms.rs`. Idea "SQL extensions take settings selection and question-kind checks from the core" carries them.
 - `Json.java`, as the generic byte and value codec that the generated JVM inputs and results use. It holds no request shape. Its deletion clause in Changes no longer applies.
 
+### Added public declarations
+
+```text
+fn Request::named(&str, RequestArguments) -> Result<Self, Error>
+fn Request::for_function(RequestFunction, RequestArguments) -> Self
+fn Request::for_definition(RequestDefinition, RequestInput, RequestOptions) -> Self
+fn RequestFunction::for_definition(&RequestDefinition) -> Self
+impl FromStr for RequestFunction
+type RequestFunction::Err = Error
+```
+
 ## Progress
 
 - 2026-10-11 started
