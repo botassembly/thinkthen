@@ -4,7 +4,7 @@ Ian asked for an adversarial review of the 0.2 build after 0534 to 0542 closed. 
 
 ## Release test campaign
 
-The rc.11 campaign cannot pass. The time limit killed Ada at 30:00 after 254 of 255 cases. Nine consumers failed setup within a second each because the scratch home drops the toolchain and cache paths. The Beelink has 16 cores, but the runner uses one consumer at a time.
+The rc.11 campaign cannot pass. The time limit killed Ada at 30:00 after 254 of 255 cases. Eight consumer groups failed setup within a second each because the rc.11 command left the toolchain and cache variables unset, so each consumer looked in its empty scratch home. The Beelink has 16 cores, but the runner uses one consumer at a time.
 
 Each consumer took this long in the rc.11 campaign. The serial preamble before them took 13 minutes.
 
@@ -18,7 +18,7 @@ Each consumer took this long in the rc.11 campaign. The serial preamble before t
 
 Ada is the outlier because every case writes a generated caller, deletes its objects and statically links the 70 MB native archive (`libraries/ada/checks/full_case.py:53-59`). A warm compile and link costs about 4.7 s, and the program runs in 6 ms. COBOL builds one bridge and runs all 255 cases in 111 s. The JVM driver starts a new JVM for each case in each of three languages. Rust consumers compile with one job. The preamble reruns the routine suite and a Rust public-case pass that the installed `rust` consumer repeats.
 
-Parallel consumers, one Ada build and one JVM per language would leave the longest consumer as the campaign's length. Restoring the nine missing consumers adds their own time back. Ticket 0549 carries this work.
+Parallel consumers, one Ada build and one JVM per language would leave the longest consumer as the campaign's length. Restoring the eight missing consumer groups adds their own time back. Ticket 0549 carries this work.
 
 Of the 258 required cases, 96 are named-input cases and 24 are image-admission cases. Most of them test refusals and byte limits inside the shared Rust core, so each binding only passes them through. Keeping them in cli, rust and c, plus a few in each binding, would cut each other consumer by about 40%. That changes the parity contract, so Ian decides it.
 

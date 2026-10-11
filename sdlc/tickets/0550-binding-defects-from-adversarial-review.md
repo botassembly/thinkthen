@@ -20,7 +20,7 @@ A caller in every language sees its own producer's exception and Rust's admissio
     - `ruby/src/ffi/request.rs:86`
     - `python/src/inputs.rs:30`
     - `c/src/ffi/session/ffi.rs:97`
-  - **Aggregate rows.** Python and Ruby always add aggregate rows, as JavaScript and PHP do, and their recognize branch goes (`_calls.py:206-212`, `session.rb:178`). Rust sends one aggregate packet per call except for recognize, so the rows are the same today. The change removes the second rule.
+  - **Aggregate rows.** Python and Ruby use the single add rule that JavaScript and PHP use, and their recognize branch goes (`_calls.py:206-212`, `session.rb:178`). Rust sends one aggregate packet per call except for recognize, so the rows are the same today. The change removes the second rule.
   - **C++.** A closed push stops feeding and does not throw (`cpp/include/thinkthen/client.hpp:52`).
   - **C#.** Immediate failures carry the native retry flag and facts (`csharp/src/NativeSession.cs:16`).
   - **PHP.**
