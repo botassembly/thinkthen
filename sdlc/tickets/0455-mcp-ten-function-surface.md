@@ -1,6 +1,6 @@
 # 0455: Expose the ten functions through a local MCP server
 
-Status: in progress.
+Status: COMPLETE.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review.
 Milestone: 0.2
 Owner: builder, lane0 `ticket/0455-rank-members-completion`.
@@ -30,6 +30,8 @@ final real Windows execution and local timing remain pending. No complete parity
 main landing or publication is claimed.
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
+Landed: e782d03
 
 ## Outcome
 
