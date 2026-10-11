@@ -29,3 +29,7 @@ The cli, rust and c consumers run every case their contract requires today. Each
   - `parity.py` tests cover the tier rule.
   - One full campaign passes, and its summary shows the per-consumer durations next to those of the first 0549 run.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
