@@ -42,3 +42,4 @@ One `test-full-cases --run` on the Beelink runs every consumer, and no consumer 
 - 2026-10-11 next: The completed campaign at 60ba71846 failed after 4785 seconds with retained logs; source optimization and setup corrections need focused proof and fresh code review before the next full run.
 - 2026-10-11 next: Fresh review found that surfaces sanitation drops campaign compiler settings, so the developer is repairing that boundary and proving propagation before a full rerun.
 - 2026-10-11 next: The reviewed corrected campaign at 8c09ffdab is running in the background with retained ownership and logs; its owner will await exit before reading results.
+- 2026-10-11 next: The corrected campaign at 8c09ffdab failed after 5569 seconds; retained logs show grouped consumer budgets, duplicate setup work and three specific fixture or privacy failures that require focused repairs before another run.
