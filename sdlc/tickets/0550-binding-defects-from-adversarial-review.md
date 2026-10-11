@@ -44,3 +44,4 @@ PM amendment, 2026-10-11. The C# fix may add two C exports: `thinkthen_session_e
 
 - 2026-10-11 started
 - 2026-10-11 next: Session diagnostic accessors await a PM ABI ruling because constructor-slot reuse breaks the retained installed C lifetime contract; other binding repairs continue.
+- 2026-10-11 next: Committed binding fixes passed fresh review, and the PM approved the remaining session-error accessor delta with header documentation and installed C coverage.
