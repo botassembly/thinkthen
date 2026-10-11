@@ -13,8 +13,9 @@ temp_home
 cargo build --locked --offline --package thinkthen --lib --no-default-features --features bundled-sqlite
 # Ticket 0086: the library graph carries no command-only crate, and on Unix it
 # keeps `nix` with `signal` for the host signal owner (ticket 0078).
+# Ticket 0511: shared native CSV/TSV readers require `csv-core` without `cli`.
 graph=$(cargo tree --locked --offline --package thinkthen --no-default-features --features bundled-sqlite -e normal,build --prefix none -f '{p} {f}')
-if printf '%s\n' "$graph" | grep -Eq '^(clap|csv-core|signal-hook) '; then
+if printf '%s\n' "$graph" | grep -Eq '^(clap|signal-hook) '; then
     printf '%s\n' 'package: command dependency entered the library-only graph' >&2
     exit 1
 fi
