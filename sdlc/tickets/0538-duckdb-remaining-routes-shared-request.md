@@ -37,6 +37,8 @@ fn CompleteScore::to_scalar_json(&self) -> Result<String, Error>
 
 These accessors serialize the retained scalar Details result without introducing a new format or copying its metadata rules into DuckDB.
 
+Annotate ruling. DuckDB annotate takes the shared Request behavior: an invalid row such as one missing `/body` stops the call before any send, and the query returns the same bad-row error. Today the query already fails on that row. Only the side effect changes: valid neighbours are no longer sent and cached first. Update the installed DuckDB regression to expect the error with zero sends. Packed batch counts for valid input stay unchanged. Add no public admission helper and no second direct engine call. `Engine::check_record_limit` may keep eager quotas. Note the change in the DuckDB README.
+
 ## Progress
 
 - 2026-10-11 started
