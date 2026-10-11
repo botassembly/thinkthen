@@ -28,7 +28,7 @@ Future<void> main(List<String> args) async {
           .value
           .value;
       check(answer is bool, 'smoke answer is not boolean');
-      print('smoke: $answer');
+      print('\nsmoke: $answer');
     } finally {
       engine.close();
     }
