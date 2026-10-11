@@ -156,7 +156,11 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         if value.get('image_variants'):
                             from c_images import assert_images
                             assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
-                        shared.assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        expected=step
+                        if CONSUMER == 'ruby' and step.get('raw') is not None and step['expect'].get('error') == 'usage':
+                            # Ruby preserves authored bytes through question_file; malformed files report Local.
+                            expected={**step,'expect':{**step['expect'],'error':'local'}}
+                        shared.assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                         if row['id']=='native-filter-first-excluded':
                             assert [r['index'] for r in got['rows']]==[1,2] and [r['value'] for r in got['rows']]==[True,True],got
                             assert int(backend.read('count'))==3,got

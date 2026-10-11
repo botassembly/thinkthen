@@ -2,13 +2,13 @@
 require "thinkthen"
 doc = JSON.parse(File.read(ARGV.fetch(0), encoding: "UTF-8"))
 settings = JSON.parse(ARGV.fetch(1)).transform_keys(&:to_sym)
-client = ThinkThen::Client.new(**settings)
 def json_value(value)
   return value.to_h.transform_values { |v| json_value(v) } if value.is_a?(Hash) || (value.respond_to?(:to_h) && !value.nil? && !value.is_a?(Array))
   return value.map { |v| json_value(v) } if value.is_a?(Array)
   value
 end
 begin
+  client = ThinkThen::Client.new(**settings)
   question = doc.fetch("question")
   question = case question.fetch("kind")
     when "definition" then question.fetch("value")
@@ -23,11 +23,10 @@ begin
     ThinkThen::Client.files(source.fetch("paths"), framing: source["framing"], media: source.fetch("media", "text"), **source.fetch("reading", {}).transform_keys(&:to_sym))
   else
     input.fetch("items").map do |item|
-      original = item["original"]
-      value = original && original.fetch(original.fetch("kind") == "text" ? "text" : "value")
       ThinkThen::Client::Item.new(item.transform_keys(&:to_sym))
     end
   end
+  input = input.each if doc["incremental"] && input.is_a?(Array)
   cancel = ThinkThen::Cancel.new
   cancel.cancel if doc["cancel"]
   if doc["held_cancel"]
@@ -44,5 +43,5 @@ rescue ThinkThen::Error => error
     puts JSON.generate(admission: {code: error.code, message: error.message, requests_sent: 0})
   end
 ensure
-  client.close
+  client&.close
 end
