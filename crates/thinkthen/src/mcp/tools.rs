@@ -38,11 +38,9 @@ pub(super) fn list(output_schema: &Value) -> Value {
 }
 
 fn input_schema(tool: Tool) -> Value {
-    let canonical: Value = serde_json::from_str(include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../specification/request.schema.json"
-    )))
-    .unwrap_or_else(|_| json!({}));
+    let canonical: Value =
+        serde_json::from_str(include_str!("../public/request/request.schema.json"))
+            .unwrap_or_else(|_| json!({}));
     let mut options = canonical
         .pointer("/$defs/RequestOptions")
         .cloned()

@@ -11,17 +11,28 @@ fn committed_request_schema_is_derived_from_deserialization_types() {
     let _settings = generator.subschema_for::<crate::public::settings::json::Document>();
     let schema = generator.into_root_schema_for::<Request>();
     let text = serde_json::to_string_pretty(&schema).unwrap() + "\n";
-    let path = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../specification/request.schema.json"
-    );
-    if std::fs::read_to_string(path).is_ok_and(|committed| committed == text) {
-        return;
+    let paths = [
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../specification/request.schema.json"
+        ),
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/public/request/request.schema.json"
+        ),
+    ];
+    let mut changed = false;
+    for path in paths {
+        if std::fs::read_to_string(path).is_ok_and(|committed| committed == text) {
+            continue;
+        }
+        changed = true;
+        if std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|v| v == "1") {
+            std::fs::write(path, &text).unwrap();
+        }
     }
-    if std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|v| v == "1") {
-        std::fs::write(path, text).unwrap();
-    }
-    panic!(
+    assert!(
+        !changed,
         "generated request schema differs; rewrite with THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib committed_request_schema, then rerun"
     );
 }
