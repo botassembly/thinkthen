@@ -37,3 +37,7 @@ A caller in every language sees its own producer's exception and Rust's admissio
   - Rust tests cover the usage counters.
   - Routine checks pass.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
