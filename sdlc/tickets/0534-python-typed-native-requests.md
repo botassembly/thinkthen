@@ -1,6 +1,6 @@
 # 0534: Give Python typed native requests and Rust admission
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 Reviews: revision 12a1448586f319342b5a0e15dccca585a51a0f25, accept
 
 Reviews: revision fcbc671c2f52c328b296776b8c09ca1940c57b46, accept
+
+Landed: 5f03bec
 
 ## Outcome
 
