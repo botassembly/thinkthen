@@ -36,3 +36,4 @@ The public Rust `Engine` admits every call through `Request`, the same as every 
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Bounded intake and snapshot repairs at b1f95b370 are under fresh code review; the combined source ceiling remains above the approved target and compilation awaits the owned 0549 campaign.
