@@ -138,3 +138,19 @@ PHP's installed process passed all required cases and its seven package-specific
 Rust Polars then passed its complete installed run, including every typed function, file and image case. Its original matrix and logs are in lane 0's `target/0530-rust-polars-ca0fef2b9/`. The check used the unchanged crate archive from the final local bundle. Its build and test processes were awaited. No hosted workflow, candidate tag, registry publication or paid call was started during this wrap-up.
 
 Ada's focused run also completed successfully: thirty required cases and one additional regression. The accepted authored-input correction landed as `bc17ec211`. These focused Ada and COBOL results do not establish complete installed parity; their full runs were not started. Dart and Flutter were also not started after Ian asked to finish active work. All active check processes exited and were awaited before their lanes were released.
+
+## Finish the amended installed runs
+
+Dart, Flutter, Ada and COBOL each passed a complete installed run with all 255 required cells and a clean collector exit. Ada and COBOL each also passed two additional regressions. The native package payloads came from the retained final local bundle; these corrections changed fixture inputs and execution, not those packaged products. Every qualification and backend process exited and was awaited.
+
+Dart's fixture now supplies the documented Find options, annotation metadata, image media unit and incremental feed forms. Ada builds the installed package objects once per run and rebuilds each case caller; long fixture strings travel through case-owned exact-byte files so the compiler's source-line limit cannot change the public input. COBOL uses its existing public image file selectors and retains constructor admission errors. Fresh code reviews accepted these changes and their measured fixture ceilings. The final review explicitly accepted Ada's additional 23 Ada and 11 Python lines, COBOL's eight Python lines and three shared fixture lines.
+
+The approved COBOL representation ruling keeps the documented 8192-byte scalar limit. The six image body-excess and packing cases assert `tt-n-cobol-overflow-constant`, a null session and exactly zero loopback sends. The README explains why larger scalar inputs cannot reach the native body and packing limits through this binding. Other consumers establish those native limits; expanding COBOL carriers would change the input contract.
+
+The M5 prerequisite check found Command Line Tools but no Xcode or assembled Apple package. The supported XCFramework assembly requires Xcode. The amendment assigns installed Foundation execution to 0543's macOS candidate; this local prerequisite check supplies no Apple runtime parity evidence.
+
+The main checkout retains the complete original and corrected logs and matrices in `target/0530-final-installed-consumers/`, including artifact identities and the Foundation prerequisite output. Initial Dart fixture failures, COBOL failures and Ada compiler failures remain there alongside the clean final runs. Ada's earlier diagnostic run mixed old and corrected fixture inputs and is not counted as its complete passing run.
+
+## What the build taught us
+
+An installed fixture must preserve the authored input and use the binding's real representation limits. Compile caching can shorten a full run without sharing runtime state between cases. Keep the failed diagnostic run intact, then qualify an immutable corrected fixture once. A documented host scalar limit needs an explicit applicability ruling rather than silently changing a native-limit assertion.
