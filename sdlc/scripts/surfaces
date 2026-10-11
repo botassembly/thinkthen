@@ -317,6 +317,8 @@ if [ -n "$publish_tag" ]; then
 	# The R check installed both shapes from this commit in the sweep.
 	sh sdlc/scripts/release-pack --reuse "$host" "$packed" crate r 3>&- ||
 		{ echo 'surfaces: FAIL publish (the crate or the R package did not pack)'; exit 1; }
+	(cd site && npm run test-docs) 3>&- ||
+		{ echo 'surfaces: FAIL publish (documentation replay did not pass)'; exit 1; }
 	[ "$(git rev-parse HEAD)" = "$publish_commit" ] && [ -z "$(git status --porcelain)" ] ||
 		{ echo 'surfaces: FAIL publish (the checkout changed during the run)'; exit 1; }
 	sh sdlc/scripts/publish-builds "$publish_tag" "$publish_root" "$publish_commit" "$packed"
