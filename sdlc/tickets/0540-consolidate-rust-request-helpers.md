@@ -8,6 +8,8 @@ Depends on: 0539
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
+Reviews: revision a7b88a615, accept
+
 ## Outcome
 
 Each request rule has one owner in Rust. Results unpack through one accessor per kind. Source and feed framing share one decoder and one validator. Modules change each other's state only through methods.
