@@ -4,7 +4,7 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556
+Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
