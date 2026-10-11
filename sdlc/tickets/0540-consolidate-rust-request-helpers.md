@@ -25,3 +25,7 @@ Each request rule has one owner in Rust. Results unpack through one accessor per
   - Lower the Rust source ceiling.
 - Proof: the existing outside-in tests pass unchanged. No new test is needed unless a merge changes a message, in which case the test pins the kept message.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
