@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
+Reviews: revision d7e885c2e, accept
+
 ## Outcome
 
 No shipped package, script or document uses the retired "door" names. The JVM jar, package and classes carry current names. Every migrated language's README maps its old calls to the new ones. The public docs describe current behavior only.
